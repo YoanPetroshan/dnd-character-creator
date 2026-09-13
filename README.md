@@ -34,6 +34,18 @@ outside the standard library; everything else in this repo (`storage.py`,
 `sheet_derive.py`, `markdown_render.py`, `pdf_fill.py`, `app.py`) is new,
 and none of it imports from `dnd-app-bg-local`'s play engine.
 
+**Storage root is shared with the `dnd-app-bg-local` play app.** The
+default storage root (`~/.claude/dnd`) is the same directory that app's own
+character library uses — deliberate, so a character built here needs no
+migration to be usable there later. Building a character with a name that
+already exists no longer silently overwrites it: `POST /api/chargen/build`
+returns `409` unless the request includes `?overwrite=1` (see
+`storage.character_exists()`).
+
+`python -m chargen build --save` is not supported in this standalone repo —
+it raises `ModuleNotFoundError: No module named 'library'`, since
+`library.py` is intentionally not ported here.
+
 Not yet done: linking this app's output back into the play app as a
 campaign-recruitable character. The storage path is chosen so that step
 needs no data migration when it happens.

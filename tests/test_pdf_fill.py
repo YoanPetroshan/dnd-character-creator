@@ -3,6 +3,9 @@ from pathlib import Path
 from pypdf import PdfReader
 
 import pdf_fill
+from chargen.catalog import Catalog
+
+CATALOG = Catalog.load()
 
 SHEET = {
     "name": "Torvin Bracewell",
@@ -43,7 +46,7 @@ DERIVED = {
 
 
 def _fill_and_read_fields():
-    data = pdf_fill.fill(SHEET, DERIVED)
+    data = pdf_fill.fill(SHEET, DERIVED, CATALOG)
     import io
     reader = PdfReader(io.BytesIO(data))
     fields = reader.get_fields() or {}
@@ -51,7 +54,7 @@ def _fill_and_read_fields():
 
 
 def test_fill_returns_pdf_bytes():
-    data = pdf_fill.fill(SHEET, DERIVED)
+    data = pdf_fill.fill(SHEET, DERIVED, CATALOG)
     assert data[:4] == b"%PDF"
 
 
@@ -109,7 +112,7 @@ def test_fill_populates_spellcasting_for_caster():
     caster_sheet["classes"] = [{"cls": "Cleric", "subclass": "Life", "level": 1}]
     caster_derived = dict(DERIVED)
     caster_derived["spellcasting"] = {"ability": "WIS", "save_dc": 13, "attack_bonus": 5}
-    data = pdf_fill.fill(caster_sheet, caster_derived)
+    data = pdf_fill.fill(caster_sheet, caster_derived, CATALOG)
     import io
     reader = PdfReader(io.BytesIO(data))
     fields = reader.get_fields() or {}
@@ -118,3 +121,71 @@ def test_fill_populates_spellcasting_for_caster():
     assert values["SpellcastingAbility 2"] == "WIS"
     assert values["SpellSaveDC  2"] == "13"
     assert values["SpellAtkBonus 2"] == "+5"
+
+
+def test_fill_weapon_slots_hold_only_weapons():
+    # Armor-only equipment (no real weapon anywhere in the list): the three
+    # "Wpn Name" slots must stay empty rather than being filled with armor
+    # or clothing, which is what a chain-mail-and-shield character's
+    # equipment list looks like by default (I5).
+    armor_only_sheet = dict(SHEET)
+    armor_only_sheet["equipment"] = [
+        {"name": "Chain Mail", "equipped": True, "quantity": 1},
+        {"name": "Shield", "equipped": True, "quantity": 1},
+        {"name": "Clothes, common", "equipped": False, "quantity": 1},
+    ]
+    data = pdf_fill.fill(armor_only_sheet, DERIVED, CATALOG)
+    import io
+    reader = PdfReader(io.BytesIO(data))
+    fields = reader.get_fields() or {}
+    values = {k: (v.get("/V") if isinstance(v, dict) else None) for k, v in fields.items()}
+    for field in ("Wpn Name", "Wpn Name 2", "Wpn Name 3"):
+        assert values.get(field) in (None, ""), (field, values.get(field))
+        assert values.get(field) != "Chain Mail"
+        assert values.get(field) != "Shield"
+        assert values.get(field) != "Clothes, common"
+
+
+def test_fill_weapon_slots_prefer_equipped_weapons_first():
+    mixed_sheet = dict(SHEET)
+    mixed_sheet["equipment"] = [
+        {"name": "Chain Mail", "equipped": True, "quantity": 1},
+        {"name": "Dagger", "equipped": False, "quantity": 1},
+        {"name": "Longsword", "equipped": True, "quantity": 1},
+    ]
+    data = pdf_fill.fill(mixed_sheet, DERIVED, CATALOG)
+    import io
+    reader = PdfReader(io.BytesIO(data))
+    fields = reader.get_fields() or {}
+    values = {k: (v.get("/V") if isinstance(v, dict) else None) for k, v in fields.items()}
+    # The equipped weapon (Longsword) should come before the carried-only
+    # weapon (Dagger); the armor never occupies a slot.
+    assert values["Wpn Name"] == "Longsword"
+    assert values["Wpn Name 2"] == "Dagger"
+    assert values.get("Wpn Name 3") in (None, "")
+
+
+def test_fill_hd_scales_with_character_level():
+    level5_sheet = dict(SHEET)
+    level5_sheet["classes"] = [{"cls": "Fighter", "subclass": "", "level": 5}]
+    level5_sheet["combat"] = dict(SHEET["combat"])
+    level5_sheet["combat"]["hit_dice"] = [{"cls": "Fighter", "die": 10, "used": 0}]
+    data = pdf_fill.fill(level5_sheet, DERIVED, CATALOG)
+    import io
+    reader = PdfReader(io.BytesIO(data))
+    fields = reader.get_fields() or {}
+    values = {k: (v.get("/V") if isinstance(v, dict) else None) for k, v in fields.items()}
+    assert values["HD"] == "5d10"
+    assert values["HDTotal"] == "5"
+
+
+def test_fill_hd_is_empty_when_hit_dice_missing():
+    no_hd_sheet = dict(SHEET)
+    no_hd_sheet["combat"] = dict(SHEET["combat"])
+    no_hd_sheet["combat"]["hit_dice"] = []
+    data = pdf_fill.fill(no_hd_sheet, DERIVED, CATALOG)
+    import io
+    reader = PdfReader(io.BytesIO(data))
+    fields = reader.get_fields() or {}
+    values = {k: (v.get("/V") if isinstance(v, dict) else None) for k, v in fields.items()}
+    assert values.get("HD") in (None, "")

@@ -53,10 +53,19 @@ is a single self-contained file (inline CSS/JS), same pattern as the source repo
   campaign structure, no `/menu` or "back to the game" links in the ported
   `builder.html` (those pages don't exist here). This is explicitly deferred
   to a future phase where the play app is wired to consume this app's output.
-- **Character storage is local to this app**: a `library/` directory at the
-  repo root (or `DND_CHARACTER_ROOT` env override), one subdirectory per
-  character, holding `character.yaml` + generated `character.md` +
-  `character.pdf`. Not the source repo's campaign-rooted library layout.
+- **Character storage deliberately shares the source repo's path
+  convention.** The root defaults to `~/.claude/dnd` (override with
+  `DND_CAMPAIGN_ROOT`, the source repo's own env var name), and a build
+  writes to `<root>/characters/<Name>/current.yaml` — the exact layout
+  `dnd-app-bg-local`'s `skills/dnd/scripts/paths.py::characters_dir()` and
+  `library.py` already read and write. This is a deliberate reversal of an
+  earlier "repo-local `library/` folder" plan: the payoff is that a
+  character this app saves is already visible to the play app's library
+  with zero migration once that integration phase happens. The tradeoff —
+  a name collision between this app and the play app's live character
+  library — is guarded in code: `storage.character_exists()` +
+  `api_build()`'s `409`/`?overwrite=1` check (see `storage.py`, `app.py`,
+  and `README.md`), not by keeping the storage root separate.
 
 ## Components
 
@@ -167,8 +176,11 @@ pypdf
 
 ## Explicitly out of scope (this phase)
 
-- Any link back to `dnd-app-bg-local` (no shared HTTP calls, no shared
-  filesystem paths, no campaign linking).
+- Any link back to `dnd-app-bg-local` (no shared HTTP calls, no campaign
+  linking, no code importing that repo's engine). The storage *path* is
+  deliberately shared, by design (see the storage constraint above) — that
+  is the one exception, and it is a filesystem convention, not a link back
+  to running code.
 - Multiclassing, Warlock pact magic slots — same scope limits `chargen.build()`
   already documents.
 - Syncing "official" (non-SRD) supplemental content

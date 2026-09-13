@@ -1,4 +1,7 @@
 import markdown_render
+from chargen.catalog import Catalog
+
+CATALOG = Catalog.load()
 
 SHEET = {
     "name": "Torvin Bracewell",
@@ -85,3 +88,34 @@ def test_render_includes_spellcasting_section_for_caster():
     assert "## Spellcasting" in out
     assert "Cure Wounds" in out
     assert "**Save DC** 13" in out
+
+
+def test_render_groups_spells_by_level_and_shows_spell_slots():
+    caster_sheet = dict(SHEET)
+    caster_sheet["classes"] = [{"cls": "Cleric", "subclass": "Life", "level": 5}]
+    caster_sheet["spells"] = [
+        {"name": "Sacred Flame", "cls": "Cleric", "prepared": True},  # cantrip
+        {"name": "Cure Wounds", "cls": "Cleric", "prepared": True},   # level 1
+    ]
+    caster_sheet["spell_slots"] = {
+        1: {"max": 4, "used": 0}, 2: {"max": 3, "used": 0}, 3: {"max": 2, "used": 0},
+    }
+    caster_derived = dict(DERIVED)
+    caster_derived["spellcasting"] = {"ability": "WIS", "save_dc": 15, "attack_bonus": 7}
+    out = markdown_render.render(caster_sheet, caster_derived, CATALOG)
+
+    assert "## Spellcasting" in out
+    assert "Cantrips" in out
+    assert "Level 1" in out
+    assert "Sacred Flame" in out
+    assert "Cure Wounds" in out
+
+    assert "## Spell Slots" in out
+    assert "Level 1: 4 max" in out
+    assert "Level 2: 3 max" in out
+    assert "Level 3: 2 max" in out
+
+
+def test_render_omits_spell_slots_section_when_no_slots():
+    out = markdown_render.render(SHEET, DERIVED, CATALOG)
+    assert "## Spell Slots" not in out

@@ -49,7 +49,8 @@ def api_catalog():
 
 @app.route("/api/chargen/spells")
 def api_spells():
-    return jsonify({"spells": [dataclasses.asdict(s) for s in _CATALOG.spells()]})
+    cls = request.args.get("class") or None
+    return jsonify({"spells": [dataclasses.asdict(s) for s in _CATALOG.spells(cls=cls)]})
 
 
 @app.route("/api/chargen/equipment")
@@ -79,15 +80,22 @@ def api_build():
     if problems:
         return jsonify({"problems": problems, "warnings": warnings}), 400
 
+    overwrite = request.args.get("overwrite") == "1"
+    if not overwrite and storage.character_exists(sheet["name"]):
+        return jsonify({
+            "error": f"a character named '{sheet['name']}' already exists",
+        }), 409
+
     derived = sheet_derive.derive(sheet, _CATALOG, draft)
     yaml_path = storage.save_yaml(sheet["name"], sheet)
-    md_text = markdown_render.render(sheet, derived)
+    md_text = markdown_render.render(sheet, derived, _CATALOG)
     md_path = storage.save_markdown(sheet["name"], md_text)
-    pdf_bytes = pdf_fill.fill(sheet, derived)
+    pdf_bytes = pdf_fill.fill(sheet, derived, _CATALOG)
     pdf_path = storage.save_pdf(sheet["name"], pdf_bytes)
 
     return jsonify({
-        "ok": True, "warnings": warnings,
+        "ok": True, "warnings": warnings, "name": sheet["name"],
+        "level": sum(c["level"] for c in sheet["classes"]),
         "yaml_path": str(yaml_path), "md_path": str(md_path), "pdf_path": str(pdf_path),
     }), 201
 
@@ -107,14 +115,22 @@ _FMT_FILENAME = {"yaml": "current.yaml", "md": "character.md", "pdf": "character
 def api_character_download(name: str, fmt: str):
     if fmt not in _FMT_FILENAME:
         return jsonify({"error": f"unknown format {fmt!r}"}), 400
-    path = storage.char_dir(name) / _FMT_FILENAME[fmt]
+    # Non-creating lookup: char_dir() would mkdir the character's folder as
+    # a side effect even for a nonexistent character, leaving empty folders
+    # behind in the shared library on a GET (Minor 2).
+    safe_name = storage.safe_dir_name(name)
+    path = storage.characters_dir() / safe_name / _FMT_FILENAME[fmt]
     if not path.exists():
         return jsonify({"error": "not found"}), 404
     mode = "rb" if fmt == "pdf" else "r"
     encoding = None if fmt == "pdf" else "utf-8"
     with open(path, mode, encoding=encoding) as f:
         data = f.read()
-    return Response(data, mimetype=_FMT_CONTENT_TYPE[fmt])
+    response = Response(data, mimetype=_FMT_CONTENT_TYPE[fmt])
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="{safe_name}.{fmt}"'
+    )
+    return response
 
 
 if __name__ == "__main__":

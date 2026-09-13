@@ -51,6 +51,16 @@ def char_dir(name: str) -> Path:
     return d
 
 
+def character_exists(name: str) -> bool:
+    """True if a character named `name` already has a saved sheet.
+
+    Non-creating: unlike char_dir(), this never mkdir's anything, so a
+    plain existence check can't leave empty folders behind in the shared
+    library (see storage.characters_dir()'s docstring / Minor 2).
+    """
+    return (characters_dir() / safe_dir_name(name) / "current.yaml").exists()
+
+
 def _atomic_write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")

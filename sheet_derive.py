@@ -42,13 +42,22 @@ def derive(sheet: dict, catalog: Catalog, draft: dict) -> dict:
 
     level = _total_level(sheet) or 1
     prof = rules.proficiency_bonus(level)
+    classes = sheet.get("classes") or []
 
     armor = None
     armor_id = draft.get("equipped_armor_id")
     if armor_id:
         armor = next((a for a in catalog.armor() if a["id"] == armor_id), None)
     shield = bool(draft.get("shield"))
-    ac = rules.armor_class(mods["DEX"], armor, shield)
+
+    class_features = None
+    if armor is None and classes:
+        cls_name = classes[0].get("cls", "")
+        if cls_name == "Barbarian":
+            class_features = {"unarmored_defense_ability_mod": mods["CON"]}
+        elif cls_name == "Monk":
+            class_features = {"unarmored_defense_ability_mod": mods["WIS"]}
+    ac = rules.armor_class(mods["DEX"], armor, shield, class_features)
 
     proficiencies = sheet.get("proficiencies") or {}
     prof_skills = set(proficiencies.get("skills") or [])
@@ -65,7 +74,6 @@ def derive(sheet: dict, catalog: Catalog, draft: dict) -> dict:
     passive_perception = 10 + skills["Perception"]
 
     spellcasting = None
-    classes = sheet.get("classes") or []
     if classes:
         cls_name = classes[0].get("cls", "")
         ability = CASTING_ABILITY.get(cls_name)

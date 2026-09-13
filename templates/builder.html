@@ -426,7 +426,7 @@ function say(el, text, kind) {
 // header api() uses, then hand the browser a blob to save instead.
 async function downloadCharacterMd(name) {
   try {
-    const r = await fetch(`/api/characters/${encodeURIComponent(name)}/download.md`, {headers: H()});
+    const r = await fetch(`/api/characters/${encodeURIComponent(name)}/md`, {headers: H()});
     if (!r.ok) throw new Error(`${r.status}`);
     const blob = await r.blob();
     const url = URL.createObjectURL(blob);

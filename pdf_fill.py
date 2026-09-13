@@ -28,6 +28,8 @@ from pathlib import Path
 
 from pypdf import PdfReader, PdfWriter
 
+from chargen.catalog import Catalog
+
 _TEMPLATE = Path(__file__).resolve().parent / "assets" / "character-sheet-template.pdf"
 
 _SKILL_FIELD = {
@@ -101,7 +103,7 @@ def _proficiencies_text(sheet: dict) -> str:
     return "\n".join(parts)
 
 
-def fill(sheet: dict, derived: dict) -> bytes:
+def fill(sheet: dict, derived: dict, catalog: Catalog) -> bytes:
     reader = PdfReader(str(_TEMPLATE))
     writer = PdfWriter()
     writer.append(reader)
@@ -113,6 +115,11 @@ def fill(sheet: dict, derived: dict) -> bytes:
     personality = sheet.get("personality") or {}
     skills = derived.get("skills") or {}
     saves = derived.get("saves") or {}
+
+    total_level = sum(c.get("level", 0) for c in sheet.get("classes") or [])
+    hit_dice = combat.get("hit_dice") or []
+    first_hit_die = hit_dice[0] if hit_dice else None
+    hd_text = f"{total_level}d{first_hit_die['die']}" if first_hit_die else ""
 
     values: dict[str, str] = {
         "CharacterName": sheet.get("name", ""),
@@ -127,9 +134,8 @@ def fill(sheet: dict, derived: dict) -> bytes:
         "HPMax": str(combat.get("hp_max", "")),
         "HPCurrent": str(combat.get("hp_current", "")),
         "HPTemp": str(combat.get("hp_temp", 0)),
-        "HD": "".join(f"{h.get('die', '')}" for h in combat.get("hit_dice") or [])[:1]
-              and f"1d{(combat.get('hit_dice') or [{}])[0].get('die', '')}",
-        "HDTotal": str(sum(c.get("level", 0) for c in sheet.get("classes") or [])),
+        "HD": hd_text,
+        "HDTotal": str(total_level),
         "ProfBonus": _fmt_mod(derived.get("proficiency_bonus", 2)),
         "Passive": str(derived.get("passive_perception", 10)),
         "Inspiration": "1" if (sheet.get("conditions") or {}).get("inspiration") else "",
@@ -155,7 +161,13 @@ def fill(sheet: dict, derived: dict) -> bytes:
         if skill_name in skills:
             values[field_name] = _fmt_mod(skills[skill_name])
 
-    weapon_names = [i["name"] for i in (sheet.get("equipment") or [])][:3]
+    weapon_catalog_names = {w.name for w in catalog.weapons()}
+    equipment = sheet.get("equipment") or []
+    equipped_weapons = [i["name"] for i in equipment
+                        if i.get("name") in weapon_catalog_names and i.get("equipped")]
+    other_weapons = [i["name"] for i in equipment
+                     if i.get("name") in weapon_catalog_names and not i.get("equipped")]
+    weapon_names = (equipped_weapons + other_weapons)[:3]
     wpn_fields = ["Wpn Name", "Wpn Name 2", "Wpn Name 3"]
     for name, field in zip(weapon_names, wpn_fields):
         values[field] = name

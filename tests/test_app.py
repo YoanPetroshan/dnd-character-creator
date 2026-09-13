@@ -63,6 +63,8 @@ def test_build_saves_all_three_formats(client, tmp_path):
     assert resp.status_code == 201, resp.get_json()
     body = resp.get_json()
     assert body["ok"] is True
+    assert body["name"] == "Torvin Bracewell"
+    assert body["level"] == 1
     yaml_path = tmp_path / "characters" / "Torvin Bracewell" / "current.yaml"
     md_path = tmp_path / "characters" / "Torvin Bracewell" / "character.md"
     pdf_path = tmp_path / "characters" / "Torvin Bracewell" / "character.pdf"
@@ -71,12 +73,50 @@ def test_build_saves_all_three_formats(client, tmp_path):
     assert pdf_path.exists() and pdf_path.read_bytes()[:4] == b"%PDF"
 
 
+def test_build_same_name_twice_is_refused_without_overwrite(client, tmp_path):
+    draft = _human_fighter_draft()
+    first = client.post("/api/chargen/build", json=draft)
+    assert first.status_code == 201, first.get_json()
+
+    yaml_path = tmp_path / "characters" / "Torvin Bracewell" / "current.yaml"
+    original_yaml = yaml_path.read_text(encoding="utf-8")
+
+    # A second build under the same name, no ?overwrite=1: refused, and the
+    # first character's saved sheet must be untouched (C1 — this used to
+    # silently destroy it).
+    changed_draft = dict(draft)
+    changed_draft["player"] = "SomeoneElse"
+    second = client.post("/api/chargen/build", json=changed_draft)
+    assert second.status_code == 409
+    assert "already exists" in second.get_json()["error"]
+    assert yaml_path.read_text(encoding="utf-8") == original_yaml
+
+    # With ?overwrite=1, the build proceeds normally.
+    third = client.post("/api/chargen/build?overwrite=1", json=changed_draft)
+    assert third.status_code == 201, third.get_json()
+    assert yaml_path.read_text(encoding="utf-8") != original_yaml
+
+
 def test_characters_list_endpoint(client):
     client.post("/api/chargen/build", json=_human_fighter_draft())
     resp = client.get("/api/characters")
     assert resp.status_code == 200
     names = [c["name"] for c in resp.get_json()]
     assert "Torvin Bracewell" in names
+
+
+def test_spells_endpoint_filters_by_class(client):
+    unfiltered = client.get("/api/chargen/spells")
+    assert unfiltered.status_code == 200
+    all_spells = unfiltered.get_json()["spells"]
+
+    filtered = client.get("/api/chargen/spells?class=Wizard")
+    assert filtered.status_code == 200
+    wizard_spells = filtered.get_json()["spells"]
+
+    assert len(wizard_spells) < len(all_spells)
+    wizard_names = {s["name"] for s in wizard_spells}
+    assert "Cure Wounds" not in wizard_names  # Cleric/Druid/Bard/Paladin/Ranger only
 
 
 def test_download_endpoints(client):

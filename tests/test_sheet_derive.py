@@ -81,6 +81,49 @@ def test_non_caster_has_no_spellcasting_block():
     assert out["spellcasting"] is None
 
 
+def test_barbarian_unarmored_defense_uses_con_mod():
+    sheet = {
+        "name": "Grunda Ironfist",
+        "race": "Human",
+        "background": "Outlander",
+        "classes": [{"cls": "Barbarian", "subclass": "", "level": 1}],
+        "ability_scores": {"STR": 16, "DEX": 15, "CON": 14,
+                           "INT": 8, "WIS": 10, "CHA": 8},
+        "proficiencies": {
+            "saving_throws": ["STR", "CON"], "skills": [],
+            "armor": ["Light Armor", "Medium Armor", "Shields"],
+            "weapons": ["Simple Weapons", "Martial Weapons"],
+            "tools": [], "languages": [],
+        },
+        "equipment": [],
+    }
+    draft = {"equipped_armor_id": None, "shield": False}
+    out = sheet_derive.derive(sheet, CATALOG, draft)
+    # DEX 15 -> mod +2, CON 14 -> mod +2 -> AC = 10 + 2 + 2 = 14
+    assert out["ac"] == 14
+
+
+def test_monk_unarmored_defense_uses_wis_mod():
+    sheet = {
+        "name": "Wu Jing",
+        "race": "Human",
+        "background": "Hermit",
+        "classes": [{"cls": "Monk", "subclass": "", "level": 1}],
+        "ability_scores": {"STR": 10, "DEX": 15, "CON": 12,
+                           "INT": 10, "WIS": 16, "CHA": 8},
+        "proficiencies": {
+            "saving_throws": ["STR", "DEX"], "skills": [],
+            "armor": [], "weapons": ["Simple Weapons"],
+            "tools": [], "languages": [],
+        },
+        "equipment": [],
+    }
+    draft = {"equipped_armor_id": None, "shield": False}
+    out = sheet_derive.derive(sheet, CATALOG, draft)
+    # DEX 15 -> mod +2, WIS 16 -> mod +3 -> AC = 10 + 2 + 3 = 15
+    assert out["ac"] == 15
+
+
 def test_caster_has_spellcasting_block():
     sheet = {
         "name": "Sylwen Nightbrook",

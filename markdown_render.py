@@ -25,7 +25,7 @@ def _classes_line(sheet: dict) -> str:
     return " / ".join(parts)
 
 
-def render(sheet: dict, derived: dict) -> str:
+def render(sheet: dict, derived: dict, catalog=None) -> str:
     combat = sheet.get("combat") or {}
     scores = sheet.get("ability_scores") or {}
     mods = derived.get("ability_mods") or {}
@@ -97,9 +97,39 @@ def render(sheet: dict, derived: dict) -> str:
         lines.append(f"- **Ability:** {spellcasting['ability']}  |  "
                      f"**Save DC** {spellcasting['save_dc']}  |  "
                      f"**Attack Bonus** {_fmt_mod(spellcasting['attack_bonus'])}")
-        for spell in sheet.get("spells") or []:
-            prepared_tag = " (prepared)" if spell.get("prepared") else ""
-            lines.append(f"- {spell.get('name', '')}{prepared_tag}")
+        spells = sheet.get("spells") or []
+        # chargen.build()'s sheet["spells"] entries carry name/cls/prepared
+        # but not a spell's level — that lives on the catalog's own Spell
+        # records. When a catalog is supplied, look each spell up by name
+        # to group the list by level; without one, fall back to a flat list
+        # so this stays usable with just a sheet + derived dict.
+        level_by_name: dict[str, int] = {}
+        if catalog is not None:
+            for s in catalog.spells():
+                level_by_name.setdefault(s.name, s.level)
+        if level_by_name and spells:
+            grouped: dict[int, list[dict]] = {}
+            for spell in spells:
+                lvl = level_by_name.get(spell.get("name", ""), 0)
+                grouped.setdefault(lvl, []).append(spell)
+            for lvl in sorted(grouped):
+                label = "Cantrips" if lvl == 0 else f"Level {lvl}"
+                lines.append(f"- **{label}**")
+                for spell in grouped[lvl]:
+                    prepared_tag = " (prepared)" if spell.get("prepared") else ""
+                    lines.append(f"  - {spell.get('name', '')}{prepared_tag}")
+        else:
+            for spell in spells:
+                prepared_tag = " (prepared)" if spell.get("prepared") else ""
+                lines.append(f"- {spell.get('name', '')}{prepared_tag}")
+        lines.append("")
+
+    spell_slots = sheet.get("spell_slots") or {}
+    if spell_slots:
+        lines.append("## Spell Slots")
+        for lvl in sorted(spell_slots, key=lambda k: int(k)):
+            info = spell_slots[lvl] or {}
+            lines.append(f"- Level {lvl}: {info.get('max', 0)} max")
         lines.append("")
 
     lines.append("## Features & Traits")
