@@ -1148,7 +1148,7 @@ $('#build-btn').addEventListener('click', async () => {
   try {
     const d = await api('/api/chargen/build', {method: 'POST', body: JSON.stringify(DRAFT)});
     say(msg, `<b>${esc(d.name)}</b> е записан — ниво ${d.level}.
-      <span class=”act” style=”margin-left:10px”>Записан</span>
+      <span class="act" style="margin-left:10px">Записан</span>
       <button type="button" class="act" style="margin-left:10px" data-download-name="${esc(d.name)}">Свали DM файл</button>`, 'ok');
     msg.querySelector('[data-download-name]').addEventListener('click', () => downloadCharacterMd(d.name));
     $('#build-btn').disabled = true;
