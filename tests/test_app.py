@@ -1,5 +1,6 @@
 import io
 import json
+from urllib.parse import quote
 
 import pytest
 
@@ -125,3 +126,24 @@ def test_download_endpoints(client):
         resp = client.get(f"/api/characters/Torvin Bracewell/{fmt}")
         assert resp.status_code == 200, (fmt, resp.get_json() if resp.is_json else resp.data)
         assert resp.data.startswith(prefix) or prefix in resp.data[:200]
+
+
+def test_download_content_disposition_is_latin1_safe_for_a_cyrillic_name(client):
+    # Regression test: a character name outside latin-1 (this app's own
+    # examples are Bulgarian) used to crash the real dev server with
+    # UnicodeEncodeError while writing response headers, because
+    # Content-Disposition's `filename=` was set to the raw Unicode name.
+    # Flask's test client doesn't transmit real HTTP bytes, so it would not
+    # catch this on its own — encode the header value the same way
+    # Werkzeug's real socket layer does, so this test fails the same way
+    # production did if the header ever regresses to a bare Unicode name.
+    draft = dict(_human_fighter_draft())
+    draft["name"] = "Тестов Герой"
+    resp = client.post("/api/chargen/build", json=draft)
+    assert resp.status_code == 201, resp.get_json()
+
+    dl = client.get(f"/api/characters/{quote('Тестов Герой')}/md")
+    assert dl.status_code == 200
+    disposition = dl.headers["Content-Disposition"]
+    disposition.encode("latin-1")  # raises UnicodeEncodeError if this regresses
+    assert "filename*=UTF-8''" in disposition

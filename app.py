@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import dataclasses
 import os
+from urllib.parse import quote
 
 from flask import Flask, jsonify, request, render_template, Response, send_from_directory
 
@@ -127,8 +128,16 @@ def api_character_download(name: str, fmt: str):
     with open(path, mode, encoding=encoding) as f:
         data = f.read()
     response = Response(data, mimetype=_FMT_CONTENT_TYPE[fmt])
+    # HTTP header values must be latin-1; a character name is free-form
+    # Unicode (this app's own examples are Bulgarian/Cyrillic), so the plain
+    # `filename=` fallback must stay ASCII-only and the real name goes in
+    # the RFC 6266 `filename*=` parameter instead. Without this, downloading
+    # any character whose name has a non-latin-1 character crashes Werkzeug
+    # with UnicodeEncodeError while writing the response headers.
+    encoded_name = quote(f"{safe_name}.{fmt}")
     response.headers["Content-Disposition"] = (
-        f'attachment; filename="{safe_name}.{fmt}"'
+        f'attachment; filename="character.{fmt}"; '
+        f"filename*=UTF-8''{encoded_name}"
     )
     return response
 

@@ -1271,7 +1271,7 @@ async function preview() {
     const d = await api('/api/chargen/preview',
                         {method: 'POST', body: JSON.stringify(DRAFT)});
     if (mine !== seq) return;                    // a newer preview won
-    LAST = {sheet: d.problems.length ? null : d.sheet, problems: d.problems || [], warnings: d.warnings || []};
+    LAST = {sheet: (d.problems || []).length ? null : d.sheet, problems: d.problems || [], warnings: d.warnings || []};
   } catch (e) {
     if (mine !== seq) return;
     LAST = {sheet: null, problems: ['Сървърът не отговори: ' + e.message], warnings: []};
