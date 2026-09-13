@@ -1,0 +1,904 @@
+{
+  "terms": [
+    {
+      "en": "Ability",
+      "bg": "Способност (Ability)"
+    },
+    {
+      "en": "Ability Check",
+      "bg": "Проверка на умение (Ability Check)"
+    },
+    {
+      "en": "Ability Score",
+      "bg": "Стойност на способност (Ability Score)"
+    },
+    {
+      "en": "Strength (STR)",
+      "bg": "Сила (Strength)"
+    },
+    {
+      "en": "Dexterity (DEX)",
+      "bg": "Ловкост (Dexterity)"
+    },
+    {
+      "en": "Constitution (CON)",
+      "bg": "Издръжливост (Constitution)"
+    },
+    {
+      "en": "Intelligence (INT)",
+      "bg": "Интелект (Intelligence)"
+    },
+    {
+      "en": "Wisdom (WIS)",
+      "bg": "Мъдрост (Wisdom)"
+    },
+    {
+      "en": "Charisma (CHA)",
+      "bg": "Харизма (Charisma)"
+    },
+    {
+      "en": "Modifier",
+      "bg": "Модификатор"
+    },
+    {
+      "en": "Acrobatics",
+      "bg": "Акробатика (Acrobatics)"
+    },
+    {
+      "en": "Animal Handling",
+      "bg": "Работа с животни (Animal Handling)"
+    },
+    {
+      "en": "Arcana",
+      "bg": "Аркана (Arcana)"
+    },
+    {
+      "en": "Athletics",
+      "bg": "Атлетика (Athletics)"
+    },
+    {
+      "en": "Deception",
+      "bg": "Заблуда (Deception)"
+    },
+    {
+      "en": "History",
+      "bg": "История (History)"
+    },
+    {
+      "en": "Insight",
+      "bg": "Проницателност (Insight)"
+    },
+    {
+      "en": "Intimidation",
+      "bg": "Сплашване (Intimidation)"
+    },
+    {
+      "en": "Investigation",
+      "bg": "Разследване (Investigation)"
+    },
+    {
+      "en": "Medicine",
+      "bg": "Медицина (Medicine)"
+    },
+    {
+      "en": "Nature",
+      "bg": "Природа (Nature)"
+    },
+    {
+      "en": "Perception",
+      "bg": "Възприятие (Perception)"
+    },
+    {
+      "en": "Performance",
+      "bg": "Представление (Performance)"
+    },
+    {
+      "en": "Persuasion",
+      "bg": "Убеждаване (Persuasion)"
+    },
+    {
+      "en": "Religion",
+      "bg": "Религия (Religion)"
+    },
+    {
+      "en": "Sleight of Hand",
+      "bg": "Ловкост на ръка (Sleight of Hand)"
+    },
+    {
+      "en": "Stealth",
+      "bg": "Скриване (Stealth)"
+    },
+    {
+      "en": "Survival",
+      "bg": "Оцеляване (Survival)"
+    },
+    {
+      "en": "Attack",
+      "bg": "Атака"
+    },
+    {
+      "en": "Attack Action",
+      "bg": "Действие за атака (Attack Action)"
+    },
+    {
+      "en": "Attack Roll",
+      "bg": "Хвърляне за атака (Attack Roll)"
+    },
+    {
+      "en": "Attack Bonus",
+      "bg": "Attack Bonus"
+    },
+    {
+      "en": "Armor Class (AC)",
+      "bg": "Armor Class (AC)"
+    },
+    {
+      "en": "Hit",
+      "bg": "Уцелване"
+    },
+    {
+      "en": "Miss",
+      "bg": "Пропуск"
+    },
+    {
+      "en": "Damage",
+      "bg": "Щета / Щети"
+    },
+    {
+      "en": "Damage Type",
+      "bg": "Вид щета"
+    },
+    {
+      "en": "Hit Points (HP)",
+      "bg": "Hit Points (HP)"
+    },
+    {
+      "en": "Hit Dice",
+      "bg": "Hit Dice"
+    },
+    {
+      "en": "Temporary Hit Points",
+      "bg": "Временни Hit Points"
+    },
+    {
+      "en": "Saving Throw",
+      "bg": "Спасително хвърляне (Saving Throw)"
+    },
+    {
+      "en": "Saving Throw DC",
+      "bg": "Коефициент за спасително хвърляне (Saving Throw DC)"
+    },
+    {
+      "en": "Difficulty Class (DC)",
+      "bg": "Коефициент на трудност (DC)"
+    },
+    {
+      "en": "Death Saving Throw",
+      "bg": "Спасително хвърляне при смърт"
+    },
+    {
+      "en": "Critical Hit (Natural 20)",
+      "bg": "Критичен удар (Critical Hit / Natural 20)"
+    },
+    {
+      "en": "Critical Fail (Natural 1)",
+      "bg": "Критичен провал (Critical Fail / Natural 1)"
+    },
+    {
+      "en": "Initiative",
+      "bg": "Инициатива"
+    },
+    {
+      "en": "Initiative Roll",
+      "bg": "Хвърляне за инициатива"
+    },
+    {
+      "en": "Advantage",
+      "bg": "Advantage"
+    },
+    {
+      "en": "Disadvantage",
+      "bg": "Disadvantage"
+    },
+    {
+      "en": "Bonus Action",
+      "bg": "Bonus Action"
+    },
+    {
+      "en": "Reaction",
+      "bg": "Реакция"
+    },
+    {
+      "en": "Round",
+      "bg": "Рунд"
+    },
+    {
+      "en": "Turn",
+      "bg": "Ход"
+    },
+    {
+      "en": "Melee Attack",
+      "bg": "Бойна атака (в ближен бой)"
+    },
+    {
+      "en": "Ranged Attack",
+      "bg": "Далекобойна атака (Ranged Attack)"
+    },
+    {
+      "en": "Weapon Attack",
+      "bg": "Атака с оръжие"
+    },
+    {
+      "en": "Spell Attack",
+      "bg": "Магическа атака (Spell Attack)"
+    },
+    {
+      "en": "Proficiency",
+      "bg": "Майсторство (Proficiency)"
+    },
+    {
+      "en": "Proficiency Bonus",
+      "bg": "Бонус от майсторство"
+    },
+    {
+      "en": "Dash",
+      "bg": "Спринт (Dash)"
+    },
+    {
+      "en": "Disengage",
+      "bg": "Откъсване (Disengage)"
+    },
+    {
+      "en": "Dodge",
+      "bg": "Отклоняване (Dodge)"
+    },
+    {
+      "en": "Help",
+      "bg": "Помощ (Help)"
+    },
+    {
+      "en": "Hide",
+      "bg": "Скриване (Hide)"
+    },
+    {
+      "en": "Ready",
+      "bg": "Подготовка (Ready)"
+    },
+    {
+      "en": "Search",
+      "bg": "Търсене (Search)"
+    },
+    {
+      "en": "Use an Object",
+      "bg": "Използване на предмет"
+    },
+    {
+      "en": "Grapple",
+      "bg": "Хващане (Grapple)"
+    },
+    {
+      "en": "Shove",
+      "bg": "Бутане (Shove)"
+    },
+    {
+      "en": "Opportunity Attack",
+      "bg": "Атака при удобен случай (Opportunity Attack)"
+    },
+    {
+      "en": "Flanking",
+      "bg": "Обкръжаване (Flanking)"
+    },
+    {
+      "en": "Blinded",
+      "bg": "Сляп (Blinded)"
+    },
+    {
+      "en": "Charmed",
+      "bg": "Очарован (Charmed)"
+    },
+    {
+      "en": "Deafened",
+      "bg": "Оглушен (Deafened)"
+    },
+    {
+      "en": "Exhaustion",
+      "bg": "Изтощение (Exhaustion)"
+    },
+    {
+      "en": "Frightened",
+      "bg": "Уплашен (Frightened)"
+    },
+    {
+      "en": "Grappled",
+      "bg": "Хванат (Grappled)"
+    },
+    {
+      "en": "Incapacitated",
+      "bg": "Недееспособен (Incapacitated)"
+    },
+    {
+      "en": "Invisible",
+      "bg": "Невидим (Invisible)"
+    },
+    {
+      "en": "Paralyzed",
+      "bg": "Парализиран (Paralyzed)"
+    },
+    {
+      "en": "Petrified",
+      "bg": "Вкаменен (Petrified)"
+    },
+    {
+      "en": "Poisoned",
+      "bg": "Отровен (Poisoned)"
+    },
+    {
+      "en": "Prone",
+      "bg": "Повален (Prone)"
+    },
+    {
+      "en": "Restrained",
+      "bg": "Ограничен (Restrained)"
+    },
+    {
+      "en": "Stunned",
+      "bg": "Зашеметен (Stunned)"
+    },
+    {
+      "en": "Surprised",
+      "bg": "Изненадан (Surprised)"
+    },
+    {
+      "en": "Unconscious",
+      "bg": "В безсъзнание (Unconscious)"
+    },
+    {
+      "en": "Acid",
+      "bg": "Киселина"
+    },
+    {
+      "en": "Bludgeoning",
+      "bg": "Смазващи щети"
+    },
+    {
+      "en": "Cold",
+      "bg": "Студ"
+    },
+    {
+      "en": "Fire",
+      "bg": "Огън"
+    },
+    {
+      "en": "Force",
+      "bg": "Сила (Force)"
+    },
+    {
+      "en": "Lightning",
+      "bg": "Мълния"
+    },
+    {
+      "en": "Necrotic",
+      "bg": "Некротични щети"
+    },
+    {
+      "en": "Piercing",
+      "bg": "Прободни щети"
+    },
+    {
+      "en": "Poison",
+      "bg": "Отрова"
+    },
+    {
+      "en": "Psychic",
+      "bg": "Психични щети"
+    },
+    {
+      "en": "Radiant",
+      "bg": "Лъчисти щети"
+    },
+    {
+      "en": "Slashing",
+      "bg": "Режещи щети"
+    },
+    {
+      "en": "Thunder",
+      "bg": "Гръм"
+    },
+    {
+      "en": "Resistance",
+      "bg": "Съпротива (Resistance) — половин щети"
+    },
+    {
+      "en": "Immunity",
+      "bg": "Имунитет (Immunity) — нула щети"
+    },
+    {
+      "en": "Vulnerability",
+      "bg": "Уязвимост (Vulnerability) — двойни щети"
+    },
+    {
+      "en": "Absorption",
+      "bg": "Поглъщане (Absorption) — лекува вместо щети"
+    },
+    {
+      "en": "Spell",
+      "bg": "Заклинание (Spell)"
+    },
+    {
+      "en": "Cantrip",
+      "bg": "Проста магия (Cantrip)"
+    },
+    {
+      "en": "Spell Slot",
+      "bg": "Spell Slot"
+    },
+    {
+      "en": "Spellcasting",
+      "bg": "Магьосничество (Spellcasting)"
+    },
+    {
+      "en": "Spell Save DC",
+      "bg": "Коефициент за съпротива на магия (Spell Save DC)"
+    },
+    {
+      "en": "Concentration",
+      "bg": "Concentration"
+    },
+    {
+      "en": "Ritual",
+      "bg": "Ритуал (Ritual)"
+    },
+    {
+      "en": "Component",
+      "bg": "Компонент"
+    },
+    {
+      "en": "Verbal (V)",
+      "bg": "Словесен (Verbal)"
+    },
+    {
+      "en": "Somatic (S)",
+      "bg": "Соматичен (Somatic)"
+    },
+    {
+      "en": "Material (M)",
+      "bg": "Материален (Material)"
+    },
+    {
+      "en": "Duration",
+      "bg": "Продължителност"
+    },
+    {
+      "en": "Range",
+      "bg": "Обхват"
+    },
+    {
+      "en": "Area of Effect",
+      "bg": "Зона на поражение (Area of Effect)"
+    },
+    {
+      "en": "Cone",
+      "bg": "Конус"
+    },
+    {
+      "en": "Cube",
+      "bg": "Куб"
+    },
+    {
+      "en": "Cylinder",
+      "bg": "Цилиндър"
+    },
+    {
+      "en": "Line",
+      "bg": "Линия"
+    },
+    {
+      "en": "Sphere",
+      "bg": "Сфера"
+    },
+    {
+      "en": "Abjuration",
+      "bg": "Защита (Abjuration)"
+    },
+    {
+      "en": "Conjuration",
+      "bg": "Призоваване (Conjuration)"
+    },
+    {
+      "en": "Divination",
+      "bg": "Прорицание (Divination)"
+    },
+    {
+      "en": "Enchantment",
+      "bg": "Омагьосване (Enchantment)"
+    },
+    {
+      "en": "Evocation",
+      "bg": "Разрушителна магия (Evocation)"
+    },
+    {
+      "en": "Illusion",
+      "bg": "Илюзия (Illusion)"
+    },
+    {
+      "en": "Necromancy",
+      "bg": "Некромантия (Necromancy)"
+    },
+    {
+      "en": "Transmutation",
+      "bg": "Трансмутация (Transmutation)"
+    },
+    {
+      "en": "Aberration",
+      "bg": "Аберация"
+    },
+    {
+      "en": "Beast",
+      "bg": "Звяр"
+    },
+    {
+      "en": "Celestial",
+      "bg": "Небесно създание"
+    },
+    {
+      "en": "Construct",
+      "bg": "Конструкт"
+    },
+    {
+      "en": "Dragon",
+      "bg": "Дракон"
+    },
+    {
+      "en": "Elemental",
+      "bg": "Елементал"
+    },
+    {
+      "en": "Fey",
+      "bg": "Фейско създание"
+    },
+    {
+      "en": "Fiend",
+      "bg": "Демон / Дявол (Fiend)"
+    },
+    {
+      "en": "Giant",
+      "bg": "Великан"
+    },
+    {
+      "en": "Humanoid",
+      "bg": "Хуманоид"
+    },
+    {
+      "en": "Monstrosity",
+      "bg": "Чудовищно създание"
+    },
+    {
+      "en": "Ooze",
+      "bg": "Слуз"
+    },
+    {
+      "en": "Plant",
+      "bg": "Растение"
+    },
+    {
+      "en": "Undead",
+      "bg": "Немъртъв"
+    },
+    {
+      "en": "Darkvision",
+      "bg": "Тъмновиждане (Darkvision)"
+    },
+    {
+      "en": "Blindsight",
+      "bg": "Сляпо виждане (Blindsight)"
+    },
+    {
+      "en": "Tremorsense",
+      "bg": "Трепетоусет (Tremorsense)"
+    },
+    {
+      "en": "Truesight",
+      "bg": "Истинско виждане (Truesight)"
+    },
+    {
+      "en": "Passive Perception",
+      "bg": "Пасивно възприятие"
+    },
+    {
+      "en": "Difficult Terrain",
+      "bg": "Труден терен (Difficult Terrain)"
+    },
+    {
+      "en": "Half Cover",
+      "bg": "Половинно укритие (+2 AC, +2 DEX saves)"
+    },
+    {
+      "en": "Three-Quarters Cover",
+      "bg": "Тричетвъртинно укритие (+5 AC, +5 DEX saves)"
+    },
+    {
+      "en": "Total Cover",
+      "bg": "Пълно укритие"
+    },
+    {
+      "en": "Obscured (Lightly)",
+      "bg": "Леко замъглен"
+    },
+    {
+      "en": "Obscured (Heavily)",
+      "bg": "Силно замъглен"
+    },
+    {
+      "en": "Character",
+      "bg": "Герой / Персонаж"
+    },
+    {
+      "en": "Class",
+      "bg": "Клас"
+    },
+    {
+      "en": "Subclass",
+      "bg": "Подклас (Subclass)"
+    },
+    {
+      "en": "Multiclass",
+      "bg": "Мултиклас (Multiclass)"
+    },
+    {
+      "en": "Level",
+      "bg": "Ниво"
+    },
+    {
+      "en": "Experience Points (XP)",
+      "bg": "Experience Points (XP)"
+    },
+    {
+      "en": "Background",
+      "bg": "Минало (Background)"
+    },
+    {
+      "en": "Race / Species",
+      "bg": "Раса / Вид"
+    },
+    {
+      "en": "Feat",
+      "bg": "Подвиг (Feat)"
+    },
+    {
+      "en": "Feature",
+      "bg": "Класова способност (Feature)"
+    },
+    {
+      "en": "Trait",
+      "bg": "Черта (Trait)"
+    },
+    {
+      "en": "Alignment",
+      "bg": "Мироглед (Alignment)"
+    },
+    {
+      "en": "Inspiration",
+      "bg": "Вдъхновение"
+    },
+    {
+      "en": "Equipment",
+      "bg": "Екипировка (Equipment)"
+    },
+    {
+      "en": "Weapon",
+      "bg": "Оръжие"
+    },
+    {
+      "en": "Armor",
+      "bg": "Броня"
+    },
+    {
+      "en": "Shield",
+      "bg": "Щит"
+    },
+    {
+      "en": "Item",
+      "bg": "Предмет"
+    },
+    {
+      "en": "Magic Item",
+      "bg": "Магически предмет"
+    },
+    {
+      "en": "Potion",
+      "bg": "Отвара"
+    },
+    {
+      "en": "Scroll",
+      "bg": "Свитък"
+    },
+    {
+      "en": "Wand",
+      "bg": "Пръчка"
+    },
+    {
+      "en": "Staff",
+      "bg": "Жезъл"
+    },
+    {
+      "en": "Ring",
+      "bg": "Пръстен"
+    },
+    {
+      "en": "Amulet",
+      "bg": "Амулет"
+    },
+    {
+      "en": "Tool",
+      "bg": "Инструмент"
+    },
+    {
+      "en": "Treasure",
+      "bg": "Съкровище"
+    },
+    {
+      "en": "Gold Piece (GP)",
+      "bg": "Златна монета (GP)"
+    },
+    {
+      "en": "Silver Piece (SP)",
+      "bg": "Сребърна монета (SP)"
+    },
+    {
+      "en": "Copper Piece (CP)",
+      "bg": "Медна монета (CP)"
+    },
+    {
+      "en": "Platinum Piece (PP)",
+      "bg": "Платинена монета (PP)"
+    },
+    {
+      "en": "Electrum Piece (EP)",
+      "bg": "Електрумова монета (EP)"
+    },
+    {
+      "en": "Short Rest",
+      "bg": "Кратка почивка"
+    },
+    {
+      "en": "Long Rest",
+      "bg": "Дълга почивка"
+    },
+    {
+      "en": "Rest",
+      "bg": "Почивка"
+    },
+    {
+      "en": "Health",
+      "bg": "Health"
+    },
+    {
+      "en": "Campaign",
+      "bg": "Кампания"
+    },
+    {
+      "en": "Quest",
+      "bg": "Мисия (Quest)"
+    },
+    {
+      "en": "Combat",
+      "bg": "Бой"
+    },
+    {
+      "en": "Encounter",
+      "bg": "Среща / Сблъсък (Encounter)"
+    },
+    {
+      "en": "Dungeon Master (DM)",
+      "bg": "Dungeon Master (DM)"
+    },
+    {
+      "en": "Non-Player Character (NPC)",
+      "bg": "Non-Player Character (NPC)"
+    },
+    {
+      "en": "Party",
+      "bg": "Група"
+    },
+    {
+      "en": "Creature",
+      "bg": "Създание"
+    },
+    {
+      "en": "Monster",
+      "bg": "Чудовище"
+    },
+    {
+      "en": "Trap",
+      "bg": "Капан"
+    },
+    {
+      "en": "Hazard",
+      "bg": "Опасност (Hazard)"
+    },
+    {
+      "en": "Loot",
+      "bg": "Плячка (Loot)"
+    },
+    {
+      "en": "Bonus",
+      "bg": "Бонус"
+    },
+    {
+      "en": "Speed",
+      "bg": "Скорост"
+    },
+    {
+      "en": "Movement",
+      "bg": "Движение"
+    },
+    {
+      "en": "Magic",
+      "bg": "Магия"
+    },
+    {
+      "en": "Effect",
+      "bg": "Ефект"
+    },
+    {
+      "en": "Target",
+      "bg": "Цел"
+    }
+  ],
+  "keep_english": [
+    "Advantage",
+    "Disadvantage",
+    "Bonus Action",
+    "Spell Slot",
+    "Concentration",
+    "Hit Points",
+    "HP",
+    "Hit Dice",
+    "AC",
+    "XP",
+    "DC",
+    "DM",
+    "NPC",
+    "Attack Bonus",
+    "Health",
+    "Armor Class",
+    "Armor Class (AC)",
+    "Hit Points (HP)",
+    "Experience Points (XP)",
+    "Dungeon Master (DM)",
+    "Non-Player Character (NPC)"
+  ],
+  "never_translate": [
+    "Gundren Rockseeker",
+    "Sildar Hallwinter",
+    "Strahd von Zarovich",
+    "Elf",
+    "Dwarf",
+    "Halfling",
+    "Tiefling",
+    "Dragonborn",
+    "Gnome",
+    "Half-Orc",
+    "Aasimar",
+    "Goliath",
+    "High Elf",
+    "Wood Elf",
+    "Hill Dwarf",
+    "Mountain Dwarf",
+    "Lightfoot Halfling",
+    "Phandalin",
+    "Waterdeep",
+    "Candlekeep",
+    "Baldur's Gate",
+    "Tymora",
+    "Mystra",
+    "Lathander",
+    "Kelemvor",
+    "Fireball",
+    "Shield",
+    "Counterspell",
+    "Eldritch Blast",
+    "Cloak of Protection",
+    "Bag of Holding"
+  ]
+}
