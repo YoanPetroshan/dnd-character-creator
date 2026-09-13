@@ -1,3 +1,1364 @@
 <!doctype html>
-<title>Character Builder</title>
-<p>chargen builder placeholder — replaced in a later task.</p>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DnD — Нов герой</title>
+<meta name="dnd-token" content="{{ lan_token }}">
+<link rel="icon" href="/icons/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Spectral:wght@300;400;600&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Same tokens as menu.html — every template here carries its own inline CSS,
+   so the palette is duplicated on purpose rather than shared through a file
+   that does not exist. Keep the two in step when either changes. */
+:root{
+  --ink:#201206; --ink-2:#3F2712; --ink-3:#4C301A;
+  --hair:rgba(242,149,59,.30); --hair-soft:rgba(242,149,59,.15);
+  --gold:#F2953B; --gold-lit:#FFC178; --vellum:#FFE7C4;
+  --text:#FCE3C0; --dim:#EEBB86; --muted:#DCA05E;
+  --good:#6FBF8F; --warn:#D9A441; --crit:#C4574B;
+  --display:'Cinzel',Georgia,serif; --body:'Spectral',Georgia,serif;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--ink); color:var(--text);
+  font-family:var(--body); font-weight:400; font-size:16px; line-height:1.6;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+#bg{position:fixed; inset:0; z-index:0; display:block}
+#bg-glow{
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 108%, rgba(242,149,59,.16), transparent 60%),
+    radial-gradient(ellipse 80% 60% at 12% -10%, rgba(230,140,50,.14), transparent 62%),
+    linear-gradient(180deg,#150C04 0%, var(--ink) 60%);
+}
+.wrap{position:relative; z-index:1; max-width:1320px; margin:0 auto; padding:0 26px 90px}
+
+header.top{padding:44px 0 18px; text-align:center}
+.kicker{font-family:var(--mono); font-size:10px; letter-spacing:.34em;
+  text-transform:uppercase; color:var(--gold); margin:0 0 14px}
+h1{font-family:var(--display); font-weight:600; margin:0 0 10px;
+  font-size:clamp(30px,5vw,50px); color:var(--vellum); letter-spacing:.02em}
+.sub{color:var(--dim); margin:0; font-size:17px}
+.version{margin-top:14px; font-family:var(--mono); font-size:11px;
+  letter-spacing:.14em; color:var(--muted)}
+.version b{color:var(--gold-lit); font-weight:400}
+.version a{color:var(--gold); text-decoration:none}
+
+h2{font-family:var(--display); font-weight:600; color:var(--vellum);
+  font-size:22px; margin:0 0 4px; letter-spacing:.02em}
+h3{font-family:var(--display); font-size:16px; color:var(--gold-lit);
+  margin:0 0 6px; font-weight:600; letter-spacing:.01em}
+.hint{color:var(--muted); font-size:14px; margin:0 0 18px}
+.hint code{font-family:var(--mono); font-size:12px}
+
+/* ── the step indicator ─────────────────────────────────────────────── */
+nav.stepper{display:flex; gap:4px; justify-content:center; flex-wrap:wrap;
+  margin:20px 0 26px; border-bottom:1px solid var(--hair)}
+nav.stepper button{
+  background:none; border:0; border-bottom:2px solid transparent;
+  color:var(--dim); font-family:var(--display); font-size:12px;
+  letter-spacing:.12em; text-transform:uppercase; padding:11px 14px;
+  cursor:pointer; transition:color .15s, border-color .15s; white-space:nowrap;
+}
+nav.stepper button:hover{color:var(--gold-lit)}
+nav.stepper button.on{color:var(--gold-lit); border-bottom-color:var(--gold)}
+nav.stepper button:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+nav.stepper button .num{font-family:var(--mono); font-size:10px; color:var(--muted); margin-right:6px}
+nav.stepper button.done .num{color:var(--good)}
+nav.stepper button[hidden]{display:none}
+
+/* ── layout: steps on the left, the live sheet on the right ─────────── */
+.cols{display:grid; grid-template-columns:minmax(0,1fr) 372px; gap:22px; align-items:start}
+@media (max-width:1040px){ .cols{grid-template-columns:minmax(0,1fr)} }
+
+section.step{
+  background:rgba(63,39,18,.7); border:1px solid var(--hair);
+  border-radius:10px; padding:22px;
+}
+section.step[hidden]{display:none}
+.panel{
+  background:linear-gradient(180deg, rgba(76,48,26,.82), rgba(63,39,18,.82));
+  border:1px solid var(--hair); border-radius:10px; padding:18px 19px; margin-bottom:18px;
+}
+.fields{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px}
+label{display:flex; flex-direction:column; gap:6px; font-size:13px; color:var(--dim)}
+label span.lbl{font-family:var(--mono); font-size:10px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--gold)}
+input,select,textarea{
+  background:rgba(0,0,0,.4); color:var(--vellum);
+  border:1px solid var(--hair); border-radius:7px; padding:9px 11px;
+  font-family:var(--body); font-size:15px; width:100%;
+}
+input:focus,select:focus,textarea:focus{
+  outline:none; border-color:rgba(255,193,120,.75);
+  box-shadow:0 0 0 2px rgba(255,193,120,.14);
+}
+textarea{font-family:var(--mono); font-size:12.5px; line-height:1.55; min-height:110px; resize:vertical}
+input[type=checkbox],input[type=radio]{width:auto}
+.inline{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:16px}
+
+button.act,a.act{
+  font-family:var(--display); font-size:11.5px; letter-spacing:.14em;
+  text-transform:uppercase; padding:8px 14px; border-radius:6px;
+  border:1px solid var(--hair); background:rgba(0,0,0,.28);
+  color:var(--text); cursor:pointer; text-decoration:none; display:inline-block;
+  transition:border-color .15s, color .15s, background .15s;
+}
+button.act:hover,a.act:hover{border-color:var(--gold); color:var(--gold-lit)}
+button.act:focus-visible,a.act:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+button.act.primary{
+  background:linear-gradient(180deg, rgba(242,149,59,.44), rgba(150,86,24,.55));
+  border-color:rgba(255,193,120,.7); color:#FFF3E0;
+}
+button.act[disabled]{opacity:.4; cursor:not-allowed}
+/* .act sets its own display, which would otherwise beat the browser's
+   [hidden] rule and leave a hidden button on screen. */
+button.act[hidden],a.act[hidden]{display:none}
+
+.badge{font-family:var(--mono); font-size:9.5px; letter-spacing:.1em;
+  text-transform:uppercase; padding:3px 7px; border-radius:3px;
+  border:1px solid var(--hair); color:var(--muted); display:inline-block}
+.badge.on{color:var(--gold-lit); border-color:rgba(242,149,59,.5)}
+.badge.good{color:var(--good); border-color:rgba(111,191,143,.4)}
+.badge.warn{color:var(--warn); border-color:rgba(217,164,65,.4)}
+.badges{display:flex; gap:6px; flex-wrap:wrap; margin:8px 0}
+
+.msg{margin-top:14px; padding:11px 14px; border-radius:7px; font-size:14px;
+  border:1px solid var(--hair); background:rgba(0,0,0,.3)}
+.msg.ok{border-left:3px solid var(--good)}
+.msg.err{border-left:3px solid var(--crit)}
+.msg.info{border-left:3px solid var(--gold)}
+.msg.warn{border-left:3px solid var(--warn)}
+.msg[hidden]{display:none}
+
+.trait{border-top:1px solid var(--hair-soft); padding:9px 0 0; margin-top:9px}
+.trait b{color:var(--gold-lit); font-weight:600; font-family:var(--display); font-size:14px}
+.trait p{margin:3px 0 0; font-size:14px; color:var(--dim)}
+
+.kv{display:grid; grid-template-columns:auto 1fr; gap:4px 14px; font-size:14px; margin:6px 0}
+.kv dt{font-family:var(--mono); font-size:10px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--gold); padding-top:4px}
+.kv dd{margin:0; color:var(--text)}
+
+.checkgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:8px; margin-top:10px}
+.checkgrid label{flex-direction:row; align-items:center; gap:8px; font-size:14px;
+  color:var(--text); border:1px solid var(--hair-soft); border-radius:6px;
+  padding:7px 10px; cursor:pointer; background:rgba(0,0,0,.22)}
+.checkgrid label:hover{border-color:rgba(242,149,59,.34)}
+.checkgrid label.picked{border-color:var(--gold); color:var(--gold-lit)}
+.checkgrid label.off{opacity:.42}
+
+.counter{font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--muted)}
+.counter b{color:var(--gold-lit); font-weight:400}
+.counter.bad b{color:var(--crit)}
+
+.abil{display:grid; grid-template-columns:repeat(6,1fr); gap:9px}
+.abil label{align-items:center}
+.abil input{text-align:center; font-family:var(--mono); font-weight:400}
+.abil .fin{font-family:var(--mono); font-size:11px; color:var(--good); text-align:center}
+.abil .cost{font-family:var(--mono); font-size:10px; color:var(--muted); text-align:center}
+
+.pills{display:flex; gap:6px; flex-wrap:wrap; margin:10px 0}
+.pills button{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; padding:5px 10px;
+  border-radius:4px; background:rgba(0,0,0,.3); border:1px solid var(--hair);
+  color:var(--dim); cursor:pointer;
+}
+.pills button:hover{border-color:var(--gold); color:var(--gold-lit)}
+.pills button.on{border-color:var(--gold); color:var(--gold-lit); background:rgba(242,149,59,.12)}
+
+table.cat{width:100%; border-collapse:collapse; font-size:13.5px; margin-top:8px}
+table.cat th{font-family:var(--mono); font-size:9.5px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--gold); text-align:left;
+  border-bottom:1px solid var(--hair); padding:6px 8px; font-weight:400}
+table.cat td{border-bottom:1px solid var(--hair-soft); padding:6px 8px; color:var(--dim)}
+table.cat td b{color:var(--text); font-weight:400}
+table.cat tr:hover td{background:rgba(242,149,59,.06)}
+.scroll{max-height:430px; overflow-y:auto; border:1px solid var(--hair-soft);
+  border-radius:8px; padding:0 4px}
+
+details.spell{border-bottom:1px solid var(--hair-soft); padding:5px 0}
+details.spell summary{cursor:pointer; display:flex; gap:9px; align-items:center;
+  font-size:14px; color:var(--text); list-style:none}
+details.spell summary::-webkit-details-marker{display:none}
+details.spell summary .nm{flex:1}
+details.spell p{margin:6px 0 8px 26px; font-size:13.5px; color:var(--dim); white-space:pre-wrap}
+.lvlhead{font-family:var(--mono); font-size:10px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--gold); margin:16px 0 4px}
+
+/* ── the live derived sheet ─────────────────────────────────────────── */
+aside.live{position:sticky; top:16px;
+  background:linear-gradient(180deg, rgba(76,48,26,.9), rgba(63,39,18,.9));
+  border:1px solid var(--hair); border-radius:10px; padding:18px 19px;
+  max-height:calc(100vh - 32px); overflow-y:auto;
+}
+aside.live h2{font-size:18px; margin-bottom:2px}
+.stat{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline;
+  gap:10px; border-bottom:1px solid var(--hair-soft); padding:7px 0}
+.stat .n{font-family:var(--display); font-size:17px; color:var(--gold-lit); white-space:nowrap}
+.stat .k{font-family:var(--mono); font-size:10px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--gold)}
+.stat .src{font-family:var(--mono); font-size:10px; color:var(--muted); flex-basis:100%}
+.statline{display:flex; justify-content:space-between; font-size:13px; padding:2px 0}
+.statline .src{font-family:var(--mono); font-size:10px; color:var(--muted)}
+.statline b{font-family:var(--mono); color:var(--gold-lit); font-weight:400}
+.statline.prof{color:var(--gold-lit)}
+.problems{margin:10px 0 0; padding-left:18px; font-size:13px; color:var(--warn)}
+.problems li{margin-bottom:5px}
+
+.nav{display:flex; justify-content:space-between; gap:10px; margin-top:22px;
+  border-top:1px solid var(--hair); padding-top:16px}
+
+footer.foot{text-align:center; color:var(--muted); font-size:13px; padding:34px 0 0}
+footer.foot a{color:var(--gold)}
+
+@media (max-width:640px){
+  .abil{grid-template-columns:repeat(3,1fr)}
+  header.top{padding:30px 0 14px}
+  .wrap{padding:0 14px 60px}
+}
+@media (prefers-reduced-motion:reduce){ #bg{display:none} }
+</style>
+</head>
+<body>
+<div id="bg-glow"></div>
+<canvas id="bg" aria-hidden="true"></canvas>
+
+<div class="wrap">
+  <header class="top">
+    <p class="kicker">Ковачница за герои</p>
+    <h1>Нов герой</h1>
+    <p class="sub">Седем стъпки. Листът отдясно се преизчислява при всяка промяна.</p>
+  </header>
+
+  <!-- Who the character is — needed by every step, so it stays visible. -->
+  <div class="panel">
+    <div class="fields">
+      <label><span class="lbl">Име</span>
+        <input id="f-name" placeholder="Sylwen Nightbrook" autocomplete="off"></label>
+      <label><span class="lbl">Играч</span>
+        <input id="f-player" placeholder="по избор" autocomplete="off"></label>
+      <label><span class="lbl">Мироглед</span>
+        <select id="f-alignment">
+          <option value="">— избери —</option>
+          <option value="Lawful Good">Законно добър (LG)</option>
+          <option value="Neutral Good">Неутрално добър (NG)</option>
+          <option value="Chaotic Good">Хаотично добър (CG)</option>
+          <option value="Lawful Neutral">Законно неутрален (LN)</option>
+          <option value="Neutral">Неутрален (N)</option>
+          <option value="Chaotic Neutral">Хаотично неутрален (CN)</option>
+          <option value="Lawful Evil">Законно зъл (LE)</option>
+          <option value="Neutral Evil">Неутрално зъл (NE)</option>
+          <option value="Chaotic Evil">Хаотично зъл (CE)</option>
+        </select></label>
+      <label><span class="lbl">Ruleset филтър</span>
+        <select id="ruleset-filter">
+          <option value="">Всички</option>
+          <option value="2014">2014</option>
+          <option value="2024">2024</option>
+        </select></label>
+    </div>
+  </div>
+
+  <nav class="stepper" id="stepper" role="tablist"></nav>
+
+  <div class="cols">
+    <div>
+      <!-- ── 1. Race ──────────────────────────────────────────────── -->
+      <section class="step" id="step-race">
+        <h2>Раса</h2>
+        <p class="hint">Расата дава бонуси към характеристиките, скорост, размер, езици и умения.</p>
+        <div class="fields">
+          <label><span class="lbl">Race</span><select id="sel-race"></select></label>
+          <label id="lbl-subrace"><span class="lbl">Subrace</span><select id="sel-subrace"></select></label>
+        </div>
+        <div id="race-info"></div>
+        <div id="race-note" class="msg warn" hidden></div>
+        <div id="subrace-info"></div>
+      </section>
+
+      <!-- ── 2. Background ────────────────────────────────────────── -->
+      <section class="step" id="step-background" hidden>
+        <h2>Background</h2>
+        <p class="hint">Предисторията дава умения, инструменти, езици, стартово имущество и своя черта.</p>
+        <div class="fields">
+          <label><span class="lbl">Background</span><select id="sel-background"></select></label>
+        </div>
+        <div id="background-info"></div>
+        <div id="background-note" class="msg warn" hidden></div>
+      </section>
+
+      <!-- ── 3. Class ─────────────────────────────────────────────── -->
+      <section class="step" id="step-class" hidden>
+        <h2>Клас</h2>
+        <p class="hint">Класът дава кост на живот, спасителни хвърляния, владения и избор на умения.</p>
+        <div class="fields">
+          <label><span class="lbl">Class</span><select id="sel-class"></select></label>
+          <label><span class="lbl">Ниво</span>
+            <input type="number" id="f-level" min="1" max="20" value="1"></label>
+        </div>
+        <div id="class-info"></div>
+        <div id="skill-picker"></div>
+        <p class="hint" style="margin-top:18px">Подклас (subclass) още не се избира тук — за списъка с
+          подкласове няма отделен HTTP маршрут в API-то. Черновата се праща с <code>subclass_id: null</code>.</p>
+      </section>
+
+      <!-- ── 4. Abilities ─────────────────────────────────────────── -->
+      <section class="step" id="step-abilities" hidden>
+        <h2>Характеристики</h2>
+        <p class="hint">Избери метод, после въведи базовите стойности. Расовите бонуси се показват отдолу.</p>
+        <div class="pills" id="method-pills">
+          <button data-method="roll">Хвърляне</button>
+          <button data-method="standard_array">Стандартен масив</button>
+          <button data-method="point_buy">Point buy</button>
+        </div>
+        <div class="msg info" id="method-hint"></div>
+        <div class="abil" id="abil-grid" style="margin-top:16px"></div>
+        <div class="inline">
+          <button class="act" type="button" id="roll-btn">Хвърли 4d6 (падне най-ниският)</button>
+          <button class="act" type="button" id="fill-array">Попълни 15/14/13/12/10/8</button>
+        </div>
+        <p class="hint" style="margin-top:18px">Тази стъпка няма панел за свободния избор на
+          характеристики (<code>ability_choice</code>), който някои раси и background-и
+          дават — виж бележката при съответната стъпка. Черновата няма поле за такъв
+          избор, така че тези раси/background-и остават недостъпни за създаване, докато
+          не изберат нещо друго.</p>
+      </section>
+
+      <!-- ── 5. Equipment ─────────────────────────────────────────── -->
+      <section class="step" id="step-equipment" hidden>
+        <h2>Снаряжение</h2>
+        <p class="hint">Избери една броня и (по желание) щит — те влизат в листа като носени.
+          Кликни оръжие или предмет от таблиците долу, за да го добавиш — избраните
+          се показват в „Избрано" отдолу и влизат в листа на героя.</p>
+
+        <h3>Броня</h3>
+        <div id="armor-list" class="scroll"></div>
+        <label class="inline" style="gap:9px; margin-top:12px; flex-direction:row; align-items:center">
+          <input type="checkbox" id="f-shield"><span>Щит (+2 AC)</span></label>
+
+        <h3 style="margin-top:24px">Weapons</h3>
+        <div class="pills" id="weapon-cats"></div>
+        <div class="scroll" id="weapon-list"></div>
+
+        <h3 style="margin-top:24px">Gear</h3>
+        <label><span class="lbl">Търси</span><input id="gear-search" placeholder="rope, torch…"></label>
+        <div class="scroll" id="gear-list" style="margin-top:8px"></div>
+
+        <h3 style="margin-top:24px">Избрано</h3>
+        <div class="pills" id="chosen-chips"></div>
+
+        <div id="kit-info" class="msg info" style="margin-top:18px"></div>
+      </section>
+
+      <!-- ── 6. Spells ────────────────────────────────────────────── -->
+      <section class="step" id="step-spells" hidden>
+        <h2>Магии</h2>
+        <p class="hint" id="spell-intro"></p>
+        <div class="pills" id="spell-filters"></div>
+        <div class="counter" id="spell-counter"></div>
+        <div class="msg warn" id="spell-note" style="margin-bottom:12px"></div>
+        <div class="scroll" id="spell-list" style="max-height:620px"></div>
+      </section>
+
+      <!-- ── 7. Review ────────────────────────────────────────────── -->
+      <section class="step" id="step-review" hidden>
+        <h2>Преглед</h2>
+        <p class="hint">Ето какво ще се запише. Числата отдясно идват от <code>/api/chargen/preview</code>.</p>
+        <div id="review-body"></div>
+        <label style="margin-top:16px"><span class="lbl">Предистория (текст)</span>
+          <textarea id="f-backstory" placeholder="Кой е бил героят, преди да тръгне…"></textarea></label>
+        <div class="inline">
+          <button class="act primary" id="build-btn">Създай героя</button>
+          <span class="counter" id="build-hint"></span>
+        </div>
+        <div class="msg" id="build-msg" hidden></div>
+      </section>
+
+      <div class="nav">
+        <button class="act" id="prev-btn">← Назад</button>
+        <button class="act" id="next-btn">Напред →</button>
+      </div>
+    </div>
+
+    <!-- ── the live sheet ─────────────────────────────────────────── -->
+    <aside class="live">
+      <h2>Листът в момента</h2>
+      <p class="hint" style="margin-bottom:10px">Всяко число казва откъде идва.</p>
+      <div id="live-warnings" class="msg warn" hidden></div>
+      <div id="live-body"></div>
+    </aside>
+  </div>
+
+  <footer class="foot"></footer>
+</div>
+
+<script>
+// ── plumbing (same token/fetch pattern as menu.html) ────────────────────
+const TOKEN = (document.querySelector('meta[name="dnd-token"]')||{}).content || '';
+const H = () => TOKEN ? {'Content-Type':'application/json','X-DND-Token':TOKEN}
+                      : {'Content-Type':'application/json'};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sgn = n => (n >= 0 ? '+' : '') + n;
+
+async function api(url, opts) {
+  const r = await fetch(url, Object.assign({headers: H()}, opts||{}));
+  let body = null;
+  try { body = await r.json(); } catch(_) {}
+  if (!r.ok) { const e = new Error((body && body.error) || `${r.status}`);
+               e.status = r.status; e.body = body; throw e; }
+  return body || {};
+}
+function say(el, text, kind) {
+  el.hidden = false; el.className = 'msg ' + (kind||'info'); el.innerHTML = text;
+}
+
+// A plain <a href download> can't carry the X-DND-Token header, so in --lan
+// mode (a real token, not the localhost no-op) it 403s. Fetch with the same
+// header api() uses, then hand the browser a blob to save instead.
+async function downloadCharacterMd(name) {
+  try {
+    const r = await fetch(`/api/characters/${encodeURIComponent(name)}/download.md`, {headers: H()});
+    if (!r.ok) throw new Error(`${r.status}`);
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${name}.md`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) { alert('Не мога да сваля файла: ' + e.message); }
+}
+
+// ── rules duplicated client-side, on purpose ───────────────────────────
+// These four tables mirror chargen/rules.py and chargen/validate.py so the
+// page can show a live number before the server has seen the draft. The
+// server stays the authority: every one of them is re-checked by build().
+const ABILITIES = ['STR','DEX','CON','INT','WIS','CHA'];
+const POINT_BUY_COST = {8:0, 9:1, 10:2, 11:3, 12:4, 13:5, 14:7, 15:9};
+const POINT_BUY_BUDGET = 27;
+const STANDARD_ARRAY = [15,14,13,12,10,8];
+const KNOWN_TABLE = {1:2,2:3,3:4,4:5,5:6,6:7,7:8,8:9,9:10,10:11,11:12,12:12,
+                     13:13,14:13,15:14,16:14,17:15,18:15,19:15,20:15};
+const KNOWN_CASTERS = ['Bard','Ranger','Sorcerer','Warlock'];
+const PREPARED_CASTERS = ['Cleric','Druid','Paladin','Wizard'];
+const CASTING_ABILITY = {Cleric:'WIS', Druid:'WIS', Paladin:'CHA', Wizard:'INT',
+                         Bard:'CHA', Ranger:'WIS', Sorcerer:'CHA', Warlock:'CHA'};
+const SKILL_ABILITY = {
+  'Acrobatics':'DEX', 'Animal Handling':'WIS', 'Arcana':'INT', 'Athletics':'STR',
+  'Deception':'CHA', 'History':'INT', 'Insight':'WIS', 'Intimidation':'CHA',
+  'Investigation':'INT', 'Medicine':'WIS', 'Nature':'INT', 'Perception':'WIS',
+  'Performance':'CHA', 'Persuasion':'CHA', 'Religion':'INT',
+  'Sleight of Hand':'DEX', 'Stealth':'DEX', 'Survival':'WIS',
+};
+const mod = score => Math.floor((score - 10) / 2);
+const profBonus = lvl => lvl < 5 ? 2 : lvl < 9 ? 3 : lvl < 13 ? 4 : lvl < 17 ? 5 : 6;
+
+// ── the Draft, exactly the shape chargen/build.py reads ────────────────
+// There is no ruleset field on the Draft at all — mixing pieces from
+// different editions (2014/2024) is fully legal now, per-piece: a race's
+// fixed ability bonuses and a background's weighted ability CHOICE each
+// apply independently, whichever pieces the player actually picked. The
+// server no longer blocks a mismatch; it returns an informational
+// "warnings" array alongside "problems", which renderLive() shows in the
+// live panel regardless of whether the sheet itself rendered. optionLabel()
+// below still marks 2024-ruleset catalog entries with " · 2024" in dropdown
+// labels — that's purely for player orientation, not a legality signal.
+// The one real gap: a race or background whose bonus comes from a flexible
+// ability CHOICE (Half-Elf's race choice, or a 2024-style background's
+// weighted choice) has no field in this Draft to express the pick, so
+// build() still refuses those by name — see the ability_choice notes in
+// renderRace() and renderBackground().
+const DRAFT = {
+  name: '', player: '',
+  race_id: null, subrace_id: null, background_id: null,
+  class_id: null, subclass_id: null, level: 1,
+  ability_method: 'point_buy',
+  ability_scores: {STR:8, DEX:8, CON:8, INT:8, WIS:8, CHA:8},
+  ability_choice_index: null, ability_choice_assignment: null,
+  skill_picks: [], equipped_armor_id: null, shield: false,
+  hp_method: 'max_then_average',
+  spells_known: [], spells_prepared: [],
+  alignment: '', backstory: '',
+  chosen_weapons: [], chosen_gear: [],
+};
+
+let CAT = {races: [], backgrounds: [], classes: []};
+let EQUIP = {weapons: [], armor: [], gear: []};
+const SPELLS = {};              // class name -> spell list, fetched once each
+let LAST = {sheet: null, problems: ['Черновата още не е попълнена.'], warnings: []};
+// Client-side only — narrows which catalog entries the three dropdowns
+// offer next time they render. Never touches DRAFT; changing it cannot
+// invalidate a choice already made.
+let RULESET_FILTER = '';
+
+const race = () => CAT.races.find(r => r.id === DRAFT.race_id) || null;
+const subrace = () => (race()?.subraces || []).find(s => s.id === DRAFT.subrace_id) || null;
+const background = () => CAT.backgrounds.find(b => b.id === DRAFT.background_id) || null;
+const klass = () => CAT.classes.find(c => c.id === DRAFT.class_id) || null;
+const levelRow = () => (klass()?.levels || []).find(l => l.level === DRAFT.level) || null;
+const armorObj = () => EQUIP.armor.find(a => a.id === DRAFT.equipped_armor_id) || null;
+const isKnownCaster = () => KNOWN_CASTERS.includes(klass()?.name);
+const isPreparedCaster = () => PREPARED_CASTERS.includes(klass()?.name);
+const isCaster = () => isKnownCaster() || isPreparedCaster();
+
+/** Base scores plus race and subrace bonuses — the same per-piece stacking
+    chargen/validate.apply_ability_bonuses() does server-side.
+
+    A 2024-style background's weighted ability_choice bonus is deliberately
+    NOT mirrored here: this page has no UI to set ability_choice_index /
+    ability_choice_assignment (both are pinned to null in DRAFT above), and
+    build() refuses any race/background carrying a choice by name — see the
+    notes rendered in renderRace()/renderBackground(). So no character this
+    builder can actually create has such a bonus to show, and this panel
+    never diverges from the server's own final scores. Adding that UI means
+    adding the bonus here too. */
+function finalScores() {
+  const out = Object.assign({}, DRAFT.ability_scores);
+  for (const src of [race(), subrace()])
+    for (const [k, v] of Object.entries((src && src.ability_bonuses) || {}))
+      out[k] = (out[k] || 0) + v;
+  return out;
+}
+/** Which abilities got a racial bonus, for the "+2 (Human)" annotations. */
+function bonusSources() {
+  const out = {};
+  for (const src of [race(), subrace()])
+    for (const [k, v] of Object.entries((src && src.ability_bonuses) || {}))
+      (out[k] = out[k] || []).push(`${sgn(v)} ${src.name}`);
+  return out;
+}
+
+// ── steps ──────────────────────────────────────────────────────────────
+const STEPS = [
+  {id: 'race',       label: 'Раса'},
+  {id: 'background', label: 'Background'},
+  {id: 'class',      label: 'Клас'},
+  {id: 'abilities',  label: 'Характеристики'},
+  {id: 'equipment',  label: 'Снаряжение'},
+  {id: 'spells',     label: 'Магии'},
+  {id: 'review',     label: 'Преглед'},
+];
+let STEP = 0;
+
+function stepVisible(i) { return STEPS[i].id !== 'spells' || isCaster(); }
+
+function renderStepper() {
+  $('#stepper').innerHTML = STEPS.map((s, i) =>
+    `<button data-step="${i}" ${stepVisible(i) ? '' : 'hidden'}
+       class="${i === STEP ? 'on' : ''} ${i < STEP ? 'done' : ''}">
+       <span class="num">${i + 1}</span>${esc(s.label)}</button>`).join('');
+  $('#stepper').querySelectorAll('button').forEach(b =>
+    b.addEventListener('click', () => go(Number(b.dataset.step))));
+}
+
+function go(i) {
+  // Free navigation both ways — a player may go back and change their race
+  // after picking spells, and the panels all read from the same DRAFT.
+  const dir = i > STEP ? 1 : -1;
+  while (i >= 0 && i < STEPS.length && !stepVisible(i)) i += dir;
+  STEP = Math.max(0, Math.min(STEPS.length - 1, i));
+  STEPS.forEach((s, n) => { $('#step-' + s.id).hidden = n !== STEP; });
+  renderStepper();
+  if (STEPS[STEP].id === 'spells') renderSpells();
+  if (STEPS[STEP].id === 'review') renderReview();
+  $('#prev-btn').disabled = STEP === 0;
+  $('#next-btn').disabled = STEP === STEPS.length - 1;
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+$('#prev-btn').addEventListener('click', () => go(STEP - 1));
+$('#next-btn').addEventListener('click', () => go(STEP + 1));
+
+// ── 1. race ────────────────────────────────────────────────────────────
+/** Label for one race/background option. Names repeat across sourcebooks —
+    "Orc" is five different records, "Dwarf" three — so a bare name leaves
+    the player picking blind between them. Qualify everything that isn't the
+    SRD baseline with its book, and mark the 2024-ruleset records, which a
+    2014 draft cannot legally use. */
+function optionLabel(rec) {
+  if (!rec.source || rec.source === '5e-SRD') return rec.name;
+  const edition = rec.ruleset === '2024' ? ' · 2024' : '';
+  return `${rec.name} (${rec.source}${edition})`;
+}
+/** Filter a catalog list by RULESET_FILTER, but never hide the entry the
+    Draft already points at — changing the filter narrows what's offered
+    next, it never yanks away a choice already made. */
+function filterByRuleset(list, currentId) {
+  const out = RULESET_FILTER ? list.filter(r => r.ruleset === RULESET_FILTER) : list.slice();
+  if (currentId && !out.some(r => r.id === currentId)) {
+    const cur = list.find(r => r.id === currentId);
+    if (cur) out.push(cur);
+  }
+  return out;
+}
+
+function renderRaceOptions() {
+  const list = filterByRuleset(CAT.races, DRAFT.race_id);
+  $('#sel-race').innerHTML = '<option value="">— избери —</option>' +
+    list.map(r => `<option value="${esc(r.id)}">${esc(optionLabel(r))}</option>`).join('');
+}
+function traitsHtml(list) {
+  return (list || []).map(t =>
+    `<div class="trait"><b>${esc(t.name)}</b><p>${esc(t.text)}</p></div>`).join('');
+}
+function bonusText(b) {
+  const e = Object.entries(b || {});
+  return e.length ? e.map(([k, v]) => `${k} ${sgn(v)}`).join(', ') : '—';
+}
+function renderRace() {
+  const r = race(), sub = $('#sel-subrace');
+  $('#sel-race').value = DRAFT.race_id || '';
+
+  const subs = (r && r.subraces) || [];
+  $('#lbl-subrace').style.display = subs.length ? '' : 'none';
+  sub.innerHTML = '<option value="">— без подраса —</option>' +
+    subs.map(s => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('');
+  sub.value = DRAFT.subrace_id || '';
+
+  if (!r) { $('#race-info').innerHTML = ''; $('#subrace-info').innerHTML = '';
+            $('#race-note').hidden = true; return; }
+
+  $('#race-info').innerHTML = `
+    <div class="panel" style="margin-top:16px">
+      <h3>${esc(r.name)}</h3>
+      <dl class="kv">
+        <dt>Бонуси</dt><dd>${esc(bonusText(r.ability_bonuses))}</dd>
+        <dt>Скорост</dt><dd>${r.speed} ft</dd>
+        <dt>Размер</dt><dd>${esc(r.size || '—')}</dd>
+        <dt>Езици</dt><dd>${esc((r.languages || []).join(', ') || '—')}</dd>
+        <dt>Източник</dt><dd>${esc(r.source)} · ${esc(r.ruleset)}</dd>
+      </dl>
+      ${traitsHtml(r.traits)}
+    </div>`;
+
+  // Half-Elf's "choose two other scores, +1 each" has no field in the Draft,
+  // so build() will refuse it by name. Say so here rather than let the
+  // player discover it as an opaque failure on the last step.
+  const note = $('#race-note');
+  const notes = [];
+  if (r.ability_choice) {
+    notes.push(`<b>${esc(r.name)}</b> дава и свободен избор на характеристики
+      (${esc(JSON.stringify(r.ability_choice))}), който черновата още не може да опише.
+      Създаването ще откаже с точно това съобщение — избери друга раса, ако ти трябва герой сега.`);
+  }
+  note.hidden = notes.length === 0;
+  note.className = 'msg warn';
+  note.innerHTML = notes.join('<hr style="border:0;border-top:1px solid var(--line);margin:8px 0">');
+
+  const s = subrace();
+  $('#subrace-info').innerHTML = !s ? '' : `
+    <div class="panel">
+      <h3>${esc(s.name)} <span class="badge on">подраса</span></h3>
+      <dl class="kv">
+        <dt>Дава</dt><dd>${esc(bonusText(s.ability_bonuses))}</dd>
+      </dl>
+      ${traitsHtml(s.traits) || '<p class="hint" style="margin:0">Без допълнителни черти.</p>'}
+    </div>`;
+}
+// Changing the race changes the racial bonuses, so the abilities step's
+// final scores and their "← +2 Dwarf" annotations have to be redrawn here
+// too — otherwise that step keeps showing the previous race's totals until
+// the player happens to retype a score, while the live panel already shows
+// the new ones. (renderAbilities() ends by calling renderAbilitiesFooter().)
+$('#sel-race').addEventListener('change', ev => {
+  DRAFT.race_id = ev.target.value || null;
+  DRAFT.subrace_id = null;
+  renderRace(); renderAbilities(); touched();
+});
+$('#sel-subrace').addEventListener('change', ev => {
+  DRAFT.subrace_id = ev.target.value || null;
+  renderRace(); renderAbilities(); touched();
+});
+
+// ── 2. background ──────────────────────────────────────────────────────
+function renderBackgroundOptions() {
+  const list = filterByRuleset(CAT.backgrounds, DRAFT.background_id);
+  $('#sel-background').innerHTML = '<option value="">— избери —</option>' +
+    list.map(b =>
+      `<option value="${esc(b.id)}">${esc(optionLabel(b))}</option>`).join('');
+}
+function renderBackground() {
+  $('#sel-background').value = DRAFT.background_id || '';
+  const b = background();
+  const bnote = $('#background-note');
+  // A 2024-style background's weighted ability CHOICE has no field in the
+  // Draft to express the pick, so build() still refuses it by name — same
+  // treatment as the race's ability_choice note above. ability_choice is an
+  // array here (unlike the race's object-or-null), and an empty array is
+  // truthy in JS but means "no choice" (mirrors Python's falsy []), so the
+  // length has to be checked explicitly rather than the bare value.
+  if (b && b.ability_choice && b.ability_choice.length) {
+    bnote.hidden = false;
+    bnote.innerHTML = `<b>${esc(b.name)}</b> дава и свободен избор на характеристики
+      (${esc(JSON.stringify(b.ability_choice))}), който черновата още не може да опише.
+      Създаването ще откаже с точно това съобщение — избери друг background, ако ти
+      трябва герой сега.`;
+  } else {
+    bnote.hidden = true;
+  }
+  if (!b) { $('#background-info').innerHTML = ''; return; }
+  const langs = Array.isArray(b.languages)
+    ? (b.languages.join(', ') || '—')
+    : `${b.languages} по избор`;
+  $('#background-info').innerHTML = `
+    <div class="panel" style="margin-top:16px">
+      <h3>${esc(b.name)}</h3>
+      <dl class="kv">
+        <dt>Умения</dt><dd>${esc((b.skill_proficiencies || []).join(', ') || '—')}</dd>
+        <dt>Инструменти</dt><dd>${esc((b.tool_proficiencies || []).join(', ') || '—')}</dd>
+        <dt>Езици</dt><dd>${esc(langs)}</dd>
+        <dt>Имущество</dt><dd>${esc((b.starting_equipment || [])
+            .map(i => `${i.name}${i.quantity > 1 ? ' ×' + i.quantity : ''}`).join(', ') || '—')}</dd>
+        <dt>Източник</dt><dd>${esc(b.source || '—')} · ${esc(b.ruleset || '—')}</dd>
+      </dl>
+      ${b.feature ? traitsHtml([b.feature]) : ''}
+    </div>`;
+}
+$('#sel-background').addEventListener('change', ev => {
+  DRAFT.background_id = ev.target.value || null;
+  renderBackground(); renderSkillPicker(); touched();
+});
+
+// ── 3. class ───────────────────────────────────────────────────────────
+function renderClassOptions() {
+  const list = filterByRuleset(CAT.classes, DRAFT.class_id);
+  $('#sel-class').innerHTML = '<option value="">— избери —</option>' +
+    list.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+}
+function renderClass() {
+  $('#sel-class').value = DRAFT.class_id || '';
+  $('#f-level').value = DRAFT.level;
+  const c = klass();
+  if (!c) { $('#class-info').innerHTML = ''; $('#skill-picker').innerHTML = ''; return; }
+  const row = levelRow();
+  $('#class-info').innerHTML = `
+    <div class="panel" style="margin-top:16px">
+      <h3>${esc(c.name)}</h3>
+      <dl class="kv">
+        <dt>Hit die</dt><dd>d${c.hit_die}</dd>
+        <dt>Спасявания</dt><dd>${esc((c.saving_throws || []).join(', ') || '—')}</dd>
+        <dt>Броня</dt><dd>${esc((c.armor || []).join(', ') || '—')}</dd>
+        <dt>Оръжия</dt><dd>${esc((c.weapons || []).join(', ') || '—')}</dd>
+        <dt>Инструменти</dt><dd>${esc((c.tools || []).join(', ') || '—')}</dd>
+        <dt>Магии</dt><dd>${isCaster()
+          ? `да — чрез ${esc(CASTING_ABILITY[c.name])} (${isPreparedCaster() ? 'подготвя' : 'знае'})`
+          : 'не'}</dd>
+      </dl>
+      ${row ? `<div class="trait"><b>На ниво ${row.level}</b><p>${
+        esc((row.features || []).join(', ') || '—')}</p></div>` : ''}
+    </div>`;
+  renderSkillPicker();
+}
+function renderSkillPicker() {
+  const c = klass(), box = $('#skill-picker');
+  const choice = (c && c.skill_choice) || null;
+  if (!choice) { box.innerHTML = ''; return; }
+  const granted = (background()?.skill_proficiencies) || [];
+  const n = DRAFT.skill_picks.length, full = n >= choice.count;
+  box.innerHTML = `
+    <h3 style="margin-top:20px">Умения по избор</h3>
+    <div class="counter ${n === choice.count ? '' : 'bad'}">избрани <b>${n}</b> от <b>${choice.count}</b>${
+      granted.length ? ` · ${esc(granted.join(', '))} вече идват от background-а` : ''}</div>
+    <div class="checkgrid">
+      ${choice.options.map(s => {
+        const on = DRAFT.skill_picks.includes(s);
+        const blocked = granted.includes(s) || (!on && full);
+        return `<label class="${on ? 'picked' : ''} ${blocked ? 'off' : ''}">
+          <input type="checkbox" data-skill="${esc(s)}" ${on ? 'checked' : ''}
+                 ${blocked ? 'disabled' : ''}>
+          <span>${esc(s)}${granted.includes(s) ? ' (от background)' : ''}</span></label>`;
+      }).join('')}
+    </div>`;
+  box.querySelectorAll('[data-skill]').forEach(cb => cb.addEventListener('change', () => {
+    const s = cb.dataset.skill;
+    if (cb.checked) DRAFT.skill_picks.push(s);
+    else DRAFT.skill_picks = DRAFT.skill_picks.filter(x => x !== s);
+    renderSkillPicker(); touched();
+  }));
+}
+$('#sel-class').addEventListener('change', ev => {
+  DRAFT.class_id = ev.target.value || null;
+  DRAFT.skill_picks = [];
+  DRAFT.spells_known = []; DRAFT.spells_prepared = [];
+  renderClass(); renderStepper(); touched();
+});
+$('#f-level').addEventListener('input', ev => {
+  DRAFT.level = Math.max(1, Math.min(20, Number(ev.target.value) || 1));
+  renderClass(); touched();
+});
+
+// ── 4. abilities ───────────────────────────────────────────────────────
+const METHOD_HINT = {
+  roll: 'Хвърляне: всяка стойност между <b>3 и 18</b>. Бутонът долу хвърля 4d6 и маха най-ниския зар.',
+  standard_array: 'Стандартен масив: точно <b>15, 14, 13, 12, 10, 8</b> — всяка стойност по веднъж.',
+  point_buy: 'Point buy: всяка стойност между <b>8 и 15</b>, общо до <b>27 точки</b>.',
+};
+function pointsSpent() {
+  return ABILITIES.reduce((sum, a) => sum + (POINT_BUY_COST[DRAFT.ability_scores[a]] ?? 0), 0);
+}
+function renderAbilities() {
+  $('#method-pills').querySelectorAll('button').forEach(b =>
+    b.classList.toggle('on', b.dataset.method === DRAFT.ability_method));
+  $('#method-hint').innerHTML = METHOD_HINT[DRAFT.ability_method];
+  $('#roll-btn').hidden = DRAFT.ability_method !== 'roll';
+  $('#fill-array').hidden = DRAFT.ability_method !== 'standard_array';
+
+  const fin = finalScores(), src = bonusSources();
+  $('#abil-grid').innerHTML = ABILITIES.map(a => `
+    <label><span class="lbl">${a}</span>
+      <input type="number" data-ab="${a}" min="1" max="30" value="${DRAFT.ability_scores[a]}">
+      <span class="fin">${fin[a]} (${sgn(mod(fin[a]))})${
+        src[a] ? ' ← ' + esc(src[a].join(' ')) : ''}</span>
+      ${DRAFT.ability_method === 'point_buy'
+        ? `<span class="cost">цена ${POINT_BUY_COST[DRAFT.ability_scores[a]] ?? '—'}</span>` : ''}
+    </label>`).join('');
+  $('#abil-grid').querySelectorAll('[data-ab]').forEach(inp =>
+    inp.addEventListener('input', () => {
+      DRAFT.ability_scores[inp.dataset.ab] = Number(inp.value) || 0;
+      renderAbilitiesFooter(); touched();
+    }));
+  renderAbilitiesFooter();
+}
+/** The live budget/array check under the six inputs — the same rules
+    chargen/validate.validate_ability_scores() enforces server-side. */
+function renderAbilitiesFooter() {
+  const fin = finalScores(), src = bonusSources();
+  $('#abil-grid').querySelectorAll('label').forEach((lab, i) => {
+    const a = ABILITIES[i];
+    lab.querySelector('.fin').innerHTML = `${fin[a]} (${sgn(mod(fin[a]))})${
+      src[a] ? ' ← ' + esc(src[a].join(' ')) : ''}`;
+    const cost = lab.querySelector('.cost');
+    if (cost) cost.textContent = 'цена ' + (POINT_BUY_COST[DRAFT.ability_scores[a]] ?? '—');
+  });
+  const m = DRAFT.ability_method;
+  let extra = '';
+  if (m === 'point_buy') {
+    const spent = pointsSpent(), over = spent > POINT_BUY_BUDGET;
+    extra = `<br><span class="counter ${over ? 'bad' : ''}">похарчени <b>${spent}</b>
+      от <b>${POINT_BUY_BUDGET}</b> точки · остават <b>${POINT_BUY_BUDGET - spent}</b></span>`;
+  } else if (m === 'standard_array') {
+    const have = ABILITIES.map(a => DRAFT.ability_scores[a]).sort((x, y) => y - x);
+    const want = [...STANDARD_ARRAY].sort((x, y) => y - x);
+    const ok = have.join(',') === want.join(',');
+    extra = `<br><span class="counter ${ok ? '' : 'bad'}">използвани <b>${have.join(', ')}</b>
+      · трябва <b>${want.join(', ')}</b></span>`;
+  }
+  $('#method-hint').innerHTML = METHOD_HINT[m] + extra;
+}
+$('#method-pills').querySelectorAll('button').forEach(b =>
+  b.addEventListener('click', () => {
+    DRAFT.ability_method = b.dataset.method;
+    if (DRAFT.ability_method === 'point_buy')
+      ABILITIES.forEach(a => { if (!(DRAFT.ability_scores[a] in POINT_BUY_COST))
+                                 DRAFT.ability_scores[a] = 8; });
+    renderAbilities(); touched();
+  }));
+$('#roll-btn').addEventListener('click', () => {
+  ABILITIES.forEach(a => {
+    const d = [0,0,0,0].map(() => 1 + Math.floor(Math.random() * 6)).sort((x, y) => y - x);
+    DRAFT.ability_scores[a] = d[0] + d[1] + d[2];
+  });
+  renderAbilities(); touched();
+});
+$('#fill-array').addEventListener('click', () => {
+  ABILITIES.forEach((a, i) => { DRAFT.ability_scores[a] = STANDARD_ARRAY[i]; });
+  renderAbilities(); touched();
+});
+
+// ── 5. equipment ───────────────────────────────────────────────────────
+let WEAPON_CAT = '';
+// Player-chosen weapons/gear, on top of whatever the class/background
+// starting kit already grants. Kept as its own local id -> quantity map,
+// separate from LAST.sheet.equipment — the server merges chosen items into
+// the same named rows as the auto-granted kit, so there is no way to tell
+// the two apart again from its response. Synced into DRAFT.chosen_weapons/
+// chosen_gear (the array-of-{id,quantity} shape build() expects) on every
+// change.
+let CHOSEN = {weapons: {}, gear: {}};
+function syncChosenToDraft() {
+  DRAFT.chosen_weapons = Object.entries(CHOSEN.weapons).map(([id, quantity]) => ({id, quantity}));
+  DRAFT.chosen_gear = Object.entries(CHOSEN.gear).map(([id, quantity]) => ({id, quantity}));
+}
+/** The single add path for both a table-row click and a drag-drop onto the
+    tray — one function, two triggers, so the two never drift apart. */
+function addChosen(kind, id) {
+  CHOSEN[kind][id] = (CHOSEN[kind][id] || 0) + 1;
+  syncChosenToDraft(); renderChosen(); touched();
+}
+function renderChosen() {
+  const weaponsById = new Map(EQUIP.weapons.map(w => [w.id, w]));
+  const gearById = new Map(EQUIP.gear.map(g => [g.id, g]));
+  const chips = [];
+  for (const [id, qty] of Object.entries(CHOSEN.weapons)) {
+    const item = weaponsById.get(id);
+    if (item) chips.push({id, kind: 'weapons', name: item.name, qty});
+  }
+  for (const [id, qty] of Object.entries(CHOSEN.gear)) {
+    const item = gearById.get(id);
+    if (item) chips.push({id, kind: 'gear', name: item.name, qty});
+  }
+  $('#chosen-chips').innerHTML = chips.length
+    ? chips.map(c => `<span class="badge on">${esc(c.name)}${c.qty > 1 ? ' ×' + c.qty : ''}
+        <button type="button" data-remove-chosen="${c.kind}:${esc(c.id)}"
+          style="margin-left:4px; cursor:pointer; background:none; border:none; color:inherit; font:inherit">×</button></span>`).join('')
+    : '<span class="hint" style="margin:0">Нищо избрано — кликни ред от Weapons/Gear отгоре, или го пусни тук.</span>';
+  $('#chosen-chips').querySelectorAll('[data-remove-chosen]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      const [kind, id] = btn.dataset.removeChosen.split(':');
+      delete CHOSEN[kind][id];
+      syncChosenToDraft(); renderChosen(); touched();
+    }));
+}
+$('#chosen-chips').addEventListener('dragover', ev => ev.preventDefault());
+$('#chosen-chips').addEventListener('drop', ev => {
+  ev.preventDefault();
+  const [kind, id] = (ev.dataTransfer.getData('text/plain') || '').split(':');
+  if (kind && id) addChosen(kind, id);
+});
+function renderArmor() {
+  $('#armor-list').innerHTML = `<table class="cat">
+    <thead><tr><th></th><th>Armor</th><th>Вид</th><th>AC</th><th>STR</th>
+      <th>Stealth</th><th>Тегло</th><th>Цена</th></tr></thead><tbody>
+    <tr><td><input type="radio" name="armor" value="" ${
+      DRAFT.equipped_armor_id ? '' : 'checked'}></td>
+      <td colspan="7"><b>Без броня</b> — AC 10 + DEX</td></tr>
+    ${EQUIP.armor.map(a => `<tr>
+      <td><input type="radio" name="armor" value="${esc(a.id)}" ${
+        DRAFT.equipped_armor_id === a.id ? 'checked' : ''}></td>
+      <td><b>${esc(a.name)}</b></td><td>${esc(a.category)}</td><td>${a.base_ac}</td>
+      <td>${a.str_minimum || '—'}</td>
+      <td>${a.stealth_disadvantage ? 'disadvantage' : '—'}</td>
+      <td>${a.weight ?? '—'}</td><td>${esc(a.cost || '—')}</td></tr>`).join('')}
+    </tbody></table>`;
+  $('#armor-list').querySelectorAll('input[name=armor]').forEach(r =>
+    r.addEventListener('change', () => {
+      DRAFT.equipped_armor_id = r.value || null; touched();
+    }));
+  $('#f-shield').checked = !!DRAFT.shield;
+}
+function renderWeapons() {
+  const cats = ['', ...new Set(EQUIP.weapons.map(w => w.category))];
+  $('#weapon-cats').innerHTML = cats.map(c =>
+    `<button data-wcat="${esc(c)}" class="${WEAPON_CAT === c ? 'on' : ''}">${
+      esc(c || 'Всички')}</button>`).join('');
+  $('#weapon-cats').querySelectorAll('[data-wcat]').forEach(b =>
+    b.addEventListener('click', () => { WEAPON_CAT = b.dataset.wcat; renderWeapons(); }));
+
+  const rows = EQUIP.weapons.filter(w => !WEAPON_CAT || w.category === WEAPON_CAT);
+  $('#weapon-list').innerHTML = `<table class="cat">
+    <thead><tr><th>Weapon</th><th>Вид</th><th>Щета</th><th>Versatile</th>
+      <th>Свойства</th><th>Тегло</th><th>Цена</th></tr></thead><tbody>
+    ${rows.map(w => `<tr draggable="true" data-add-weapon="${esc(w.id)}" style="cursor:pointer">
+      <td><b>${esc(w.name)}</b></td><td>${esc(w.category)}</td>
+      <td>${esc(w.damage_dice || '—')} ${esc(w.damage_type || '')}</td>
+      <td>${esc(w.versatile_damage_dice || '—')}</td>
+      <td>${esc((w.properties || []).join(', ') || '—')}</td>
+      <td>${w.weight ?? '—'}</td><td>${esc(w.cost || '—')}</td></tr>`).join('')}
+    </tbody></table>`;
+  $('#weapon-list').querySelectorAll('[data-add-weapon]').forEach(tr => {
+    tr.addEventListener('click', () => addChosen('weapons', tr.dataset.addWeapon));
+    tr.addEventListener('dragstart', ev => ev.dataTransfer.setData('text/plain', 'weapons:' + tr.dataset.addWeapon));
+  });
+}
+function renderGear() {
+  const q = ($('#gear-search').value || '').toLowerCase().trim();
+  const rows = EQUIP.gear.filter(g => !q || g.name.toLowerCase().includes(q));
+  $('#gear-list').innerHTML = `<table class="cat"><tbody>
+    ${rows.slice(0, 250).map(g => `<tr draggable="true" data-add-gear="${esc(g.id)}" style="cursor:pointer">
+        <td><b>${esc(g.name)}</b></td></tr>`).join('')
+      || '<tr><td>нищо не съвпада</td></tr>'}</tbody></table>`;
+  $('#gear-list').querySelectorAll('[data-add-gear]').forEach(tr => {
+    tr.addEventListener('click', () => addChosen('gear', tr.dataset.addGear));
+    tr.addEventListener('dragstart', ev => ev.dataTransfer.setData('text/plain', 'gear:' + tr.dataset.addGear));
+  });
+}
+$('#f-shield').addEventListener('change', ev => { DRAFT.shield = ev.target.checked; touched(); });
+$('#gear-search').addEventListener('input', renderGear);
+
+/** The class+background starting kit. There is no route for
+    catalog.starting_equipment(), so this reads it back out of the last
+    successful preview's sheet — the items build() itself added, unequipped. */
+function renderKit() {
+  const box = $('#kit-info'), sheet = LAST.sheet;
+  const kit = (sheet && sheet.equipment || []).filter(i => !i.equipped);
+  box.innerHTML = kit.length
+    ? `<b>Стартов комплект</b> (идва сам от класа и background-а, вижда се чак
+       когато черновата е валидна): ` +
+      kit.map(i => esc(i.name) + (i.quantity > 1 ? ' ×' + i.quantity : '')).join(', ')
+    : `<b>Стартов комплект</b> — ще се появи тук, щом черновата стане валидна.
+       Класът и background-ът го добавят сами при създаването.`;
+}
+
+// ── 6. spells ──────────────────────────────────────────────────────────
+let SPELL_LEVEL = 'available';
+async function loadSpells(clsName) {
+  if (SPELLS[clsName]) return SPELLS[clsName];
+  const d = await api(`/api/chargen/spells?class=${encodeURIComponent(clsName)}`);
+  SPELLS[clsName] = d.spells || [];
+  return SPELLS[clsName];
+}
+/** Which spell levels this character can actually cast — cantrips when the
+    level row grants any, plus every level with at least one slot. */
+function availableLevels() {
+  const row = levelRow();
+  if (!row) return [];
+  const out = row.cantrips_known ? [0] : [];
+  for (const [lvl, n] of Object.entries(row.spell_slots || {}))
+    if (n > 0) out.push(Number(lvl));
+  return out.sort((a, b) => a - b);
+}
+function spellCap() {
+  const c = klass(); if (!c) return null;
+  if (isKnownCaster()) return KNOWN_TABLE[DRAFT.level] ?? 15;
+  if (isPreparedCaster()) {
+    const abil = CASTING_ABILITY[c.name], m = mod(finalScores()[abil]);
+    return c.name === 'Paladin'
+      ? Math.max(1, Math.floor(DRAFT.level / 2) + m)
+      : Math.max(1, DRAFT.level + m);
+  }
+  return null;
+}
+const chosenSpells = () => isPreparedCaster() ? DRAFT.spells_prepared : DRAFT.spells_known;
+
+async function renderSpells() {
+  const c = klass();
+  if (!c || !isCaster()) return;
+  let list;
+  try { list = await loadSpells(c.name); }
+  catch (e) { $('#spell-list').innerHTML = `<p class="hint">Не мога да прочета магиите: ${esc(e.message)}</p>`; return; }
+
+  const avail = availableLevels();
+  $('#spell-intro').innerHTML = isPreparedCaster()
+    ? `<b>${esc(c.name)}</b> <b>подготвя</b> магии — избраните отиват в
+       <code>spells_prepared</code>. Лимитът е ниво + модификатора на ${esc(CASTING_ABILITY[c.name])}.`
+    : `<b>${esc(c.name)}</b> <b>знае</b> магии — избраните отиват в
+       <code>spells_known</code>. Лимитът идва от таблицата в <code>rules.py</code>.`;
+
+  const levels = [...new Set(list.map(s => s.level))].sort((a, b) => a - b);
+  $('#spell-filters').innerHTML =
+    `<button data-slvl="available" class="${SPELL_LEVEL === 'available' ? 'on' : ''}">Достъпни сега</button>` +
+    `<button data-slvl="all" class="${SPELL_LEVEL === 'all' ? 'on' : ''}">Всички</button>` +
+    levels.map(l => `<button data-slvl="${l}" class="${SPELL_LEVEL === String(l) ? 'on' : ''}">${
+      l === 0 ? 'Cantrips' : 'ниво ' + l}</button>`).join('');
+  $('#spell-filters').querySelectorAll('[data-slvl]').forEach(b =>
+    b.addEventListener('click', () => { SPELL_LEVEL = b.dataset.slvl; renderSpells(); }));
+
+  const cap = spellCap(), picked = chosenSpells();
+  $('#spell-counter').className = 'counter' + (cap !== null && picked.length > cap ? ' bad' : '');
+  $('#spell-counter').innerHTML = `избрани <b>${picked.length}</b>${
+    cap !== null ? ` от <b>${cap}</b>` : ''} · достъпни нива: <b>${
+    avail.map(l => l === 0 ? 'cantrips' : l).join(', ') || 'няма'}</b>`;
+  $('#spell-note').innerHTML = `Забележка: проверката в <code>validate.py</code> в момента брои
+    и cantrip-ите срещу същия лимит — известен, отложен пропуск. Тази страница не го
+    заобикаля: ако прекалиш, съобщението идва от сървъра, отдясно.`;
+
+  const shown = list.filter(s =>
+    SPELL_LEVEL === 'all' ? true :
+    SPELL_LEVEL === 'available' ? avail.includes(s.level) :
+    s.level === Number(SPELL_LEVEL));
+
+  const byLevel = {};
+  for (const s of shown) (byLevel[s.level] = byLevel[s.level] || []).push(s);
+
+  $('#spell-list').innerHTML = Object.keys(byLevel).map(Number).sort((a, b) => a - b).map(lvl => `
+    <div class="lvlhead">${lvl === 0 ? 'Cantrips' : 'Ниво ' + lvl}${
+      avail.includes(lvl) ? '' : ' · няма слотове на това ниво'}</div>
+    ${byLevel[lvl].map(s => `
+      <details class="spell">
+        <summary>
+          <input type="checkbox" data-spell="${esc(s.name)}" ${
+            picked.includes(s.name) ? 'checked' : ''}>
+          <span class="nm">${esc(s.name)}</span>
+          <span class="badge">${esc(s.school || '—')}</span>
+          ${s.concentration ? '<span class="badge warn">concentration</span>' : ''}
+          ${s.ritual ? '<span class="badge">ritual</span>' : ''}
+        </summary>
+        <p><b>${esc(s.casting_time)}</b> · ${esc(s.range)} · ${esc(s.duration)} · ${
+          esc(componentText(s.components))}\n\n${esc(s.description)}</p>
+      </details>`).join('')}`).join('') || '<p class="hint">Няма магии за този филтър.</p>';
+
+  $('#spell-list').querySelectorAll('[data-spell]').forEach(cb =>
+    cb.addEventListener('click', ev => {
+      ev.stopPropagation();               // don't toggle the <details> too
+      const name = cb.dataset.spell;
+      const list = isPreparedCaster() ? DRAFT.spells_prepared : DRAFT.spells_known;
+      const at = list.indexOf(name);
+      if (cb.checked && at < 0) list.push(name);
+      if (!cb.checked && at >= 0) list.splice(at, 1);
+      const cap2 = spellCap(), n = list.length;
+      $('#spell-counter').className = 'counter' + (cap2 !== null && n > cap2 ? ' bad' : '');
+      $('#spell-counter').innerHTML = `избрани <b>${n}</b>${
+        cap2 !== null ? ` от <b>${cap2}</b>` : ''} · достъпни нива: <b>${
+        availableLevels().map(l => l === 0 ? 'cantrips' : l).join(', ') || 'няма'}</b>`;
+      touched();
+    }));
+}
+function componentText(c) {
+  if (!c) return '—';
+  const parts = [];
+  if (c.v) parts.push('V'); if (c.s) parts.push('S');
+  if (c.m) parts.push('M (' + (typeof c.m === 'string' ? c.m : 'материал') + ')');
+  return parts.join(', ') || '—';
+}
+
+// ── 7. review ──────────────────────────────────────────────────────────
+function renderReview() {
+  const r = race(), s = subrace(), b = background(), c = klass();
+  const fin = finalScores();
+  const picked = chosenSpells();
+  $('#review-body').innerHTML = `
+    <div class="panel">
+      <h3>${esc(DRAFT.name || '(без име)')}</h3>
+      <dl class="kv">
+        <dt>Раса</dt><dd>${esc(s ? `${r.name} → ${s.name}` : (r ? r.name : '—'))}</dd>
+        <dt>Background</dt><dd>${esc(b ? b.name : '—')}</dd>
+        <dt>Клас</dt><dd>${esc(c ? `${c.name}, ниво ${DRAFT.level}` : '—')}</dd>
+        <dt>Характеристики</dt><dd>${ABILITIES.map(a =>
+          `${a} ${fin[a]} (${sgn(mod(fin[a]))})`).join(' · ')}</dd>
+        <dt>Метод</dt><dd>${esc(DRAFT.ability_method)}</dd>
+        <dt>Умения</dt><dd>${esc(DRAFT.skill_picks.join(', ') || '—')}${
+          b && b.skill_proficiencies.length ? ` <span class="badge">+ ${
+            esc(b.skill_proficiencies.join(', '))} от background</span>` : ''}</dd>
+        <dt>Броня</dt><dd>${esc(armorObj()?.name || 'без броня')}${DRAFT.shield ? ' + щит' : ''}</dd>
+        <dt>Магии</dt><dd>${picked.length
+          ? `${esc(picked.join(', '))} <span class="badge">${
+              isPreparedCaster() ? 'prepared' : 'known'}</span>`
+          : (isCaster() ? 'няма избрани' : '—')}</dd>
+        <dt>Играч</dt><dd>${esc(DRAFT.player || '—')}</dd>
+        <dt>Мироглед</dt><dd>${esc(DRAFT.alignment || '—')}</dd>
+      </dl>
+    </div>`;
+  const ok = LAST.problems.length === 0;
+  $('#build-btn').disabled = !ok;
+  $('#build-hint').textContent = ok
+    ? 'черновата е законна'
+    : `${LAST.problems.length} проблем(а) — виж списъка отдясно`;
+}
+
+$('#build-btn').addEventListener('click', async () => {
+  const msg = $('#build-msg');
+  say(msg, 'Записвам…', 'info');
+  try {
+    const d = await api('/api/chargen/build', {method: 'POST', body: JSON.stringify(DRAFT)});
+    say(msg, `<b>${esc(d.name)}</b> е записан — ниво ${d.level}.
+      <span class=”act” style=”margin-left:10px”>Записан</span>
+      <button type="button" class="act" style="margin-left:10px" data-download-name="${esc(d.name)}">Свали DM файл</button>`, 'ok');
+    msg.querySelector('[data-download-name]').addEventListener('click', () => downloadCharacterMd(d.name));
+    $('#build-btn').disabled = true;
+  } catch (e) {
+    const problems = (e.body && e.body.problems) || [];
+    say(msg, problems.length
+      ? 'Не мога да го създам:<ul class="problems">' +
+        problems.map(p => `<li>${esc(p)}</li>`).join('') + '</ul>'
+      : esc(e.message), 'err');
+  }
+});
+
+// ── the live derived sheet ─────────────────────────────────────────────
+/** AC, initiative, prof bonus, save DC and spell attack are not stored on
+    the sheet — the game derives AC from the equipment list when it needs
+    it, and the rest are pure functions of level and the final scores. All
+    five are recomputed here with the same formulas rules.py uses, so the
+    panel can show a number (and its source) live. */
+function armorClass() {
+  const a = armorObj(), dex = mod(finalScores().DEX);
+  let ac, src;
+  if (!a) { ac = 10 + dex; src = `10 база ${sgn(dex)} DEX`; }
+  else if (a.category === 'light') { ac = a.base_ac + dex;
+    src = `${a.base_ac} (${a.name}, лека) ${sgn(dex)} DEX`; }
+  else if (a.category === 'medium') { const d = Math.min(dex, 2); ac = a.base_ac + d;
+    src = `${a.base_ac} (${a.name}, средна) ${sgn(d)} DEX (макс +2)`; }
+  else { ac = a.base_ac; src = `${a.base_ac} (${a.name}, тежка) — без DEX`; }
+  if (DRAFT.shield) { ac += 2; src += ' +2 щит'; }
+  return {n: ac, src};
+}
+function hpSource(sheet) {
+  const c = klass(); if (!c) return '';
+  const con = mod(finalScores().CON), avg = Math.floor(c.hit_die / 2) + 1;
+  return DRAFT.level === 1
+    ? `d${c.hit_die} макс ${sgn(con)} CON`
+    : `d${c.hit_die} макс ${sgn(con)} CON + ${DRAFT.level - 1}×(${avg} ${sgn(con)} CON)`;
+}
+function statRow(k, n, src) {
+  return `<div class="stat"><span class="k">${k}</span><span class="n">${n}</span>
+    <span class="src">${src}</span></div>`;
+}
+function renderLive() {
+  const warnBox = $('#live-warnings');
+  if (LAST.warnings && LAST.warnings.length) {
+    warnBox.hidden = false;
+    warnBox.innerHTML = LAST.warnings.map(w => `<div>${esc(w)}</div>`).join('');
+  } else {
+    warnBox.hidden = true;
+  }
+  const box = $('#live-body'), sheet = LAST.sheet, c = klass();
+  if (!sheet || LAST.problems.length) {
+    box.innerHTML = `<div class="msg warn"><b>Черновата още не е готова.</b>
+      Числата се появяват, щом всичко е законно.</div>
+      <ul class="problems">${(LAST.problems || []).map(p => `<li>${esc(p)}</li>`).join('')}</ul>`;
+    return;
+  }
+  const fin = sheet.ability_scores;         // final scores, computed server-side
+  const pb = profBonus(DRAFT.level), ac = armorClass();
+  const dex = mod(fin.DEX);
+  const saves = (sheet.proficiencies.saving_throws) || [];
+  const skills = (sheet.proficiencies.skills) || [];
+  const abil = c ? CASTING_ABILITY[c.name] : null;
+  const cast = isCaster() && abil ? mod(fin[abil]) : null;
+
+  box.innerHTML = `
+    ${statRow('HP', `${sheet.combat.hp_max}`, esc(hpSource(sheet)))}
+    ${statRow('AC', ac.n, esc(ac.src) + ' · сметнато тук — листът не пази AC')}
+    ${statRow('Инициатива', sgn(dex), `DEX ${sgn(dex)}`)}
+    ${statRow('Скорост', `${sheet.combat.speed} ft`, `раса ${esc(sheet.race)}`)}
+    ${statRow('Proficiency', sgn(pb), `ниво ${DRAFT.level}`)}
+    ${cast !== null ? statRow('Spell DC', 8 + pb + cast,
+        `8 + ${pb} prof ${sgn(cast)} ${esc(abil)}`) : ''}
+    ${cast !== null ? statRow('Spell attack', sgn(pb + cast),
+        `${sgn(pb)} prof ${sgn(cast)} ${esc(abil)}`) : ''}
+
+    <div class="lvlhead">Характеристики</div>
+    ${ABILITIES.map(a => `<div class="statline"><span>${a} ${fin[a]}</span>
+      <b>${sgn(mod(fin[a]))}</b></div>`).join('')}
+
+    <div class="lvlhead">Спасителни хвърляния</div>
+    ${ABILITIES.map(a => {
+      const p = saves.includes(a), n = mod(fin[a]) + (p ? pb : 0);
+      return `<div class="statline ${p ? 'prof' : ''}"><span>${a}</span>
+        <b>${sgn(n)}</b><span class="src">${a} ${sgn(mod(fin[a]))}${
+          p ? ` ${sgn(pb)} prof` : ''}</span></div>`;
+    }).join('')}
+
+    <div class="lvlhead">Умения</div>
+    ${Object.keys(SKILL_ABILITY).map(sk => {
+      const a = SKILL_ABILITY[sk], p = skills.includes(sk);
+      const n = mod(fin[a]) + (p ? pb : 0);
+      return `<div class="statline ${p ? 'prof' : ''}"><span>${esc(sk)}</span>
+        <b>${sgn(n)}</b><span class="src">${a} ${sgn(mod(fin[a]))}${
+          p ? ` ${sgn(pb)} prof` : ''}</span></div>`;
+    }).join('')}
+
+    ${(sheet.spells || []).length ? `<div class="lvlhead">Магии</div>
+      ${sheet.spells.map(s => `<div class="statline"><span>${esc(s.name)}</span>
+        <b>${s.prepared ? 'prepared' : 'known'}</b></div>`).join('')}` : ''}
+
+    ${Object.keys(sheet.spell_slots || {}).length ? `<div class="lvlhead">Слотове</div>
+      ${Object.entries(sheet.spell_slots).map(([lvl, s]) =>
+        `<div class="statline"><span>ниво ${lvl}</span><b>${s.max}</b></div>`).join('')}` : ''}
+
+    <div class="lvlhead">Снаряжение</div>
+    ${(sheet.equipment || []).map(i => `<div class="statline"><span>${esc(i.name)}${
+      i.quantity > 1 ? ' ×' + i.quantity : ''}</span>
+      <b>${i.equipped ? 'носено' : '—'}</b></div>`).join('') || '<p class="hint">—</p>'}`;
+}
+
+// ── preview: fired on every change, debounced ──────────────────────────
+let timer = 0, seq = 0;
+function touched() {
+  clearTimeout(timer);
+  timer = setTimeout(preview, 350);
+}
+async function preview() {
+  const mine = ++seq;
+  try {
+    const d = await api('/api/chargen/preview',
+                        {method: 'POST', body: JSON.stringify(DRAFT)});
+    if (mine !== seq) return;                    // a newer preview won
+    LAST = {sheet: d.problems.length ? null : d.sheet, problems: d.problems || [], warnings: d.warnings || []};
+  } catch (e) {
+    if (mine !== seq) return;
+    LAST = {sheet: null, problems: ['Сървърът не отговори: ' + e.message], warnings: []};
+  }
+  renderLive();
+  renderKit();
+  if (STEPS[STEP].id === 'review') renderReview();
+}
+
+// ── identity fields ────────────────────────────────────────────────────
+$('#f-name').addEventListener('input', ev => { DRAFT.name = ev.target.value; touched(); });
+$('#f-player').addEventListener('input', ev => { DRAFT.player = ev.target.value; touched(); });
+$('#f-alignment').addEventListener('change', ev => { DRAFT.alignment = ev.target.value; touched(); });
+$('#ruleset-filter').addEventListener('change', ev => {
+  RULESET_FILTER = ev.target.value;
+  // Rebuilding a <select>'s innerHTML with no option marked selected resets
+  // its visible value to the first (blank) option — even though DRAFT.*_id
+  // itself is untouched by filterByRuleset(). renderRace()/renderBackground()/
+  // renderClass() are what set el.value back to the Draft's real current
+  // value (boot() already relies on this same pattern), so they have to run
+  // here too, or a filter change looks like it silently discarded a pick.
+  renderRaceOptions(); renderBackgroundOptions(); renderClassOptions();
+  renderRace(); renderBackground(); renderClass();
+});
+$('#f-backstory').addEventListener('input', ev => { DRAFT.backstory = ev.target.value; touched(); });
+
+// ── boot ───────────────────────────────────────────────────────────────
+async function boot() {
+  try {
+    CAT = await api('/api/chargen/catalog');
+  } catch (e) {
+    $('#live-body').innerHTML = `<div class="msg err">Не мога да прочета каталога: ${esc(e.message)}</div>`;
+    return;
+  }
+  try { EQUIP = await api('/api/chargen/equipment'); } catch (_) {}
+
+  renderRaceOptions(); renderBackgroundOptions(); renderClassOptions();
+  // One background exists in the SRD data right now; preselecting it saves a
+  // click without hiding the step or pretending the list is longer.
+  if (CAT.backgrounds.length === 1) DRAFT.background_id = CAT.backgrounds[0].id;
+  renderRace(); renderBackground(); renderClass(); renderAbilities();
+  renderArmor(); renderWeapons(); renderGear(); renderChosen(); renderKit();
+  renderStepper(); go(0);
+  preview();
+}
+boot();
+
+// ── drifting starfield (same as menu.html) ─────────────────────────────
+(() => {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const cv = document.getElementById('bg'), ctx = cv.getContext('2d');
+  let w = 0, h = 0, stars = [], raf = 0;
+
+  function build() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = cv.width = innerWidth * dpr; h = cv.height = innerHeight * dpr;
+    cv.style.width = innerWidth + 'px'; cv.style.height = innerHeight + 'px';
+    const n = Math.round((innerWidth * innerHeight) / 9000);
+    stars = Array.from({length: n}, () => ({
+      x: Math.random() * w, y: Math.random() * h,
+      r: (Math.random() * 1.5 + 0.35) * dpr,
+      vy: (Math.random() * 0.16 + 0.03) * dpr,
+      a: Math.random() * 0.5 + 0.18,
+      tw: Math.random() * 0.02 + 0.004,
+      p: Math.random() * Math.PI * 2,
+    }));
+  }
+  function frame() {
+    ctx.clearRect(0, 0, w, h);
+    for (const s of stars) {
+      s.y -= s.vy; s.p += s.tw;
+      if (s.y < -4) { s.y = h + 4; s.x = Math.random() * w; }
+      const a = s.a * (0.65 + 0.35 * Math.sin(s.p));
+      ctx.beginPath();
+      ctx.fillStyle = `rgba(232,200,126,${a.toFixed(3)})`;
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    raf = requestAnimationFrame(frame);
+  }
+  function start() { if (!raf) raf = requestAnimationFrame(frame); }
+  function stop() { cancelAnimationFrame(raf); raf = 0; }
+
+  build(); start();
+  addEventListener('resize', () => { build(); }, {passive: true});
+  document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
+})();
+</script>
+</body>
+</html>

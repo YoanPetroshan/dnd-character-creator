@@ -5,8 +5,9 @@ this module only wires HTTP onto it.
 from __future__ import annotations
 
 import dataclasses
+import os
 
-from flask import Flask, jsonify, request, render_template, Response
+from flask import Flask, jsonify, request, render_template, Response, send_from_directory
 
 from chargen.build import build
 from chargen.catalog import Catalog
@@ -17,12 +18,18 @@ import storage
 
 app = Flask(__name__)
 
+_STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 _CATALOG = Catalog.load()
 
 
 @app.route("/")
 def index():
     return render_template("builder.html")
+
+
+@app.route("/icons/<path:filename>")
+def icons(filename):
+    return send_from_directory(_STATIC_DIR, filename)
 
 
 @app.route("/api/chargen/catalog")
