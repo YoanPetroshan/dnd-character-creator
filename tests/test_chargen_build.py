@@ -743,6 +743,12 @@ class ValidationTest(unittest.TestCase):
 
 # ── the round trip: build() -> library -> the real running game ─────────
 
+@unittest.skip(
+    "Integration test for library.py/engine — those live in the source "
+    "repo's skills/dnd/scripts/, which this standalone repo deliberately "
+    "does not include (see docs/superpowers/specs/2026-09-13-character-creator-app-design.md). "
+    "Not a chargen bug."
+)
 class RoundTripTest(unittest.TestCase):
     """build() -> library.save() -> library.load() -> copy_to_campaign()
     -> engine.state.party_names() / engine.local_context.read_hp().
