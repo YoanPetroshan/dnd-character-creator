@@ -67,6 +67,21 @@ def api_catalog_species(species_id: str):
     return jsonify({**race, "subspecies": _catalog.subraces_of(species_id)})
 
 
+@app.route("/api/items")
+def api_items():
+    category = request.args.get("category")
+    query = (request.args.get("q") or "").lower()
+    results = []
+    for item in _catalog.items.values():
+        item_category = item.get("equipment_category", {}).get("index")
+        if category and item_category != category:
+            continue
+        if query and query not in item["name"].lower():
+            continue
+        results.append({"id": item["index"], "name": item["name"], "category": item_category})
+    return jsonify({"items": results})
+
+
 @app.route("/api/export/yaml", methods=["POST"])
 def api_export_yaml():
     draft = request.get_json(silent=True) or {}

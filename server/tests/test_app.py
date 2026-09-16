@@ -127,3 +127,43 @@ def test_export_yaml_rejects_when_a_choice_is_still_pending(client):
     # Fighting Style is never pre-selected in this fixture, so it stays pending
     assert resp.status_code == 400
     assert any("unresolved-choice" in p["id"] for p in resp.get_json()["problems"])
+
+
+def test_items_endpoint_lists_every_bundled_item(client):
+    resp = client.get("/api/items")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert len(body["items"]) == 237
+    chain_mail = next(i for i in body["items"] if i["id"] == "chain-mail")
+    assert chain_mail["name"] == "Chain Mail"
+    assert chain_mail["category"] == "armor"
+
+
+def test_items_endpoint_filters_by_category(client):
+    resp = client.get("/api/items?category=armor")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert len(body["items"]) == 13
+    assert all(i["category"] == "armor" for i in body["items"])
+
+
+def test_items_endpoint_filters_by_search_query(client):
+    resp = client.get("/api/items?q=longbow")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    names = [i["name"].lower() for i in body["items"]]
+    assert any("longbow" in n for n in names)
+    assert all("longbow" in n for n in names)
+
+
+def test_equipment_choice_appears_in_resolve_response(client):
+    resp = client.post("/api/resolve", json={
+        "classes": [{"classId": "fighter", "level": 1, "choices": {}}],
+        "background": {"choices": {}}, "species": {"choices": {}},
+        "abilities": {"method": "manual", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10}},
+        "equipment": {"choices": {}, "added": [], "skipped": False},
+    })
+    assert resp.status_code == 200
+    body = resp.get_json()
+    equipment_choices = [c for c in body["choices"] if c["source"]["kind"] == "equipment"]
+    assert len(equipment_choices) == 3
