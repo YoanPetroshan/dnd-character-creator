@@ -47,3 +47,11 @@ def test_subraces_of_returns_only_that_races_subraces():
 def test_backgrounds_contains_only_acolyte():
     catalog = load()
     assert list(catalog.backgrounds.keys()) == ["acolyte"]
+
+
+def test_items_indexed_by_srd_index_covers_all_categories():
+    catalog = load()
+    assert len(catalog.items) == 237
+    assert catalog.items["chain-mail"]["armor_category"] == "Heavy"
+    assert catalog.items["longbow"]["weapon_category"] == "Martial"
+    assert catalog.items["dungeoneers-pack"]["equipment_category"]["index"] == "adventuring-gear"

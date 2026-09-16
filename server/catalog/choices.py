@@ -8,9 +8,15 @@ language_options references "/api/2014/languages", which isn't bundled as
 its own SRD file — resolved from reference_data.LANGUAGES instead, since
 that's pure open-content SRD data, not sourcebook material).
 `equipment_category`-based option sets (used by starting_equipment_options)
-are NOT resolved here — equipment choices are out of scope until Phase 2,
-so any envelope needing that path returns None, and every caller must skip
-a None result entirely rather than emit a partial or broken choice.
+are still NOT resolved here — every case that would need it in the bundled
+data is also nested inside an unrepresentable option_type "choice" (see
+build_choice_options' "multiple" handling below), so there's nothing to
+gain by solving only half of that problem in Phase 2a. A "multiple" bundle
+(e.g. "leather armor, a longbow, and 20 arrows") IS resolved, as one
+combined option, but only when every item inside it is a plain
+counted_reference — a bundle containing its own nested sub-choice returns
+None for that one option, same "skip rather than fake it" discipline as
+everything else in this module.
 """
 from __future__ import annotations
 
@@ -28,6 +34,26 @@ def _option_label(option: dict) -> str | None:
     return None  # score_prerequisite, multiple, etc. — not used by any Phase 1 choice
 
 
+def _bundle_label_and_id(items: list[dict]) -> tuple[str, str] | None:
+    """A 'multiple' option's items are themselves option-shaped. Only
+    resolvable if EVERY sub-item is a plain counted_reference — a nested
+    'choice' (e.g. "a martial weapon and a shield", where "a martial
+    weapon" is its own sub-choice) makes the whole bundle unrepresentable
+    in this phase's flat Choice model, so this returns None rather than
+    silently dropping the sub-choice's meaning.
+    """
+    label_parts = []
+    id_parts = []
+    for sub in items:
+        if sub.get("option_type") != "counted_reference":
+            return None
+        of = sub["of"]
+        count = sub.get("count", 1)
+        label_parts.append(f"{count}x {of['name']}" if count != 1 else of["name"])
+        id_parts.append(of["index"])  # quantities are not part of the id — see plan's Global Constraints
+    return " + ".join(label_parts), "+".join(id_parts)
+
+
 def build_choice_options(from_field: dict) -> list[dict] | None:
     """Returns [{id, label}] for this option set, or None if it can't be
     resolved from bundled Phase 1 data (equipment_category, or a
@@ -37,6 +63,13 @@ def build_choice_options(from_field: dict) -> list[dict] | None:
     if set_type == "options_array":
         options = []
         for opt in from_field.get("options", []):
+            if opt.get("option_type") == "multiple":
+                bundle = _bundle_label_and_id(opt.get("items", []))
+                if bundle is None:
+                    continue
+                label, option_id = bundle
+                options.append({"id": option_id, "label": label})
+                continue
             label = _option_label(opt)
             if label is None:
                 continue

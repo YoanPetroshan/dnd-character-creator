@@ -90,3 +90,52 @@ def test_build_choice_template_joins_list_desc_into_a_string():
     source = {"kind": "class", "id": "fighter", "label": "Fighter", "level": 1}
     tpl = build_choice_template(envelope, "x", source, "Fighting Style", description=" ".join(fighting_style["desc"]))
     assert isinstance(tpl["description"], str)
+
+
+def test_multiple_bundle_of_counted_references_resolves_to_one_option():
+    classes = _load("5e-SRD-Classes.json")
+    fighter = next(c for c in classes if c["index"] == "fighter")
+    envelope = fighter["starting_equipment_options"][0]  # "(a) chain mail or (b) leather armor, longbow, and 20 arrows"
+    options = build_choice_options(envelope["from"])
+    assert options is not None
+    assert len(options) == 2
+    ids = {o["id"] for o in options}
+    assert "chain-mail" in ids
+    assert "leather-armor+longbow+arrow" in ids
+    bundle = next(o for o in options if o["id"] == "leather-armor+longbow+arrow")
+    assert "Leather Armor" in bundle["label"]
+    assert "Longbow" in bundle["label"]
+    assert "20x Arrow" in bundle["label"]
+
+
+def test_multiple_bundle_with_a_nested_choice_is_dropped_not_faked():
+    classes = _load("5e-SRD-Classes.json")
+    fighter = next(c for c in classes if c["index"] == "fighter")
+    envelope = fighter["starting_equipment_options"][1]  # "(a) a martial weapon and a shield or (b) two martial weapons"
+    # Both options in this envelope nest an option_type "choice" somewhere —
+    # neither is resolvable in this phase, so the whole envelope resolves to
+    # no options at all, which build_choice_options reports as None (its
+    # established "nothing resolvable" signal, same as an all-empty
+    # options_array).
+    assert build_choice_options(envelope["from"]) is None
+
+
+def test_simple_multiple_bundle_alongside_a_plain_counted_reference():
+    classes = _load("5e-SRD-Classes.json")
+    fighter = next(c for c in classes if c["index"] == "fighter")
+    envelope = fighter["starting_equipment_options"][2]  # "(a) a light crossbow and 20 bolts or (b) two handaxes"
+    options = build_choice_options(envelope["from"])
+    assert options is not None
+    ids = {o["id"] for o in options}
+    assert "crossbow-light+crossbow-bolt" in ids
+    assert "handaxe" in ids
+
+
+def test_two_plain_counted_reference_options_both_resolve():
+    classes = _load("5e-SRD-Classes.json")
+    fighter = next(c for c in classes if c["index"] == "fighter")
+    envelope = fighter["starting_equipment_options"][3]  # "(a) a dungeoneer's pack or (b) an explorer's pack"
+    options = build_choice_options(envelope["from"])
+    assert options is not None
+    ids = {o["id"] for o in options}
+    assert ids == {"dungeoneers-pack", "explorers-pack"}
