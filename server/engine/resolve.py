@@ -17,6 +17,7 @@ from __future__ import annotations
 from catalog.choices import build_choice_template
 from catalog.loader import Catalog
 from . import derived as derived_mod
+from . import equipment as equipment_mod
 
 
 def _species_ability_bonuses(race: dict | None, subrace: dict | None) -> dict[str, int]:
@@ -143,6 +144,50 @@ def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrac
     return templates
 
 
+def _equipment_choice_templates(entity: dict, source_kind: str, source_id: str, source_label: str) -> list[dict]:
+    templates = []
+    for i, envelope in enumerate(entity.get("starting_equipment_options", [])):
+        cid = f"{source_kind}:{source_id}:1:equipment-choice-{i}" if source_kind == "class" else f"{source_kind}:{source_id}:equipment-choice-{i}"
+        source = {"kind": "equipment", "id": source_id, "label": source_label}
+        if source_kind == "class":
+            source["level"] = 1
+        tpl = build_choice_template(envelope, cid, source, "Starting Equipment")
+        if tpl:
+            templates.append(tpl)
+    return templates
+
+
+def _fixed_equipment(entries: list[dict], item_lookup: dict) -> list[dict]:
+    result = []
+    for entry in entries:
+        equipment_ref = entry.get("equipment") or {}
+        item_id = equipment_ref.get("index")
+        item = item_lookup.get(item_id) if item_id else None
+        if not item:
+            continue
+        result.append({"itemId": item_id, "name": item["name"], "qty": entry.get("quantity", 1)})
+    return result
+
+
+def _gather_equipped_items(
+    equipment_choices: list[dict], added_entries: list[dict], item_lookup: dict,
+) -> list[dict]:
+    equipped: list[dict] = []
+    for choice in equipment_choices:
+        for selected_id in choice["selected"]:
+            for item_id in selected_id.split("+"):
+                item = item_lookup.get(item_id)
+                if item:
+                    equipped.append(item)
+    for entry in added_entries:
+        if not isinstance(entry, dict) or not entry.get("equipped"):
+            continue
+        item = item_lookup.get(entry.get("itemId"))
+        if item:
+            equipped.append(item)
+    return equipped
+
+
 def _apply_background_overlap(class_templates: list[dict], bg: dict | None) -> None:
     if not bg:
         return
@@ -256,6 +301,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choice_templates += _background_choice_templates(bg, bg_id)
     if race and race_id:
         choice_templates += _species_choice_templates(catalog, race, race_id, subrace)
+    if cls and cls_id:
+        choice_templates += _equipment_choice_templates(cls, "class", cls_id, cls["name"])
+    if bg and bg_id:
+        choice_templates += _equipment_choice_templates(bg, "background", bg_id, bg["name"])
 
     _apply_background_overlap([t for t in choice_templates if t["source"]["kind"] == "class"], bg)
 
@@ -265,6 +314,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         all_selections.update(cls_entry.get("choices") or {})
     all_selections.update(background_dict.get("choices") or {})
     all_selections.update(species.get("choices") or {})
+    all_selections.update((draft.get("equipment") or {}).get("choices") or {})
 
     choices: list[dict] = []
     for tpl in choice_templates:
@@ -279,6 +329,35 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             selected = selected[: tpl["count"]]
         status = "resolved" if len(selected) == tpl["count"] else "pending"
         choices.append({**tpl, "selected": selected, "status": status})
+
+    equipment_dict = draft.get("equipment") or {}
+    added_raw = equipment_dict.get("added")
+    if added_raw is None:
+        added_raw = []
+    elif not isinstance(added_raw, list):
+        problems.append({"id": "malformed-equipment-added", "message": "'equipment.added' must be a list."})
+        added_raw = []
+
+    added_resolved = []
+    for entry in added_raw:
+        if not isinstance(entry, dict):
+            continue
+        item = catalog.items.get(entry.get("itemId"))
+        if not item:
+            continue
+        added_resolved.append({
+            "itemId": entry["itemId"], "name": item["name"],
+            "qty": entry.get("qty", 1), "equipped": bool(entry.get("equipped", False)),
+        })
+
+    equipment_choices = [c for c in choices if c["source"]["kind"] == "equipment"]
+    equipped_items = _gather_equipped_items(equipment_choices, added_raw if isinstance(added_raw, list) else [], catalog.items)
+
+    granted_equipment = []
+    if cls:
+        granted_equipment += _fixed_equipment(cls.get("starting_equipment", []), catalog.items)
+    if bg:
+        granted_equipment += _fixed_equipment(bg.get("starting_equipment", []), catalog.items)
 
     # Derived stats.
     proficient_skills: set[str] = set()
@@ -298,7 +377,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "proficiencyBonus": prof_bonus,
         "hitPointMax": derived_mod.hit_point_max(hit_die, modifiers["CON"]),
         "hitDice": f"1d{hit_die}" if hit_die else None,
-        "armorClass": derived_mod.armor_class(modifiers["DEX"]),
+        "armorClass": equipment_mod.armor_class_from_gear(equipped_items, modifiers["DEX"]),
         "speed": race.get("speed") if race else None,
         "savingThrows": saves,
         "skills": skills,
@@ -324,6 +403,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             "savingThrows": proficient_save_abilities,
             "languages": sorted(set(fixed_languages + chosen_languages)),
         },
+        "equipment": {"granted": granted_equipment, "added": added_resolved},
     }
 
     return {

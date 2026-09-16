@@ -27,11 +27,6 @@ def hit_point_max(hit_die: int | None, con_modifier: int) -> int:
     return hit_die + con_modifier
 
 
-def armor_class(dex_modifier: int) -> int:
-    # No armor/shield yet — equipment is Phase 2. Unarmored AC = 10 + DEX mod.
-    return 10 + dex_modifier
-
-
 def saving_throws(
     modifiers: dict[str, int], proficient_abilities: list[str], prof_bonus: int,
 ) -> dict[str, int]:

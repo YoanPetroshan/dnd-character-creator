@@ -21,11 +21,6 @@ def test_hit_point_max_is_hit_die_plus_con_modifier_at_level_one():
     assert derived.hit_point_max(None, 2) == 0
 
 
-def test_armor_class_unarmored_is_ten_plus_dex():
-    assert derived.armor_class(2) == 12
-    assert derived.armor_class(-1) == 9
-
-
 def test_saving_throws_adds_prof_bonus_only_for_proficient_abilities():
     modifiers = {"STR": 3, "DEX": 2, "CON": 1, "INT": 0, "WIS": -1, "CHA": 0}
     saves = derived.saving_throws(modifiers, ["STR", "CON"], 2)

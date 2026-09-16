@@ -97,6 +97,13 @@ def test_export_yaml_endpoint_returns_valid_yaml(client):
         "class:fighter:1:prof-choice-0": ["skill-acrobatics", "skill-athletics"],
         "class:fighter:1:feature:fighter-fighting-style": ["fighter-fighting-style-archery"],
     }
+    # Fighter now offers 3 resolvable equipment choices (Task 3) — all must
+    # be selected for the draft to have no pending choices left to export.
+    draft["equipment"]["choices"] = {
+        "class:fighter:1:equipment-choice-0": ["chain-mail"],
+        "class:fighter:1:equipment-choice-2": ["handaxe"],
+        "class:fighter:1:equipment-choice-3": ["explorers-pack"],
+    }
     draft["background"]["choices"] = {"background:acolyte:languages": ["dwarvish", "elvish"]}
     draft["species"]["choices"] = {"species:human:languages": ["giant"]}
     resp = client.post("/api/export/yaml", json=draft)

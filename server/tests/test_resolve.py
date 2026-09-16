@@ -328,3 +328,94 @@ def test_null_choice_selection_value_is_a_problem_not_a_crash(catalog):
     resolution = resolve(draft, catalog)  # must not raise
     skill_choice = next(c for c in resolution["choices"] if c["label"] == "Skill Proficiencies")
     assert skill_choice["selected"] == []
+
+
+def test_fighter_equipment_choices_are_offered(catalog):
+    resolution = resolve(_fighter_acolyte_human_draft(), catalog)
+    equipment_choices = [c for c in resolution["choices"] if c["source"]["kind"] == "equipment"]
+    labels = {c["label"] for c in equipment_choices}
+    # 3 of Fighter's 4 starting_equipment_options entries are resolvable in
+    # this phase (see Task 1) — the "martial weapon and a shield or two
+    # martial weapons" one is not, and must not appear at all.
+    assert len(equipment_choices) == 3
+    armor_choice = next(c for c in equipment_choices if any(o["id"] == "chain-mail" for o in c["options"]))
+    ids = {o["id"] for o in armor_choice["options"]}
+    assert ids == {"chain-mail", "leather-armor+longbow+arrow"}
+
+
+def test_selecting_chain_mail_computes_heavy_armor_ac(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[{
+            "classId": "fighter", "level": 1,
+            "choices": {"class:fighter:1:prof-choice-0": ["skill-athletics", "skill-history"]},
+        }],
+        equipment={
+            "choices": {"class:fighter:1:equipment-choice-0": ["chain-mail"]},
+            "added": [], "skipped": False,
+        },
+    )
+    resolution = resolve(draft, catalog)
+    # Fighter/Human draft has DEX 14 -> +2 human bonus... reuse the fixture's
+    # own DEX (14) + Human's +1 = 15 -> +2 mod; chain mail ignores DEX.
+    assert resolution["derived"]["armorClass"] == 16  # chain mail base, no DEX
+
+
+def test_selecting_leather_bundle_computes_light_armor_ac_with_dex(catalog):
+    draft = _fighter_acolyte_human_draft(
+        equipment={
+            "choices": {"class:fighter:1:equipment-choice-0": ["leather-armor+longbow+arrow"]},
+            "added": [], "skipped": False,
+        },
+    )
+    resolution = resolve(draft, catalog)
+    dex_mod = resolution["derived"]["abilityModifiers"]["DEX"]
+    assert resolution["derived"]["armorClass"] == 11 + dex_mod
+
+
+def test_sheet_lists_acolytes_granted_fixed_equipment(catalog):
+    resolution = resolve(_fighter_acolyte_human_draft(), catalog)
+    granted = resolution["sheet"]["equipment"]["granted"]
+    granted_ids = {g["itemId"] for g in granted}
+    assert "clothes-common" in granted_ids
+    assert "pouch" in granted_ids
+
+
+def test_draft_added_equipped_shield_adds_to_ac(catalog):
+    draft = _fighter_acolyte_human_draft(
+        equipment={"choices": {}, "added": [{"itemId": "shield", "qty": 1, "equipped": True}], "skipped": False},
+    )
+    resolution = resolve(draft, catalog)
+    dex_mod = resolution["derived"]["abilityModifiers"]["DEX"]
+    assert resolution["derived"]["armorClass"] == 10 + dex_mod + 2
+
+
+def test_draft_added_unequipped_item_does_not_affect_ac(catalog):
+    draft = _fighter_acolyte_human_draft(
+        equipment={"choices": {}, "added": [{"itemId": "shield", "qty": 1, "equipped": False}], "skipped": False},
+    )
+    resolution = resolve(draft, catalog)
+    dex_mod = resolution["derived"]["abilityModifiers"]["DEX"]
+    assert resolution["derived"]["armorClass"] == 10 + dex_mod
+    added = resolution["sheet"]["equipment"]["added"]
+    assert any(a["itemId"] == "shield" and a["equipped"] is False for a in added)
+
+
+def test_unknown_added_item_id_is_dropped_not_a_crash(catalog):
+    draft = _fighter_acolyte_human_draft(
+        equipment={"choices": {}, "added": [{"itemId": "not-a-real-item", "qty": 1, "equipped": True}], "skipped": False},
+    )
+    resolution = resolve(draft, catalog)  # must not raise
+    assert resolution["sheet"]["equipment"]["added"] == []
+
+
+def test_missing_equipment_field_entirely_is_not_a_crash(catalog):
+    draft = _fighter_acolyte_human_draft()
+    del draft["equipment"]
+    resolution = resolve(draft, catalog)  # must not raise
+    assert resolution["sheet"]["equipment"]["added"] == []
+
+
+def test_non_list_added_equipment_is_a_problem_not_a_crash(catalog):
+    draft = _fighter_acolyte_human_draft(equipment={"choices": {}, "added": "not-a-list", "skipped": False})
+    resolution = resolve(draft, catalog)  # must not raise
+    assert any(p["id"] == "malformed-equipment-added" for p in resolution["problems"])
