@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useDraft } from "./DraftContext";
 import { ResolutionProvider, useResolutionContext } from "./ResolutionContext";
+import { ClassPage } from "./pages/ClassPage";
 
 function StepPlaceholder({ name }: { name: string }) {
   return (
@@ -47,7 +48,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/home" replace />} />
             <Route path="/home" element={<HomePlaceholder />} />
-            <Route path="/class" element={<StepPlaceholder name="Class" />} />
+            <Route path="/class" element={<ClassPage />} />
             <Route path="/background" element={<StepPlaceholder name="Background" />} />
             <Route path="/species" element={<StepPlaceholder name="Species" />} />
             <Route path="/abilities" element={<StepPlaceholder name="Abilities" />} />
