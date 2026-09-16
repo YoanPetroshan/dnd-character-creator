@@ -71,8 +71,13 @@ def api_catalog_species(species_id: str):
 def api_export_yaml():
     draft = request.get_json(silent=True) or {}
     resolution = resolve(draft, _catalog)
-    if resolution["problems"]:
-        return jsonify({"problems": resolution["problems"]}), 400
+    pending_problems = [
+        {"id": f"unresolved-choice-{c['id']}", "message": f"'{c['label']}' isn't fully chosen yet."}
+        for c in resolution["choices"] if c["status"] == "pending"
+    ]
+    all_problems = resolution["problems"] + pending_problems
+    if all_problems:
+        return jsonify({"problems": all_problems}), 400
     return Response(to_yaml(resolution), mimetype="application/x-yaml")
 
 

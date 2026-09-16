@@ -43,7 +43,7 @@ def _class_choice_templates(cls: dict, cls_id: str) -> list[dict]:
         # also typed "proficiencies" that isn't actually a skill choice
         # (instruments/tools) — relabel based on what the resolved options
         # actually are, not the envelope's own (misleading) type field.
-        if tpl["label"] == "Skill Proficiencies" and not all(o["id"].startswith("skill-") for o in tpl["options"]):
+        if tpl["options"] and tpl["label"] == "Skill Proficiencies" and not all(o["id"].startswith("skill-") for o in tpl["options"]):
             tpl["label"] = "Tool Proficiencies"
         templates.append(tpl)
     return templates
@@ -120,6 +120,26 @@ def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrac
         tpl = build_choice_template(envelope, cid, source, trait["name"], description=_join_desc(trait.get("desc")))
         if tpl:
             templates.append(tpl)
+
+    # Race/subrace bonus-language choices (e.g. Human, Half-Elf) use the
+    # same options_array shape as everything else build_choice_options
+    # already handles, so this is a real Choice, not just a warning.
+    for src, src_id in ((race, race_id), (subrace, subrace.get("index") if subrace else None)):
+        if not src:
+            continue
+        envelope = src.get("language_options")
+        if not envelope:
+            continue
+        cid = f"species:{race_id}:languages"
+        if src is subrace:
+            cid = f"species:{race_id}:subspecies:{src_id}:languages"
+        source = {"kind": "species", "id": race_id, "label": race["name"]}
+        choose = envelope.get("choose", 1)
+        description = f"Choose {choose} additional language{'s' if choose != 1 else ''} of your choice."
+        tpl = build_choice_template(envelope, cid, source, "Bonus Language", description=description)
+        if tpl:
+            templates.append(tpl)
+
     return templates
 
 
@@ -140,7 +160,16 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     problems: list[dict] = []
     warnings: list[dict] = []
 
-    classes = draft.get("classes") or []
+    classes_raw = draft.get("classes")
+    if classes_raw is None:
+        classes_raw = []
+    elif not isinstance(classes_raw, list):
+        problems.append({"id": "malformed-classes", "message": "'classes' must be a list."})
+        classes_raw = []
+    classes = [c for c in classes_raw if isinstance(c, dict)]
+    if len(classes) != len(classes_raw):
+        problems.append({"id": "malformed-class-entry", "message": "one or more entries in 'classes' were not objects and were ignored."})
+
     if len(classes) > 1:
         problems.append({"id": "multiclass-unsupported", "message": "Multiclassing isn't supported yet — pick a single class."})
         classes = classes[:1]
@@ -155,12 +184,21 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     if cls_id and not cls:
         problems.append({"id": "unknown-class", "message": f"Unknown class '{cls_id}'."})
 
-    bg_id = (draft.get("background") or {}).get("id")
+    background_raw = draft.get("background")
+    if background_raw is not None and not isinstance(background_raw, dict):
+        problems.append({"id": "malformed-background", "message": "'background' must be an object."})
+        background_raw = {}
+    background_dict = background_raw or {}
+    bg_id = background_dict.get("id")
     bg = catalog.backgrounds.get(bg_id) if bg_id else None
     if bg_id and not bg:
         problems.append({"id": "unknown-background", "message": f"Unknown background '{bg_id}'."})
 
-    species = draft.get("species") or {}
+    species_raw = draft.get("species")
+    if species_raw is not None and not isinstance(species_raw, dict):
+        problems.append({"id": "malformed-species", "message": "'species' must be an object."})
+        species_raw = {}
+    species = species_raw or {}
     race_id = species.get("id")
     race = catalog.races.get(race_id) if race_id else None
     if race_id and not race:
@@ -181,6 +219,16 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # backgrounds don't grant ability bonuses in this ruleset; see spec §4).
     base_scores = (draft.get("abilities") or {}).get("base") or {}
     species_bonuses = _species_ability_bonuses(race, subrace)
+    if race and race.get("ability_bonus_options"):
+        problems.append({
+            "id": "species-ability-choice-unsupported",
+            "message": f"{race['name']}'s ability-score choice isn't supported yet — no bonus from it was applied.",
+        })
+    if subrace and subrace.get("ability_bonus_options"):
+        problems.append({
+            "id": "species-ability-choice-unsupported",
+            "message": f"{subrace['name']}'s ability-score choice isn't supported yet — no bonus from it was applied.",
+        })
     final_scores: dict[str, int] = {}
     for ab in derived_mod.ABILITIES:
         raw = base_scores.get(ab, 10)
@@ -215,13 +263,20 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     all_selections: dict[str, list[str]] = {}
     if cls_entry:
         all_selections.update(cls_entry.get("choices") or {})
-    all_selections.update((draft.get("background") or {}).get("choices") or {})
-    all_selections.update((draft.get("species") or {}).get("choices") or {})
+    all_selections.update(background_dict.get("choices") or {})
+    all_selections.update(species.get("choices") or {})
 
     choices: list[dict] = []
     for tpl in choice_templates:
-        valid_ids = {o["id"] for o in tpl["options"]}
-        selected = [s for s in all_selections.get(tpl["id"], []) if s in valid_ids]
+        valid_ids = {o["id"] for o in tpl["options"] if not o.get("disabled")}
+        raw_selected = all_selections.get(tpl["id"]) or []  # `or []` guards a JSON null value too
+        selected = [s for s in raw_selected if s in valid_ids]
+        if len(selected) > tpl["count"]:
+            problems.append({
+                "id": f"over-selected-{tpl['id']}",
+                "message": f"'{tpl['label']}' allows {tpl['count']} selection(s) but {len(selected)} were submitted.",
+            })
+            selected = selected[: tpl["count"]]
         status = "resolved" if len(selected) == tpl["count"] else "pending"
         choices.append({**tpl, "selected": selected, "status": status})
 

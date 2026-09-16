@@ -229,3 +229,102 @@ def test_null_ability_score_becomes_a_problem_not_a_crash(catalog):
     })
     resolution = resolve(draft, catalog)  # must not raise
     assert any(p["id"] == "ability-invalid-STR" for p in resolution["problems"])
+
+
+def test_over_selecting_a_choice_truncates_and_records_a_problem(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[{
+            "classId": "fighter", "level": 1,
+            "choices": {"class:fighter:1:prof-choice-0": [
+                "skill-acrobatics", "skill-athletics", "skill-history", "skill-intimidation", "skill-perception",
+            ]},
+        }],
+    )
+    resolution = resolve(draft, catalog)
+    skill_choice = next(c for c in resolution["choices"] if c["label"] == "Skill Proficiencies")
+    assert len(skill_choice["selected"]) == 2
+    assert skill_choice["status"] == "resolved"
+    assert any(p["id"].startswith("over-selected-") for p in resolution["problems"])
+    # Only the truncated 2 (plus Acolyte's own unconditional skill-insight/
+    # skill-religion grants) may land in the sheet — the 3 over-submitted
+    # ids (history, intimidation, perception) must never leak through.
+    assert resolution["sheet"]["proficiencies"]["skills"] == [
+        "skill-acrobatics", "skill-athletics", "skill-insight", "skill-religion",
+    ]
+
+
+def test_selecting_a_disabled_option_does_not_count_toward_the_choice(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[{
+            "classId": "fighter", "level": 1,
+            "choices": {"class:fighter:1:prof-choice-0": ["skill-insight", "skill-athletics"]},
+        }],
+    )
+    resolution = resolve(draft, catalog)
+    skill_choice = next(c for c in resolution["choices"] if c["label"] == "Skill Proficiencies")
+    # skill-insight is disabled (Acolyte already grants it) — must not be selectable
+    assert "skill-insight" not in skill_choice["selected"]
+    assert skill_choice["selected"] == ["skill-athletics"]
+    assert skill_choice["status"] == "pending"  # only 1 of 2 actually landed
+
+
+def test_monk_second_proficiency_choice_does_not_appear_as_a_broken_empty_choice(catalog):
+    draft = {
+        "name": "Test Monk", "sources": ["srd"],
+        "classes": [{"classId": "monk", "level": 1, "choices": {}}],
+        "background": {"choices": {}}, "species": {"choices": {}},
+        "abilities": {"method": "manual", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10}},
+        "equipment": {"added": [], "skipped": False}, "details": {},
+    }
+    resolution = resolve(draft, catalog)
+    class_choices = [c for c in resolution["choices"] if c["source"]["kind"] == "class"]
+    labels = [c["label"] for c in class_choices]
+    assert labels.count("Skill Proficiencies") == 1  # not duplicated
+    assert all(len(c["options"]) > 0 for c in class_choices)  # no empty/unsatisfiable choice
+
+
+def test_human_bonus_language_choice_is_offered(catalog):
+    resolution = resolve(_fighter_acolyte_human_draft(), catalog)
+    bonus_lang = next(c for c in resolution["choices"] if c["label"] == "Bonus Language")
+    assert bonus_lang["source"]["kind"] == "species"
+    assert bonus_lang["count"] == 1
+    assert len(bonus_lang["options"]) > 0
+
+
+def test_half_elf_ability_bonus_choice_is_flagged_as_unsupported(catalog):
+    draft = _fighter_acolyte_human_draft(species={"id": "half-elf", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert any(p["id"] == "species-ability-choice-unsupported" for p in resolution["problems"])
+
+
+def test_non_list_classes_is_a_problem_not_a_crash(catalog):
+    draft = _fighter_acolyte_human_draft(classes={"classId": "fighter"})
+    resolution = resolve(draft, catalog)  # must not raise
+    assert any(p["id"] == "malformed-classes" for p in resolution["problems"])
+
+
+def test_string_classes_entries_are_ignored_not_a_crash(catalog):
+    draft = _fighter_acolyte_human_draft(classes=["fighter"])
+    resolution = resolve(draft, catalog)  # must not raise
+    assert any(p["id"] == "malformed-class-entry" for p in resolution["problems"])
+
+
+def test_string_background_is_a_problem_not_a_crash(catalog):
+    draft = _fighter_acolyte_human_draft(background="acolyte")
+    resolution = resolve(draft, catalog)  # must not raise
+    assert any(p["id"] == "malformed-background" for p in resolution["problems"])
+
+
+def test_string_species_is_a_problem_not_a_crash(catalog):
+    draft = _fighter_acolyte_human_draft(species="human")
+    resolution = resolve(draft, catalog)  # must not raise
+    assert any(p["id"] == "malformed-species" for p in resolution["problems"])
+
+
+def test_null_choice_selection_value_is_a_problem_not_a_crash(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "fighter", "level": 1, "choices": {"class:fighter:1:prof-choice-0": None}}],
+    )
+    resolution = resolve(draft, catalog)  # must not raise
+    skill_choice = next(c for c in resolution["choices"] if c["label"] == "Skill Proficiencies")
+    assert skill_choice["selected"] == []

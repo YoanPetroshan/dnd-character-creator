@@ -43,7 +43,7 @@ def build_choice_options(from_field: dict) -> list[dict] | None:
             item = opt.get("item") or opt.get("of")
             option_id = item["index"] if item else label.lower().replace(" ", "-")
             options.append({"id": option_id, "label": label})
-        return options
+        return options if options else None
 
     if set_type == "resource_list":
         url = from_field.get("resource_list_url", "")

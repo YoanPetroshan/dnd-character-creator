@@ -92,7 +92,14 @@ def test_catalog_species_detail_endpoint_includes_subspecies(client):
 
 
 def test_export_yaml_endpoint_returns_valid_yaml(client):
-    resp = client.post("/api/export/yaml", json=_fighter_acolyte_human_draft())
+    draft = _fighter_acolyte_human_draft()
+    draft["classes"][0]["choices"] = {
+        "class:fighter:1:prof-choice-0": ["skill-acrobatics", "skill-athletics"],
+        "class:fighter:1:feature:fighter-fighting-style": ["fighter-fighting-style-archery"],
+    }
+    draft["background"]["choices"] = {"background:acolyte:languages": ["dwarvish", "elvish"]}
+    draft["species"]["choices"] = {"species:human:languages": ["giant"]}
+    resp = client.post("/api/export/yaml", json=draft)
     assert resp.status_code == 200
     assert resp.mimetype == "application/x-yaml"
     doc = yaml.safe_load(resp.data.decode("utf-8"))
@@ -106,3 +113,10 @@ def test_export_yaml_rejects_a_draft_with_problems(client):
     })
     assert resp.status_code == 400
     assert any(p["id"] == "multiclass-unsupported" for p in resp.get_json()["problems"])
+
+
+def test_export_yaml_rejects_when_a_choice_is_still_pending(client):
+    resp = client.post("/api/export/yaml", json=_fighter_acolyte_human_draft())
+    # Fighting Style is never pre-selected in this fixture, so it stays pending
+    assert resp.status_code == 400
+    assert any("unresolved-choice" in p["id"] for p in resp.get_json()["problems"])
