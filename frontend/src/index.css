@@ -1,0 +1,127 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  color: #222;
+  background: #fafafa;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.step-nav {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  background: #eee;
+  border-bottom: 1px solid #ccc;
+}
+
+.step-nav a {
+  padding: 8px 12px;
+  text-decoration: none;
+  color: #333;
+  border-radius: 4px;
+  position: relative;
+}
+
+.step-nav a.active {
+  background: #333;
+  color: #fff;
+}
+
+.step-nav__badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: #c0392b;
+  color: #fff;
+  font-size: 11px;
+}
+
+main {
+  flex: 1;
+  padding: 16px;
+}
+
+.page {
+  max-width: 800px;
+}
+
+.choice-card {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  background: #fff;
+}
+
+.choice-card__header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.choice-card[data-status="pending"] .choice-card__header {
+  border-left: 3px solid #2980b9;
+}
+
+.choice-card__pending-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #2980b9;
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.choice-card__label {
+  font-weight: 600;
+  flex: 1;
+}
+
+.choice-card__level,
+.choice-card__count {
+  font-size: 12px;
+  color: #666;
+}
+
+.choice-card__body {
+  padding: 0 12px 12px;
+}
+
+.choice-picker {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.choice-picker li {
+  padding: 2px 0;
+}
+
+.choice-picker__option--disabled {
+  color: #999;
+}
+
+.choice-picker__reason {
+  font-style: italic;
+  font-size: 12px;
+}
