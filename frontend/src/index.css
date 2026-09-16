@@ -138,3 +138,32 @@ main {
 .picker-list li {
   padding: 2px 0;
 }
+
+.ability-method-selector {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.ability-table {
+  border-collapse: collapse;
+}
+
+.ability-table th,
+.ability-table td {
+  border: 1px solid #ccc;
+  padding: 6px 12px;
+  text-align: left;
+}
+
+.point-buy-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.point-buy-stepper__value {
+  min-width: 1.5em;
+  text-align: center;
+  display: inline-block;
+}
