@@ -42,6 +42,8 @@ def _bundle_label_and_id(items: list[dict]) -> tuple[str, str] | None:
     in this phase's flat Choice model, so this returns None rather than
     silently dropping the sub-choice's meaning.
     """
+    if not items:
+        return None
     label_parts = []
     id_parts = []
     for sub in items:

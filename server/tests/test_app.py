@@ -156,6 +156,22 @@ def test_items_endpoint_filters_by_search_query(client):
     assert all("longbow" in n for n in names)
 
 
+def test_export_yaml_does_not_block_on_pending_equipment_choices(client):
+    resp = client.post("/api/export/yaml", json={
+        "name": "Torvin Bracewell",
+        "classes": [{"classId": "fighter", "level": 1, "choices": {
+            "class:fighter:1:prof-choice-0": ["skill-athletics", "skill-history"],
+            "class:fighter:1:feature:fighter-fighting-style": ["fighter-fighting-style-archery"],
+        }}],
+        "background": {"id": "acolyte", "choices": {"background:acolyte:languages": ["draconic", "deep-speech"]}},
+        "species": {"id": "human", "choices": {"species:human:languages": ["dwarvish"]}},
+        "abilities": {"method": "manual", "base": {"STR": 16, "DEX": 14, "CON": 14, "INT": 10, "WIS": 12, "CHA": 8}},
+        "equipment": {"added": [], "skipped": False},  # no "choices" key — exactly what the shipped frontend sends
+    })
+    assert resp.status_code == 200
+    assert resp.mimetype == "application/x-yaml"
+
+
 def test_equipment_choice_appears_in_resolve_response(client):
     resp = client.post("/api/resolve", json={
         "classes": [{"classId": "fighter", "level": 1, "choices": {}}],

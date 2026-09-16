@@ -88,7 +88,12 @@ def api_export_yaml():
     resolution = resolve(draft, _catalog)
     pending_problems = [
         {"id": f"unresolved-choice-{c['id']}", "message": f"'{c['label']}' isn't fully chosen yet."}
-        for c in resolution["choices"] if c["status"] == "pending"
+        for c in resolution["choices"]
+        if c["status"] == "pending" and c["source"]["kind"] != "equipment"
+        # Equipment choices are excluded from this gate until a frontend
+        # exists that can resolve them (Phase 2b) — otherwise every
+        # character the currently-shipped UI builds would be permanently
+        # unexportable, which is a regression this phase must not cause.
     ]
     all_problems = resolution["problems"] + pending_problems
     if all_problems:

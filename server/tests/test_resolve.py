@@ -431,3 +431,69 @@ def test_non_dict_equipment_field_itself_is_not_a_crash(catalog):
     draft = _fighter_acolyte_human_draft(equipment="not-a-dict")
     resolution = resolve(draft, catalog)  # must not raise
     assert resolution["sheet"]["equipment"]["added"] == []
+
+
+def test_paladin_granted_chain_mail_is_counted_toward_ac(catalog):
+    draft = {
+        "name": "Test Paladin", "sources": ["srd"],
+        "classes": [{"classId": "paladin", "level": 1, "choices": {}}],
+        "background": {"choices": {}}, "species": {"choices": {}},
+        "abilities": {"method": "manual", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10}},
+        "equipment": {"choices": {}, "added": [], "skipped": False}, "details": {},
+    }
+    resolution = resolve(draft, catalog)
+    granted_ids = {g["itemId"] for g in resolution["sheet"]["equipment"]["granted"]}
+    assert "chain-mail" in granted_ids
+    assert resolution["derived"]["armorClass"] == 16  # chain mail base, heavy armor ignores DEX
+
+
+def test_unhashable_added_item_id_is_not_a_crash(catalog):
+    draft = _fighter_acolyte_human_draft(
+        equipment={"choices": {}, "added": [{"itemId": ["shield"], "qty": 1, "equipped": True}], "skipped": False},
+    )
+    resolution = resolve(draft, catalog)  # must not raise
+    assert resolution["sheet"]["equipment"]["added"] == []
+
+
+def test_dict_added_item_id_is_not_a_crash(catalog):
+    draft = _fighter_acolyte_human_draft(
+        equipment={"choices": {}, "added": [{"itemId": {"a": 1}, "qty": 1, "equipped": True}], "skipped": False},
+    )
+    resolution = resolve(draft, catalog)  # must not raise
+    assert resolution["sheet"]["equipment"]["added"] == []
+
+
+def test_truncated_equipment_choice_notes_the_limitation_in_its_description(catalog):
+    draft = {
+        "name": "Test Cleric", "sources": ["srd"],
+        "classes": [{"classId": "cleric", "level": 1, "choices": {}}],
+        "background": {"choices": {}}, "species": {"choices": {}},
+        "abilities": {"method": "manual", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10}},
+        "equipment": {"choices": {}, "added": [], "skipped": False}, "details": {},
+    }
+    resolution = resolve(draft, catalog)
+    equipment_choices = [c for c in resolution["choices"] if c["source"]["kind"] == "equipment"]
+    # Find the one with only 1 real option resolved (the "a light crossbow
+    # and 20 bolts OR any simple weapon" envelope, per the final review's
+    # own finding) — verify it live first rather than assuming which index.
+    truncated = [c for c in equipment_choices if len(c["options"]) == 1]
+    assert truncated, "expected at least one truncated equipment choice for Cleric"
+    assert "not available yet" in truncated[0]["description"] or "aren't available yet" in truncated[0]["description"]
+
+
+def test_chosen_equipment_appears_on_the_sheet(catalog):
+    draft = _fighter_acolyte_human_draft(
+        equipment={"choices": {"class:fighter:1:equipment-choice-0": ["chain-mail"]}, "added": [], "skipped": False},
+    )
+    resolution = resolve(draft, catalog)
+    chosen_ids = {c["itemId"] for c in resolution["sheet"]["equipment"]["chosen"]}
+    assert "chain-mail" in chosen_ids
+
+
+def test_unhashable_choice_selection_element_is_not_a_crash(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "fighter", "level": 1, "choices": {"class:fighter:1:prof-choice-0": [["skill-athletics"], "skill-history"]}}],
+    )
+    resolution = resolve(draft, catalog)  # must not raise
+    skill_choice = next(c for c in resolution["choices"] if c["label"] == "Skill Proficiencies")
+    assert skill_choice["selected"] == ["skill-history"]  # the unhashable element is skipped, the valid one kept

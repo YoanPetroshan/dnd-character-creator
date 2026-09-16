@@ -6,11 +6,13 @@ fixed-order pass: sources → species ability bonuses → final ability scores
 fixpoint.
 
 Phase 1 scope: single class, level 1 only. Multiclass, leveling above 1,
-subclass selection, and equipment are all out of scope (see the plan's
-Global Constraints) — draft.classes[0].subclassId is read but never
-trusted to gate a feature choice unless it actually matches, so any
-level-1 feature gated to a specific subclass is filtered out rather than
-guessed at.
+and subclass selection are all out of scope (see the plan's Global
+Constraints) — draft.classes[0].subclassId is read but never trusted to
+gate a feature choice unless it actually matches, so any level-1 feature
+gated to a specific subclass is filtered out rather than guessed at.
+Equipment IS in scope as of Phase 2a — see engine/equipment.py and the
+_equipment_choice_templates/_gather_equipped_items/_fixed_equipment
+functions below.
 """
 from __future__ import annotations
 
@@ -152,8 +154,12 @@ def _equipment_choice_templates(entity: dict, source_kind: str, source_id: str, 
         if source_kind == "class":
             source["level"] = 1
         tpl = build_choice_template(envelope, cid, source, "Starting Equipment")
-        if tpl:
-            templates.append(tpl)
+        if not tpl:
+            continue
+        original_option_count = len((envelope.get("from") or {}).get("options", []))
+        if original_option_count and len(tpl["options"]) < original_option_count:
+            tpl["description"] = (tpl["description"] + " (Note: one or more of the original options for this choice aren't available yet and have been left out.)").strip()
+        templates.append(tpl)
     return templates
 
 
@@ -182,10 +188,22 @@ def _gather_equipped_items(
     for entry in added_entries:
         if not isinstance(entry, dict) or not entry.get("equipped"):
             continue
-        item = item_lookup.get(entry.get("itemId"))
+        item_id = entry.get("itemId")
+        item = item_lookup.get(item_id) if isinstance(item_id, str) else None
         if item:
             equipped.append(item)
     return equipped
+
+
+def _chosen_equipment(equipment_choices: list[dict], item_lookup: dict) -> list[dict]:
+    result: list[dict] = []
+    for choice in equipment_choices:
+        for selected_id in choice["selected"]:
+            for item_id in selected_id.split("+"):
+                item = item_lookup.get(item_id)
+                if item:
+                    result.append({"itemId": item_id, "name": item["name"], "qty": 1})
+    return result
 
 
 def _apply_background_overlap(class_templates: list[dict], bg: dict | None) -> None:
@@ -327,7 +345,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     for tpl in choice_templates:
         valid_ids = {o["id"] for o in tpl["options"] if not o.get("disabled")}
         raw_selected = all_selections.get(tpl["id"]) or []  # `or []` guards a JSON null value too
-        selected = [s for s in raw_selected if s in valid_ids]
+        selected = [s for s in raw_selected if isinstance(s, str) and s in valid_ids]
         if len(selected) > tpl["count"]:
             problems.append({
                 "id": f"over-selected-{tpl['id']}",
@@ -348,22 +366,29 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     for entry in added_raw:
         if not isinstance(entry, dict):
             continue
-        item = catalog.items.get(entry.get("itemId"))
+        item_id = entry.get("itemId")
+        item = catalog.items.get(item_id) if isinstance(item_id, str) else None
         if not item:
             continue
         added_resolved.append({
-            "itemId": entry["itemId"], "name": item["name"],
+            "itemId": item_id, "name": item["name"],
             "qty": entry.get("qty", 1), "equipped": bool(entry.get("equipped", False)),
         })
 
     equipment_choices = [c for c in choices if c["source"]["kind"] == "equipment"]
     equipped_items = _gather_equipped_items(equipment_choices, added_raw if isinstance(added_raw, list) else [], catalog.items)
+    chosen_equipment = _chosen_equipment(equipment_choices, catalog.items)
 
     granted_equipment = []
     if cls:
         granted_equipment += _fixed_equipment(cls.get("starting_equipment", []), catalog.items)
     if bg:
         granted_equipment += _fixed_equipment(bg.get("starting_equipment", []), catalog.items)
+
+    for granted in granted_equipment:
+        granted_item = catalog.items.get(granted["itemId"])
+        if granted_item:
+            equipped_items.append(granted_item)
 
     # Derived stats.
     proficient_skills: set[str] = set()
@@ -409,7 +434,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             "savingThrows": proficient_save_abilities,
             "languages": sorted(set(fixed_languages + chosen_languages)),
         },
-        "equipment": {"granted": granted_equipment, "added": added_resolved},
+        "equipment": {"granted": granted_equipment, "chosen": chosen_equipment, "added": added_resolved},
     }
 
     return {
