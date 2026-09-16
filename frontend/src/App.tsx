@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useDraft } from "./DraftContext";
+import { ResolutionProvider, useResolutionContext } from "./ResolutionContext";
 
 function StepPlaceholder({ name }: { name: string }) {
   return (
@@ -11,6 +12,7 @@ function StepPlaceholder({ name }: { name: string }) {
 
 function HomePlaceholder() {
   const { draft, dispatch } = useDraft();
+  const { resolution, loading, error } = useResolutionContext();
   return (
     <div className="page">
       <h1>Home</h1>
@@ -23,6 +25,16 @@ function HomePlaceholder() {
         />
       </label>
       <p>Saved as you type — reload the page and this name should still be here.</p>
+      <h2>Resolution (from /api/resolve)</h2>
+      {loading && <p>Зареждане…</p>}
+      {error && <p style={{ color: "red" }}>Грешка: {error}</p>}
+      {resolution && (
+        <ul>
+          {resolution.warnings.map((w) => (
+            <li key={w.id}>{w.message}</li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -30,18 +42,20 @@ function HomePlaceholder() {
 export default function App() {
   return (
     <div className="app">
-      <main>
-        <Routes>
-          <Route path="/" element={<Navigate to="/home" replace />} />
-          <Route path="/home" element={<HomePlaceholder />} />
-          <Route path="/class" element={<StepPlaceholder name="Class" />} />
-          <Route path="/background" element={<StepPlaceholder name="Background" />} />
-          <Route path="/species" element={<StepPlaceholder name="Species" />} />
-          <Route path="/abilities" element={<StepPlaceholder name="Abilities" />} />
-          <Route path="/equipment" element={<StepPlaceholder name="Equipment" />} />
-          <Route path="/export" element={<StepPlaceholder name="Export" />} />
-        </Routes>
-      </main>
+      <ResolutionProvider>
+        <main>
+          <Routes>
+            <Route path="/" element={<Navigate to="/home" replace />} />
+            <Route path="/home" element={<HomePlaceholder />} />
+            <Route path="/class" element={<StepPlaceholder name="Class" />} />
+            <Route path="/background" element={<StepPlaceholder name="Background" />} />
+            <Route path="/species" element={<StepPlaceholder name="Species" />} />
+            <Route path="/abilities" element={<StepPlaceholder name="Abilities" />} />
+            <Route path="/equipment" element={<StepPlaceholder name="Equipment" />} />
+            <Route path="/export" element={<StepPlaceholder name="Export" />} />
+          </Routes>
+        </main>
+      </ResolutionProvider>
     </div>
   );
 }
