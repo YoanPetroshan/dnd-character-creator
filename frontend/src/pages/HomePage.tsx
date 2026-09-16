@@ -3,7 +3,7 @@ import { useResolutionContext } from "../ResolutionContext";
 
 export function HomePage() {
   const { draft, dispatch } = useDraft();
-  const { resolution, loading, error } = useResolutionContext();
+  const { resolution, loading, error, retry } = useResolutionContext();
   return (
     <div className="page">
       <h1>Home</h1>
@@ -18,7 +18,14 @@ export function HomePage() {
       <p>Saved as you type — reload the page and this name should still be here.</p>
       <h2>Resolution (from /api/resolve)</h2>
       {loading && <p>Зареждане…</p>}
-      {error && <p style={{ color: "red" }}>Грешка: {error}</p>}
+      {error && (
+        <p style={{ color: "red" }}>
+          Грешка: {error}{" "}
+          <button type="button" onClick={retry}>
+            Опитай пак
+          </button>
+        </p>
+      )}
       {resolution && (
         <ul>
           {resolution.warnings.map((w) => (

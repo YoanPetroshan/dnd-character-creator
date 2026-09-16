@@ -2,8 +2,16 @@ import { useResolutionContext } from "../ResolutionContext";
 import { ChoiceCard } from "../components/ChoiceCard";
 
 export function BackgroundPage() {
-  const { resolution, loading, error } = useResolutionContext();
-  if (error) return <div className="page">Грешка: {error}</div>;
+  const { resolution, loading, error, retry } = useResolutionContext();
+  if (error)
+    return (
+      <div className="page">
+        <p>Грешка: {error}</p>
+        <button type="button" onClick={retry}>
+          Опитай пак
+        </button>
+      </div>
+    );
   if (!resolution) return <div className="page">Зареждане…</div>;
   const choices = resolution.choices.filter((c) => c.source.kind === "background");
   return (

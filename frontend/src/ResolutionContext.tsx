@@ -7,6 +7,7 @@ interface ResolutionContextValue {
   resolution: Resolution | null;
   loading: boolean;
   error: string | null;
+  retry: () => void;
 }
 
 const ResolutionContext = createContext<ResolutionContextValue | null>(null);

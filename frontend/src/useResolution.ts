@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import type { Draft, Resolution } from "./types";
 
 const DEBOUNCE_MS = 150;
@@ -9,12 +9,13 @@ interface ResolutionState {
   error: string | null;
 }
 
-export function useResolution(draft: Draft): ResolutionState {
+export function useResolution(draft: Draft): ResolutionState & { retry: () => void } {
   const [state, setState] = useState<ResolutionState>({
     resolution: null,
     loading: false,
     error: null,
   });
+  const [retryNonce, setRetryNonce] = useState(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestId = useRef(0);
 
@@ -46,7 +47,9 @@ export function useResolution(draft: Draft): ResolutionState {
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [draft]);
+  }, [draft, retryNonce]);
 
-  return state;
+  const retry = useCallback(() => setRetryNonce((n) => n + 1), []);
+
+  return { ...state, retry };
 }

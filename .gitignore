@@ -8,3 +8,8 @@ server/__pycache__/
 server/**/__pycache__/
 frontend/node_modules/
 frontend/dist/
+
+# tsc -b generated output that would otherwise shadow vite.config.ts
+frontend/*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts

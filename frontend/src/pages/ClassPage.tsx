@@ -2,9 +2,17 @@ import { useResolutionContext } from "../ResolutionContext";
 import { ChoiceCard } from "../components/ChoiceCard";
 
 export function ClassPage() {
-  const { resolution, loading, error } = useResolutionContext();
+  const { resolution, loading, error, retry } = useResolutionContext();
 
-  if (error) return <div className="page">Грешка: {error}</div>;
+  if (error)
+    return (
+      <div className="page">
+        <p>Грешка: {error}</p>
+        <button type="button" onClick={retry}>
+          Опитай пак
+        </button>
+      </div>
+    );
   if (!resolution) return <div className="page">Зареждане…</div>;
 
   const classChoices = resolution.choices.filter((c) => c.source.kind === "class");
