@@ -186,3 +186,46 @@ def test_mismatched_subspecies_is_a_problem_and_subspecies_is_ignored(catalog):
     resolution = resolve(draft, catalog)
     assert any(p["id"] == "subspecies-mismatch" for p in resolution["problems"])
     assert resolution["sheet"]["species"]["subspecies"] is None
+
+
+def test_bard_instrument_choice_does_not_pollute_skill_proficiencies(catalog):
+    draft = {
+        "name": "Test Bard", "sources": ["srd"],
+        "classes": [{
+            "classId": "bard", "level": 1,
+            "choices": {
+                "class:bard:1:prof-choice-0": ["skill-acrobatics", "skill-arcana", "skill-athletics"],
+                "class:bard:1:prof-choice-1": ["bagpipes", "drum", "dulcimer"],
+            },
+        }],
+        "background": {"choices": {}}, "species": {"choices": {}},
+        "abilities": {"method": "manual", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10}},
+        "equipment": {"added": [], "skipped": False}, "details": {},
+    }
+    resolution = resolve(draft, catalog)
+    skills = resolution["sheet"]["proficiencies"]["skills"]
+    assert all(s.startswith("skill-") for s in skills)
+    assert "bagpipes" not in skills
+    tool_choice = next(c for c in resolution["choices"] if c["label"] == "Tool Proficiencies")
+    assert tool_choice["selected"] == ["bagpipes", "drum", "dulcimer"]
+    skill_choice = next(c for c in resolution["choices"] if c["label"] == "Skill Proficiencies")
+    assert all(o["id"].startswith("skill-") for o in skill_choice["options"])
+
+
+def test_non_numeric_ability_score_becomes_a_problem_not_a_crash(catalog):
+    draft = _fighter_acolyte_human_draft(abilities={
+        "method": "manual",
+        "base": {"STR": "not-a-number", "DEX": 14, "CON": 14, "INT": 10, "WIS": 12, "CHA": 8},
+    })
+    resolution = resolve(draft, catalog)  # must not raise
+    assert any(p["id"] == "ability-invalid-STR" for p in resolution["problems"])
+    assert resolution["sheet"]["abilities"]["STR"] == 11  # fallback 10 + human's +1
+
+
+def test_null_ability_score_becomes_a_problem_not_a_crash(catalog):
+    draft = _fighter_acolyte_human_draft(abilities={
+        "method": "manual",
+        "base": {"STR": None, "DEX": 14, "CON": 14, "INT": 10, "WIS": 12, "CHA": 8},
+    })
+    resolution = resolve(draft, catalog)  # must not raise
+    assert any(p["id"] == "ability-invalid-STR" for p in resolution["problems"])

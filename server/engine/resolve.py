@@ -35,10 +35,17 @@ def _class_choice_templates(cls: dict, cls_id: str) -> list[dict]:
     for i, envelope in enumerate(cls.get("proficiency_choices", [])):
         cid = f"class:{cls_id}:1:prof-choice-{i}"
         source = {"kind": "class", "id": cls_id, "label": cls["name"], "level": 1}
-        label = "Skill Proficiencies" if envelope.get("type") == "proficiencies" else (envelope.get("type") or "Choice").title()
-        tpl = build_choice_template(envelope, cid, source, label)
-        if tpl:
-            templates.append(tpl)
+        provisional_label = "Skill Proficiencies" if envelope.get("type") == "proficiencies" else (envelope.get("type") or "Choice").title()
+        tpl = build_choice_template(envelope, cid, source, provisional_label)
+        if not tpl:
+            continue
+        # Some classes (Bard, Monk) have a SECOND proficiency_choices entry
+        # also typed "proficiencies" that isn't actually a skill choice
+        # (instruments/tools) — relabel based on what the resolved options
+        # actually are, not the envelope's own (misleading) type field.
+        if tpl["label"] == "Skill Proficiencies" and not all(o["id"].startswith("skill-") for o in tpl["options"]):
+            tpl["label"] = "Tool Proficiencies"
+        templates.append(tpl)
     return templates
 
 
@@ -174,10 +181,15 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # backgrounds don't grant ability bonuses in this ruleset; see spec §4).
     base_scores = (draft.get("abilities") or {}).get("base") or {}
     species_bonuses = _species_ability_bonuses(race, subrace)
-    final_scores = {
-        ab: int(base_scores.get(ab, 10)) + species_bonuses.get(ab, 0)
-        for ab in derived_mod.ABILITIES
-    }
+    final_scores: dict[str, int] = {}
+    for ab in derived_mod.ABILITIES:
+        raw = base_scores.get(ab, 10)
+        try:
+            base_score = int(raw)
+        except (TypeError, ValueError):
+            problems.append({"id": f"ability-invalid-{ab}", "message": f"{ab} score {raw!r} isn't a valid number; using 10 instead."})
+            base_score = 10
+        final_scores[ab] = base_score + species_bonuses.get(ab, 0)
     for ab, score in final_scores.items():
         if not (1 <= score <= 30):
             problems.append({"id": f"ability-out-of-range-{ab}", "message": f"{ab} score {score} is out of the 1-30 range."})
@@ -216,8 +228,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # Derived stats.
     proficient_skills: set[str] = set()
     for c in choices:
-        if c["source"]["kind"] == "class" and c["label"] == "Skill Proficiencies":
-            proficient_skills.update(c["selected"])
+        if c["source"]["kind"] == "class":
+            proficient_skills.update(s for s in c["selected"] if s.startswith("skill-"))
     if bg:
         proficient_skills.update(p["index"] for p in bg.get("starting_proficiencies", []) if p["index"].startswith("skill-"))
 
@@ -240,7 +252,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
 
     fixed_languages = [lang["index"] for lang in (bg.get("languages", []) if bg else [])] + \
         [lang["index"] for lang in (race.get("languages", []) if race else [])]
-    chosen_languages = [s for c in choices if c["label"] == "Languages" for s in c["selected"]]
+    chosen_languages = [s for c in choices if c["source"]["kind"] == "background" for s in c["selected"]]
 
     sheet = {
         "name": draft.get("name") or "",
