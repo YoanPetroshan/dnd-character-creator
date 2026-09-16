@@ -1,0 +1,188 @@
+import pytest
+
+from catalog.loader import load
+from engine.resolve import resolve
+
+
+@pytest.fixture(scope="module")
+def catalog():
+    return load()
+
+
+def _fighter_acolyte_human_draft(**overrides):
+    draft = {
+        "name": "Torvin Bracewell",
+        "sources": ["srd"],
+        "classes": [{"classId": "fighter", "level": 1, "choices": {}}],
+        "background": {"id": "acolyte", "choices": {}},
+        "species": {"id": "human", "choices": {}},
+        "abilities": {"method": "manual", "base": {"STR": 16, "DEX": 14, "CON": 14, "INT": 10, "WIS": 12, "CHA": 8}},
+        "equipment": {"added": [], "skipped": False},
+        "details": {},
+    }
+    draft.update(overrides)
+    return draft
+
+
+def _empty_draft():
+    return {
+        "name": "", "sources": ["srd"], "classes": [],
+        "background": {"choices": {}}, "species": {"choices": {}},
+        "abilities": {"method": "standard", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10}},
+        "equipment": {"added": [], "skipped": False}, "details": {},
+    }
+
+
+def test_empty_draft_resolves_without_error_or_problems(catalog):
+    resolution = resolve(_empty_draft(), catalog)
+    assert resolution["problems"] == []
+    assert resolution["choices"] == []
+    assert resolution["sheet"]["name"] == ""
+    assert resolution["sheet"]["level"] == 0
+    assert resolution["sheet"]["class"] is None
+
+
+def test_fighter_acolyte_human_produces_expected_sheet_and_derived(catalog):
+    resolution = resolve(_fighter_acolyte_human_draft(), catalog)
+    assert resolution["problems"] == []
+    sheet = resolution["sheet"]
+    assert sheet["name"] == "Torvin Bracewell"
+    assert sheet["level"] == 1
+    assert sheet["class"] == {"id": "fighter", "name": "Fighter"}
+    assert sheet["background"] == {"id": "acolyte", "name": "Acolyte"}
+    assert sheet["species"]["id"] == "human"
+    assert sheet["species"]["subspecies"] is None
+    # Human's +1 to every ability (chargen/data/srd/5e-SRD-Races.json)
+    assert sheet["abilities"] == {"STR": 17, "DEX": 15, "CON": 15, "INT": 11, "WIS": 13, "CHA": 9}
+
+    derived = resolution["derived"]
+    assert derived["abilityModifiers"] == {"STR": 3, "DEX": 2, "CON": 2, "INT": 0, "WIS": 1, "CHA": -1}
+    assert derived["proficiencyBonus"] == 2
+    assert derived["hitPointMax"] == 12  # Fighter hit_die 10 + CON mod 2
+    assert derived["hitDice"] == "1d10"
+    assert derived["armorClass"] == 12  # 10 + DEX mod 2, unarmored
+    assert derived["speed"] == 30
+    # Fighter is proficient in STR and CON saves
+    assert derived["savingThrows"]["STR"] == 5
+    assert derived["savingThrows"]["CON"] == 4
+    assert derived["savingThrows"]["DEX"] == 2  # not proficient
+    assert derived["passivePerception"] == 10 + derived["skills"]["skill-perception"]
+
+
+def test_fighter_class_skill_choice_disables_options_already_granted_by_background(catalog):
+    resolution = resolve(_fighter_acolyte_human_draft(), catalog)
+    skill_choice = next(
+        c for c in resolution["choices"]
+        if c["source"]["kind"] == "class" and c["label"] == "Skill Proficiencies"
+    )
+    insight = next(o for o in skill_choice["options"] if o["id"] == "skill-insight")
+    assert insight.get("disabled") is True
+    assert "Acolyte" in insight["disabledReason"]
+    athletics = next(o for o in skill_choice["options"] if o["id"] == "skill-athletics")
+    assert not athletics.get("disabled")
+
+
+def test_fighting_style_choice_is_present_and_pending_by_default(catalog):
+    resolution = resolve(_fighter_acolyte_human_draft(), catalog)
+    fighting_style = next(
+        c for c in resolution["choices"]
+        if c["source"]["kind"] == "class" and c["label"] == "Fighting Style"
+    )
+    assert fighting_style["count"] == 1
+    assert fighting_style["selected"] == []
+    assert fighting_style["status"] == "pending"
+    # The subfeature_options envelope itself carries no description — this
+    # must be sourced from the parent feature's own 'desc', or it silently
+    # renders blank in the UI.
+    assert "specialty" in fighting_style["description"]
+    option_ids = {o["id"] for o in fighting_style["options"]}
+    assert "fighter-fighting-style-archery" in option_ids
+
+
+def test_selecting_a_choice_marks_it_resolved(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[{
+            "classId": "fighter", "level": 1,
+            "choices": {"class:fighter:1:feature:fighter-fighting-style": ["fighter-fighting-style-archery"]},
+        }],
+    )
+    resolution = resolve(draft, catalog)
+    fighting_style = next(
+        c for c in resolution["choices"]
+        if c["source"]["kind"] == "class" and c["label"] == "Fighting Style"
+    )
+    assert fighting_style["selected"] == ["fighter-fighting-style-archery"]
+    assert fighting_style["status"] == "resolved"
+
+
+def test_background_language_choice_offers_sixteen_languages(catalog):
+    resolution = resolve(_fighter_acolyte_human_draft(), catalog)
+    languages = next(c for c in resolution["choices"] if c["source"]["kind"] == "background")
+    assert languages["label"] == "Languages"
+    assert languages["count"] == 2
+    assert len(languages["options"]) == 16
+    assert languages["description"] == "Choose 2 languages of your choice."
+
+
+def test_species_trait_choice_for_dragonborn_ancestry(catalog):
+    draft = _fighter_acolyte_human_draft(species={"id": "dragonborn", "choices": {}})
+    resolution = resolve(draft, catalog)
+    ancestry = next(c for c in resolution["choices"] if c["source"]["kind"] == "species")
+    assert ancestry["label"] == "Draconic Ancestry"
+    assert ancestry["count"] == 1
+    # subtrait_options itself carries no description — must come from the
+    # parent trait's own 'desc'.
+    assert "draconic ancestry" in ancestry["description"].lower()
+    option_ids = {o["id"] for o in ancestry["options"]}
+    assert "draconic-ancestry-black" in option_ids
+
+
+def test_subrace_ability_bonus_stacks_with_race(catalog):
+    draft = _fighter_acolyte_human_draft(species={"id": "dwarf", "subspeciesId": "hill-dwarf", "choices": {}})
+    resolution = resolve(draft, catalog)
+    # Dwarf +2 CON, Hill Dwarf subrace +1 WIS (chargen/data/srd/5e-SRD-Races.json,
+    # 5e-SRD-Subraces.json)
+    assert resolution["sheet"]["abilities"]["CON"] == 16  # base 14 + 2
+    assert resolution["sheet"]["abilities"]["WIS"] == 13  # base 12 + 1
+    assert resolution["sheet"]["species"]["subspecies"] == {"id": "hill-dwarf", "name": "Hill Dwarf"}
+
+
+def test_multiclass_draft_produces_a_problem_and_uses_only_the_first_class(catalog):
+    draft = _fighter_acolyte_human_draft(classes=[
+        {"classId": "fighter", "level": 1, "choices": {}},
+        {"classId": "wizard", "level": 1, "choices": {}},
+    ])
+    resolution = resolve(draft, catalog)
+    assert any(p["id"] == "multiclass-unsupported" for p in resolution["problems"])
+    assert resolution["sheet"]["class"]["id"] == "fighter"
+
+
+def test_level_other_than_one_produces_a_problem_but_still_resolves(catalog):
+    draft = _fighter_acolyte_human_draft(classes=[{"classId": "fighter", "level": 5, "choices": {}}])
+    resolution = resolve(draft, catalog)
+    assert any(p["id"] == "level-unsupported" for p in resolution["problems"])
+    assert resolution["sheet"]["level"] == 1
+    assert resolution["derived"]["proficiencyBonus"] == 2
+
+
+def test_unknown_class_id_produces_a_problem_not_a_crash(catalog):
+    draft = _fighter_acolyte_human_draft(classes=[{"classId": "not-a-class", "level": 1, "choices": {}}])
+    resolution = resolve(draft, catalog)
+    assert any(p["id"] == "unknown-class" for p in resolution["problems"])
+    assert resolution["sheet"]["class"] is None
+
+
+def test_ability_score_out_of_range_produces_a_problem(catalog):
+    draft = _fighter_acolyte_human_draft(abilities={
+        "method": "manual",
+        "base": {"STR": 99, "DEX": 14, "CON": 14, "INT": 10, "WIS": 12, "CHA": 8},
+    })
+    resolution = resolve(draft, catalog)
+    assert any(p["id"] == "ability-out-of-range-STR" for p in resolution["problems"])
+
+
+def test_mismatched_subspecies_is_a_problem_and_subspecies_is_ignored(catalog):
+    draft = _fighter_acolyte_human_draft(species={"id": "human", "subspeciesId": "hill-dwarf", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert any(p["id"] == "subspecies-mismatch" for p in resolution["problems"])
+    assert resolution["sheet"]["species"]["subspecies"] is None
