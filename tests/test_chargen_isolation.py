@@ -47,6 +47,16 @@ _EXCLUDED_DIR_PARTS = {".venv", "venv", "__pycache__", ".git"}
 # that they can't import their own siblings.
 LOCAL_MODULES = {p.stem for p in ROOT.glob("*.py")} | {"chargen", "tests"}
 
+# The v2 builder's own first-party packages, all living under server/
+# (server/app.py, server/catalog/, server/engine/, server/export.py) — v2's
+# counterparts to chargen. Deliberately NOT folded into the blanket
+# LOCAL_MODULES set above and NOT allowed from arbitrary paths: "engine" is
+# literally one of the exact module names this test exists to catch (see
+# the module docstring), so this exemption only applies to imports from
+# inside server/ itself — an `import engine` anywhere else in the repo is
+# still exactly the violation this test is designed to flag.
+SERVER_LOCAL_MODULES = {"catalog", "engine", "export"}
+
 # The one lazy import chargen/cli.py is allowed to keep — see module
 # docstring above and final-review.md's I6/Minor 7.
 _CLI_LAZY_IMPORT_EXEMPTION = (pathlib.Path("chargen") / "cli.py", "library")
@@ -110,6 +120,8 @@ def test_every_top_level_import_is_stdlib_chargen_or_a_declared_dependency():
                 top = mod.split(".")[0]
                 if (top in LOCAL_MODULES or top in ALLOWED_THIRD_PARTY
                         or top in STDLIB_MODULES):
+                    continue
+                if rel.parts[0] == "server" and top in SERVER_LOCAL_MODULES:
                     continue
                 if (rel, top) == _CLI_LAZY_IMPORT_EXEMPTION:
                     continue
