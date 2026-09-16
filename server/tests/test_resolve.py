@@ -419,3 +419,15 @@ def test_non_list_added_equipment_is_a_problem_not_a_crash(catalog):
     draft = _fighter_acolyte_human_draft(equipment={"choices": {}, "added": "not-a-list", "skipped": False})
     resolution = resolve(draft, catalog)  # must not raise
     assert any(p["id"] == "malformed-equipment-added" for p in resolution["problems"])
+
+
+def test_non_dict_equipment_choices_is_a_problem_not_a_crash(catalog):
+    draft = _fighter_acolyte_human_draft(equipment={"choices": "not-a-dict", "added": [], "skipped": False})
+    resolution = resolve(draft, catalog)  # must not raise
+    assert any(p["id"] == "malformed-equipment-choices" for p in resolution["problems"])
+
+
+def test_non_dict_equipment_field_itself_is_not_a_crash(catalog):
+    draft = _fighter_acolyte_human_draft(equipment="not-a-dict")
+    resolution = resolve(draft, catalog)  # must not raise
+    assert resolution["sheet"]["equipment"]["added"] == []

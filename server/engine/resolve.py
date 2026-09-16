@@ -309,12 +309,19 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     _apply_background_overlap([t for t in choice_templates if t["source"]["kind"] == "class"], bg)
 
     # Apply the draft's own selections onto each template to get a real Choice.
+    equipment_raw = draft.get("equipment")
+    equipment_dict = equipment_raw if isinstance(equipment_raw, dict) else {}
+    equipment_choices_raw = equipment_raw.get("choices") if isinstance(equipment_raw, dict) else None
+    if equipment_choices_raw is not None and not isinstance(equipment_choices_raw, dict):
+        problems.append({"id": "malformed-equipment-choices", "message": "'equipment.choices' must be an object."})
+        equipment_choices_raw = None
+
     all_selections: dict[str, list[str]] = {}
     if cls_entry:
         all_selections.update(cls_entry.get("choices") or {})
     all_selections.update(background_dict.get("choices") or {})
     all_selections.update(species.get("choices") or {})
-    all_selections.update((draft.get("equipment") or {}).get("choices") or {})
+    all_selections.update(equipment_choices_raw or {})
 
     choices: list[dict] = []
     for tpl in choice_templates:
@@ -330,7 +337,6 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         status = "resolved" if len(selected) == tpl["count"] else "pending"
         choices.append({**tpl, "selected": selected, "status": status})
 
-    equipment_dict = draft.get("equipment") or {}
     added_raw = equipment_dict.get("added")
     if added_raw is None:
         added_raw = []
