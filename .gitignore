@@ -3,3 +3,8 @@ __pycache__/
 .venv/
 *.tmp
 .DS_Store
+server/.venv/
+server/__pycache__/
+server/**/__pycache__/
+frontend/node_modules/
+frontend/dist/
