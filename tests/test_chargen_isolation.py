@@ -33,8 +33,11 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
-# The declared third-party dependencies this repo actually uses (see
-# requirements.txt / README.md). Everything else must be stdlib or `chargen`.
+# The declared third-party dependencies this repo actually uses, across
+# both the root requirements.txt (this app's v1 code) and server/
+# requirements.txt (v2's Flask backend) — there is no single combined
+# manifest, so this set is the closest thing to one. Everything else must
+# be stdlib or `chargen`.
 ALLOWED_THIRD_PARTY = {"flask", "flask_cors", "yaml", "pypdf", "fpdf", "pytest"}
 
 STDLIB_MODULES = set(sys.stdlib_module_names)

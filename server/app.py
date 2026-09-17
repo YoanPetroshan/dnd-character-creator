@@ -1,6 +1,7 @@
-"""Thin Flask shell around the v2 catalog + resolve engine + YAML/Markdown
-export. No rules logic lives here — this module only wires HTTP onto
-catalog.loader / engine.resolve / export / markdown_export.
+"""Thin Flask shell around the v2 catalog + resolve engine + YAML/
+Markdown/PDF export. No rules logic lives here — this module only wires
+HTTP onto catalog.loader / engine.resolve / export / markdown_export /
+pdf_export.
 """
 from __future__ import annotations
 
@@ -139,9 +140,9 @@ def _pending_export_problems(resolution: dict) -> list[dict]:
         # cantrip/spell picks is the same correct behavior class/
         # background/species choices already get — not a lockout.
         #
-        # Shared by both /api/export/yaml and /api/export/markdown (Phase
-        # 2f) so the two formats can never drift on what counts as
-        # export-ready.
+        # Shared by every format behind /api/export/<fmt> (introduced in
+        # Phase 2f for yaml/markdown, extended in Phase 2g to also cover
+        # pdf) so no format can ever drift on what counts as export-ready.
     ]
 
 

@@ -135,3 +135,21 @@ def test_handles_a_long_character_spanning_multiple_pages():
     pdf_bytes = to_pdf(resolution)
     reader = PdfReader(io.BytesIO(pdf_bytes))
     assert len(reader.pages) >= 2  # confirms auto page break actually engaged
+
+
+def test_detail_and_equipment_sections_match_markdown_export():
+    # pdf_export.py and markdown_export.py are two renderings of one
+    # content contract (same fields, same order — see this plan's Global
+    # Constraints), duplicated rather than shared because PDF's imperative
+    # layout API can't share a string-building function with Markdown's.
+    # Nothing else enforces that the two stay in sync — a future field
+    # added to one and not the other would pass every existing test in
+    # both files (they use deliberately separate fixtures) and only show
+    # up as a silently incomplete PDF or Markdown export. This guard
+    # exists purely to make that drift loud.
+    import markdown_export
+
+    import pdf_export
+
+    assert pdf_export._DETAIL_SECTIONS == markdown_export._DETAIL_SECTIONS
+    assert pdf_export._EQUIPMENT_SECTIONS == markdown_export._EQUIPMENT_SECTIONS
