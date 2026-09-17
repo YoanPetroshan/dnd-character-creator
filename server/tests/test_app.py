@@ -129,6 +129,33 @@ def test_export_yaml_rejects_when_a_choice_is_still_pending(client):
     assert any("unresolved-choice" in p["id"] for p in resp.get_json()["problems"])
 
 
+def test_export_markdown_endpoint_returns_markdown(client):
+    draft = _fighter_acolyte_human_draft()
+    draft["classes"][0]["choices"] = {
+        "class:fighter:1:prof-choice-0": ["skill-acrobatics", "skill-athletics"],
+        "class:fighter:1:feature:fighter-fighting-style": ["fighter-fighting-style-archery"],
+    }
+    draft["equipment"]["choices"] = {
+        "class:fighter:1:equipment-choice-0": ["chain-mail"],
+        "class:fighter:1:equipment-choice-2": ["handaxe"],
+        "class:fighter:1:equipment-choice-3": ["explorers-pack"],
+    }
+    draft["background"]["choices"] = {"background:acolyte:languages": ["dwarvish", "elvish"]}
+    draft["species"]["choices"] = {"species:human:languages": ["giant"]}
+    resp = client.post("/api/export/markdown", json=draft)
+    assert resp.status_code == 200
+    assert resp.mimetype == "text/markdown"
+    assert "Torvin Bracewell" in resp.data.decode("utf-8")
+
+
+def test_export_markdown_rejects_when_a_choice_is_still_pending(client):
+    resp = client.post("/api/export/markdown", json=_fighter_acolyte_human_draft())
+    # Same pending Fighting Style choice as the YAML gate test above — both
+    # routes must share the same gate, not two independently-drifting copies.
+    assert resp.status_code == 400
+    assert any("unresolved-choice" in p["id"] for p in resp.get_json()["problems"])
+
+
 def test_items_endpoint_lists_every_bundled_item(client):
     resp = client.get("/api/items")
     assert resp.status_code == 200

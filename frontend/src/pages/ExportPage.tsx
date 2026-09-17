@@ -6,7 +6,7 @@ export function ExportPage() {
   const { draft } = useDraft();
   const { resolution, loading, error, retry } = useResolutionContext();
   const [exportError, setExportError] = useState<string | null>(null);
-  const [exporting, setExporting] = useState(false);
+  const [exportingFormat, setExportingFormat] = useState<"yaml" | "markdown" | null>(null);
 
   if (error)
     return (
@@ -22,11 +22,15 @@ export function ExportPage() {
   const pendingChoices = resolution.choices.filter((c) => c.status === "pending");
   const canExport = resolution.problems.length === 0 && pendingChoices.length === 0;
 
-  async function handleExport() {
-    setExporting(true);
+  async function handleExport(format: "yaml" | "markdown") {
+    const config =
+      format === "yaml"
+        ? { endpoint: "/api/export/yaml", extension: "yaml", mimeType: "application/x-yaml" }
+        : { endpoint: "/api/export/markdown", extension: "md", mimeType: "text/markdown" };
+    setExportingFormat(format);
     setExportError(null);
     try {
-      const resp = await fetch("/api/export/yaml", {
+      const resp = await fetch(config.endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(draft),
@@ -36,11 +40,11 @@ export function ExportPage() {
         throw new Error(body.problems?.map((p) => p.message).join("; ") ?? `export failed: ${resp.status}`);
       }
       const text = await resp.text();
-      const blob = new Blob([text], { type: "application/x-yaml" });
+      const blob = new Blob([text], { type: config.mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${draft.name || "character"}.yaml`;
+      a.download = `${draft.name || "character"}.${config.extension}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -48,7 +52,7 @@ export function ExportPage() {
     } catch (err) {
       setExportError(err instanceof Error ? err.message : String(err));
     } finally {
-      setExporting(false);
+      setExportingFormat(null);
     }
   }
 
@@ -77,8 +81,11 @@ export function ExportPage() {
       )}
       {canExport && <p>Всичко е готово за експорт.</p>}
       {exportError && <p style={{ color: "red" }}>{exportError}</p>}
-      <button type="button" disabled={!canExport || exporting} onClick={handleExport}>
-        {exporting ? "Изтегляне…" : "Изтегли YAML"}
+      <button type="button" disabled={!canExport || exportingFormat !== null} onClick={() => handleExport("yaml")}>
+        {exportingFormat === "yaml" ? "Изтегляне…" : "Изтегли YAML"}
+      </button>
+      <button type="button" disabled={!canExport || exportingFormat !== null} onClick={() => handleExport("markdown")}>
+        {exportingFormat === "markdown" ? "Изтегляне…" : "Изтегли Markdown"}
       </button>
     </div>
   );
