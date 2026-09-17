@@ -269,3 +269,32 @@ main {
 .spell-library-card__desc {
   margin: 4px 0 0;
 }
+
+.details-section {
+  margin: 12px 0;
+  border: 1px solid #ccc;
+  padding: 8px 12px;
+}
+
+.details-section summary {
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.details-section label {
+  display: block;
+  margin: 8px 0 4px;
+}
+
+.details-section input,
+.details-section select,
+.details-section textarea {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  box-sizing: border-box;
+}
+
+.details-section textarea {
+  min-height: 60px;
+}
