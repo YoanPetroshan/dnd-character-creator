@@ -64,6 +64,7 @@ export interface ClassSelection {
   classId: string;
   level: number;
   subclassId?: string;
+  hpRolls?: Record<string, number>;
   choices: Record<string, string[]>;
 }
 
