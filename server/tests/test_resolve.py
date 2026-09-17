@@ -304,10 +304,32 @@ def test_human_bonus_language_choice_is_offered(catalog):
     assert len(bonus_lang["options"]) > 0
 
 
-def test_half_elf_ability_bonus_choice_is_flagged_as_unsupported(catalog):
+def test_half_elf_ability_bonus_choice_no_longer_blocks_export(catalog):
+    draft = _fighter_acolyte_human_draft(
+        species={"id": "half-elf", "choices": {"species:half-elf:ability-bonus": ["str", "dex"]}},
+    )
+    resolution = resolve(draft, catalog)
+    assert not any(p["id"] == "species-ability-choice-unsupported" for p in resolution["problems"])
+
+
+def test_half_elf_selected_ability_bonuses_are_applied(catalog):
+    draft = _fighter_acolyte_human_draft(
+        species={"id": "half-elf", "choices": {"species:half-elf:ability-bonus": ["str", "dex"]}},
+        abilities={"method": "manual", "base": {"STR": 14, "DEX": 12, "CON": 14, "INT": 10, "WIS": 12, "CHA": 8}},
+    )
+    resolution = resolve(draft, catalog)
+    scores = resolution["sheet"]["abilities"]
+    assert scores["STR"] == 15  # 14 base + 1 from the ability-bonus choice
+    assert scores["DEX"] == 13  # 12 base + 1
+    assert scores["CHA"] == 10  # 8 base + 2 fixed Half-Elf bonus (unrelated to this choice, unaffected)
+
+
+def test_half_elf_choice_is_pending_when_unresolved(catalog):
     draft = _fighter_acolyte_human_draft(species={"id": "half-elf", "choices": {}})
     resolution = resolve(draft, catalog)
-    assert any(p["id"] == "species-ability-choice-unsupported" for p in resolution["problems"])
+    choice = next(c for c in resolution["choices"] if c["id"] == "species:half-elf:ability-bonus")
+    assert choice["status"] == "pending"
+    assert choice["count"] == 2
 
 
 def test_non_list_classes_is_a_problem_not_a_crash(catalog):

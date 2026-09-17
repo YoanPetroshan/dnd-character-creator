@@ -31,6 +31,8 @@ def _option_label(option: dict) -> str | None:
         return option["of"]["name"]
     if option_type == "string":
         return option["string"]
+    if option_type == "ability_bonus":
+        return f"{option['ability_score']['name']} +{option.get('bonus', 1)}"
     return None  # score_prerequisite, multiple, etc. — not used by any Phase 1 choice
 
 
@@ -74,6 +76,10 @@ def build_choice_options(from_field: dict) -> list[dict] | None:
                 continue
             label = _option_label(opt)
             if label is None:
+                continue
+            if opt.get("option_type") == "ability_bonus":
+                option_id = opt["ability_score"]["index"]
+                options.append({"id": option_id, "label": label})
                 continue
             item = opt.get("item") or opt.get("of")
             option_id = item["index"] if item else label.lower().replace(" ", "-")

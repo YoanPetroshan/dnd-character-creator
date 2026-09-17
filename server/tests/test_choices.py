@@ -139,3 +139,17 @@ def test_two_plain_counted_reference_options_both_resolve():
     assert options is not None
     ids = {o["id"] for o in options}
     assert ids == {"dungeoneers-pack", "explorers-pack"}
+
+
+def test_ability_bonus_option_type_produces_a_readable_label_and_stable_id():
+    from_field = {
+        "option_set_type": "options_array",
+        "options": [
+            {"option_type": "ability_bonus", "ability_score": {"index": "str", "name": "STR"}, "bonus": 1},
+            {"option_type": "ability_bonus", "ability_score": {"index": "dex", "name": "DEX"}, "bonus": 1},
+        ],
+    }
+    options = build_choice_options(from_field)
+    assert options is not None
+    assert options[0] == {"id": "str", "label": "STR +1"}
+    assert options[1] == {"id": "dex", "label": "DEX +1"}

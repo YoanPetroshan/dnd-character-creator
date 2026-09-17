@@ -48,6 +48,24 @@ def _species_ability_bonuses(race: dict | None, subrace: dict | None) -> dict[st
     return bonuses
 
 
+def _species_ability_bonus_choice_template(race: dict | None, subrace: dict | None, race_id: str | None) -> dict | None:
+    """Half-Elf's ability_bonus_options (the only race/subrace in the
+    bundled data with this field) needs a real Choice — this builds its
+    template. Race is checked before subrace since ability_bonus_options
+    could in principle appear on either (only race does in the bundled
+    data, but this stays generic rather than hardcoding "half-elf")."""
+    for src in (race, subrace):
+        if not src or not src.get("ability_bonus_options"):
+            continue
+        envelope = src["ability_bonus_options"]
+        cid = f"species:{race_id}:ability-bonus"
+        source = {"kind": "species", "id": race_id, "label": race["name"] if race else ""}
+        choose = envelope.get("choose", 1)
+        description = f"Choose {choose} ability score{'s' if choose != 1 else ''} to increase by 1."
+        return build_choice_template(envelope, cid, source, "Ability Score Increase", description=description)
+    return None
+
+
 def _asi_granting_levels(catalog: Catalog, cls_id: str, max_level: int) -> list[int]:
     """ability_score_bonuses in a level row is a CUMULATIVE count, not a
     per-level flag — the actual ASI-granting levels are wherever the
@@ -492,16 +510,15 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # backgrounds don't grant ability bonuses in this ruleset; see spec §4).
     base_scores = (draft.get("abilities") or {}).get("base") or {}
     species_bonuses = _species_ability_bonuses(race, subrace)
-    if race and race.get("ability_bonus_options"):
-        problems.append({
-            "id": "species-ability-choice-unsupported",
-            "message": f"{race['name']}'s ability-score choice isn't supported yet — no bonus from it was applied.",
-        })
-    if subrace and subrace.get("ability_bonus_options"):
-        problems.append({
-            "id": "species-ability-choice-unsupported",
-            "message": f"{subrace['name']}'s ability-score choice isn't supported yet — no bonus from it was applied.",
-        })
+    species_ability_choice_tpl = _species_ability_bonus_choice_template(race, subrace, race_id)
+    if species_ability_choice_tpl:
+        species_choices_raw = species.get("choices") if isinstance(species.get("choices"), dict) else {}
+        valid_ability_ids = {o["id"] for o in species_ability_choice_tpl["options"] if not o.get("disabled")}
+        raw_selected = species_choices_raw.get(species_ability_choice_tpl["id"]) or []
+        selected_abilities = [s for s in raw_selected if isinstance(s, str) and s in valid_ability_ids][: species_ability_choice_tpl["count"]]
+        for ab_id in selected_abilities:
+            ab_key = ab_id.upper()
+            species_bonuses[ab_key] = species_bonuses.get(ab_key, 0) + 1  # bundled data's `bonus` is always 1; if a future data source varies this, look it up from the option instead of hardcoding 1 here
     final_scores: dict[str, int] = {}
     for ab in derived_mod.ABILITIES:
         raw = base_scores.get(ab, 10)
@@ -543,6 +560,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choice_templates += _background_choice_templates(bg, bg_id)
     if race and race_id:
         choice_templates += _species_choice_templates(catalog, race, race_id, subrace)
+        if species_ability_choice_tpl:
+            choice_templates.append(species_ability_choice_tpl)
     if cls and cls_id:
         choice_templates += _equipment_choice_templates(cls, "class", cls_id, cls["name"])
     if bg and bg_id:
