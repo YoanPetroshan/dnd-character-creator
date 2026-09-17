@@ -82,3 +82,12 @@ def test_hit_point_max_at_level_sums_level_1_plus_every_subsequent_gain():
 
 def test_hit_point_max_at_level_none_hit_die_is_zero():
     assert derived.hit_point_max_at_level(hit_die=None, con_modifier=2, level=5, hp_type="fixed", hp_rolls={}) == 0
+
+
+def test_hit_point_gain_per_level_never_goes_below_one():
+    # RAW: minimum 1 HP gained per level, always. A very-low-CON character
+    # (CON mod -4) with a d6 hit die would otherwise produce a
+    # non-positive gain: d6 average 6//2+1=4, 4 + -4 = 0 (or worse for an
+    # unlucky manual roll of 1).
+    assert derived.hit_point_gain_per_level(hit_die=6, con_modifier=-4, hp_type="fixed", level=2, hp_rolls={}) == 1
+    assert derived.hit_point_gain_per_level(hit_die=6, con_modifier=-4, hp_type="manual", level=2, hp_rolls={"2": 1}) == 1

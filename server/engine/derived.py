@@ -1,8 +1,9 @@
-"""Pure derived-stat math for a resolved level-1 single-class character.
-No I/O, no catalog access — every function here is independently testable
-against hand-computed 5e SRD values. All ability-keyed dicts use the same
-UPPERCASE ability keys as frontend/src/types.ts's Ability type
-("STR"/"DEX"/"CON"/"INT"/"WIS"/"CHA").
+"""Pure derived-stat math for a resolved single-class character, including
+per-level HP growth across levels 1-20 (see hit_point_gain_per_level/
+hit_point_max_at_level below). No I/O, no catalog access — every function
+here is independently testable against hand-computed 5e SRD values. All
+ability-keyed dicts use the same UPPERCASE ability keys as
+frontend/src/types.ts's Ability type ("STR"/"DEX"/"CON"/"INT"/"WIS"/"CHA").
 """
 from __future__ import annotations
 
@@ -31,11 +32,11 @@ def hit_point_gain_per_level(hit_die: int, con_modifier: int, hp_type: str, leve
     if hp_type == "manual":
         roll = hp_rolls.get(str(level))
         if isinstance(roll, int) and 1 <= roll <= hit_die:
-            return roll + con_modifier
+            return max(1, roll + con_modifier)
     # fixed mode, or manual mode with a missing/invalid roll -> fall back
     # to the RAW "take the average" value rather than 0 or a blocking
     # problem — a defaulted estimate is always safer than garbage HP.
-    return (hit_die // 2 + 1) + con_modifier
+    return max(1, (hit_die // 2 + 1) + con_modifier)
 
 
 def hit_point_max_at_level(hit_die: int | None, con_modifier: int, level: int, hp_type: str, hp_rolls: dict) -> int:
