@@ -212,7 +212,7 @@ def test_spells_endpoint_returns_full_spell_details(client):
     fireball = next(s for s in body["spells"] if s["id"] == "fireball")
     # Check all expected keys are present
     expected_keys = {"id", "name", "level", "school", "castingTime", "range",
-                     "components", "duration", "concentration", "ritual", "desc"}
+                     "components", "duration", "concentration", "ritual", "material", "desc"}
     assert set(fireball.keys()) == expected_keys
     # Check concrete values for Fireball
     assert fireball["name"] == "Fireball"
@@ -222,6 +222,21 @@ def test_spells_endpoint_returns_full_spell_details(client):
     assert "V" in fireball["components"]
     assert fireball["concentration"] is False
     assert fireball["ritual"] is False
+
+
+def test_spells_endpoint_includes_material_field(client):
+    resp = client.get("/api/spells?q=fireball")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    fireball = next(s for s in body["spells"] if s["id"] == "fireball")
+    assert fireball["material"] == "A tiny ball of bat guano and sulfur."
+
+
+def test_spells_endpoint_tolerates_empty_level_parameter(client):
+    resp = client.get("/api/spells?level=")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert len(body["spells"]) == 319
 
 
 def test_export_yaml_does_not_block_on_pending_equipment_choices(client):

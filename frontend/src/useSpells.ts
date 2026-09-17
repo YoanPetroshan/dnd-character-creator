@@ -11,6 +11,7 @@ export interface CatalogSpell {
   duration: string | null;
   concentration: boolean;
   ritual: boolean;
+  material: string | null;
   desc: string;
 }
 
@@ -31,6 +32,7 @@ export function useSpells(classId: string, level: string, query: string): Spells
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
     if (!classId) {
+      requestId.current++;
       setState({ spells: [], loading: false, error: null });
       return;
     }

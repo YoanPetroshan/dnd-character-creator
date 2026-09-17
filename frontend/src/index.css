@@ -260,6 +260,12 @@ main {
   margin: 4px 0;
 }
 
+.spell-library-card__material {
+  margin: 4px 0 0;
+  font-style: italic;
+  color: #555;
+}
+
 .spell-library-card__desc {
   margin: 4px 0 0;
 }

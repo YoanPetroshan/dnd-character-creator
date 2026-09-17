@@ -88,7 +88,7 @@ def api_spells():
     level_param = request.args.get("level")
     query = (request.args.get("q") or "").lower()
     level_filter = None
-    if level_param is not None:
+    if level_param:
         try:
             level_filter = int(level_param)
         except ValueError:
@@ -112,6 +112,7 @@ def api_spells():
             "duration": spell.get("duration"),
             "concentration": spell.get("concentration", False),
             "ritual": spell.get("ritual", False),
+            "material": spell.get("material"),
             "desc": " ".join(spell.get("desc", [])),
         })
     results.sort(key=lambda s: s["name"])
