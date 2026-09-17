@@ -1,6 +1,7 @@
-"""Thin Flask shell around the v2 catalog + resolve engine + YAML/Markdown
-export. No rules logic lives here — this module only wires HTTP onto
-catalog.loader / engine.resolve / export / markdown_export.
+"""Thin Flask shell around the v2 catalog + resolve engine + YAML/
+Markdown/PDF export. No rules logic lives here — this module only wires
+HTTP onto catalog.loader / engine.resolve / export / markdown_export /
+pdf_export.
 """
 from __future__ import annotations
 
@@ -11,6 +12,7 @@ from catalog.loader import load as load_catalog
 from engine.resolve import resolve
 from export import to_yaml
 from markdown_export import to_markdown
+from pdf_export import to_pdf
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
@@ -138,30 +140,31 @@ def _pending_export_problems(resolution: dict) -> list[dict]:
         # cantrip/spell picks is the same correct behavior class/
         # background/species choices already get — not a lockout.
         #
-        # Shared by both /api/export/yaml and /api/export/markdown (Phase
-        # 2f) so the two formats can never drift on what counts as
-        # export-ready.
+        # Shared by every format behind /api/export/<fmt> (introduced in
+        # Phase 2f for yaml/markdown, extended in Phase 2g to also cover
+        # pdf) so no format can ever drift on what counts as export-ready.
     ]
 
 
-@app.route("/api/export/yaml", methods=["POST"])
-def api_export_yaml():
+_EXPORT_RENDERERS = {
+    "yaml": (to_yaml, "application/x-yaml"),
+    "markdown": (to_markdown, "text/markdown"),
+    "pdf": (to_pdf, "application/pdf"),
+}
+
+
+@app.route("/api/export/<fmt>", methods=["POST"])
+def api_export(fmt: str):
+    entry = _EXPORT_RENDERERS.get(fmt)
+    if entry is None:
+        return jsonify({"error": f"unknown export format '{fmt}'"}), 404
+    renderer, mimetype = entry
     draft = request.get_json(silent=True) or {}
     resolution = resolve(draft, _catalog)
     all_problems = resolution["problems"] + _pending_export_problems(resolution)
     if all_problems:
         return jsonify({"problems": all_problems}), 400
-    return Response(to_yaml(resolution), mimetype="application/x-yaml")
-
-
-@app.route("/api/export/markdown", methods=["POST"])
-def api_export_markdown():
-    draft = request.get_json(silent=True) or {}
-    resolution = resolve(draft, _catalog)
-    all_problems = resolution["problems"] + _pending_export_problems(resolution)
-    if all_problems:
-        return jsonify({"problems": all_problems}), 400
-    return Response(to_markdown(resolution), mimetype="text/markdown")
+    return Response(renderer(resolution), mimetype=mimetype)
 
 
 if __name__ == "__main__":

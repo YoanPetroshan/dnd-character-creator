@@ -156,6 +156,38 @@ def test_export_markdown_rejects_when_a_choice_is_still_pending(client):
     assert any("unresolved-choice" in p["id"] for p in resp.get_json()["problems"])
 
 
+def test_export_pdf_endpoint_returns_a_pdf(client):
+    draft = _fighter_acolyte_human_draft()
+    draft["classes"][0]["choices"] = {
+        "class:fighter:1:prof-choice-0": ["skill-acrobatics", "skill-athletics"],
+        "class:fighter:1:feature:fighter-fighting-style": ["fighter-fighting-style-archery"],
+    }
+    draft["equipment"]["choices"] = {
+        "class:fighter:1:equipment-choice-0": ["chain-mail"],
+        "class:fighter:1:equipment-choice-2": ["handaxe"],
+        "class:fighter:1:equipment-choice-3": ["explorers-pack"],
+    }
+    draft["background"]["choices"] = {"background:acolyte:languages": ["dwarvish", "elvish"]}
+    draft["species"]["choices"] = {"species:human:languages": ["giant"]}
+    resp = client.post("/api/export/pdf", json=draft)
+    assert resp.status_code == 200
+    assert resp.content_type.startswith("application/pdf")
+    assert resp.data[:4] == b"%PDF"
+
+
+def test_export_pdf_rejects_when_a_choice_is_still_pending(client):
+    resp = client.post("/api/export/pdf", json=_fighter_acolyte_human_draft())
+    # Same pending Fighting Style choice as the YAML/Markdown gate tests above.
+    assert resp.status_code == 400
+    body = resp.get_json()
+    assert "problems" in body
+
+
+def test_export_unknown_format_returns_404(client):
+    resp = client.post("/api/export/xml", json={})
+    assert resp.status_code == 404
+
+
 def test_items_endpoint_lists_every_bundled_item(client):
     resp = client.get("/api/items")
     assert resp.status_code == 200
