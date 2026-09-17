@@ -26,6 +26,8 @@ def to_yaml(resolution: dict) -> str:
         "savingThrows": derived["savingThrows"],
         "skills": derived["skills"],
         "passivePerception": derived["passivePerception"],
+        "spellSaveDC": derived["spellSaveDC"],
+        "spellAttackBonus": derived["spellAttackBonus"],
         "proficiencies": sheet["proficiencies"],
         "spells": sheet["spells"],
     }

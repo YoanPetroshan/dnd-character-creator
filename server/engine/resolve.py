@@ -12,7 +12,8 @@ gate a feature choice unless it actually matches, so any level-1 feature
 gated to a specific subclass is filtered out rather than guessed at.
 Equipment IS in scope as of Phase 2a — see engine/equipment.py and the
 _equipment_choice_templates/_gather_equipped_items/_fixed_equipment
-functions below.
+functions below. Spellcasting IS in scope as of Phase 2c — see
+engine/spells.py and the _spell_choice_templates function below.
 """
 from __future__ import annotations
 
