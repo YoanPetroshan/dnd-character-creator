@@ -147,6 +147,14 @@ def test_includes_only_submitted_details_fields():
     assert "Вяра" not in text  # faith wasn't submitted, its label shouldn't appear
 
 
+def test_includes_subclass_name_when_present():
+    resolution = _sample_resolution()
+    resolution["sheet"]["class"] = {"id": "cleric", "name": "Cleric", "subclass": {"id": "life", "name": "Life"}}
+    text = to_markdown(resolution)
+    assert "Life" in text
+    assert "Ниво 1 Cleric (Life)" in text
+
+
 def test_multiline_detail_value_stays_intact_and_does_not_break_list_structure():
     resolution = _sample_resolution()
     resolution["sheet"]["details"] = {"backstory": "Първи ред.\n\nВтори абзац."}

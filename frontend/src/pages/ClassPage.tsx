@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
 import { useCatalog } from "../useCatalog";
@@ -11,13 +11,42 @@ function isSpellChoiceId(choiceId: string): boolean {
   return choiceId.endsWith(":spells-cantrips") || choiceId.endsWith(":spells-known");
 }
 
+interface ClassDetail {
+  subclasses: { index: string; name: string }[]; // "index", not "id" — raw SRD class object, unmapped
+  levelFeatureCounts: Record<string, number>;
+  subclassUnlockLevel: number | null;
+  hit_die?: number; // raw SRD class object field, spread into this response as-is
+}
+
 export function ClassPage() {
   const { draft, dispatch } = useDraft();
   const { resolution, loading, error, retry } = useResolutionContext();
   const catalog = useCatalog();
   const [tab, setTab] = useState<ClassTab>("features");
+  const [classDetail, setClassDetail] = useState<ClassDetail | null>(null);
 
   const selectedClassId = draft.classes[0]?.classId;
+  const classLevel = draft.classes[0]?.level ?? 1;
+
+  useEffect(() => {
+    if (!selectedClassId) {
+      setClassDetail(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/catalog/class/${selectedClassId}`)
+      .then((r) => r.json())
+      .then((data: ClassDetail) => {
+        if (!cancelled) setClassDetail(data);
+      })
+      .catch(() => {
+        if (!cancelled) setClassDetail(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedClassId]);
+
   const classChoices = resolution ? resolution.choices.filter((c) => c.source.kind === "class") : [];
   const featureChoices = classChoices.filter((c) => !isSpellChoiceId(c.id));
   const spellChoices = classChoices.filter((c) => isSpellChoiceId(c.id));
@@ -64,6 +93,83 @@ export function ClassPage() {
           </li>
         ))}
       </ul>
+
+      {selectedClassId && (
+        <label>
+          Ниво
+          <input
+            type="number"
+            min={1}
+            max={20}
+            value={classLevel}
+            onChange={(e) => {
+              const parsed = parseInt(e.target.value, 10);
+              if (!Number.isNaN(parsed)) dispatch({ type: "SET_CLASS_LEVEL", level: parsed });
+            }}
+          />
+        </label>
+      )}
+
+      {selectedClassId &&
+        classDetail &&
+        classDetail.subclassUnlockLevel !== null &&
+        classLevel >= classDetail.subclassUnlockLevel && (
+          <label>
+            Подклас
+            <select
+              value={draft.classes[0]?.subclassId ?? ""}
+              onChange={(e) => {
+                dispatch({ type: "SET_SUBCLASS", subclassId: e.target.value || undefined });
+              }}
+            >
+              <option value="">— избери подклас —</option>
+              {classDetail.subclasses.map((s) => (
+                <option key={s.index} value={s.index}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
+      {selectedClassId && classDetail && (
+        <p className="higher-levels-teaser">
+          Способности на по-високи нива:{" "}
+          {Object.entries(classDetail.levelFeatureCounts)
+            .filter(([lvl]) => Number(lvl) > classLevel)
+            .reduce((sum, [, count]) => sum + count, 0)}
+        </p>
+      )}
+
+      {selectedClassId && (
+        <div className="hp-summary">
+          <strong>Точки живот:</strong>{" "}
+          {resolution ? String(resolution.derived.hitPointMax ?? "—") : "—"}
+        </div>
+      )}
+
+      {selectedClassId && draft.preferences.hitPointType === "manual" && classLevel >= 2 && (
+        <div className="hp-rolls">
+          <h3>Хвърляния за точки живот</h3>
+          {Array.from({ length: classLevel - 1 }, (_, i) => i + 2).map((lvl) => (
+            <label key={lvl}>
+              Ниво {lvl}
+              <input
+                type="number"
+                min={1}
+                placeholder={
+                  classDetail?.hit_die !== undefined ? String(Math.floor(classDetail.hit_die / 2) + 1) : undefined
+                }
+                value={draft.classes[0]?.hpRolls?.[String(lvl)] ?? ""}
+                onChange={(e) => {
+                  const parsed = parseInt(e.target.value, 10);
+                  if (!Number.isNaN(parsed)) dispatch({ type: "SET_HP_ROLL", level: lvl, value: parsed });
+                }}
+              />
+            </label>
+          ))}
+        </div>
+      )}
 
       {selectedClassId && (
         <div className="tab-bar" role="tablist">

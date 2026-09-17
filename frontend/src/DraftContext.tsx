@@ -30,6 +30,9 @@ type Action =
   | { type: "SET_BACKGROUND"; backgroundId: string }
   | { type: "SET_SPECIES"; speciesId: string }
   | { type: "SET_SUBSPECIES"; subspeciesId: string | undefined }
+  | { type: "SET_CLASS_LEVEL"; level: number }
+  | { type: "SET_SUBCLASS"; subclassId: string | undefined }
+  | { type: "SET_HP_ROLL"; level: number; value: number }
   | { type: "SET_ABILITY_METHOD"; method: Draft["abilities"]["method"] }
   | { type: "SET_ABILITY_SCORE"; ability: Ability; value: number }
   | { type: "SET_DETAIL"; field: keyof Draft["details"]; value: string }
@@ -74,6 +77,25 @@ function reducer(state: Draft, action: Action): Draft {
         ...state,
         species: { ...state.species, subspeciesId: action.subspeciesId, choices: {} },
       };
+    case "SET_CLASS_LEVEL": {
+      if (state.classes.length === 0) return state;
+      const [cls] = state.classes;
+      const level = Math.min(20, Math.max(1, action.level));
+      return { ...state, classes: [{ ...cls, level }] };
+    }
+    case "SET_SUBCLASS": {
+      if (state.classes.length === 0) return state;
+      const [cls] = state.classes;
+      return { ...state, classes: [{ ...cls, subclassId: action.subclassId }] };
+    }
+    case "SET_HP_ROLL": {
+      if (state.classes.length === 0) return state;
+      const [cls] = state.classes;
+      return {
+        ...state,
+        classes: [{ ...cls, hpRolls: { ...(cls.hpRolls ?? {}), [String(action.level)]: action.value } }],
+      };
+    }
     case "SET_ABILITY_METHOD":
       return { ...state, abilities: { ...state.abilities, method: action.method } };
     case "SET_ABILITY_SCORE":

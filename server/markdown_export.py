@@ -78,10 +78,14 @@ def to_markdown(resolution: dict) -> str:
     cls = sheet["class"]
     bg = sheet["background"]
 
+    class_label = cls["name"] if cls else "—"
+    if cls and cls.get("subclass"):
+        class_label += f" ({cls['subclass']['name']})"
+
     lines.append(f"# {sheet['name'] or 'Безименен герой'}")
     lines.append("")
     lines.append(
-        f"**Ниво {sheet['level']} {cls['name'] if cls else '—'}** | "
+        f"**Ниво {sheet['level']} {class_label}** | "
         f"**Произход:** {bg['name'] if bg else '—'} | "
         f"**Раса:** {_species_label(sheet['species'])}"
     )

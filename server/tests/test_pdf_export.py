@@ -95,6 +95,14 @@ def test_includes_spells_for_a_caster():
     assert "13" in text
 
 
+def test_includes_subclass_name_when_present():
+    resolution = _sample_resolution()
+    resolution["sheet"]["class"] = {"id": "cleric", "name": "Cleric", "subclass": {"id": "life", "name": "Life"}}
+    text = _extract_text(to_pdf(resolution))
+    assert "Life" in text
+    assert "Cleric" in text
+
+
 def test_includes_multiline_detail_values_intact():
     resolution = _sample_resolution()
     resolution["sheet"]["details"] = {"backstory": "Първи ред.\n\nВтори абзац с още текст."}

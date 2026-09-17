@@ -5,20 +5,26 @@ fixed-order pass: sources → species ability bonuses → final ability scores
 → derived stats → choice generation/validation (§4a) — never iterates to a
 fixpoint.
 
-Phase 1 scope: single class, level 1 only. Multiclass, leveling above 1,
-and subclass selection are all out of scope (see the plan's Global
-Constraints) — draft.classes[0].subclassId is read but never trusted to
-gate a feature choice unless it actually matches, so any level-1 feature
-gated to a specific subclass is filtered out rather than guessed at.
-Equipment IS in scope as of Phase 2a — see engine/equipment.py and the
+Single-class leveling (1-20) is in scope: draft.classes[0].subclassId is
+read but never trusted to gate a feature choice unless it actually
+matches, so any feature gated to a specific subclass is filtered out
+rather than guessed at. Multiclass remains out of scope (see the plan's
+Global Constraints). Equipment IS in scope as of Phase 2a — see
+engine/equipment.py and the
 _equipment_choice_templates/_gather_equipped_items/_fixed_equipment
 functions below. Spellcasting IS in scope as of Phase 2c — see
 engine/spells.py and the _spell_choice_templates function below.
+
+Single-class leveling (1-20), subclass selection, and ASI choices ARE in
+scope as of Phase 3a — see engine/asi.py, the _asi_choice_templates/
+_apply_asi_progression functions, and SUBCLASS_UNLOCK_LEVEL in
+catalog/reference_data.py. Multiclassing remains out of scope (Phase 3b).
 """
 from __future__ import annotations
 
 from catalog.choices import build_choice_template
 from catalog.loader import Catalog
+from . import asi as asi_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
 from . import spells as spells_mod
@@ -40,6 +46,51 @@ def _species_ability_bonuses(race: dict | None, subrace: dict | None) -> dict[st
             ab = entry["ability_score"]["index"].upper()
             bonuses[ab] = bonuses.get(ab, 0) + entry["bonus"]
     return bonuses
+
+
+def _asi_granting_levels(catalog: Catalog, cls_id: str, max_level: int) -> list[int]:
+    """ability_score_bonuses in a level row is a CUMULATIVE count, not a
+    per-level flag — the actual ASI-granting levels are wherever the
+    value increases from the previous level. Verified empirically while
+    writing this plan: Fighter and Rogue both have real extra ASI levels
+    (6/14 and 10) beyond the standard 4/8/12/16/19 every other class
+    uses, and this diff-based approach correctly finds both."""
+    levels: list[int] = []
+    previous = 0
+    for lvl in range(1, max_level + 1):
+        row = catalog.class_level_row(cls_id, lvl)
+        current = row.get("ability_score_bonuses", 0) if row else 0
+        if current > previous:
+            levels.append(lvl)
+        previous = current
+    return levels
+
+
+def _apply_asi_progression(
+    base_scores: dict[str, int], asi_levels: list[int], class_choices: dict, cls_id: str | None,
+) -> tuple[dict[int, dict[str, int]], dict[str, int]]:
+    """Walks ASI-granting levels in ascending order, applying each
+    level's stored selection (if present and valid) to a running
+    ability-score state. Returns (scores_by_level, final_scores):
+    scores_by_level[lvl] is the state BEFORE that level's own ASI is
+    applied (used by _asi_choice_templates to compute which options are
+    disabled for that specific level's choice — a combo that's fine at
+    level 4 might exceed the cap by level 8 once earlier ASIs stack),
+    and final_scores is the state after every level's ASI has been
+    applied — this becomes the actual final ability scores used for
+    `modifiers` and everything derived from them."""
+    combos = dict(asi_mod.asi_combinations())
+    scores_by_level: dict[int, dict[str, int]] = {}
+    running = dict(base_scores)
+    for lvl in asi_levels:
+        scores_by_level[lvl] = dict(running)
+        cid = f"class:{cls_id}:{lvl}:asi"
+        raw_selected = class_choices.get(cid) or []
+        if isinstance(raw_selected, list) and len(raw_selected) == 1 and raw_selected[0] in combos:
+            deltas = combos[raw_selected[0]]
+            if not asi_mod.asi_exceeds_cap(deltas, running):
+                running = asi_mod.apply_asi(deltas, running)
+    return scores_by_level, running
 
 
 def _class_choice_templates(cls: dict, cls_id: str) -> list[dict]:
@@ -82,22 +133,44 @@ def _sanitized_details(details_raw) -> dict | None:
     return result if result else None
 
 
+def _cumulative_feature_refs(
+    catalog: Catalog, cls_id: str, subclass_id: str | None, max_level: int,
+) -> list[tuple[int, dict]]:
+    """Every class-level feature ref from level 1 through max_level, plus
+    (once a subclass is selected) every subclass-level feature ref in the
+    same range, each paired with the exact level it came from — needed so
+    _feature_choice_templates can build a correctly level-suffixed choice
+    id and source.level for each, not just always "1" as before Phase
+    3a."""
+    refs: list[tuple[int, dict]] = []
+    for lvl in range(1, max_level + 1):
+        row = catalog.class_level_row(cls_id, lvl)
+        if row:
+            refs.extend((lvl, ref) for ref in row.get("features", []))
+    if subclass_id:
+        for lvl in range(1, max_level + 1):
+            srow = catalog.subclass_level_row(subclass_id, lvl)
+            if srow:
+                refs.extend((lvl, ref) for ref in srow.get("features", []))
+    return refs
+
+
 def _feature_choice_templates(
-    catalog: Catalog, cls_id: str, cls_name: str, feature_refs: list[dict], subclass_id: str | None,
+    catalog: Catalog, cls_id: str, cls_name: str, feature_refs: list[tuple[int, dict]], subclass_id: str | None,
 ) -> list[dict]:
     templates = []
-    for ref in feature_refs:
+    for lvl, ref in feature_refs:
         feature = catalog.features.get(ref["index"])
         if not feature:
             continue
         feature_subclass = feature.get("subclass")
         if feature_subclass and feature_subclass.get("index") != subclass_id:
-            continue  # subclass-gated, and Phase 1 never has a trusted subclass pick
+            continue  # subclass-gated to a different subclass than the one selected (or none selected)
         envelope = (feature.get("feature_specific") or {}).get("subfeature_options")
         if not envelope:
             continue
-        cid = f"class:{cls_id}:1:feature:{feature['index']}"
-        source = {"kind": "class", "id": cls_id, "label": cls_name, "level": 1}
+        cid = f"class:{cls_id}:{lvl}:feature:{feature['index']}"
+        source = {"kind": "class", "id": cls_id, "label": cls_name, "level": lvl}
         # The subfeature_options envelope itself has no 'desc' key — the
         # description text lives on the parent feature (verified directly
         # against 5e-SRD-Features.json), so it must be passed explicitly.
@@ -165,6 +238,34 @@ def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrac
     return templates
 
 
+def _asi_option_label(deltas: list[tuple[str, int]]) -> str:
+    return " and ".join(f"{ab} +{delta}" for ab, delta in deltas)
+
+
+def _asi_choice_templates(
+    cls_id: str, cls_name: str, asi_levels: list[int], scores_by_level: dict[int, dict[str, int]],
+) -> list[dict]:
+    templates = []
+    for lvl in asi_levels:
+        current_scores = scores_by_level.get(lvl, {})
+        options = []
+        for option_id, deltas in asi_mod.asi_combinations():
+            option = {"id": option_id, "label": _asi_option_label(deltas)}
+            if asi_mod.asi_exceeds_cap(deltas, current_scores):
+                option["disabled"] = True
+                option["disabledReason"] = "would exceed the ability score cap of 20"
+            options.append(option)
+        cid = f"class:{cls_id}:{lvl}:asi"
+        source = {"kind": "class", "id": cls_id, "label": cls_name, "level": lvl}
+        templates.append({
+            "id": cid, "source": source, "label": "Ability Score Improvement",
+            "description": "Increase one ability score by 2, or two ability scores by 1 each.",
+            "count": 1,
+            "options": options,
+        })
+    return templates
+
+
 def _equipment_choice_templates(entity: dict, source_kind: str, source_id: str, source_label: str) -> list[dict]:
     templates = []
     for i, envelope in enumerate(entity.get("starting_equipment_options", [])):
@@ -191,14 +292,34 @@ def _spell_options(catalog: Catalog, cls_id: str, spell_level: int) -> list[dict
     return [{"option_type": "reference", "item": {"index": s["index"], "name": s["name"]}} for s in matches]
 
 
+def _spell_options_up_to(catalog: Catalog, cls_id: str, max_level: int) -> list[dict]:
+    matches = [
+        s for s in catalog.spells.values()
+        if 1 <= s["level"] <= max_level and any(c["index"] == cls_id for c in s.get("classes", []))
+    ]
+    matches.sort(key=lambda s: (s["level"], s["name"]))
+    return [{"option_type": "reference", "item": {"index": s["index"], "name": s["name"]}} for s in matches]
+
+
+def _highest_spell_slot_level(spellcasting: dict) -> int:
+    highest = 0
+    for n in range(1, 10):
+        if spellcasting.get(f"spell_slots_level_{n}", 0) > 0:
+            highest = n
+    return highest
+
+
 def _spell_choice_templates(
-    catalog: Catalog, cls: dict, cls_id: str, level_row: dict | None, ability_modifier: int,
+    catalog: Catalog, cls: dict, cls_id: str, level_row: dict | None, ability_modifier: int, class_level: int,
 ) -> list[dict]:
     if not level_row:
         return []
     spellcasting = level_row.get("spellcasting") or {}
     templates = []
-    source = {"kind": "class", "id": cls_id, "label": cls["name"], "level": 1}
+    # No `level` in source — these choices span every level a spellcaster
+    # has reached (count grows as they level up), so they're not anchored
+    # to one specific level the way a feature/ASI choice is.
+    source = {"kind": "class", "id": cls_id, "label": cls["name"]}
 
     cantrips_known = spellcasting.get("cantrips_known", 0)
     if cantrips_known > 0:
@@ -206,23 +327,25 @@ def _spell_choice_templates(
             "option_set_type": "options_array",
             "options": _spell_options(catalog, cls_id, spell_level=0),
         }}
-        cid = f"class:{cls_id}:1:spells-cantrips"
+        cid = f"class:{cls_id}:spells-cantrips"
         description = f"Choose {cantrips_known} cantrip{'s' if cantrips_known != 1 else ''} from the {cls['name']} spell list."
         tpl = build_choice_template(envelope, cid, source, "Cantrips Known", description=description)
         if tpl:
             templates.append(tpl)
 
-    known_count = spells_mod.known_spell_count(level_row, ability_modifier, class_level=1)
+    known_count = spells_mod.known_spell_count(level_row, ability_modifier, class_level=class_level, cls_id=cls_id)
     if known_count > 0:
+        max_spell_level = _highest_spell_slot_level(spellcasting)
         envelope = {"choose": known_count, "from": {
             "option_set_type": "options_array",
-            "options": _spell_options(catalog, cls_id, spell_level=1),
+            "options": _spell_options_up_to(catalog, cls_id, max_spell_level),
         }}
-        cid = f"class:{cls_id}:1:spells-known"
+        cid = f"class:{cls_id}:spells-known"
         is_known_caster = spellcasting.get("spells_known") is not None
         label = "Spells Known" if is_known_caster else "Prepared Spells"
         verb = "know" if is_known_caster else "prepare"
-        description = f"Choose {known_count} 1st-level spell{'s' if known_count != 1 else ''} to {verb} from the {cls['name']} spell list."
+        level_word = "spell" if max_spell_level == 1 else f"level-{max_spell_level}-or-lower spell"
+        description = f"Choose {known_count} {level_word}{'s' if known_count != 1 else ''} to {verb} from the {cls['name']} spell list."
         tpl = build_choice_template(envelope, cid, source, label, description=description)
         if tpl:
             templates.append(tpl)
@@ -307,12 +430,32 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     cls_entry = classes[0] if classes else None
     cls_id = cls_entry.get("classId") if cls_entry else None
     subclass_id = cls_entry.get("subclassId") if cls_entry else None
-    if cls_entry and cls_entry.get("level", 1) != 1:
-        problems.append({"id": "level-unsupported", "message": "Only level 1 is supported in this version."})
+    level = 1
+    if cls_entry:
+        raw_level = cls_entry.get("level", 1)
+        try:
+            level = int(raw_level)
+        except (TypeError, ValueError):
+            problems.append({"id": "level-unsupported", "message": f"Level {raw_level!r} isn't a valid number; using 1 instead."})
+            level = 1
+        if not (1 <= level <= 20):
+            problems.append({"id": "level-unsupported", "message": f"Level {level} is out of the 1-20 range; using 1 instead."})
+            level = 1
 
     cls = catalog.classes.get(cls_id) if cls_id else None
     if cls_id and not cls:
         problems.append({"id": "unknown-class", "message": f"Unknown class '{cls_id}'."})
+
+    subclass = catalog.subclasses.get(subclass_id) if subclass_id else None
+    if subclass_id and not subclass:
+        problems.append({"id": "unknown-subclass", "message": f"Unknown subclass '{subclass_id}'."})
+        subclass_id = None
+    elif subclass and cls_id and subclass.get("class", {}).get("index") != cls_id:
+        problems.append({
+            "id": "subclass-mismatch",
+            "message": f"'{subclass['name']}' isn't a subclass of the selected class.",
+        })
+        subclass_id = None
 
     background_raw = draft.get("background")
     if background_raw is not None and not isinstance(background_raw, dict):
@@ -372,20 +515,30 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         if not (1 <= score <= 30):
             problems.append({"id": f"ability-out-of-range-{ab}", "message": f"{ab} score {score} is out of the 1-30 range."})
 
+    class_choices_raw = cls_entry.get("choices") if cls_entry else None
+    class_choices = class_choices_raw if isinstance(class_choices_raw, dict) else {}
+
+    asi_levels: list[int] = []
+    if cls and cls_id:
+        asi_levels = _asi_granting_levels(catalog, cls_id, level)
+    asi_scores_by_level, final_scores = _apply_asi_progression(final_scores, asi_levels, class_choices, cls_id)
+
     modifiers = derived_mod.ability_modifiers(final_scores)
-    prof_bonus = 2  # fixed at level 1 for every class, per the SRD level tables
+    prof_bonus_row = catalog.class_level_row(cls_id, level) if cls and cls_id else None
+    prof_bonus = prof_bonus_row["prof_bonus"] if prof_bonus_row else 2
 
     # Choice templates from every source.
     choice_templates: list[dict] = []
     level_row = None
     if cls and cls_id:
         choice_templates += _class_choice_templates(cls, cls_id)
-        level_row = catalog.level_row(cls_id, 1)
-        if level_row:
-            choice_templates += _feature_choice_templates(catalog, cls_id, cls["name"], level_row.get("features", []), subclass_id)
+        level_row = catalog.class_level_row(cls_id, level)
+        feature_refs = _cumulative_feature_refs(catalog, cls_id, subclass_id, level)
+        choice_templates += _feature_choice_templates(catalog, cls_id, cls["name"], feature_refs, subclass_id)
+        choice_templates += _asi_choice_templates(cls_id, cls["name"], asi_levels, asi_scores_by_level)
         spell_ability = spells_mod.spellcasting_ability(cls)
         if spell_ability and level_row:
-            choice_templates += _spell_choice_templates(catalog, cls, cls_id, level_row, modifiers[spell_ability])
+            choice_templates += _spell_choice_templates(catalog, cls, cls_id, level_row, modifiers[spell_ability], class_level=level)
     if bg and bg_id:
         choice_templates += _background_choice_templates(bg, bg_id)
     if race and race_id:
@@ -452,8 +605,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     equipped_items = _gather_equipped_items(equipment_choices, added_raw if isinstance(added_raw, list) else [], catalog.items)
     chosen_equipment = _chosen_equipment(equipment_choices, catalog.items)
 
-    cantrip_choice = next((c for c in choices if c["id"] == f"class:{cls_id}:1:spells-cantrips"), None) if cls_id else None
-    known_spells_choice = next((c for c in choices if c["id"] == f"class:{cls_id}:1:spells-known"), None) if cls_id else None
+    cantrip_choice = next((c for c in choices if c["id"] == f"class:{cls_id}:spells-cantrips"), None) if cls_id else None
+    known_spells_choice = next((c for c in choices if c["id"] == f"class:{cls_id}:spells-known"), None) if cls_id else None
 
     def _spell_summaries(choice: dict | None) -> list[dict]:
         if not choice:
@@ -495,13 +648,18 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     proficient_save_abilities = [st["index"].upper() for st in (cls.get("saving_throws", []) if cls else [])]
 
     hit_die = cls.get("hit_die") if cls else None
+    hp_type = (draft.get("preferences") or {}).get("hitPointType")
+    if hp_type not in ("fixed", "manual"):
+        hp_type = "fixed"
+    hp_rolls_raw = cls_entry.get("hpRolls") if cls_entry else None
+    hp_rolls = {k: v for k, v in hp_rolls_raw.items() if isinstance(v, int)} if isinstance(hp_rolls_raw, dict) else {}
     saves = derived_mod.saving_throws(modifiers, proficient_save_abilities, prof_bonus)
     skills = derived_mod.skill_scores(modifiers, list(proficient_skills), prof_bonus)
     derived = {
         "abilityModifiers": modifiers,
         "proficiencyBonus": prof_bonus,
-        "hitPointMax": derived_mod.hit_point_max(hit_die, modifiers["CON"]),
-        "hitDice": f"1d{hit_die}" if hit_die else None,
+        "hitPointMax": derived_mod.hit_point_max_at_level(hit_die, modifiers["CON"], level, hp_type, hp_rolls),
+        "hitDice": f"{level}d{hit_die}" if hit_die else None,
         "armorClass": equipment_mod.armor_class_from_gear(equipped_items, modifiers["DEX"]),
         "speed": race.get("speed") if race else None,
         "savingThrows": saves,
@@ -517,8 +675,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
 
     sheet = {
         "name": draft.get("name") or "",
-        "level": 1 if cls else 0,
-        "class": {"id": cls_id, "name": cls["name"]} if cls else None,
+        "level": level if cls else 0,
+        "class": {
+            "id": cls_id, "name": cls["name"],
+            "subclass": {"id": subclass_id, "name": subclass["name"]} if subclass_id and subclass else None,
+        } if cls else None,
         "background": {"id": bg_id, "name": bg["name"]} if bg else None,
         "species": {
             "id": race_id, "name": race["name"],
