@@ -48,7 +48,7 @@ def test_fighter_acolyte_human_produces_expected_sheet_and_derived(catalog):
     sheet = resolution["sheet"]
     assert sheet["name"] == "Torvin Bracewell"
     assert sheet["level"] == 1
-    assert sheet["class"] == {"id": "fighter", "name": "Fighter"}
+    assert sheet["class"] == {"id": "fighter", "name": "Fighter", "subclass": None}
     assert sheet["background"] == {"id": "acolyte", "name": "Acolyte"}
     assert sheet["species"]["id"] == "human"
     assert sheet["species"]["subspecies"] is None
@@ -867,3 +867,28 @@ def test_hit_dice_string_reflects_the_level(catalog):
     draft = _fighter_acolyte_human_draft(classes=[{"classId": "fighter", "level": 5, "choices": {}}])
     resolution = resolve(draft, catalog)
     assert resolution["derived"]["hitDice"] == "5d10"
+
+
+def test_warlock_level_3_still_gets_a_spells_known_choice(catalog):
+    # Regression for the Critical finding: Warlock's Pact Magic moves
+    # slots up out of spell_slots_level_1 starting at level 3, and the
+    # gate in known_spell_count used to key specifically on
+    # spell_slots_level_1, silently zeroing out Warlock's spell choice
+    # from level 3 onward.
+    draft = _bare_class_draft("warlock", classes=[{"classId": "warlock", "level": 3, "choices": {}}])
+    resolution = resolve(draft, catalog)
+    known_choice = next(c for c in resolution["choices"] if c["id"] == "class:warlock:spells-known")
+    assert known_choice["count"] > 0
+
+
+def test_cleric_with_subclass_puts_it_on_the_resolved_sheet(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "cleric", "level": 1, "subclassId": "life", "choices": {}}],
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["class"]["subclass"] == {"id": "life", "name": "Life"}
+
+
+def test_class_with_no_subclass_selected_has_a_null_subclass_on_the_sheet(catalog):
+    resolution = resolve(_fighter_acolyte_human_draft(), catalog)
+    assert resolution["sheet"]["class"]["subclass"] is None

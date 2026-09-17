@@ -96,3 +96,13 @@ SUBCLASS_UNLOCK_LEVEL: dict[str, int] = {
     "barbarian": 3, "bard": 3, "fighter": 3, "monk": 3,
     "paladin": 3, "ranger": 3, "rogue": 3,
 }
+
+# Half-caster classes use ability_modifier + floor(class_level / 2) for
+# their prepared-spell count, not the full-caster ability_modifier +
+# class_level formula — real 5e RAW, not present as a distinguishing
+# flag anywhere in the bundled SRD data. Ranger's own level rows happen
+# to carry an explicit `spells_known` field (the known-caster branch
+# below), so this only actually changes Paladin's behavior today — but
+# the set describes a real RAW fact about both classes, independent of
+# which code branch currently reads it.
+HALF_CASTER_CLASSES = {"paladin", "ranger"}

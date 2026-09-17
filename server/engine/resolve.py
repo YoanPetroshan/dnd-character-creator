@@ -5,12 +5,12 @@ fixed-order pass: sources → species ability bonuses → final ability scores
 → derived stats → choice generation/validation (§4a) — never iterates to a
 fixpoint.
 
-Phase 1 scope: single class, level 1 only. Multiclass, leveling above 1,
-and subclass selection are all out of scope (see the plan's Global
-Constraints) — draft.classes[0].subclassId is read but never trusted to
-gate a feature choice unless it actually matches, so any level-1 feature
-gated to a specific subclass is filtered out rather than guessed at.
-Equipment IS in scope as of Phase 2a — see engine/equipment.py and the
+Single-class leveling (1-20) is in scope: draft.classes[0].subclassId is
+read but never trusted to gate a feature choice unless it actually
+matches, so any feature gated to a specific subclass is filtered out
+rather than guessed at. Multiclass remains out of scope (see the plan's
+Global Constraints). Equipment IS in scope as of Phase 2a — see
+engine/equipment.py and the
 _equipment_choice_templates/_gather_equipped_items/_fixed_equipment
 functions below. Spellcasting IS in scope as of Phase 2c — see
 engine/spells.py and the _spell_choice_templates function below.
@@ -24,7 +24,6 @@ from __future__ import annotations
 
 from catalog.choices import build_choice_template
 from catalog.loader import Catalog
-from catalog.reference_data import SUBCLASS_UNLOCK_LEVEL
 from . import asi as asi_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
@@ -334,7 +333,7 @@ def _spell_choice_templates(
         if tpl:
             templates.append(tpl)
 
-    known_count = spells_mod.known_spell_count(level_row, ability_modifier, class_level=class_level)
+    known_count = spells_mod.known_spell_count(level_row, ability_modifier, class_level=class_level, cls_id=cls_id)
     if known_count > 0:
         max_spell_level = _highest_spell_slot_level(spellcasting)
         envelope = {"choose": known_count, "from": {
@@ -677,7 +676,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     sheet = {
         "name": draft.get("name") or "",
         "level": level if cls else 0,
-        "class": {"id": cls_id, "name": cls["name"]} if cls else None,
+        "class": {
+            "id": cls_id, "name": cls["name"],
+            "subclass": {"id": subclass_id, "name": subclass["name"]} if subclass_id and subclass else None,
+        } if cls else None,
         "background": {"id": bg_id, "name": bg["name"]} if bg else None,
         "species": {
             "id": race_id, "name": race["name"],

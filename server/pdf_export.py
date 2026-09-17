@@ -91,9 +91,13 @@ def to_pdf(resolution: dict) -> bytes:
     cls = sheet["class"]
     bg = sheet["background"]
 
+    class_label = cls["name"] if cls else "—"
+    if cls and cls.get("subclass"):
+        class_label += f" ({cls['subclass']['name']})"
+
     pdf.h1(sheet["name"] or "Безименен герой")
     pdf.body(
-        f"Ниво {sheet['level']} {cls['name'] if cls else '—'}  |  "
+        f"Ниво {sheet['level']} {class_label}  |  "
         f"Произход: {bg['name'] if bg else '—'}  |  "
         f"Раса: {_species_label(sheet['species'])}"
     )
