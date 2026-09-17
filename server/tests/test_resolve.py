@@ -147,6 +147,27 @@ def test_subrace_ability_bonus_stacks_with_race(catalog):
     assert resolution["sheet"]["species"]["subspecies"] == {"id": "hill-dwarf", "name": "Hill Dwarf"}
 
 
+def test_species_trait_proficiencies_are_applied(catalog):
+    # Elf's Keen Senses trait grants Perception proficiency automatically,
+    # with no choice involved.
+    draft = _fighter_acolyte_human_draft(species={"id": "elf", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert "skill-perception" in resolution["sheet"]["proficiencies"]["skills"]
+
+
+def test_a_race_with_no_automatic_skill_grant_gets_none(catalog):
+    # Human has no trait granting an automatic skill proficiency — confirm
+    # this fix doesn't spuriously grant one. With the fixture's default
+    # empty choices, Fighter's own skill-proficiency choice is left
+    # unresolved (pending) and Acolyte's own two FIXED skills (Insight,
+    # Religion — background.starting_proficiencies, not a choice) are the
+    # only ones that resolve — confirmed empirically while writing this
+    # plan. Nothing should be attributable to Human.
+    draft = _fighter_acolyte_human_draft()  # already uses Human
+    resolution = resolve(draft, catalog)
+    assert set(resolution["sheet"]["proficiencies"]["skills"]) == {"skill-insight", "skill-religion"}
+
+
 def test_multiclass_draft_produces_a_problem_and_uses_only_the_first_class(catalog):
     draft = _fighter_acolyte_human_draft(classes=[
         {"classId": "fighter", "level": 1, "choices": {}},

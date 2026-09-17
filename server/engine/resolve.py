@@ -644,6 +644,13 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             proficient_skills.update(s for s in c["selected"] if s.startswith("skill-"))
     if bg:
         proficient_skills.update(p["index"] for p in bg.get("starting_proficiencies", []) if p["index"].startswith("skill-"))
+    if race:
+        trait_refs = list(race.get("traits", [])) + (list(subrace.get("racial_traits", [])) if subrace else [])
+        for ref in trait_refs:
+            trait = catalog.traits.get(ref["index"])
+            if not trait:
+                continue
+            proficient_skills.update(p["index"] for p in trait.get("proficiencies", []) if p["index"].startswith("skill-"))
 
     proficient_save_abilities = [st["index"].upper() for st in (cls.get("saving_throws", []) if cls else [])]
 
