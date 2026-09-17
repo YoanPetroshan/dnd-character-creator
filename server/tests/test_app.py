@@ -77,6 +77,22 @@ def test_catalog_class_detail_endpoint_404s_for_unknown_id(client):
     assert resp.status_code == 404
 
 
+def test_catalog_class_includes_level_feature_counts(client):
+    resp = client.get("/api/catalog/class/fighter")
+    body = resp.get_json()
+    assert "levelFeatureCounts" in body
+    assert body["levelFeatureCounts"]["1"] == 2  # fighter-fighting-style, second-wind
+    assert body["levelFeatureCounts"]["3"] == 1  # martial-archetype
+    assert len(body["levelFeatureCounts"]) == 20
+
+
+def test_catalog_class_includes_subclass_unlock_level(client):
+    resp = client.get("/api/catalog/class/cleric")
+    assert resp.get_json()["subclassUnlockLevel"] == 1
+    resp = client.get("/api/catalog/class/fighter")
+    assert resp.get_json()["subclassUnlockLevel"] == 3
+
+
 def test_catalog_background_detail_endpoint(client):
     resp = client.get("/api/catalog/background/acolyte")
     assert resp.status_code == 200

@@ -9,6 +9,7 @@ from flask import Flask, Response, jsonify, request
 from flask_cors import CORS
 
 from catalog.loader import load as load_catalog
+from catalog.reference_data import SUBCLASS_UNLOCK_LEVEL
 from engine.resolve import resolve
 from export import to_yaml
 from markdown_export import to_markdown
@@ -51,7 +52,15 @@ def api_catalog_class(class_id: str):
     cls = _catalog.classes.get(class_id)
     if not cls:
         return jsonify({"error": "not found"}), 404
-    return jsonify(cls)
+    level_feature_counts = {}
+    for lvl in range(1, 21):
+        row = _catalog.class_level_row(class_id, lvl)
+        level_feature_counts[str(lvl)] = len(row.get("features", [])) if row else 0
+    return jsonify({
+        **cls,
+        "levelFeatureCounts": level_feature_counts,
+        "subclassUnlockLevel": SUBCLASS_UNLOCK_LEVEL.get(class_id),
+    })
 
 
 @app.route("/api/catalog/background/<background_id>")
