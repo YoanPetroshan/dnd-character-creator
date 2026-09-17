@@ -36,9 +36,17 @@ class Catalog:
     items: dict[str, dict] = field(default_factory=dict)
     spells: dict[str, dict] = field(default_factory=dict)
 
-    def level_row(self, class_id: str, level: int) -> dict | None:
+    def class_level_row(self, class_id: str, level: int) -> dict | None:
         for row in self.levels:
-            if row.get("class", {}).get("index") == class_id and row.get("level") == level:
+            if (row.get("class", {}).get("index") == class_id
+                    and row.get("level") == level
+                    and "subclass" not in row):
+                return row
+        return None
+
+    def subclass_level_row(self, subclass_id: str, level: int) -> dict | None:
+        for row in self.levels:
+            if row.get("subclass", {}).get("index") == subclass_id and row.get("level") == level:
                 return row
         return None
 

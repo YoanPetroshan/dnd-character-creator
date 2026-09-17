@@ -25,3 +25,14 @@ def test_skill_ability_known_mappings():
 
 def test_abilities_are_the_six_srd_abilities_uppercase():
     assert reference_data.ABILITIES == ["STR", "DEX", "CON", "INT", "WIS", "CHA"]
+
+
+def test_subclass_unlock_level_has_all_twelve_classes():
+    from catalog.reference_data import SUBCLASS_UNLOCK_LEVEL
+    assert set(SUBCLASS_UNLOCK_LEVEL) == {
+        "barbarian", "bard", "cleric", "druid", "fighter", "monk",
+        "paladin", "ranger", "rogue", "sorcerer", "warlock", "wizard",
+    }
+    assert SUBCLASS_UNLOCK_LEVEL["cleric"] == 1
+    assert SUBCLASS_UNLOCK_LEVEL["wizard"] == 2
+    assert SUBCLASS_UNLOCK_LEVEL["fighter"] == 3

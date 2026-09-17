@@ -20,21 +20,45 @@ def test_classes_indexed_by_srd_index():
     assert catalog.classes["fighter"]["hit_die"] == 10
 
 
-def test_level_row_returns_the_matching_class_and_level():
+def test_class_level_row_returns_base_class_row_only():
     catalog = load()
-    row = catalog.level_row("fighter", 1)
+    row = catalog.class_level_row("fighter", 1)
     assert row is not None
     assert row["level"] == 1
-    assert row["prof_bonus"] == 2
-    feature_names = {f["name"] for f in row["features"]}
-    assert "Fighting Style" in feature_names
-    assert "Second Wind" in feature_names
+    assert "subclass" not in row
 
 
-def test_level_row_returns_none_for_unknown_class_or_level():
+def test_class_level_row_excludes_subclass_rows_at_a_colliding_level():
+    # Wizard's own level-2 row (arcane-tradition feature) and Evocation's
+    # subclass-level-2 row (evocation-savant/sculpt-spells) both exist
+    # with class.index == "wizard" and level == 2 — this is the exact
+    # ambiguity this task fixes. class_level_row must return the base
+    # row, never the subclass one.
     catalog = load()
-    assert catalog.level_row("not-a-class", 1) is None
-    assert catalog.level_row("fighter", 99) is None
+    row = catalog.class_level_row("wizard", 2)
+    assert row is not None
+    assert "subclass" not in row
+    assert any(f["index"] == "arcane-tradition" for f in row["features"])
+
+
+def test_class_level_row_unknown_class_or_level_is_none():
+    catalog = load()
+    assert catalog.class_level_row("not-a-class", 1) is None
+    assert catalog.class_level_row("fighter", 99) is None
+
+
+def test_subclass_level_row_returns_the_subclass_specific_row():
+    catalog = load()
+    row = catalog.subclass_level_row("evocation", 2)
+    assert row is not None
+    assert row["level"] == 2
+    assert any(f["index"] == "evocation-savant" for f in row["features"])
+
+
+def test_subclass_level_row_unknown_subclass_or_level_is_none():
+    catalog = load()
+    assert catalog.subclass_level_row("not-a-subclass", 2) is None
+    assert catalog.subclass_level_row("evocation", 99) is None
 
 
 def test_subraces_of_returns_only_that_races_subraces():

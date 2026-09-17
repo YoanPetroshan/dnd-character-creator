@@ -80,3 +80,19 @@ SKILL_NAMES: dict[str, str] = {
     "skill-stealth": "Stealth",
     "skill-survival": "Survival",
 }
+
+# The level each class first grants its subclass-defining feature (e.g.
+# Divine Domain, Primal Path) — read directly from each class's own
+# features list in 5e-SRD-Levels.json. There is no structured "choose
+# your subclass" envelope anywhere in the bundled data; the unlock level
+# is identified only by which specifically-named feature first appears,
+# so this table is hardcoded from that empirical reading — the same
+# "open RAW fact the bundled JSON doesn't expose structurally" precedent
+# as SKILL_ABILITY/LANGUAGES/SKILL_NAMES above. Verified against the
+# actual per-class features lists at levels 1-3 while writing this plan.
+SUBCLASS_UNLOCK_LEVEL: dict[str, int] = {
+    "cleric": 1, "sorcerer": 1, "warlock": 1,
+    "wizard": 2, "druid": 2,
+    "barbarian": 3, "bard": 3, "fighter": 3, "monk": 3,
+    "paladin": 3, "ranger": 3, "rogue": 3,
+}
