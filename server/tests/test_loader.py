@@ -55,3 +55,10 @@ def test_items_indexed_by_srd_index_covers_all_categories():
     assert catalog.items["chain-mail"]["armor_category"] == "Heavy"
     assert catalog.items["longbow"]["weapon_category"] == "Martial"
     assert catalog.items["dungeoneers-pack"]["equipment_category"]["index"] == "adventuring-gear"
+
+
+def test_spells_indexed_by_index():
+    catalog = load()
+    assert len(catalog.spells) == 319
+    assert catalog.spells["fireball"]["name"] == "Fireball"
+    assert catalog.spells["fireball"]["level"] == 3

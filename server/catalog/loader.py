@@ -34,6 +34,7 @@ class Catalog:
     traits: dict[str, dict] = field(default_factory=dict)
     backgrounds: dict[str, dict] = field(default_factory=dict)
     items: dict[str, dict] = field(default_factory=dict)
+    spells: dict[str, dict] = field(default_factory=dict)
 
     def level_row(self, class_id: str, level: int) -> dict | None:
         for row in self.levels:
@@ -56,4 +57,5 @@ def load() -> Catalog:
         traits=_index_by(_load("5e-SRD-Traits.json")),
         backgrounds=_index_by(_load("5e-SRD-Backgrounds.json")),
         items=_index_by(_load("5e-SRD-Equipment.json")),
+        spells=_index_by(_load("5e-SRD-Spells.json")),
     )
