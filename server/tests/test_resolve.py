@@ -605,3 +605,39 @@ def test_derived_spell_save_dc_and_attack_bonus_use_the_spellcasting_ability(cat
     # INT 16 -> +3 modifier, prof bonus 2 at level 1
     assert resolution["derived"]["spellSaveDC"] == 13  # 8 + 2 + 3
     assert resolution["derived"]["spellAttackBonus"] == 5  # 2 + 3
+
+
+def test_sheet_details_passes_through_submitted_fields_only(catalog):
+    draft = _fighter_acolyte_human_draft(
+        details={"alignment": "Chaotic Good", "backstory": "Раснал в Невървинтър."},
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["details"] == {"alignment": "Chaotic Good", "backstory": "Раснал в Невървинтър."}
+
+
+def test_sheet_details_is_none_when_missing(catalog):
+    draft = _fighter_acolyte_human_draft()
+    del draft["details"]
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["details"] is None
+
+
+def test_sheet_details_is_none_when_explicitly_null(catalog):
+    draft = _fighter_acolyte_human_draft(details=None)
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["details"] is None
+
+
+def test_malformed_details_is_none_and_not_a_problem(catalog):
+    draft = _fighter_acolyte_human_draft(details="not a dict")
+    resolution = resolve(draft, catalog)  # must not raise
+    assert resolution["sheet"]["details"] is None
+    assert not any(p["id"].startswith("malformed-details") or "details" in p["id"] for p in resolution["problems"])
+
+
+def test_sheet_details_drops_unknown_keys_and_non_string_values(catalog):
+    draft = _fighter_acolyte_human_draft(
+        details={"alignment": "Chaotic Good", "unknownField": "ignored", "faith": 12345},
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["details"] == {"alignment": "Chaotic Good"}

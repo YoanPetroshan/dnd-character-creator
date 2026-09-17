@@ -23,6 +23,13 @@ from . import derived as derived_mod
 from . import equipment as equipment_mod
 from . import spells as spells_mod
 
+_DETAIL_FIELDS = {
+    "alignment", "faith", "lifestyle",
+    "age", "height", "weight", "eyes", "skin", "hair",
+    "personalityTraits", "ideals", "bonds", "flaws",
+    "backstory", "notes",
+}
+
 
 def _species_ability_bonuses(race: dict | None, subrace: dict | None) -> dict[str, int]:
     bonuses: dict[str, int] = {}
@@ -63,6 +70,13 @@ def _join_desc(desc) -> str | None:
     if isinstance(desc, list):
         return " ".join(desc)
     return desc
+
+
+def _sanitized_details(details_raw) -> dict | None:
+    if not isinstance(details_raw, dict):
+        return None
+    result = {k: v for k, v in details_raw.items() if k in _DETAIL_FIELDS and isinstance(v, str)}
+    return result if result else None
 
 
 def _feature_choice_templates(
@@ -388,6 +402,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         problems.append({"id": "malformed-equipment-choices", "message": "'equipment.choices' must be an object."})
         equipment_choices_raw = None
 
+    details = _sanitized_details(draft.get("details"))
+
     all_selections: dict[str, list[str]] = {}
     if cls_entry:
         all_selections.update(cls_entry.get("choices") or {})
@@ -513,6 +529,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         },
         "equipment": {"granted": granted_equipment, "chosen": chosen_equipment, "added": added_resolved},
         "spells": spells_summary,
+        "details": details,
     }
 
     return {

@@ -13,7 +13,9 @@ def _sample_resolution():
             "species": {"id": "human", "name": "Human", "subspecies": None},
             "abilities": {"STR": 17, "DEX": 15, "CON": 15, "INT": 11, "WIS": 13, "CHA": 9},
             "proficiencies": {"skills": ["skill-athletics"], "savingThrows": ["STR", "CON"], "languages": ["common"]},
+            "equipment": {"granted": [], "chosen": [], "added": []},
             "spells": None,
+            "details": None,
         },
         "derived": {
             "abilityModifiers": {"STR": 3, "DEX": 2, "CON": 2, "INT": 0, "WIS": 1, "CHA": -1},
@@ -108,3 +110,32 @@ def test_to_yaml_shows_null_spell_save_dc_and_attack_bonus_for_a_non_caster():
     doc = yaml.safe_load(text)
     assert doc["spellSaveDC"] is None
     assert doc["spellAttackBonus"] is None
+
+
+def test_to_yaml_includes_details_when_present():
+    resolution = _sample_resolution()
+    resolution["sheet"]["details"] = {"alignment": "Lawful Neutral"}
+    text = to_yaml(resolution)
+    doc = yaml.safe_load(text)
+    assert doc["details"]["alignment"] == "Lawful Neutral"
+    assert "Lawful Neutral" in text
+
+
+def test_to_yaml_shows_null_details_when_none_submitted():
+    resolution = _sample_resolution()
+    text = to_yaml(resolution)
+    doc = yaml.safe_load(text)
+    assert doc["details"] is None
+
+
+def test_to_yaml_includes_equipment():
+    resolution = _sample_resolution()
+    resolution["sheet"]["equipment"] = {
+        "granted": [{"itemId": "chain-mail", "name": "Chain Mail", "qty": 1}],
+        "chosen": [],
+        "added": [],
+    }
+    text = to_yaml(resolution)
+    doc = yaml.safe_load(text)
+    assert doc["equipment"]["granted"][0]["name"] == "Chain Mail"
+    assert "Chain Mail" in text
