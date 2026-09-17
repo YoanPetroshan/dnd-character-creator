@@ -82,6 +82,42 @@ def api_items():
     return jsonify({"items": results})
 
 
+@app.route("/api/spells")
+def api_spells():
+    class_id = request.args.get("class")
+    level_param = request.args.get("level")
+    query = (request.args.get("q") or "").lower()
+    level_filter = None
+    if level_param is not None:
+        try:
+            level_filter = int(level_param)
+        except ValueError:
+            return jsonify({"error": "'level' must be an integer"}), 400
+    results = []
+    for spell in _catalog.spells.values():
+        if class_id and not any(c["index"] == class_id for c in spell.get("classes", [])):
+            continue
+        if level_filter is not None and spell["level"] != level_filter:
+            continue
+        if query and query not in spell["name"].lower():
+            continue
+        results.append({
+            "id": spell["index"],
+            "name": spell["name"],
+            "level": spell["level"],
+            "school": spell.get("school", {}).get("name"),
+            "castingTime": spell.get("casting_time"),
+            "range": spell.get("range"),
+            "components": spell.get("components", []),
+            "duration": spell.get("duration"),
+            "concentration": spell.get("concentration", False),
+            "ritual": spell.get("ritual", False),
+            "desc": " ".join(spell.get("desc", [])),
+        })
+    results.sort(key=lambda s: s["name"])
+    return jsonify({"spells": results})
+
+
 @app.route("/api/export/yaml", methods=["POST"])
 def api_export_yaml():
     draft = request.get_json(silent=True) or {}
