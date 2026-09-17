@@ -86,6 +86,7 @@ export interface Draft {
   };
   equipment: {
     startingChoice?: string;
+    choices: Record<string, string[]>;
     added: { itemId: string; qty: number; equipped: boolean }[];
     skipped: boolean;
   };

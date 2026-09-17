@@ -18,7 +18,7 @@ export const emptyDraft: Draft = {
     method: "standard",
     base: { STR: 10, DEX: 10, CON: 10, INT: 10, WIS: 10, CHA: 10 },
   },
-  equipment: { added: [], skipped: false },
+  equipment: { choices: {}, added: [], skipped: false },
   details: {},
 };
 
@@ -32,7 +32,10 @@ type Action =
   | { type: "SET_SUBSPECIES"; subspeciesId: string | undefined }
   | { type: "SET_ABILITY_METHOD"; method: Draft["abilities"]["method"] }
   | { type: "SET_ABILITY_SCORE"; ability: Ability; value: number }
-  | { type: "SET_CHOICE_SELECTION"; source: ChoiceSourceKind; choiceId: string; selected: string[] };
+  | { type: "SET_CHOICE_SELECTION"; source: ChoiceSourceKind; choiceId: string; selected: string[] }
+  | { type: "ADD_ITEM"; itemId: string }
+  | { type: "REMOVE_ITEM"; itemId: string }
+  | { type: "TOGGLE_EQUIPPED"; itemId: string };
 
 function reducer(state: Draft, action: Action): Draft {
   switch (action.type) {
@@ -45,10 +48,22 @@ function reducer(state: Draft, action: Action): Draft {
     case "SET_CLASS":
       // A fresh single-entry array with empty choices — Phase 1 supports
       // exactly one class at level 1, and any choices tied to a previous
-      // class selection are meaningless for the new one.
-      return { ...state, classes: [{ classId: action.classId, level: 1, choices: {} }] };
+      // class selection are meaningless for the new one. Equipment choice
+      // ids are also class-scoped (e.g. "class:rogue:1:equipment-choice-0"),
+      // so they go stale on class change too.
+      return {
+        ...state,
+        classes: [{ classId: action.classId, level: 1, choices: {} }],
+        equipment: { ...state.equipment, choices: {} },
+      };
     case "SET_BACKGROUND":
-      return { ...state, background: { id: action.backgroundId, choices: {} } };
+      // Equipment choice ids are also background-scoped, so they go stale
+      // on background change too — see SET_CLASS above.
+      return {
+        ...state,
+        background: { id: action.backgroundId, choices: {} },
+        equipment: { ...state.equipment, choices: {} },
+      };
     case "SET_SPECIES":
       // Switching species clears any subspecies pick too — a subspecies id
       // from the old species is never valid for the new one.
@@ -95,8 +110,37 @@ function reducer(state: Draft, action: Action): Draft {
           },
         };
       }
-      return state; // subclass/feature/equipment choices aren't dispatched from anywhere in Phase 1b
+      if (action.source === "equipment") {
+        return {
+          ...state,
+          equipment: {
+            ...state.equipment,
+            choices: { ...state.equipment.choices, [action.choiceId]: action.selected },
+          },
+        };
+      }
+      return state; // subclass/feature choices aren't dispatched from anywhere yet
     }
+    case "ADD_ITEM": {
+      const existing = state.equipment.added.find((e) => e.itemId === action.itemId);
+      const added = existing
+        ? state.equipment.added.map((e) => (e.itemId === action.itemId ? { ...e, qty: e.qty + 1 } : e))
+        : [...state.equipment.added, { itemId: action.itemId, qty: 1, equipped: false }];
+      return { ...state, equipment: { ...state.equipment, added } };
+    }
+    case "REMOVE_ITEM":
+      return {
+        ...state,
+        equipment: { ...state.equipment, added: state.equipment.added.filter((e) => e.itemId !== action.itemId) },
+      };
+    case "TOGGLE_EQUIPPED":
+      return {
+        ...state,
+        equipment: {
+          ...state.equipment,
+          added: state.equipment.added.map((e) => (e.itemId === action.itemId ? { ...e, equipped: !e.equipped } : e)),
+        },
+      };
     default:
       return state;
   }

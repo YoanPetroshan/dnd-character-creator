@@ -167,3 +167,41 @@ main {
   text-align: center;
   display: inline-block;
 }
+
+.equipment-section {
+  margin-bottom: 16px;
+}
+
+.equipment-section ul {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.item-browser-list,
+.inventory-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+}
+
+.item-browser-list li,
+.inventory-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.item-browser-list li:last-child,
+.inventory-list li:last-child {
+  border-bottom: none;
+}
+
+.item-browser-list li span,
+.inventory-list li span {
+  flex: 1;
+}
