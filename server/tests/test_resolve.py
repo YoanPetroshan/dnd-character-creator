@@ -892,3 +892,23 @@ def test_cleric_with_subclass_puts_it_on_the_resolved_sheet(catalog):
 def test_class_with_no_subclass_selected_has_a_null_subclass_on_the_sheet(catalog):
     resolution = resolve(_fighter_acolyte_human_draft(), catalog)
     assert resolution["sheet"]["class"]["subclass"] is None
+
+
+def test_species_chosen_languages_appear_on_the_sheet(catalog):
+    draft = _fighter_acolyte_human_draft(
+        species={"id": "human", "choices": {"species:human:languages": ["draconic"]}},
+    )
+    resolution = resolve(draft, catalog)
+    assert "draconic" in resolution["sheet"]["proficiencies"]["languages"]
+
+
+def test_background_chosen_languages_still_appear_no_regression(catalog):
+    # Acolyte's own language choice — confirm this plan's fix doesn't
+    # accidentally drop background-sourced languages while adding
+    # species-sourced ones.
+    draft = _fighter_acolyte_human_draft(
+        background={"id": "acolyte", "choices": {"background:acolyte:languages": ["celestial", "infernal"]}},
+    )
+    resolution = resolve(draft, catalog)
+    languages = resolution["sheet"]["proficiencies"]["languages"]
+    assert "celestial" in languages and "infernal" in languages

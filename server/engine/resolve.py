@@ -671,7 +671,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
 
     fixed_languages = [lang["index"] for lang in (bg.get("languages", []) if bg else [])] + \
         [lang["index"] for lang in (race.get("languages", []) if race else [])]
-    chosen_languages = [s for c in choices if c["source"]["kind"] == "background" for s in c["selected"]]
+    chosen_languages = [
+        s for c in choices
+        if c["source"]["kind"] in ("background", "species") and c["id"].endswith(":languages")
+        for s in c["selected"]
+    ]
 
     sheet = {
         "name": draft.get("name") or "",
