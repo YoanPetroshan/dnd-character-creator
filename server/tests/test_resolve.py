@@ -967,3 +967,52 @@ def test_background_chosen_languages_still_appear_no_regression(catalog):
     resolution = resolve(draft, catalog)
     languages = resolution["sheet"]["proficiencies"]["languages"]
     assert "celestial" in languages and "infernal" in languages
+
+
+def test_wizard_duplicate_cantrip_selection_is_deduplicated(catalog):
+    # Regression test for dedup fix in commit 1aa299b: submitting the same
+    # valid cantrip id multiple times (e.g. ["fire-bolt", "fire-bolt",
+    # "fire-bolt"]) must resolve with only one copy, not three. The generic
+    # choice-resolution loop (for tpl in choice_templates:) dedupes all
+    # choice types, not just Half-Elf's ability bonus (which was the only
+    # one covered by the original review). This test verifies Wizard's
+    # cantrip choice gets deduplicated correctly.
+    draft = _wizard_draft(
+        int_score=16,  # INT 16 -> +3 mod, so cantrip count = 3
+        classes=[{
+            "classId": "wizard", "level": 1,
+            "choices": {"class:wizard:spells-cantrips": ["fire-bolt", "fire-bolt", "fire-bolt"]},
+        }],
+    )
+    resolution = resolve(draft, catalog)
+    cantrip_choice = next(c for c in resolution["choices"] if c["id"] == "class:wizard:spells-cantrips")
+    # Verify the selection is deduplicated
+    assert cantrip_choice["selected"] == ["fire-bolt"]
+    # Status must be "pending" (only 1 of 3 cantrips selected), not
+    # "resolved" from padding with duplicates
+    assert cantrip_choice["status"] == "pending"
+    # Confirm no spurious over-selected problem appears (the duplicate
+    # selection should be silently dropped before the over-select check)
+    assert not any(p["id"].startswith("over-selected-") for p in resolution["problems"])
+
+
+def test_fighter_duplicate_skill_selection_is_deduplicated(catalog):
+    # Regression test for dedup fix in commit 1aa299b: submitting the same
+    # valid skill id twice (e.g. ["skill-athletics", "skill-athletics"])
+    # must resolve with only one copy. Fighter's proficiency choice has
+    # count=2, so selecting one unique skill leaves it pending.
+    draft = _fighter_acolyte_human_draft(
+        classes=[{
+            "classId": "fighter", "level": 1,
+            "choices": {"class:fighter:1:prof-choice-0": ["skill-athletics", "skill-athletics"]},
+        }],
+    )
+    resolution = resolve(draft, catalog)
+    skill_choice = next(c for c in resolution["choices"] if c["label"] == "Skill Proficiencies")
+    # Verify the selection is deduplicated to a single copy
+    assert skill_choice["selected"] == ["skill-athletics"]
+    # Status must be "pending" (only 1 of 2 skills selected), not
+    # "resolved" from padding with duplicates
+    assert skill_choice["status"] == "pending"
+    # Confirm no spurious over-selected problem appears
+    assert not any(p["id"].startswith("over-selected-") for p in resolution["problems"])
