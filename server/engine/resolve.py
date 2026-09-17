@@ -23,12 +23,12 @@ from . import derived as derived_mod
 from . import equipment as equipment_mod
 from . import spells as spells_mod
 
-_DETAIL_FIELDS = {
+_DETAIL_FIELDS = (
     "alignment", "faith", "lifestyle",
     "age", "height", "weight", "eyes", "skin", "hair",
     "personalityTraits", "ideals", "bonds", "flaws",
-    "backstory", "notes",
-}
+    "backstory", "organizations", "allies", "enemies", "notes",
+)
 
 
 def _species_ability_bonuses(race: dict | None, subrace: dict | None) -> dict[str, int]:
@@ -75,7 +75,10 @@ def _join_desc(desc) -> str | None:
 def _sanitized_details(details_raw) -> dict | None:
     if not isinstance(details_raw, dict):
         return None
-    result = {k: v for k, v in details_raw.items() if k in _DETAIL_FIELDS and isinstance(v, str)}
+    result = {
+        k: details_raw[k] for k in _DETAIL_FIELDS
+        if isinstance(details_raw.get(k), str) and details_raw[k].strip()
+    }
     return result if result else None
 
 

@@ -109,6 +109,9 @@ export interface Draft {
     flaws?: string;
     // Notes
     backstory?: string;
+    organizations?: string;
+    allies?: string;
+    enemies?: string;
     notes?: string;
   };
 }
