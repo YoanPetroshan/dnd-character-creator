@@ -94,6 +94,14 @@ def api_export_yaml():
         # exists that can resolve them (Phase 2b) — otherwise every
         # character the currently-shipped UI builds would be permanently
         # unexportable, which is a regression this phase must not cause.
+        #
+        # Spell choices (source.kind == "class", added in Phase 2c) are
+        # deliberately NOT carved out here, unlike equipment above: the
+        # shipped Class-step UI (ChoiceCard/ChoicePicker) already renders
+        # and resolves any source.kind == "class" choice generically,
+        # spell choices included, so gating export on unresolved
+        # cantrip/spell picks is the same correct behavior class/
+        # background/species choices already get — not a lockout.
     ]
     all_problems = resolution["problems"] + pending_problems
     if all_problems:

@@ -12,7 +12,8 @@ gate a feature choice unless it actually matches, so any level-1 feature
 gated to a specific subclass is filtered out rather than guessed at.
 Equipment IS in scope as of Phase 2a — see engine/equipment.py and the
 _equipment_choice_templates/_gather_equipped_items/_fixed_equipment
-functions below.
+functions below. Spellcasting IS in scope as of Phase 2c — see
+engine/spells.py and the _spell_choice_templates function below.
 """
 from __future__ import annotations
 
@@ -20,6 +21,7 @@ from catalog.choices import build_choice_template
 from catalog.loader import Catalog
 from . import derived as derived_mod
 from . import equipment as equipment_mod
+from . import spells as spells_mod
 
 
 def _species_ability_bonuses(race: dict | None, subrace: dict | None) -> dict[str, int]:
@@ -160,6 +162,54 @@ def _equipment_choice_templates(entity: dict, source_kind: str, source_id: str, 
         if original_option_count and len(tpl["options"]) < original_option_count:
             tpl["description"] = (tpl["description"] + " (Note: one or more of the original options for this choice aren't available yet and have been left out.)").strip()
         templates.append(tpl)
+    return templates
+
+
+def _spell_options(catalog: Catalog, cls_id: str, spell_level: int) -> list[dict]:
+    matches = [
+        s for s in catalog.spells.values()
+        if s["level"] == spell_level and any(c["index"] == cls_id for c in s.get("classes", []))
+    ]
+    matches.sort(key=lambda s: s["name"])
+    return [{"option_type": "reference", "item": {"index": s["index"], "name": s["name"]}} for s in matches]
+
+
+def _spell_choice_templates(
+    catalog: Catalog, cls: dict, cls_id: str, level_row: dict | None, ability_modifier: int,
+) -> list[dict]:
+    if not level_row:
+        return []
+    spellcasting = level_row.get("spellcasting") or {}
+    templates = []
+    source = {"kind": "class", "id": cls_id, "label": cls["name"], "level": 1}
+
+    cantrips_known = spellcasting.get("cantrips_known", 0)
+    if cantrips_known > 0:
+        envelope = {"choose": cantrips_known, "from": {
+            "option_set_type": "options_array",
+            "options": _spell_options(catalog, cls_id, spell_level=0),
+        }}
+        cid = f"class:{cls_id}:1:spells-cantrips"
+        description = f"Choose {cantrips_known} cantrip{'s' if cantrips_known != 1 else ''} from the {cls['name']} spell list."
+        tpl = build_choice_template(envelope, cid, source, "Cantrips Known", description=description)
+        if tpl:
+            templates.append(tpl)
+
+    known_count = spells_mod.known_spell_count(level_row, ability_modifier, class_level=1)
+    if known_count > 0:
+        envelope = {"choose": known_count, "from": {
+            "option_set_type": "options_array",
+            "options": _spell_options(catalog, cls_id, spell_level=1),
+        }}
+        cid = f"class:{cls_id}:1:spells-known"
+        is_known_caster = spellcasting.get("spells_known") is not None
+        label = "Spells Known" if is_known_caster else "Prepared Spells"
+        verb = "know" if is_known_caster else "prepare"
+        description = f"Choose {known_count} 1st-level spell{'s' if known_count != 1 else ''} to {verb} from the {cls['name']} spell list."
+        tpl = build_choice_template(envelope, cid, source, label, description=description)
+        if tpl:
+            templates.append(tpl)
+
     return templates
 
 
@@ -310,11 +360,15 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
 
     # Choice templates from every source.
     choice_templates: list[dict] = []
+    level_row = None
     if cls and cls_id:
         choice_templates += _class_choice_templates(cls, cls_id)
         level_row = catalog.level_row(cls_id, 1)
         if level_row:
             choice_templates += _feature_choice_templates(catalog, cls_id, cls["name"], level_row.get("features", []), subclass_id)
+        spell_ability = spells_mod.spellcasting_ability(cls)
+        if spell_ability and level_row:
+            choice_templates += _spell_choice_templates(catalog, cls, cls_id, level_row, modifiers[spell_ability])
     if bg and bg_id:
         choice_templates += _background_choice_templates(bg, bg_id)
     if race and race_id:
@@ -379,6 +433,27 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     equipped_items = _gather_equipped_items(equipment_choices, added_raw if isinstance(added_raw, list) else [], catalog.items)
     chosen_equipment = _chosen_equipment(equipment_choices, catalog.items)
 
+    cantrip_choice = next((c for c in choices if c["id"] == f"class:{cls_id}:1:spells-cantrips"), None) if cls_id else None
+    known_spells_choice = next((c for c in choices if c["id"] == f"class:{cls_id}:1:spells-known"), None) if cls_id else None
+
+    def _spell_summaries(choice: dict | None) -> list[dict]:
+        if not choice:
+            return []
+        return [
+            {"id": sid, "name": catalog.spells[sid]["name"], "level": catalog.spells[sid]["level"]}
+            for sid in choice["selected"] if sid in catalog.spells
+        ]
+
+    spell_ability = spells_mod.spellcasting_ability(cls) if cls else None
+    has_spellcasting_this_level = bool(cantrip_choice or known_spells_choice)
+    spells_summary = None
+    spell_save_dc = None
+    spell_attack_bonus = None
+    if has_spellcasting_this_level and spell_ability:
+        spells_summary = {"cantrips": _spell_summaries(cantrip_choice), "known": _spell_summaries(known_spells_choice)}
+        spell_save_dc = spells_mod.spell_save_dc(prof_bonus, modifiers[spell_ability])
+        spell_attack_bonus = spells_mod.spell_attack_bonus(prof_bonus, modifiers[spell_ability])
+
     granted_equipment = []
     if cls:
         granted_equipment += _fixed_equipment(cls.get("starting_equipment", []), catalog.items)
@@ -413,6 +488,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "savingThrows": saves,
         "skills": skills,
         "passivePerception": derived_mod.passive_perception(skills),
+        "spellSaveDC": spell_save_dc,
+        "spellAttackBonus": spell_attack_bonus,
     }
 
     fixed_languages = [lang["index"] for lang in (bg.get("languages", []) if bg else [])] + \
@@ -435,6 +512,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             "languages": sorted(set(fixed_languages + chosen_languages)),
         },
         "equipment": {"granted": granted_equipment, "chosen": chosen_equipment, "added": added_resolved},
+        "spells": spells_summary,
     }
 
     return {
