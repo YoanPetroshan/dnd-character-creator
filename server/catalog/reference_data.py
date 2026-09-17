@@ -53,3 +53,30 @@ SKILL_ABILITY: dict[str, str] = {
 }
 
 ABILITIES: list[str] = ["STR", "DEX", "CON", "INT", "WIS", "CHA"]
+
+# SRD skill `index` -> its standard 5e display name. Open SRD content,
+# same "safe to hardcode" reasoning as LANGUAGES above — no bundled SRD
+# file carries these as their own list; they only exist embedded inside
+# each class's proficiency_choices option labels, which doesn't help code
+# that starts from a skill `index` (e.g. derived.skills' keys) rather than
+# from a class's own choice envelope.
+SKILL_NAMES: dict[str, str] = {
+    "skill-acrobatics": "Acrobatics",
+    "skill-animal-handling": "Animal Handling",
+    "skill-arcana": "Arcana",
+    "skill-athletics": "Athletics",
+    "skill-deception": "Deception",
+    "skill-history": "History",
+    "skill-insight": "Insight",
+    "skill-intimidation": "Intimidation",
+    "skill-investigation": "Investigation",
+    "skill-medicine": "Medicine",
+    "skill-nature": "Nature",
+    "skill-perception": "Perception",
+    "skill-performance": "Performance",
+    "skill-persuasion": "Persuasion",
+    "skill-religion": "Religion",
+    "skill-sleight-of-hand": "Sleight of Hand",
+    "skill-stealth": "Stealth",
+    "skill-survival": "Survival",
+}
