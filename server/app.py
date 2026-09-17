@@ -11,6 +11,7 @@ from catalog.loader import load as load_catalog
 from engine.resolve import resolve
 from export import to_yaml
 from markdown_export import to_markdown
+from pdf_export import to_pdf
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
@@ -144,24 +145,25 @@ def _pending_export_problems(resolution: dict) -> list[dict]:
     ]
 
 
-@app.route("/api/export/yaml", methods=["POST"])
-def api_export_yaml():
+_EXPORT_RENDERERS = {
+    "yaml": (to_yaml, "application/x-yaml"),
+    "markdown": (to_markdown, "text/markdown"),
+    "pdf": (to_pdf, "application/pdf"),
+}
+
+
+@app.route("/api/export/<fmt>", methods=["POST"])
+def api_export(fmt: str):
+    entry = _EXPORT_RENDERERS.get(fmt)
+    if entry is None:
+        return jsonify({"error": f"unknown export format '{fmt}'"}), 404
+    renderer, mimetype = entry
     draft = request.get_json(silent=True) or {}
     resolution = resolve(draft, _catalog)
     all_problems = resolution["problems"] + _pending_export_problems(resolution)
     if all_problems:
         return jsonify({"problems": all_problems}), 400
-    return Response(to_yaml(resolution), mimetype="application/x-yaml")
-
-
-@app.route("/api/export/markdown", methods=["POST"])
-def api_export_markdown():
-    draft = request.get_json(silent=True) or {}
-    resolution = resolve(draft, _catalog)
-    all_problems = resolution["problems"] + _pending_export_problems(resolution)
-    if all_problems:
-        return jsonify({"problems": all_problems}), 400
-    return Response(to_markdown(resolution), mimetype="text/markdown")
+    return Response(renderer(resolution), mimetype=mimetype)
 
 
 if __name__ == "__main__":
