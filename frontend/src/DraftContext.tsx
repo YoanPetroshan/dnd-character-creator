@@ -31,7 +31,7 @@ type Action =
   | { type: "SET_SPECIES"; speciesId: string }
   | { type: "SET_SUBSPECIES"; subspeciesId: string | undefined }
   | { type: "SET_CLASS_LEVEL"; level: number }
-  | { type: "SET_SUBCLASS"; subclassId: string }
+  | { type: "SET_SUBCLASS"; subclassId: string | undefined }
   | { type: "SET_HP_ROLL"; level: number; value: number }
   | { type: "SET_ABILITY_METHOD"; method: Draft["abilities"]["method"] }
   | { type: "SET_ABILITY_SCORE"; ability: Ability; value: number }
@@ -80,7 +80,8 @@ function reducer(state: Draft, action: Action): Draft {
     case "SET_CLASS_LEVEL": {
       if (state.classes.length === 0) return state;
       const [cls] = state.classes;
-      return { ...state, classes: [{ ...cls, level: action.level }] };
+      const level = Math.min(20, Math.max(1, action.level));
+      return { ...state, classes: [{ ...cls, level }] };
     }
     case "SET_SUBCLASS": {
       if (state.classes.length === 0) return state;

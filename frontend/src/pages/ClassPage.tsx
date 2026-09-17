@@ -15,6 +15,7 @@ interface ClassDetail {
   subclasses: { index: string; name: string }[]; // "index", not "id" — raw SRD class object, unmapped
   levelFeatureCounts: Record<string, number>;
   subclassUnlockLevel: number | null;
+  hit_die?: number; // raw SRD class object field, spread into this response as-is
 }
 
 export function ClassPage() {
@@ -118,7 +119,7 @@ export function ClassPage() {
             <select
               value={draft.classes[0]?.subclassId ?? ""}
               onChange={(e) => {
-                if (e.target.value) dispatch({ type: "SET_SUBCLASS", subclassId: e.target.value });
+                dispatch({ type: "SET_SUBCLASS", subclassId: e.target.value || undefined });
               }}
             >
               <option value="">— избери подклас —</option>
@@ -133,7 +134,7 @@ export function ClassPage() {
 
       {selectedClassId && classDetail && (
         <p className="higher-levels-teaser">
-          Налични на по-високи нива:{" "}
+          Способности на по-високи нива:{" "}
           {Object.entries(classDetail.levelFeatureCounts)
             .filter(([lvl]) => Number(lvl) > classLevel)
             .reduce((sum, [, count]) => sum + count, 0)}
@@ -156,6 +157,9 @@ export function ClassPage() {
               <input
                 type="number"
                 min={1}
+                placeholder={
+                  classDetail?.hit_die !== undefined ? String(Math.floor(classDetail.hit_die / 2) + 1) : undefined
+                }
                 value={draft.classes[0]?.hpRolls?.[String(lvl)] ?? ""}
                 onChange={(e) => {
                   const parsed = parseInt(e.target.value, 10);
