@@ -58,8 +58,8 @@ export function EquipmentPage() {
         <div className="equipment-section">
           <h2>Получена екипировка</h2>
           <ul>
-            {sheetEquipment.granted.map((g) => (
-              <li key={g.itemId}>
+            {sheetEquipment.granted.map((g, i) => (
+              <li key={`${g.itemId}-${i}`}>
                 {g.name} ×{g.qty}
               </li>
             ))}
@@ -71,8 +71,8 @@ export function EquipmentPage() {
         <div className="equipment-section">
           <h2>Избрана екипировка</h2>
           <ul>
-            {sheetEquipment.chosen.map((c) => (
-              <li key={c.itemId}>{c.name}</li>
+            {sheetEquipment.chosen.map((c, i) => (
+              <li key={`${c.itemId}-${i}`}>{c.name}</li>
             ))}
           </ul>
         </div>

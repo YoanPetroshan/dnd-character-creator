@@ -48,10 +48,22 @@ function reducer(state: Draft, action: Action): Draft {
     case "SET_CLASS":
       // A fresh single-entry array with empty choices — Phase 1 supports
       // exactly one class at level 1, and any choices tied to a previous
-      // class selection are meaningless for the new one.
-      return { ...state, classes: [{ classId: action.classId, level: 1, choices: {} }] };
+      // class selection are meaningless for the new one. Equipment choice
+      // ids are also class-scoped (e.g. "class:rogue:1:equipment-choice-0"),
+      // so they go stale on class change too.
+      return {
+        ...state,
+        classes: [{ classId: action.classId, level: 1, choices: {} }],
+        equipment: { ...state.equipment, choices: {} },
+      };
     case "SET_BACKGROUND":
-      return { ...state, background: { id: action.backgroundId, choices: {} } };
+      // Equipment choice ids are also background-scoped, so they go stale
+      // on background change too — see SET_CLASS above.
+      return {
+        ...state,
+        background: { id: action.backgroundId, choices: {} },
+        equipment: { ...state.equipment, choices: {} },
+      };
     case "SET_SPECIES":
       // Switching species clears any subspecies pick too — a subspecies id
       // from the old species is never valid for the new one.
