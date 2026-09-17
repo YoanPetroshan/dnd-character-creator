@@ -43,3 +43,42 @@ def test_passive_perception_is_ten_plus_perception_skill():
 
 def test_passive_perception_defaults_to_ten_when_perception_missing():
     assert derived.passive_perception({}) == 10
+
+
+def test_hit_point_gain_per_level_fixed_mode_uses_average_rounded_up():
+    # d10 average: 10//2 + 1 = 6, plus CON mod
+    assert derived.hit_point_gain_per_level(hit_die=10, con_modifier=2, hp_type="fixed", level=2, hp_rolls={}) == 8
+    # d6 average: 6//2 + 1 = 4
+    assert derived.hit_point_gain_per_level(hit_die=6, con_modifier=0, hp_type="fixed", level=3, hp_rolls={}) == 4
+    # d12 average: 12//2 + 1 = 7
+    assert derived.hit_point_gain_per_level(hit_die=12, con_modifier=-1, hp_type="fixed", level=5, hp_rolls={}) == 6
+
+
+def test_hit_point_gain_per_level_manual_mode_uses_the_roll():
+    assert derived.hit_point_gain_per_level(hit_die=10, con_modifier=2, hp_type="manual", level=2, hp_rolls={"2": 7}) == 9
+
+
+def test_hit_point_gain_per_level_manual_mode_falls_back_to_average_when_roll_missing():
+    assert derived.hit_point_gain_per_level(hit_die=10, con_modifier=2, hp_type="manual", level=2, hp_rolls={}) == 8
+    assert derived.hit_point_gain_per_level(hit_die=10, con_modifier=2, hp_type="manual", level=3, hp_rolls={"2": 7}) == 8  # roll exists for a DIFFERENT level
+
+
+def test_hit_point_gain_per_level_manual_mode_rejects_an_out_of_range_roll():
+    # a roll of 0 or > hit_die is invalid input — fall back to average rather than trust it
+    assert derived.hit_point_gain_per_level(hit_die=8, con_modifier=1, hp_type="manual", level=2, hp_rolls={"2": 0}) == 6
+    assert derived.hit_point_gain_per_level(hit_die=8, con_modifier=1, hp_type="manual", level=2, hp_rolls={"2": 99}) == 6
+    assert derived.hit_point_gain_per_level(hit_die=8, con_modifier=1, hp_type="manual", level=2, hp_rolls={"2": "not a number"}) == 6
+
+
+def test_hit_point_max_at_level_1_matches_the_existing_level_1_function_exactly():
+    assert derived.hit_point_max_at_level(hit_die=10, con_modifier=2, level=1, hp_type="fixed", hp_rolls={}) == derived.hit_point_max(10, 2)
+    assert derived.hit_point_max_at_level(hit_die=10, con_modifier=2, level=1, hp_type="manual", hp_rolls={}) == derived.hit_point_max(10, 2)
+
+
+def test_hit_point_max_at_level_sums_level_1_plus_every_subsequent_gain():
+    # d10, CON +2, fixed mode: level 1 = 10+2=12; levels 2-5 each add 6+2=8 -> 12 + 4*8 = 44
+    assert derived.hit_point_max_at_level(hit_die=10, con_modifier=2, level=5, hp_type="fixed", hp_rolls={}) == 44
+
+
+def test_hit_point_max_at_level_none_hit_die_is_zero():
+    assert derived.hit_point_max_at_level(hit_die=None, con_modifier=2, level=5, hp_type="fixed", hp_rolls={}) == 0

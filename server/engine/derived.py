@@ -27,6 +27,26 @@ def hit_point_max(hit_die: int | None, con_modifier: int) -> int:
     return hit_die + con_modifier
 
 
+def hit_point_gain_per_level(hit_die: int, con_modifier: int, hp_type: str, level: int, hp_rolls: dict) -> int:
+    if hp_type == "manual":
+        roll = hp_rolls.get(str(level))
+        if isinstance(roll, int) and 1 <= roll <= hit_die:
+            return roll + con_modifier
+    # fixed mode, or manual mode with a missing/invalid roll -> fall back
+    # to the RAW "take the average" value rather than 0 or a blocking
+    # problem — a defaulted estimate is always safer than garbage HP.
+    return (hit_die // 2 + 1) + con_modifier
+
+
+def hit_point_max_at_level(hit_die: int | None, con_modifier: int, level: int, hp_type: str, hp_rolls: dict) -> int:
+    if hit_die is None:
+        return 0
+    total = hit_point_max(hit_die, con_modifier)
+    for lvl in range(2, level + 1):
+        total += hit_point_gain_per_level(hit_die, con_modifier, hp_type, lvl, hp_rolls)
+    return total
+
+
 def saving_throws(
     modifiers: dict[str, int], proficient_abilities: list[str], prof_bonus: int,
 ) -> dict[str, int]:
