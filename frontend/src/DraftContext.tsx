@@ -32,6 +32,7 @@ type Action =
   | { type: "SET_SUBSPECIES"; subspeciesId: string | undefined }
   | { type: "SET_ABILITY_METHOD"; method: Draft["abilities"]["method"] }
   | { type: "SET_ABILITY_SCORE"; ability: Ability; value: number }
+  | { type: "SET_DETAIL"; field: keyof Draft["details"]; value: string }
   | { type: "SET_CHOICE_SELECTION"; source: ChoiceSourceKind; choiceId: string; selected: string[] }
   | { type: "ADD_ITEM"; itemId: string }
   | { type: "REMOVE_ITEM"; itemId: string }
@@ -83,6 +84,8 @@ function reducer(state: Draft, action: Action): Draft {
           base: { ...state.abilities.base, [action.ability]: action.value },
         },
       };
+    case "SET_DETAIL":
+      return { ...state, details: { ...state.details, [action.field]: action.value } };
     case "SET_CHOICE_SELECTION": {
       if (action.source === "class") {
         if (state.classes.length === 0) return state; // no class picked yet — ignore

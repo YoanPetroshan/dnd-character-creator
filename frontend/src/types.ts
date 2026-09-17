@@ -91,9 +91,24 @@ export interface Draft {
     skipped: boolean;
   };
   details: {
+    // Character Details
     alignment?: string;
     faith?: string;
     lifestyle?: string;
+    // Physical Characteristics
+    age?: string;
+    height?: string;
+    weight?: string;
+    eyes?: string;
+    skin?: string;
+    hair?: string;
+    // Personality
+    personalityTraits?: string;
+    ideals?: string;
+    bonds?: string;
+    flaws?: string;
+    // Notes
     backstory?: string;
+    notes?: string;
   };
 }
