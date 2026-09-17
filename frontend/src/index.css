@@ -298,3 +298,17 @@ main {
 .details-section textarea {
   min-height: 60px;
 }
+
+.higher-levels-teaser {
+  font-size: 0.9em;
+  color: #555;
+}
+
+.hp-rolls label {
+  display: inline-block;
+  margin-right: 12px;
+}
+
+.hp-rolls input {
+  width: 60px;
+}
