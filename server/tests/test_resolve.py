@@ -1016,3 +1016,28 @@ def test_fighter_duplicate_skill_selection_is_deduplicated(catalog):
     assert skill_choice["status"] == "pending"
     # Confirm no spurious over-selected problem appears
     assert not any(p["id"].startswith("over-selected-") for p in resolution["problems"])
+
+
+def test_a_fully_dropped_equipment_envelope_produces_a_warning(catalog):
+    # Paladin has 4 starting-equipment envelopes in the bundled SRD data,
+    # of which only 2 survive build_choice_template (confirmed empirically
+    # while writing this plan) — the other 2 are genuinely dropped.
+    draft = _fighter_acolyte_human_draft(classes=[{"classId": "paladin", "level": 1, "choices": {}}])
+    resolution = resolve(draft, catalog)
+    assert any("equipment" in w["id"] for w in resolution["warnings"])
+
+
+def test_a_class_with_no_dropped_envelopes_has_no_such_warning(catalog):
+    # Wizard has 3 starting-equipment envelopes, all 3 survive
+    # build_choice_template (confirmed empirically while writing this
+    # plan) — zero dropped, so no CLASS-level equipment warning should
+    # appear. Scoped to the class-specific warning id (rather than "any
+    # equipment warning at all") because the bundled SRD data's only
+    # background, Acolyte (the default from _fighter_acolyte_human_draft),
+    # itself has a genuinely-dropped envelope (1 total, 0 survived) and so
+    # always contributes its own equipment-envelope-dropped-background-*
+    # warning — that's correct, separate behavior, not something this
+    # class-focused test is about.
+    draft = _fighter_acolyte_human_draft(classes=[{"classId": "wizard", "level": 1, "choices": {}}])
+    resolution = resolve(draft, catalog)
+    assert not any(w["id"] == "equipment-envelope-dropped-class-wizard" for w in resolution["warnings"])

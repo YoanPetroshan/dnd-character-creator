@@ -284,8 +284,9 @@ def _asi_choice_templates(
     return templates
 
 
-def _equipment_choice_templates(entity: dict, source_kind: str, source_id: str, source_label: str) -> list[dict]:
+def _equipment_choice_templates(entity: dict, source_kind: str, source_id: str, source_label: str) -> tuple[list[dict], int]:
     templates = []
+    dropped_envelopes = 0
     for i, envelope in enumerate(entity.get("starting_equipment_options", [])):
         cid = f"{source_kind}:{source_id}:1:equipment-choice-{i}" if source_kind == "class" else f"{source_kind}:{source_id}:equipment-choice-{i}"
         source = {"kind": "equipment", "id": source_id, "label": source_label}
@@ -293,12 +294,13 @@ def _equipment_choice_templates(entity: dict, source_kind: str, source_id: str, 
             source["level"] = 1
         tpl = build_choice_template(envelope, cid, source, "Starting Equipment")
         if not tpl:
+            dropped_envelopes += 1
             continue
         original_option_count = len((envelope.get("from") or {}).get("options", []))
         if original_option_count and len(tpl["options"]) < original_option_count:
             tpl["description"] = (tpl["description"] + " (Note: one or more of the original options for this choice aren't available yet and have been left out.)").strip()
         templates.append(tpl)
-    return templates
+    return templates, dropped_envelopes
 
 
 def _spell_options(catalog: Catalog, cls_id: str, spell_level: int) -> list[dict]:
@@ -567,9 +569,21 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         if species_ability_choice_tpl:
             choice_templates.append(species_ability_choice_tpl)
     if cls and cls_id:
-        choice_templates += _equipment_choice_templates(cls, "class", cls_id, cls["name"])
+        cls_equipment_templates, cls_dropped = _equipment_choice_templates(cls, "class", cls_id, cls["name"])
+        choice_templates += cls_equipment_templates
+        if cls_dropped:
+            warnings.append({
+                "id": f"equipment-envelope-dropped-class-{cls_id}",
+                "message": f"{cls['name']}'s starting equipment has {cls_dropped} choice(s) that can't be shown yet and were left out.",
+            })
     if bg and bg_id:
-        choice_templates += _equipment_choice_templates(bg, "background", bg_id, bg["name"])
+        bg_equipment_templates, bg_dropped = _equipment_choice_templates(bg, "background", bg_id, bg["name"])
+        choice_templates += bg_equipment_templates
+        if bg_dropped:
+            warnings.append({
+                "id": f"equipment-envelope-dropped-background-{bg_id}",
+                "message": f"{bg['name']}'s starting equipment has {bg_dropped} choice(s) that can't be shown yet and were left out.",
+            })
 
     _apply_background_overlap([t for t in choice_templates if t["source"]["kind"] == "class"], bg)
 
