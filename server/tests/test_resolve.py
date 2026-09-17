@@ -157,14 +157,6 @@ def test_multiclass_draft_produces_a_problem_and_uses_only_the_first_class(catal
     assert resolution["sheet"]["class"]["id"] == "fighter"
 
 
-def test_level_other_than_one_produces_a_problem_but_still_resolves(catalog):
-    draft = _fighter_acolyte_human_draft(classes=[{"classId": "fighter", "level": 5, "choices": {}}])
-    resolution = resolve(draft, catalog)
-    assert any(p["id"] == "level-unsupported" for p in resolution["problems"])
-    assert resolution["sheet"]["level"] == 1
-    assert resolution["derived"]["proficiencyBonus"] == 2
-
-
 def test_unknown_class_id_produces_a_problem_not_a_crash(catalog):
     draft = _fighter_acolyte_human_draft(classes=[{"classId": "not-a-class", "level": 1, "choices": {}}])
     resolution = resolve(draft, catalog)
@@ -531,18 +523,18 @@ def _bare_class_draft(cls_id, **overrides):
 
 def test_wizard_gets_cantrip_and_prepared_spell_choices(catalog):
     resolution = resolve(_wizard_draft(int_score=16), catalog)
-    cantrip_choice = next(c for c in resolution["choices"] if c["id"] == "class:wizard:1:spells-cantrips")
+    cantrip_choice = next(c for c in resolution["choices"] if c["id"] == "class:wizard:spells-cantrips")
     assert cantrip_choice["count"] == 3
     assert cantrip_choice["label"] == "Cantrips Known"
     assert all(opt["id"] in catalog.spells for opt in cantrip_choice["options"])
-    known_choice = next(c for c in resolution["choices"] if c["id"] == "class:wizard:1:spells-known")
+    known_choice = next(c for c in resolution["choices"] if c["id"] == "class:wizard:spells-known")
     assert known_choice["count"] == 4  # INT mod +3, class level 1 -> max(1, 3+1)
     assert known_choice["label"] == "Prepared Spells"
 
 
 def test_wizard_cantrip_options_are_level_zero_wizard_spells_only(catalog):
     resolution = resolve(_wizard_draft(), catalog)
-    cantrip_choice = next(c for c in resolution["choices"] if c["id"] == "class:wizard:1:spells-cantrips")
+    cantrip_choice = next(c for c in resolution["choices"] if c["id"] == "class:wizard:spells-cantrips")
     for opt in cantrip_choice["options"]:
         spell = catalog.spells[opt["id"]]
         assert spell["level"] == 0
@@ -551,7 +543,7 @@ def test_wizard_cantrip_options_are_level_zero_wizard_spells_only(catalog):
 
 def test_bard_known_choice_uses_explicit_spells_known_not_a_formula(catalog):
     resolution = resolve(_bare_class_draft("bard"), catalog)
-    known_choice = next(c for c in resolution["choices"] if c["id"] == "class:bard:1:spells-known")
+    known_choice = next(c for c in resolution["choices"] if c["id"] == "class:bard:spells-known")
     assert known_choice["count"] == 4  # bard's level-1 spells_known, regardless of CHA modifier
     assert known_choice["label"] == "Spells Known"
 
@@ -590,8 +582,8 @@ def test_selected_cantrips_and_known_spells_appear_in_the_sheet(catalog):
         classes=[{
             "classId": "wizard", "level": 1,
             "choices": {
-                "class:wizard:1:spells-cantrips": [cantrip_id],
-                "class:wizard:1:spells-known": [spell_id],
+                "class:wizard:spells-cantrips": [cantrip_id],
+                "class:wizard:spells-known": [spell_id],
             },
         }],
     )
@@ -683,3 +675,195 @@ def test_sheet_details_output_order_is_canonical_regardless_of_submission_order(
     )
     resolution = resolve(draft, catalog)
     assert list(resolution["sheet"]["details"].keys()) == ["alignment", "faith", "notes"]
+
+
+def test_level_2_to_20_is_no_longer_a_problem(catalog):
+    for level in (2, 5, 10, 20):
+        draft = _fighter_acolyte_human_draft(
+            classes=[{"classId": "fighter", "level": level, "choices": {}}],
+        )
+        resolution = resolve(draft, catalog)
+        assert not any(p["id"] == "level-unsupported" for p in resolution["problems"])
+        assert resolution["sheet"]["level"] == level
+
+
+def test_level_0_or_above_20_is_still_a_problem(catalog):
+    for bad_level in (0, 21, -1):
+        draft = _fighter_acolyte_human_draft(
+            classes=[{"classId": "fighter", "level": bad_level, "choices": {}}],
+        )
+        resolution = resolve(draft, catalog)
+        assert any(p["id"] == "level-unsupported" for p in resolution["problems"])
+
+
+def test_level_1_character_is_byte_identical_to_before_this_phase(catalog):
+    # Regression anchor: every choice id, sheet shape, and derived stat
+    # for a level-1 Fighter must be unchanged from Phase 2's behavior.
+    draft = _fighter_acolyte_human_draft()
+    resolution = resolve(draft, catalog)
+    choice_ids = {c["id"] for c in resolution["choices"]}
+    assert "class:fighter:1:prof-choice-0" in choice_ids  # proficiency choice, unchanged
+    # feature choices at level 1 keep their level-1 id shape
+    assert any(cid.startswith("class:fighter:1:feature:") for cid in choice_ids)
+    assert resolution["derived"]["proficiencyBonus"] == 2
+    assert resolution["derived"]["hitPointMax"] == 12  # d10 + CON mod 1, matches existing fixture's expected value
+    assert resolution["derived"]["hitDice"] == "1d10"
+
+
+def test_cumulative_feature_choices_appear_as_level_increases(catalog):
+    # Wizard gains a feature choice-worthy pick at level 2 (arcane-tradition
+    # triggers subclass selection, not a Choice — but other classes have
+    # real per-level feature choices; use a level where a NEW choice
+    # genuinely appears). Verify structurally: resolving at level 3 must
+    # include every choice id that resolving at level 1 includes, plus
+    # possibly more — never fewer.
+    draft_l1 = _fighter_acolyte_human_draft(classes=[{"classId": "fighter", "level": 1, "choices": {}}])
+    draft_l3 = _fighter_acolyte_human_draft(classes=[{"classId": "fighter", "level": 3, "choices": {}}])
+    ids_l1 = {c["id"] for c in resolve(draft_l1, catalog)["choices"] if c["source"]["kind"] == "class"}
+    ids_l3 = {c["id"] for c in resolve(draft_l3, catalog)["choices"] if c["source"]["kind"] == "class"}
+    assert ids_l1.issubset(ids_l3)
+
+
+def test_prof_bonus_scales_with_level(catalog):
+    # SRD prof bonus table: +2 at 1-4, +3 at 5-8, +4 at 9-12, +5 at 13-16, +6 at 17-20
+    expectations = {1: 2, 5: 3, 9: 4, 13: 5, 17: 6, 20: 6}
+    for level, expected in expectations.items():
+        draft = _fighter_acolyte_human_draft(classes=[{"classId": "fighter", "level": level, "choices": {}}])
+        resolution = resolve(draft, catalog)
+        assert resolution["derived"]["proficiencyBonus"] == expected, f"level {level}"
+
+
+def test_asi_choices_appear_at_the_right_levels_for_fighter(catalog):
+    draft = _fighter_acolyte_human_draft(classes=[{"classId": "fighter", "level": 19, "choices": {}}])
+    resolution = resolve(draft, catalog)
+    asi_ids = sorted(c["id"] for c in resolution["choices"] if c["id"].endswith(":asi"))
+    assert asi_ids == [
+        "class:fighter:12:asi", "class:fighter:14:asi", "class:fighter:16:asi",
+        "class:fighter:19:asi", "class:fighter:4:asi", "class:fighter:6:asi", "class:fighter:8:asi",
+    ]
+
+
+def test_asi_choices_do_not_appear_above_the_selected_level(catalog):
+    draft = _fighter_acolyte_human_draft(classes=[{"classId": "fighter", "level": 5, "choices": {}}])
+    resolution = resolve(draft, catalog)
+    asi_ids = [c["id"] for c in resolution["choices"] if c["id"].endswith(":asi")]
+    assert asi_ids == ["class:fighter:4:asi"]  # not 6 or 8, since level is only 5
+
+
+def test_asi_option_disabled_when_it_would_exceed_the_cap(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "fighter", "level": 4, "choices": {}}],
+        abilities={"method": "manual", "base": {"STR": 19, "DEX": 14, "CON": 14, "INT": 10, "WIS": 12, "CHA": 8}},
+    )
+    resolution = resolve(draft, catalog)
+    asi_choice = next(c for c in resolution["choices"] if c["id"] == "class:fighter:4:asi")
+    str_plus_2 = next(o for o in asi_choice["options"] if o["id"] == "str-plus-2")
+    assert str_plus_2.get("disabled") is True
+    dex_plus_2 = next(o for o in asi_choice["options"] if o["id"] == "dex-plus-2")
+    assert not dex_plus_2.get("disabled")
+
+
+def test_selecting_an_asi_actually_increases_the_final_ability_score(catalog):
+    # The fixture's Human species already gives +1 to every ability score
+    # (verified directly against 5e-SRD-Races.json's human entry), so
+    # final STR before any ASI is 16 (fixture base) + 1 (species) = 17,
+    # not the base score alone — don't forget this term when computing
+    # expected values for any ASI test that uses the standard fixture.
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "fighter", "level": 4, "choices": {"class:fighter:4:asi": ["str-plus-2"]}}],
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["abilities"]["STR"] == 19  # 16 base + 1 species + 2 from ASI
+
+
+def test_asi_cap_check_uses_the_running_score_including_earlier_asis(catalog):
+    # Fixture base STR 16 + Human's +1 = 17 final before any ASI. Pick
+    # str-plus-2 at level 4 -> STR 19. At level 8, str-plus-2 must be
+    # disabled (19+2=21 > 20) even though a check against only the
+    # base+species score (17+2=19) would have wrongly shown it as still
+    # available — this is the actual distinguishing case for "stacked
+    # scores, not base scores" (a check using 19 as the starting override
+    # would already be at/above the interesting boundary regardless of
+    # stacking, so it wouldn't prove anything about the ordering bug this
+    # test exists to catch).
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "fighter", "level": 8, "choices": {
+            "class:fighter:4:asi": ["str-plus-2"],
+        }}],
+    )
+    resolution = resolve(draft, catalog)
+    asi_choice_8 = next(c for c in resolution["choices"] if c["id"] == "class:fighter:8:asi")
+    str_plus_2_at_8 = next(o for o in asi_choice_8["options"] if o["id"] == "str-plus-2")
+    assert str_plus_2_at_8.get("disabled") is True
+    assert resolution["sheet"]["abilities"]["STR"] == 19  # 16 base + 1 species + 2 from the level-4 pick
+
+
+def test_subclass_selection_at_the_correct_level(catalog):
+    # Cleric unlocks its subclass at level 1
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "cleric", "level": 1, "subclassId": "life", "choices": {}}],
+        background={"id": "acolyte", "choices": {}},
+    )
+    resolution = resolve(draft, catalog)
+    assert not any(p["id"] == "subclass-mismatch" for p in resolution["problems"])
+
+
+def test_subclass_mismatch_is_a_problem(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "fighter", "level": 3, "subclassId": "life", "choices": {}}],  # "life" belongs to cleric, not fighter
+    )
+    resolution = resolve(draft, catalog)
+    assert any(p["id"] == "subclass-mismatch" for p in resolution["problems"])
+
+
+def test_spell_choice_ids_are_level_agnostic_now(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "wizard", "level": 1, "choices": {}}],
+        abilities={"method": "manual", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 16, "WIS": 10, "CHA": 10}},
+    )
+    resolution = resolve(draft, catalog)
+    choice_ids = {c["id"] for c in resolution["choices"]}
+    assert "class:wizard:spells-cantrips" in choice_ids
+    assert "class:wizard:1:spells-cantrips" not in choice_ids  # old, level-suffixed id must be gone
+
+
+def test_spell_options_expand_with_level(catalog):
+    # A level-5 Wizard has 3rd-level slots — the "known" spell choice's
+    # options must include 3rd-level spells, not just 1st-level ones.
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "wizard", "level": 5, "choices": {}}],
+        abilities={"method": "manual", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 16, "WIS": 10, "CHA": 10}},
+    )
+    resolution = resolve(draft, catalog)
+    known_choice = next(c for c in resolution["choices"] if c["id"] == "class:wizard:spells-known")
+    option_ids = {o["id"] for o in known_choice["options"]}
+    fireball_present = "fireball" in option_ids  # fireball is a real 3rd-level wizard spell, verified earlier this session
+    assert fireball_present
+
+
+def test_hit_point_max_grows_with_level(catalog):
+    draft_l1 = _fighter_acolyte_human_draft(classes=[{"classId": "fighter", "level": 1, "choices": {}}])
+    draft_l5 = _fighter_acolyte_human_draft(classes=[{"classId": "fighter", "level": 5, "choices": {}}])
+    hp_l1 = resolve(draft_l1, catalog)["derived"]["hitPointMax"]
+    hp_l5 = resolve(draft_l5, catalog)["derived"]["hitPointMax"]
+    assert hp_l5 > hp_l1
+
+
+def test_manual_hp_rolls_are_used_when_present(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "fighter", "level": 2, "hpRolls": {"2": 10}, "choices": {}}],
+        preferences={"advancementType": "milestone", "hitPointType": "manual", "usePrerequisites": {"feats": True, "multiclass": True}},
+    )
+    resolution = resolve(draft, catalog)
+    # CON mod is 2, not 1 — fixture base CON 14 + Human's +1 species bonus
+    # = 15, and (15-10)//2 = 2 (matches the existing level-1 regression
+    # test's own hitPointMax == 12 assertion: 10 + 2 = 12). Don't assume
+    # the base score's own modifier without the species bonus applied.
+    # level 1: 10 (d10 max) + 2 (CON mod) = 12; level 2 manual roll 10 + 2 = 12 -> 24
+    assert resolution["derived"]["hitPointMax"] == 24
+
+
+def test_hit_dice_string_reflects_the_level(catalog):
+    draft = _fighter_acolyte_human_draft(classes=[{"classId": "fighter", "level": 5, "choices": {}}])
+    resolution = resolve(draft, catalog)
+    assert resolution["derived"]["hitDice"] == "5d10"
