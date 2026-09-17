@@ -497,3 +497,111 @@ def test_unhashable_choice_selection_element_is_not_a_crash(catalog):
     resolution = resolve(draft, catalog)  # must not raise
     skill_choice = next(c for c in resolution["choices"] if c["label"] == "Skill Proficiencies")
     assert skill_choice["selected"] == ["skill-history"]  # the unhashable element is skipped, the valid one kept
+
+
+def _wizard_draft(int_score=10, **overrides):
+    draft = {
+        "name": "Test Wizard", "sources": ["srd"],
+        "classes": [{"classId": "wizard", "level": 1, "choices": {}}],
+        "background": {"choices": {}}, "species": {"choices": {}},
+        "abilities": {
+            "method": "manual",
+            "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": int_score, "WIS": 10, "CHA": 10},
+        },
+        "equipment": {"added": [], "skipped": False}, "details": {},
+    }
+    draft.update(overrides)
+    return draft
+
+
+def _bare_class_draft(cls_id, **overrides):
+    draft = {
+        "name": "Test Character", "sources": ["srd"],
+        "classes": [{"classId": cls_id, "level": 1, "choices": {}}],
+        "background": {"choices": {}}, "species": {"choices": {}},
+        "abilities": {
+            "method": "manual",
+            "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10},
+        },
+        "equipment": {"added": [], "skipped": False}, "details": {},
+    }
+    draft.update(overrides)
+    return draft
+
+
+def test_wizard_gets_cantrip_and_prepared_spell_choices(catalog):
+    resolution = resolve(_wizard_draft(int_score=16), catalog)
+    cantrip_choice = next(c for c in resolution["choices"] if c["id"] == "class:wizard:1:spells-cantrips")
+    assert cantrip_choice["count"] == 3
+    assert cantrip_choice["label"] == "Cantrips Known"
+    assert all(opt["id"] in catalog.spells for opt in cantrip_choice["options"])
+    known_choice = next(c for c in resolution["choices"] if c["id"] == "class:wizard:1:spells-known")
+    assert known_choice["count"] == 4  # INT mod +3, class level 1 -> max(1, 3+1)
+    assert known_choice["label"] == "Prepared Spells"
+
+
+def test_wizard_cantrip_options_are_level_zero_wizard_spells_only(catalog):
+    resolution = resolve(_wizard_draft(), catalog)
+    cantrip_choice = next(c for c in resolution["choices"] if c["id"] == "class:wizard:1:spells-cantrips")
+    for opt in cantrip_choice["options"]:
+        spell = catalog.spells[opt["id"]]
+        assert spell["level"] == 0
+        assert any(c["index"] == "wizard" for c in spell["classes"])
+
+
+def test_bard_known_choice_uses_explicit_spells_known_not_a_formula(catalog):
+    resolution = resolve(_bare_class_draft("bard"), catalog)
+    known_choice = next(c for c in resolution["choices"] if c["id"] == "class:bard:1:spells-known")
+    assert known_choice["count"] == 4  # bard's level-1 spells_known, regardless of CHA modifier
+    assert known_choice["label"] == "Spells Known"
+
+
+def test_paladin_gets_no_spell_choices_at_level_1(catalog):
+    resolution = resolve(_bare_class_draft("paladin"), catalog)
+    spell_choice_ids = [c["id"] for c in resolution["choices"] if "spells" in c["id"]]
+    assert spell_choice_ids == []
+    assert resolution["sheet"]["spells"] is None
+    assert resolution["derived"]["spellSaveDC"] is None
+    assert resolution["derived"]["spellAttackBonus"] is None
+
+
+def test_fighter_has_no_spell_choices_or_derived_spell_stats(catalog):
+    resolution = resolve(_bare_class_draft("fighter"), catalog)
+    spell_choice_ids = [c["id"] for c in resolution["choices"] if "spells" in c["id"]]
+    assert spell_choice_ids == []
+    assert resolution["sheet"]["spells"] is None
+    assert resolution["derived"]["spellSaveDC"] is None
+
+
+def test_selected_cantrips_and_known_spells_appear_in_the_sheet(catalog):
+    # Fireball is level 3, so it's never offered at level 1 — look up real
+    # level-appropriate wizard spells/cantrips programmatically rather than
+    # hardcoding names that haven't been verified against the loaded data.
+    cantrip_id = next(
+        s["index"] for s in catalog.spells.values()
+        if s["level"] == 0 and any(c["index"] == "wizard" for c in s["classes"])
+    )
+    spell_id = next(
+        s["index"] for s in catalog.spells.values()
+        if s["level"] == 1 and any(c["index"] == "wizard" for c in s["classes"])
+    )
+    draft = _wizard_draft(
+        int_score=16,
+        classes=[{
+            "classId": "wizard", "level": 1,
+            "choices": {
+                "class:wizard:1:spells-cantrips": [cantrip_id],
+                "class:wizard:1:spells-known": [spell_id],
+            },
+        }],
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["spells"]["cantrips"][0]["id"] == cantrip_id
+    assert resolution["sheet"]["spells"]["known"][0]["id"] == spell_id
+
+
+def test_derived_spell_save_dc_and_attack_bonus_use_the_spellcasting_ability(catalog):
+    resolution = resolve(_wizard_draft(int_score=16), catalog)
+    # INT 16 -> +3 modifier, prof bonus 2 at level 1
+    assert resolution["derived"]["spellSaveDC"] == 13  # 8 + 2 + 3
+    assert resolution["derived"]["spellAttackBonus"] == 5  # 2 + 3
