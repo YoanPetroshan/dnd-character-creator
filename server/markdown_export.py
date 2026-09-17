@@ -8,9 +8,9 @@ already produces them — no new engine computation happens here.
 """
 from __future__ import annotations
 
-from catalog.reference_data import SKILL_NAMES
+from catalog.reference_data import ABILITIES, LANGUAGES, SKILL_NAMES
 
-_ABILITIES = ("STR", "DEX", "CON", "INT", "WIS", "CHA")
+_LANGUAGE_NAMES = {lang["index"]: lang["name"] for lang in LANGUAGES}
 
 _DETAIL_SECTIONS = [
     ("Данни за героя", [("alignment", "Мирогледие"), ("faith", "Вяра/Божество"), ("lifestyle", "Начин на живот")]),
@@ -47,13 +47,13 @@ def _species_label(species: dict | None) -> str:
 def _ability_line(sheet: dict, derived: dict) -> str:
     scores = sheet["abilities"]
     mods = derived["abilityModifiers"]
-    return "  ".join(f"**{ab}** {scores[ab]} ({_fmt_mod(mods[ab])})" for ab in _ABILITIES)
+    return "  ".join(f"**{ab}** {scores[ab]} ({_fmt_mod(mods[ab])})" for ab in ABILITIES)
 
 
 def _saves_line(derived: dict, proficient: list[str]) -> str:
     saves = derived["savingThrows"]
     parts = []
-    for ab in _ABILITIES:
+    for ab in ABILITIES:
         marker = "●" if ab in proficient else "○"
         parts.append(f"{marker} **{ab}** {_fmt_mod(saves[ab])}")
     return "  ".join(parts)
@@ -89,7 +89,11 @@ def to_markdown(resolution: dict) -> str:
 
     lines.append("## Бойни показатели")
     lines.append(f"- **Клас броня (AC):** {derived['armorClass']}")
-    lines.append(f"- **Точки живот:** {derived['hitPointMax']} ({derived['hitDice']})")
+    lines.append(
+        f"- **Точки живот:** {derived['hitPointMax']} ({derived['hitDice']})"
+        if derived["hitDice"] is not None
+        else f"- **Точки живот:** {derived['hitPointMax']} (—)"
+    )
     lines.append(f"- **Скорост:** {derived['speed']} фута" if derived["speed"] is not None else "- **Скорост:** —")
     lines.append(f"- **Инициатива:** {_fmt_mod(derived['abilityModifiers']['DEX'])}")
     lines.append(f"- **Пасивно възприятие:** {derived['passivePerception']}")
@@ -110,7 +114,9 @@ def to_markdown(resolution: dict) -> str:
 
     languages = sheet["proficiencies"]["languages"]
     lines.append("## Езици")
-    lines.append(", ".join(languages) if languages else "—")
+    lines.append(
+        ", ".join(_LANGUAGE_NAMES.get(lang_id, lang_id) for lang_id in languages) if languages else "—"
+    )
     lines.append("")
 
     equipment = sheet["equipment"]
@@ -143,10 +149,12 @@ def to_markdown(resolution: dict) -> str:
             lines.append("### Трикове")
             for s in spells["cantrips"]:
                 lines.append(f"- {s['name']}")
+            lines.append("")
         if spells["known"]:
             lines.append("### Известни/Подготвени заклинания")
             for s in spells["known"]:
                 lines.append(f"- {s['name']} (ниво {s['level']})")
+            lines.append("")
         lines.append("")
 
     details = sheet["details"]
@@ -156,8 +164,11 @@ def to_markdown(resolution: dict) -> str:
             if not present:
                 continue
             lines.append(f"## {section_label}")
-            for label, value in present:
-                lines.append(f"- **{label}:** {value}")
             lines.append("")
+            for label, value in present:
+                lines.append(f"**{label}:**")
+                lines.append("")
+                lines.append(value)
+                lines.append("")
 
     return "\n".join(lines).rstrip() + "\n"

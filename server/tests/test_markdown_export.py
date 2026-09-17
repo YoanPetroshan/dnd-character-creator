@@ -1,7 +1,7 @@
 from markdown_export import to_markdown
 
 
-def _sample_resolution(**overrides):
+def _sample_resolution():
     resolution = {
         "sheet": {
             "name": "Тестов Герой",
@@ -36,11 +36,6 @@ def _sample_resolution(**overrides):
         },
         "choices": [], "problems": [], "warnings": [], "pruned": [],
     }
-    for key, value in overrides.items():
-        if key in resolution["sheet"]:
-            resolution["sheet"][key] = value
-        elif key in resolution["derived"]:
-            resolution["derived"][key] = value
     return resolution
 
 
@@ -86,6 +81,14 @@ def test_skill_names_are_human_readable_not_raw_ids():
 def test_includes_languages_or_a_placeholder():
     text = to_markdown(_sample_resolution())
     assert "common" in text.lower() or "Common" in text
+
+
+def test_language_names_are_human_readable_not_raw_ids():
+    resolution = _sample_resolution()
+    resolution["sheet"]["proficiencies"]["languages"] = ["deep-speech"]
+    text = to_markdown(resolution)
+    assert "Deep Speech" in text
+    assert "deep-speech" not in text
 
 
 def test_omits_spells_section_for_a_non_caster():
@@ -142,3 +145,14 @@ def test_includes_only_submitted_details_fields():
     assert "Chaotic Good" in text
     assert "Роден в планините." in text
     assert "Вяра" not in text  # faith wasn't submitted, its label shouldn't appear
+
+
+def test_multiline_detail_value_stays_intact_and_does_not_break_list_structure():
+    resolution = _sample_resolution()
+    resolution["sheet"]["details"] = {"backstory": "Първи ред.\n\nВтори абзац."}
+    text = to_markdown(resolution)
+    assert "Първи ред." in text and "Втори абзац." in text
+    # The value must not be embedded as a bullet's own line (a "\n" inside a
+    # bullet breaks out of the Markdown list structure), so the backstory
+    # label should not be on the same line as the value's first line.
+    assert "- **Предистория:** Първи ред." not in text
