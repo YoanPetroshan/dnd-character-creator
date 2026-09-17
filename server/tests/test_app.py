@@ -156,6 +156,89 @@ def test_items_endpoint_filters_by_search_query(client):
     assert all("longbow" in n for n in names)
 
 
+def test_spells_endpoint_lists_all_spells_by_default(client):
+    resp = client.get("/api/spells")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert len(body["spells"]) == 319
+    fireball = next(s for s in body["spells"] if s["id"] == "fireball")
+    assert fireball["name"] == "Fireball"
+
+
+def test_spells_endpoint_filters_by_class(client):
+    resp = client.get("/api/spells?class=wizard")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    spell_ids = [s["id"] for s in body["spells"]]
+    # Fireball is a wizard spell
+    assert "fireball" in spell_ids
+    # Cure Wounds is cleric/druid/paladin/ranger/bard but not wizard
+    assert "cure-wounds" not in spell_ids
+
+
+def test_spells_endpoint_filters_by_class_and_level(client):
+    resp = client.get("/api/spells?class=wizard&level=0")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert len(body["spells"]) > 0
+    # All returned spells must be level 0
+    assert all(s["level"] == 0 for s in body["spells"])
+
+
+def test_spells_endpoint_filters_by_search_query(client):
+    resp = client.get("/api/spells?q=fire")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    spell_names = [s["name"].lower() for s in body["spells"]]
+    # Fire Bolt and Fireball should be present
+    assert any("fire bolt" in n for n in spell_names)
+    assert any("fireball" in n for n in spell_names)
+    # Non-matching spell like "cure wounds" should not be present
+    assert not any("cure wounds" in n for n in spell_names)
+
+
+def test_spells_endpoint_rejects_invalid_level_parameter(client):
+    resp = client.get("/api/spells?level=notanumber")
+    assert resp.status_code == 400
+    body = resp.get_json()
+    assert "error" in body
+    assert "integer" in body["error"].lower()
+
+
+def test_spells_endpoint_returns_full_spell_details(client):
+    resp = client.get("/api/spells?q=fireball")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    fireball = next(s for s in body["spells"] if s["id"] == "fireball")
+    # Check all expected keys are present
+    expected_keys = {"id", "name", "level", "school", "castingTime", "range",
+                     "components", "duration", "concentration", "ritual", "material", "desc"}
+    assert set(fireball.keys()) == expected_keys
+    # Check concrete values for Fireball
+    assert fireball["name"] == "Fireball"
+    assert fireball["level"] == 3
+    assert fireball["school"] == "Evocation"
+    assert isinstance(fireball["components"], list)
+    assert "V" in fireball["components"]
+    assert fireball["concentration"] is False
+    assert fireball["ritual"] is False
+
+
+def test_spells_endpoint_includes_material_field(client):
+    resp = client.get("/api/spells?q=fireball")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    fireball = next(s for s in body["spells"] if s["id"] == "fireball")
+    assert fireball["material"] == "A tiny ball of bat guano and sulfur."
+
+
+def test_spells_endpoint_tolerates_empty_level_parameter(client):
+    resp = client.get("/api/spells?level=")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert len(body["spells"]) == 319
+
+
 def test_export_yaml_does_not_block_on_pending_equipment_choices(client):
     resp = client.post("/api/export/yaml", json={
         "name": "Torvin Bracewell",
