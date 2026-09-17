@@ -27,6 +27,7 @@ def to_yaml(resolution: dict) -> str:
         "skills": derived["skills"],
         "passivePerception": derived["passivePerception"],
         "proficiencies": sheet["proficiencies"],
+        "spells": sheet["spells"],
     }
     # allow_unicode=True: character names in this app are routinely
     # Cyrillic (the app's own examples are Bulgarian) — without this,
