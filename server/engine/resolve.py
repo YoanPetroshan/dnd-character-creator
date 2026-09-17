@@ -515,7 +515,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         species_choices_raw = species.get("choices") if isinstance(species.get("choices"), dict) else {}
         valid_ability_ids = {o["id"] for o in species_ability_choice_tpl["options"] if not o.get("disabled")}
         raw_selected = species_choices_raw.get(species_ability_choice_tpl["id"]) or []
-        selected_abilities = [s for s in raw_selected if isinstance(s, str) and s in valid_ability_ids][: species_ability_choice_tpl["count"]]
+        # Dedupe BEFORE capping to `count` and applying bonuses — otherwise a
+        # duplicate selection (e.g. ["str", "str"]) would apply the same
+        # ability's bonus twice with no problem reported.
+        deduped_selected = list(dict.fromkeys(s for s in raw_selected if isinstance(s, str)))
+        selected_abilities = [s for s in deduped_selected if s in valid_ability_ids][: species_ability_choice_tpl["count"]]
         for ab_id in selected_abilities:
             ab_key = ab_id.upper()
             species_bonuses[ab_key] = species_bonuses.get(ab_key, 0) + 1  # bundled data's `bonus` is always 1; if a future data source varies this, look it up from the option instead of hardcoding 1 here
@@ -590,7 +594,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     for tpl in choice_templates:
         valid_ids = {o["id"] for o in tpl["options"] if not o.get("disabled")}
         raw_selected = all_selections.get(tpl["id"]) or []  # `or []` guards a JSON null value too
-        selected = [s for s in raw_selected if isinstance(s, str) and s in valid_ids]
+        # Dedupe (preserving first-occurrence order) so this generic pass
+        # agrees with the early species-ability-bonus pass above, which
+        # dedupes the same underlying selection before applying bonuses.
+        raw_selected = list(dict.fromkeys(s for s in raw_selected if isinstance(s, str)))
+        selected = [s for s in raw_selected if s in valid_ids]
         if len(selected) > tpl["count"]:
             problems.append({
                 "id": f"over-selected-{tpl['id']}",

@@ -324,6 +324,18 @@ def test_half_elf_selected_ability_bonuses_are_applied(catalog):
     assert scores["CHA"] == 10  # 8 base + 2 fixed Half-Elf bonus (unrelated to this choice, unaffected)
 
 
+def test_half_elf_duplicate_ability_selection_does_not_double_apply(catalog):
+    draft = _fighter_acolyte_human_draft(
+        species={"id": "half-elf", "choices": {"species:half-elf:ability-bonus": ["str", "str"]}},
+        abilities={"method": "manual", "base": {"STR": 14, "DEX": 12, "CON": 14, "INT": 10, "WIS": 12, "CHA": 8}},
+    )
+    resolution = resolve(draft, catalog)
+    scores = resolution["sheet"]["abilities"]
+    assert scores["STR"] == 15  # 14 base + 1, not +2 — duplicate selection must not double the bonus
+    choice = next(c for c in resolution["choices"] if c["id"] == "species:half-elf:ability-bonus")
+    assert choice["selected"] == ["str"]  # deduplicated, not ["str", "str"]
+
+
 def test_half_elf_choice_is_pending_when_unresolved(catalog):
     draft = _fighter_acolyte_human_draft(species={"id": "half-elf", "choices": {}})
     resolution = resolve(draft, catalog)
