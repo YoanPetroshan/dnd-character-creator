@@ -16,6 +16,7 @@ def to_yaml(resolution: dict) -> str:
         "class": sheet["class"],
         "background": sheet["background"],
         "species": sheet["species"],
+        "details": sheet["details"],
         "abilities": sheet["abilities"],
         "abilityModifiers": derived["abilityModifiers"],
         "proficiencyBonus": derived["proficiencyBonus"],
@@ -29,6 +30,7 @@ def to_yaml(resolution: dict) -> str:
         "spellSaveDC": derived["spellSaveDC"],
         "spellAttackBonus": derived["spellAttackBonus"],
         "proficiencies": sheet["proficiencies"],
+        "equipment": sheet["equipment"],
         "spells": sheet["spells"],
     }
     # allow_unicode=True: character names in this app are routinely

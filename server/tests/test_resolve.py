@@ -1,7 +1,7 @@
 import pytest
 
 from catalog.loader import load
-from engine.resolve import resolve
+from engine.resolve import _DETAIL_FIELDS, resolve
 
 
 @pytest.fixture(scope="module")
@@ -605,3 +605,81 @@ def test_derived_spell_save_dc_and_attack_bonus_use_the_spellcasting_ability(cat
     # INT 16 -> +3 modifier, prof bonus 2 at level 1
     assert resolution["derived"]["spellSaveDC"] == 13  # 8 + 2 + 3
     assert resolution["derived"]["spellAttackBonus"] == 5  # 2 + 3
+
+
+def test_sheet_details_passes_through_submitted_fields_only(catalog):
+    draft = _fighter_acolyte_human_draft(
+        details={"alignment": "Chaotic Good", "backstory": "Раснал в Невървинтър."},
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["details"] == {"alignment": "Chaotic Good", "backstory": "Раснал в Невървинтър."}
+
+
+def test_sheet_details_is_none_when_missing(catalog):
+    draft = _fighter_acolyte_human_draft()
+    del draft["details"]
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["details"] is None
+
+
+def test_sheet_details_is_none_when_explicitly_null(catalog):
+    draft = _fighter_acolyte_human_draft(details=None)
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["details"] is None
+
+
+def test_malformed_details_is_none_and_not_a_problem(catalog):
+    draft = _fighter_acolyte_human_draft(details="not a dict")
+    resolution = resolve(draft, catalog)  # must not raise
+    assert resolution["sheet"]["details"] is None
+    assert not any(p["id"].startswith("malformed-details") or "details" in p["id"] for p in resolution["problems"])
+
+
+def test_sheet_details_drops_unknown_keys_and_non_string_values(catalog):
+    draft = _fighter_acolyte_human_draft(
+        details={"alignment": "Chaotic Good", "unknownField": "ignored", "faith": 12345},
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["details"] == {"alignment": "Chaotic Good"}
+
+
+def test_sheet_details_is_none_for_explicitly_empty_dict(catalog):
+    draft = _fighter_acolyte_human_draft(details={})
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["details"] is None
+
+
+def test_sheet_details_is_none_when_nothing_survives_filtering(catalog):
+    draft = _fighter_acolyte_human_draft(
+        details={"alignment": 1, "faith": [], "lifestyle": None},
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["details"] is None
+
+
+def test_detail_fields_contract_is_pinned(catalog):
+    # Guards against a frontend/backend field-name drift silently dropping
+    # data at export time — if types.ts gains/renames a details field
+    # without a matching update here, this fails loudly.
+    assert _DETAIL_FIELDS == (
+        "alignment", "faith", "lifestyle",
+        "age", "height", "weight", "eyes", "skin", "hair",
+        "personalityTraits", "ideals", "bonds", "flaws",
+        "backstory", "organizations", "allies", "enemies", "notes",
+    )
+
+
+def test_sheet_details_drops_whitespace_only_values(catalog):
+    draft = _fighter_acolyte_human_draft(
+        details={"alignment": "   ", "faith": "Deity of Wind"},
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["details"] == {"faith": "Deity of Wind"}
+
+
+def test_sheet_details_output_order_is_canonical_regardless_of_submission_order(catalog):
+    draft = _fighter_acolyte_human_draft(
+        details={"notes": "Some notes", "alignment": "Chaotic Good", "faith": "Deity of Wind"},
+    )
+    resolution = resolve(draft, catalog)
+    assert list(resolution["sheet"]["details"].keys()) == ["alignment", "faith", "notes"]
