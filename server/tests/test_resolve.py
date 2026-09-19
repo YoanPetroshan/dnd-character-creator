@@ -1041,3 +1041,18 @@ def test_a_class_with_no_dropped_envelopes_has_no_such_warning(catalog):
     draft = _fighter_acolyte_human_draft(classes=[{"classId": "wizard", "level": 1, "choices": {}}])
     resolution = resolve(draft, catalog)
     assert not any(w["id"] == "equipment-envelope-dropped-class-wizard" for w in resolution["warnings"])
+
+
+def test_a_genuinely_clean_resolution_has_zero_warnings(catalog):
+    # Coverage gap from review: no test asserts a fully clean
+    # resolution["warnings"] == []. Wizard has 0 dropped equipment
+    # envelopes (3 total, all 3 survive). Passing background with no "id"
+    # key (e.g. {"choices": {}}) makes bg_id become None and skips the
+    # entire background-equipment block, avoiding Acolyte's own dropped
+    # envelope entirely. Result: warnings == [] everywhere.
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "wizard", "level": 1, "choices": {}}],
+        background={"choices": {}},
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["warnings"] == []
