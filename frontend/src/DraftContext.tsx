@@ -34,6 +34,9 @@ type Action =
   | { type: "SET_SUBCLASS"; subclassId: string | undefined }
   | { type: "SET_HP_ROLL"; level: number; value: number }
   | { type: "SET_ABILITY_METHOD"; method: Draft["abilities"]["method"] }
+  | { type: "SET_HIT_POINT_TYPE"; hitPointType: Draft["preferences"]["hitPointType"] }
+  | { type: "SET_ADVANCEMENT_TYPE"; advancementType: Draft["preferences"]["advancementType"] }
+  | { type: "SET_USE_PREREQUISITE"; field: keyof Draft["preferences"]["usePrerequisites"]; value: boolean }
   | { type: "SET_ABILITY_SCORE"; ability: Ability; value: number }
   | { type: "SET_DETAIL"; field: keyof Draft["details"]; value: string }
   | { type: "SET_CHOICE_SELECTION"; source: ChoiceSourceKind; choiceId: string; selected: string[] }
@@ -98,6 +101,18 @@ function reducer(state: Draft, action: Action): Draft {
     }
     case "SET_ABILITY_METHOD":
       return { ...state, abilities: { ...state.abilities, method: action.method } };
+    case "SET_HIT_POINT_TYPE":
+      return { ...state, preferences: { ...state.preferences, hitPointType: action.hitPointType } };
+    case "SET_ADVANCEMENT_TYPE":
+      return { ...state, preferences: { ...state.preferences, advancementType: action.advancementType } };
+    case "SET_USE_PREREQUISITE":
+      return {
+        ...state,
+        preferences: {
+          ...state.preferences,
+          usePrerequisites: { ...state.preferences.usePrerequisites, [action.field]: action.value },
+        },
+      };
     case "SET_ABILITY_SCORE":
       return {
         ...state,
