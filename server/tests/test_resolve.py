@@ -168,6 +168,53 @@ def test_a_race_with_no_automatic_skill_grant_gets_none(catalog):
     assert set(resolution["sheet"]["proficiencies"]["skills"]) == {"skill-insight", "skill-religion"}
 
 
+def test_rogue_class_skill_choice_disables_option_already_granted_by_species(catalog):
+    # Elf's Keen Senses trait grants Perception for free, and Rogue's own
+    # skill-proficiency choice list includes skill-perception as one of its
+    # options — without the species-overlap guard, a player could spend one
+    # of Rogue's 4 skill picks on a skill they already have for free.
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "rogue", "level": 1, "choices": {}}],
+        species={"id": "elf", "choices": {}},
+    )
+    resolution = resolve(draft, catalog)
+    skill_choice = next(c for c in resolution["choices"] if c["id"] == "class:rogue:1:prof-choice-0")
+    perception = next(o for o in skill_choice["options"] if o["id"] == "skill-perception")
+    assert perception.get("disabled") is True
+    assert "Elf" in perception["disabledReason"]
+
+
+def test_disabled_species_granted_skill_is_excluded_from_valid_selections(catalog):
+    # Submitting the disabled option anyway must not count toward the
+    # choice's resolution, matching how a disabled background-granted
+    # option already behaves.
+    draft = _fighter_acolyte_human_draft(
+        classes=[{
+            "classId": "rogue", "level": 1,
+            "choices": {"class:rogue:1:prof-choice-0": ["skill-perception", "skill-stealth", "skill-acrobatics", "skill-athletics"]},
+        }],
+        species={"id": "elf", "choices": {}},
+    )
+    resolution = resolve(draft, catalog)
+    skill_choice = next(c for c in resolution["choices"] if c["id"] == "class:rogue:1:prof-choice-0")
+    assert "skill-perception" not in skill_choice["selected"]
+    assert skill_choice["status"] == "pending"  # only 3 of 4 required picks were valid
+    assert set(skill_choice["selected"]) == {"skill-stealth", "skill-acrobatics", "skill-athletics"}
+
+
+def test_species_overlap_does_not_affect_a_race_with_no_automatic_skill_grant(catalog):
+    # Human grants no automatic skill proficiency, so the species-overlap
+    # guard shouldn't disable anything on Rogue's own skill choice (the
+    # fixture's Acolyte background DOES overlap with Rogue's Insight
+    # option via the pre-existing background-overlap guard, so this checks
+    # specifically that nothing is attributed to Human, not that nothing
+    # is disabled at all).
+    draft = _fighter_acolyte_human_draft(classes=[{"classId": "rogue", "level": 1, "choices": {}}])
+    resolution = resolve(draft, catalog)
+    skill_choice = next(c for c in resolution["choices"] if c["id"] == "class:rogue:1:prof-choice-0")
+    assert not any("Human" in (o.get("disabledReason") or "") for o in skill_choice["options"])
+
+
 def test_multiclass_draft_produces_a_problem_and_uses_only_the_first_class(catalog):
     draft = _fighter_acolyte_human_draft(classes=[
         {"classId": "fighter", "level": 1, "choices": {}},

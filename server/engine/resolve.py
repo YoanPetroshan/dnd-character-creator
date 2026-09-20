@@ -429,6 +429,32 @@ def _apply_background_overlap(class_templates: list[dict], bg: dict | None) -> N
                 opt["disabledReason"] = f"already granted by {bg['name']}"
 
 
+def _apply_species_overlap(class_templates: list[dict], race: dict | None, subrace: dict | None, catalog: Catalog) -> None:
+    """Mirrors _apply_background_overlap: race/subrace traits can grant a
+    skill proficiency for free (e.g. Elf's Keen Senses grants
+    skill-perception), and a class's own skill-choice list can include that
+    same skill (e.g. Rogue's prof-choice-0). Without this, a player could
+    spend a class choice slot on a skill they already have for free, with
+    no disabled flag or warning — this closes that gap the same way the
+    background path already does."""
+    if not race:
+        return
+    trait_refs = list(race.get("traits", [])) + (list(subrace.get("racial_traits", [])) if subrace else [])
+    granted: set[str] = set()
+    for ref in trait_refs:
+        trait = catalog.traits.get(ref["index"])
+        if not trait:
+            continue
+        granted.update(p["index"] for p in trait.get("proficiencies", []) if p["index"].startswith("skill-"))
+    if not granted:
+        return
+    for tpl in class_templates:
+        for opt in tpl["options"]:
+            if opt["id"] in granted:
+                opt["disabled"] = True
+                opt["disabledReason"] = f"already granted by {race['name']}"
+
+
 def resolve(draft: dict, catalog: Catalog) -> dict:
     problems: list[dict] = []
     warnings: list[dict] = []
@@ -586,6 +612,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             })
 
     _apply_background_overlap([t for t in choice_templates if t["source"]["kind"] == "class"], bg)
+    _apply_species_overlap([t for t in choice_templates if t["source"]["kind"] == "class"], race, subrace, catalog)
 
     # Apply the draft's own selections onto each template to get a real Choice.
     equipment_raw = draft.get("equipment")
