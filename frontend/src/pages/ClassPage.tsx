@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
-import { useCatalog } from "../useCatalog";
+import { useCatalogContext } from "../CatalogContext";
 import { ChoiceCard } from "../components/ChoiceCard";
 import { SpellLibrary } from "../components/SpellLibrary";
 
@@ -21,7 +21,7 @@ interface ClassDetail {
 export function ClassPage() {
   const { draft, dispatch } = useDraft();
   const { resolution, loading, error, retry } = useResolutionContext();
-  const catalog = useCatalog();
+  const catalog = useCatalogContext();
   const [tab, setTab] = useState<ClassTab>("features");
   const [classDetail, setClassDetail] = useState<ClassDetail | null>(null);
 

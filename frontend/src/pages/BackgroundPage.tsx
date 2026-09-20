@@ -1,12 +1,12 @@
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
-import { useCatalog } from "../useCatalog";
+import { useCatalogContext } from "../CatalogContext";
 import { ChoiceCard } from "../components/ChoiceCard";
 
 export function BackgroundPage() {
   const { draft, dispatch } = useDraft();
   const { resolution, loading, error, retry } = useResolutionContext();
-  const catalog = useCatalog();
+  const catalog = useCatalogContext();
 
   if (error)
     return (
