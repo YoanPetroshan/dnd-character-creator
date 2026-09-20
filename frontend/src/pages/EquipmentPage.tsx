@@ -13,12 +13,6 @@ const CATEGORIES = [
   { value: "mounts-and-vehicles", label: "Превозни средства" },
 ];
 
-interface SheetEquipment {
-  granted: { itemId: string; name: string; qty: number }[];
-  chosen: { itemId: string; name: string; qty: number }[];
-  added: { itemId: string; name: string; qty: number; equipped: boolean }[];
-}
-
 export function EquipmentPage() {
   const { dispatch } = useDraft();
   const { resolution, loading, error, retry } = useResolutionContext();
@@ -43,7 +37,7 @@ export function EquipmentPage() {
     dispatch({ type: "SET_CHOICE_SELECTION", source: "equipment", choiceId, selected });
   }
 
-  const sheetEquipment = resolution.sheet.equipment as SheetEquipment | undefined;
+  const sheetEquipment = resolution.sheet.equipment;
 
   return (
     <div className="page">
@@ -54,7 +48,7 @@ export function EquipmentPage() {
         <ChoiceCard key={choice.id} choice={choice} onChange={handleChoiceChange} />
       ))}
 
-      {sheetEquipment && sheetEquipment.granted.length > 0 && (
+      {sheetEquipment.granted.length > 0 && (
         <div className="equipment-section">
           <h2>Получена екипировка</h2>
           <ul>
@@ -67,7 +61,7 @@ export function EquipmentPage() {
         </div>
       )}
 
-      {sheetEquipment && sheetEquipment.chosen.length > 0 && (
+      {sheetEquipment.chosen.length > 0 && (
         <div className="equipment-section">
           <h2>Избрана екипировка</h2>
           <ul>
@@ -107,8 +101,8 @@ export function EquipmentPage() {
       </ul>
 
       <h2>Инвентар</h2>
-      {(!sheetEquipment || sheetEquipment.added.length === 0) && <p>Няма добавени предмети.</p>}
-      {sheetEquipment && sheetEquipment.added.length > 0 && (
+      {sheetEquipment.added.length === 0 && <p>Няма добавени предмети.</p>}
+      {sheetEquipment.added.length > 0 && (
         <ul className="inventory-list">
           {sheetEquipment.added.map((entry) => (
             <li key={entry.itemId}>

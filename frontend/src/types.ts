@@ -51,10 +51,122 @@ export interface Pruned {
   reason: string;
 }
 
+export interface CharacterDetails {
+  // Character Details
+  alignment?: string;
+  faith?: string;
+  lifestyle?: string;
+  // Physical Characteristics
+  age?: string;
+  height?: string;
+  weight?: string;
+  eyes?: string;
+  skin?: string;
+  hair?: string;
+  // Personality
+  personalityTraits?: string;
+  ideals?: string;
+  bonds?: string;
+  flaws?: string;
+  // Notes
+  backstory?: string;
+  organizations?: string;
+  allies?: string;
+  enemies?: string;
+  notes?: string;
+}
+
+export interface SheetEquipmentEntry {
+  itemId: string;
+  name: string;
+  qty: number;
+}
+
+export interface SheetAddedEquipmentEntry extends SheetEquipmentEntry {
+  equipped: boolean;
+}
+
+export interface SheetSpellSummary {
+  id: string;
+  name: string;
+  level: number;
+}
+
+export interface SheetSpells {
+  cantrips: SheetSpellSummary[];
+  known: SheetSpellSummary[];
+}
+
+export interface SheetClassSubclass {
+  id: string;
+  name: string;
+}
+
+export interface SheetClass {
+  id: string;
+  name: string;
+  subclass: SheetClassSubclass | null;
+}
+
+export interface SheetBackground {
+  id: string;
+  name: string;
+}
+
+export interface SheetSubspecies {
+  id: string;
+  name: string;
+}
+
+export interface SheetSpecies {
+  id: string;
+  name: string;
+  subspecies: SheetSubspecies | null;
+}
+
+export interface SheetProficiencies {
+  skills: string[];
+  savingThrows: string[];
+  languages: string[];
+}
+
+export interface SheetEquipment {
+  granted: SheetEquipmentEntry[];
+  chosen: SheetEquipmentEntry[];
+  added: SheetAddedEquipmentEntry[];
+}
+
+export interface Sheet {
+  name: string;
+  level: number;
+  class: SheetClass | null;
+  background: SheetBackground | null;
+  species: SheetSpecies | null;
+  abilities: Record<Ability, number>;
+  proficiencies: SheetProficiencies;
+  equipment: SheetEquipment;
+  spells: SheetSpells | null;
+  details: CharacterDetails | null;
+}
+
+export interface Derived {
+  abilityModifiers: Record<Ability, number>;
+  proficiencyBonus: number;
+  hitPointMax: number;
+  hitDice: string | null;
+  armorClass: number;
+  speed: number | null;
+  savingThrows: Record<Ability, number>;
+  skills: Record<string, number>;
+  passivePerception: number;
+  spellSaveDC: number | null;
+  spellAttackBonus: number | null;
+}
+
 export interface Resolution {
-  sheet: Record<string, unknown>;
+  sheet: Sheet;
   choices: Choice[];
-  derived: Record<string, unknown>;
+  derived: Derived;
   problems: Problem[];
   warnings: WarningItem[];
   pruned: Pruned[];
@@ -91,28 +203,5 @@ export interface Draft {
     added: { itemId: string; qty: number; equipped: boolean }[];
     skipped: boolean;
   };
-  details: {
-    // Character Details
-    alignment?: string;
-    faith?: string;
-    lifestyle?: string;
-    // Physical Characteristics
-    age?: string;
-    height?: string;
-    weight?: string;
-    eyes?: string;
-    skin?: string;
-    hair?: string;
-    // Personality
-    personalityTraits?: string;
-    ideals?: string;
-    bonds?: string;
-    flaws?: string;
-    // Notes
-    backstory?: string;
-    organizations?: string;
-    allies?: string;
-    enemies?: string;
-    notes?: string;
-  };
+  details: CharacterDetails;
 }
