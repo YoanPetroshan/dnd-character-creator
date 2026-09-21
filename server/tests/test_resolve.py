@@ -1238,3 +1238,95 @@ def test_multiclass_hit_dice_lists_every_class(catalog):
     )
     resolution = resolve(draft, catalog)
     assert resolution["derived"]["hitDice"] == "3d10 + 2d6"
+
+
+def test_secondary_class_multiclass_proficiency_choice_is_generated(catalog):
+    # Rogue's multi_classing.proficiency_choices grants a skill choice
+    # when taken as a SECONDARY class (confirmed empirically: choose 1
+    # from an 11-skill list) — distinct from Rogue's own level-1
+    # proficiency_choices (a bigger 4-skill choice), which only applies
+    # when Rogue is the FIRST class.
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "fighter", "level": 2, "choices": {}},
+            {"classId": "rogue", "level": 1, "choices": {}},
+        ],
+    )
+    resolution = resolve(draft, catalog)
+    mc_choice = next((c for c in resolution["choices"] if c["id"] == "class:rogue:multiclass-prof-choice-0"), None)
+    assert mc_choice is not None
+    assert mc_choice["count"] == 1
+    assert any(o["id"] == "skill-stealth" for o in mc_choice["options"])
+
+
+def test_primary_class_does_not_get_a_multiclass_proficiency_choice(catalog):
+    # Rogue as the FIRST class should NOT also get the multiclass-only
+    # choice template — only its normal level-1 prof-choice-0.
+    draft = _fighter_acolyte_human_draft(classes=[{"classId": "rogue", "level": 1, "choices": {}}])
+    resolution = resolve(draft, catalog)
+    assert not any(c["id"] == "class:rogue:multiclass-prof-choice-0" for c in resolution["choices"])
+
+
+def test_secondary_class_fixed_multiclass_proficiencies_appear_on_sheet(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "fighter", "level": 2, "choices": {}},
+            {"classId": "rogue", "level": 1, "choices": {}},
+        ],
+    )
+    resolution = resolve(draft, catalog)
+    profs = resolution["sheet"]["proficiencies"]
+    assert "light-armor" in profs["armor"]
+    assert "thieves-tools" in profs["tools"]
+    # Fighter (primary) should contribute ITS full level-1 grant too:
+    assert "martial-weapons" in profs["weapons"]
+
+
+def test_multiclass_prerequisite_unmet_is_a_problem_when_preference_on(catalog):
+    # Wizard requires INT >= 13 to multiclass in/out of. Give a low INT.
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "fighter", "level": 2, "choices": {}},
+            {"classId": "wizard", "level": 1, "choices": {}},
+        ],
+        abilities={"method": "manual", "base": {"STR": 16, "DEX": 14, "CON": 14, "INT": 8, "WIS": 12, "CHA": 8}},
+        preferences={"advancementType": "milestone", "hitPointType": "fixed", "usePrerequisites": {"feats": True, "multiclass": True}},
+    )
+    resolution = resolve(draft, catalog)
+    assert any(p["id"] == "multiclass-prerequisite-unmet-wizard" for p in resolution["problems"])
+    # The class must still be FULLY resolved despite the unmet prerequisite
+    # (never hidden) — confirmed via Wizard's hit die (1d6) still showing up
+    # in the combined hitDice string. (Note: as of Task 4, `sheet["classes"]`
+    # doesn't exist yet — sheet["class"] is still a single primary-class
+    # object; that shape change is Task 5's job per the plan, so this test
+    # uses `derived.hitDice` instead of the brief's original
+    # `sheet["classes"][1]` assertion to verify Wizard's full resolution.)
+    assert resolution["derived"]["hitDice"] == "2d10 + 1d6"
+
+
+def test_multiclass_prerequisite_check_skipped_when_preference_off(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "fighter", "level": 2, "choices": {}},
+            {"classId": "wizard", "level": 1, "choices": {}},
+        ],
+        abilities={"method": "manual", "base": {"STR": 16, "DEX": 14, "CON": 14, "INT": 8, "WIS": 12, "CHA": 8}},
+        preferences={"advancementType": "milestone", "hitPointType": "fixed", "usePrerequisites": {"feats": True, "multiclass": False}},
+    )
+    resolution = resolve(draft, catalog)
+    assert not any(p["id"].startswith("multiclass-prerequisite-unmet") for p in resolution["problems"])
+
+
+def test_fighter_secondary_class_prerequisite_options_str_or_dex(catalog):
+    # Fighter's multiclass prereq is "choose 1 of STR>=13 / DEX>=13" —
+    # confirm meeting DEX alone (not STR) is sufficient.
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "wizard", "level": 2, "choices": {}},
+            {"classId": "fighter", "level": 1, "choices": {}},
+        ],
+        abilities={"method": "manual", "base": {"STR": 8, "DEX": 14, "CON": 14, "INT": 14, "WIS": 12, "CHA": 8}},
+        preferences={"advancementType": "milestone", "hitPointType": "fixed", "usePrerequisites": {"feats": True, "multiclass": True}},
+    )
+    resolution = resolve(draft, catalog)
+    assert not any(p["id"] == "multiclass-prerequisite-unmet-fighter" for p in resolution["problems"])

@@ -130,6 +130,27 @@ def _class_choice_templates(cls: dict, cls_id: str) -> list[dict]:
     return templates
 
 
+def _multiclass_proficiency_choice_templates(cls: dict, cls_id: str) -> list[dict]:
+    """Mirrors _class_choice_templates exactly, but sourced from
+    multi_classing.proficiency_choices instead of the class's own
+    top-level proficiency_choices — this is the EXTRA skill/tool choice
+    a class grants when taken as a SECOND-OR-LATER class (confirmed
+    empirically: Bard, Ranger, Rogue each have this; Bard has two
+    envelopes — a skill choice and a musical-instrument choice)."""
+    templates = []
+    for i, envelope in enumerate(cls.get("multi_classing", {}).get("proficiency_choices", [])):
+        cid = f"class:{cls_id}:multiclass-prof-choice-{i}"
+        source = {"kind": "class", "id": cls_id, "label": cls["name"]}
+        provisional_label = "Skill Proficiencies" if envelope.get("type") == "proficiencies" else (envelope.get("type") or "Choice").title()
+        tpl = build_choice_template(envelope, cid, source, provisional_label)
+        if not tpl:
+            continue
+        if tpl["options"] and tpl["label"] == "Skill Proficiencies" and not all(o["id"].startswith("skill-") for o in tpl["options"]):
+            tpl["label"] = "Tool Proficiencies"
+        templates.append(tpl)
+    return templates
+
+
 def _join_desc(desc) -> str | None:
     """Feature/trait 'desc' fields are lists of paragraph strings; choice
     envelopes never carry their own 'desc' except proficiency_choices (see
@@ -254,6 +275,46 @@ def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrac
             templates.append(tpl)
 
     return templates
+
+
+def _multiclass_prerequisite_problems(resolved_classes: list[dict], final_scores: dict[str, int], use_prerequisites: bool) -> list[dict]:
+    """Checks every resolved class's multi_classing.prerequisites (a plain
+    list, ALL must be met) or multi_classing.prerequisite_options (an
+    options-array, "choose N of these" — Fighter is the only SRD class
+    with this shape, STR-or-DEX) against the character's final ability
+    scores. Applies to EVERY class, not just secondary ones — the SRD
+    prerequisite is a two-way gate (both the class you already have and
+    the class you're adding need their own prerequisite met), which
+    matches this loop iterating over all of resolved_classes, not just
+    index > 0. Never hides the class — only appends a problem."""
+    if not use_prerequisites:
+        return []
+    problems = []
+    for rc in resolved_classes:
+        cls, cls_id = rc["cls"], rc["cls_id"]
+        if not (cls and cls_id):
+            continue
+        mc = cls.get("multi_classing", {})
+        prereqs = mc.get("prerequisites")
+        prereq_options = mc.get("prerequisite_options")
+        if prereqs:
+            met = all(final_scores.get(p["ability_score"]["index"].upper(), 0) >= p["minimum_score"] for p in prereqs)
+        elif prereq_options:
+            options = prereq_options.get("from", {}).get("options", [])
+            choose = prereq_options.get("choose", 1)
+            met_count = sum(
+                1 for opt in options
+                if final_scores.get(opt["ability_score"]["index"].upper(), 0) >= opt["minimum_score"]
+            )
+            met = met_count >= choose
+        else:
+            met = True  # no prerequisite data at all — nothing to fail
+        if not met:
+            problems.append({
+                "id": f"multiclass-prerequisite-unmet-{cls_id}",
+                "message": f"{cls['name']}'s multiclassing prerequisite isn't met.",
+            })
+    return problems
 
 
 def _asi_option_label(deltas: list[tuple[str, int]]) -> str:
@@ -608,11 +669,16 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc["asi_levels"] = rc_asi_levels  # stashed for Task 4's prerequisite check convenience, and for sheet assembly
 
         choice_templates += _class_choice_templates(rc_cls, rc_cls_id)
+        if rc["index"] > 0:
+            choice_templates += _multiclass_proficiency_choice_templates(rc_cls, rc_cls_id)
         rc_level_row = catalog.class_level_row(rc_cls_id, rc_level)
         rc["level_row"] = rc_level_row
         feature_refs = _cumulative_feature_refs(catalog, rc_cls_id, rc_subclass_id, rc_level)
         choice_templates += _feature_choice_templates(catalog, rc_cls_id, rc_cls["name"], feature_refs, rc_subclass_id)
         choice_templates += _asi_choice_templates(rc_cls_id, rc_cls["name"], rc_asi_levels, rc_asi_scores_by_level)
+
+    use_prereqs = bool((draft.get("preferences") or {}).get("usePrerequisites", {}).get("multiclass"))
+    problems += _multiclass_prerequisite_problems(resolved_classes, final_scores, use_prereqs)
 
     modifiers = derived_mod.ability_modifiers(final_scores)
     # Prof bonus is confirmed class-agnostic at a given level (per the
@@ -778,6 +844,57 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 continue
             proficient_skills.update(p["index"] for p in trait.get("proficiencies", []) if p["index"].startswith("skill-"))
 
+    proficient_armor: set[str] = set()
+    proficient_weapons: set[str] = set()
+    proficient_tools: set[str] = set()
+
+    # The brief's original heuristic only carved out "shortswords" as the
+    # one non-generic weapon-category id, reasoning from a check against
+    # Fighter+Rogue's proficiencies alone. A full empirical scan of every
+    # SRD class's top-level `proficiencies` (not just the two classes this
+    # task's tests exercise) turns up 14 more specific-weapon proficiency
+    # ids that don't contain the substring "weapon" — without this set
+    # they'd be wrongly bucketed into `tools` for any class whose primary
+    # (level-1) proficiency grant names an individual weapon rather than a
+    # broad category (e.g. Bard's rapiers/longswords/shortswords/
+    # hand-crossbows, Wizard's daggers/darts/slings/quarterstaffs/
+    # crossbows-light). Verified against 5e-SRD-Classes.json directly.
+    _SPECIFIC_WEAPON_PROFICIENCY_IDS = {
+        "shortswords", "clubs", "crossbows-light", "daggers", "darts", "hand-crossbows",
+        "javelins", "longswords", "maces", "quarterstaffs", "rapiers", "scimitars",
+        "sickles", "slings", "spears",
+    }
+
+    def _categorize_proficiency(prof_id: str) -> None:
+        if prof_id.startswith("skill-") or prof_id.startswith("saving-throw-"):
+            return  # skills handled by proficient_skills elsewhere; saving
+            # throws by proficient_save_abilities — a class's top-level
+            # `proficiencies` field mixes saving-throw-* entries in with its
+            # armor/weapon grants (confirmed for every SRD class), so this
+            # guard is needed or they'd fall through to the tools bucket.
+        if "armor" in prof_id or prof_id == "shields":
+            proficient_armor.add(prof_id)
+        elif "weapon" in prof_id or prof_id in _SPECIFIC_WEAPON_PROFICIENCY_IDS:
+            proficient_weapons.add(prof_id)
+        else:
+            proficient_tools.add(prof_id)
+
+    for c in choices:
+        if c["source"]["kind"] == "class":
+            for s in c["selected"]:
+                if not s.startswith("skill-"):
+                    _categorize_proficiency(s)
+
+    for rc in resolved_classes:
+        if not rc["cls"]:
+            continue
+        if rc["index"] == 0:
+            for p in rc["cls"].get("proficiencies", []):
+                _categorize_proficiency(p["index"])
+        else:
+            for p in rc["cls"].get("multi_classing", {}).get("proficiencies", []):
+                _categorize_proficiency(p["index"])
+
     proficient_save_abilities = [st["index"].upper() for st in (cls.get("saving_throws", []) if cls else [])]
 
     hp_type = (draft.get("preferences") or {}).get("hitPointType")
@@ -834,6 +951,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             "skills": sorted(proficient_skills),
             "savingThrows": proficient_save_abilities,
             "languages": sorted(set(fixed_languages + chosen_languages)),
+            "armor": sorted(proficient_armor),
+            "weapons": sorted(proficient_weapons),
+            "tools": sorted(proficient_tools),
         },
         "equipment": {"granted": granted_equipment, "chosen": chosen_equipment, "added": added_resolved},
         "spells": spells_summary,
