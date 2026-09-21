@@ -105,6 +105,7 @@ export interface SheetClassSubclass {
 export interface SheetClass {
   id: string;
   name: string;
+  level: number;
   subclass: SheetClassSubclass | null;
 }
 
@@ -139,7 +140,7 @@ export interface SheetEquipment {
 export interface Sheet {
   name: string;
   level: number;
-  class: SheetClass | null;
+  classes: SheetClass[];
   background: SheetBackground | null;
   species: SheetSpecies | null;
   abilities: Record<Ability, number>;
