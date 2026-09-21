@@ -1,0 +1,48 @@
+# Phase 3b-ii — Multiclass Spell Slots: Design
+
+## Context
+
+Phase 3b-i (multiclassing core, merged) made each class's own features/ASI/proficiencies/HP correctly independent, but deliberately left spellcasting's SLOT POOL untouched — each caster's cantrips/known-spells still resolve correctly per-class (already aggregated into `sheet["spells"]` as a list, one entry per caster), but nothing computes or exposes actual spell SLOT counts anywhere in the Resolution.
+
+**A more fundamental fact, discovered while scoping this phase (verified directly against the bundled SRD data, not assumed):** spell slots are not tracked ANYWHERE in the current Resolution shape — not even for a single-class spellcaster. `server/engine/resolve.py`'s only use of `spell_slots_level_N` today is `_highest_spell_slot_level()`, which exists purely to gate which spell LEVELS are valid choice options — it was never meant to expose "you have N slots of level M" to the player. So this phase isn't purely "share an existing thing across classes" — it's "add spell slot tracking to the Resolution at all, computed via the combined-caster-level formula for the shared multiclass pool (which correctly reduces to a single class's own slots when only one non-Warlock caster is present)."
+
+## The multiclass spell-slot table doesn't need to be hardcoded
+
+**Verified directly against the bundled data:** the standard 5e "Multiclass Spellcaster" table (PHB) — the slot progression looked up by COMBINED caster level, shared across every full/half caster except Warlock — is number-for-number identical to a full caster's OWN single-class slot progression at the same level. Confirmed by reading Wizard's per-level `spellcasting.spell_slots_level_N` fields for levels 1-20 directly from `5e-SRD-Levels.json` — this is exactly the well-known multiclass table. This means: **no new hardcoded reference table is needed.** The combined-level lookup is simply `catalog.class_level_row(<any full-caster class id>, combined_level)["spellcasting"]` — reusing existing data and the existing `class_level_row` catalog method, with `"wizard"` (or any full caster) as an arbitrary anchor class purely to read its slot-progression column, which is class-agnostic for this purpose (already established as a valid pattern in Phase 3b-i for `prof_bonus`, which is also class-agnostic and read the same way).
+
+## Combined caster level formula (verified against real class data)
+
+- **Full casters** (Bard, Cleric, Druid, Sorcerer, Wizard): contribute their own full class level.
+- **Half casters** (Paladin, Ranger — confirmed via `HALF_CASTER_CLASSES` in `catalog/reference_data.py`, already established in Phase 3a): contribute `floor(level / 2)`. Verified: a level-1 Paladin/Ranger contributes 0 automatically (no special-case needed — `1 // 2 == 0` already matches RAW's "no spellcasting below level 2" for these classes).
+- **Third casters** (Eldritch Knight, Arcane Trickster — contribute `floor(level / 3)` per RAW): **do not exist in the bundled SRD data** (verified earlier in this project: Fighter's only bundled subclass is Champion, Rogue's is Thief, neither grants spellcasting). Write the formula to structurally allow for a third-caster contribution (in case Phase 4 adds sourcebook content with these subclasses later), but there is nothing to test it against today — note this explicitly rather than silently assuming it can never matter.
+- **Warlock**: contributes **zero** to the combined level and draws from its own, entirely separate Pact Magic slot table (already present per-level in the bundled data, already read correctly by the existing single-class code path — Phase 3b-ii does not touch Warlock's own slot computation at all, only ensures a multiclass draft with a Warlock correctly keeps Warlock's slots separate from the shared pool).
+
+## What changes in `resolve()`
+
+- A new pure function (candidate location: `server/engine/spells.py`, alongside the existing `known_spell_count`/`spell_save_dc`/`spell_attack_bonus`) computing combined caster level from a list of `(cls_id, level)` pairs, using `HALF_CASTER_CLASSES` (already exists) and excluding Warlock (already identifiable — Warlock's `spellcasting_ability` or a dedicated check, whichever the existing code already uses to distinguish it).
+- `derived` gains a new field — candidate name `spellSlots: dict[str, int]` (e.g. `{"1": 4, "2": 3, ...}`, only levels with a nonzero slot count, or all 9 always-present with zeros — pick whichever matches this project's existing convention for similar dicts, e.g. `sheet.proficiencies.skills` uses a list, `derived.skills` uses a dict — check at plan-writing time) — the SHARED pool for every non-Warlock caster, looked up via the combined level. If a Warlock is present, a SEPARATE field (candidate name `warlockSpellSlots`) holds Warlock's own Pact Magic slots, read directly from Warlock's own level row exactly as today's single-class code already does it (unchanged logic, just relocated/exposed).
+- `derived.spellSaveDC`/`spellAttackBonus` — currently single scalars computed from the PRIMARY class only — reshape into PER-CASTER values. Natural home: alongside each entry already in `sheet["spells"]` (which already has `{classId, cantrips, known}` per caster, from Phase 3b-i) — add `spellSaveDC`/`spellAttackBonus` to each of those entries, and remove the old top-level `derived.spellSaveDC`/`spellAttackBonus` scalars (a breaking change, consistent with this project's established no-dual-shape precedent). This was explicitly flagged as the right eventual home for this data by Phase 3b-i's own final review, to avoid reshaping it twice.
+
+## What does NOT change
+
+- Each caster's own known-cantrips/known-spells COUNT and CHOICE resolution (Phase 2c/3a/3b-i logic) — untouched. This phase only adds slot-pool computation and moves DC/attack-bonus to be per-caster; it does not touch spell selection itself.
+- Warlock's own slot computation logic — untouched, only its EXPOSURE (a dedicated `derived` field) and its exclusion from the shared pool are new.
+- Equipment, proficiencies, HP, prof bonus, prerequisites — none of Phase 3b-i's other work is touched by this phase.
+
+## Frontend impact
+
+- `frontend/src/types.ts`'s `Derived` interface gains `spellSlots`/`warlockSpellSlots` (or whatever exact names plan-writing settles on), loses the old top-level `spellSaveDC`/`spellAttackBonus` (moved into each `SheetClassSpells` entry — that type already exists from Phase 3b-i's `sheet.spells` list change, just needs the two new fields added to it).
+- No UI is required to actually DISPLAY spell slots yet (no slot-tracker widget, no "mark a slot used" interaction) — this phase's frontend scope is limited to keeping the TypeScript types correct and not leaving any dead/broken reference to the old scalar fields, matching how narrowly-scoped Phase 3b-i's own Task 5/6 frontend-type-sync work was. A real slot-tracking UI (checkboxes/pips a player can click to mark slots used in play) is out of scope here — this project's `Resolution` is a computed-from-scratch snapshot on every request, not a mutable play-state tracker, and "which slots are currently expended" isn't a concept the Draft model has anywhere (matching how HP is shown as a max, not a currently-remaining tracker either). If real play-state tracking is ever wanted, that's a different, larger feature, not part of this phase.
+
+## Testing strategy
+
+- Verify the combined-level formula against real SRD data for: a single full caster (reduces to that class's own table — regression anchor); two full casters (e.g. Wizard 3 / Sorcerer 2 → combined level 5 → Wizard's own level-5 slots); a full + half caster (e.g. Cleric 4 / Paladin 4 → combined level 4 + 2 = 6 → level-6 slots); a Warlock alongside a full caster (confirm Warlock's own slots stay separate AND correct, and the full caster's shared-pool slots are computed WITHOUT counting Warlock's level at all); a single Warlock (only `warlockSpellSlots` populated, `spellSlots` reflects zero non-Warlock casters — decide at plan-writing time whether this should be absent/null vs. all-zero, matching this project's established null-vs-empty conventions elsewhere).
+- A non-caster multiclass (e.g. Fighter + Rogue, neither a caster) — confirm no spurious `spellSlots` entry, matching Phase 3b-i's own established "no non-caster leaks a spell field" testing pattern.
+- Regression: every single-class spellcasting test from Phase 2c/3a/3b-i must keep passing, with `spellSaveDC`/`spellAttackBonus` moved into the new per-caster location (an expected, deliberate shape change requiring those specific tests to update their assertions' STRUCTURE, not their underlying VALUES).
+
+## Self-review
+
+- **Placeholder scan:** the two genuinely open plan-writing decisions (dict-vs-list shape for `spellSlots`, null-vs-empty-object for a Warlock-only or non-caster draft) are named explicitly as decisions for plan-writing time, grounded in "match this project's existing convention," not left vague.
+- **Internal consistency:** the "no new hardcoded table" claim and the "reuse `class_level_row` the same way Phase 3b-i already did for prof bonus" claim are the same insight applied twice, stated consistently.
+- **Scope check:** explicitly excludes any interactive slot-tracking UI (a genuinely different, larger feature) and explicitly excludes third-caster subclasses (don't exist in bundled data) from real implementation while still keeping the formula structurally ready for them.
+- **Ambiguity check:** the DC/attack-bonus reshape's exact destination (inside each `sheet.spells` entry) is stated as a firm design decision (not left open), since Phase 3b-i's own final review already recommended this specific destination.
