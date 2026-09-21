@@ -210,7 +210,7 @@ export function ClassPage() {
         </p>
       )}
 
-      {!primaryClassId && (
+      {draft.classes.length <= 1 && (
         <ul className="picker-list">
           {catalog.classes.map((c) => (
             <li key={c.id}>
@@ -218,7 +218,7 @@ export function ClassPage() {
                 <input
                   type="radio"
                   name="class"
-                  checked={false}
+                  checked={c.id === primaryClassId}
                   onChange={() => dispatch({ type: "SET_CLASS", classId: c.id })}
                 />
                 {c.name} (d{c.hitDie})
