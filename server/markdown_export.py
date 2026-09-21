@@ -154,24 +154,36 @@ def to_markdown(resolution: dict) -> str:
         lines.append("—")
         lines.append("")
 
+    # sheet["spells"] is a list with one entry per class that has
+    # spellcasting this level (multiclass-aware as of the Phase 3b-i
+    # final-review fix — a single-class caster still gets a one-entry
+    # list). derived["spellSaveDC"]/["spellAttackBonus"] stay PRIMARY-class-
+    # only (see resolve.py), so they're shown once, up top, not per class.
     spells = sheet["spells"]
-    if spells is not None:
+    if spells:
         lines.append("## Заклинания")
         if derived["spellSaveDC"] is not None:
             lines.append(
                 f"- **Спасяване за заклинание (DC):** {derived['spellSaveDC']}  |  "
                 f"**Бонус за атака:** {_fmt_mod(derived['spellAttackBonus'])}"
             )
-        if spells["cantrips"]:
-            lines.append("### Трикове")
-            for s in spells["cantrips"]:
-                lines.append(f"- {s['name']}")
-            lines.append("")
-        if spells["known"]:
-            lines.append("### Известни/Подготвени заклинания")
-            for s in spells["known"]:
-                lines.append(f"- {s['name']} (ниво {s['level']})")
-            lines.append("")
+        class_names = {c["id"]: c["name"] for c in classes}
+        multi_caster = len(spells) > 1
+        for class_spells in spells:
+            # Only label each subsection by class when there's more than
+            # one caster to disambiguate — a single-class sheet keeps the
+            # plain, unlabeled headings it always had.
+            suffix = f" ({class_names.get(class_spells['classId'], class_spells['classId'])})" if multi_caster else ""
+            if class_spells["cantrips"]:
+                lines.append(f"### Трикове{suffix}")
+                for s in class_spells["cantrips"]:
+                    lines.append(f"- {s['name']}")
+                lines.append("")
+            if class_spells["known"]:
+                lines.append(f"### Известни/Подготвени заклинания{suffix}")
+                for s in class_spells["known"]:
+                    lines.append(f"- {s['name']} (ниво {s['level']})")
+                lines.append("")
         lines.append("")
 
     details = sheet["details"]

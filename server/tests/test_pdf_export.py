@@ -16,7 +16,7 @@ def _sample_resolution():
             "abilities": {"STR": 17, "DEX": 15, "CON": 15, "INT": 11, "WIS": 13, "CHA": 9},
             "proficiencies": {"skills": ["skill-athletics"], "savingThrows": ["STR", "CON"], "languages": ["common"]},
             "equipment": {"granted": [], "chosen": [], "added": []},
-            "spells": None,
+            "spells": [],
             "details": None,
         },
         "derived": {
@@ -83,16 +83,44 @@ def test_omits_spells_section_for_a_non_caster():
 def test_includes_spells_for_a_caster():
     resolution = _sample_resolution()
     resolution["sheet"]["classes"] = [{"id": "wizard", "name": "Wizard", "level": 1, "subclass": None}]
-    resolution["sheet"]["spells"] = {
+    resolution["sheet"]["spells"] = [{
+        "classId": "wizard",
         "cantrips": [{"id": "fire-bolt", "name": "Fire Bolt", "level": 0}],
         "known": [{"id": "magic-missile", "name": "Magic Missile", "level": 1}],
-    }
+    }]
     resolution["derived"]["spellSaveDC"] = 13
     resolution["derived"]["spellAttackBonus"] = 5
     text = _extract_text(to_pdf(resolution))
     assert "Fire Bolt" in text
     assert "Magic Missile" in text
     assert "13" in text
+
+
+def test_includes_spells_for_every_caster_in_a_multiclass_character():
+    # Regression for the "secondary caster's spells vanish" bug: a
+    # multi-entry sheet["spells"] list must render every class's spells.
+    resolution = _sample_resolution()
+    resolution["sheet"]["level"] = 5
+    resolution["sheet"]["classes"] = [
+        {"id": "fighter", "name": "Fighter", "level": 3, "subclass": None},
+        {"id": "wizard", "name": "Wizard", "level": 2, "subclass": None},
+    ]
+    resolution["sheet"]["spells"] = [
+        {
+            "classId": "fighter",
+            "cantrips": [],
+            "known": [{"id": "hunters-mark", "name": "Hunter's Mark", "level": 1}],
+        },
+        {
+            "classId": "wizard",
+            "cantrips": [{"id": "fire-bolt", "name": "Fire Bolt", "level": 0}],
+            "known": [{"id": "magic-missile", "name": "Magic Missile", "level": 1}],
+        },
+    ]
+    text = _extract_text(to_pdf(resolution))
+    assert "Fire Bolt" in text
+    assert "Magic Missile" in text
+    assert "Hunter" in text
 
 
 def test_includes_subclass_name_when_present():
@@ -136,10 +164,11 @@ def test_handles_a_long_character_spanning_multiple_pages():
     # handle it transparently.
     resolution = _sample_resolution()
     resolution["sheet"]["classes"] = [{"id": "wizard", "name": "Wizard", "level": 1, "subclass": None}]
-    resolution["sheet"]["spells"] = {
+    resolution["sheet"]["spells"] = [{
+        "classId": "wizard",
         "cantrips": [{"id": f"cantrip-{i}", "name": f"Cantrip Spell {i}", "level": 0} for i in range(10)],
         "known": [{"id": f"spell-{i}", "name": f"Known Spell {i}", "level": 1} for i in range(15)],
-    }
+    }]
     resolution["sheet"]["equipment"] = {
         "granted": [{"itemId": f"item-{i}", "name": f"Granted Item {i}", "qty": 1} for i in range(10)],
         "chosen": [{"itemId": f"item2-{i}", "name": f"Chosen Item {i}", "qty": 1} for i in range(10)],

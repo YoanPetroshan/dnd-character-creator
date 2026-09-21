@@ -5,12 +5,10 @@ fixed-order pass: sources → species ability bonuses → final ability scores
 → derived stats → choice generation/validation (§4a) — never iterates to a
 fixpoint.
 
-Single-class leveling (1-20) is in scope: draft.classes[0].subclassId is
-read but never trusted to gate a feature choice unless it actually
-matches, so any feature gated to a specific subclass is filtered out
-rather than guessed at. Multiclass remains out of scope (see the plan's
-Global Constraints). Equipment IS in scope as of Phase 2a — see
-engine/equipment.py and the
+Leveling (1-20) is in scope: each resolved class's subclassId is read but
+never trusted to gate a feature choice unless it actually matches, so any
+feature gated to a specific subclass is filtered out rather than guessed
+at. Equipment IS in scope as of Phase 2a — see engine/equipment.py and the
 _equipment_choice_templates/_gather_equipped_items/_fixed_equipment
 functions below. Spellcasting IS in scope as of Phase 2c — see
 engine/spells.py and the _spell_choice_templates function below.
@@ -18,7 +16,23 @@ engine/spells.py and the _spell_choice_templates function below.
 Single-class leveling (1-20), subclass selection, and ASI choices ARE in
 scope as of Phase 3a — see engine/asi.py, the _asi_choice_templates/
 _apply_asi_progression functions, and SUBCLASS_UNLOCK_LEVEL in
-catalog/reference_data.py. Multiclassing remains out of scope (Phase 3b).
+catalog/reference_data.py.
+
+Multiclassing core IS in scope as of Phase 3b-i: draft.classes is a list
+(not just a single class), resolved via resolved_classes with per-class
+progression (its own level, subclass, ASIs, feature/spell choices), a
+combined proficiency bonus and hit-dice string, and the multiclass-aware
+proficiency rules — a PRIMARY class (resolved_classes[0], index 0) gets
+its full normal grant and level-1 proficiency CHOICE, while every
+SECONDARY class gets only its (usually smaller) multi_classing.*
+fixed-proficiency grant and proficiency_choices choice (see
+_multiclass_proficiency_choice_templates and the `rc["index"] == 0`
+gating throughout resolve()), plus multiclass ability-score prerequisites
+(_multiclass_prerequisite_problems). sheet["spells"] aggregates every
+resolved class's spellcasting, not just the primary's. Still out of scope:
+a genuinely COMBINED spell-slot table across multiple caster classes
+(Phase 3b-ii — spellSaveDC/spellAttackBonus stay primary-class-only for
+now) and pruning multiclass-related warnings (Phase 3c).
 """
 from __future__ import annotations
 
@@ -677,8 +691,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc_asi_scores_by_level, final_scores = _apply_asi_progression(final_scores, rc_asi_levels, rc_class_choices, rc_cls_id)
         rc["asi_levels"] = rc_asi_levels  # stashed for Task 4's prerequisite check convenience, and for sheet assembly
 
-        choice_templates += _class_choice_templates(rc_cls, rc_cls_id)
-        if rc["index"] > 0:
+        if rc["index"] == 0:
+            choice_templates += _class_choice_templates(rc_cls, rc_cls_id)
+        else:
             choice_templates += _multiclass_proficiency_choice_templates(rc_cls, rc_cls_id)
         rc_level_row = catalog.class_level_row(rc_cls_id, rc_level)
         rc["level_row"] = rc_level_row
@@ -806,6 +821,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     equipped_items = _gather_equipped_items(equipment_choices, added_raw if isinstance(added_raw, list) else [], catalog.items)
     chosen_equipment = _chosen_equipment(equipment_choices, catalog.items)
 
+    # Primary class's own cantrip/known-spell choices — used below only for
+    # the primary-only derived spellSaveDC/spellAttackBonus (reshaping those
+    # into per-class values is out of scope for this fix; see Phase 3b-ii).
     cantrip_choice = next((c for c in choices if c["id"] == f"class:{cls_id}:spells-cantrips"), None) if cls_id else None
     known_spells_choice = next((c for c in choices if c["id"] == f"class:{cls_id}:spells-known"), None) if cls_id else None
 
@@ -817,13 +835,34 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             for sid in choice["selected"] if sid in catalog.spells
         ]
 
+    # sheet["spells"] aggregates across EVERY resolved class with
+    # spellcasting, not just the primary one — a secondary caster's
+    # selections previously never reached the sheet (or any export) because
+    # only the primary's cls_id was ever looked up. One entry per class that
+    # actually has a cantrip and/or known-spell Choice this level; a
+    # non-caster (or a caster below its first spell-granting level)
+    # contributes no entry at all, so this stays [] rather than padding out
+    # with empty per-class placeholders.
+    spells_summary: list[dict] = []
+    for rc in resolved_classes:
+        rc_cls, rc_cls_id = rc["cls"], rc["cls_id"]
+        if not (rc_cls and rc_cls_id):
+            continue
+        rc_cantrip_choice = next((c for c in choices if c["id"] == f"class:{rc_cls_id}:spells-cantrips"), None)
+        rc_known_spells_choice = next((c for c in choices if c["id"] == f"class:{rc_cls_id}:spells-known"), None)
+        if not (rc_cantrip_choice or rc_known_spells_choice):
+            continue
+        spells_summary.append({
+            "classId": rc_cls_id,
+            "cantrips": _spell_summaries(rc_cantrip_choice),
+            "known": _spell_summaries(rc_known_spells_choice),
+        })
+
     spell_ability = spells_mod.spellcasting_ability(cls) if cls else None
     has_spellcasting_this_level = bool(cantrip_choice or known_spells_choice)
-    spells_summary = None
     spell_save_dc = None
     spell_attack_bonus = None
     if has_spellcasting_this_level and spell_ability:
-        spells_summary = {"cantrips": _spell_summaries(cantrip_choice), "known": _spell_summaries(known_spells_choice)}
         spell_save_dc = spells_mod.spell_save_dc(prof_bonus, modifiers[spell_ability])
         spell_attack_bonus = spells_mod.spell_attack_bonus(prof_bonus, modifiers[spell_ability])
 

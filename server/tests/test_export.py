@@ -14,7 +14,7 @@ def _sample_resolution():
             "abilities": {"STR": 17, "DEX": 15, "CON": 15, "INT": 11, "WIS": 13, "CHA": 9},
             "proficiencies": {"skills": ["skill-athletics"], "savingThrows": ["STR", "CON"], "languages": ["common"]},
             "equipment": {"granted": [], "chosen": [], "added": []},
-            "spells": None,
+            "spells": [],
             "details": None,
         },
         "derived": {
@@ -56,31 +56,53 @@ def test_to_yaml_includes_no_spells_section_for_a_non_caster():
     resolution = _sample_resolution()
     text = to_yaml(resolution)
     doc = yaml.safe_load(text)
-    assert doc["spells"] is None
+    assert doc["spells"] == []
 
 
 def test_to_yaml_includes_cantrips_and_known_spells_for_a_caster():
     resolution = _sample_resolution()
     resolution["sheet"]["classes"] = [{"id": "wizard", "name": "Wizard", "level": 1, "subclass": None}]
-    resolution["sheet"]["spells"] = {
+    resolution["sheet"]["spells"] = [{
+        "classId": "wizard",
         "cantrips": [{"id": "fire-bolt", "name": "Fire Bolt", "level": 0}],
         "known": [{"id": "magic-missile", "name": "Magic Missile", "level": 1}],
-    }
+    }]
     text = to_yaml(resolution)
     doc = yaml.safe_load(text)
-    assert doc["spells"]["cantrips"][0]["name"] == "Fire Bolt"
-    assert doc["spells"]["known"][0]["name"] == "Magic Missile"
+    assert doc["spells"][0]["cantrips"][0]["name"] == "Fire Bolt"
+    assert doc["spells"][0]["known"][0]["name"] == "Magic Missile"
     assert "Fire Bolt" in text
     assert "Magic Missile" in text
+
+
+def test_to_yaml_includes_a_spells_entry_per_caster_for_a_multiclass_character():
+    # Regression for the "secondary caster's spells vanish" bug — the YAML
+    # export just passes sheet["spells"] straight through, so a
+    # multi-caster list must round-trip with every class's entry intact.
+    resolution = _sample_resolution()
+    resolution["sheet"]["classes"] = [
+        {"id": "fighter", "name": "Fighter", "level": 3, "subclass": None},
+        {"id": "wizard", "name": "Wizard", "level": 2, "subclass": None},
+    ]
+    resolution["sheet"]["spells"] = [{
+        "classId": "wizard",
+        "cantrips": [{"id": "fire-bolt", "name": "Fire Bolt", "level": 0}],
+        "known": [{"id": "magic-missile", "name": "Magic Missile", "level": 1}],
+    }]
+    text = to_yaml(resolution)
+    doc = yaml.safe_load(text)
+    assert len(doc["spells"]) == 1
+    assert doc["spells"][0]["classId"] == "wizard"
 
 
 def test_to_yaml_includes_spell_save_dc_and_attack_bonus_for_a_caster():
     resolution = _sample_resolution()
     resolution["sheet"]["classes"] = [{"id": "cleric", "name": "Cleric", "level": 1, "subclass": None}]
-    resolution["sheet"]["spells"] = {
+    resolution["sheet"]["spells"] = [{
+        "classId": "cleric",
         "cantrips": [{"id": "sacred-flame", "name": "Sacred Flame", "level": 0}],
         "known": [],
-    }
+    }]
     resolution["derived"]["spellSaveDC"] = 13
     resolution["derived"]["spellAttackBonus"] = 5
     text = to_yaml(resolution)
@@ -92,10 +114,11 @@ def test_to_yaml_includes_spell_save_dc_and_attack_bonus_for_a_caster():
 def test_to_yaml_includes_spell_save_dc_and_attack_bonus_for_a_wizard():
     resolution = _sample_resolution()
     resolution["sheet"]["classes"] = [{"id": "wizard", "name": "Wizard", "level": 1, "subclass": None}]
-    resolution["sheet"]["spells"] = {
+    resolution["sheet"]["spells"] = [{
+        "classId": "wizard",
         "cantrips": [{"id": "fire-bolt", "name": "Fire Bolt", "level": 0}],
         "known": [{"id": "magic-missile", "name": "Magic Missile", "level": 1}],
-    }
+    }]
     resolution["derived"]["spellSaveDC"] = 14
     resolution["derived"]["spellAttackBonus"] = 6
     text = to_yaml(resolution)

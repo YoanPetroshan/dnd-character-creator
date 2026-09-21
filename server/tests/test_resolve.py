@@ -270,22 +270,29 @@ def test_duplicate_class_id_is_a_problem_and_only_first_occurrence_counted(catal
 def test_non_primary_class_choice_selections_reach_all_selections(catalog):
     # Review finding 1: all_selections was only ever populated from
     # classes[0]'s own submitted choices, so a second/third class's own
-    # choice selections (here, Wizard's skill-proficiency pick, submitted
-    # on classes[1]) could never be read back — leaving that choice stuck
-    # "pending" no matter what was submitted.
+    # choice selections (here, Rogue's multiclass skill-proficiency pick,
+    # submitted on classes[1]) could never be read back — leaving that
+    # choice stuck "pending" no matter what was submitted.
+    #
+    # Uses Rogue's multiclass-prof-choice-0 (not a primary-only
+    # 1:prof-choice-0 id) because the final-review fix wave made
+    # 1:prof-choice-0 PRIMARY-only — a secondary class no longer gets that
+    # template at all, so asserting on it here would conflate this
+    # all_selections-merging behavior with that separate, already-covered
+    # gating behavior.
     draft = _fighter_acolyte_human_draft(
         classes=[
             {"classId": "fighter", "level": 1, "choices": {}},
             {
-                "classId": "wizard", "level": 1,
-                "choices": {"class:wizard:1:prof-choice-0": ["skill-arcana", "skill-history"]},
+                "classId": "rogue", "level": 1,
+                "choices": {"class:rogue:multiclass-prof-choice-0": ["skill-stealth"]},
             },
         ],
     )
     resolution = resolve(draft, catalog)
-    wizard_skill_choice = next(c for c in resolution["choices"] if c["id"] == "class:wizard:1:prof-choice-0")
-    assert wizard_skill_choice["selected"] == ["skill-arcana", "skill-history"]
-    assert wizard_skill_choice["status"] == "resolved"
+    rogue_skill_choice = next(c for c in resolution["choices"] if c["id"] == "class:rogue:multiclass-prof-choice-0")
+    assert rogue_skill_choice["selected"] == ["skill-stealth"]
+    assert rogue_skill_choice["status"] == "resolved"
 
 
 def test_invalid_large_level_does_not_spuriously_trigger_total_level_exceeded(catalog):
@@ -746,7 +753,10 @@ def test_paladin_gets_no_spell_choices_at_level_1(catalog):
     resolution = resolve(_bare_class_draft("paladin"), catalog)
     spell_choice_ids = [c["id"] for c in resolution["choices"] if "spells" in c["id"]]
     assert spell_choice_ids == []
-    assert resolution["sheet"]["spells"] is None
+    # sheet["spells"] is a LIST (one entry per class with spellcasting this
+    # level) as of the Phase 3b-i final-review fix — a character with no
+    # spellcaster classes gets an empty list, not None.
+    assert resolution["sheet"]["spells"] == []
     assert resolution["derived"]["spellSaveDC"] is None
     assert resolution["derived"]["spellAttackBonus"] is None
 
@@ -755,7 +765,7 @@ def test_fighter_has_no_spell_choices_or_derived_spell_stats(catalog):
     resolution = resolve(_bare_class_draft("fighter"), catalog)
     spell_choice_ids = [c["id"] for c in resolution["choices"] if "spells" in c["id"]]
     assert spell_choice_ids == []
-    assert resolution["sheet"]["spells"] is None
+    assert resolution["sheet"]["spells"] == []
     assert resolution["derived"]["spellSaveDC"] is None
 
 
@@ -782,8 +792,13 @@ def test_selected_cantrips_and_known_spells_appear_in_the_sheet(catalog):
         }],
     )
     resolution = resolve(draft, catalog)
-    assert resolution["sheet"]["spells"]["cantrips"][0]["id"] == cantrip_id
-    assert resolution["sheet"]["spells"]["known"][0]["id"] == spell_id
+    # sheet["spells"] is a list of one entry per spellcasting class; a
+    # single-class Wizard draft has exactly one entry.
+    spells = resolution["sheet"]["spells"]
+    assert len(spells) == 1
+    assert spells[0]["classId"] == "wizard"
+    assert spells[0]["cantrips"][0]["id"] == cantrip_id
+    assert spells[0]["known"][0]["id"] == spell_id
 
 
 def test_derived_spell_save_dc_and_attack_bonus_use_the_spellcasting_ability(catalog):
@@ -1426,3 +1441,149 @@ def test_single_class_draft_never_gets_a_multiclass_prerequisite_problem(catalog
     )
     resolution = resolve(draft, catalog)
     assert not any(p["id"].startswith("multiclass-prerequisite-unmet") for p in resolution["problems"])
+
+
+# --- Final-review fix wave (Phase 3b-i) ---
+#
+# Finding 1: `_class_choice_templates` (the PRIMARY-only level-1
+# proficiency CHOICE, e.g. Rogue's "choose 4 skills") was called
+# unconditionally for every resolved class, including secondary ones —
+# even though the FIXED-grant path 30 lines below was already correctly
+# gated on `rc["index"] == 0`. A secondary Wizard (which grants no skill
+# proficiencies at all when multiclassed into) wrongly got a
+# choose-2-skills card, and a secondary Rogue got BOTH its primary
+# choose-4 card AND the correct multiclass choose-1 card.
+#
+# Finding 2: the cantrip/known-spell Choice lookup used only the PRIMARY
+# class's cls_id, so a secondary spellcaster's fully-selected spells never
+# reached sheet["spells"] or any export, even though the Choice itself was
+# resolved in resolution["choices"].
+
+def test_secondary_wizard_does_not_get_the_primary_level_1_proficiency_choice(catalog):
+    # Fighter 2 / Wizard 1: Wizard has proficiency_choices (a level-1
+    # choose-2-skills grant) but NO multi_classing.proficiency_choices, so
+    # as a secondary class it should get neither choice template at all.
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "fighter", "level": 2, "choices": {}},
+            {"classId": "wizard", "level": 1, "choices": {}},
+        ],
+    )
+    resolution = resolve(draft, catalog)
+    choice_ids = [c["id"] for c in resolution["choices"]]
+    assert "class:wizard:1:prof-choice-0" not in choice_ids
+    assert "class:wizard:multiclass-prof-choice-0" not in choice_ids
+
+
+def test_secondary_rogue_gets_only_the_multiclass_proficiency_choice(catalog):
+    # Fighter 2 / Rogue 1: Rogue as a SECONDARY class must get only its
+    # multiclass-prof-choice-0 (choose 1) — not also its primary-only
+    # 1:prof-choice-0 (choose 4), which would grant 5 skills instead of 1.
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "fighter", "level": 2, "choices": {}},
+            {"classId": "rogue", "level": 1, "choices": {}},
+        ],
+    )
+    resolution = resolve(draft, catalog)
+    choice_ids = [c["id"] for c in resolution["choices"]]
+    assert "class:rogue:1:prof-choice-0" not in choice_ids
+    mc_choice = next(c for c in resolution["choices"] if c["id"] == "class:rogue:multiclass-prof-choice-0")
+    assert mc_choice["count"] == 1
+
+
+def test_secondary_class_does_not_get_the_primary_proficiency_choice(catalog):
+    # Mirror of test_primary_class_does_not_get_a_multiclass_proficiency_choice:
+    # confirms the gating is symmetric in both directions, using Rogue (which
+    # has both a primary-only and a multiclass-only choice) as the primary
+    # class this time — Rogue as PRIMARY must keep its normal prof-choice-0.
+    draft = _fighter_acolyte_human_draft(classes=[{"classId": "rogue", "level": 1, "choices": {}}])
+    resolution = resolve(draft, catalog)
+    choice_ids = [c["id"] for c in resolution["choices"]]
+    assert "class:rogue:1:prof-choice-0" in choice_ids
+    assert "class:rogue:multiclass-prof-choice-0" not in choice_ids
+
+
+def test_single_class_spellcaster_spells_appear_as_a_list_of_one(catalog):
+    # Regression, in the new shape: a single-class caster's spells still
+    # reach the sheet, just as one entry in a list rather than a bare object.
+    cantrip_id = next(
+        s["index"] for s in catalog.spells.values()
+        if s["level"] == 0 and any(c["index"] == "wizard" for c in s["classes"])
+    )
+    spell_id = next(
+        s["index"] for s in catalog.spells.values()
+        if s["level"] == 1 and any(c["index"] == "wizard" for c in s["classes"])
+    )
+    draft = _wizard_draft(
+        int_score=16,
+        classes=[{
+            "classId": "wizard", "level": 1,
+            "choices": {
+                "class:wizard:spells-cantrips": [cantrip_id],
+                "class:wizard:spells-known": [spell_id],
+            },
+        }],
+    )
+    resolution = resolve(draft, catalog)
+    spells = resolution["sheet"]["spells"]
+    assert isinstance(spells, list)
+    assert len(spells) == 1
+    assert spells[0]["classId"] == "wizard"
+    assert spells[0]["cantrips"][0]["id"] == cantrip_id
+    assert spells[0]["known"][0]["id"] == spell_id
+
+
+def test_secondary_class_spellcaster_spells_appear_in_the_sheet(catalog):
+    # The bug fix itself: Fighter 3 / Wizard 2, with Wizard's cantrips and
+    # known spells fully selected. Before the fix, sheet["spells"] never
+    # found Wizard's choices because the lookup only checked the primary
+    # class's cls_id ("fighter") — the selections silently vanished from the
+    # sheet and every export despite being `status: "resolved"` in
+    # resolution["choices"].
+    cantrip_id = next(
+        s["index"] for s in catalog.spells.values()
+        if s["level"] == 0 and any(c["index"] == "wizard" for c in s["classes"])
+    )
+    spell_id = next(
+        s["index"] for s in catalog.spells.values()
+        if s["level"] == 1 and any(c["index"] == "wizard" for c in s["classes"])
+    )
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "fighter", "level": 3, "choices": {}},
+            {
+                "classId": "wizard", "level": 2,
+                "choices": {
+                    "class:wizard:spells-cantrips": [cantrip_id],
+                    "class:wizard:spells-known": [spell_id],
+                },
+            },
+        ],
+        abilities={"method": "manual", "base": {"STR": 16, "DEX": 14, "CON": 14, "INT": 16, "WIS": 12, "CHA": 8}},
+    )
+    resolution = resolve(draft, catalog)
+    spells = resolution["sheet"]["spells"]
+    wizard_entry = next((e for e in spells if e["classId"] == "wizard"), None)
+    assert wizard_entry is not None, f"wizard's spells never made it into sheet['spells']: {spells}"
+    assert wizard_entry["cantrips"][0]["id"] == cantrip_id
+    assert wizard_entry["known"][0]["id"] == spell_id
+    # Primary-class-only derived spell stats are explicitly out of scope for
+    # this fix (see the final review) — Fighter isn't a caster, so both
+    # stay None even though Wizard (secondary) is a real caster.
+    assert resolution["derived"]["spellSaveDC"] is None
+    assert resolution["derived"]["spellAttackBonus"] is None
+
+
+def test_non_caster_secondary_class_adds_no_spurious_spell_entry(catalog):
+    # Fighter 2 / Rogue 1: neither class is a spellcaster, so
+    # sheet["spells"] must be an empty list — not an entry with empty
+    # cantrips/known for a class that was never a caster in the first place.
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "fighter", "level": 2, "choices": {}},
+            {"classId": "rogue", "level": 1, "choices": {}},
+        ],
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["spells"] == []

@@ -166,22 +166,31 @@ def to_pdf(resolution: dict) -> bytes:
     if not any_equipment:
         pdf.body("—")
 
+    # sheet["spells"] is a list with one entry per class that has
+    # spellcasting this level (multiclass-aware as of the Phase 3b-i
+    # final-review fix — a single-class caster still gets a one-entry
+    # list). derived["spellSaveDC"]/["spellAttackBonus"] stay PRIMARY-class-
+    # only (see resolve.py), so they're shown once, not per class.
     spells = sheet["spells"]
-    if spells is not None:
+    if spells:
         pdf.h2("Заклинания")
         if derived["spellSaveDC"] is not None:
             pdf.body(
                 f"Спасяване за заклинание (DC): {derived['spellSaveDC']}   "
                 f"Бонус за атака: {_fmt_mod(derived['spellAttackBonus'])}"
             )
-        if spells["cantrips"]:
-            pdf.h3("Трикове")
-            for s in spells["cantrips"]:
-                pdf.bullet(s["name"])
-        if spells["known"]:
-            pdf.h3("Известни/Подготвени заклинания")
-            for s in spells["known"]:
-                pdf.bullet(f"{s['name']} (ниво {s['level']})")
+        class_names = {c["id"]: c["name"] for c in classes}
+        multi_caster = len(spells) > 1
+        for class_spells in spells:
+            suffix = f" ({class_names.get(class_spells['classId'], class_spells['classId'])})" if multi_caster else ""
+            if class_spells["cantrips"]:
+                pdf.h3(f"Трикове{suffix}")
+                for s in class_spells["cantrips"]:
+                    pdf.bullet(s["name"])
+            if class_spells["known"]:
+                pdf.h3(f"Известни/Подготвени заклинания{suffix}")
+                for s in class_spells["known"]:
+                    pdf.bullet(f"{s['name']} (ниво {s['level']})")
 
     details = sheet["details"]
     if details:

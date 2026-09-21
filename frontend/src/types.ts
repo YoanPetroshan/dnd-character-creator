@@ -92,7 +92,8 @@ export interface SheetSpellSummary {
   level: number;
 }
 
-export interface SheetSpells {
+export interface SheetClassSpells {
+  classId: string;
   cantrips: SheetSpellSummary[];
   known: SheetSpellSummary[];
 }
@@ -146,7 +147,7 @@ export interface Sheet {
   abilities: Record<Ability, number>;
   proficiencies: SheetProficiencies;
   equipment: SheetEquipment;
-  spells: SheetSpells | null;
+  spells: SheetClassSpells[];
   details: CharacterDetails | null;
 }
 

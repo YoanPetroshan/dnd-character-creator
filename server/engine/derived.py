@@ -1,9 +1,10 @@
-"""Pure derived-stat math for a resolved single-class character, including
-per-level HP growth across levels 1-20 (see hit_point_gain_per_level/
-hit_point_max_at_level below). No I/O, no catalog access — every function
-here is independently testable against hand-computed 5e SRD values. All
-ability-keyed dicts use the same UPPERCASE ability keys as
-frontend/src/types.ts's Ability type ("STR"/"DEX"/"CON"/"INT"/"WIS"/"CHA").
+"""Pure derived-stat math for a resolved character, single-class or
+multiclass, including per-level HP growth across levels 1-20 (see
+hit_point_gain_per_level/hit_point_max_at_level below). No I/O, no catalog
+access — every function here is independently testable against
+hand-computed 5e SRD values. All ability-keyed dicts use the same
+UPPERCASE ability keys as frontend/src/types.ts's Ability type
+("STR"/"DEX"/"CON"/"INT"/"WIS"/"CHA").
 Multiclass HP (hit_point_max_multiclass) reuses hit_point_max/hit_point_gain_per_level
 unchanged — see Phase 3b-i design spec for the "only your very first class level
 ever takes the max" rule.

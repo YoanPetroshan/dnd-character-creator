@@ -12,7 +12,7 @@ def _sample_resolution():
             "abilities": {"STR": 17, "DEX": 15, "CON": 15, "INT": 11, "WIS": 13, "CHA": 9},
             "proficiencies": {"skills": ["skill-athletics"], "savingThrows": ["STR", "CON"], "languages": ["common"]},
             "equipment": {"granted": [], "chosen": [], "added": []},
-            "spells": None,
+            "spells": [],
             "details": None,
         },
         "derived": {
@@ -99,16 +99,62 @@ def test_omits_spells_section_for_a_non_caster():
 def test_includes_spells_section_for_a_caster():
     resolution = _sample_resolution()
     resolution["sheet"]["classes"] = [{"id": "wizard", "name": "Wizard", "level": 1, "subclass": None}]
-    resolution["sheet"]["spells"] = {
+    resolution["sheet"]["spells"] = [{
+        "classId": "wizard",
         "cantrips": [{"id": "fire-bolt", "name": "Fire Bolt", "level": 0}],
         "known": [{"id": "magic-missile", "name": "Magic Missile", "level": 1}],
-    }
+    }]
     resolution["derived"]["spellSaveDC"] = 13
     resolution["derived"]["spellAttackBonus"] = 5
     text = to_markdown(resolution)
     assert "Fire Bolt" in text
     assert "Magic Missile" in text
     assert "13" in text
+
+
+def test_includes_spells_for_every_caster_in_a_multiclass_character():
+    # Regression for the "secondary caster's spells vanish" bug: a
+    # multi-entry sheet["spells"] list must render every class's spells,
+    # each subsection labeled with its class name to disambiguate.
+    resolution = _sample_resolution()
+    resolution["sheet"]["level"] = 5
+    resolution["sheet"]["classes"] = [
+        {"id": "fighter", "name": "Fighter", "level": 3, "subclass": None},
+        {"id": "wizard", "name": "Wizard", "level": 2, "subclass": None},
+    ]
+    resolution["sheet"]["spells"] = [
+        {
+            "classId": "fighter",
+            "cantrips": [],
+            "known": [{"id": "hunters-mark", "name": "Hunter's Mark", "level": 1}],
+        },
+        {
+            "classId": "wizard",
+            "cantrips": [{"id": "fire-bolt", "name": "Fire Bolt", "level": 0}],
+            "known": [{"id": "magic-missile", "name": "Magic Missile", "level": 1}],
+        },
+    ]
+    text = to_markdown(resolution)
+    assert "Fire Bolt" in text
+    assert "Magic Missile" in text
+    assert "Hunter's Mark" in text
+    assert "(Wizard)" in text
+    assert "(Fighter)" in text
+
+
+def test_does_not_label_spell_subsections_by_class_for_a_single_caster():
+    # A single-class caster keeps the plain, unlabeled headings it always
+    # had — the per-class label is only needed to disambiguate when there's
+    # more than one caster.
+    resolution = _sample_resolution()
+    resolution["sheet"]["classes"] = [{"id": "wizard", "name": "Wizard", "level": 1, "subclass": None}]
+    resolution["sheet"]["spells"] = [{
+        "classId": "wizard",
+        "cantrips": [{"id": "fire-bolt", "name": "Fire Bolt", "level": 0}],
+        "known": [{"id": "magic-missile", "name": "Magic Missile", "level": 1}],
+    }]
+    text = to_markdown(resolution)
+    assert "(Wizard)" not in text
 
 
 def test_omits_equipment_subsections_that_are_empty():
