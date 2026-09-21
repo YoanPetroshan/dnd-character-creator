@@ -1330,3 +1330,73 @@ def test_fighter_secondary_class_prerequisite_options_str_or_dex(catalog):
     )
     resolution = resolve(draft, catalog)
     assert not any(p["id"] == "multiclass-prerequisite-unmet-fighter" for p in resolution["problems"])
+
+
+# --- Task 4 review-fix regression tests ---
+#
+# Finding 1: the proficiency-bucketing loop gated only on
+# `c["source"]["kind"] == "class"`, which also covers feature subfeature
+# choices, ASI choices, and spell choices — not just proficiency choices.
+# `_categorize_proficiency`'s substring check ("armor" in prof_id) then
+# miscategorized a selected spell like `mage-armor` into
+# sheet.proficiencies.armor right alongside real armor proficiencies.
+#
+# Finding 2: `_multiclass_prerequisite_problems` ran for every resolved
+# class with no guard for "this character only has one class, so
+# multiclassing prerequisites don't apply" — a single-class Wizard with
+# low INT and the preference on produced a spurious
+# multiclass-prerequisite-unmet-wizard problem.
+
+def test_non_proficiency_class_choices_do_not_pollute_proficiency_buckets(catalog):
+    # Fighter 4 / Wizard 1 with REAL selections in every non-proficiency
+    # class-choice slot: an ASI, a feature subfeature (fighting style), and
+    # both wizard spell choices (including mage-armor, the exact spell the
+    # reviewer found leaking into `armor`). None of these ids should ever
+    # land in armor/weapons/tools — only genuine proficiency ids may.
+    cantrip_id = next(
+        s["index"] for s in catalog.spells.values()
+        if s["level"] == 0 and any(c["index"] == "wizard" for c in s["classes"])
+    )
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {
+                "classId": "fighter", "level": 4,
+                "choices": {
+                    "class:fighter:4:asi": ["str-plus-2"],
+                    "class:fighter:1:feature:fighter-fighting-style": ["fighter-fighting-style-defense"],
+                },
+            },
+            {
+                "classId": "wizard", "level": 1,
+                "choices": {
+                    "class:wizard:spells-cantrips": [cantrip_id],
+                    "class:wizard:spells-known": ["mage-armor"],
+                },
+            },
+        ],
+        abilities={"method": "manual", "base": {"STR": 16, "DEX": 14, "CON": 14, "INT": 16, "WIS": 12, "CHA": 8}},
+    )
+    resolution = resolve(draft, catalog)
+    profs = resolution["sheet"]["proficiencies"]
+    leaking_ids = {"mage-armor", cantrip_id, "str-plus-2", "fighter-fighting-style-defense"}
+    for bucket in ("armor", "weapons", "tools"):
+        assert not (leaking_ids & set(profs[bucket])), f"{bucket} leaked a non-proficiency id: {profs[bucket]}"
+    # The real proficiencies must still be there — this is a fix for the
+    # pollution, not a regression on genuine grants.
+    assert "all-armor" in profs["armor"]
+    assert "shields" in profs["armor"]
+    assert "martial-weapons" in profs["weapons"]
+    assert "simple-weapons" in profs["weapons"]
+
+
+def test_single_class_draft_never_gets_a_multiclass_prerequisite_problem(catalog):
+    # A single-class Wizard with INT 10 (below the multiclass prerequisite
+    # of INT >= 13) and the preference ON. Multiclassing prerequisites
+    # apply only when actually multiclassing — a lone class should never
+    # trigger this problem, no matter the preference or ability scores.
+    draft = _bare_class_draft(
+        "wizard",
+        preferences={"advancementType": "milestone", "hitPointType": "fixed", "usePrerequisites": {"feats": True, "multiclass": True}},
+    )
+    resolution = resolve(draft, catalog)
+    assert not any(p["id"].startswith("multiclass-prerequisite-unmet") for p in resolution["problems"])

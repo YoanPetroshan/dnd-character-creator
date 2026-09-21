@@ -286,8 +286,17 @@ def _multiclass_prerequisite_problems(resolved_classes: list[dict], final_scores
     prerequisite is a two-way gate (both the class you already have and
     the class you're adding need their own prerequisite met), which
     matches this loop iterating over all of resolved_classes, not just
-    index > 0. Never hides the class — only appends a problem."""
+    index > 0. Never hides the class — only appends a problem.
+
+    A character with fewer than two actually-resolved classes isn't
+    multiclassing at all, so the check never applies to them regardless of
+    the preference's value — otherwise a single-class character (e.g. a
+    lone Wizard with low INT) would get a spurious
+    multiclass-prerequisite-unmet problem for a class they aren't even
+    multiclassing into."""
     if not use_prerequisites:
+        return []
+    if len([rc for rc in resolved_classes if rc["cls"]]) < 2:
         return []
     problems = []
     for rc in resolved_classes:
@@ -879,8 +888,25 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         else:
             proficient_tools.add(prof_id)
 
+    # Gating on `c["source"]["kind"] == "class"` alone is too broad — it also
+    # covers feature subfeature choices, ASI choices, and spell choices
+    # (cantrips/known spells), none of which are proficiency choices. A
+    # selected spell like `mage-armor` would otherwise be fed into
+    # `_categorize_proficiency`, whose substring check ("armor" in prof_id)
+    # miscategorizes it into `armor` right next to real armor proficiencies.
+    # The two real proficiency-choice id shapes are
+    # `class:{cls_id}:1:prof-choice-{i}` (primary class's level-1 choice)
+    # and `class:{cls_id}:multiclass-prof-choice-{i}` (this class's
+    # multiclass-only choice) — both, and only those, contain the substring
+    # "prof-choice-" (verified character-by-character: the primary id's
+    # "...:1:prof-choice-0" contains ":prof-choice-", but the multiclass
+    # id's "...:multiclass-prof-choice-0" does NOT — the character before
+    # "prof-choice-" there is "-", not ":" — so a leading-colon substring
+    # check would miss the multiclass pattern; "prof-choice-" without the
+    # colon is what actually matches both, confirmed against every cid
+    # pattern generated in this file).
     for c in choices:
-        if c["source"]["kind"] == "class":
+        if c["source"]["kind"] == "class" and "prof-choice-" in c["id"]:
             for s in c["selected"]:
                 if not s.startswith("skill-"):
                     _categorize_proficiency(s)
