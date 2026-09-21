@@ -50,6 +50,21 @@ def _species_label(species: dict | None) -> str:
     return label
 
 
+def _class_label(classes: list) -> str:
+    if not classes:
+        return "—"
+    parts = []
+    for c in classes:
+        # Single-class drafts keep the plain name (the level is already
+        # shown once, in the "Ниво N" prefix); a multiclass draft's level
+        # line covers only the total, so each class here carries its own.
+        part = c["name"] if len(classes) == 1 else f"{c['name']} {c['level']}"
+        if c.get("subclass"):
+            part += f" ({c['subclass']['name']})"
+        parts.append(part)
+    return " / ".join(parts)
+
+
 class _SheetPDF(FPDF):
     def __init__(self):
         super().__init__()
@@ -88,12 +103,10 @@ def to_pdf(resolution: dict) -> bytes:
     derived = resolution["derived"]
     pdf = _SheetPDF()
 
-    cls = sheet["class"]
+    classes = sheet["classes"]
     bg = sheet["background"]
 
-    class_label = cls["name"] if cls else "—"
-    if cls and cls.get("subclass"):
-        class_label += f" ({cls['subclass']['name']})"
+    class_label = _class_label(classes)
 
     pdf.h1(sheet["name"] or "Безименен герой")
     pdf.body(

@@ -10,7 +10,7 @@ def _sample_resolution():
         "sheet": {
             "name": "Тестов Герой",
             "level": 1,
-            "class": {"id": "fighter", "name": "Fighter"},
+            "classes": [{"id": "fighter", "name": "Fighter", "level": 1, "subclass": None}],
             "background": {"id": "acolyte", "name": "Acolyte"},
             "species": {"id": "human", "name": "Human", "subspecies": None},
             "abilities": {"STR": 17, "DEX": 15, "CON": 15, "INT": 11, "WIS": 13, "CHA": 9},
@@ -82,7 +82,7 @@ def test_omits_spells_section_for_a_non_caster():
 
 def test_includes_spells_for_a_caster():
     resolution = _sample_resolution()
-    resolution["sheet"]["class"] = {"id": "wizard", "name": "Wizard"}
+    resolution["sheet"]["classes"] = [{"id": "wizard", "name": "Wizard", "level": 1, "subclass": None}]
     resolution["sheet"]["spells"] = {
         "cantrips": [{"id": "fire-bolt", "name": "Fire Bolt", "level": 0}],
         "known": [{"id": "magic-missile", "name": "Magic Missile", "level": 1}],
@@ -97,10 +97,24 @@ def test_includes_spells_for_a_caster():
 
 def test_includes_subclass_name_when_present():
     resolution = _sample_resolution()
-    resolution["sheet"]["class"] = {"id": "cleric", "name": "Cleric", "subclass": {"id": "life", "name": "Life"}}
+    resolution["sheet"]["classes"] = [
+        {"id": "cleric", "name": "Cleric", "level": 1, "subclass": {"id": "life", "name": "Life"}}
+    ]
     text = _extract_text(to_pdf(resolution))
     assert "Life" in text
     assert "Cleric" in text
+
+
+def test_includes_every_class_for_a_multiclass_character():
+    resolution = _sample_resolution()
+    resolution["sheet"]["level"] = 5
+    resolution["sheet"]["classes"] = [
+        {"id": "fighter", "name": "Fighter", "level": 3, "subclass": None},
+        {"id": "wizard", "name": "Wizard", "level": 2, "subclass": None},
+    ]
+    text = _extract_text(to_pdf(resolution))
+    assert "Fighter 3" in text
+    assert "Wizard 2" in text
 
 
 def test_includes_multiline_detail_values_intact():
@@ -121,7 +135,7 @@ def test_handles_a_long_character_spanning_multiple_pages():
     # even if it overflows one page — fpdf2's auto page break should
     # handle it transparently.
     resolution = _sample_resolution()
-    resolution["sheet"]["class"] = {"id": "wizard", "name": "Wizard"}
+    resolution["sheet"]["classes"] = [{"id": "wizard", "name": "Wizard", "level": 1, "subclass": None}]
     resolution["sheet"]["spells"] = {
         "cantrips": [{"id": f"cantrip-{i}", "name": f"Cantrip Spell {i}", "level": 0} for i in range(10)],
         "known": [{"id": f"spell-{i}", "name": f"Known Spell {i}", "level": 1} for i in range(15)],

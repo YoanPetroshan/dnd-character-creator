@@ -13,7 +13,7 @@ def to_yaml(resolution: dict) -> str:
     doc = {
         "name": sheet["name"],
         "level": sheet["level"],
-        "class": sheet["class"],
+        "classes": sheet["classes"],
         "background": sheet["background"],
         "species": sheet["species"],
         "details": sheet["details"],

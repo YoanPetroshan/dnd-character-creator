@@ -6,7 +6,7 @@ def _sample_resolution():
         "sheet": {
             "name": "Тестов Герой",
             "level": 1,
-            "class": {"id": "fighter", "name": "Fighter"},
+            "classes": [{"id": "fighter", "name": "Fighter", "level": 1, "subclass": None}],
             "background": {"id": "acolyte", "name": "Acolyte"},
             "species": {"id": "human", "name": "Human", "subspecies": None},
             "abilities": {"STR": 17, "DEX": 15, "CON": 15, "INT": 11, "WIS": 13, "CHA": 9},
@@ -98,7 +98,7 @@ def test_omits_spells_section_for_a_non_caster():
 
 def test_includes_spells_section_for_a_caster():
     resolution = _sample_resolution()
-    resolution["sheet"]["class"] = {"id": "wizard", "name": "Wizard"}
+    resolution["sheet"]["classes"] = [{"id": "wizard", "name": "Wizard", "level": 1, "subclass": None}]
     resolution["sheet"]["spells"] = {
         "cantrips": [{"id": "fire-bolt", "name": "Fire Bolt", "level": 0}],
         "known": [{"id": "magic-missile", "name": "Magic Missile", "level": 1}],
@@ -149,10 +149,25 @@ def test_includes_only_submitted_details_fields():
 
 def test_includes_subclass_name_when_present():
     resolution = _sample_resolution()
-    resolution["sheet"]["class"] = {"id": "cleric", "name": "Cleric", "subclass": {"id": "life", "name": "Life"}}
+    resolution["sheet"]["classes"] = [
+        {"id": "cleric", "name": "Cleric", "level": 1, "subclass": {"id": "life", "name": "Life"}}
+    ]
     text = to_markdown(resolution)
     assert "Life" in text
     assert "Ниво 1 Cleric (Life)" in text
+
+
+def test_includes_every_class_for_a_multiclass_character():
+    resolution = _sample_resolution()
+    resolution["sheet"]["level"] = 5
+    resolution["sheet"]["classes"] = [
+        {"id": "fighter", "name": "Fighter", "level": 3, "subclass": None},
+        {"id": "wizard", "name": "Wizard", "level": 2, "subclass": None},
+    ]
+    text = to_markdown(resolution)
+    assert "Fighter 3" in text
+    assert "Wizard 2" in text
+    assert "Ниво 5 Fighter 3 / Wizard 2" in text
 
 
 def test_multiline_detail_value_stays_intact_and_does_not_break_list_structure():

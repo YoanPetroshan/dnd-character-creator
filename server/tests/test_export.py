@@ -8,7 +8,7 @@ def _sample_resolution():
         "sheet": {
             "name": "Тестов Герой",
             "level": 1,
-            "class": {"id": "fighter", "name": "Fighter"},
+            "classes": [{"id": "fighter", "name": "Fighter", "level": 1, "subclass": None}],
             "background": {"id": "acolyte", "name": "Acolyte"},
             "species": {"id": "human", "name": "Human", "subspecies": None},
             "abilities": {"STR": 17, "DEX": 15, "CON": 15, "INT": 11, "WIS": 13, "CHA": 9},
@@ -39,7 +39,7 @@ def test_to_yaml_produces_parseable_yaml_with_expected_fields():
     doc = yaml.safe_load(text)
     assert doc["name"] == "Тестов Герой"
     assert doc["level"] == 1
-    assert doc["class"] == {"id": "fighter", "name": "Fighter"}
+    assert doc["classes"] == [{"id": "fighter", "name": "Fighter", "level": 1, "subclass": None}]
     assert doc["abilities"]["STR"] == 17
     assert doc["hitPointMax"] == 12
     assert doc["armorClass"] == 12
@@ -61,7 +61,7 @@ def test_to_yaml_includes_no_spells_section_for_a_non_caster():
 
 def test_to_yaml_includes_cantrips_and_known_spells_for_a_caster():
     resolution = _sample_resolution()
-    resolution["sheet"]["class"] = {"id": "wizard", "name": "Wizard"}
+    resolution["sheet"]["classes"] = [{"id": "wizard", "name": "Wizard", "level": 1, "subclass": None}]
     resolution["sheet"]["spells"] = {
         "cantrips": [{"id": "fire-bolt", "name": "Fire Bolt", "level": 0}],
         "known": [{"id": "magic-missile", "name": "Magic Missile", "level": 1}],
@@ -76,7 +76,7 @@ def test_to_yaml_includes_cantrips_and_known_spells_for_a_caster():
 
 def test_to_yaml_includes_spell_save_dc_and_attack_bonus_for_a_caster():
     resolution = _sample_resolution()
-    resolution["sheet"]["class"] = {"id": "cleric", "name": "Cleric"}
+    resolution["sheet"]["classes"] = [{"id": "cleric", "name": "Cleric", "level": 1, "subclass": None}]
     resolution["sheet"]["spells"] = {
         "cantrips": [{"id": "sacred-flame", "name": "Sacred Flame", "level": 0}],
         "known": [],
@@ -91,7 +91,7 @@ def test_to_yaml_includes_spell_save_dc_and_attack_bonus_for_a_caster():
 
 def test_to_yaml_includes_spell_save_dc_and_attack_bonus_for_a_wizard():
     resolution = _sample_resolution()
-    resolution["sheet"]["class"] = {"id": "wizard", "name": "Wizard"}
+    resolution["sheet"]["classes"] = [{"id": "wizard", "name": "Wizard", "level": 1, "subclass": None}]
     resolution["sheet"]["spells"] = {
         "cantrips": [{"id": "fire-bolt", "name": "Fire Bolt", "level": 0}],
         "known": [{"id": "magic-missile", "name": "Magic Missile", "level": 1}],
@@ -139,3 +139,19 @@ def test_to_yaml_includes_equipment():
     doc = yaml.safe_load(text)
     assert doc["equipment"]["granted"][0]["name"] == "Chain Mail"
     assert "Chain Mail" in text
+
+
+def test_to_yaml_includes_every_class_for_a_multiclass_character():
+    resolution = _sample_resolution()
+    resolution["sheet"]["classes"] = [
+        {"id": "fighter", "name": "Fighter", "level": 3, "subclass": None},
+        {"id": "wizard", "name": "Wizard", "level": 2, "subclass": None},
+    ]
+    text = to_yaml(resolution)
+    doc = yaml.safe_load(text)
+    assert doc["classes"] == [
+        {"id": "fighter", "name": "Fighter", "level": 3, "subclass": None},
+        {"id": "wizard", "name": "Wizard", "level": 2, "subclass": None},
+    ]
+    assert "Fighter" in text
+    assert "Wizard" in text

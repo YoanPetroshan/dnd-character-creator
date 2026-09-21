@@ -45,7 +45,7 @@ def test_resolve_real_draft_returns_computed_values(client):
     assert resp.status_code == 200
     body = resp.get_json()
     assert body["problems"] == []
-    assert body["sheet"]["class"]["id"] == "fighter"
+    assert body["sheet"]["classes"][0]["id"] == "fighter"
     assert body["derived"]["hitPointMax"] == 12
     assert body["derived"]["armorClass"] == 12
     skill_choice = next(c for c in body["choices"] if c["label"] == "Skill Proficiencies")

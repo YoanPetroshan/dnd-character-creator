@@ -40,7 +40,7 @@ def test_empty_draft_resolves_without_error_or_problems(catalog):
     assert resolution["choices"] == []
     assert resolution["sheet"]["name"] == ""
     assert resolution["sheet"]["level"] == 0
-    assert resolution["sheet"]["class"] is None
+    assert resolution["sheet"]["classes"] == []
 
 
 def test_fighter_acolyte_human_produces_expected_sheet_and_derived(catalog):
@@ -49,7 +49,7 @@ def test_fighter_acolyte_human_produces_expected_sheet_and_derived(catalog):
     sheet = resolution["sheet"]
     assert sheet["name"] == "Torvin Bracewell"
     assert sheet["level"] == 1
-    assert sheet["class"] == {"id": "fighter", "name": "Fighter", "subclass": None}
+    assert sheet["classes"] == [{"id": "fighter", "name": "Fighter", "level": 1, "subclass": None}]
     assert sheet["background"] == {"id": "acolyte", "name": "Acolyte"}
     assert sheet["species"]["id"] == "human"
     assert sheet["species"]["subspecies"] is None
@@ -216,20 +216,18 @@ def test_species_overlap_does_not_affect_a_race_with_no_automatic_skill_grant(ca
     assert not any("Human" in (o.get("disabledReason") or "") for o in skill_choice["options"])
 
 
-def test_multiclass_draft_sheet_still_reflects_only_the_first_class(catalog):
-    # Multiclassing is now resolved for real (see the tests below), but
-    # sheet assembly (background/species/equipment/final sheet) hasn't been
-    # updated to multiclass yet — that's Tasks 3-5 in this plan. Until then
-    # the alias block in resolve() keeps `classes[0]` as "the primary
-    # class" for those purposes, so no multiclass-unsupported problem is
-    # produced, and the sheet still reflects only the first class.
+def test_multiclass_draft_sheet_reflects_every_class(catalog):
+    # Multiclassing is now resolved for real, and sheet assembly (Task 5)
+    # renders every class in draft.classes — not just the first — so no
+    # multiclass-unsupported problem is produced and both classes appear.
     draft = _fighter_acolyte_human_draft(classes=[
         {"classId": "fighter", "level": 1, "choices": {}},
         {"classId": "wizard", "level": 1, "choices": {}},
     ])
     resolution = resolve(draft, catalog)
     assert not any(p["id"] == "multiclass-unsupported" for p in resolution["problems"])
-    assert resolution["sheet"]["class"]["id"] == "fighter"
+    class_ids = [c["id"] for c in resolution["sheet"]["classes"]]
+    assert class_ids == ["fighter", "wizard"]
 
 
 def test_two_classes_no_longer_produce_multiclass_unsupported(catalog):
@@ -323,7 +321,7 @@ def test_unknown_class_id_produces_a_problem_not_a_crash(catalog):
     draft = _fighter_acolyte_human_draft(classes=[{"classId": "not-a-class", "level": 1, "choices": {}}])
     resolution = resolve(draft, catalog)
     assert any(p["id"] == "unknown-class" for p in resolution["problems"])
-    assert resolution["sheet"]["class"] is None
+    assert resolution["sheet"]["classes"] == []
 
 
 def test_ability_score_out_of_range_produces_a_problem(catalog):
@@ -1082,12 +1080,44 @@ def test_cleric_with_subclass_puts_it_on_the_resolved_sheet(catalog):
         classes=[{"classId": "cleric", "level": 1, "subclassId": "life", "choices": {}}],
     )
     resolution = resolve(draft, catalog)
-    assert resolution["sheet"]["class"]["subclass"] == {"id": "life", "name": "Life"}
+    assert resolution["sheet"]["classes"][0]["subclass"] == {"id": "life", "name": "Life"}
 
 
 def test_class_with_no_subclass_selected_has_a_null_subclass_on_the_sheet(catalog):
     resolution = resolve(_fighter_acolyte_human_draft(), catalog)
-    assert resolution["sheet"]["class"]["subclass"] is None
+    assert resolution["sheet"]["classes"][0]["subclass"] is None
+
+
+def test_sheet_classes_is_a_list_with_one_entry_per_class(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "fighter", "level": 3, "choices": {}},
+            {"classId": "wizard", "level": 2, "choices": {}},
+        ],
+    )
+    resolution = resolve(draft, catalog)
+    classes = resolution["sheet"]["classes"]
+    assert len(classes) == 2
+    assert classes[0]["id"] == "fighter" and classes[0]["level"] == 3
+    assert classes[1]["id"] == "wizard" and classes[1]["level"] == 2
+
+
+def test_sheet_classes_is_empty_list_when_no_class_selected(catalog):
+    resolution = resolve(_empty_draft(), catalog)
+    assert resolution["sheet"]["classes"] == []
+
+
+def test_sheet_classes_single_class_still_carries_subclass(catalog):
+    # Regression check: a single-class draft's subclass info (already
+    # tested elsewhere for the OLD sheet["class"] shape) must survive
+    # the list-shape change identically.
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "fighter", "level": 3, "subclassId": "champion", "choices": {}}],
+    )
+    resolution = resolve(draft, catalog)
+    classes = resolution["sheet"]["classes"]
+    assert len(classes) == 1
+    assert classes[0]["subclass"] == {"id": "champion", "name": "Champion"}
 
 
 def test_species_chosen_languages_appear_on_the_sheet(catalog):
@@ -1296,11 +1326,7 @@ def test_multiclass_prerequisite_unmet_is_a_problem_when_preference_on(catalog):
     assert any(p["id"] == "multiclass-prerequisite-unmet-wizard" for p in resolution["problems"])
     # The class must still be FULLY resolved despite the unmet prerequisite
     # (never hidden) — confirmed via Wizard's hit die (1d6) still showing up
-    # in the combined hitDice string. (Note: as of Task 4, `sheet["classes"]`
-    # doesn't exist yet — sheet["class"] is still a single primary-class
-    # object; that shape change is Task 5's job per the plan, so this test
-    # uses `derived.hitDice` instead of the brief's original
-    # `sheet["classes"][1]` assertion to verify Wizard's full resolution.)
+    # in the combined hitDice string.
     assert resolution["derived"]["hitDice"] == "2d10 + 1d6"
 
 

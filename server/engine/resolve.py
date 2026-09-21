@@ -962,11 +962,14 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
 
     sheet = {
         "name": draft.get("name") or "",
-        "level": level if cls else 0,
-        "class": {
-            "id": cls_id, "name": cls["name"],
-            "subclass": {"id": subclass_id, "name": subclass["name"]} if subclass_id and subclass else None,
-        } if cls else None,
+        "level": total_level if resolved_classes else 0,
+        "classes": [
+            {
+                "id": rc["cls_id"], "name": rc["cls"]["name"], "level": rc["level"],
+                "subclass": {"id": rc["subclass_id"], "name": rc["subclass"]["name"]} if rc["subclass_id"] and rc["subclass"] else None,
+            }
+            for rc in resolved_classes if rc["cls"]
+        ],
         "background": {"id": bg_id, "name": bg["name"]} if bg else None,
         "species": {
             "id": race_id, "name": race["name"],
