@@ -18,23 +18,18 @@ interface ClassDetail {
   hit_die?: number; // raw SRD class object field, spread into this response as-is
 }
 
-export function ClassPage() {
+function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolean }) {
   const { draft, dispatch } = useDraft();
-  const { resolution, loading, error, retry } = useResolutionContext();
-  const catalog = useCatalogContext();
+  const { resolution, loading } = useResolutionContext();
   const [tab, setTab] = useState<ClassTab>("features");
   const [classDetail, setClassDetail] = useState<ClassDetail | null>(null);
 
-  const selectedClassId = draft.classes[0]?.classId;
-  const classLevel = draft.classes[0]?.level ?? 1;
+  const classEntry = draft.classes.find((c) => c.classId === classId);
+  const classLevel = classEntry?.level ?? 1;
 
   useEffect(() => {
-    if (!selectedClassId) {
-      setClassDetail(null);
-      return;
-    }
     let cancelled = false;
-    fetch(`/api/catalog/class/${selectedClassId}`)
+    fetch(`/api/catalog/class/${classId}`)
       .then((r) => r.json())
       .then((data: ClassDetail) => {
         if (!cancelled) setClassDetail(data);
@@ -45,13 +40,150 @@ export function ClassPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedClassId]);
+  }, [classId]);
 
-  const classChoices = resolution ? resolution.choices.filter((c) => c.source.kind === "class") : [];
+  const classChoices = resolution
+    ? resolution.choices.filter((c) => c.source.kind === "class" && c.id.startsWith(`class:${classId}:`))
+    : [];
   const featureChoices = classChoices.filter((c) => !isSpellChoiceId(c.id));
   const spellChoices = classChoices.filter((c) => isSpellChoiceId(c.id));
   const hasSpells = spellChoices.length > 0;
   const effectiveTab: ClassTab = hasSpells ? tab : "features";
+
+  const tabFeaturesId = `tab-features-${classId}`;
+  const panelFeaturesId = `panel-features-${classId}`;
+  const tabSpellsId = `tab-spells-${classId}`;
+  const panelSpellsId = `panel-spells-${classId}`;
+
+  function handleChange(choiceId: string, selected: string[]) {
+    dispatch({ type: "SET_CHOICE_SELECTION", source: "class", choiceId, selected });
+  }
+
+  return (
+    <div className="class-block">
+      <h2>
+        {classId}{" "}
+        {!isPrimary && (
+          <button type="button" onClick={() => dispatch({ type: "REMOVE_CLASS", classId })}>
+            ✕ Премахни
+          </button>
+        )}
+      </h2>
+
+      <label>
+        Ниво
+        <input
+          type="number"
+          min={1}
+          max={20}
+          value={classLevel}
+          onChange={(e) => {
+            const parsed = parseInt(e.target.value, 10);
+            if (!Number.isNaN(parsed)) dispatch({ type: "SET_CLASS_LEVEL", classId, level: parsed });
+          }}
+        />
+      </label>
+
+      {classDetail && classDetail.subclassUnlockLevel !== null && classLevel >= classDetail.subclassUnlockLevel && (
+        <label>
+          Подклас
+          <select
+            value={classEntry?.subclassId ?? ""}
+            onChange={(e) => dispatch({ type: "SET_SUBCLASS", classId, subclassId: e.target.value || undefined })}
+          >
+            <option value="">— избери подклас —</option>
+            {classDetail.subclasses.map((s) => (
+              <option key={s.index} value={s.index}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
+      {classDetail && (
+        <p className="higher-levels-teaser">
+          Способности на по-високи нива:{" "}
+          {Object.entries(classDetail.levelFeatureCounts)
+            .filter(([lvl]) => Number(lvl) > classLevel)
+            .reduce((sum, [, count]) => sum + count, 0)}
+        </p>
+      )}
+
+      {draft.preferences.hitPointType === "manual" && classLevel >= 2 && (
+        <div className="hp-rolls">
+          <h3>Хвърляния за точки живот</h3>
+          {Array.from({ length: classLevel - 1 }, (_, i) => i + 2).map((lvl) => (
+            <label key={lvl}>
+              Ниво {lvl}
+              <input
+                type="number"
+                min={1}
+                placeholder={
+                  classDetail?.hit_die !== undefined ? String(Math.floor(classDetail.hit_die / 2) + 1) : undefined
+                }
+                value={classEntry?.hpRolls?.[String(lvl)] ?? ""}
+                onChange={(e) => {
+                  const parsed = parseInt(e.target.value, 10);
+                  if (!Number.isNaN(parsed)) dispatch({ type: "SET_HP_ROLL", classId, level: lvl, value: parsed });
+                }}
+              />
+            </label>
+          ))}
+        </div>
+      )}
+
+      <div className="tab-bar" role="tablist">
+        <button
+          type="button"
+          id={tabFeaturesId}
+          role="tab"
+          aria-selected={effectiveTab === "features"}
+          aria-controls={panelFeaturesId}
+          onClick={() => setTab("features")}
+        >
+          Способности
+        </button>
+        {hasSpells && (
+          <button
+            type="button"
+            id={tabSpellsId}
+            role="tab"
+            aria-selected={effectiveTab === "spells"}
+            aria-controls={panelSpellsId}
+            onClick={() => setTab("spells")}
+          >
+            Заклинания
+          </button>
+        )}
+      </div>
+
+      {effectiveTab === "features" && (
+        <div id={panelFeaturesId} role="tabpanel" aria-labelledby={tabFeaturesId}>
+          {!loading && featureChoices.length === 0 && <p>Няма избори за този клас.</p>}
+          {featureChoices.map((choice) => (
+            <ChoiceCard key={choice.id} choice={choice} onChange={handleChange} />
+          ))}
+        </div>
+      )}
+
+      {effectiveTab === "spells" && (
+        <div id={panelSpellsId} role="tabpanel" aria-labelledby={tabSpellsId}>
+          {spellChoices.map((choice) => (
+            <ChoiceCard key={choice.id} choice={choice} onChange={handleChange} />
+          ))}
+
+          <SpellLibrary key={classId} classId={classId} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function ClassPage() {
+  const { draft, dispatch } = useDraft();
+  const { resolution, loading, error, retry } = useResolutionContext();
+  const catalog = useCatalogContext();
 
   if (error)
     return (
@@ -63,9 +195,8 @@ export function ClassPage() {
       </div>
     );
 
-  function handleChange(choiceId: string, selected: string[]) {
-    dispatch({ type: "SET_CHOICE_SELECTION", source: "class", choiceId, selected });
-  }
+  const takenClassIds = new Set(draft.classes.map((c) => c.classId));
+  const primaryClassId = draft.classes[0]?.classId;
 
   return (
     <div className="page">
@@ -78,142 +209,49 @@ export function ClassPage() {
           </button>
         </p>
       )}
-      <ul className="picker-list">
-        {catalog.classes.map((c) => (
-          <li key={c.id}>
-            <label>
-              <input
-                type="radio"
-                name="class"
-                checked={selectedClassId === c.id}
-                onChange={() => dispatch({ type: "SET_CLASS", classId: c.id })}
-              />
-              {c.name} (d{c.hitDie})
-            </label>
-          </li>
-        ))}
-      </ul>
 
-      {selectedClassId && (
-        <label>
-          Ниво
-          <input
-            type="number"
-            min={1}
-            max={20}
-            value={classLevel}
-            onChange={(e) => {
-              const parsed = parseInt(e.target.value, 10);
-              if (!Number.isNaN(parsed)) dispatch({ type: "SET_CLASS_LEVEL", level: parsed });
-            }}
-          />
-        </label>
+      {!primaryClassId && (
+        <ul className="picker-list">
+          {catalog.classes.map((c) => (
+            <li key={c.id}>
+              <label>
+                <input
+                  type="radio"
+                  name="class"
+                  checked={false}
+                  onChange={() => dispatch({ type: "SET_CLASS", classId: c.id })}
+                />
+                {c.name} (d{c.hitDie})
+              </label>
+            </li>
+          ))}
+        </ul>
       )}
 
-      {selectedClassId &&
-        classDetail &&
-        classDetail.subclassUnlockLevel !== null &&
-        classLevel >= classDetail.subclassUnlockLevel && (
-          <label>
-            Подклас
-            <select
-              value={draft.classes[0]?.subclassId ?? ""}
-              onChange={(e) => {
-                dispatch({ type: "SET_SUBCLASS", subclassId: e.target.value || undefined });
-              }}
-            >
-              <option value="">— избери подклас —</option>
-              {classDetail.subclasses.map((s) => (
-                <option key={s.index} value={s.index}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-
-      {selectedClassId && classDetail && (
-        <p className="higher-levels-teaser">
-          Способности на по-високи нива:{" "}
-          {Object.entries(classDetail.levelFeatureCounts)
-            .filter(([lvl]) => Number(lvl) > classLevel)
-            .reduce((sum, [, count]) => sum + count, 0)}
-        </p>
-      )}
-
-      {selectedClassId && (
+      {primaryClassId && (
         <div className="hp-summary">
-          <strong>Точки живот:</strong>{" "}
-          {resolution ? String(resolution.derived.hitPointMax ?? "—") : "—"}
+          <strong>Точки живот:</strong> {resolution ? String(resolution.derived.hitPointMax ?? "—") : "—"}
         </div>
       )}
 
-      {selectedClassId && draft.preferences.hitPointType === "manual" && classLevel >= 2 && (
-        <div className="hp-rolls">
-          <h3>Хвърляния за точки живот</h3>
-          {Array.from({ length: classLevel - 1 }, (_, i) => i + 2).map((lvl) => (
-            <label key={lvl}>
-              Ниво {lvl}
-              <input
-                type="number"
-                min={1}
-                placeholder={
-                  classDetail?.hit_die !== undefined ? String(Math.floor(classDetail.hit_die / 2) + 1) : undefined
-                }
-                value={draft.classes[0]?.hpRolls?.[String(lvl)] ?? ""}
-                onChange={(e) => {
-                  const parsed = parseInt(e.target.value, 10);
-                  if (!Number.isNaN(parsed)) dispatch({ type: "SET_HP_ROLL", level: lvl, value: parsed });
-                }}
-              />
-            </label>
-          ))}
-        </div>
-      )}
+      {draft.classes.map((c, i) => (
+        <ClassBlock key={c.classId} classId={c.classId} isPrimary={i === 0} />
+      ))}
 
-      {selectedClassId && (
-        <div className="tab-bar" role="tablist">
-          <button
-            type="button"
-            id="tab-features"
-            role="tab"
-            aria-selected={effectiveTab === "features"}
-            aria-controls="panel-features"
-            onClick={() => setTab("features")}
-          >
-            Способности
-          </button>
-          {hasSpells && (
-            <button
-              type="button"
-              id="tab-spells"
-              role="tab"
-              aria-selected={effectiveTab === "spells"}
-              aria-controls="panel-spells"
-              onClick={() => setTab("spells")}
-            >
-              Заклинания
-            </button>
-          )}
-        </div>
-      )}
-
-      {selectedClassId && effectiveTab === "features" && (
-        <div id="panel-features" role="tabpanel" aria-labelledby="tab-features">
-          {!loading && featureChoices.length === 0 && <p>Няма избори за този клас.</p>}
-          {featureChoices.map((choice) => (
-            <ChoiceCard key={choice.id} choice={choice} onChange={handleChange} />
-          ))}
-        </div>
-      )}
-
-      {selectedClassId && effectiveTab === "spells" && (
-        <div id="panel-spells" role="tabpanel" aria-labelledby="tab-spells">
-          {spellChoices.map((choice) => (
-            <ChoiceCard key={choice.id} choice={choice} onChange={handleChange} />
-          ))}
-
-          <SpellLibrary key={selectedClassId} classId={selectedClassId} />
+      {primaryClassId && (
+        <div className="add-class">
+          <h3>+ Добави клас</h3>
+          <ul className="picker-list">
+            {catalog.classes
+              .filter((c) => !takenClassIds.has(c.id))
+              .map((c) => (
+                <li key={c.id}>
+                  <button type="button" onClick={() => dispatch({ type: "ADD_CLASS", classId: c.id })}>
+                    {c.name} (d{c.hitDie})
+                  </button>
+                </li>
+              ))}
+          </ul>
         </div>
       )}
     </div>

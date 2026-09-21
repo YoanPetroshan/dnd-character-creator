@@ -312,3 +312,23 @@ main {
 .hp-rolls input {
   width: 60px;
 }
+
+.hp-summary {
+  margin-bottom: 12px;
+}
+
+.class-block {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background: #fff;
+}
+
+.class-block h2 {
+  margin-top: 0;
+}
+
+.add-class {
+  margin-bottom: 16px;
+}
