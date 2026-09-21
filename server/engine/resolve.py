@@ -481,16 +481,6 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         deduped_classes.append(c)
     classes = deduped_classes
 
-    total_level = 0
-    for c in classes:
-        raw_lvl = c.get("level", 1)
-        try:
-            total_level += int(raw_lvl)
-        except (TypeError, ValueError):
-            pass  # per-entry level validation (below) already reports this
-    if total_level > 20:
-        problems.append({"id": "total-level-exceeded", "message": f"Total character level {total_level} exceeds the 20-level cap."})
-
     resolved_classes: list[dict] = []
     for idx, entry in enumerate(classes):
         entry_cls_id = entry.get("classId")
@@ -528,6 +518,15 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             "index": idx, "cls_id": entry_cls_id, "cls": entry_cls, "level": entry_level,
             "subclass_id": entry_subclass_id, "subclass": entry_subclass, "class_choices": entry_class_choices,
         })
+
+    # Computed AFTER the per-class loop above (not from raw `classes`), so
+    # this reflects each entry's CLAMPED/validated level — an out-of-range
+    # submitted level (e.g. 25) is reset to 1 by that loop, and this check
+    # must agree with the level that's actually used everywhere else in
+    # resolve(), not the raw, never-used submitted value.
+    total_level = sum(rc["level"] for rc in resolved_classes)
+    if total_level > 20:
+        problems.append({"id": "total-level-exceeded", "message": f"Total character level {total_level} exceeds the 20-level cap."})
 
     cls_entry = classes[0] if classes else None
     primary = resolved_classes[0] if resolved_classes else None
@@ -671,8 +670,14 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     details = _sanitized_details(draft.get("details"))
 
     all_selections: dict[str, list[str]] = {}
-    if cls_entry:
-        all_selections.update(cls_entry.get("choices") or {})
+    # Every class's own choice ids are scoped by cls_id (e.g.
+    # "class:fighter:..." vs "class:wizard:...") and never collide across
+    # two different classes' choice sets, so merging every resolved
+    # class's submitted choices here (not just the primary/classes[0]'s)
+    # is safe — and necessary, since the generic choice-resolution loop
+    # below reads selections only from this dict.
+    for rc in resolved_classes:
+        all_selections.update(rc["class_choices"])
     all_selections.update(background_dict.get("choices") or {})
     all_selections.update(species.get("choices") or {})
     all_selections.update(equipment_choices_raw or {})

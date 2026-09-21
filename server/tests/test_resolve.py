@@ -268,6 +268,56 @@ def test_duplicate_class_id_is_a_problem_and_only_first_occurrence_counted(catal
     assert len(prof_choices) == 1
 
 
+def test_non_primary_class_choice_selections_reach_all_selections(catalog):
+    # Review finding 1: all_selections was only ever populated from
+    # classes[0]'s own submitted choices, so a second/third class's own
+    # choice selections (here, Wizard's skill-proficiency pick, submitted
+    # on classes[1]) could never be read back — leaving that choice stuck
+    # "pending" no matter what was submitted.
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "fighter", "level": 1, "choices": {}},
+            {
+                "classId": "wizard", "level": 1,
+                "choices": {"class:wizard:1:prof-choice-0": ["skill-arcana", "skill-history"]},
+            },
+        ],
+    )
+    resolution = resolve(draft, catalog)
+    wizard_skill_choice = next(c for c in resolution["choices"] if c["id"] == "class:wizard:1:prof-choice-0")
+    assert wizard_skill_choice["selected"] == ["skill-arcana", "skill-history"]
+    assert wizard_skill_choice["status"] == "resolved"
+
+
+def test_invalid_large_level_does_not_spuriously_trigger_total_level_exceeded(catalog):
+    # Review finding 2: total_level (feeding the total-level-exceeded
+    # problem) was summed from RAW, unvalidated per-entry levels, before
+    # the per-class loop clamps an out-of-range level like 25 down to 1.
+    # A single class with a garbage level of 25 must not trigger
+    # total-level-exceeded, since the REAL resolved level is 1.
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "fighter", "level": 25, "choices": {}}],
+    )
+    resolution = resolve(draft, catalog)
+    assert not any(p["id"] == "total-level-exceeded" for p in resolution["problems"])
+    assert any(p["id"] == "level-unsupported" for p in resolution["problems"])
+
+
+def test_total_level_exceeded_still_fires_for_two_genuinely_valid_classes(catalog):
+    # Regression guard for the finding-2 fix: two VALID classes whose real
+    # summed level legitimately exceeds 20 must still produce
+    # total-level-exceeded, computed from the clamped/validated levels.
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "fighter", "level": 15, "choices": {}},
+            {"classId": "wizard", "level": 10, "choices": {}},
+        ],
+    )
+    resolution = resolve(draft, catalog)
+    assert any(p["id"] == "total-level-exceeded" for p in resolution["problems"])
+    assert not any(p["id"] == "level-unsupported" for p in resolution["problems"])
+
+
 def test_unknown_class_id_produces_a_problem_not_a_crash(catalog):
     draft = _fighter_acolyte_human_draft(classes=[{"classId": "not-a-class", "level": 1, "choices": {}}])
     resolution = resolve(draft, catalog)
