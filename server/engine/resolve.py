@@ -469,39 +469,74 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     if len(classes) != len(classes_raw):
         problems.append({"id": "malformed-class-entry", "message": "one or more entries in 'classes' were not objects and were ignored."})
 
-    if len(classes) > 1:
-        problems.append({"id": "multiclass-unsupported", "message": "Multiclassing isn't supported yet — pick a single class."})
-        classes = classes[:1]
+    seen_class_ids: set[str] = set()
+    deduped_classes: list[dict] = []
+    for c in classes:
+        cid_check = c.get("classId")
+        if cid_check in seen_class_ids:
+            problems.append({"id": "duplicate-class", "message": f"'{cid_check}' appears more than once in classes — only the first entry is used."})
+            continue
+        if cid_check is not None:
+            seen_class_ids.add(cid_check)
+        deduped_classes.append(c)
+    classes = deduped_classes
+
+    total_level = 0
+    for c in classes:
+        raw_lvl = c.get("level", 1)
+        try:
+            total_level += int(raw_lvl)
+        except (TypeError, ValueError):
+            pass  # per-entry level validation (below) already reports this
+    if total_level > 20:
+        problems.append({"id": "total-level-exceeded", "message": f"Total character level {total_level} exceeds the 20-level cap."})
+
+    resolved_classes: list[dict] = []
+    for idx, entry in enumerate(classes):
+        entry_cls_id = entry.get("classId")
+        entry_subclass_id = entry.get("subclassId")
+        entry_level = 1
+        raw_level = entry.get("level", 1)
+        try:
+            entry_level = int(raw_level)
+        except (TypeError, ValueError):
+            problems.append({"id": "level-unsupported", "message": f"Level {raw_level!r} for '{entry_cls_id}' isn't a valid number; using 1 instead."})
+            entry_level = 1
+        if not (1 <= entry_level <= 20):
+            problems.append({"id": "level-unsupported", "message": f"Level {entry_level} for '{entry_cls_id}' is out of the 1-20 range; using 1 instead."})
+            entry_level = 1
+
+        entry_cls = catalog.classes.get(entry_cls_id) if entry_cls_id else None
+        if entry_cls_id and not entry_cls:
+            problems.append({"id": "unknown-class", "message": f"Unknown class '{entry_cls_id}'."})
+
+        entry_subclass = catalog.subclasses.get(entry_subclass_id) if entry_subclass_id else None
+        if entry_subclass_id and not entry_subclass:
+            problems.append({"id": "unknown-subclass", "message": f"Unknown subclass '{entry_subclass_id}'."})
+            entry_subclass_id = None
+        elif entry_subclass and entry_cls_id and entry_subclass.get("class", {}).get("index") != entry_cls_id:
+            problems.append({
+                "id": "subclass-mismatch",
+                "message": f"'{entry_subclass['name']}' isn't a subclass of '{entry_cls_id}'.",
+            })
+            entry_subclass_id = None
+
+        entry_choices_raw = entry.get("choices")
+        entry_class_choices = entry_choices_raw if isinstance(entry_choices_raw, dict) else {}
+
+        resolved_classes.append({
+            "index": idx, "cls_id": entry_cls_id, "cls": entry_cls, "level": entry_level,
+            "subclass_id": entry_subclass_id, "subclass": entry_subclass, "class_choices": entry_class_choices,
+        })
 
     cls_entry = classes[0] if classes else None
-    cls_id = cls_entry.get("classId") if cls_entry else None
-    subclass_id = cls_entry.get("subclassId") if cls_entry else None
-    level = 1
-    if cls_entry:
-        raw_level = cls_entry.get("level", 1)
-        try:
-            level = int(raw_level)
-        except (TypeError, ValueError):
-            problems.append({"id": "level-unsupported", "message": f"Level {raw_level!r} isn't a valid number; using 1 instead."})
-            level = 1
-        if not (1 <= level <= 20):
-            problems.append({"id": "level-unsupported", "message": f"Level {level} is out of the 1-20 range; using 1 instead."})
-            level = 1
-
-    cls = catalog.classes.get(cls_id) if cls_id else None
-    if cls_id and not cls:
-        problems.append({"id": "unknown-class", "message": f"Unknown class '{cls_id}'."})
-
-    subclass = catalog.subclasses.get(subclass_id) if subclass_id else None
-    if subclass_id and not subclass:
-        problems.append({"id": "unknown-subclass", "message": f"Unknown subclass '{subclass_id}'."})
-        subclass_id = None
-    elif subclass and cls_id and subclass.get("class", {}).get("index") != cls_id:
-        problems.append({
-            "id": "subclass-mismatch",
-            "message": f"'{subclass['name']}' isn't a subclass of the selected class.",
-        })
-        subclass_id = None
+    primary = resolved_classes[0] if resolved_classes else None
+    cls_id = primary["cls_id"] if primary else None
+    cls = primary["cls"] if primary else None
+    subclass_id = primary["subclass_id"] if primary else None
+    subclass = primary["subclass"] if primary else None
+    level = primary["level"] if primary else 1
+    class_choices = primary["class_choices"] if primary else {}
 
     background_raw = draft.get("background")
     if background_raw is not None and not isinstance(background_raw, dict):
@@ -564,30 +599,41 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         if not (1 <= score <= 30):
             problems.append({"id": f"ability-out-of-range-{ab}", "message": f"{ab} score {score} is out of the 1-30 range."})
 
-    class_choices_raw = cls_entry.get("choices") if cls_entry else None
-    class_choices = class_choices_raw if isinstance(class_choices_raw, dict) else {}
+    choice_templates: list[dict] = []
+    for rc in resolved_classes:
+        rc_cls, rc_cls_id, rc_level, rc_subclass_id = rc["cls"], rc["cls_id"], rc["level"], rc["subclass_id"]
+        rc_class_choices = rc["class_choices"]
+        if not (rc_cls and rc_cls_id):
+            continue
+        rc_asi_levels = _asi_granting_levels(catalog, rc_cls_id, rc_level)
+        rc_asi_scores_by_level, final_scores = _apply_asi_progression(final_scores, rc_asi_levels, rc_class_choices, rc_cls_id)
+        rc["asi_levels"] = rc_asi_levels  # stashed for Task 4's prerequisite check convenience, and for sheet assembly
 
-    asi_levels: list[int] = []
-    if cls and cls_id:
-        asi_levels = _asi_granting_levels(catalog, cls_id, level)
-    asi_scores_by_level, final_scores = _apply_asi_progression(final_scores, asi_levels, class_choices, cls_id)
+        choice_templates += _class_choice_templates(rc_cls, rc_cls_id)
+        rc_level_row = catalog.class_level_row(rc_cls_id, rc_level)
+        rc["level_row"] = rc_level_row
+        feature_refs = _cumulative_feature_refs(catalog, rc_cls_id, rc_subclass_id, rc_level)
+        choice_templates += _feature_choice_templates(catalog, rc_cls_id, rc_cls["name"], feature_refs, rc_subclass_id)
+        choice_templates += _asi_choice_templates(rc_cls_id, rc_cls["name"], rc_asi_levels, rc_asi_scores_by_level)
 
     modifiers = derived_mod.ability_modifiers(final_scores)
     prof_bonus_row = catalog.class_level_row(cls_id, level) if cls and cls_id else None
     prof_bonus = prof_bonus_row["prof_bonus"] if prof_bonus_row else 2
 
-    # Choice templates from every source.
-    choice_templates: list[dict] = []
-    level_row = None
-    if cls and cls_id:
-        choice_templates += _class_choice_templates(cls, cls_id)
-        level_row = catalog.class_level_row(cls_id, level)
-        feature_refs = _cumulative_feature_refs(catalog, cls_id, subclass_id, level)
-        choice_templates += _feature_choice_templates(catalog, cls_id, cls["name"], feature_refs, subclass_id)
-        choice_templates += _asi_choice_templates(cls_id, cls["name"], asi_levels, asi_scores_by_level)
-        spell_ability = spells_mod.spellcasting_ability(cls)
-        if spell_ability and level_row:
-            choice_templates += _spell_choice_templates(catalog, cls, cls_id, level_row, modifiers[spell_ability], class_level=level)
+    # Spell choices need `modifiers` (for spellcasting-ability-driven known-
+    # spell counts), which isn't final until EVERY class's ASI progression
+    # has run — hence this is a SECOND loop over resolved_classes, not
+    # merged into the loop above.
+    for rc in resolved_classes:
+        rc_cls, rc_cls_id, rc_level, rc_level_row = rc["cls"], rc["cls_id"], rc["level"], rc.get("level_row")
+        if not (rc_cls and rc_cls_id):
+            continue
+        spell_ability = spells_mod.spellcasting_ability(rc_cls)
+        if spell_ability and rc_level_row:
+            choice_templates += _spell_choice_templates(catalog, rc_cls, rc_cls_id, rc_level_row, modifiers[spell_ability], class_level=rc_level)
+
+    asi_levels = primary.get("asi_levels", []) if primary else []
+    level_row = primary.get("level_row") if primary else None
     if bg and bg_id:
         choice_templates += _background_choice_templates(bg, bg_id)
     if race and race_id:

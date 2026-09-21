@@ -215,14 +215,57 @@ def test_species_overlap_does_not_affect_a_race_with_no_automatic_skill_grant(ca
     assert not any("Human" in (o.get("disabledReason") or "") for o in skill_choice["options"])
 
 
-def test_multiclass_draft_produces_a_problem_and_uses_only_the_first_class(catalog):
+def test_multiclass_draft_sheet_still_reflects_only_the_first_class(catalog):
+    # Multiclassing is now resolved for real (see the tests below), but
+    # sheet assembly (background/species/equipment/final sheet) hasn't been
+    # updated to multiclass yet — that's Tasks 3-5 in this plan. Until then
+    # the alias block in resolve() keeps `classes[0]` as "the primary
+    # class" for those purposes, so no multiclass-unsupported problem is
+    # produced, and the sheet still reflects only the first class.
     draft = _fighter_acolyte_human_draft(classes=[
         {"classId": "fighter", "level": 1, "choices": {}},
         {"classId": "wizard", "level": 1, "choices": {}},
     ])
     resolution = resolve(draft, catalog)
-    assert any(p["id"] == "multiclass-unsupported" for p in resolution["problems"])
+    assert not any(p["id"] == "multiclass-unsupported" for p in resolution["problems"])
     assert resolution["sheet"]["class"]["id"] == "fighter"
+
+
+def test_two_classes_no_longer_produce_multiclass_unsupported(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "fighter", "level": 3, "choices": {}},
+            {"classId": "wizard", "level": 2, "choices": {}},
+        ],
+    )
+    resolution = resolve(draft, catalog)
+    assert not any(p["id"] == "multiclass-unsupported" for p in resolution["problems"])
+
+
+def test_total_level_over_20_is_a_problem_not_silently_truncated(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "fighter", "level": 15, "choices": {}},
+            {"classId": "wizard", "level": 10, "choices": {}},
+        ],
+    )
+    resolution = resolve(draft, catalog)
+    assert any(p["id"] == "total-level-exceeded" for p in resolution["problems"])
+
+
+def test_duplicate_class_id_is_a_problem_and_only_first_occurrence_counted(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "fighter", "level": 3, "choices": {}},
+            {"classId": "fighter", "level": 5, "choices": {}},
+        ],
+    )
+    resolution = resolve(draft, catalog)
+    assert any(p["id"] == "duplicate-class" for p in resolution["problems"])
+    # Only ONE Fighter's worth of level-1 proficiency choices should exist
+    # — not two — confirming the duplicate was dropped, not merged/summed.
+    prof_choices = [c for c in resolution["choices"] if c["id"] == "class:fighter:1:prof-choice-0"]
+    assert len(prof_choices) == 1
 
 
 def test_unknown_class_id_produces_a_problem_not_a_crash(catalog):

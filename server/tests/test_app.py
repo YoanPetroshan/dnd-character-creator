@@ -131,11 +131,14 @@ def test_export_yaml_endpoint_returns_valid_yaml(client):
 
 
 def test_export_yaml_rejects_a_draft_with_problems(client):
+    # "multiclass-unsupported" no longer exists as of Phase 3b-i (resolve()
+    # now supports multiple classes for real) — an unknown class id is used
+    # here instead to exercise the same "rejects a draft with problems" path.
     resp = client.post("/api/export/yaml", json={
-        "classes": [{"classId": "fighter", "level": 1, "choices": {}}, {"classId": "wizard", "level": 1, "choices": {}}],
+        "classes": [{"classId": "not-a-class", "level": 1, "choices": {}}],
     })
     assert resp.status_code == 400
-    assert any(p["id"] == "multiclass-unsupported" for p in resp.get_json()["problems"])
+    assert any(p["id"] == "unknown-class" for p in resp.get_json()["problems"])
 
 
 def test_export_yaml_rejects_when_a_choice_is_still_pending(client):
