@@ -1,6 +1,7 @@
 import pytest
 
 from catalog.loader import load
+from engine.derived import hit_point_max_multiclass
 from engine.resolve import _DETAIL_FIELDS, resolve
 
 
@@ -1196,3 +1197,44 @@ def test_a_genuinely_clean_resolution_has_zero_warnings(catalog):
     )
     resolution = resolve(draft, catalog)
     assert resolution["warnings"] == []
+
+
+def test_multiclass_proficiency_bonus_comes_from_total_level(catalog):
+    # Fighter 1 alone -> prof bonus 2. Add Wizard 4 -> total level 5 ->
+    # prof bonus 3, even though Fighter's OWN level (1) would only be 2.
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "fighter", "level": 1, "choices": {}},
+            {"classId": "wizard", "level": 4, "choices": {}},
+        ],
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["derived"]["proficiencyBonus"] == 3
+
+
+def test_multiclass_hit_point_max_matches_hit_point_max_multiclass(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "fighter", "level": 3, "choices": {}},
+            {"classId": "wizard", "level": 2, "choices": {}},
+        ],
+        abilities={"method": "manual", "base": {"STR": 16, "DEX": 14, "CON": 14, "INT": 14, "WIS": 12, "CHA": 8}},
+    )
+    resolution = resolve(draft, catalog)
+    con_mod = (14 - 10) // 2
+    expected = hit_point_max_multiclass(
+        [{"hit_die": 10, "level": 3, "hp_rolls": {}}, {"hit_die": 6, "level": 2, "hp_rolls": {}}],
+        con_modifier=con_mod, hp_type="fixed",
+    )
+    assert resolution["derived"]["hitPointMax"] == expected
+
+
+def test_multiclass_hit_dice_lists_every_class(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "fighter", "level": 3, "choices": {}},
+            {"classId": "wizard", "level": 2, "choices": {}},
+        ],
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["derived"]["hitDice"] == "3d10 + 2d6"

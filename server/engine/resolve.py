@@ -528,7 +528,6 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     if total_level > 20:
         problems.append({"id": "total-level-exceeded", "message": f"Total character level {total_level} exceeds the 20-level cap."})
 
-    cls_entry = classes[0] if classes else None
     primary = resolved_classes[0] if resolved_classes else None
     cls_id = primary["cls_id"] if primary else None
     cls = primary["cls"] if primary else None
@@ -616,7 +615,15 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choice_templates += _asi_choice_templates(rc_cls_id, rc_cls["name"], rc_asi_levels, rc_asi_scores_by_level)
 
     modifiers = derived_mod.ability_modifiers(final_scores)
-    prof_bonus_row = catalog.class_level_row(cls_id, level) if cls and cls_id else None
+    # Prof bonus is confirmed class-agnostic at a given level (per the
+    # design spec's empirical check), so any resolved class's level table
+    # can be used to look it up — but it must be looked up at TOTAL level
+    # (summed across every class), not any single class's own level.
+    # `total_level` here reuses the SAME variable computed above (from
+    # resolved_classes' clamped/validated levels) for the
+    # total-level-exceeded check.
+    prof_bonus_lookup_cls_id = next((rc["cls_id"] for rc in resolved_classes if rc["cls"]), None)
+    prof_bonus_row = catalog.class_level_row(prof_bonus_lookup_cls_id, total_level) if prof_bonus_lookup_cls_id else None
     prof_bonus = prof_bonus_row["prof_bonus"] if prof_bonus_row else 2
 
     # Spell choices need `modifiers` (for spellcasting-ability-driven known-
@@ -773,19 +780,26 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
 
     proficient_save_abilities = [st["index"].upper() for st in (cls.get("saving_throws", []) if cls else [])]
 
-    hit_die = cls.get("hit_die") if cls else None
     hp_type = (draft.get("preferences") or {}).get("hitPointType")
     if hp_type not in ("fixed", "manual"):
         hp_type = "fixed"
-    hp_rolls_raw = cls_entry.get("hpRolls") if cls_entry else None
-    hp_rolls = {k: v for k, v in hp_rolls_raw.items() if isinstance(v, int)} if isinstance(hp_rolls_raw, dict) else {}
+    hp_class_entries = []
+    for rc in resolved_classes:
+        if not rc["cls"]:
+            continue
+        rc_hit_die = rc["cls"].get("hit_die")
+        if rc_hit_die is None:
+            continue
+        rc_hp_rolls_raw = classes[rc["index"]].get("hpRolls") if rc["index"] < len(classes) else None
+        rc_hp_rolls = {k: v for k, v in rc_hp_rolls_raw.items() if isinstance(v, int)} if isinstance(rc_hp_rolls_raw, dict) else {}
+        hp_class_entries.append({"hit_die": rc_hit_die, "level": rc["level"], "hp_rolls": rc_hp_rolls})
     saves = derived_mod.saving_throws(modifiers, proficient_save_abilities, prof_bonus)
     skills = derived_mod.skill_scores(modifiers, list(proficient_skills), prof_bonus)
     derived = {
         "abilityModifiers": modifiers,
         "proficiencyBonus": prof_bonus,
-        "hitPointMax": derived_mod.hit_point_max_at_level(hit_die, modifiers["CON"], level, hp_type, hp_rolls),
-        "hitDice": f"{level}d{hit_die}" if hit_die else None,
+        "hitPointMax": derived_mod.hit_point_max_multiclass(hp_class_entries, modifiers["CON"], hp_type),
+        "hitDice": " + ".join(f"{rc['level']}d{rc['cls']['hit_die']}" for rc in resolved_classes if rc["cls"] and rc["cls"].get("hit_die")) or None,
         "armorClass": equipment_mod.armor_class_from_gear(equipped_items, modifiers["DEX"]),
         "speed": race.get("speed") if race else None,
         "savingThrows": saves,
