@@ -91,3 +91,55 @@ def test_hit_point_gain_per_level_never_goes_below_one():
     # unlucky manual roll of 1).
     assert derived.hit_point_gain_per_level(hit_die=6, con_modifier=-4, hp_type="fixed", level=2, hp_rolls={}) == 1
     assert derived.hit_point_gain_per_level(hit_die=6, con_modifier=-4, hp_type="manual", level=2, hp_rolls={"2": 1}) == 1
+
+
+def test_hit_point_max_multiclass_single_class_matches_hit_point_max_at_level():
+    # A single-entry list must produce EXACTLY what hit_point_max_at_level
+    # already produces — this is the regression-safety anchor: multiclass
+    # HP for one class is not a new formula, it's the existing one.
+    entries = [{"hit_die": 10, "level": 5, "hp_rolls": {}}]
+    result = derived.hit_point_max_multiclass(entries, con_modifier=2, hp_type="fixed")
+    expected = derived.hit_point_max_at_level(10, con_modifier=2, level=5, hp_type="fixed", hp_rolls={})
+    assert result == expected
+
+
+def test_hit_point_max_multiclass_only_first_class_level_1_gets_the_max():
+    # Fighter (d10) taken first at level 1, then Wizard (d6) multiclassed
+    # in at level 1 — Wizard's OWN level 1 must NOT take d6's max (6),
+    # it must use the fixed/average method like any level above 1.
+    entries = [
+        {"hit_die": 10, "level": 1, "hp_rolls": {}},
+        {"hit_die": 6, "level": 1, "hp_rolls": {}},
+    ]
+    result = derived.hit_point_max_multiclass(entries, con_modifier=1, hp_type="fixed")
+    # Fighter L1: 10 (max) + 1 (con) = 11
+    # Wizard's own "L1" (its first level, but NOT the character's first
+    # level overall): average (6//2+1=4) + 1 (con) = 5
+    assert result == 11 + 5
+
+
+def test_hit_point_max_multiclass_sums_every_class_correctly():
+    # Fighter 3 (d10) / Wizard 2 (d6), fixed mode.
+    entries = [
+        {"hit_die": 10, "level": 3, "hp_rolls": {}},
+        {"hit_die": 6, "level": 2, "hp_rolls": {}},
+    ]
+    result = derived.hit_point_max_multiclass(entries, con_modifier=2, hp_type="fixed")
+    # Fighter: L1 max (10+2=12) + L2 avg (6+2=8) + L3 avg (6+2=8) = 28
+    # Wizard: "L1" avg (4+2=6) + "L2" avg (4+2=6) = 12
+    assert result == 28 + 12
+
+
+def test_hit_point_max_multiclass_manual_mode_uses_per_class_rolls():
+    entries = [
+        {"hit_die": 10, "level": 2, "hp_rolls": {"2": 7}},
+        {"hit_die": 8, "level": 2, "hp_rolls": {"2": 5}},
+    ]
+    result = derived.hit_point_max_multiclass(entries, con_modifier=1, hp_type="manual")
+    # Fighter: L1 max (10+1=11) + L2 roll (7+1=8) = 19
+    # Rogue-shaped d8 secondary: "L1" avg (8//2+1=5, +1 con=6) + "L2" roll (5+1=6) = 12
+    assert result == 19 + 12
+
+
+def test_hit_point_max_multiclass_empty_list_is_zero():
+    assert derived.hit_point_max_multiclass([], con_modifier=0, hp_type="fixed") == 0
