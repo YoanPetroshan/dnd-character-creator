@@ -45,12 +45,14 @@ This phase detects staleness where a choice's ID entirely disappears from the cu
 
 ## Testing strategy
 
+**Reachable scenarios** (verified against the real frontend reducer — only these two actions leave `choices` untouched while changing what's reachable):
 - A real level-down scenario (e.g. a Fighter leveled to 5 with a level-5 ASI selected, then leveled back down to 3) — confirm the level-5 ASI choice id appears in `pruned` with a reason naming it, and confirms `resolve()` doesn't crash or otherwise change any OTHER behavior.
-- A subclass-switch scenario (a feature/choice tied to the old subclass) — confirm staleness detected.
-- A class-removal scenario (multiclass: remove a secondary class that had its own selections) — confirm every one of that class's stale selections are individually listed.
-- A background/species-change scenario — same pattern.
-- A regression check: a character with NO stale selections (a fresh, freely-built one) has `pruned == []`, matching every existing test's current expectation (this is a breaking-in-practice-but-additive change — no existing test asserts `pruned` at all currently, since it's always been `[]`, so this shouldn't break anything, but confirm at plan-writing time by grepping existing tests for `"pruned"`).
+- A subclass-clearing scenario (a feature choice tied to the now-cleared subclass) — confirm staleness detected, and that a BASE (non-subclass-gated) feature choice on the same class stays unaffected.
+- A regression check: a character with NO stale selections (a fresh, freely-built one) has `pruned == []`.
 - Confirm a stale selection with an EMPTY list (`[]`) is NOT flagged — only non-empty stale selections matter (an empty list contributes nothing regardless of staleness, so flagging it would be noise).
+- A multiclass independence check: one class's selection going stale must not affect any OTHER class's own choices in the same `resolve()` call (the flat `all_selections` merge must not cause cross-class interference).
+
+**Explicitly NOT reachable, do not write a test expecting these to produce `pruned` entries:** a class-removal scenario (removing a class deletes its whole `choices` dict WITH it — nothing left to go stale) and a background/species-change scenario (`SET_BACKGROUND`/`SET_SPECIES`/`SET_SUBSPECIES` all reset `choices: {}` on the new entry) — both confirmed unreachable via the real `DraftContext.tsx` reducer, consistent with the `## Explicitly out of scope` and `## What does NOT change` sections above.
 
 ## Self-review
 
