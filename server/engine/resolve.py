@@ -52,7 +52,6 @@ from __future__ import annotations
 
 from catalog.choices import build_choice_template
 from catalog.loader import Catalog
-from catalog.reference_data import FULL_CASTER_CLASSES, HALF_CASTER_CLASSES
 from . import asi as asi_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
@@ -885,9 +884,23 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # never folded into either path above, per RAW (see engine/spells.py's
     # PACT_MAGIC_CLASSES/warlock_pact_magic_slots docstrings).
     caster_level_entries = [(rc["cls_id"], rc["level"]) for rc in resolved_classes if rc["cls"]]
+    # Classification by class-id set membership alone (cls_id in
+    # FULL_CASTER_CLASSES | HALF_CASTER_CLASSES) is wrong: a half caster
+    # (Paladin/Ranger) has no Spellcasting feature at all until level 2, so
+    # a level-1 Paladin/Ranger grants ZERO slots despite being in
+    # HALF_CASTER_CLASSES. The real test is whether the class ACTUALLY
+    # grants a nonzero slot table at its own current level —
+    # single_class_spell_slots returns {} (falsy) when it doesn't, so this
+    # list comprehension counts only classes with a genuine, current slot
+    # grant (fixed post-final-review; see docstring above). Warlock (and
+    # any other PACT_MAGIC_CLASSES) is excluded here too: its own class-
+    # level row DOES carry nonzero spell_slots_level_N entries (that's its
+    # Pact Magic progression), but those must never be folded into this
+    # shared pool — Warlock is handled entirely separately below.
     slot_granting_entries = [
         (cls_id, level) for cls_id, level in caster_level_entries
-        if cls_id in FULL_CASTER_CLASSES or cls_id in HALF_CASTER_CLASSES
+        if cls_id not in spells_mod.PACT_MAGIC_CLASSES
+        and spells_mod.single_class_spell_slots(catalog, cls_id, level)
     ]
     if len(slot_granting_entries) == 1:
         only_cls_id, only_level = slot_granting_entries[0]

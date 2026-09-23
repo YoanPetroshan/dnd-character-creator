@@ -1719,6 +1719,73 @@ def test_two_slot_granting_classes_still_use_the_combined_round_down_table(catal
     assert resolution["derived"]["spellSlots"] == expected
 
 
+def test_level_1_half_caster_alongside_another_half_caster_is_not_double_counted(catalog):
+    # Regression for the final-review finding: slot-granting classification
+    # was done by class-id SET MEMBERSHIP (cls_id in FULL_CASTER_CLASSES |
+    # HALF_CASTER_CLASSES) rather than by an ACTUAL current-level grant. A
+    # level-1 Paladin has NO Spellcasting feature yet (half casters gain it
+    # at level 2 per RAW) and so grants ZERO slots — Ranger 5 is therefore
+    # the ONLY class actually granting slots here, and its own real
+    # level-5 row must be used directly rather than the combined
+    # round-down table ((1 // 2) + 5 = 5, which would wrongly produce
+    # Wizard's level-5 row of {"1": 4, "2": 3, "3": 2}).
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "paladin", "level": 1, "choices": {}},
+            {"classId": "ranger", "level": 5, "choices": {}},
+        ],
+        abilities={"method": "manual", "base": {"STR": 14, "DEX": 14, "CON": 12, "INT": 10, "WIS": 13, "CHA": 13}},
+    )
+    resolution = resolve(draft, catalog)
+    ranger_lvl5 = catalog.class_level_row("ranger", 5)["spellcasting"]
+    expected = {str(n): ranger_lvl5.get(f"spell_slots_level_{n}", 0) for n in range(1, 10) if ranger_lvl5.get(f"spell_slots_level_{n}", 0) > 0}
+    assert expected == {"1": 4, "2": 2}  # Ranger's real level-5 row, per PHB — pinned as a literal.
+    assert resolution["derived"]["spellSlots"] == expected
+
+
+def test_warlock_only_character_has_empty_shared_pool_and_its_own_pact_magic(catalog):
+    # No test previously resolved a single-class Warlock in isolation —
+    # confirm the shared pool stays empty (Warlock is never a
+    # slot-granting class for the combined/single-class table, per RAW)
+    # while warlockSpellSlots reflects Warlock's own real level-5 Pact
+    # Magic row from the catalog.
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "warlock", "level": 5, "choices": {}}],
+        abilities={"method": "manual", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 16}},
+    )
+    resolution = resolve(draft, catalog)
+    warlock_lvl5 = catalog.class_level_row("warlock", 5)["spellcasting"]
+    expected_warlock = {str(n): warlock_lvl5.get(f"spell_slots_level_{n}", 0) for n in range(1, 10) if warlock_lvl5.get(f"spell_slots_level_{n}", 0) > 0}
+    assert resolution["derived"]["spellSlots"] == {}
+    assert resolution["derived"]["warlockSpellSlots"] == expected_warlock
+
+
+def test_three_caster_classes_combined_pool_and_independent_pact_magic(catalog):
+    # No genuine 3-class test previously existed. Cleric 4 (full) + Paladin
+    # 4 (half) + Warlock 3 (Pact Magic, entirely separate per RAW): the
+    # shared pool must reflect ONLY Cleric+Paladin's combined level
+    # (4 + 4 // 2 = 6, a full caster's own level-6 row), completely
+    # unaffected by Warlock's presence, and warlockSpellSlots must reflect
+    # Warlock's own level-3 row, completely independent of the other two.
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "cleric", "level": 4, "choices": {}},
+            {"classId": "paladin", "level": 4, "choices": {}},
+            {"classId": "warlock", "level": 3, "choices": {}},
+        ],
+        abilities={"method": "manual", "base": {"STR": 14, "DEX": 10, "CON": 12, "INT": 10, "WIS": 16, "CHA": 13}},
+    )
+    resolution = resolve(draft, catalog)
+    combined_level = 4 + 4 // 2  # Cleric full (4) + Paladin half (4 // 2 = 2) = 6
+    wizard_lvl6 = catalog.class_level_row("wizard", combined_level)["spellcasting"]
+    expected_shared = {str(n): wizard_lvl6[f"spell_slots_level_{n}"] for n in range(1, 10) if wizard_lvl6[f"spell_slots_level_{n}"] > 0}
+    assert resolution["derived"]["spellSlots"] == expected_shared
+
+    warlock_lvl3 = catalog.class_level_row("warlock", 3)["spellcasting"]
+    expected_warlock = {str(n): warlock_lvl3.get(f"spell_slots_level_{n}", 0) for n in range(1, 10) if warlock_lvl3.get(f"spell_slots_level_{n}", 0) > 0}
+    assert resolution["derived"]["warlockSpellSlots"] == expected_warlock
+
+
 def test_derived_no_longer_has_top_level_spell_save_dc_or_attack_bonus(catalog):
     resolution = resolve(_fighter_acolyte_human_draft(), catalog)
     assert "spellSaveDC" not in resolution["derived"]
