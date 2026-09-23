@@ -1,16 +1,26 @@
 from catalog.loader import load
+from catalog.official_source import has_official
 
 
 def test_load_returns_expected_counts():
     catalog = load()
     assert len(catalog.classes) == 12
-    assert len(catalog.races) == 9
-    assert len(catalog.subraces) == 4
     assert len(catalog.backgrounds) == 1
-    assert len(catalog.traits) == 38
     assert len(catalog.features) == 407
     assert len(catalog.levels) == 290
     assert len(catalog.subclasses) == 12
+    # Bundled SRD counts for races/subraces/traits are exact — byte-identical
+    # when official sourcebook data hasn't been fetched on this machine. When
+    # it has (as on this dev machine), load() merges in the wider official
+    # race/subrace/trait data, so these become lower bounds instead.
+    if has_official():
+        assert len(catalog.races) >= 9
+        assert len(catalog.subraces) >= 4
+        assert len(catalog.traits) >= 38
+    else:
+        assert len(catalog.races) == 9
+        assert len(catalog.subraces) == 4
+        assert len(catalog.traits) == 38
 
 
 def test_classes_indexed_by_srd_index():
