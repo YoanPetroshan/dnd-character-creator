@@ -99,6 +99,16 @@ export function HomePage() {
           ))}
         </ul>
       )}
+      {resolution && resolution.pruned.length > 0 && (
+        <>
+          <h3>Отпаднали избори</h3>
+          <ul>
+            {resolution.pruned.map((p) => (
+              <li key={p.choiceId}>{p.reason}</li>
+            ))}
+          </ul>
+        </>
+      )}
     </div>
   );
 }
