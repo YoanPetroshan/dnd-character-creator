@@ -72,17 +72,13 @@ def combined_caster_level(class_entries: list[tuple[str, int]]) -> int:
     return total
 
 
-def multiclass_spell_slots(catalog: Catalog, combined_level: int) -> dict[str, int]:
-    """The shared spell-slot pool for every non-Warlock caster, looked
-    up at the combined caster level. Only nonzero slot levels are
-    included. combined_level <= 0 (no full/half casters present, or
-    they're all below their first spell-granting level) returns {}."""
-    if combined_level <= 0:
-        return {}
-    row = catalog.class_level_row(_MULTICLASS_SLOT_TABLE_ANCHOR_CLASS, combined_level)
-    if not row:
-        return {}
-    spellcasting = row.get("spellcasting") or {}
+def _nonzero_spell_slots(spellcasting: dict | None) -> dict[str, int]:
+    """Extract the nonzero spell_slots_level_N entries from a single
+    spellcasting dict (as found in a catalog class-level row), keyed by
+    slot level as a string. Shared by multiclass_spell_slots,
+    single_class_spell_slots, and warlock_pact_magic_slots so the
+    filtering logic lives in exactly one place."""
+    spellcasting = spellcasting or {}
     return {
         str(n): spellcasting[f"spell_slots_level_{n}"]
         for n in range(1, 10)
@@ -90,15 +86,41 @@ def multiclass_spell_slots(catalog: Catalog, combined_level: int) -> dict[str, i
     }
 
 
+def multiclass_spell_slots(catalog: Catalog, combined_level: int) -> dict[str, int]:
+    """The shared spell-slot pool for every non-Warlock caster, looked
+    up at the combined caster level. Only nonzero slot levels are
+    included. combined_level <= 0 (no full/half casters present, or
+    they're all below their first spell-granting level) returns {}.
+
+    Per RAW (PHB 164), this combined-level table is only the correct
+    lookup when MORE THAN ONE class actually grants spell slots — callers
+    with exactly one slot-granting class must use that class's own
+    single_class_spell_slots row instead (see resolve()'s call site)."""
+    if combined_level <= 0:
+        return {}
+    row = catalog.class_level_row(_MULTICLASS_SLOT_TABLE_ANCHOR_CLASS, combined_level)
+    if not row:
+        return {}
+    return _nonzero_spell_slots(row.get("spellcasting"))
+
+
+def single_class_spell_slots(catalog: Catalog, cls_id: str, class_level: int) -> dict[str, int]:
+    """A single class's OWN spell-slot progression at its own class
+    level, read directly from its class-level row — the correct lookup
+    (per PHB 164) whenever exactly one class grants spell slots, even
+    alongside other non-caster classes. Unlike the shared multiclass
+    table, this is NOT a round-down onto a full caster's table, so a
+    half caster (Paladin/Ranger) gets its real, non-halved progression
+    at every level, including odd ones."""
+    row = catalog.class_level_row(cls_id, class_level)
+    if not row:
+        return {}
+    return _nonzero_spell_slots(row.get("spellcasting"))
+
+
 def warlock_pact_magic_slots(level_row: dict | None) -> dict[str, int]:
     """Warlock's own Pact Magic slots, read directly from its OWN level
     row (not the shared multiclass table) — pass catalog.class_level_row
     ("warlock", <warlock's own class level>)["spellcasting"] as the level
     argument's dict, or None if no Warlock is present."""
-    if not level_row:
-        return {}
-    return {
-        str(n): level_row[f"spell_slots_level_{n}"]
-        for n in range(1, 10)
-        if level_row.get(f"spell_slots_level_{n}", 0) > 0
-    }
+    return _nonzero_spell_slots(level_row)

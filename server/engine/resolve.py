@@ -33,11 +33,16 @@ resolved class's spellcasting, not just the primary's.
 
 A genuinely COMBINED spell-slot table across multiple caster classes IS in
 scope as of Phase 3b-ii — see engine/spells.py's combined_caster_level/
-multiclass_spell_slots/warlock_pact_magic_slots. derived["spellSlots"] is
-the shared pool for every non-Warlock caster (looked up at the combined
-caster level); derived["warlockSpellSlots"] is Warlock's own Pact Magic,
-looked up separately at Warlock's own class level and never folded into
-the combined-level calculation, per RAW. spellSaveDC/spellAttackBonus are
+multiclass_spell_slots/single_class_spell_slots/warlock_pact_magic_slots.
+derived["spellSlots"] is the shared pool, but per PHB 164 the combined
+round-down table is only used when MORE THAN ONE class grants spell
+slots; with exactly one slot-granting class (even alongside other
+non-caster classes), that class's own single-class progression is looked
+up directly instead (see the `slot_granting_entries` branch below — fixed
+post-review, since the round-down table silently undercounts a lone half
+caster at every odd level). derived["warlockSpellSlots"] is Warlock's own
+Pact Magic, looked up separately at Warlock's own class level and never
+folded into either path above, per RAW. spellSaveDC/spellAttackBonus are
 no longer top-level derived scalars — each caster in sheet["spells"] now
 carries its own, since a multiclass character's casters each use their
 own spellcasting ability. Still out of scope: pruning multiclass-related
@@ -47,6 +52,7 @@ from __future__ import annotations
 
 from catalog.choices import build_choice_template
 from catalog.loader import Catalog
+from catalog.reference_data import FULL_CASTER_CLASSES, HALF_CASTER_CLASSES
 from . import asi as asi_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
@@ -866,16 +872,29 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             "spellAttackBonus": rc_attack_bonus,
         })
 
-    # Combined multiclass spell-slot pool (Phase 3b-ii): every non-Warlock
-    # caster shares one pool looked up at the COMBINED caster level (full
-    # casters contribute their own level, half casters level // 2), while
-    # Warlock's Pact Magic is looked up separately at Warlock's OWN class
-    # level — never folded into the combined-level calculation above, per
-    # RAW (see engine/spells.py's PACT_MAGIC_CLASSES/warlock_pact_magic_slots
-    # docstrings).
+    # Spell-slot pool (Phase 3b-ii, fixed post-review): per PHB 164, the
+    # COMBINED multiclass table (full casters contribute their own level,
+    # half casters level // 2, looked up in a full caster's own table) is
+    # only the correct rule when MORE THAN ONE class actually grants spell
+    # slots. A character with exactly one slot-granting class — even
+    # alongside other non-caster classes (e.g. Fighter/Paladin) — uses
+    # that ONE class's own single-class progression directly; rounding a
+    # lone half caster's level down and looking it up in the shared table
+    # silently undercounts its slots at every odd level. Warlock's Pact
+    # Magic is always looked up separately at Warlock's OWN class level,
+    # never folded into either path above, per RAW (see engine/spells.py's
+    # PACT_MAGIC_CLASSES/warlock_pact_magic_slots docstrings).
     caster_level_entries = [(rc["cls_id"], rc["level"]) for rc in resolved_classes if rc["cls"]]
-    shared_combined_level = spells_mod.combined_caster_level(caster_level_entries)
-    spell_slots = spells_mod.multiclass_spell_slots(catalog, shared_combined_level)
+    slot_granting_entries = [
+        (cls_id, level) for cls_id, level in caster_level_entries
+        if cls_id in FULL_CASTER_CLASSES or cls_id in HALF_CASTER_CLASSES
+    ]
+    if len(slot_granting_entries) == 1:
+        only_cls_id, only_level = slot_granting_entries[0]
+        spell_slots = spells_mod.single_class_spell_slots(catalog, only_cls_id, only_level)
+    else:
+        shared_combined_level = spells_mod.combined_caster_level(caster_level_entries)
+        spell_slots = spells_mod.multiclass_spell_slots(catalog, shared_combined_level)
     warlock_entry = next((rc for rc in resolved_classes if rc["cls_id"] in spells_mod.PACT_MAGIC_CLASSES and rc["cls"]), None)
     warlock_level_row = catalog.class_level_row(warlock_entry["cls_id"], warlock_entry["level"])["spellcasting"] if warlock_entry else None
     warlock_slots = spells_mod.warlock_pact_magic_slots(warlock_level_row)

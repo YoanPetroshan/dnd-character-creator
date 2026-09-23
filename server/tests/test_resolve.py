@@ -1599,13 +1599,21 @@ def test_non_caster_secondary_class_adds_no_spurious_spell_entry(catalog):
 
 
 def test_single_caster_spell_slots_match_their_own_level_table(catalog):
+    # Sorcerer, not Wizard: Wizard is the hardcoded internal anchor class
+    # (_MULTICLASS_SLOT_TABLE_ANCHOR_CLASS in engine/spells.py) that
+    # multiclass_spell_slots looks up under the hood, so a single-class
+    # Wizard test would compare the implementation's own lookup against
+    # itself and could never fail regardless of correctness. Sorcerer is a
+    # different full-caster class with (confirmed empirically) the exact
+    # same slot progression as Wizard at level 5, so this is a real,
+    # non-tautological regression check.
     draft = _fighter_acolyte_human_draft(
-        classes=[{"classId": "wizard", "level": 5, "choices": {}}],
-        abilities={"method": "manual", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 16, "WIS": 10, "CHA": 10}},
+        classes=[{"classId": "sorcerer", "level": 5, "choices": {}}],
+        abilities={"method": "manual", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 16}},
     )
     resolution = resolve(draft, catalog)
-    wizard_lvl5 = catalog.class_level_row("wizard", 5)["spellcasting"]
-    expected = {str(n): wizard_lvl5[f"spell_slots_level_{n}"] for n in range(1, 10) if wizard_lvl5[f"spell_slots_level_{n}"] > 0}
+    sorcerer_lvl5 = catalog.class_level_row("sorcerer", 5)["spellcasting"]
+    expected = {str(n): sorcerer_lvl5[f"spell_slots_level_{n}"] for n in range(1, 10) if sorcerer_lvl5[f"spell_slots_level_{n}"] > 0}
     assert resolution["derived"]["spellSlots"] == expected
     assert resolution["derived"]["warlockSpellSlots"] == {}
 
@@ -1653,6 +1661,62 @@ def test_non_caster_multiclass_has_empty_spell_slots(catalog):
     resolution = resolve(draft, catalog)
     assert resolution["derived"]["spellSlots"] == {}
     assert resolution["derived"]["warlockSpellSlots"] == {}
+
+
+def test_single_half_caster_at_odd_level_uses_its_own_slot_table(catalog):
+    # PHB 164: the combined multiclass table (half casters contributing
+    # level // 2 to a shared level, looked up in a full caster's own
+    # table) applies ONLY when more than one class grants spell slots. A
+    # single-class Paladin at an odd level must use Paladin's own level-5
+    # row directly, NOT round level 5 down to combined level 2 and look
+    # that up in the shared table (which would silently undercount).
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "paladin", "level": 5, "choices": {}}],
+        abilities={"method": "manual", "base": {"STR": 14, "DEX": 10, "CON": 12, "INT": 10, "WIS": 10, "CHA": 16}},
+    )
+    resolution = resolve(draft, catalog)
+    paladin_lvl5 = catalog.class_level_row("paladin", 5)["spellcasting"]
+    expected = {str(n): paladin_lvl5.get(f"spell_slots_level_{n}", 0) for n in range(1, 10) if paladin_lvl5.get(f"spell_slots_level_{n}", 0) > 0}
+    assert expected == {"1": 4, "2": 2}  # Paladin's real level-5 row, per PHB.
+    assert resolution["derived"]["spellSlots"] == expected
+    assert resolution["derived"]["warlockSpellSlots"] == {}
+
+
+def test_non_caster_class_alongside_one_half_caster_still_uses_its_own_table(catalog):
+    # Fighter grants no spell slots at all, so Paladin remains the ONLY
+    # slot-granting class here — Fighter's presence must not change the
+    # result at all compared to a single-class Paladin 5.
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "fighter", "level": 5, "choices": {}},
+            {"classId": "paladin", "level": 5, "choices": {}},
+        ],
+        abilities={"method": "manual", "base": {"STR": 14, "DEX": 10, "CON": 12, "INT": 10, "WIS": 10, "CHA": 16}},
+    )
+    resolution = resolve(draft, catalog)
+    paladin_lvl5 = catalog.class_level_row("paladin", 5)["spellcasting"]
+    expected = {str(n): paladin_lvl5.get(f"spell_slots_level_{n}", 0) for n in range(1, 10) if paladin_lvl5.get(f"spell_slots_level_{n}", 0) > 0}
+    assert expected == {"1": 4, "2": 2}
+    assert resolution["derived"]["spellSlots"] == expected
+
+
+def test_two_slot_granting_classes_still_use_the_combined_round_down_table(catalog):
+    # Genuine two-caster case (Cleric, a full caster + Paladin, a half
+    # caster): the round-down combined-level table is exactly the right
+    # rule here, and must keep applying — this is not touched by the
+    # single-slot-granting-class fix above.
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "cleric", "level": 4, "choices": {}},
+            {"classId": "paladin", "level": 4, "choices": {}},
+        ],
+        abilities={"method": "manual", "base": {"STR": 14, "DEX": 10, "CON": 12, "INT": 10, "WIS": 16, "CHA": 13}},
+    )
+    resolution = resolve(draft, catalog)
+    combined_level = 4 + 4 // 2  # Cleric full (4) + Paladin half (4 // 2 = 2) = 6
+    wizard_lvl6 = catalog.class_level_row("wizard", combined_level)["spellcasting"]
+    expected = {str(n): wizard_lvl6[f"spell_slots_level_{n}"] for n in range(1, 10) if wizard_lvl6[f"spell_slots_level_{n}"] > 0}
+    assert resolution["derived"]["spellSlots"] == expected
 
 
 def test_derived_no_longer_has_top_level_spell_save_dc_or_attack_bonus(catalog):
