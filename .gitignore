@@ -13,3 +13,7 @@ frontend/dist/
 frontend/*.tsbuildinfo
 frontend/vite.config.js
 frontend/vite.config.d.ts
+
+# SDD scratch worktrees/workspaces (never committed)
+.worktrees/
+.superpowers/
