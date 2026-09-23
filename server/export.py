@@ -27,8 +27,14 @@ def to_yaml(resolution: dict) -> str:
         "savingThrows": derived["savingThrows"],
         "skills": derived["skills"],
         "passivePerception": derived["passivePerception"],
-        "spellSaveDC": derived["spellSaveDC"],
-        "spellAttackBonus": derived["spellAttackBonus"],
+        # spellSaveDC/spellAttackBonus moved off `derived` and into each
+        # sheet["spells"][i] entry as of Phase 3b-ii (see engine/resolve.py) —
+        # `.get()` (not direct indexing) is a deliberate, minimal stopgap so
+        # this doesn't KeyError against the new Resolution shape; surfacing
+        # the new derived["spellSlots"]/["warlockSpellSlots"] and per-caster
+        # values properly in the YAML export is Task 3's job, not this one's.
+        "spellSaveDC": derived.get("spellSaveDC"),
+        "spellAttackBonus": derived.get("spellAttackBonus"),
         "proficiencies": sheet["proficiencies"],
         "equipment": sheet["equipment"],
         "spells": sheet["spells"],

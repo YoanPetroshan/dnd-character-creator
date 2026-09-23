@@ -757,8 +757,12 @@ def test_paladin_gets_no_spell_choices_at_level_1(catalog):
     # level) as of the Phase 3b-i final-review fix — a character with no
     # spellcaster classes gets an empty list, not None.
     assert resolution["sheet"]["spells"] == []
-    assert resolution["derived"]["spellSaveDC"] is None
-    assert resolution["derived"]["spellAttackBonus"] is None
+    # spellSaveDC/spellAttackBonus moved into each sheet.spells entry as of
+    # Phase 3b-ii — with no spellcasting classes, sheet["spells"] is already
+    # empty (asserted above), so there's no per-caster entry to check. The
+    # combined slot pool is also empty for a non-caster.
+    assert resolution["derived"]["spellSlots"] == {}
+    assert resolution["derived"]["warlockSpellSlots"] == {}
 
 
 def test_fighter_has_no_spell_choices_or_derived_spell_stats(catalog):
@@ -766,7 +770,7 @@ def test_fighter_has_no_spell_choices_or_derived_spell_stats(catalog):
     spell_choice_ids = [c["id"] for c in resolution["choices"] if "spells" in c["id"]]
     assert spell_choice_ids == []
     assert resolution["sheet"]["spells"] == []
-    assert resolution["derived"]["spellSaveDC"] is None
+    assert resolution["derived"]["spellSlots"] == {}
 
 
 def test_selected_cantrips_and_known_spells_appear_in_the_sheet(catalog):
@@ -802,10 +806,13 @@ def test_selected_cantrips_and_known_spells_appear_in_the_sheet(catalog):
 
 
 def test_derived_spell_save_dc_and_attack_bonus_use_the_spellcasting_ability(catalog):
+    # spellSaveDC/spellAttackBonus moved from top-level derived scalars into
+    # each sheet.spells entry as of Phase 3b-ii.
     resolution = resolve(_wizard_draft(int_score=16), catalog)
+    wizard_entry = next(s for s in resolution["sheet"]["spells"] if s["classId"] == "wizard")
     # INT 16 -> +3 modifier, prof bonus 2 at level 1
-    assert resolution["derived"]["spellSaveDC"] == 13  # 8 + 2 + 3
-    assert resolution["derived"]["spellAttackBonus"] == 5  # 2 + 3
+    assert wizard_entry["spellSaveDC"] == 13  # 8 + 2 + 3
+    assert wizard_entry["spellAttackBonus"] == 5  # 2 + 3
 
 
 def test_sheet_details_passes_through_submitted_fields_only(catalog):
@@ -1568,11 +1575,13 @@ def test_secondary_class_spellcaster_spells_appear_in_the_sheet(catalog):
     assert wizard_entry is not None, f"wizard's spells never made it into sheet['spells']: {spells}"
     assert wizard_entry["cantrips"][0]["id"] == cantrip_id
     assert wizard_entry["known"][0]["id"] == spell_id
-    # Primary-class-only derived spell stats are explicitly out of scope for
-    # this fix (see the final review) — Fighter isn't a caster, so both
-    # stay None even though Wizard (secondary) is a real caster.
-    assert resolution["derived"]["spellSaveDC"] is None
-    assert resolution["derived"]["spellAttackBonus"] is None
+    # spellSaveDC/spellAttackBonus moved into each sheet.spells entry as of
+    # Phase 3b-ii — Wizard (secondary) is a real caster and gets its own
+    # values, using its own spellcasting ability (INT) and the character's
+    # total-level proficiency bonus. Total level 5 (Fighter 3 + Wizard 2) ->
+    # prof bonus +3; INT 16 -> +3 modifier -> DC 8+3+3=14, attack +3+3=6.
+    assert wizard_entry["spellSaveDC"] == 14
+    assert wizard_entry["spellAttackBonus"] == 6
 
 
 def test_non_caster_secondary_class_adds_no_spurious_spell_entry(catalog):
@@ -1587,3 +1596,81 @@ def test_non_caster_secondary_class_adds_no_spurious_spell_entry(catalog):
     )
     resolution = resolve(draft, catalog)
     assert resolution["sheet"]["spells"] == []
+
+
+def test_single_caster_spell_slots_match_their_own_level_table(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "wizard", "level": 5, "choices": {}}],
+        abilities={"method": "manual", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 16, "WIS": 10, "CHA": 10}},
+    )
+    resolution = resolve(draft, catalog)
+    wizard_lvl5 = catalog.class_level_row("wizard", 5)["spellcasting"]
+    expected = {str(n): wizard_lvl5[f"spell_slots_level_{n}"] for n in range(1, 10) if wizard_lvl5[f"spell_slots_level_{n}"] > 0}
+    assert resolution["derived"]["spellSlots"] == expected
+    assert resolution["derived"]["warlockSpellSlots"] == {}
+
+
+def test_two_full_casters_share_a_combined_slot_pool(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "wizard", "level": 3, "choices": {}},
+            {"classId": "sorcerer", "level": 2, "choices": {}},
+        ],
+        abilities={"method": "manual", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 14, "WIS": 10, "CHA": 14}},
+    )
+    resolution = resolve(draft, catalog)
+    wizard_lvl5 = catalog.class_level_row("wizard", 5)["spellcasting"]  # combined level 3+2=5
+    expected = {str(n): wizard_lvl5[f"spell_slots_level_{n}"] for n in range(1, 10) if wizard_lvl5[f"spell_slots_level_{n}"] > 0}
+    assert resolution["derived"]["spellSlots"] == expected
+
+
+def test_warlock_alongside_a_full_caster_keeps_pact_magic_separate(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "wizard", "level": 3, "choices": {}},
+            {"classId": "warlock", "level": 3, "choices": {}},
+        ],
+        abilities={"method": "manual", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 14, "WIS": 10, "CHA": 14}},
+    )
+    resolution = resolve(draft, catalog)
+    # Combined pool should reflect ONLY Wizard's level (3), Warlock excluded.
+    wizard_lvl3 = catalog.class_level_row("wizard", 3)["spellcasting"]
+    expected_shared = {str(n): wizard_lvl3[f"spell_slots_level_{n}"] for n in range(1, 10) if wizard_lvl3[f"spell_slots_level_{n}"] > 0}
+    assert resolution["derived"]["spellSlots"] == expected_shared
+    warlock_lvl3 = catalog.class_level_row("warlock", 3)["spellcasting"]
+    expected_warlock = {str(n): warlock_lvl3[f"spell_slots_level_{n}"] for n in range(1, 10) if warlock_lvl3[f"spell_slots_level_{n}"] > 0}
+    assert resolution["derived"]["warlockSpellSlots"] == expected_warlock
+    assert resolution["derived"]["spellSlots"] != resolution["derived"]["warlockSpellSlots"]
+
+
+def test_non_caster_multiclass_has_empty_spell_slots(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "fighter", "level": 3, "choices": {}},
+            {"classId": "rogue", "level": 2, "choices": {}},
+        ],
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["derived"]["spellSlots"] == {}
+    assert resolution["derived"]["warlockSpellSlots"] == {}
+
+
+def test_derived_no_longer_has_top_level_spell_save_dc_or_attack_bonus(catalog):
+    resolution = resolve(_fighter_acolyte_human_draft(), catalog)
+    assert "spellSaveDC" not in resolution["derived"]
+    assert "spellAttackBonus" not in resolution["derived"]
+
+
+def test_each_caster_in_sheet_spells_carries_its_own_save_dc_and_attack_bonus(catalog):
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "wizard", "level": 3, "choices": {
+            "class:wizard:spells-cantrips": ["fire-bolt"],
+            "class:wizard:spells-known": ["magic-missile"],
+        }}],
+        abilities={"method": "manual", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 16, "WIS": 10, "CHA": 10}},
+    )
+    resolution = resolve(draft, catalog)
+    wizard_entry = next(s for s in resolution["sheet"]["spells"] if s["classId"] == "wizard")
+    # INT 16 -> +3 modifier; prof bonus at level 3 is 2 -> DC 8+2+3=13, attack +2+3=5.
+    assert wizard_entry["spellSaveDC"] == 13
+    assert wizard_entry["spellAttackBonus"] == 5

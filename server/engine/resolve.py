@@ -29,10 +29,19 @@ fixed-proficiency grant and proficiency_choices choice (see
 _multiclass_proficiency_choice_templates and the `rc["index"] == 0`
 gating throughout resolve()), plus multiclass ability-score prerequisites
 (_multiclass_prerequisite_problems). sheet["spells"] aggregates every
-resolved class's spellcasting, not just the primary's. Still out of scope:
-a genuinely COMBINED spell-slot table across multiple caster classes
-(Phase 3b-ii — spellSaveDC/spellAttackBonus stay primary-class-only for
-now) and pruning multiclass-related warnings (Phase 3c).
+resolved class's spellcasting, not just the primary's.
+
+A genuinely COMBINED spell-slot table across multiple caster classes IS in
+scope as of Phase 3b-ii — see engine/spells.py's combined_caster_level/
+multiclass_spell_slots/warlock_pact_magic_slots. derived["spellSlots"] is
+the shared pool for every non-Warlock caster (looked up at the combined
+caster level); derived["warlockSpellSlots"] is Warlock's own Pact Magic,
+looked up separately at Warlock's own class level and never folded into
+the combined-level calculation, per RAW. spellSaveDC/spellAttackBonus are
+no longer top-level derived scalars — each caster in sheet["spells"] now
+carries its own, since a multiclass character's casters each use their
+own spellcasting ability. Still out of scope: pruning multiclass-related
+warnings (Phase 3c).
 """
 from __future__ import annotations
 
@@ -821,12 +830,6 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     equipped_items = _gather_equipped_items(equipment_choices, added_raw if isinstance(added_raw, list) else [], catalog.items)
     chosen_equipment = _chosen_equipment(equipment_choices, catalog.items)
 
-    # Primary class's own cantrip/known-spell choices — used below only for
-    # the primary-only derived spellSaveDC/spellAttackBonus (reshaping those
-    # into per-class values is out of scope for this fix; see Phase 3b-ii).
-    cantrip_choice = next((c for c in choices if c["id"] == f"class:{cls_id}:spells-cantrips"), None) if cls_id else None
-    known_spells_choice = next((c for c in choices if c["id"] == f"class:{cls_id}:spells-known"), None) if cls_id else None
-
     def _spell_summaries(choice: dict | None) -> list[dict]:
         if not choice:
             return []
@@ -852,19 +855,30 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc_known_spells_choice = next((c for c in choices if c["id"] == f"class:{rc_cls_id}:spells-known"), None)
         if not (rc_cantrip_choice or rc_known_spells_choice):
             continue
+        rc_spell_ability = spells_mod.spellcasting_ability(rc_cls)
+        rc_save_dc = spells_mod.spell_save_dc(prof_bonus, modifiers[rc_spell_ability]) if rc_spell_ability else None
+        rc_attack_bonus = spells_mod.spell_attack_bonus(prof_bonus, modifiers[rc_spell_ability]) if rc_spell_ability else None
         spells_summary.append({
             "classId": rc_cls_id,
             "cantrips": _spell_summaries(rc_cantrip_choice),
             "known": _spell_summaries(rc_known_spells_choice),
+            "spellSaveDC": rc_save_dc,
+            "spellAttackBonus": rc_attack_bonus,
         })
 
-    spell_ability = spells_mod.spellcasting_ability(cls) if cls else None
-    has_spellcasting_this_level = bool(cantrip_choice or known_spells_choice)
-    spell_save_dc = None
-    spell_attack_bonus = None
-    if has_spellcasting_this_level and spell_ability:
-        spell_save_dc = spells_mod.spell_save_dc(prof_bonus, modifiers[spell_ability])
-        spell_attack_bonus = spells_mod.spell_attack_bonus(prof_bonus, modifiers[spell_ability])
+    # Combined multiclass spell-slot pool (Phase 3b-ii): every non-Warlock
+    # caster shares one pool looked up at the COMBINED caster level (full
+    # casters contribute their own level, half casters level // 2), while
+    # Warlock's Pact Magic is looked up separately at Warlock's OWN class
+    # level — never folded into the combined-level calculation above, per
+    # RAW (see engine/spells.py's PACT_MAGIC_CLASSES/warlock_pact_magic_slots
+    # docstrings).
+    caster_level_entries = [(rc["cls_id"], rc["level"]) for rc in resolved_classes if rc["cls"]]
+    shared_combined_level = spells_mod.combined_caster_level(caster_level_entries)
+    spell_slots = spells_mod.multiclass_spell_slots(catalog, shared_combined_level)
+    warlock_entry = next((rc for rc in resolved_classes if rc["cls_id"] in spells_mod.PACT_MAGIC_CLASSES and rc["cls"]), None)
+    warlock_level_row = catalog.class_level_row(warlock_entry["cls_id"], warlock_entry["level"])["spellcasting"] if warlock_entry else None
+    warlock_slots = spells_mod.warlock_pact_magic_slots(warlock_level_row)
 
     granted_equipment = []
     if cls:
@@ -987,8 +1001,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "savingThrows": saves,
         "skills": skills,
         "passivePerception": derived_mod.passive_perception(skills),
-        "spellSaveDC": spell_save_dc,
-        "spellAttackBonus": spell_attack_bonus,
+        "spellSlots": spell_slots,
+        "warlockSpellSlots": warlock_slots,
     }
 
     fixed_languages = [lang["index"] for lang in (bg.get("languages", []) if bg else [])] + \
