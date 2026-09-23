@@ -185,7 +185,7 @@ def to_markdown(resolution: dict) -> str:
             # one caster to disambiguate — a single-class sheet keeps the
             # plain, unlabeled headings it always had.
             suffix = f" ({class_names.get(class_spells['classId'], class_spells['classId'])})" if multi_caster else ""
-            save_dc = class_spells.get("spellSaveDC")
+            save_dc = class_spells["spellSaveDC"]
             if save_dc is not None:
                 lines.append(
                     f"- **Спасяване за заклинание (DC){suffix}:** {save_dc}  |  "

@@ -66,6 +66,8 @@ def test_to_yaml_includes_cantrips_and_known_spells_for_a_caster():
         "classId": "wizard",
         "cantrips": [{"id": "fire-bolt", "name": "Fire Bolt", "level": 0}],
         "known": [{"id": "magic-missile", "name": "Magic Missile", "level": 1}],
+        "spellSaveDC": 13,
+        "spellAttackBonus": 5,
     }]
     text = to_yaml(resolution)
     doc = yaml.safe_load(text)
@@ -88,6 +90,8 @@ def test_to_yaml_includes_a_spells_entry_per_caster_for_a_multiclass_character()
         "classId": "wizard",
         "cantrips": [{"id": "fire-bolt", "name": "Fire Bolt", "level": 0}],
         "known": [{"id": "magic-missile", "name": "Magic Missile", "level": 1}],
+        "spellSaveDC": 12,
+        "spellAttackBonus": 4,
     }]
     text = to_yaml(resolution)
     doc = yaml.safe_load(text)

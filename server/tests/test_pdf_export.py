@@ -211,11 +211,15 @@ def test_includes_spells_for_every_caster_in_a_multiclass_character():
             "classId": "fighter",
             "cantrips": [],
             "known": [{"id": "hunters-mark", "name": "Hunter's Mark", "level": 1}],
+            "spellSaveDC": None,
+            "spellAttackBonus": None,
         },
         {
             "classId": "wizard",
             "cantrips": [{"id": "fire-bolt", "name": "Fire Bolt", "level": 0}],
             "known": [{"id": "magic-missile", "name": "Magic Missile", "level": 1}],
+            "spellSaveDC": 13,
+            "spellAttackBonus": 5,
         },
     ]
     text = _extract_text(to_pdf(resolution))
@@ -269,6 +273,8 @@ def test_handles_a_long_character_spanning_multiple_pages():
         "classId": "wizard",
         "cantrips": [{"id": f"cantrip-{i}", "name": f"Cantrip Spell {i}", "level": 0} for i in range(10)],
         "known": [{"id": f"spell-{i}", "name": f"Known Spell {i}", "level": 1} for i in range(15)],
+        "spellSaveDC": 15,
+        "spellAttackBonus": 7,
     }]
     resolution["sheet"]["equipment"] = {
         "granted": [{"itemId": f"item-{i}", "name": f"Granted Item {i}", "qty": 1} for i in range(10)],

@@ -231,11 +231,15 @@ def test_includes_spells_for_every_caster_in_a_multiclass_character():
             "classId": "fighter",
             "cantrips": [],
             "known": [{"id": "hunters-mark", "name": "Hunter's Mark", "level": 1}],
+            "spellSaveDC": None,
+            "spellAttackBonus": None,
         },
         {
             "classId": "wizard",
             "cantrips": [{"id": "fire-bolt", "name": "Fire Bolt", "level": 0}],
             "known": [{"id": "magic-missile", "name": "Magic Missile", "level": 1}],
+            "spellSaveDC": 13,
+            "spellAttackBonus": 5,
         },
     ]
     text = to_markdown(resolution)
@@ -256,6 +260,8 @@ def test_does_not_label_spell_subsections_by_class_for_a_single_caster():
         "classId": "wizard",
         "cantrips": [{"id": "fire-bolt", "name": "Fire Bolt", "level": 0}],
         "known": [{"id": "magic-missile", "name": "Magic Missile", "level": 1}],
+        "spellSaveDC": 13,
+        "spellAttackBonus": 5,
     }]
     text = to_markdown(resolution)
     assert "(Wizard)" not in text

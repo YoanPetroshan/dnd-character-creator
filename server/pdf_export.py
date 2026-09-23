@@ -193,7 +193,7 @@ def to_pdf(resolution: dict) -> bytes:
         multi_caster = len(spells) > 1
         for class_spells in spells:
             suffix = f" ({class_names.get(class_spells['classId'], class_spells['classId'])})" if multi_caster else ""
-            save_dc = class_spells.get("spellSaveDC")
+            save_dc = class_spells["spellSaveDC"]
             if save_dc is not None:
                 pdf.body(
                     f"Спасяване за заклинание (DC){suffix}: {save_dc}   "
