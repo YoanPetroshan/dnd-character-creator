@@ -15,6 +15,7 @@
 - **Source-qualified ids, matching 5etools' own convention.** A record from a non-SRD source gets an id suffixed by its source tag (e.g. `aasimar-vgm`, matching how the raw data already disambiguates reprints — Aasimar appears in VGM, then again reprinted in MPMM and XPHB, each a DIFFERENT record needing a DIFFERENT id) — never collide with an SRD id or with each other.
 - **Every fix verified against the REAL fetched data** (`~/.claude/dnd/.data/official/races.json`, already on this machine) — this project's unbroken discipline, more important than ever now that the data is messier/more varied than SRD's.
 - **`_copy`/`_mod`-based records are skipped** (return nothing from the normalizer for that record) — these are 5etools' own "this record is defined as another record plus a diff" shorthand, and fully resolving them is out of scope for this pass (matches v1's own disclosed cut in `chargen/normalise.py`, inherited here for the same reason: real, but bounded, engineering cost with a small number of affected records).
+- **`chargen` is a sibling of `server/`, not a subpackage of it — `import chargen` fails from every real way this server runs.** Confirmed empirically while setting up this plan's worktree: `cd server && .venv/bin/python -c "from chargen.sources import official_dir"` raises `ModuleNotFoundError`, both under `python app.py` (production) and `python -m pytest` (tests, despite `server/tests/conftest.py`'s existing `sys.path` insert — that insert only adds `server/` itself, not its parent). **`server/catalog/official_source.py` is the ONE place that fixes this** — it inserts the repo root onto `sys.path` at import time, then imports AND RE-EXPORTS `official_dir`/`has_official` from `chargen.sources` (see Task 1 Step 4). Every other file in this plan — `catalog/loader.py`, every test file, everything — imports `official_dir`/`has_official`/`load_official_races` FROM `catalog.official_source`, never directly from `chargen.sources`. This is a single point of truth, not a convention to remember per-file: **never write `from chargen.sources import ...` anywhere in this plan except inside `official_source.py` itself** — doing so elsewhere reintroduces the `ModuleNotFoundError`, since nothing guarantees `official_source.py`'s sys.path fix ran first.
 
 ---
 
@@ -52,8 +53,12 @@ Read `server/tests/test_resolve.py`'s conventions for the `catalog` fixture, the
 
 ```python
 import pytest
-from chargen.sources import official_dir, has_official
-from catalog.official_source import load_official_races
+# official_dir/has_official are imported FROM official_source (a
+# re-export), not from chargen.sources directly — official_source.py is
+# the one place that fixes sys.path so `chargen` (a sibling of server/,
+# not a subpackage) is importable at all; importing chargen.sources
+# directly here would fail with ModuleNotFoundError before that fix runs.
+from catalog.official_source import official_dir, has_official, load_official_races
 
 pytestmark = pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 
@@ -98,7 +103,7 @@ def test_copy_based_records_are_skipped_not_crashed_on():
 - [ ] **Step 3: Run to verify they fail**
 
 Run: `cd server && .venv/bin/python -m pytest tests/test_official_source.py -v`
-Expected: FAIL (`ModuleNotFoundError` or similar — `catalog/official_source.py` doesn't exist yet).
+Expected: FAIL with `ModuleNotFoundError: No module named 'catalog.official_source'` — `catalog/official_source.py` doesn't exist yet. (This is the only expected failure mode. If you instead see a `chargen`-related ModuleNotFoundError, something imported `chargen.sources` directly instead of via `catalog.official_source` — check the test file matches Step 2 exactly.)
 
 - [ ] **Step 4: Implement**
 
@@ -128,11 +133,29 @@ _copy/_mod-based records (5etools' own "defined as another record plus a
 diff" shorthand) are skipped — real, but a bounded, disclosed cut, same
 scope decision v1's own chargen/normalise.py already made for the same
 reason (see that module's docstring).
+
+chargen lives at the repo root, a SIBLING of server/ — not a subpackage
+of it. Every real way this server runs (`cd server && python app.py` in
+production, `cd server && pytest` for tests) has `server/` as the
+working directory, which does not put the repo root on sys.path. The
+insert below is what makes `from chargen.sources import ...` resolve —
+this module is the ONLY place in the whole codebase that imports
+chargen.sources directly; official_dir/has_official are re-exported
+from here (see the import line right below) so every caller (loader.py,
+every test) imports them FROM catalog.official_source instead, and
+never needs to know chargen lives one level up at all.
 """
 from __future__ import annotations
 
 from pathlib import Path
 import json
+import sys
+
+_repo_root = Path(__file__).resolve().parents[2]  # server/catalog/official_source.py -> catalog -> server -> repo root
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+
+from chargen.sources import official_dir, has_official  # noqa: E402  (must follow the sys.path fix above)
 
 
 def _ability_bonuses_from_5etools(ability_list: list[dict]) -> list[dict]:
@@ -232,26 +255,36 @@ print(json.dumps(data['subrace'][0], indent=2)[:1000])
 "
 ```
 
-Confirm the subrace shape (likely has a `raceName`/`raceSource` back-reference to its parent race, plus its own `ability`/`entries` following the same conventions as races) and the bundled SRD subrace shape (`server/chargen/data/srd/5e-SRD-Subraces.json`, read one record) for the target shape — `catalog.loader.py`'s SRD subrace conversion should already show the exact fields needed (likely `index, name, race:{index,name,url}, ability_bonuses, racial_traits, ...` — verify, don't assume). Implement `_subrace_from_5etools(raw, traits_by_index) -> dict | None` mirroring `_race_from_5etools`'s structure, and wire it into `load_official_races` to populate the `subraces` return value. Update the module's own tests (Step 2) with a real subrace case once this exists.
+Confirm the subrace shape (likely has a `raceName`/`raceSource` back-reference to its parent race, plus its own `ability`/`entries` following the same conventions as races) and the bundled SRD subrace shape (`chargen/data/srd/5e-SRD-Subraces.json`, at the REPO ROOT, not under `server/` — read one record) for the target shape — `catalog/loader.py`'s SRD subrace conversion should already show the exact fields needed (likely `index, name, race:{index,name,url}, ability_bonuses, racial_traits, ...` — verify, don't assume). Implement `_subrace_from_5etools(raw, traits_by_index) -> dict | None` mirroring `_race_from_5etools`'s structure, and wire it into `load_official_races` to populate the `subraces` return value. Update the module's own tests (Step 2) with a real subrace case once this exists.
 
 - [ ] **Step 6: Wire into `catalog/loader.py`**
 
-Read `server/catalog/loader.py` in full. Find the `Catalog` dataclass's `races`/`subraces`/`traits` population (likely in a `load()` function that builds the dataclass from `_load()`/`_index_by()` calls on the bundled SRD files). Add, after the SRD data is loaded:
+Read `server/catalog/loader.py` in full — it's short (confirmed at plan-writing time: `_DATA_DIR = Path(__file__).resolve().parents[2] / "chargen" / "data" / "srd"`, i.e. the repo root's `chargen/data/srd/`, and a single parameterless `load() -> Catalog` function returning `Catalog(classes=..., races=_index_by(_load("5e-SRD-Races.json")), subraces=_index_by(_load("5e-SRD-Subraces.json")), traits=_index_by(_load("5e-SRD-Traits.json")), ...)` in one `return` statement — re-confirm this hasn't changed since, then replace `load()` with:
 
 ```python
-from .official_source import load_official_races
-from chargen.sources import official_dir
+def load() -> Catalog:
+    from .official_source import load_official_races, official_dir
 
-# ... inside load():
-official_races, official_subraces, official_traits = load_official_races(official_dir())
-races_by_index = {**_index_by(_load("5e-SRD-Races.json")), **_index_by(official_races)}
-# (adapt to the real existing variable names/construction pattern in this
-# file rather than assuming this exact snippet — read the current code
-# first, this is illustrative of the MERGE, not a literal patch)
-traits_by_index = {**_index_by(_load("5e-SRD-Traits.json")), **official_traits}
+    official_races, official_subraces, official_traits = load_official_races(official_dir())
+    races = {**_index_by(_load("5e-SRD-Races.json")), **_index_by(official_races)}
+    subraces = {**_index_by(_load("5e-SRD-Subraces.json")), **_index_by(official_subraces)}
+    traits = {**_index_by(_load("5e-SRD-Traits.json")), **official_traits}  # official_traits is already a dict — see load_official_races' own return type
+
+    return Catalog(
+        classes=_index_by(_load("5e-SRD-Classes.json")),
+        levels=_load("5e-SRD-Levels.json"),
+        features=_index_by(_load("5e-SRD-Features.json")),
+        subclasses=_index_by(_load("5e-SRD-Subclasses.json")),
+        races=races,
+        subraces=subraces,
+        traits=traits,
+        backgrounds=_index_by(_load("5e-SRD-Backgrounds.json")),
+        items=_index_by(_load("5e-SRD-Equipment.json")),
+        spells=_index_by(_load("5e-SRD-Spells.json")),
+    )
 ```
 
-The exact insertion point depends on `loader.py`'s real current structure — read it fully before editing, and confirm the merge preserves every existing SRD-only behavior unchanged (Global Constraints' no-op guarantee).
+The `from .official_source import ...` is deliberately a LOCAL import inside `load()`, not a top-level one — `official_source.py` does its own `sys.path` mutation at import time (a real but narrow side effect, confirmed necessary in Global Constraints), and keeping that side effect out of `loader.py`'s own top-level import list keeps it obviously scoped to only the one function that needs it. `official_dir` here is `catalog.official_source`'s re-export, not `chargen.sources` imported directly (Global Constraints: never import `chargen.sources` directly outside `official_source.py`). If the real current `load()` has evolved from the shape above by the time this task runs, adapt the same merge pattern to whatever it actually looks like — the load-bearing part is the three-way dict merge (SRD ∪ official, official wins ties only in the impossible case of an id collision, which Global Constraints' source-qualified-id rule guarantees never happens), not the exact surrounding syntax.
 
 - [ ] **Step 7: Run to verify all pass**
 
@@ -349,13 +382,21 @@ def test_ability_choice_race_gets_both_fixed_and_choice_envelopes():
     assert {o["ability_score"]["index"] for o in aetherborn["ability_bonus_options"]["from"]["options"]} == {"str", "dex", "con", "int", "wis"}
 
 
-def test_ability_choice_flows_through_the_existing_choice_machinery(catalog_with_official):
+```
+
+A second test — confirming the choice actually flows through `resolve()` end to end — belongs in `server/tests/test_resolve.py` instead, not this file: that file already has its own module-scoped `catalog` fixture (`@pytest.fixture(scope="module") def catalog(): return load()`, at the top of `test_resolve.py`), which after Task 1's `loader.py` wiring automatically includes official data when present on the machine — no separate fixture needed. Add there:
+
+```python
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_sourcebook_ability_bonus_choice_flows_through_resolve(catalog):
     # A real resolve() test — build a draft selecting 2 of the 5 offered
-    # abilities for Aetherborn's choice envelope, confirm it applies.
+    # abilities for Aetherborn's choice envelope, confirm it applies. Ground
+    # the exact draft/assertions against real data from this task's own
+    # Step 1 output before writing this — don't guess the race name/values.
     ...
 ```
 
-(Ground the second test's exact draft/assertions against real data once Step 1's output is in hand — don't guess the exact race name/values without having run Step 1 first.)
+(`has_official` needs importing there too — `from catalog.official_source import has_official`, same rule as everywhere else in this plan.)
 
 - [ ] **Step 3: Run to verify they fail**
 
@@ -602,10 +643,13 @@ Confirm each is a plain list of strings (not nested dicts with conditions — 5e
 
 - [ ] **Step 2: Write failing tests**
 
+Both tests below go in `server/tests/test_resolve.py`, using that file's own existing module-scoped `catalog` fixture (`return load()` — automatically official-data-aware after Task 1's `loader.py` wiring, no separate fixture needed) and its existing `_fighter_acolyte_human_draft` helper:
+
 ```python
-def test_race_damage_modifiers_carry_through_to_the_sheet(catalog_with_official):
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_race_damage_modifiers_carry_through_to_the_sheet(catalog):
     draft = _fighter_acolyte_human_draft(species={"id": "aasimar-vgm", "choices": {}})
-    resolution = resolve(draft, catalog_with_official)
+    resolution = resolve(draft, catalog)
     assert resolution["sheet"]["damageModifiers"]["resistances"] == ["necrotic", "radiant"]
     assert resolution["sheet"]["damageModifiers"]["immunities"] == []
     assert resolution["sheet"]["conditionImmunities"] == []
@@ -616,6 +660,8 @@ def test_a_race_with_no_damage_modifiers_gets_empty_lists(catalog):
     assert resolution["sheet"]["damageModifiers"] == {"resistances": [], "immunities": [], "vulnerabilities": []}
     assert resolution["sheet"]["conditionImmunities"] == []
 ```
+
+(`from catalog.official_source import has_official` needs adding to `test_resolve.py`'s imports — same single-point-of-truth rule as everywhere else in this plan. The first test's exact Aasimar-VGM resistances literal must be re-confirmed against Step 1's real output before trusting it here.)
 
 - [ ] **Step 3-4: Standard TDD loop** — implement `_damage_modifiers_from_5etools`/`_condition_immunities_from_5etools` in `official_source.py` (adding these as NEW fields directly on the race dict, e.g. `race["resist"]`/`race["immune"]`/`race["vulnerable"]`/`race["condition_immune"]`, matching 5etools' own field names rather than inventing new ones, so the conversion is a near-identity copy), then wire a small new block into `resolve()`'s `sheet = {...}` construction reading `race.get("resist", [])` etc. (guard for `race` being `None`, matching every other species-conditional field already in `resolve()`).
 
