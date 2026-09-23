@@ -1805,3 +1805,52 @@ def test_each_caster_in_sheet_spells_carries_its_own_save_dc_and_attack_bonus(ca
     # INT 16 -> +3 modifier; prof bonus at level 3 is 2 -> DC 8+2+3=13, attack +2+3=5.
     assert wizard_entry["spellSaveDC"] == 13
     assert wizard_entry["spellAttackBonus"] == 5
+
+
+def test_leveling_down_prunes_a_now_unreachable_asi_choice(catalog):
+    # Fighter's ASI-granting levels include level 4. A level-4 ASI
+    # selection, then leveled back down to 3, should be pruned. Confirmed
+    # directly against the real catalog while writing this plan: at
+    # level 4 the choice class:fighter:4:asi exists in `choices`; at
+    # level 3 it doesn't, while the raw selection is still sitting in
+    # classes[0]["choices"] (SET_CLASS_LEVEL never touches `choices`).
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "fighter", "level": 4, "choices": {
+            "class:fighter:4:asi": ["str-plus-2"],
+        }}],
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["pruned"] == []  # not stale yet, level 4 is current
+
+    draft["classes"][0]["level"] = 3  # level back down, selection left in place
+    resolution = resolve(draft, catalog)
+    pruned_ids = [p["choiceId"] for p in resolution["pruned"]]
+    assert "class:fighter:4:asi" in pruned_ids
+    pruned_entry = next(p for p in resolution["pruned"] if p["choiceId"] == "class:fighter:4:asi")
+    assert "class:fighter:4:asi" in pruned_entry["reason"]
+
+
+def test_clearing_a_subclass_prunes_its_subclass_gated_feature_choice(catalog):
+    # Champion (Fighter's only bundled subclass) grants a SECOND Fighting
+    # Style choice at level 10 (class:fighter:10:feature:additional-
+    # fighting-style) on top of the base class's level-1 one — confirmed
+    # directly against the real catalog while writing this plan. Clearing
+    # subclassId (SET_SUBCLASS with undefined, e.g. re-picking "no
+    # subclass") leaves the old selection in place but the level-10
+    # feature choice stops being generated, since it's subclass-gated;
+    # the base level-1 Fighting Style choice (not subclass-specific)
+    # correctly stays reachable and unpruned.
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "fighter", "level": 10, "subclassId": "champion", "choices": {
+            "class:fighter:1:feature:fighter-fighting-style": ["fighting-style-defense"],
+            "class:fighter:10:feature:additional-fighting-style": ["fighting-style-dueling"],
+        }}],
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["pruned"] == []
+
+    draft["classes"][0]["subclassId"] = None  # clear the subclass, selections left in place
+    resolution = resolve(draft, catalog)
+    pruned_ids = [p["choiceId"] for p in resolution["pruned"]]
+    assert "class:fighter:10:feature:additional-fighting-style" in pruned_ids
+    assert "class:fighter:1:feature:fighter-fighting-style" not in pruned_ids  # base class feature, still reachable
