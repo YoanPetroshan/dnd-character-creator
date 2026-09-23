@@ -81,6 +81,47 @@ def _ability_bonuses_from_5etools(ability_list: list[dict]) -> list[dict]:
     return bonuses
 
 
+def _ability_bonus_options_from_5etools(ability_list: list[dict]) -> dict | None:
+    """Converts the CHOOSE portion of 5etools' `ability` field into the
+    SAME ability_bonus_options envelope shape SRD's Half-Elf record
+    already uses ({"choose": N, "type": "ability_bonuses", "from": {...}})
+    — this is exactly what build_choice_template/build_choice_options
+    (catalog/choices.py) and _species_ability_bonus_choice_template
+    (engine/resolve.py) already know how to consume, unmodified. A race
+    can carry BOTH a fixed bonus (handled separately, by
+    _ability_bonuses_from_5etools, from the SAME entry) and this choice
+    envelope at once — e.g. Aetherborn: fixed +2 CHA, plus choose 2 of
+    {STR,DEX,CON,INT,WIS} for +1 each — since SRD keeps ability_bonuses
+    and ability_bonus_options as two independent fields, and so do the
+    two functions here (_species_ability_bonuses/
+    _species_ability_bonus_choice_template read them independently too).
+
+    Only entries shaped {"choose": {"from": [...], "count": N}} are
+    handled — confirmed empirically (2026-09-23, against the real fetched
+    races.json) that every race-level entry using "choose" matches this
+    shape, EXCEPT TCE's "Custom Lineage" pseudo-race, which uses
+    {"from": [...], "amount": 2} instead of "count": a fundamentally
+    different, more flexible ASI split (TCE's actual rule: +2 to one
+    ability OR +1 to two) that this simple choose-N-for-+1-each envelope
+    can't represent either way. Entries without a "count" key are
+    skipped rather than guessed at (silently defaulting a missing
+    "count" to 1 would misrepresent Custom Lineage's real mechanics) —
+    same out-of-scope reasoning as the "weighted" shape seen on
+    backgrounds (Phase 4b), not races, which this also doesn't handle."""
+    for entry in ability_list or []:
+        choose = entry.get("choose")
+        if not choose or "count" not in choose:
+            continue
+        from_list = choose.get("from", [])
+        count = choose["count"]
+        options = [
+            {"option_type": "ability_bonus", "ability_score": {"index": ab, "name": ab.upper(), "url": ""}, "bonus": 1}
+            for ab in from_list
+        ]
+        return {"choose": count, "type": "ability_bonuses", "from": {"option_set_type": "options_array", "options": options}}
+    return None
+
+
 def _trait_refs_from_entries(entries: list, id_prefix: str, race_ref: list[dict], subrace_ref: list[dict],
                               traits_by_index: dict[str, dict]) -> list[dict]:
     """Mints one synthetic trait per top-level `entries` item, added to
@@ -123,6 +164,7 @@ def _race_from_5etools(raw: dict, traits_by_index: dict[str, dict]) -> dict | No
         "index": index, "name": raw["name"],
         "speed": raw.get("speed") if isinstance(raw.get("speed"), int) else 30,
         "ability_bonuses": _ability_bonuses_from_5etools(raw.get("ability", [])),
+        "ability_bonus_options": _ability_bonus_options_from_5etools(raw.get("ability", [])),
         "alignment": "", "age": "", "size": size, "size_description": "",
         "languages": [], "language_desc": "",
         "traits": trait_refs,

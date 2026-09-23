@@ -84,3 +84,49 @@ def test_all_subraces_reference_a_race_that_was_actually_loaded():
     race_ids = {r["index"] for r in races}
     for s in subraces:
         assert s["race"]["index"] in race_ids
+
+
+def test_ability_choice_race_gets_both_fixed_and_choice_envelopes():
+    # Aetherborn (PSK): a fixed +2 CHA plus a SEPARATE choose-2-of-5 choice
+    # for +1 each — confirmed against the real fetched data (2026-09-23) to
+    # match this exact shape: {"cha": 2, "choose": {"from": [...], "count": 2}}.
+    races, _, _ = load_official_races(official_dir())
+    aetherborn = next(r for r in races if r["name"] == "Aetherborn")
+    assert aetherborn["ability_bonuses"] == [{"ability_score": {"index": "cha", "name": "CHA", "url": ""}, "bonus": 2}]
+    assert aetherborn["ability_bonus_options"]["choose"] == 2
+    assert {o["ability_score"]["index"] for o in aetherborn["ability_bonus_options"]["from"]["options"]} == {"str", "dex", "con", "int", "wis"}
+
+
+def test_ability_choice_envelope_matches_srd_shape_exactly():
+    # Same envelope shape catalog/choices.py's build_choice_options already
+    # knows how to consume for SRD's Half-Elf (Phase 3b) — option_type
+    # "ability_bonus", one option per candidate ability, each worth +1.
+    races, _, _ = load_official_races(official_dir())
+    aetherborn = next(r for r in races if r["name"] == "Aetherborn")
+    envelope = aetherborn["ability_bonus_options"]
+    assert envelope["type"] == "ability_bonuses"
+    assert envelope["from"]["option_set_type"] == "options_array"
+    for option in envelope["from"]["options"]:
+        assert option["option_type"] == "ability_bonus"
+        assert option["bonus"] == 1
+        assert set(option["ability_score"].keys()) == {"index", "name", "url"}
+
+
+def test_race_with_no_ability_choice_gets_no_options_envelope():
+    # Aasimar (VGM) is a plain fixed +2 CHA/+1 WIS, no "choose" sub-entry —
+    # ability_bonus_options must stay None, not an empty/malformed dict.
+    races, _, _ = load_official_races(official_dir())
+    aasimar = next(r for r in races if r["index"] == "aasimar-vgm")
+    assert aasimar["ability_bonus_options"] is None
+
+
+def test_custom_lineage_amount_shape_is_not_silently_mishandled():
+    # TCE's "Custom Lineage" uses {"from": [...], "amount": 2} instead of a
+    # "count" key — a fundamentally different, more flexible ASI split (+2
+    # to one ability OR +1 to two) that this task's simple choose-N-for-+1-
+    # each envelope cannot represent. Confirmed empirically (2026-09-23)
+    # this is the ONLY race-level entry with "choose" but no "count". Must
+    # be skipped (None), not guessed at via a wrong default count.
+    races, _, _ = load_official_races(official_dir())
+    custom_lineage = next(r for r in races if r["name"] == "Custom Lineage")
+    assert custom_lineage["ability_bonus_options"] is None

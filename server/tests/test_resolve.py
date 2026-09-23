@@ -1,6 +1,10 @@
 import pytest
 
 from catalog.loader import load
+# has_official is imported FROM official_source (a re-export), not from
+# chargen.sources directly — see official_source.py's own docstring for
+# why every caller in this plan does it this way.
+from catalog.official_source import has_official
 from engine.derived import hit_point_max_multiclass
 from engine.resolve import _DETAIL_FIELDS, resolve
 
@@ -488,6 +492,33 @@ def test_half_elf_choice_is_pending_when_unresolved(catalog):
     choice = next(c for c in resolution["choices"] if c["id"] == "species:half-elf:ability-bonus")
     assert choice["status"] == "pending"
     assert choice["count"] == 2
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_sourcebook_ability_bonus_choice_flows_through_resolve(catalog):
+    # Aetherborn (PSK, official_source.py's own id "aetherborn-psk"): a
+    # fixed +2 CHA plus a SEPARATE choose-2-of-{STR,DEX,CON,INT,WIS}
+    # choice for +1 each — confirmed against the real fetched data
+    # (2026-09-23). This exercises Phase 3b's Half-Elf-built ability-bonus
+    # Choice machinery end to end for a Task 2/official_source.py-produced
+    # envelope, with zero changes to resolve.py or catalog/choices.py.
+    draft = _fighter_acolyte_human_draft(
+        species={"id": "aetherborn-psk", "choices": {"species:aetherborn-psk:ability-bonus": ["str", "dex"]}},
+        abilities={"method": "manual", "base": {"STR": 14, "DEX": 12, "CON": 14, "INT": 10, "WIS": 12, "CHA": 8}},
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    scores = resolution["sheet"]["abilities"]
+    assert scores["STR"] == 15  # 14 base + 1 from the choice
+    assert scores["DEX"] == 13  # 12 base + 1 from the choice
+    assert scores["CHA"] == 10  # 8 base + 2 fixed Aetherborn bonus, unrelated to the choice
+    assert scores["CON"] == 14  # unaffected — not selected
+
+    choice = next(c for c in resolution["choices"] if c["id"] == "species:aetherborn-psk:ability-bonus")
+    assert choice["status"] == "resolved"
+    assert choice["count"] == 2
+    assert choice["selected"] == ["str", "dex"]
+    assert {o["id"] for o in choice["options"]} == {"str", "dex", "con", "int", "wis"}
 
 
 def test_non_list_classes_is_a_problem_not_a_crash(catalog):
