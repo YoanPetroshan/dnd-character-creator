@@ -1854,3 +1854,50 @@ def test_clearing_a_subclass_prunes_its_subclass_gated_feature_choice(catalog):
     pruned_ids = [p["choiceId"] for p in resolution["pruned"]]
     assert "class:fighter:10:feature:additional-fighting-style" in pruned_ids
     assert "class:fighter:1:feature:fighter-fighting-style" not in pruned_ids  # base class feature, still reachable
+
+
+def test_pruning_a_multiclass_choice_does_not_disturb_the_other_class(catalog):
+    # all_selections is a flat dict merged across every resolved class, so
+    # this pins that a stale selection on ONE class in a multiclass draft
+    # is detected in isolation — it neither leaks into the other class's
+    # own choice ids nor disturbs that class's own resolution. Fighter
+    # 4/Wizard 3: Fighter's level-4 ASI selection, Wizard's own cantrips
+    # and prepared spells submitted normally (with the base draft's INT
+    # 10 -> +0 modifier, Wizard 3's known-spell count is 3). Confirmed
+    # directly against the real catalog while writing this test.
+    draft = _fighter_acolyte_human_draft(
+        classes=[
+            {"classId": "fighter", "level": 4, "choices": {"class:fighter:4:asi": ["str-plus-2"]}},
+            {"classId": "wizard", "level": 3, "choices": {
+                "class:wizard:spells-cantrips": ["acid-splash", "chill-touch", "dancing-lights"],
+                "class:wizard:spells-known": ["alarm", "burning-hands", "charm-person"],
+            }},
+        ],
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["pruned"] == []  # level 4 is current, ASI still reachable
+
+    draft["classes"][0]["level"] = 3  # level Fighter down, selection left in place
+    resolution = resolve(draft, catalog)
+    pruned_ids = [p["choiceId"] for p in resolution["pruned"]]
+    assert pruned_ids == ["class:fighter:4:asi"]  # only Fighter's stale ASI, nothing Wizard-related
+
+    wizard_cantrips = next(c for c in resolution["choices"] if c["id"] == "class:wizard:spells-cantrips")
+    wizard_known = next(c for c in resolution["choices"] if c["id"] == "class:wizard:spells-known")
+    assert wizard_cantrips["status"] == "resolved"
+    assert wizard_cantrips["selected"] == ["acid-splash", "chill-touch", "dancing-lights"]
+    assert wizard_known["status"] == "resolved"
+    assert wizard_known["selected"] == ["alarm", "burning-hands", "charm-person"]
+
+
+def test_a_stale_choice_id_with_an_empty_selection_is_not_flagged_as_pruned(catalog):
+    # Locks in the `if selected and ...` guard in the pruned list
+    # comprehension: an empty list contributes nothing regardless of
+    # staleness, so it shouldn't be flagged. A future refactor to a
+    # simpler-looking `if choice_id not in current_template_ids` (dropping
+    # the truthiness check) would flag this and fail here.
+    draft = _fighter_acolyte_human_draft(
+        classes=[{"classId": "fighter", "level": 3, "choices": {"class:fighter:4:asi": []}}],
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["pruned"] == []

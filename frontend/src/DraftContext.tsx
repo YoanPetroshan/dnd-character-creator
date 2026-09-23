@@ -72,11 +72,18 @@ function reducer(state: Draft, action: Action): Draft {
         classes: [...state.classes, { classId: action.classId, level: 1, choices: {} }],
       };
     }
-    case "REMOVE_CLASS":
+    case "REMOVE_CLASS": {
+      // If the removed class is the PRIMARY (classes[0]), equipment choice
+      // ids anchored to it go stale — same reasoning as SET_CLASS above.
+      // Removing a non-primary class leaves classes[0] untouched, so
+      // equipment choices are still anchored correctly and need no change.
+      const isPrimary = state.classes[0]?.classId === action.classId;
       return {
         ...state,
         classes: state.classes.filter((c) => c.classId !== action.classId),
+        ...(isPrimary ? { equipment: { ...state.equipment, choices: {} } } : {}),
       };
+    }
     case "SET_BACKGROUND":
       // Equipment choice ids are also background-scoped, so they go stale
       // on background change too — see SET_CLASS above.

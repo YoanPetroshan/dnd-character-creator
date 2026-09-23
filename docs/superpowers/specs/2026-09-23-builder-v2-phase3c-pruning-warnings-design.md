@@ -4,7 +4,7 @@
 
 Since Phase 0, `Resolution.pruned` has existed in the response shape (`list[{choiceId, reason}]`, both backend `frontend/src/types.ts` and the Python side) but has NEVER been written to — `resolve()` always returns `"pruned": []`. The architecture already makes stale selections SAFE by construction: every phase since Phase 1 has relied on the fact that a choice template is only generated for a level/class/subclass/species actually currently reached, so a selection stored in the Draft for a choice that no longer exists (because the player leveled down, switched subclass, removed a class, changed species) simply stops being read by the generic choice-resolution loop — it's never deleted, never causes a crash, just silently inert. This has been explicitly relied upon and tested (e.g. Phase 3a's own design spec §7, "no pruning needed" — verified by a level-up/level-down round-trip producing byte-identical results).
 
-Phase 3c is NOT about correctness — the architecture is already correct. It's purely about **visibility**: telling the player "this choice you made no longer applies and was ignored" instead of leaving them to wonder why, say, a spell they picked at a higher level silently vanished from their sheet after they lowered their level.
+Phase 3c is NOT about correctness — the architecture is already correct. It's purely about **visibility**: telling the player "this choice you made no longer applies and was ignored" instead of leaving them to wonder why, say, an ASI they picked at a higher level silently stopped applying after they lowered their level, or a subclass-gated feature choice they made silently stopped applying after they cleared that subclass.
 
 ## Goal
 
@@ -32,6 +32,10 @@ is sufficient — it's traceable (names the exact stale choice id) without requi
 
 - No mutation of the Draft — `pruned` is purely informational output, exactly like `problems`/`warnings`. The stale selection stays in the Draft's `localStorage` copy untouched (consistent with the existing, already-relied-upon "never delete, just stop reading" architecture) — a player could, in principle, level back up and have their old selection silently resurface, which is correct RAW-agnostic UX (undo-friendly), not a bug to fix.
 - No change to the actual resolution logic anywhere else — this is a pure, additive read-only pass over already-computed data.
+
+## Explicitly out of scope
+
+This phase detects staleness where a choice's ID entirely disappears from the current `choice_templates` — the ID that used to be generated for the Draft's prior state simply isn't generated anymore. It does NOT detect the separate case where a choice's ID survives but its allowed COUNT shrinks — e.g. a spellcaster levels down while still having more spells selected than the lower level now allows. Spell choice ids are deliberately level-agnostic (see `server/engine/resolve.py`, `_spell_choice_templates`: "No `level` in source — these choices span every level a spellcaster has reached"), so `class:<id>:spells-known` stays present in `choice_templates` across a level change; only its `choose` count shrinks. That case already produces a blocking `over-selected-*` problem (pre-existing behavior, not introduced by this phase) rather than a `pruned` entry. It's a known, separate gap — tracked as follow-up work, not addressed here.
 
 ## Frontend
 

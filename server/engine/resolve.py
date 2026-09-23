@@ -795,12 +795,15 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
 
     # A selection stored in the Draft for a choice id that no longer
     # exists among the CURRENTLY reachable choice_templates (because the
-    # player leveled down, switched subclass, removed a class, or changed
-    # species/background) is stale — it was never deleted from the Draft
-    # (the architecture deliberately never mutates the Draft — see Phase
-    # 3a design spec §7), so it just silently stopped being read. This is
-    # the first time anything surfaces that to the player instead of
-    # leaving it invisible.
+    # player leveled down or cleared a subclass selection) is stale — it
+    # was never deleted from the Draft (the architecture deliberately
+    # never mutates the Draft — see Phase 3a design spec §7), so it just
+    # silently stopped being read. This is the first time anything
+    # surfaces that to the player instead of leaving it invisible.
+    # (SET_SPECIES/SET_SUBSPECIES/SET_BACKGROUND/SET_CLASS all reset
+    # `choices: {}` in the frontend reducer, so a species/background/
+    # primary-class change can never itself leave a stale selection
+    # behind — those paths never reach here.)
     current_template_ids = {tpl["id"] for tpl in choice_templates}
     pruned = [
         {"choiceId": choice_id, "reason": f"'{choice_id}' no longer applies to the current character and was ignored."}
