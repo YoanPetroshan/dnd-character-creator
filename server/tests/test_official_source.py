@@ -130,3 +130,135 @@ def test_custom_lineage_amount_shape_is_not_silently_mishandled():
     races, _, _ = load_official_races(official_dir())
     custom_lineage = next(r for r in races if r["name"] == "Custom Lineage")
     assert custom_lineage["ability_bonus_options"] is None
+
+
+# --- Task 3: fixed skill/tool/weapon/armor proficiency grants -------------
+#
+# Real-data shapes confirmed empirically (2026-09-23) against
+# /Users/yoanpetrov/.claude/dnd/.data/official/races.json:
+#   skillProficiencies -> Aetherborn (PSK) -> [{"intimidation": True}]
+#   toolProficiencies  -> Naga (PSA)       -> [{"poisoner's kit": True}]
+#   weaponProficiencies-> Dwarf (PHB)      -> [{"battleaxe|phb": True, ...}]
+#   armorProficiencies -> Hobgoblin (VGM)  -> [{"light": True}]
+# Choice-shaped entries ("choose": {...}, "any": N, "anyArtisansTool": N)
+# never have value True, so they're naturally excluded by an `is True` check.
+
+
+def test_fixed_skill_proficiency_lands_on_a_synthetic_trait():
+    races, _, traits_by_index = load_official_races(official_dir())
+    aetherborn = next(r for r in races if r["name"] == "Aetherborn")
+    skill_traits = [
+        traits_by_index[t["index"]] for t in aetherborn["traits"]
+        if any(p["index"] == "skill-intimidation" for p in traits_by_index[t["index"]].get("proficiencies", []))
+    ]
+    assert len(skill_traits) == 1
+    # The grant lands on the trait whose own prose actually describes it
+    # ("Menacing": "You have proficiency in the {@skill Intimidation}
+    # skill.") — not an arbitrary trait like "Age".
+    assert skill_traits[0]["name"] == "Menacing"
+
+
+def test_fixed_skill_proficiency_flows_through_resolve_into_the_sheet():
+    # Proves the "zero-touch reuse" claim end-to-end for skills: resolve.py's
+    # existing trait-proficiency-scanning code (engine/resolve.py ~line 957)
+    # already reads trait.get("proficiencies", []) filtered by "skill-" and
+    # folds it into sheet.proficiencies.skills, exactly like SRD's own Elf
+    # "Keen Senses" trait already does — no resolve.py changes needed.
+    from catalog.loader import load
+    from engine.resolve import resolve
+
+    catalog = load()
+    draft = {
+        "name": "Test Aetherborn", "sources": ["srd"],
+        "classes": [{"classId": "fighter", "level": 1, "choices": {}}],
+        "background": {"id": "acolyte", "choices": {}},
+        "species": {"id": "aetherborn-psk", "choices": {}},
+        "abilities": {"method": "manual", "base": {"STR": 15, "DEX": 14, "CON": 13, "INT": 12, "WIS": 10, "CHA": 8}},
+        "equipment": {"added": [], "skipped": False}, "details": {},
+    }
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    assert "skill-intimidation" in resolution["sheet"]["proficiencies"]["skills"]
+
+
+def test_fixed_tool_proficiency_lands_on_a_synthetic_trait_with_apostrophe_stripped():
+    # Naga (PSA)'s "Poison Affinity" grants proficiency with the poisoner's
+    # kit — id must match catalog items' own "poisoners-kit" (apostrophe
+    # stripped, space -> hyphen), and the display name should read
+    # "Poisoner's Kit" (title case, apostrophe preserved) not "Poisoner'S
+    # Kit" (what a naive str.title() call would wrongly produce).
+    races, _, traits_by_index = load_official_races(official_dir())
+    naga = next(r for r in races if r["name"] == "Naga")
+    all_profs = [p for t in naga["traits"] for p in traits_by_index[t["index"]].get("proficiencies", [])]
+    tool_profs = [p for p in all_profs if p["index"] == "poisoners-kit"]
+    assert len(tool_profs) == 1
+    assert tool_profs[0]["name"] == "Poisoner's Kit"
+
+
+def test_fixed_weapon_proficiency_strips_source_suffix_and_pluralizes():
+    # Dwarf (PHB)'s "Dwarven Combat Training" grants battleaxe/handaxe/
+    # light hammer/warhammer proficiency. Raw ids carry a "|phb" source
+    # suffix that must be stripped, and the resulting ids must be
+    # PLURALIZED to match the id convention the BUNDLED SRD data's own
+    # identical trait already uses (chargen/data/srd/5e-SRD-Traits.json's
+    # "dwarven-combat-training" trait: battleaxes/handaxes/light-hammers/
+    # warhammers) — a DIFFERENT, separate id namespace from catalog.items'
+    # own SINGULAR equipment ids ("battleaxe").
+    races, _, traits_by_index = load_official_races(official_dir())
+    dwarf = next(r for r in races if r["name"] == "Dwarf" and r.get("source") == "PHB")
+    all_profs = [p for t in dwarf["traits"] for p in traits_by_index[t["index"]].get("proficiencies", [])]
+    weapon_ids = {p["index"] for p in all_profs if p["index"] in {"battleaxes", "handaxes", "light-hammers", "warhammers"}}
+    assert weapon_ids == {"battleaxes", "handaxes", "light-hammers", "warhammers"}
+
+
+def test_fixed_armor_proficiency_gets_the_dash_armor_suffix():
+    # Hobgoblin (VGM)'s "Martial Training" grants light armor proficiency —
+    # raw key is the bare category "light", converted id must match the
+    # SRD class-proficiency convention ("light-armor", not "light").
+    races, _, traits_by_index = load_official_races(official_dir())
+    hobgoblin = next(r for r in races if r["name"] == "Hobgoblin" and r.get("source") == "VGM")
+    all_profs = [p for t in hobgoblin["traits"] for p in traits_by_index[t["index"]].get("proficiencies", [])]
+    assert any(p["index"] == "light-armor" for p in all_profs)
+
+
+def test_choice_shaped_skill_proficiency_produces_no_fixed_grant():
+    # Centaur (GGR/MPMM) uses {"choose": {"from": [...]}} — a player CHOICE,
+    # not a fixed grant. Must NOT show up as a fixed proficiency entry on
+    # any synthetic trait (that's Task 4's job, not this task's).
+    races, _, traits_by_index = load_official_races(official_dir())
+    centaur = next(r for r in races if r["name"] == "Centaur")
+    all_profs = [p for t in centaur["traits"] for p in traits_by_index[t["index"]].get("proficiencies", [])]
+    skill_indexes = {p["index"] for p in all_profs if p["index"].startswith("skill-")}
+    assert skill_indexes == set()
+
+
+def test_subrace_fixed_weapon_proficiency_lands_on_a_racial_trait():
+    # Drow (PHB), a subrace of Elf (PHB), grants rapier/shortsword/hand
+    # crossbow proficiency via "Drow Weapon Training" — subraces need the
+    # exact same conversion+attachment treatment as races, onto their own
+    # racial_traits (not the parent race's traits).
+    _, subraces, traits_by_index = load_official_races(official_dir())
+    drow = next(s for s in subraces if s["name"] == "Drow" and s["race"]["index"] == "elf-phb")
+    all_profs = [p for t in drow["racial_traits"] for p in traits_by_index[t["index"]].get("proficiencies", [])]
+    weapon_ids = {p["index"] for p in all_profs}
+    assert {"rapiers", "shortswords", "hand-crossbows"} <= weapon_ids
+
+
+def test_race_with_no_named_entries_but_a_fixed_grant_gets_a_dedicated_trait():
+    # Defensive path: empirically NO real race/subrace hits this (all 66
+    # with any proficiency field have a matching named entries item — see
+    # module docstring), but the conversion must not silently drop a fixed
+    # grant if a race ever has one with zero named entries.
+    from catalog.official_source import _race_from_5etools
+
+    raw = {
+        "name": "Test Race", "source": "TEST", "size": ["M"],
+        "entries": [],  # no named entries at all
+        "skillProficiencies": [{"intimidation": True}],
+    }
+    traits_by_index = {}
+    race = _race_from_5etools(raw, traits_by_index)
+    assert len(race["traits"]) == 1
+    trait = traits_by_index[race["traits"][0]["index"]]
+    assert trait["name"] == "Automatic Proficiencies"
+    assert trait["proficiencies"] == [{"index": "skill-intimidation", "name": "Skill: Intimidation", "url": ""}]
