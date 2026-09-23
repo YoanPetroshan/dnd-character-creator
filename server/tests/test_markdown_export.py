@@ -31,8 +31,8 @@ def _sample_resolution():
                 "skill-sleight-of-hand": 2, "skill-stealth": 2, "skill-survival": 1,
             },
             "passivePerception": 11,
-            "spellSaveDC": None,
-            "spellAttackBonus": None,
+            "spellSlots": {},
+            "warlockSpellSlots": {},
         },
         "choices": [], "problems": [], "warnings": [], "pruned": [],
     }
@@ -103,13 +103,117 @@ def test_includes_spells_section_for_a_caster():
         "classId": "wizard",
         "cantrips": [{"id": "fire-bolt", "name": "Fire Bolt", "level": 0}],
         "known": [{"id": "magic-missile", "name": "Magic Missile", "level": 1}],
+        "spellSaveDC": 13,
+        "spellAttackBonus": 5,
     }]
-    resolution["derived"]["spellSaveDC"] = 13
-    resolution["derived"]["spellAttackBonus"] = 5
     text = to_markdown(resolution)
     assert "Fire Bolt" in text
     assert "Magic Missile" in text
     assert "13" in text
+
+
+def test_each_casters_spell_save_dc_and_attack_bonus_render_labeled_by_class():
+    # Phase 3b-ii: spellSaveDC/spellAttackBonus moved off derived (a
+    # single, ambiguous top-level value attributable only to the primary
+    # caster) and onto each sheet["spells"][i] entry — a multiclass
+    # character's casters each use their own spellcasting ability, so
+    # both must render, each clearly labeled by its own class.
+    resolution = _sample_resolution()
+    resolution["sheet"]["level"] = 5
+    resolution["sheet"]["classes"] = [
+        {"id": "wizard", "name": "Wizard", "level": 3, "subclass": None},
+        {"id": "cleric", "name": "Cleric", "level": 2, "subclass": None},
+    ]
+    resolution["sheet"]["spells"] = [
+        {"classId": "wizard", "cantrips": [], "known": [], "spellSaveDC": 14, "spellAttackBonus": 6},
+        {"classId": "cleric", "cantrips": [], "known": [], "spellSaveDC": 13, "spellAttackBonus": 5},
+    ]
+    text = to_markdown(resolution)
+    lines = text.splitlines()
+    wizard_line = next(l for l in lines if "Wizard" in l and "14" in l)
+    cleric_line = next(l for l in lines if "Cleric" in l and "13" in l)
+    assert wizard_line != cleric_line
+    assert "6" in wizard_line
+    assert "5" in cleric_line
+
+
+def test_spell_slots_render_as_a_compact_line():
+    resolution = _sample_resolution()
+    resolution["sheet"]["classes"] = [{"id": "wizard", "name": "Wizard", "level": 3, "subclass": None}]
+    resolution["sheet"]["spells"] = [{
+        "classId": "wizard", "cantrips": [], "known": [],
+        "spellSaveDC": 14, "spellAttackBonus": 6,
+    }]
+    resolution["derived"]["spellSlots"] = {"1": 4, "2": 3}
+    text = to_markdown(resolution)
+    slot_line = next(l for l in text.splitlines() if "Spell Slots" in l)
+    assert "4" in slot_line
+    assert "3" in slot_line
+
+
+def test_warlock_spell_slots_render_separately_from_shared_pool():
+    resolution = _sample_resolution()
+    resolution["sheet"]["classes"] = [
+        {"id": "wizard", "name": "Wizard", "level": 3, "subclass": None},
+        {"id": "warlock", "name": "Warlock", "level": 2, "subclass": None},
+    ]
+    resolution["sheet"]["spells"] = [
+        {"classId": "wizard", "cantrips": [], "known": [], "spellSaveDC": 14, "spellAttackBonus": 6},
+        {"classId": "warlock", "cantrips": [], "known": [], "spellSaveDC": 13, "spellAttackBonus": 5},
+    ]
+    resolution["derived"]["spellSlots"] = {"1": 4, "2": 3}
+    resolution["derived"]["warlockSpellSlots"] = {"1": 2}
+    text = to_markdown(resolution)
+    lines = text.splitlines()
+    shared_line = next(l for l in lines if "Spell Slots" in l and "Pact Magic" not in l)
+    pact_line = next(l for l in lines if "Pact Magic Slots" in l)
+    assert shared_line != pact_line
+
+
+def test_no_spell_slots_line_when_a_caster_has_no_slots_yet():
+    # A cantrip-only caster (e.g. a level-1 Wizard before its first
+    # spell-granting level, or any class with an empty spellSlots dict)
+    # must not print an empty "Spell Slots:" line.
+    resolution = _sample_resolution()
+    resolution["sheet"]["classes"] = [{"id": "wizard", "name": "Wizard", "level": 1, "subclass": None}]
+    resolution["sheet"]["spells"] = [{
+        "classId": "wizard",
+        "cantrips": [{"id": "fire-bolt", "name": "Fire Bolt", "level": 0}],
+        "known": [], "spellSaveDC": 13, "spellAttackBonus": 5,
+    }]
+    text = to_markdown(resolution)
+    assert "Spell Slots" not in text
+    assert "Pact Magic" not in text
+
+
+def test_end_to_end_for_a_real_multiclass_caster():
+    # Integration test through the REAL resolve() (not a hand-rolled
+    # fixture) — closes the gap where the export test suite could stay
+    # green over broken markdown export despite no test ever exercising a
+    # real spellcasting character's Resolution shape.
+    from catalog.loader import load
+    from engine.resolve import resolve
+
+    catalog = load()
+    draft = {
+        "name": "Multi Test", "sources": ["srd"],
+        "classes": [
+            {"classId": "wizard", "level": 3, "choices": {}},
+            {"classId": "cleric", "level": 2, "choices": {}},
+        ],
+        "background": {"choices": {}}, "species": {"choices": {}},
+        "abilities": {"method": "manual", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 16, "WIS": 14, "CHA": 10}},
+        "equipment": {"choices": {}, "added": [], "skipped": True},
+        "details": {},
+    }
+    resolution = resolve(draft, catalog)
+    text = to_markdown(resolution)
+    lines = text.splitlines()
+    wizard_line = next(l for l in lines if "Wizard" in l and "14" in l)
+    cleric_line = next(l for l in lines if "Cleric" in l and "13" in l)
+    assert wizard_line != cleric_line
+    slot_line = next(l for l in lines if "Spell Slots" in l)
+    assert "4" in slot_line and "3" in slot_line and "2" in slot_line
 
 
 def test_includes_spells_for_every_caster_in_a_multiclass_character():

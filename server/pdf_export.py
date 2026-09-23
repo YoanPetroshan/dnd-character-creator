@@ -65,6 +65,15 @@ def _class_label(classes: list) -> str:
     return " / ".join(parts)
 
 
+def _fmt_spell_slots(slots: dict) -> str:
+    """Mirrors markdown_export._fmt_spell_slots exactly (duplicated per
+    this file's established convention) — slots is
+    derived["spellSlots"]/["warlockSpellSlots"], a dict of only the
+    nonzero slot levels keyed by level as a string."""
+    ordered = sorted(slots, key=int)
+    return ", ".join(f"ниво {lvl}: {slots[lvl]}" for lvl in ordered)
+
+
 class _SheetPDF(FPDF):
     def __init__(self):
         super().__init__()
@@ -169,18 +178,33 @@ def to_pdf(resolution: dict) -> bytes:
     # sheet["spells"] is a list with one entry per class that has
     # spellcasting this level (multiclass-aware as of the Phase 3b-i
     # final-review fix — a single-class caster still gets a one-entry
-    # list). derived["spellSaveDC"]/["spellAttackBonus"] stay PRIMARY-class-
-    # only (see resolve.py), so they're shown once, not per class.
+    # list). Each entry now carries its OWN spellSaveDC/spellAttackBonus
+    # (Phase 3b-ii — a multiclass character's casters each use their own
+    # spellcasting ability), so these are shown once per caster, labeled,
+    # rather than once at the top as before. derived["spellSlots"] is the
+    # single shared pool across every non-Warlock caster;
+    # derived["warlockSpellSlots"] is Warlock's own separate Pact Magic
+    # pool — both are character-wide, not per-caster, so they're shown
+    # once each, after the per-caster DC/attack lines.
     spells = sheet["spells"]
     if spells:
         pdf.h2("Заклинания")
-        if derived["spellSaveDC"] is not None:
-            pdf.body(
-                f"Спасяване за заклинание (DC): {derived['spellSaveDC']}   "
-                f"Бонус за атака: {_fmt_mod(derived['spellAttackBonus'])}"
-            )
         class_names = {c["id"]: c["name"] for c in classes}
         multi_caster = len(spells) > 1
+        for class_spells in spells:
+            suffix = f" ({class_names.get(class_spells['classId'], class_spells['classId'])})" if multi_caster else ""
+            save_dc = class_spells.get("spellSaveDC")
+            if save_dc is not None:
+                pdf.body(
+                    f"Спасяване за заклинание (DC){suffix}: {save_dc}   "
+                    f"Бонус за атака{suffix}: {_fmt_mod(class_spells['spellAttackBonus'])}"
+                )
+        spell_slots = derived["spellSlots"]
+        if spell_slots:
+            pdf.body(f"Spell Slots: {_fmt_spell_slots(spell_slots)}")
+        warlock_slots = derived["warlockSpellSlots"]
+        if warlock_slots:
+            pdf.body(f"Pact Magic Slots: {_fmt_spell_slots(warlock_slots)}")
         for class_spells in spells:
             suffix = f" ({class_names.get(class_spells['classId'], class_spells['classId'])})" if multi_caster else ""
             if class_spells["cantrips"]:

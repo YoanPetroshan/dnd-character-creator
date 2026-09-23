@@ -29,12 +29,15 @@ def to_yaml(resolution: dict) -> str:
         "passivePerception": derived["passivePerception"],
         # spellSaveDC/spellAttackBonus moved off `derived` and into each
         # sheet["spells"][i] entry as of Phase 3b-ii (see engine/resolve.py) —
-        # `.get()` (not direct indexing) is a deliberate, minimal stopgap so
-        # this doesn't KeyError against the new Resolution shape; surfacing
-        # the new derived["spellSlots"]/["warlockSpellSlots"] and per-caster
-        # values properly in the YAML export is Task 3's job, not this one's.
-        "spellSaveDC": derived.get("spellSaveDC"),
-        "spellAttackBonus": derived.get("spellAttackBonus"),
+        # a multiclass character's casters each use their own spellcasting
+        # ability, so there's no longer one meaningful top-level scalar for
+        # either. They already round-trip via "spells": sheet["spells"]
+        # below, so no separate top-level key is added for them. The new
+        # combined slot pool (and Warlock's separate Pact Magic pool) ARE
+        # still single, character-wide values, so they get their own
+        # top-level keys here like every other `derived` field in this doc.
+        "spellSlots": derived["spellSlots"],
+        "warlockSpellSlots": derived["warlockSpellSlots"],
         "proficiencies": sheet["proficiencies"],
         "equipment": sheet["equipment"],
         "spells": sheet["spells"],
