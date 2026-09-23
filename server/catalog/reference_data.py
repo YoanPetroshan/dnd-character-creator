@@ -97,6 +97,11 @@ SUBCLASS_UNLOCK_LEVEL: dict[str, int] = {
     "paladin": 3, "ranger": 3, "rogue": 3,
 }
 
+# Full-caster classes (contribute their own level to multiclass caster
+# level per 5e RAW). Real 5e distinction not present as a flag anywhere
+# in the bundled SRD data, so hardcoded from the standard SRD class list.
+FULL_CASTER_CLASSES = {"bard", "cleric", "druid", "sorcerer", "wizard"}
+
 # Half-caster classes use ability_modifier + floor(class_level / 2) for
 # their prepared-spell count, not the full-caster ability_modifier +
 # class_level formula — real 5e RAW, not present as a distinguishing

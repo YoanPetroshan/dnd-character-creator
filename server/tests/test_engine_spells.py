@@ -1,9 +1,19 @@
+import pytest
+from catalog.loader import load
 from engine.spells import (
+    combined_caster_level,
     known_spell_count,
+    multiclass_spell_slots,
     spell_attack_bonus,
     spell_save_dc,
     spellcasting_ability,
+    warlock_pact_magic_slots,
 )
+
+
+@pytest.fixture(scope="module")
+def catalog():
+    return load()
 
 _WIZARD = {"spellcasting": {"spellcasting_ability": {"index": "int", "name": "INT"}}}
 _FIGHTER = {}
@@ -90,3 +100,60 @@ def test_spell_save_dc_is_eight_plus_prof_bonus_plus_ability_modifier():
 
 def test_spell_attack_bonus_is_prof_bonus_plus_ability_modifier():
     assert spell_attack_bonus(proficiency_bonus=2, ability_modifier=3) == 5
+
+
+def test_combined_caster_level_single_full_caster_equals_its_own_level():
+    assert combined_caster_level([("wizard", 5)]) == 5
+
+
+def test_combined_caster_level_two_full_casters_sums_directly():
+    assert combined_caster_level([("wizard", 3), ("sorcerer", 2)]) == 5
+
+
+def test_combined_caster_level_half_caster_contributes_floor_half():
+    assert combined_caster_level([("paladin", 5)]) == 2  # 5 // 2 == 2
+    assert combined_caster_level([("paladin", 1)]) == 0  # 1 // 2 == 0, no special-case needed
+
+
+def test_combined_caster_level_full_plus_half_caster():
+    assert combined_caster_level([("cleric", 4), ("paladin", 4)]) == 4 + (4 // 2)  # == 6
+
+
+def test_combined_caster_level_excludes_warlock_entirely():
+    assert combined_caster_level([("wizard", 3), ("warlock", 5)]) == 3
+
+
+def test_combined_caster_level_excludes_non_caster_classes():
+    assert combined_caster_level([("wizard", 3), ("fighter", 5)]) == 3
+
+
+def test_combined_caster_level_empty_list_is_zero():
+    assert combined_caster_level([]) == 0
+
+
+def test_multiclass_spell_slots_matches_a_full_caster_own_table(catalog):
+    # Regression anchor: at combined level 5, the shared pool must equal
+    # Wizard's own real level-5 slots from the bundled SRD data — not a
+    # hand-typed guess, read directly from the catalog.
+    wizard_lvl5 = catalog.class_level_row("wizard", 5)["spellcasting"]
+    expected = {str(n): wizard_lvl5[f"spell_slots_level_{n}"] for n in range(1, 10) if wizard_lvl5[f"spell_slots_level_{n}"] > 0}
+    assert multiclass_spell_slots(catalog, 5) == expected
+
+
+def test_multiclass_spell_slots_zero_combined_level_is_empty(catalog):
+    assert multiclass_spell_slots(catalog, 0) == {}
+
+
+def test_warlock_pact_magic_slots_reads_directly_from_its_own_level_row(catalog):
+    # Confirmed directly against the bundled data while writing this plan:
+    # Warlock at character level 3 has 2 slots at 2nd spell level, zero
+    # elsewhere — Pact Magic's real, non-obvious curve (fewer, higher-level
+    # slots than a full caster of the same level), not a hand-typed guess.
+    warlock_lvl3 = catalog.class_level_row("warlock", 3)["spellcasting"]
+    result = warlock_pact_magic_slots(warlock_lvl3)
+    assert result == {"2": 2}
+    assert result == {"2": warlock_lvl3["spell_slots_level_2"]}
+
+
+def test_warlock_pact_magic_slots_none_row_is_empty():
+    assert warlock_pact_magic_slots(None) == {}
