@@ -96,6 +96,8 @@ export interface SheetClassSpells {
   classId: string;
   cantrips: SheetSpellSummary[];
   known: SheetSpellSummary[];
+  spellSaveDC: number | null;
+  spellAttackBonus: number | null;
 }
 
 export interface SheetClassSubclass {
@@ -161,8 +163,8 @@ export interface Derived {
   savingThrows: Record<Ability, number>;
   skills: Record<string, number>;
   passivePerception: number;
-  spellSaveDC: number | null;
-  spellAttackBonus: number | null;
+  spellSlots: Record<string, number>;
+  warlockSpellSlots: Record<string, number>;
 }
 
 export interface Resolution {
