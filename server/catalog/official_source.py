@@ -75,6 +75,23 @@ def _pluralize(slug: str) -> str:
     return slug if slug.endswith("s") else f"{slug}s"
 
 
+# Task 3b's review of resolve.py found that engine/resolve.py's own
+# _categorize_proficiency (and its _SPECIFIC_WEAPON_PROFICIENCY_IDS set)
+# recognizes "crossbows-light" for the light crossbow, not the naive
+# pluralize-and-strip-source result ("light-crossbows") the generic
+# _pluralize path below would produce for 5etools' "light crossbow|phb".
+# Without this override, that one weapon would silently land in the
+# `tools` bucket instead of `weapons` for any sourcebook race granting
+# it. This is a small, disclosed, non-exhaustive lookup for the ONE
+# concrete mismatch found and verified — further undiscovered id
+# mismatches, if any, are the same kind of narrow, disclosed gap this
+# project already accepts elsewhere (a mismatched id lands the grant in
+# the wrong bucket, visibly, not lost data).
+_WEAPON_ID_OVERRIDES = {
+    "light-crossbow": "crossbows-light",
+}
+
+
 def _category_display_name(slug: str) -> str:
     # Matches the BUNDLED SRD data's own sentence-case convention for
     # proficiency-category display names (5e-SRD-Traits.json's
@@ -125,25 +142,20 @@ def _proficiencies_from_5etools(race_raw: dict) -> list[dict]:
     against every SRD class's own top-level `proficiencies` field
     (5e-SRD-Classes.json).
 
-    KNOWN, DISCLOSED GAP (same "narrow, disclosed cut" pattern this plan
-    has used before): engine/resolve.py's existing trait-proficiency-
-    scanning code only forwards "skill-"-prefixed entries from
-    trait.get("proficiencies", []) into proficient_skills (resolve.py
-    ~line 957) — there is NO equivalent code path anywhere in resolve.py
-    that reads tool-/weapon-/armor- category ids out of RACE or SUBRACE
-    traits into sheet.proficiencies.tools/weapons/armor; those three sets
-    are populated exclusively from CLASS-granted proficiencies
-    (_categorize_proficiency, resolve.py ~lines 980-1025), which never
-    looks at race traits at all. This is NOT a new gap introduced here —
-    empirically confirmed (2026-09-23) that the BUNDLED SRD Dwarf's own
-    "Dwarven Combat Training" trait and Rock Gnome's "Tinker" trait
-    already sit unconsumed the exact same way (verified by resolving a
-    Dwarf Fighter draft: sheet.proficiencies.weapons only contains the
-    Fighter class's own grants, never battleaxes/handaxes/light-hammers/
-    warhammers). The tool/weapon/armor entries produced here are
-    correctly shaped and ready for whenever resolve.py's trait-scanning
-    is extended to those categories, but — unlike the skill entries,
-    verified end-to-end — do NOT yet reach the final character sheet."""
+    FORMERLY a known, disclosed gap (fixed by Task 3b, 2026-09-23):
+    engine/resolve.py's trait-proficiency-scanning code used to forward
+    only "skill-"-prefixed entries from trait.get("proficiencies", [])
+    into proficient_skills — there was no code path that read
+    tool-/weapon-/armor- category ids out of RACE or SUBRACE traits into
+    sheet.proficiencies.tools/weapons/armor. This was NOT a gap
+    introduced by this module — it predated this whole plan and silently
+    affected the BUNDLED SRD data too (confirmed: SRD Dwarf's "Dwarven
+    Combat Training" trait and Rock Gnome's "Tinker" trait sat unconsumed
+    the exact same way). Task 3b extended resolve.py's trait-scanning to
+    call the existing `_categorize_proficiency` for every non-skill trait
+    proficiency entry, so the tool/weapon/armor entries produced here now
+    flow all the way to sheet.proficiencies, verified end-to-end just
+    like the skill entries always were."""
     profs: list[dict] = []
 
     for skill_id, granted in (race_raw.get("skillProficiencies") or [{}])[0].items():
@@ -159,7 +171,8 @@ def _proficiencies_from_5etools(race_raw: dict) -> list[dict]:
 
     for weapon_key, granted in (race_raw.get("weaponProficiencies") or [{}])[0].items():
         if granted is True:
-            index = _pluralize(_slug(weapon_key.split("|", 1)[0].strip()))
+            weapon_slug = _slug(weapon_key.split("|", 1)[0].strip())
+            index = _WEAPON_ID_OVERRIDES.get(weapon_slug) or _pluralize(weapon_slug)
             profs.append({"index": index, "name": _category_display_name(index), "url": ""})
 
     _ARMOR_CATEGORY_SUFFIX = {"light", "medium", "heavy", "all"}

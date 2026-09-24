@@ -971,10 +971,19 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # broad category (e.g. Bard's rapiers/longswords/shortswords/
     # hand-crossbows, Wizard's daggers/darts/slings/quarterstaffs/
     # crossbows-light). Verified against 5e-SRD-Classes.json directly.
+    # Task 3b addendum: this set was originally built from an empirical scan
+    # of SRD *classes* only (see comment above). Once race/subrace traits
+    # also started feeding `_categorize_proficiency` (below), a second scan
+    # of every SRD trait's `proficiencies` (5e-SRD-Traits.json) turned up
+    # more specific-weapon ids the class-only scan never exercised: Dwarven
+    # Combat Training's battleaxes/handaxes/light-hammers/warhammers, and
+    # Elf Weapon Training's shortbows/longbows. Without these, real bundled
+    # SRD trait grants would be silently miscategorized into `tools`.
     _SPECIFIC_WEAPON_PROFICIENCY_IDS = {
         "shortswords", "clubs", "crossbows-light", "daggers", "darts", "hand-crossbows",
         "javelins", "longswords", "maces", "quarterstaffs", "rapiers", "scimitars",
         "sickles", "slings", "spears",
+        "battleaxes", "handaxes", "light-hammers", "warhammers", "shortbows", "longbows",
     }
 
     def _categorize_proficiency(prof_id: str) -> None:
@@ -990,6 +999,27 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             proficient_weapons.add(prof_id)
         else:
             proficient_tools.add(prof_id)
+
+    # PRE-EXISTING gap (predates this plan, affects bundled SRD data
+    # unconditionally, not just sourcebook races): the skill-scanning pass
+    # above reads `trait_refs` but only forwards skill- prefixed ids into
+    # `proficient_skills` — any tool/weapon/armor grant on a race/subrace
+    # trait (e.g. SRD Dwarf's "Dwarven Combat Training", which grants
+    # battleaxe/handaxe/light-hammer/warhammer proficiency) never reached
+    # sheet.proficiencies. This second pass recomputes the identical
+    # `trait_refs` (a small, disclosed duplication, matching this file's
+    # existing tolerance for it elsewhere, e.g. `_class_label()`) and
+    # categorizes every non-skill entry via the same `_categorize_proficiency`
+    # used for class-level grants below.
+    if race:
+        trait_refs = list(race.get("traits", [])) + (list(subrace.get("racial_traits", [])) if subrace else [])
+        for ref in trait_refs:
+            trait = catalog.traits.get(ref["index"])
+            if not trait:
+                continue
+            for p in trait.get("proficiencies", []):
+                if not p["index"].startswith("skill-"):
+                    _categorize_proficiency(p["index"])
 
     # Gating on `c["source"]["kind"] == "class"` alone is too broad — it also
     # covers feature subfeature choices, ASI choices, and spell choices

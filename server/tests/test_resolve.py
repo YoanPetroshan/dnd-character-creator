@@ -160,6 +160,33 @@ def test_species_trait_proficiencies_are_applied(catalog):
     assert "skill-perception" in resolution["sheet"]["proficiencies"]["skills"]
 
 
+def test_dwarf_dwarven_combat_training_weapon_proficiencies_reach_the_sheet(catalog):
+    # PRE-EXISTING bug (predates this plan, affects bundled SRD data
+    # unconditionally): resolve()'s trait-scanning only ever forwarded
+    # skill- prefixed proficiency ids out of race/subrace traits, so
+    # Dwarven Combat Training's weapon grants (chargen/data/srd/
+    # 5e-SRD-Traits.json, index "dwarven-combat-training") never reached
+    # sheet.proficiencies.weapons for any Dwarf. Ids confirmed directly
+    # against that file: battleaxes, handaxes, light-hammers, warhammers.
+    draft = _fighter_acolyte_human_draft(species={"id": "dwarf", "choices": {}})
+    resolution = resolve(draft, catalog)
+    weapons = set(resolution["sheet"]["proficiencies"]["weapons"])
+    assert {"battleaxes", "handaxes", "light-hammers", "warhammers"} <= weapons
+
+
+def test_human_has_no_extra_weapon_tool_armor_from_traits(catalog):
+    # Human has zero traits (chargen/data/srd/5e-SRD-Races.json: traits ==
+    # []), so this confirms the new trait-scanning pass doesn't leak
+    # anything extra in — Fighter's own class grants (simple/martial
+    # weapons, all-armor, shields) are untouched.
+    draft = _fighter_acolyte_human_draft()
+    resolution = resolve(draft, catalog)
+    profs = resolution["sheet"]["proficiencies"]
+    assert set(profs["weapons"]) == {"simple-weapons", "martial-weapons"}
+    assert set(profs["armor"]) == {"all-armor", "shields"}
+    assert set(profs["tools"]) == set()
+
+
 def test_a_race_with_no_automatic_skill_grant_gets_none(catalog):
     # Human has no trait granting an automatic skill proficiency — confirm
     # this fix doesn't spuriously grant one. With the fixture's default

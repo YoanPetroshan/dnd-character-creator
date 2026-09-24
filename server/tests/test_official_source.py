@@ -211,6 +211,22 @@ def test_fixed_weapon_proficiency_strips_source_suffix_and_pluralizes():
     assert weapon_ids == {"battleaxes", "handaxes", "light-hammers", "warhammers"}
 
 
+def test_light_crossbow_weapon_id_matches_resolve_pys_recognized_convention():
+    # Ground: 5etools' "light crossbow|phb" must convert to the SAME id
+    # engine/resolve.py's _categorize_proficiency recognizes via its own
+    # _SPECIFIC_WEAPON_PROFICIENCY_IDS set ("crossbows-light"), not the
+    # naive pluralized form ("light-crossbows") the generic _pluralize
+    # path would otherwise produce — confirmed mismatched during Task 3's
+    # review. No real fetched race happens to grant this weapon (checked
+    # empirically), so this calls the conversion function directly with a
+    # synthetic weaponProficiencies envelope in the exact raw shape Step 1
+    # of this task's own docstring confirms 5etools uses.
+    from catalog.official_source import _proficiencies_from_5etools
+    race_raw = {"weaponProficiencies": [{"light crossbow|phb": True}]}
+    profs = _proficiencies_from_5etools(race_raw)
+    assert profs == [{"index": "crossbows-light", "name": "Crossbows light", "url": ""}]
+
+
 def test_fixed_armor_proficiency_gets_the_dash_armor_suffix():
     # Hobgoblin (VGM)'s "Martial Training" grants light armor proficiency —
     # raw key is the bare category "light", converted id must match the
