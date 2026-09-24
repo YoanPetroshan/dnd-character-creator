@@ -174,6 +174,41 @@ def test_dwarf_dwarven_combat_training_weapon_proficiencies_reach_the_sheet(cata
     assert {"battleaxes", "handaxes", "light-hammers", "warhammers"} <= weapons
 
 
+def test_half_elf_skill_versatility_choice_is_offered_and_flows_through_resolve(catalog):
+    # PRE-EXISTING gap (predates this plan, affects bundled SRD data
+    # unconditionally): _species_choice_templates never read a trait's
+    # proficiency_choices field, so Half-Elf's real "Skill Versatility"
+    # trait (chargen/data/srd/5e-SRD-Traits.json, index "skill-versatility",
+    # choose 2 of every skill) never produced a Choice the player could even
+    # see.
+    draft = _fighter_acolyte_human_draft(species={"id": "half-elf", "choices": {}})
+    resolution = resolve(draft, catalog)
+    cids = {c["id"] for c in resolution["choices"]}
+    versatility_cid = next((cid for cid in cids if "skill-versatility" in cid), None)
+    assert versatility_cid is not None, f"expected a Skill Versatility choice, got choice ids: {cids}"
+
+    # Re-resolve with a real selection for it and confirm it lands on the sheet.
+    draft["species"]["choices"][versatility_cid] = ["skill-arcana", "skill-history"]
+    resolution2 = resolve(draft, catalog)
+    assert {"skill-arcana", "skill-history"} <= set(resolution2["sheet"]["proficiencies"]["skills"])
+
+
+def test_dwarf_tool_proficiency_choice_flows_into_sheet_tools(catalog):
+    # PRE-EXISTING gap (predates this plan, affects bundled SRD data
+    # unconditionally): same root cause as the Half-Elf test above, for
+    # Dwarf's real "Tool Proficiency" trait (index "tool-proficiency",
+    # choose 1 of smith's/brewer's/mason's tools).
+    draft = _fighter_acolyte_human_draft(species={"id": "dwarf", "choices": {}})
+    resolution = resolve(draft, catalog)
+    cids = {c["id"] for c in resolution["choices"]}
+    tool_cid = next((cid for cid in cids if "tool-proficiency" in cid), None)
+    assert tool_cid is not None, f"expected a Tool Proficiency choice, got choice ids: {cids}"
+
+    draft["species"]["choices"][tool_cid] = ["smiths-tools"]
+    resolution2 = resolve(draft, catalog)
+    assert "smiths-tools" in resolution2["sheet"]["proficiencies"]["tools"]
+
+
 def test_human_has_no_extra_weapon_tool_armor_from_traits(catalog):
     # Human has zero traits (chargen/data/srd/5e-SRD-Races.json: traits ==
     # []), so this confirms the new trait-scanning pass doesn't leak

@@ -271,6 +271,34 @@ def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrac
         trait = catalog.traits.get(ref["index"])
         if not trait:
             continue
+        # PRE-EXISTING gap (predates this plan, affects bundled SRD data
+        # unconditionally): this loop read subtrait_options below but never
+        # a trait's proficiency_choices field, so Half-Elf's real "Skill
+        # Versatility" trait (choose 2 of every skill) and Dwarf's real
+        # "Tool Proficiency" trait (choose 1 of smith's/brewer's/mason's
+        # tools) never produced a Choice the player could even see. Checked
+        # first (not after the subtrait_options block's own `continue`,
+        # which would otherwise skip traits — like both of these — that
+        # have proficiency_choices but no subtrait_options). The
+        # ":proficiency-choice" cid suffix is load-bearing, not decorative:
+        # it keeps this id distinct from the subtrait_options block's id
+        # for the same trait below (avoiding a collision if a trait ever
+        # had both fields), and it's the substring the merge-site fix below
+        # uses to tell a genuine proficiency choice apart from a
+        # subtrait_options selection (e.g. Dragonborn's Draconic Ancestry
+        # damage-type pick, which is NOT a proficiency).
+        prof_envelope = trait.get("proficiency_choices")
+        if prof_envelope:
+            prof_cid = f"species:{race_id}:trait:{trait['index']}:proficiency-choice"
+            prof_source = {"kind": "species", "id": race_id, "label": race["name"]}
+            prof_choose = prof_envelope.get("choose", 1)
+            prof_description = f"Choose {prof_choose} proficienc{'ies' if prof_choose != 1 else 'y'} of your choice."
+            prof_tpl = build_choice_template(
+                prof_envelope, prof_cid, prof_source, trait["name"], description=prof_description
+            )
+            if prof_tpl:
+                templates.append(prof_tpl)
+
         envelope = (trait.get("trait_specific") or {}).get("subtrait_options")
         if not envelope:
             continue
@@ -944,7 +972,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # Derived stats.
     proficient_skills: set[str] = set()
     for c in choices:
-        if c["source"]["kind"] == "class":
+        if c["source"]["kind"] in ("class", "species"):
             proficient_skills.update(s for s in c["selected"] if s.startswith("skill-"))
     if bg:
         proficient_skills.update(p["index"] for p in bg.get("starting_proficiencies", []) if p["index"].startswith("skill-"))
@@ -1040,6 +1068,18 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # pattern generated in this file).
     for c in choices:
         if c["source"]["kind"] == "class" and "prof-choice-" in c["id"]:
+            for s in c["selected"]:
+                if not s.startswith("skill-"):
+                    _categorize_proficiency(s)
+        elif c["source"]["kind"] == "species" and "proficiency-choice" in c["id"]:
+            # Narrowed to the "proficiency-choice" id substring (set by
+            # _species_choice_templates above) so a species-sourced
+            # subtrait_options selection (e.g. Dragonborn's Draconic
+            # Ancestry damage-type/ancestry pick) or bonus-language
+            # selection never reaches _categorize_proficiency, which has no
+            # "is this even a real proficiency id" guard and would silently
+            # miscategorize a string like "fire" or a language id into the
+            # tools bucket.
             for s in c["selected"]:
                 if not s.startswith("skill-"):
                     _categorize_proficiency(s)
