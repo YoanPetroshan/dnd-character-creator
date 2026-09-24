@@ -791,6 +791,231 @@ EOF
 
 ---
 
+### Task 4b: Close a pre-existing gap — race-sourced proficiency CHOICES never reach the sheet
+
+**Why this task exists:** Task 4's own review (implementer + independent reviewer, verified by direct code reading AND a live `resolve()` repro against real bundled SRD data) found TWO pre-existing gaps in `server/engine/resolve.py`, analogous to Task 3's gap but for CHOICE-based (not fixed) race proficiency grants:
+1. `_species_choice_templates` (confirmed at plan-writing time to span lines 267-305) reads a trait's `trait_specific.subtrait_options` and race/subrace `language_options`, but NEVER reads a trait's `proficiency_choices` field — so no Choice template is ever built for it, for ANY race. Confirmed empirically: bundled SRD Half-Elf's real "Skill Versatility" trait (`choose 2 of {every skill}`) and Dwarf's real "Tool Proficiency" trait (`choose 1 of {smith's, brewer's, mason's tools}`) both have this exact field in `chargen/data/srd/5e-SRD-Traits.json`, confirmed present, and neither currently produces a Choice the player can even see.
+2. Even if the template existed, the merge logic that turns a Choice's `selected` values into `proficient_skills`/`sheet.proficiencies` is hardcoded to only look at `c["source"]["kind"] == "class"` (confirmed at two call sites: the `proficient_skills` loop and the `_categorize_proficiency` prof-choice loop) — species-sourced choices (`kind == "species"`, the source `_species_choice_templates` already uses) are unconditionally excluded from both.
+
+This predates the whole plan and affects bundled SRD data (Half-Elf, Dwarf) today, not just sourcebook races. Given this plan's explicit full-fidelity goal, this needs closing before race proficiency CHOICES (Task 4's own contribution) can be called complete end-to-end — mirroring the Task 3 → Task 3b precedent exactly.
+
+**Files:**
+- Modify: `server/engine/resolve.py`
+- Test: `server/tests/test_resolve.py`
+
+**Interfaces:**
+- Consumes: the EXISTING `build_choice_template`/`build_choice_options` machinery (already handles the real `proficiency_choices` envelope shape — confirmed identical `options_array` shape to every other choice type, verified against both real SRD examples below) and the EXISTING `_categorize_proficiency` helper (Task 3b).
+- Produces: `sheet.proficiencies`/`proficient_skills` now include selections from race-sourced proficiency CHOICES, for every race (SRD and sourcebook).
+
+- [ ] **Step 1: Ground the exact current code and real data**
+
+Confirmed at plan-writing time — `server/engine/resolve.py`'s `_species_choice_templates` (lines 267-305):
+
+```python
+def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrace: dict | None) -> list[dict]:
+    templates = []
+    trait_refs = list(race.get("traits", [])) + (list(subrace.get("racial_traits", [])) if subrace else [])
+    for ref in trait_refs:
+        trait = catalog.traits.get(ref["index"])
+        if not trait:
+            continue
+        envelope = (trait.get("trait_specific") or {}).get("subtrait_options")
+        if not envelope:
+            continue
+        cid = f"species:{race_id}:trait:{trait['index']}"
+        source = {"kind": "species", "id": race_id, "label": race["name"]}
+        tpl = build_choice_template(envelope, cid, source, trait["name"], description=_join_desc(trait.get("desc")))
+        if tpl:
+            templates.append(tpl)
+
+    for src, src_id in ((race, race_id), (subrace, subrace.get("index") if subrace else None)):
+        if not src:
+            continue
+        envelope = src.get("language_options")
+        if not envelope:
+            continue
+        cid = f"species:{race_id}:languages"
+        if src is subrace:
+            cid = f"species:{race_id}:subspecies:{src_id}:languages"
+        source = {"kind": "species", "id": race_id, "label": race["name"]}
+        choose = envelope.get("choose", 1)
+        description = f"Choose {choose} additional language{'s' if choose != 1 else ''} of your choice."
+        tpl = build_choice_template(envelope, cid, source, "Bonus Language", description=description)
+        if tpl:
+            templates.append(tpl)
+
+    return templates
+```
+
+Real bundled SRD data (`chargen/data/srd/5e-SRD-Traits.json`) confirmed at plan-writing time — Dwarf's "Tool Proficiency" trait:
+
+```json
+{"index": "tool-proficiency", "name": "Tool Proficiency", "proficiency_choices": {"choose": 1, "type": "proficiencies", "from": {"option_set_type": "options_array", "options": [{"option_type": "reference", "item": {"index": "smiths-tools", "name": "Smith's Tools", ...}}, ...]}}}
+```
+
+Half-Elf's "Skill Versatility" trait: identical shape, `choose: 2`, options listing every `skill-*` id. Both are the SAME `options_array` envelope `build_choice_template` already handles — this task needs no new envelope logic, only reading the field and building the template, exactly mirroring the existing `subtrait_options` block immediately above it in the same function.
+
+The two merge sites (confirmed at plan-writing time, re-locate if line numbers have shifted from Task 4's own additions):
+
+```python
+    proficient_skills: set[str] = set()
+    for c in choices:
+        if c["source"]["kind"] == "class":
+            proficient_skills.update(s for s in c["selected"] if s.startswith("skill-"))
+```
+
+and, further down (inside the `_categorize_proficiency`-calling block):
+
+```python
+    for c in choices:
+        if c["source"]["kind"] == "class" and "prof-choice-" in c["id"]:
+            for s in c["selected"]:
+                if not s.startswith("skill-"):
+                    _categorize_proficiency(s)
+```
+
+- [ ] **Step 2: Write failing tests against REAL bundled SRD races first**
+
+No `has_official()` skip needed — this bug affects SRD data unconditionally:
+
+```python
+def test_half_elf_skill_versatility_choice_is_offered_and_flows_through_resolve(catalog):
+    draft = _fighter_acolyte_human_draft(species={"id": "half-elf", "choices": {}})
+    resolution = resolve(draft, catalog)
+    cids = {c["id"] for c in resolution["choices"]}
+    versatility_cid = next((cid for cid in cids if "skill-versatility" in cid), None)
+    assert versatility_cid is not None, f"expected a Skill Versatility choice, got choice ids: {cids}"
+
+    # Re-resolve with a real selection for it and confirm it lands on the sheet.
+    draft["species"]["choices"][versatility_cid] = ["skill-arcana", "skill-history"]
+    resolution2 = resolve(draft, catalog)
+    assert {"skill-arcana", "skill-history"} <= set(resolution2["sheet"]["proficiencies"]["skills"])
+    # (Confirm resolution2["sheet"]["proficiencies"]["skills"]'s exact real
+    # field name/shape against a passing existing test in test_resolve.py
+    # before trusting this literal.)
+
+
+def test_dwarf_tool_proficiency_choice_flows_into_sheet_tools(catalog):
+    draft = _fighter_acolyte_human_draft(species={"id": "dwarf", "choices": {}})
+    resolution = resolve(draft, catalog)
+    cids = {c["id"] for c in resolution["choices"]}
+    tool_cid = next((cid for cid in cids if "tool-proficiency" in cid), None)
+    assert tool_cid is not None, f"expected a Tool Proficiency choice, got choice ids: {cids}"
+
+    draft["species"]["choices"][tool_cid] = ["smiths-tools"]
+    resolution2 = resolve(draft, catalog)
+    assert "smiths-tools" in resolution2["sheet"]["proficiencies"]["tools"]
+```
+
+(Ground the exact `_fighter_acolyte_human_draft` species-override call shape and the exact sheet field paths against `test_resolve.py`'s own existing, passing tests before trusting these literals.)
+
+- [ ] **Step 3: Run to verify they fail**
+
+Run: `cd server && .venv/bin/python -m pytest tests/test_resolve.py -v -k "skill_versatility or tool_proficiency_choice"`
+Expected: FAIL — no Skill Versatility / Tool Proficiency choice id appears in `resolution["choices"]` at all today (gap 1), and even a manually-injected selection for a guessed cid wouldn't reach the sheet (gap 2).
+
+- [ ] **Step 4: Fix gap 1 — build the Choice template**
+
+Add a third block to `_species_choice_templates`, mirroring the existing `subtrait_options` block's structure exactly, reading `proficiency_choices` instead:
+
+```python
+        envelope = trait.get("proficiency_choices")
+        if envelope:
+            cid = f"species:{race_id}:trait:{trait['index']}:proficiency-choice"
+            source = {"kind": "species", "id": race_id, "label": race["name"]}
+            choose = envelope.get("choose", 1)
+            description = f"Choose {choose} proficienc{'ies' if choose != 1 else 'y'} of your choice."
+            tpl = build_choice_template(envelope, cid, source, trait["name"], description=description)
+            if tpl:
+                templates.append(tpl)
+```
+
+**The `:proficiency-choice` suffix on the cid is load-bearing, not decorative** — it must be DISTINCT from the existing `subtrait_options` block's cid for the same trait (`f"species:{race_id}:trait:{trait['index']}"`, no suffix) to avoid two different Choice templates colliding on the same id if a trait ever had both fields (not observed in real bundled data, but nothing guarantees it can't happen for a sourcebook trait later). It must ALSO be independently greppable as a distinct substring (`"proficiency-choice"`) so Step 5's merge-site fix can distinguish a genuine proficiency choice from a `subtrait_options` selection (e.g. Draconic Ancestry's damage-type/ancestry choice, which is NOT a proficiency and must never be fed into `_categorize_proficiency`) or a bonus-language selection — mirroring exactly how the existing class-side merge already distinguishes proficiency choices from other class choices via the `"prof-choice-"` substring in `c["id"]`.
+
+Place this new block either right after or right before the existing `subtrait_options` block inside the same `for ref in trait_refs:` loop — both read from the same `trait` variable already in scope, so no new loop is needed.
+
+- [ ] **Step 5: Fix gap 2 — the two merge sites**
+
+`proficient_skills` loop — extend the kind check (the existing `.startswith("skill-")` filter already correctly excludes non-skill selections from ANY source, so no id-substring narrowing is needed here, only the kind extension):
+
+```python
+    proficient_skills: set[str] = set()
+    for c in choices:
+        if c["source"]["kind"] in ("class", "species"):
+            proficient_skills.update(s for s in c["selected"] if s.startswith("skill-"))
+```
+
+Prof-choice loop — here the id-substring narrowing IS needed (a species-sourced `subtrait_options` or bonus-language selection must never reach `_categorize_proficiency`, which has no "is this even a real proficiency id" guard and would silently miscategorize a damage-type string like `"fire"` or a language id into `tools`). Add a parallel condition, matching this file's own established style of explicit, separate blocks rather than a merged conditional:
+
+```python
+    for c in choices:
+        if c["source"]["kind"] == "class" and "prof-choice-" in c["id"]:
+            for s in c["selected"]:
+                if not s.startswith("skill-"):
+                    _categorize_proficiency(s)
+        elif c["source"]["kind"] == "species" and "proficiency-choice" in c["id"]:
+            for s in c["selected"]:
+                if not s.startswith("skill-"):
+                    _categorize_proficiency(s)
+```
+
+(If you find a cleaner way to express this without duplicating the inner loop body, that's fine — just keep the id-substring narrowing for the species branch, it's the load-bearing part, not the exact syntax.)
+
+- [ ] **Step 6: Run to verify Step 2's tests pass, then full suite**
+
+Run: `cd server && .venv/bin/python -m pytest tests/test_resolve.py -v -k "skill_versatility or tool_proficiency_choice"`
+Then: `cd server && .venv/bin/python -m pytest -v` — full suite green (348 baseline + your new tests). Specifically re-check any existing test that exercises Half-Elf, Dwarf, or Draconic Ancestry (Dragonborn) — a subtrait_options-based race — to confirm the new proficiency-choice block and the merge-site kind extension don't change THEIR behavior (Dragonborn's Draconic Ancestry choice must keep working exactly as before, since it's a `subtrait_options` choice, not a `proficiency_choices` one, and must never be miscategorized by the new species branch in Step 5 — the `"proficiency-choice" in c["id"]` check is precisely what prevents this, verify it actually does).
+
+- [ ] **Step 7: Empirical end-to-end check, commit**
+
+```bash
+.venv/bin/python -c "
+from catalog.loader import load
+from engine.resolve import resolve
+catalog = load()
+draft = {
+    'classes': [{'classId': 'fighter', 'level': 1, 'choices': {}}],
+    'background': {'id': 'acolyte', 'choices': {}},
+    'species': {'id': 'half-elf', 'choices': {}},
+    'abilities': {'method': 'manual', 'base': {'STR': 16, 'DEX': 14, 'CON': 14, 'INT': 10, 'WIS': 12, 'CHA': 8}},
+    'equipment': {'choices': {}, 'added': [], 'skipped': True}, 'details': {},
+}
+r = resolve(draft, catalog)
+versatility = [c for c in r['choices'] if 'skill-versatility' in c['id']]
+print('Skill Versatility choice offered:', bool(versatility))
+print('problems:', r['problems'])
+"
+```
+
+Confirm the Skill Versatility choice is genuinely offered to the player, zero problems.
+
+```bash
+cd /Users/yoanpetrov/dnd-character-creator
+git add server/engine/resolve.py server/tests/test_resolve.py
+git commit -m "$(cat <<'EOF'
+fix: resolve() now offers and consumes race-sourced proficiency choices
+
+_species_choice_templates read a trait's trait_specific.subtrait_options
+and language_options, but never its proficiency_choices field — so
+bundled SRD Half-Elf's real "Skill Versatility" trait (choose 2 skills)
+and Dwarf's "Tool Proficiency" trait (choose 1 tool) never produced a
+Choice the player could even see. Even manually injecting a selection
+wouldn't have helped: the Choice.selected merge into proficient_skills
+and _categorize_proficiency was hardcoded to class-sourced choices
+only. Found during Task 4's own review process, not introduced by it —
+mirrors Task 3b's fix for FIXED (non-choice) race proficiency grants.
+Both merge sites now also accept species-sourced choices, with an id
+substring check (":proficiency-choice") preventing a non-proficiency
+species choice (e.g. Dragonborn's Draconic Ancestry damage-type pick)
+from being miscategorized.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
+
 ### Task 5: Damage resistances, immunities, vulnerabilities, condition immunities
 
 **Files:**
