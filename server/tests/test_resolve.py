@@ -631,6 +631,82 @@ def test_choice_shaped_resistance_is_a_disclosed_cut_not_a_crash(catalog):
     assert resolution["sheet"]["damageModifiers"]["resistances"] == []
 
 
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_race_innate_spells_resolve_against_the_bundled_srd_catalog(catalog):
+    # Aasimar/DMG: level-3 Lesser Restoration (1/day), level-5 Daylight
+    # (1/day), fixed CHA ability — both spells ARE in the bundled 2014 SRD
+    # catalog (confirmed against the real fetched races.json, 2026-09-24;
+    # part of Task 6's Step 2 measurement finding 99/108 real innate
+    # references resolve cleanly). spellId/name come from catalog.spells
+    # itself, not official_source.py's raw-fallback name, when resolved.
+    draft = _fighter_acolyte_human_draft(species={"id": "aasimar-dmg", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    grants = {g["name"]: g for g in resolution["sheet"]["innateSpells"]}
+    assert grants["Lesser Restoration"] == {
+        "spellId": "lesser-restoration", "name": "Lesser Restoration",
+        "level": 3, "uses": "1/day", "ability": "CHA", "variant": None,
+    }
+    assert grants["Daylight"]["spellId"] == "daylight"
+    assert grants["Daylight"]["level"] == 5
+
+
+def test_a_race_with_no_innate_spells_gets_an_empty_list(catalog):
+    resolution = resolve(_fighter_acolyte_human_draft(), catalog)  # Human, no innate spells
+    assert resolution["sheet"]["innateSpells"] == []
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_unresolvable_innate_spell_still_shows_its_name_with_a_null_spell_id(catalog):
+    # Triton/VGM's level-5 innate spell references "wall of water|xge" — a
+    # real spell this project has no bundled DATA for (only the SRD 2014
+    # spell list is bundled; confirmed empirically, 2026-09-24, one of
+    # Task 6's Step 2 measurement's 9/108 unresolvable real references).
+    # Must degrade gracefully: spellId null, but name still shown, not
+    # silently dropped from the sheet and not a crash.
+    draft = _fighter_acolyte_human_draft(species={"id": "triton-vgm", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    grants = {g["name"]: g for g in resolution["sheet"]["innateSpells"]}
+    assert grants["Wall Of Water"]["spellId"] is None
+    assert grants["Wall Of Water"]["level"] == 5
+    assert grants["Wall Of Water"]["uses"] == "1/day"
+    # Sibling grants on the SAME race still resolve normally, unaffected.
+    assert grants["Fog Cloud"]["spellId"] == "fog-cloud"
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_subrace_innate_spells_merge_with_the_parent_race_on_the_sheet(catalog):
+    # Duergar/MTF (subrace of Dwarf/PHB) grants its own innate spells; the
+    # parent Dwarf/PHB race has none of its own (confirmed against the
+    # real fetched races.json, 2026-09-24) — exercises
+    # _species_innate_spells' race+subrace merge, mirroring the
+    # damage-modifiers race+subrace merge test above.
+    draft = _fighter_acolyte_human_draft(species={"id": "dwarf-phb", "subspeciesId": "dwarf-phb-duergar-mtf", "choices": {}})
+    resolution = resolve(draft, catalog)
+    grants = {g["name"]: g for g in resolution["sheet"]["innateSpells"]}
+    assert grants["Enlarge/Reduce"]["spellId"] == "enlarge-reduce"
+    assert grants["Enlarge/Reduce"]["level"] == 3
+    assert grants["Invisibility"]["level"] == 5
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_choice_shaped_innate_ability_is_a_disclosed_candidate_list_not_a_crash(catalog):
+    # Aarakocra/MPMM's innate-spell ability is {"choose": ["int", "wis",
+    # "cha"]} — the majority real shape (confirmed empirically,
+    # 2026-09-24). Not resolved to a single committed ability (no new
+    # choice-resolution machinery — same scope line Task 5 drew for
+    # choice-shaped resistances), but carried through as a candidate list,
+    # not dropped or crashed on.
+    draft = _fighter_acolyte_human_draft(species={"id": "aarakocra-mpmm", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    grants = resolution["sheet"]["innateSpells"]
+    assert len(grants) == 1
+    assert grants[0]["name"] == "Gust of Wind"
+    assert grants[0]["ability"] == {"choose": ["INT", "WIS", "CHA"]}
+
+
 def test_non_list_classes_is_a_problem_not_a_crash(catalog):
     draft = _fighter_acolyte_human_draft(classes={"classId": "fighter"})
     resolution = resolve(draft, catalog)  # must not raise

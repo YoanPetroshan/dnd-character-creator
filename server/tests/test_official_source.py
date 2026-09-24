@@ -466,3 +466,91 @@ def test_race_with_no_named_entries_but_a_fixed_grant_gets_a_dedicated_trait():
     trait = traits_by_index[race["traits"][0]["index"]]
     assert trait["name"] == "Automatic Proficiencies"
     assert trait["proficiencies"] == [{"index": "skill-intimidation", "name": "Skill: Intimidation", "url": ""}]
+
+
+def test_innate_spells_mixed_at_will_and_daily_frequencies():
+    # Yuan-ti Pureblood/VGM: level 1 "innate": {"1": ["animal friendship"]}
+    # (a plain list -> at-will, confirmed against the real rules text) and
+    # level 3 {"daily": {"1": ["suggestion"]}} (-> 1/day), fixed "cha"
+    # ability (confirmed against the real fetched races.json, 2026-09-24).
+    races, _, _ = load_official_races(official_dir())
+    yti = next(r for r in races if r["index"] == "yuan-ti-pureblood-vgm")
+    grants = {g["name"]: g for g in yti["innate_spells"]}
+    assert grants["Animal Friendship"]["level"] == 1
+    assert grants["Animal Friendship"]["uses"] == "at-will"
+    assert grants["Animal Friendship"]["ability"] == "CHA"
+    assert grants["Animal Friendship"]["variant"] is None
+    assert grants["Suggestion"]["level"] == 3
+    assert grants["Suggestion"]["uses"] == "1/day"
+
+
+def test_innate_spells_choice_shaped_ability_is_preserved_as_a_candidate_list():
+    # Aarakocra/MPMM: {"innate": {"3": ["gust of wind"]}, "ability":
+    # {"choose": ["int", "wis", "cha"]}} — the MAJORITY real shape
+    # (confirmed empirically, 2026-09-24), not resolved to a single
+    # ability (no new choice-resolution machinery, same scope line Task 5
+    # drew for choice-shaped resistances) but not dropped either.
+    races, _, _ = load_official_races(official_dir())
+    aarakocra = next(r for r in races if r["index"] == "aarakocra-mpmm")
+    grants = aarakocra["innate_spells"]
+    assert len(grants) == 1
+    assert grants[0]["name"] == "Gust Of Wind"
+    assert grants[0]["spell_id"] == "gust-of-wind"
+    assert grants[0]["level"] == 3
+    assert grants[0]["uses"] == "at-will"
+    assert grants[0]["ability"] == {"choose": ["INT", "WIS", "CHA"]}
+
+
+def test_innate_spells_with_a_non_srd_reference_still_gets_a_usable_spell_id_guess():
+    # Triton/VGM's level-5 innate spell is "wall of water|xge" — a real
+    # spell this project has no bundled DATA for (confirmed empirically,
+    # 2026-09-24, part of Task 6's Step 2 measurement: 9/108 real innate
+    # references don't resolve against catalog.spells). official_source.py
+    # itself does NOT touch the catalog (no Catalog import, by design —
+    # see module docstring) — it just strips the "|xge" source decoration
+    # and slugs the clean name; engine.resolve._species_innate_spells is
+    # what actually attempts catalog resolution and degrades gracefully.
+    races, _, _ = load_official_races(official_dir())
+    triton_vgm = next(r for r in races if r["index"] == "triton-vgm")
+    grants = {g["name"]: g for g in triton_vgm["innate_spells"]}
+    assert grants["Wall Of Water"]["spell_id"] == "wall-of-water"
+    assert grants["Wall Of Water"]["level"] == 5
+
+
+def test_innate_spells_multi_entry_race_tags_each_grant_with_its_variant_name():
+    # Tiefling/XPHB folds three mutually-exclusive 2024-style "fiendish
+    # legacy" lineage options (Abyssal/Chthonic/Infernal) into ONE race
+    # record's additionalSpells list, each entry carrying a "name" tag —
+    # confirmed empirically (2026-09-24) that no subrace records exist for
+    # these, so silently flattening all three together would misrepresent
+    # the character as having every legacy's spells simultaneously. Each
+    # grant is tagged with its variant instead, so it's never dropped OR
+    # mis-modeled as unconditional.
+    races, _, _ = load_official_races(official_dir())
+    tiefling_xphb = next(r for r in races if r["index"] == "tiefling-xphb")
+    variants = {g["variant"] for g in tiefling_xphb["innate_spells"]}
+    assert variants == {"Abyssal", "Chthonic", "Infernal"}
+    abyssal_grants = [g["name"] for g in tiefling_xphb["innate_spells"] if g["variant"] == "Abyssal"]
+    assert sorted(abyssal_grants) == ["Hold Person", "Ray Of Sickness"]
+
+
+def test_a_race_with_no_additional_spells_gets_an_empty_innate_spells_list():
+    races, _, _ = load_official_races(official_dir())
+    dwarf_phb = next(r for r in races if r["index"] == "dwarf-phb")
+    assert dwarf_phb["innate_spells"] == []
+
+
+def test_subrace_innate_spells_are_independent_of_the_parent_race():
+    # Duergar/MTF (subrace of Dwarf/PHB) grants enlarge/reduce (3rd level)
+    # and invisibility (5th level), both 1/day, fixed "int" ability — the
+    # parent Dwarf/PHB race has no additionalSpells of its own (confirmed
+    # against the real fetched races.json, 2026-09-24).
+    races, subraces, _ = load_official_races(official_dir())
+    dwarf_phb = next(r for r in races if r["index"] == "dwarf-phb")
+    assert dwarf_phb["innate_spells"] == []
+    duergar = next(s for s in subraces if s["index"] == "dwarf-phb-duergar-mtf")
+    grants = {g["name"]: g for g in duergar["innate_spells"]}
+    assert grants["Enlarge/Reduce"]["spell_id"] == "enlarge-reduce"
+    assert grants["Enlarge/Reduce"]["level"] == 3
+    assert grants["Invisibility"]["level"] == 5
+    assert all(g["ability"] == "INT" for g in duergar["innate_spells"])

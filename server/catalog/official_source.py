@@ -43,6 +43,24 @@ chargen.sources directly; official_dir/has_official are re-exported
 from here (see the import line right below) so every caller (loader.py,
 every test) imports them FROM catalog.official_source instead, and
 never needs to know chargen lives one level up at all.
+
+Innate spellcasting (Task 6, 2026-09-24): `additionalSpells[].innate`
+converts to each race/subrace's new `innate_spells` field — see
+_innate_spells_from_5etools' docstring for the full shape/scope
+grounding. Empirical measurement against the real fetched races.json
+(both races AND subraces, since subraces carry the field independently
+too): 99/108 (91.7%) of real innate-spell references resolve cleanly
+against the bundled 2014 SRD spell catalog once 5etools' own nested
+"{level: {"daily": {"1": [...]}}}" shape and "name|source"/"name#N"
+decorations are correctly stripped before slugging — most sourcebook
+races' innate spells genuinely are 2014-era SRD spells. The remaining
+9/108 (8.3%) reference spells this project has no data for at all (Hex,
+Tenser's Floating Disk, Ice Knife, Wall of Water, Crown of Madness,
+Ray of Sickness, Armor of Agathys, Searing Smite) — a real, disclosed
+gap (this project has not imported spell DATA beyond the bundled SRD
+list, an explicitly out-of-scope decision predating this task), handled
+by engine.resolve._species_innate_spells degrading gracefully: spellId
+is null but the spell's name is still shown, never silently dropped.
 """
 from __future__ import annotations
 
@@ -59,7 +77,11 @@ from catalog.reference_data import SKILL_NAMES  # noqa: E402  (same reason)
 
 
 def _slug(name: str) -> str:
-    return name.lower().replace(" ", "-").replace("'", "")
+    # "/" added (Task 6): spell names like "Enlarge/Reduce" need it to match
+    # the bundled SRD spell catalog's own id ("enlarge-reduce") — no
+    # pre-existing caller (race/subrace/tool names) ever contains "/", so
+    # this is additive, not a behavior change for any current use.
+    return name.lower().replace(" ", "-").replace("'", "").replace("/", "-")
 
 
 def _tool_display_name(raw_key: str) -> str:
@@ -455,6 +477,144 @@ def _condition_immunities_from_5etools(raw: dict) -> list[str]:
     return [entry for entry in (raw.get("conditionImmune") or []) if isinstance(entry, str)]
 
 
+def _clean_innate_spell_name(raw: str) -> str:
+    """Strips 5etools' spell-reference decorations from an
+    additionalSpells.innate spell-name string: a trailing "|source" (e.g.
+    "light|xphb", confirmed against Elf/XPHB's Drow legacy) and a trailing
+    "#c"/"#<digit>" render tag (e.g. "hellish rebuke#2", confirmed against
+    Tiefling/PHB — 5etools uses this to mark "display as a cantrip" vs.
+    "display as cast at a specific slot level"; it does not change which
+    catalog spell this resolves to, so it's dropped along with "|source").
+    Confirmed empirically (2026-09-24) against every real innate-spell
+    reference in races.json that both decorations only ever appear as a
+    SUFFIX, never combined with anything else worth preserving."""
+    return raw.split("|", 1)[0].split("#", 1)[0].strip()
+
+
+def _innate_spell_uses_and_names(level_value) -> tuple[str, list[str]]:
+    """Converts ONE additionalSpells[].innate[level] value into a
+    (uses-label, raw spell-name list) pair.
+
+    Confirmed empirically (2026-09-24) against every real race AND subrace
+    innate-spell entry in races.json: exactly two shapes exist at this
+    level —
+    - a plain list of spell-name strings (e.g. Firbolg/MPMM's level-1
+      entry, `["detect magic", "disguise self"]`) — no frequency wrapper
+      at all means the real 5e rule is "at will" (e.g. Firbolg can cast
+      Detect Magic/Disguise Self on itself at will; Yuan-Ti's Animal
+      Friendship at will), confirmed against 5etools' own convention and
+      cross-checked against the actual PHB/MPMM rules text for several of
+      these races.
+    - `{"daily": {"1": [...]}}` — usable a limited number of times per
+      long rest. The wrapper key is ALWAYS "daily" (never "rest" or
+      anything else) and the inner count key is ALWAYS "1" for every real
+      `innate` entry in the whole dataset (races AND subraces) — so this
+      module only needs to model "1/day", not a general N/day. (5etools'
+      OTHER field, `known`, does use a "rest" wrapper on a few races —
+      e.g. Firbolg/VGM, Eladrin/DMG — but that's a different mechanic,
+      out of scope for this task; see module-level Task 6 docstring.)
+
+    A shape this doesn't recognize (defensively, not seen in real data)
+    returns ("at-will", []) rather than raising, so a future data update
+    with an unanticipated shape silently contributes zero spells instead
+    of crashing the whole conversion."""
+    if isinstance(level_value, list):
+        return "at-will", [n for n in level_value if isinstance(n, str)]
+    if isinstance(level_value, dict):
+        daily = level_value.get("daily")
+        if isinstance(daily, dict):
+            names = daily.get("1")
+            if isinstance(names, list):
+                return "1/day", [n for n in names if isinstance(n, str)]
+    return "at-will", []
+
+
+def _innate_spell_ability(ability_raw) -> str | dict | None:
+    """Converts additionalSpells[].ability — the spellcasting ability
+    innate spells use for save DC/attack bonus — into either a fixed
+    ability index string ("CHA") or, for the MAJORITY real shape
+    (confirmed empirically, 2026-09-24: roughly three-quarters of real
+    innate-spell-carrying entries use this, not the fixed-string form),
+    a `{"choose": [...]}` list of candidate abilities the player picks
+    from (e.g. Aarakocra/MPMM: `{"choose": ["int", "wis", "cha"]}`).
+
+    Resolving that choice into a single committed ability is out of scope
+    here — same "record the real data, don't build new choice-resolution
+    machinery" line Task 5 drew for choice-shaped resistances — so the
+    candidate list is carried through as descriptive data for display,
+    not wired into catalog/choices.py's Choice machinery."""
+    if isinstance(ability_raw, str):
+        return ability_raw.upper()
+    if isinstance(ability_raw, dict) and isinstance(ability_raw.get("choose"), list):
+        options = [a.upper() for a in ability_raw["choose"] if isinstance(a, str)]
+        if options:
+            return {"choose": options}
+    return None
+
+
+def _innate_spells_from_5etools(race_raw: dict) -> list[dict]:
+    """Converts 5etools' `additionalSpells` field into a flat list of
+    innate-spell grants — ONLY the `innate` sub-key of each entry (this
+    task's actual scope, "Innate spellcasting"); the sibling `known`/
+    `prepared`/`expanded` sub-keys are a real but DIFFERENT mechanic
+    (always-known cantrips/spells, Warlock-style always-prepared lists,
+    and Mark-of-X's "adds spells to your class spell list" respectively —
+    confirmed present in the real data, e.g. Aasimar's Light cantrip
+    lives in `known`, not `innate`) and are a disclosed, narrower cut,
+    not modeled by this function.
+
+    `additionalSpells` is a LIST, not a single dict — confirmed
+    empirically (2026-09-24) that most real races have exactly one entry,
+    but a real few (Elf/LFL: Lorwyn/Shadowmoor; Elf/XPHB: Drow/High
+    Elf/Wood Elf; Tiefling/XPHB: Abyssal/Chthonic/Infernal) have MULTIPLE
+    entries, each carrying a "name" tag, representing mutually exclusive
+    player-chosen variants (2024-style "lineage" options folded into one
+    race record rather than modeled as separate subraces — confirmed no
+    subrace records exist for these). Silently flattening every entry's
+    grants together would misrepresent a character as having ALL variants
+    at once, which is worse than a disclosed cut. Instead, every grant is
+    tagged with its source entry's `variant` name (None for the ordinary
+    single-entry case, which is the overwhelming majority) so a consumer
+    can group/filter by variant — this still doesn't build real choice-
+    resolution machinery (same scope line as _innate_spell_ability), it
+    just avoids losing or misrepresenting the data.
+
+    Each returned dict: {"name" (title-cased fallback display name,
+    catalog.spells is not imported by this module — see engine/resolve.py
+    for the final catalog-backed name/spellId resolution), "spell_id"
+    (naive slug guess), "level" (character level it becomes available),
+    "uses" ("at-will" | "1/day"), "ability" (see
+    _innate_spell_ability), "variant" (str | None)}."""
+    results: list[dict] = []
+    for entry in race_raw.get("additionalSpells") or []:
+        if not isinstance(entry, dict):
+            continue
+        innate = entry.get("innate")
+        if not isinstance(innate, dict):
+            continue
+        variant = entry.get("name") if isinstance(entry.get("name"), str) else None
+        ability = _innate_spell_ability(entry.get("ability"))
+        for level_key, level_value in innate.items():
+            try:
+                level = int(level_key)
+            except (TypeError, ValueError):
+                continue  # defensive — every real level key is a plain int string
+            uses, raw_names = _innate_spell_uses_and_names(level_value)
+            for raw_name in raw_names:
+                clean = _clean_innate_spell_name(raw_name)
+                if not clean:
+                    continue
+                results.append({
+                    "name": clean.title(),
+                    "spell_id": _slug(clean),
+                    "level": level,
+                    "uses": uses,
+                    "ability": ability,
+                    "variant": variant,
+                })
+    return results
+
+
 def _trait_refs_from_entries(entries: list, id_prefix: str, race_ref: list[dict], subrace_ref: list[dict],
                               traits_by_index: dict[str, dict]) -> list[dict]:
     """Mints one synthetic trait per top-level `entries` item, added to
@@ -511,6 +671,13 @@ def _race_from_5etools(raw: dict, traits_by_index: dict[str, dict]) -> dict | No
         # docstrings for the shape confirmed against real data.
         "resist": resist, "immune": immune, "vulnerable": vulnerable,
         "condition_immune": _condition_immunities_from_5etools(raw),
+        # NEW field (Task 6) — see _innate_spells_from_5etools' docstring
+        # for the shape and its empirically-grounded scope (innate only,
+        # not known/prepared/expanded). engine.resolve._species_innate_spells
+        # merges this with the subrace's own innate_spells and resolves
+        # spell_id against catalog.spells (this module has no Catalog
+        # access, by design — see module docstring).
+        "innate_spells": _innate_spells_from_5etools(raw),
     }
 
 
@@ -550,6 +717,13 @@ def _subrace_from_5etools(raw: dict, race_ids: set[str], traits_by_index: dict[s
         # subrace values together.
         "resist": resist, "immune": immune, "vulnerable": vulnerable,
         "condition_immune": _condition_immunities_from_5etools(raw),
+        # NEW field (Task 6) — subraces carry their OWN additionalSpells
+        # independently of their parent race (confirmed empirically,
+        # 2026-09-24: 50/98 real subraces carry the field, e.g. all nine
+        # real Tiefling MTF fiend-patron subraces and Duergar/MTF — the
+        # same race-then-subrace-additions relationship Task 5 already
+        # established for resist/immune/vulnerable).
+        "innate_spells": _innate_spells_from_5etools(raw),
     }
 
 

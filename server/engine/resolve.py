@@ -123,6 +123,46 @@ def _species_condition_immunities(race: dict | None, subrace: dict | None) -> li
     return immunities
 
 
+def _species_innate_spells(race: dict | None, subrace: dict | None, catalog: Catalog) -> list[dict]:
+    """Merges innate_spells from BOTH race and subrace — same race-then-
+    subrace-additions relationship _species_damage_modifiers already
+    merges (subraces carry their OWN additionalSpells independently, e.g.
+    Duergar/MTF subrace of Dwarf grants enlarge/reduce + invisibility that
+    the parent Dwarf/PHB race does not) — and resolves each grant's
+    spell_id against catalog.spells.
+
+    Resolvability (Task 6's empirical measurement, 2026-09-24, against the
+    real fetched races.json, races AND subraces): 99/108 (91.7%) of real
+    innate-spell references resolve cleanly against the bundled 2014 SRD
+    spell catalog — most sourcebook races' innate spells genuinely ARE
+    2014-era SRD spells, confirming the brief's "plausible" scenario, so
+    this is implemented as full resolution rather than a narrow cut. The
+    remaining 9/108 (8.3%) reference spells genuinely absent from the
+    bundled SRD list (e.g. Hex, Tenser's Floating Disk, Ice Knife, Wall of
+    Water — real spells from sourcebooks this project has not imported
+    spell DATA for, an explicitly out-of-scope gap per the design spec,
+    not a bug in this conversion). For those, spellId is None and
+    level/school/other full-record fields that only catalog.spells could
+    supply are simply not available — but `name` is ALWAYS populated
+    (official_source.py's own cleaned, title-cased fallback) so the grant
+    is visible on the sheet rather than silently dropped."""
+    innate: list[dict] = []
+    for src in (race, subrace):
+        if not src:
+            continue
+        for entry in src.get("innate_spells", []):
+            spell = catalog.spells.get(entry["spell_id"])
+            innate.append({
+                "spellId": entry["spell_id"] if spell else None,
+                "name": spell["name"] if spell else entry["name"],
+                "level": entry["level"],
+                "uses": entry["uses"],
+                "ability": entry["ability"],
+                "variant": entry["variant"],
+            })
+    return innate
+
+
 def _species_ability_bonus_choice_template(race: dict | None, subrace: dict | None, race_id: str | None) -> dict | None:
     """Half-Elf's ability_bonus_options (the only race/subrace in the
     bundled data with this field) needs a real Choice — this builds its
@@ -1182,6 +1222,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
 
     damage_modifiers = _species_damage_modifiers(race, subrace)
     condition_immunities = _species_condition_immunities(race, subrace)
+    innate_spells = _species_innate_spells(race, subrace, catalog)
 
     sheet = {
         "name": draft.get("name") or "",
@@ -1212,6 +1253,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "details": details,
         "damageModifiers": damage_modifiers,
         "conditionImmunities": condition_immunities,
+        "innateSpells": innate_spells,
     }
 
     return {
