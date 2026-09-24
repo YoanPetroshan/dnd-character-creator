@@ -76,6 +76,53 @@ def _species_ability_bonuses(race: dict | None, subrace: dict | None) -> dict[st
     return bonuses
 
 
+def _species_damage_modifiers(race: dict | None, subrace: dict | None) -> dict[str, list[str]]:
+    """Merges resist/immune/vulnerable from BOTH race and subrace, the
+    same race-then-subrace-additions relationship _species_ability_bonuses
+    already merges for ability score bonuses. This goes beyond Task 5's
+    brief, which only mentions reading race.get("resist", []) — extended
+    to also read subrace here because real fetched official data
+    (races.json, confirmed 2026-09-24) has resist entries on SUBRACE
+    records too: all four Genasi subraces (Air/Fire/Water/EEPC+MPMM) each
+    grant a different elemental resistance, and Stout Halfling/PHB grants
+    poison resistance — both only on the subrace, never the parent race.
+    Reading race-only would silently drop these, the exact category of
+    gap this plan already caught twice before (Task 3->3b, Task 4->4b for
+    race-trait proficiencies) — disclosed here rather than repeating that
+    pattern a third time. Deduplicates (preserving first-seen order) in
+    case a value is ever repeated across race+subrace, though not seen in
+    real data today."""
+    resistances: list[str] = []
+    immunities: list[str] = []
+    vulnerabilities: list[str] = []
+    for src in (race, subrace):
+        if not src:
+            continue
+        for entry in src.get("resist", []):
+            if entry not in resistances:
+                resistances.append(entry)
+        for entry in src.get("immune", []):
+            if entry not in immunities:
+                immunities.append(entry)
+        for entry in src.get("vulnerable", []):
+            if entry not in vulnerabilities:
+                vulnerabilities.append(entry)
+    return {"resistances": resistances, "immunities": immunities, "vulnerabilities": vulnerabilities}
+
+
+def _species_condition_immunities(race: dict | None, subrace: dict | None) -> list[str]:
+    """Same race+subrace merge as _species_damage_modifiers, for
+    conditionImmune (e.g. Autognome/AAG's disease immunity)."""
+    immunities: list[str] = []
+    for src in (race, subrace):
+        if not src:
+            continue
+        for entry in src.get("condition_immune", []):
+            if entry not in immunities:
+                immunities.append(entry)
+    return immunities
+
+
 def _species_ability_bonus_choice_template(race: dict | None, subrace: dict | None, race_id: str | None) -> dict | None:
     """Half-Elf's ability_bonus_options (the only race/subrace in the
     bundled data with this field) needs a real Choice — this builds its
@@ -1133,6 +1180,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         for s in c["selected"]
     ]
 
+    damage_modifiers = _species_damage_modifiers(race, subrace)
+    condition_immunities = _species_condition_immunities(race, subrace)
+
     sheet = {
         "name": draft.get("name") or "",
         "level": total_level if resolved_classes else 0,
@@ -1160,6 +1210,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "equipment": {"granted": granted_equipment, "chosen": chosen_equipment, "added": added_resolved},
         "spells": spells_summary,
         "details": details,
+        "damageModifiers": damage_modifiers,
+        "conditionImmunities": condition_immunities,
     }
 
     return {

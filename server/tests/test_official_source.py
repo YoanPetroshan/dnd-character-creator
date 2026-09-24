@@ -408,6 +408,46 @@ def test_subrace_any_n_choice_lands_on_a_racial_trait():
     assert envelope["from"] == {"option_set_type": "any_tool", "tool_category": "Artisan's Tools"}
 
 
+def test_race_damage_modifiers_and_condition_immunities_are_plain_string_lists():
+    # Aasimar/VGM: fixed necrotic/radiant resistance, no immune/
+    # vulnerable/conditionImmune of its own. Autognome/AAG: disease
+    # condition immunity. Both confirmed against the real fetched
+    # races.json (2026-09-24).
+    races, _, _ = load_official_races(official_dir())
+    aasimar_vgm = next(r for r in races if r["index"] == "aasimar-vgm")
+    assert aasimar_vgm["resist"] == ["necrotic", "radiant"]
+    assert aasimar_vgm["immune"] == []
+    assert aasimar_vgm["vulnerable"] == []
+    assert aasimar_vgm["condition_immune"] == []
+
+    autognome = next(r for r in races if r["index"] == "autognome-aag")
+    assert autognome["condition_immune"] == ["disease"]
+
+
+def test_choice_shaped_resistance_is_filtered_out_not_mis_modeled():
+    # Dragonborn/PHB's `resist` entry is {"choose": {"from": [...]}} — a
+    # choice tied to draconic ancestry, not a fixed damage type.
+    # Resolving that choice is out of scope for this pass-through
+    # conversion (see _damage_modifiers_from_5etools' docstring); the
+    # entry must be dropped, not coerced into a string or left to crash.
+    races, _, _ = load_official_races(official_dir())
+    dragonborn_phb = next(r for r in races if r["index"] == "dragonborn-phb")
+    assert dragonborn_phb["resist"] == []
+
+
+def test_subrace_damage_modifiers_are_independent_of_the_parent_race():
+    # Stout Halfling/PHB grants poison resistance; the parent Halfling/PHB
+    # race does not (confirmed against the real fetched races.json,
+    # 2026-09-24) — subraces carry their own resist/immune/vulnerable/
+    # condition_immune fields, read independently by
+    # engine.resolve._species_damage_modifiers.
+    races, subraces, _ = load_official_races(official_dir())
+    halfling_phb = next(r for r in races if r["index"] == "halfling-phb")
+    assert halfling_phb["resist"] == []
+    stout = next(s for s in subraces if s["index"] == "halfling-phb-stout-phb")
+    assert stout["resist"] == ["poison"]
+
+
 def test_race_with_no_named_entries_but_a_fixed_grant_gets_a_dedicated_trait():
     # Defensive path: empirically NO real race/subrace hits this (all 66
     # with any proficiency field have a matching named entries item — see

@@ -414,6 +414,47 @@ def _ability_bonus_options_from_5etools(ability_list: list[dict]) -> dict | None
     return None
 
 
+def _damage_modifiers_from_5etools(raw: dict) -> tuple[list[str], list[str], list[str]]:
+    """Converts 5etools' resist/immune/vulnerable fields into plain
+    string lists — a near-identity copy, string entries only.
+
+    Empirically confirmed (2026-09-24, against the real fetched
+    races.json): immune and vulnerable are ALWAYS plain string lists
+    (5/160 and 1/160 races respectively carry either field at all, zero
+    non-string entries in either). resist is NOT always plain strings —
+    7 of the 38 races/reprints carrying `resist` (Dragonborn PHB/XPHB,
+    Dragonborn (Chromatic/Gem/Metallic)/FTD, Reborn/RHW, Tiefling/XPHB)
+    use a CHOICE shape instead of a fixed damage type:
+    `{"choose": {"from": [...]}}`, e.g. Dragonborn's resistance depends
+    on the player's chosen draconic ancestry. This is a real, disclosed
+    cut, not the "resistance to X unless Y" conditional-prose shape this
+    task was originally warned to look for (no such shape exists
+    anywhere in the real data for any of these four fields) — but it's
+    still a non-string, non-trivial entry that this pure-data-pass-
+    through task deliberately does NOT resolve: doing so would mean
+    building new choice-resolution machinery (a `resist` choice envelope
+    the draft can select from, mirroring the existing skill/tool/ability
+    choice envelopes) that is out of scope for what the brief specifies
+    as an additive, non-computing task. Any non-string entry (i.e. only
+    ever a `resist` choice-dict today) is filtered out here rather than
+    silently coerced into a string or left to crash resolve.py's sheet
+    construction — the affected races get an empty resistances list
+    until a future task adds choice support, same "narrow, disclosed
+    cut" pattern this module already uses elsewhere (see module
+    docstring, _copy/_mod skip)."""
+    def _strings_only(key: str) -> list[str]:
+        return [entry for entry in (raw.get(key) or []) if isinstance(entry, str)]
+
+    return _strings_only("resist"), _strings_only("immune"), _strings_only("vulnerable")
+
+
+def _condition_immunities_from_5etools(raw: dict) -> list[str]:
+    """Converts 5etools' conditionImmune field into a plain string list —
+    confirmed empirically (2026-09-24) that all 7 races/reprints carrying
+    this field use plain strings only, no choice/conditional shape."""
+    return [entry for entry in (raw.get("conditionImmune") or []) if isinstance(entry, str)]
+
+
 def _trait_refs_from_entries(entries: list, id_prefix: str, race_ref: list[dict], subrace_ref: list[dict],
                               traits_by_index: dict[str, dict]) -> list[dict]:
     """Mints one synthetic trait per top-level `entries` item, added to
@@ -454,6 +495,8 @@ def _race_from_5etools(raw: dict, traits_by_index: dict[str, dict]) -> dict | No
     _attach_fixed_proficiencies(_proficiencies_from_5etools(raw), trait_refs, index, race_ref, [], traits_by_index)
     _attach_choice_proficiencies(raw, trait_refs, index, race_ref, [], traits_by_index)
 
+    resist, immune, vulnerable = _damage_modifiers_from_5etools(raw)
+
     return {
         "index": index, "name": raw["name"],
         "speed": raw.get("speed") if isinstance(raw.get("speed"), int) else 30,
@@ -463,6 +506,11 @@ def _race_from_5etools(raw: dict, traits_by_index: dict[str, dict]) -> dict | No
         "languages": [], "language_desc": "",
         "traits": trait_refs,
         "source": raw.get("source", ""),  # NEW field, SRD races don't have it (implicitly "SRD") — Task 6 uses this for filtering/labeling
+        # NEW fields (Task 5), 5etools' own field names — see
+        # _damage_modifiers_from_5etools/_condition_immunities_from_5etools
+        # docstrings for the shape confirmed against real data.
+        "resist": resist, "immune": immune, "vulnerable": vulnerable,
+        "condition_immune": _condition_immunities_from_5etools(raw),
     }
 
 
@@ -485,6 +533,8 @@ def _subrace_from_5etools(raw: dict, race_ids: set[str], traits_by_index: dict[s
     _attach_fixed_proficiencies(_proficiencies_from_5etools(raw), trait_refs, index, [], subrace_ref, traits_by_index)
     _attach_choice_proficiencies(raw, trait_refs, index, [], subrace_ref, traits_by_index)
 
+    resist, immune, vulnerable = _damage_modifiers_from_5etools(raw)
+
     return {
         "index": index, "name": raw["name"],
         "race": {"index": race_index, "name": race_name, "url": ""},
@@ -492,6 +542,14 @@ def _subrace_from_5etools(raw: dict, race_ids: set[str], traits_by_index: dict[s
         "ability_bonuses": _ability_bonuses_from_5etools(raw.get("ability", [])),
         "racial_traits": trait_refs,
         "url": "",
+        # NEW fields (Task 5) — subraces carry resist/immune/vulnerable/
+        # conditionImmune independently of their parent race (e.g. each
+        # Genasi subrace grants a different elemental resistance; Stout
+        # Halfling grants poison resistance) — see
+        # engine.resolve._species_damage_modifiers, which merges race and
+        # subrace values together.
+        "resist": resist, "immune": immune, "vulnerable": vulnerable,
+        "condition_immune": _condition_immunities_from_5etools(raw),
     }
 
 

@@ -583,6 +583,54 @@ def test_sourcebook_ability_bonus_choice_flows_through_resolve(catalog):
     assert {o["id"] for o in choice["options"]} == {"str", "dex", "con", "int", "wis"}
 
 
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_race_damage_modifiers_carry_through_to_the_sheet(catalog):
+    # Aasimar/VGM ("aasimar-vgm"): fixed necrotic/radiant resistance — no
+    # choice-shape involved, confirmed against the real fetched races.json
+    # (2026-09-24). resist/immune/vulnerable/conditionImmune are otherwise
+    # empty for this race, so this also exercises the always-empty-list
+    # (never null/missing) branches for immunities/conditionImmunities.
+    draft = _fighter_acolyte_human_draft(species={"id": "aasimar-vgm", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["damageModifiers"]["resistances"] == ["necrotic", "radiant"]
+    assert resolution["sheet"]["damageModifiers"]["immunities"] == []
+    assert resolution["sheet"]["conditionImmunities"] == []
+
+
+def test_a_race_with_no_damage_modifiers_gets_empty_lists(catalog):
+    resolution = resolve(_fighter_acolyte_human_draft(), catalog)  # Human, no resistances
+    assert resolution["sheet"]["damageModifiers"] == {"resistances": [], "immunities": [], "vulnerabilities": []}
+    assert resolution["sheet"]["conditionImmunities"] == []
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_subrace_only_resistance_flows_through_to_the_sheet(catalog):
+    # Stout Halfling/PHB's poison resistance lives on the SUBRACE record,
+    # not the parent Halfling race (confirmed against the real fetched
+    # races.json, 2026-09-24) — exercises _species_damage_modifiers'
+    # race+subrace merge, not just the race-only path the brief's own
+    # example test covers.
+    draft = _fighter_acolyte_human_draft(species={"id": "halfling-phb", "subspeciesId": "halfling-phb-stout-phb", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["damageModifiers"]["resistances"] == ["poison"]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_choice_shaped_resistance_is_a_disclosed_cut_not_a_crash(catalog):
+    # Dragonborn/PHB's `resist` entry is a CHOICE shape
+    # ({"choose": {"from": [...]}}) tied to the player's draconic
+    # ancestry, not a fixed damage type — confirmed against the real
+    # fetched races.json (2026-09-24). Resolving that choice is out of
+    # scope for this pure-data-pass-through task (see
+    # _damage_modifiers_from_5etools' docstring), so it must not crash
+    # and must not be silently mis-modeled as an unconditional
+    # resistance — it's simply filtered out, leaving an empty list.
+    draft = _fighter_acolyte_human_draft(species={"id": "dragonborn-phb", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    assert resolution["sheet"]["damageModifiers"]["resistances"] == []
+
+
 def test_non_list_classes_is_a_problem_not_a_crash(catalog):
     draft = _fighter_acolyte_human_draft(classes={"classId": "fighter"})
     resolution = resolve(draft, catalog)  # must not raise
