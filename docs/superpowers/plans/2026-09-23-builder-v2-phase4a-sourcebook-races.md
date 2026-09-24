@@ -549,6 +549,183 @@ EOF
 
 ---
 
+### Task 3b: Close a pre-existing gap — `resolve()` never consumed tool/weapon/armor proficiencies from race/subrace traits
+
+**Why this task exists:** Task 3's own review (both the implementer and an independent reviewer, verified two ways — direct code reading and an empirical `resolve()` repro) found that `server/engine/resolve.py` has NEVER forwarded tool/weapon/armor proficiency ids out of race/subrace traits into `sheet.proficiencies` — only `skill-` prefixed ids are read from traits. This is a PRE-EXISTING gap, not introduced by this plan: it silently affects the BUNDLED SRD data too (confirmed: SRD Dwarf's "Dwarven Combat Training" trait grants battleaxe/handaxe/light-hammer/warhammer proficiency, and it has never once reached `sheet.proficiencies.weapons`). It went unnoticed until now because nothing before this plan wrote a test asserting a race's weapon/tool/armor grant actually lands on the sheet. Given this plan's explicit goal is full mechanical fidelity (not partial — the user's own words: "искам всичко да е вътре... това беше задачата от началото"), Task 3's correctly-shaped-but-uncommitted data must not ship inert. This task closes the gap for EVERY race (SRD and sourcebook alike), and fixes a related weapon-id convention bug Task 3's review found along the way.
+
+**Files:**
+- Modify: `server/engine/resolve.py`, `server/catalog/official_source.py`
+- Test: `server/tests/test_resolve.py`, `server/tests/test_official_source.py`
+
+**Interfaces:**
+- Consumes: the EXISTING `_categorize_proficiency(prof_id: str) -> None` nested function inside `resolve()` (already handles the armor/weapon/tool bucketing correctly, including its own `_SPECIFIC_WEAPON_PROFICIENCY_IDS` set — reused unmodified).
+- Produces: `sheet.proficiencies.armor/weapons/tools` now ALSO include grants from race/subrace traits, for every race (SRD and sourcebook).
+
+- [ ] **Step 1: Ground the exact current code before touching it**
+
+Read `server/engine/resolve.py` around the `proficient_skills`/`proficient_armor`/`proficient_weapons`/`proficient_tools` block (confirmed at plan-writing time to span roughly lines 944-1025 — re-locate if line numbers have shifted). Confirm the exact current shape:
+
+```python
+    proficient_skills: set[str] = set()
+    for c in choices:
+        if c["source"]["kind"] == "class":
+            proficient_skills.update(s for s in c["selected"] if s.startswith("skill-"))
+    if bg:
+        proficient_skills.update(p["index"] for p in bg.get("starting_proficiencies", []) if p["index"].startswith("skill-"))
+    if race:
+        trait_refs = list(race.get("traits", [])) + (list(subrace.get("racial_traits", [])) if subrace else [])
+        for ref in trait_refs:
+            trait = catalog.traits.get(ref["index"])
+            if not trait:
+                continue
+            proficient_skills.update(p["index"] for p in trait.get("proficiencies", []) if p["index"].startswith("skill-"))
+
+    proficient_armor: set[str] = set()
+    proficient_weapons: set[str] = set()
+    proficient_tools: set[str] = set()
+
+    _SPECIFIC_WEAPON_PROFICIENCY_IDS = {
+        "shortswords", "clubs", "crossbows-light", "daggers", "darts", "hand-crossbows",
+        "javelins", "longswords", "maces", "quarterstaffs", "rapiers", "scimitars",
+        "sickles", "slings", "spears",
+    }
+
+    def _categorize_proficiency(prof_id: str) -> None:
+        if prof_id.startswith("skill-") or prof_id.startswith("saving-throw-"):
+            return
+        if "armor" in prof_id or prof_id == "shields":
+            proficient_armor.add(prof_id)
+        elif "weapon" in prof_id or prof_id in _SPECIFIC_WEAPON_PROFICIENCY_IDS:
+            proficient_weapons.add(prof_id)
+        else:
+            proficient_tools.add(prof_id)
+```
+
+Note `_SPECIFIC_WEAPON_PROFICIENCY_IDS` already contains `"crossbows-light"` — this is the authoritative id resolve.py recognizes for that weapon, and it is the OPPOSITE ordering from what Task 3's naive pluralization would produce ("light-crossbows" — wrong, silently uncategorized as a "tool" instead of a weapon, since neither "weapon" nor a member of `_SPECIFIC_WEAPON_PROFICIENCY_IDS` matches it).
+
+- [ ] **Step 2: Write failing tests against a REAL bundled SRD race first**
+
+This is the highest-value test in this task — proving a real, currently-broken SRD behavior gets fixed, independent of any sourcebook data (so it runs unconditionally, no `has_official()` skip needed):
+
+```python
+def test_dwarf_dwarven_combat_training_weapon_proficiencies_reach_the_sheet(catalog):
+    draft = _fighter_acolyte_human_draft(species={"id": "dwarf", "choices": {}})
+    resolution = resolve(draft, catalog)
+    weapons = set(resolution["sheet"]["proficiencies"]["weapons"])
+    # Dwarven Combat Training (PHB): battleaxe, handaxe, light hammer, warhammer.
+    # Verify the exact ids against chargen/data/srd/5e-SRD-Traits.json's
+    # "dwarven-combat-training" record before trusting this literal — do
+    # not assume from memory.
+    assert {"battleaxes", "handaxes", "light-hammers", "warhammers"} <= weapons
+```
+
+(Ground the exact expected id set against the real bundled trait record — `python -c "import json; d=json.load(open('chargen/data/srd/5e-SRD-Traits.json')); print([t for t in d if t['index']=='dwarven-combat-training'])"` from the repo root — before trusting the literal above; SRD's own trait data may already use whatever id convention `_categorize_proficiency` expects, or may not, which is exactly what this test needs to prove either way.)
+
+Add a second test for a race with NO weapon/tool/armor trait grants (e.g. Human) confirming no regression:
+
+```python
+def test_human_has_no_extra_weapon_tool_armor_from_traits(catalog):
+    draft = _fighter_acolyte_human_draft()
+    resolution = resolve(draft, catalog)
+    # Human has no traits granting weapon/tool/armor proficiencies — Fighter's
+    # own class grants (martial-weapons, simple-weapons, etc.) are untouched,
+    # this just confirms nothing EXTRA leaks in from trait-scanning.
+    ...  # ground the exact expected set against Fighter's real class proficiencies before writing this assertion
+```
+
+- [ ] **Step 3: Run to verify Step 2's tests fail**
+
+Run: `cd server && .venv/bin/python -m pytest tests/test_resolve.py -v -k dwarven_combat_training`
+Expected: FAIL — `weapons` set is currently missing the Dwarven Combat Training grants entirely (this is the bug).
+
+- [ ] **Step 4: Fix `resolve.py`**
+
+Add a second pass over the SAME `trait_refs` the skill-scanning block already computes, calling the existing `_categorize_proficiency` for every non-skill entry. Since `_categorize_proficiency` is defined AFTER the skill-scanning block (it needs `proficient_armor`/`proficient_weapons`/`proficient_tools` to already exist), add this right after `_categorize_proficiency`'s own definition, before the class-level prof-choice loop that already calls it:
+
+```python
+    if race:
+        trait_refs = list(race.get("traits", [])) + (list(subrace.get("racial_traits", [])) if subrace else [])
+        for ref in trait_refs:
+            trait = catalog.traits.get(ref["index"])
+            if not trait:
+                continue
+            for p in trait.get("proficiencies", []):
+                if not p["index"].startswith("skill-"):
+                    _categorize_proficiency(p["index"])
+```
+
+This recomputes `trait_refs` a second time (a small, disclosed duplication of the identical computation in the skill-scanning block above it) rather than restructuring the function to compute it once and reuse it across two now-separated blocks — matches this file's own already-established tolerance for small, disclosed duplication elsewhere (e.g. `_class_label()`, per the architecture doc's own "known gaps" section) over a broader refactor this task doesn't need. If you find a cleaner way that doesn't risk the working skill-scanning code above it, that's fine too — just keep the diff minimal and don't restructure code outside this concern.
+
+- [ ] **Step 5: Run to verify Step 2's tests pass, then full suite**
+
+Run: `cd server && .venv/bin/python -m pytest tests/test_resolve.py -v -k "dwarven_combat_training or human_has_no_extra"`
+Then: `cd server && .venv/bin/python -m pytest -v` — full suite green (332 baseline + your new tests), no regressions. Pay special attention to any existing test that asserts an exact (not `in`-based) proficiencies list for any race with a proficiency-granting trait — none were found during this plan's own grounding pass (`grep -rn "\"weapons\"\]" tests/*.py` found only `in`-based assertions), but re-verify.
+
+- [ ] **Step 6: Fix the weapon-id convention bug Task 3's review found**
+
+Task 3's review found a concrete mismatch: `official_source.py`'s weapon-id conversion (pluralize-and-strip-source) produces `"light-crossbows"` for 5etools' `"light crossbow|phb"`, but the id `_categorize_proficiency` actually recognizes (per `_SPECIFIC_WEAPON_PROFICIENCY_IDS`, Step 1) is `"crossbows-light"` — meaning this specific weapon would now (after Step 4's fix) get silently miscategorized into `tools` instead of `weapons` for any sourcebook race granting it, once official data is fetched.
+
+In `official_source.py`'s weapon-id conversion function (built in Task 3), add a lookup against the known `_SPECIFIC_WEAPON_PROFICIENCY_IDS` set for exact/near matches before falling back to the generic pluralize-and-strip logic — e.g., a small dict mapping known 5etools weapon slugs to their `_categorize_proficiency`-recognized id where they diverge (starting with the one confirmed case: `"light-crossbow"` → `"crossbows-light"`), with a code comment explaining why (cite Task 3's review finding). Do NOT try to exhaustively solve every possible weapon-id naming mismatch in the wider data — this task fixes the ONE concrete case the review found and verified; further mismatches, if any turn up later, are the same kind of "narrow, disclosed gap" this project already accepts elsewhere (a mismatched id just means that one specific weapon's proficiency silently lands in the wrong bucket — visible/inspectable, not a crash, not data loss).
+
+Write a test confirming this specific conversion:
+
+```python
+def test_light_crossbow_weapon_id_matches_resolve_pys_recognized_convention():
+    # Ground: 5etools' "light crossbow|phb" must convert to the SAME id
+    # _categorize_proficiency's _SPECIFIC_WEAPON_PROFICIENCY_IDS set
+    # recognizes ("crossbows-light"), not the naive pluralized form
+    # ("light-crossbows") — confirmed mismatched during Task 3's review.
+    ...  # call whichever official_source.py function does this conversion directly, assert it returns "crossbows-light" for this input
+```
+
+- [ ] **Step 7: Run full suite, empirical end-to-end check, commit**
+
+```bash
+.venv/bin/python -c "
+from catalog.loader import load
+from engine.resolve import resolve
+catalog = load()
+draft = {
+    'classes': [{'classId': 'fighter', 'level': 1, 'choices': {}}],
+    'background': {'id': 'acolyte', 'choices': {}},
+    'species': {'id': 'dwarf', 'choices': {}},
+    'abilities': {'method': 'manual', 'base': {'STR': 16, 'DEX': 14, 'CON': 14, 'INT': 10, 'WIS': 12, 'CHA': 8}},
+    'equipment': {'choices': {}, 'added': [], 'skipped': True}, 'details': {},
+}
+r = resolve(draft, catalog)
+print('Dwarf weapon proficiencies:', sorted(r['sheet']['proficiencies']['weapons']))
+print('problems:', r['problems'])
+"
+```
+
+Confirm the Dwarf's Dwarven Combat Training weapons now genuinely appear alongside Fighter's own martial/simple-weapons grants, with zero problems.
+
+```bash
+cd /Users/yoanpetrov/dnd-character-creator
+git add server/engine/resolve.py server/catalog/official_source.py server/tests/test_resolve.py server/tests/test_official_source.py
+git commit -m "$(cat <<'EOF'
+fix: resolve() now consumes tool/weapon/armor proficiencies from traits
+
+Race/subrace traits could always carry tool/weapon/armor proficiency
+grants (SRD's own Dwarven Combat Training is a real, bundled example),
+but resolve()'s trait-scanning only ever forwarded skill- prefixed
+entries into the sheet — armor/weapon/tool grants from traits have
+never reached sheet.proficiencies, for any race, SRD included. Found
+during Phase 4a's own review process, not introduced by it. Fixed by
+extending the existing trait-scanning pass to also call the existing
+_categorize_proficiency for non-skill entries. Also fixes a weapon-id
+convention mismatch in official_source.py's conversion (5etools'
+"light crossbow" now converts to "crossbows-light", matching
+_categorize_proficiency's own recognized id, not a naive pluralized
+form that would have silently miscategorized it as a tool).
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
+
 ### Task 4: Skill/tool proficiency CHOICES, including the "any N" wildcard
 
 **Files:**
