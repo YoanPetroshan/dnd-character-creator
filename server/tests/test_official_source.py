@@ -504,8 +504,8 @@ def test_innate_spells_choice_shaped_ability_is_preserved_as_a_candidate_list():
 def test_innate_spells_with_a_non_srd_reference_still_gets_a_usable_spell_id_guess():
     # Triton/VGM's level-5 innate spell is "wall of water|xge" — a real
     # spell this project has no bundled DATA for (confirmed empirically,
-    # 2026-09-24, part of Task 6's Step 2 measurement: 9/108 real innate
-    # references don't resolve against catalog.spells). official_source.py
+    # 2026-09-24, part of Task 6's re-measured Step 2 finding: 9/102 real
+    # innate references don't resolve against catalog.spells). official_source.py
     # itself does NOT touch the catalog (no Catalog import, by design —
     # see module docstring) — it just strips the "|xge" source decoration
     # and slugs the clean name; engine.resolve._species_innate_spells is
@@ -538,6 +538,28 @@ def test_a_race_with_no_additional_spells_gets_an_empty_innate_spells_list():
     races, _, _ = load_official_races(official_dir())
     dwarf_phb = next(r for r in races if r["index"] == "dwarf-phb")
     assert dwarf_phb["innate_spells"] == []
+
+
+def test_innate_spells_rest_wrapper_is_handled_the_same_as_daily_not_dropped():
+    # Mark of Scribing/ERLW (a subrace of Gnome/PHB) is the ONE real
+    # record in the whole dataset whose innate entry uses the "rest"
+    # wrapper key instead of "daily" — level 1:
+    # {"rest": {"1": ["comprehend languages"]}} (confirmed against the
+    # real fetched races.json, 2026-09-24, found by code review after an
+    # earlier pass's docstring wrongly claimed the wrapper was "ALWAYS
+    # daily"). Comprehend Languages is a real, resolvable 2014 SRD spell
+    # — before this fix it was silently dropped (fell through to the
+    # ("at-will", []) fallback) with zero trace on the sheet. Level 3's
+    # "magic mouth" uses the ordinary "daily" wrapper on the SAME record,
+    # confirming both shapes coexist and are both preserved.
+    races, subraces, _ = load_official_races(official_dir())
+    scribing = next(s for s in subraces if s["index"] == "gnome-phb-mark-of-scribing-erlw")
+    grants = {g["name"]: g for g in scribing["innate_spells"]}
+    assert grants["Comprehend Languages"]["level"] == 1
+    assert grants["Comprehend Languages"]["uses"] == "1/day"
+    assert grants["Comprehend Languages"]["spell_id"] == "comprehend-languages"
+    assert grants["Magic Mouth"]["level"] == 3
+    assert grants["Magic Mouth"]["uses"] == "1/day"
 
 
 def test_subrace_innate_spells_are_independent_of_the_parent_race():

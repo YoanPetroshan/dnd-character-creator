@@ -47,20 +47,28 @@ never needs to know chargen lives one level up at all.
 Innate spellcasting (Task 6, 2026-09-24): `additionalSpells[].innate`
 converts to each race/subrace's new `innate_spells` field — see
 _innate_spells_from_5etools' docstring for the full shape/scope
-grounding. Empirical measurement against the real fetched races.json
-(both races AND subraces, since subraces carry the field independently
-too): 99/108 (91.7%) of real innate-spell references resolve cleanly
-against the bundled 2014 SRD spell catalog once 5etools' own nested
-"{level: {"daily": {"1": [...]}}}" shape and "name|source"/"name#N"
-decorations are correctly stripped before slugging — most sourcebook
-races' innate spells genuinely are 2014-era SRD spells. The remaining
-9/108 (8.3%) reference spells this project has no data for at all (Hex,
-Tenser's Floating Disk, Ice Knife, Wall of Water, Crown of Madness,
-Ray of Sickness, Armor of Agathys, Searing Smite) — a real, disclosed
-gap (this project has not imported spell DATA beyond the bundled SRD
-list, an explicitly out-of-scope decision predating this task), handled
-by engine.resolve._species_innate_spells degrading gracefully: spellId
-is null but the spell's name is still shown, never silently dropped.
+grounding. Resolvability measurement (2026-09-24, re-measured after a
+code review caught two bugs in the first pass: a "rest"-wrapper entry
+was being silently dropped instead of counted, and the original count
+included races/subraces filtered out by the "_copy" check below and so
+never actually reached this code): running the REAL shipped pipeline —
+load_official_races() followed by resolving each returned innate-spell
+reference against catalog.spells, exactly what
+engine.resolve._species_innate_spells does — over the real fetched
+races.json produces 102 total innate-spell references (races AND
+subraces, since subraces carry the field independently too), of which
+93/102 (91.2%) resolve cleanly against the bundled 2014 SRD spell
+catalog once 5etools' own nested "{level: {"daily"|"rest": {"1":
+[...]}}}" shape and "name|source"/"name#N" decorations are correctly
+stripped before slugging — most sourcebook races' innate spells
+genuinely are 2014-era SRD spells. The remaining 9/102 (8.8%) reference
+spells this project has no data for at all (Hex, Tenser's Floating Disk,
+Ice Knife, Wall of Water, Crown of Madness, Ray of Sickness x2, Armor of
+Agathys, Searing Smite) — a real, disclosed gap (this project has not
+imported spell DATA beyond the bundled SRD list, an explicitly
+out-of-scope decision predating this task), handled by
+engine.resolve._species_innate_spells degrading gracefully: spellId is
+null but the spell's name is still shown, never silently dropped.
 """
 from __future__ import annotations
 
@@ -495,9 +503,10 @@ def _innate_spell_uses_and_names(level_value) -> tuple[str, list[str]]:
     """Converts ONE additionalSpells[].innate[level] value into a
     (uses-label, raw spell-name list) pair.
 
-    Confirmed empirically (2026-09-24) against every real race AND subrace
-    innate-spell entry in races.json: exactly two shapes exist at this
-    level —
+    Confirmed empirically (2026-09-24, re-verified 2026-09-24 after a code
+    review caught a counterexample the first pass missed) against every
+    real race AND subrace innate-spell entry in races.json: three shapes
+    exist at this level —
     - a plain list of spell-name strings (e.g. Firbolg/MPMM's level-1
       entry, `["detect magic", "disguise self"]`) — no frequency wrapper
       at all means the real 5e rule is "at will" (e.g. Firbolg can cast
@@ -506,13 +515,30 @@ def _innate_spell_uses_and_names(level_value) -> tuple[str, list[str]]:
       cross-checked against the actual PHB/MPMM rules text for several of
       these races.
     - `{"daily": {"1": [...]}}` — usable a limited number of times per
-      long rest. The wrapper key is ALWAYS "daily" (never "rest" or
-      anything else) and the inner count key is ALWAYS "1" for every real
-      `innate` entry in the whole dataset (races AND subraces) — so this
-      module only needs to model "1/day", not a general N/day. (5etools'
-      OTHER field, `known`, does use a "rest" wrapper on a few races —
-      e.g. Firbolg/VGM, Eladrin/DMG — but that's a different mechanic,
-      out of scope for this task; see module-level Task 6 docstring.)
+      long rest. This is the overwhelming majority shape (96/97 real
+      dict-wrapped entries across races AND subraces).
+    - `{"rest": {"1": [...]}}` — the ONE real exception (Mark of
+      Scribing/ERLW, a subrace of Gnome/PHB, level 1: `{"rest": {"1":
+      ["comprehend languages"]}}`). The PREVIOUS version of this
+      docstring claimed the wrapper key was "ALWAYS daily" — that claim
+      was false, disproven by this exact record in this exact file.
+      Mark of Scribing's own flavor text ("you can also cast comprehend
+      languages once with this trait, and you regain the ability to cast
+      it when you finish a short OR long rest") confirms "rest" means a
+      short-or-long-rest recharge, a real but slightly more generous
+      mechanic than "daily"'s long-rest-only cadence. This module still
+      only models two uses-labels ("at-will" and "1/day"), so "rest" is
+      treated identically to "daily" here — "1/day" undercounts the true
+      short-rest cadence slightly but is far more accurate than the
+      previous behavior (silently dropping the spell entirely). Modeling
+      a distinct "short rest" uses-label is out of scope for this pass.
+      In both shapes the inner count key is ALWAYS "1" for every real
+      `innate` entry in the whole dataset — so this module only needs to
+      model "1/day", not a general N/day. (5etools' OTHER field, `known`,
+      also uses a "rest" wrapper on a few races — e.g. Firbolg/VGM,
+      Eladrin/DMG, Mark of Handling/ERLW — but `known` is a different
+      mechanic, out of scope for this task; see module-level Task 6
+      docstring.)
 
     A shape this doesn't recognize (defensively, not seen in real data)
     returns ("at-will", []) rather than raising, so a future data update
@@ -521,9 +547,11 @@ def _innate_spell_uses_and_names(level_value) -> tuple[str, list[str]]:
     if isinstance(level_value, list):
         return "at-will", [n for n in level_value if isinstance(n, str)]
     if isinstance(level_value, dict):
-        daily = level_value.get("daily")
-        if isinstance(daily, dict):
-            names = daily.get("1")
+        wrapper = level_value.get("daily")
+        if not isinstance(wrapper, dict):
+            wrapper = level_value.get("rest")
+        if isinstance(wrapper, dict):
+            names = wrapper.get("1")
             if isinstance(names, list):
                 return "1/day", [n for n in names if isinstance(n, str)]
     return "at-will", []
@@ -565,12 +593,19 @@ def _innate_spells_from_5etools(race_raw: dict) -> list[dict]:
 
     `additionalSpells` is a LIST, not a single dict — confirmed
     empirically (2026-09-24) that most real races have exactly one entry,
-    but a real few (Elf/LFL: Lorwyn/Shadowmoor; Elf/XPHB: Drow/High
-    Elf/Wood Elf; Tiefling/XPHB: Abyssal/Chthonic/Infernal) have MULTIPLE
-    entries, each carrying a "name" tag, representing mutually exclusive
+    but a real few (Elf/XPHB: Drow/High Elf/Wood Elf; Tiefling/XPHB:
+    Abyssal/Chthonic/Infernal — both reviewer-confirmed to actually reach
+    this code and exercise this path end-to-end) have MULTIPLE entries,
+    each carrying a "name" tag, representing mutually exclusive
     player-chosen variants (2024-style "lineage" options folded into one
     race record rather than modeled as separate subraces — confirmed no
-    subrace records exist for these). Silently flattening every entry's
+    subrace records exist for these). Elf/LFL (Lorwyn/Shadowmoor) also has
+    this multi-entry shape in the raw data, but it's a "_copy"-based
+    record (see module docstring / _race_from_5etools) that
+    _race_from_5etools filters out before this function is ever called on
+    it — it was wrongly cited here as a "confirmed" example in an earlier
+    pass despite never actually being exercised by this pipeline; dropped
+    from this list for that reason. Silently flattening every entry's
     grants together would misrepresent a character as having ALL variants
     at once, which is worse than a disclosed cut. Instead, every grant is
     tagged with its source entry's `variant` name (None for the ordinary

@@ -131,17 +131,27 @@ def _species_innate_spells(race: dict | None, subrace: dict | None, catalog: Cat
     the parent Dwarf/PHB race does not) — and resolves each grant's
     spell_id against catalog.spells.
 
-    Resolvability (Task 6's empirical measurement, 2026-09-24, against the
-    real fetched races.json, races AND subraces): 99/108 (91.7%) of real
-    innate-spell references resolve cleanly against the bundled 2014 SRD
-    spell catalog — most sourcebook races' innate spells genuinely ARE
-    2014-era SRD spells, confirming the brief's "plausible" scenario, so
-    this is implemented as full resolution rather than a narrow cut. The
-    remaining 9/108 (8.3%) reference spells genuinely absent from the
-    bundled SRD list (e.g. Hex, Tenser's Floating Disk, Ice Knife, Wall of
-    Water — real spells from sourcebooks this project has not imported
-    spell DATA for, an explicitly out-of-scope gap per the design spec,
-    not a bug in this conversion). For those, spellId is None and
+    Resolvability (Task 6's empirical measurement, re-measured 2026-09-24
+    against the REAL shipped pipeline — load_official_races() followed by
+    resolving each returned reference against catalog.spells, exactly
+    what this function does, over the real fetched races.json, races AND
+    subraces): 93/102 (91.2%) of real innate-spell references resolve
+    cleanly against the bundled 2014 SRD spell catalog — most sourcebook
+    races' innate spells genuinely ARE 2014-era SRD spells, confirming
+    the brief's "plausible" scenario, so this is implemented as full
+    resolution rather than a narrow cut. (An earlier pass measured
+    99/108 by counting raw JSON references directly — that count was
+    wrong on two counts: it included records _race_from_5etools/
+    _subrace_from_5etools filter out via the "_copy" check before they
+    ever reach this code, and it predated the fix for a "rest"-wrapper
+    innate entry, see official_source._innate_spell_uses_and_names, that
+    used to be silently dropped rather than counted.) The remaining
+    9/102 (8.8%) reference spells genuinely absent from the bundled SRD
+    list (Hex, Tenser's Floating Disk, Ice Knife, Wall of Water, Crown of
+    Madness, Ray of Sickness x2, Armor of Agathys, Searing Smite — real
+    spells from sourcebooks this project has not imported spell DATA
+    for, an explicitly out-of-scope gap per the design spec, not a bug
+    in this conversion). For those, spellId is None and
     level/school/other full-record fields that only catalog.spells could
     supply are simply not available — but `name` is ALWAYS populated
     (official_source.py's own cleaned, title-cased fallback) so the grant

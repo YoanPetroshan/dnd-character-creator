@@ -636,7 +636,7 @@ def test_race_innate_spells_resolve_against_the_bundled_srd_catalog(catalog):
     # Aasimar/DMG: level-3 Lesser Restoration (1/day), level-5 Daylight
     # (1/day), fixed CHA ability — both spells ARE in the bundled 2014 SRD
     # catalog (confirmed against the real fetched races.json, 2026-09-24;
-    # part of Task 6's Step 2 measurement finding 99/108 real innate
+    # part of Task 6's re-measured Step 2 finding 93/102 real innate
     # references resolve cleanly). spellId/name come from catalog.spells
     # itself, not official_source.py's raw-fallback name, when resolved.
     draft = _fighter_acolyte_human_draft(species={"id": "aasimar-dmg", "choices": {}})
@@ -661,7 +661,7 @@ def test_unresolvable_innate_spell_still_shows_its_name_with_a_null_spell_id(cat
     # Triton/VGM's level-5 innate spell references "wall of water|xge" — a
     # real spell this project has no bundled DATA for (only the SRD 2014
     # spell list is bundled; confirmed empirically, 2026-09-24, one of
-    # Task 6's Step 2 measurement's 9/108 unresolvable real references).
+    # Task 6's re-measured Step 2's 9/102 unresolvable real references).
     # Must degrade gracefully: spellId null, but name still shown, not
     # silently dropped from the sheet and not a crash.
     draft = _fighter_acolyte_human_draft(species={"id": "triton-vgm", "choices": {}})
@@ -673,6 +673,28 @@ def test_unresolvable_innate_spell_still_shows_its_name_with_a_null_spell_id(cat
     assert grants["Wall Of Water"]["uses"] == "1/day"
     # Sibling grants on the SAME race still resolve normally, unaffected.
     assert grants["Fog Cloud"]["spellId"] == "fog-cloud"
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_rest_wrapped_innate_spell_resolves_on_the_sheet_not_silently_dropped(catalog):
+    # Mark of Scribing/ERLW (subrace of Gnome/PHB) is the one real record
+    # whose level-1 innate entry uses 5etools' "rest" wrapper key instead
+    # of "daily" (confirmed against the real fetched races.json,
+    # 2026-09-24 code review). Before the fix, this fell through
+    # official_source._innate_spell_uses_and_names' unrecognized-shape
+    # fallback and Comprehend Languages never appeared anywhere on the
+    # sheet — no problem, no trace. It's a real, resolvable 2014 SRD
+    # spell and must show up with a resolved spellId like any other
+    # "daily"-wrapped grant.
+    draft = _fighter_acolyte_human_draft(
+        species={"id": "gnome-phb", "subspeciesId": "gnome-phb-mark-of-scribing-erlw", "choices": {}}
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    grants = {g["name"]: g for g in resolution["sheet"]["innateSpells"]}
+    assert grants["Comprehend Languages"]["spellId"] == "comprehend-languages"
+    assert grants["Comprehend Languages"]["level"] == 1
+    assert grants["Comprehend Languages"]["uses"] == "1/day"
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
