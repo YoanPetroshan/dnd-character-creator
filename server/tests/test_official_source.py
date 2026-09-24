@@ -260,6 +260,154 @@ def test_subrace_fixed_weapon_proficiency_lands_on_a_racial_trait():
     assert {"rapiers", "shortswords", "hand-crossbows"} <= weapon_ids
 
 
+# --- Task 4: skill/tool proficiency CHOICES, including the "any N" wildcard
+#
+# Real-data shapes confirmed empirically (2026-09-24) against
+# /Users/yoanpetrov/.claude/dnd/.data/official/races.json:
+#   enumerated list -> Centaur (GGR)     -> skillProficiencies [{"choose": {"from": [...]}}] (no "count" -> choose 1)
+#   enumerated list -> Dwarf (PHB)       -> toolProficiencies  [{"choose": {"from": ["smith's tools", ...]}}]
+#   any N wildcard  -> Hexblood (VRGR)   -> skillProficiencies [{"any": 2}]
+#   any N wildcard  -> Autognome (AAG)   -> toolProficiencies  [{"any": 2}]
+#   any artisan's tool -> Dwarf (Kaladesh, PSK) -> toolProficiencies [{"anyArtisansTool": 2}]
+#   any musical instrument -> Satyr (MOT) -> toolProficiencies [{"anyMusicalInstrument": 1}]
+#   both skill AND tool choices on ONE race -> Warforged (EFA) -> skillProficiencies [{"any": 1}], toolProficiencies [{"any": 1}]
+# Confirmed empirically that no real entry ever mixes two choice-shapes (or
+# a fixed True grant and a choice-shape) within the same skillProficiencies/
+# toolProficiencies dict — so at most one skill-choice and one tool-choice
+# envelope exist per race/subrace.
+
+
+def test_enumerated_skill_choice_becomes_an_options_array_envelope_on_a_trait():
+    races, _, traits_by_index = load_official_races(official_dir())
+    centaur = next(r for r in races if r["name"] == "Centaur" and r.get("source") == "GGR")
+    choice_traits = [
+        traits_by_index[t["index"]] for t in centaur["traits"]
+        if traits_by_index[t["index"]].get("proficiency_choices")
+    ]
+    assert len(choice_traits) == 1
+    envelope = choice_traits[0]["proficiency_choices"]
+    # No "count" key in the raw data -> defaults to choose 1 (empirically the
+    # only shape absent "count" ever takes for this field, unlike the
+    # ability_bonus_options "amount" ambiguity from Task 2).
+    assert envelope["choose"] == 1
+    assert envelope["from"]["option_set_type"] == "options_array"
+    ids = {o["item"]["index"] for o in envelope["from"]["options"]}
+    assert ids == {"skill-animal-handling", "skill-medicine", "skill-nature", "skill-survival"}
+
+
+def test_enumerated_tool_choice_matches_catalog_items_ids():
+    races, _, traits_by_index = load_official_races(official_dir())
+    dwarf = next(r for r in races if r["name"] == "Dwarf" and r.get("source") == "PHB")
+    choice_traits = [
+        traits_by_index[t["index"]] for t in dwarf["traits"]
+        if traits_by_index[t["index"]].get("proficiency_choices")
+    ]
+    assert len(choice_traits) == 1
+    envelope = choice_traits[0]["proficiency_choices"]
+    assert envelope["choose"] == 1
+    ids = {o["item"]["index"] for o in envelope["from"]["options"]}
+    assert ids == {"smiths-tools", "brewers-supplies", "masons-tools"}
+    names = {o["item"]["name"] for o in envelope["from"]["options"]}
+    assert "Smith's Tools" in names  # apostrophe-safe title case, not "Smith'S Tools"
+
+
+def test_any_n_skill_wildcard_uses_the_any_skill_option_set_type():
+    races, _, traits_by_index = load_official_races(official_dir())
+    hexblood = next(r for r in races if r["name"] == "Hexblood" and r.get("source") == "VRGR")
+    choice_traits = [
+        traits_by_index[t["index"]] for t in hexblood["traits"]
+        if traits_by_index[t["index"]].get("proficiency_choices")
+    ]
+    assert len(choice_traits) == 1
+    envelope = choice_traits[0]["proficiency_choices"]
+    assert envelope["choose"] == 2
+    assert envelope["from"] == {"option_set_type": "any_skill"}
+
+
+def test_any_n_tool_wildcard_uses_the_any_tool_option_set_type():
+    races, _, traits_by_index = load_official_races(official_dir())
+    autognome = next(r for r in races if r["name"] == "Autognome" and r.get("source") == "AAG")
+    choice_traits = [
+        traits_by_index[t["index"]] for t in autognome["traits"]
+        if traits_by_index[t["index"]].get("proficiency_choices")
+    ]
+    assert len(choice_traits) == 1
+    envelope = choice_traits[0]["proficiency_choices"]
+    assert envelope["choose"] == 2
+    assert envelope["from"] == {"option_set_type": "any_tool"}
+
+
+def test_any_artisans_tool_wildcard_narrows_by_tool_category():
+    races, _, traits_by_index = load_official_races(official_dir())
+    dwarf_kaladesh = next(r for r in races if r["name"] == "Dwarf (Kaladesh)" and r.get("source") == "PSK")
+    choice_traits = [
+        traits_by_index[t["index"]] for t in dwarf_kaladesh["traits"]
+        if traits_by_index[t["index"]].get("proficiency_choices")
+    ]
+    assert len(choice_traits) == 1
+    envelope = choice_traits[0]["proficiency_choices"]
+    assert envelope["choose"] == 2
+    assert envelope["from"] == {"option_set_type": "any_tool", "tool_category": "Artisan's Tools"}
+
+
+def test_any_musical_instrument_wildcard_narrows_by_tool_category():
+    races, _, traits_by_index = load_official_races(official_dir())
+    satyr = next(r for r in races if r["name"] == "Satyr" and r.get("source") == "MOT")
+    choice_traits = [
+        traits_by_index[t["index"]] for t in satyr["traits"]
+        if traits_by_index[t["index"]].get("proficiency_choices")
+    ]
+    assert len(choice_traits) == 1
+    envelope = choice_traits[0]["proficiency_choices"]
+    assert envelope["choose"] == 1
+    assert envelope["from"] == {"option_set_type": "any_tool", "tool_category": "Musical Instrument"}
+
+
+def test_race_with_both_a_skill_and_a_tool_choice_gets_two_separate_choice_traits():
+    # Warforged (EFA)'s "Specialized Design" trait text grants BOTH "one
+    # skill proficiency" and "one tool proficiency of your choice" as two
+    # independent choices — SRD's own trait-level proficiency_choices shape
+    # is a single dict per trait (unlike the class-level list-of-envelopes
+    # shape), so these must land on two distinct synthetic traits, not
+    # collide as one.
+    races, _, traits_by_index = load_official_races(official_dir())
+    warforged = next(r for r in races if r["name"] == "Warforged" and r.get("source") == "EFA")
+    choice_traits = [
+        traits_by_index[t["index"]] for t in warforged["traits"]
+        if traits_by_index[t["index"]].get("proficiency_choices")
+    ]
+    assert len(choice_traits) == 2
+    set_types = {t["proficiency_choices"]["from"]["option_set_type"] for t in choice_traits}
+    assert set_types == {"any_skill", "any_tool"}
+
+
+def test_choice_shaped_proficiency_does_not_also_produce_a_fixed_grant():
+    # A CHOICE must never show up as a fixed proficiency entry too (that's
+    # Task 3's job, for `granted is True` entries only).
+    races, _, traits_by_index = load_official_races(official_dir())
+    hexblood = next(r for r in races if r["name"] == "Hexblood" and r.get("source") == "VRGR")
+    all_profs = [p for t in hexblood["traits"] for p in traits_by_index[t["index"]].get("proficiencies", [])]
+    assert all_profs == []
+
+
+def test_subrace_any_n_choice_lands_on_a_racial_trait():
+    # Mark of Making (ERLW), a subrace of Human (PHB), grants "choose 1 of
+    # any artisan's tool" — subraces need the exact same choice-envelope
+    # treatment as races, onto their own racial_traits. (Subrace records
+    # don't carry their own "source" field — Task 1's known deferred
+    # finding — so match by name alone; empirically unique in real data.)
+    _, subraces, traits_by_index = load_official_races(official_dir())
+    mark_of_making = next(s for s in subraces if s["name"] == "Mark of Making")
+    choice_traits = [
+        traits_by_index[t["index"]] for t in mark_of_making["racial_traits"]
+        if traits_by_index[t["index"]].get("proficiency_choices")
+    ]
+    assert len(choice_traits) == 1
+    envelope = choice_traits[0]["proficiency_choices"]
+    assert envelope["choose"] == 1
+    assert envelope["from"] == {"option_set_type": "any_tool", "tool_category": "Artisan's Tools"}
+
+
 def test_race_with_no_named_entries_but_a_fixed_grant_gets_a_dedicated_trait():
     # Defensive path: empirically NO real race/subrace hits this (all 66
     # with any proficiency field have a matching named entries item — see

@@ -153,3 +153,50 @@ def test_ability_bonus_option_type_produces_a_readable_label_and_stable_id():
     assert options is not None
     assert options[0] == {"id": "str", "label": "STR +1"}
     assert options[1] == {"id": "dex", "label": "DEX +1"}
+
+
+# --- Task 4: "any N" skill/tool wildcard option sets -----------------------
+#
+# Sourcebook races (e.g. Half-Elf's "choose 2 skills of your choice") need an
+# option set whose members are NOT enumerated anywhere in the envelope
+# itself — the full set of skills, or the full set of tools (optionally
+# narrowed to one tool_category), sourced from reference_data instead.
+
+
+def test_any_skill_resolves_every_srd_skill():
+    from catalog import reference_data
+    options = build_choice_options({"option_set_type": "any_skill"})
+    assert options is not None
+    assert len(options) == 18
+    ids = {o["id"] for o in options}
+    assert ids == set(reference_data.SKILL_NAMES.keys())
+    assert {"id": "skill-perception", "label": "Perception"} in options
+
+
+def test_any_tool_with_no_category_resolves_every_srd_tool():
+    from catalog import reference_data
+    options = build_choice_options({"option_set_type": "any_tool"})
+    assert options is not None
+    assert len(options) == len(reference_data.TOOLS)
+    ids = {o["id"] for o in options}
+    assert "smiths-tools" in ids
+    assert "lute" in ids
+    assert "thieves-tools" in ids
+
+
+def test_any_tool_narrowed_to_artisans_tools_category():
+    options = build_choice_options({"option_set_type": "any_tool", "tool_category": "Artisan's Tools"})
+    assert options is not None
+    ids = {o["id"] for o in options}
+    assert "smiths-tools" in ids
+    assert "brewers-supplies" in ids
+    assert "lute" not in ids  # a musical instrument, not an artisan's tool
+    assert "thieves-tools" not in ids  # "Other Tools" category
+    assert {"id": "smiths-tools", "label": "Smith's Tools"} in options
+
+
+def test_any_tool_narrowed_to_musical_instrument_category():
+    options = build_choice_options({"option_set_type": "any_tool", "tool_category": "Musical Instrument"})
+    assert options is not None
+    ids = {o["id"] for o in options}
+    assert ids == {"bagpipes", "drum", "dulcimer", "flute", "lute", "lyre", "horn", "pan-flute", "shawm", "viol"}

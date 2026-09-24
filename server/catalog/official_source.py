@@ -193,6 +193,126 @@ def _proficiencies_from_5etools(race_raw: dict) -> list[dict]:
     return profs
 
 
+def _skill_choice_envelope_from_5etools(skill_entry: dict) -> dict | None:
+    """Converts the CHOICE portion of a race's skillProficiencies[0] entry
+    (never both at once — confirmed empirically, 2026-09-24: no real entry
+    mixes a fixed `True` grant with a choice-shape, or mixes two
+    choice-shapes together) into a `proficiency_choices`-shaped envelope
+    ({"choose": N, "type": "proficiencies", "from": {...}}) — the SAME
+    envelope shape the bundled SRD data's own class-level and trait-level
+    proficiency_choices already use, so build_choice_template/
+    build_choice_options (catalog/choices.py) consume it unmodified.
+
+    Two real shapes, confirmed against races.json (2026-09-24):
+    - {"any": N}: a wildcard, not an enumerated list — no real bundled or
+      official skill data lists "every skill" out explicitly, so this
+      sources catalog/choices.py's NEW "any_skill" option_set_type instead
+      of a fixed options list.
+    - {"choose": {"from": [...], "count": N}}: an enumerated list of skill
+      NAME strings (5etools' plain-English form, e.g. "animal handling",
+      NOT an id) — converted to the existing options_array/reference shape
+      every other enumerated choice in this codebase already uses. "count"
+      is absent for every real single-choice entry (confirmed empirically)
+      and defaults to 1 — unlike the ability_bonus_options "amount" shape
+      (Task 2), there is no competing meaning for a missing count here."""
+    any_n = skill_entry.get("any")
+    if isinstance(any_n, int) and not isinstance(any_n, bool):
+        return {"choose": any_n, "type": "proficiencies", "from": {"option_set_type": "any_skill"}}
+
+    choose = skill_entry.get("choose")
+    if isinstance(choose, dict):
+        options = []
+        for name in choose.get("from", []):
+            index = f"skill-{_slug(name)}"
+            options.append({
+                "option_type": "reference",
+                "item": {"index": index, "name": f"Skill: {SKILL_NAMES.get(index, name.title())}", "url": ""},
+            })
+        return {"choose": choose.get("count", 1), "type": "proficiencies",
+                "from": {"option_set_type": "options_array", "options": options}}
+
+    return None
+
+
+def _tool_choice_envelope_from_5etools(tool_entry: dict) -> dict | None:
+    """Same idea as _skill_choice_envelope_from_5etools, for
+    toolProficiencies[0]. Tools additionally carry TWO narrowed wildcard
+    shapes skills never do — "anyArtisansTool": N and
+    "anyMusicalInstrument": N (confirmed empirically, 2026-09-24: these are
+    the only three int-valued keys — "any"/"anyArtisansTool"/
+    "anyMusicalInstrument" — seen anywhere in the real fetched data; no
+    "anyGamingSet" or similar exists) — both resolved via choices.py's
+    "any_tool" option_set_type with an added "tool_category" filter key,
+    matching reference_data.TOOLS' own `category` field verbatim
+    ("Artisan's Tools" / "Musical Instrument") rather than inventing a
+    separate option_set_type per narrowed category."""
+    any_n = tool_entry.get("any")
+    if isinstance(any_n, int) and not isinstance(any_n, bool):
+        return {"choose": any_n, "type": "proficiencies", "from": {"option_set_type": "any_tool"}}
+
+    any_artisan = tool_entry.get("anyArtisansTool")
+    if isinstance(any_artisan, int) and not isinstance(any_artisan, bool):
+        return {"choose": any_artisan, "type": "proficiencies",
+                "from": {"option_set_type": "any_tool", "tool_category": "Artisan's Tools"}}
+
+    any_instrument = tool_entry.get("anyMusicalInstrument")
+    if isinstance(any_instrument, int) and not isinstance(any_instrument, bool):
+        return {"choose": any_instrument, "type": "proficiencies",
+                "from": {"option_set_type": "any_tool", "tool_category": "Musical Instrument"}}
+
+    choose = tool_entry.get("choose")
+    if isinstance(choose, dict):
+        options = [
+            {"option_type": "reference", "item": {"index": _slug(name), "name": _tool_display_name(name), "url": ""}}
+            for name in choose.get("from", [])
+        ]
+        return {"choose": choose.get("count", 1), "type": "proficiencies",
+                "from": {"option_set_type": "options_array", "options": options}}
+
+    return None
+
+
+def _attach_choice_proficiencies(race_raw: dict, trait_refs: list[dict], id_prefix: str,
+                                  race_ref: list[dict], subrace_ref: list[dict],
+                                  traits_by_index: dict[str, dict]) -> None:
+    """Attaches this race/subrace's skill/tool proficiency CHOICE(s) (as
+    opposed to _attach_fixed_proficiencies' fixed grants) onto dedicated
+    synthetic traits — one per choice, mutating trait_refs/traits_by_index
+    in place, mirroring _attach_fixed_proficiencies' own signature and
+    calling convention.
+
+    Unlike _attach_fixed_proficiencies, this does NOT try to attach onto an
+    existing named trait whose prose describes the grant: the bundled SRD
+    data's own trait-level `proficiency_choices` field is a single dict per
+    trait (confirmed against 5e-SRD-Traits.json's tool-proficiency/
+    skill-versatility traits — unlike the class-level shape, which is a
+    LIST of envelopes), and a real race can have BOTH a skill choice AND a
+    tool choice described by the SAME prose entry (e.g. Warforged/EFA's
+    "Specialized Design": "You gain one skill proficiency and one tool
+    proficiency of your choice.") — reusing the fixed-grant heuristic here
+    would make both choices collide on one trait and silently overwrite
+    each other. At most one skill-choice and one tool-choice envelope ever
+    exist per race (confirmed empirically), so two deterministically-named
+    dedicated traits ("Skill Proficiency" / "Tool Proficiency") are always
+    enough — no need to enumerate/number them."""
+    skill_entry = (race_raw.get("skillProficiencies") or [{}])[0]
+    tool_entry = (race_raw.get("toolProficiencies") or [{}])[0]
+
+    for label, envelope in (
+        ("Skill Proficiency", _skill_choice_envelope_from_5etools(skill_entry)),
+        ("Tool Proficiency", _tool_choice_envelope_from_5etools(tool_entry)),
+    ):
+        if envelope is None:
+            continue
+        trait_id = f"{id_prefix}-trait-choice-{_slug(label)}"
+        traits_by_index[trait_id] = {
+            "index": trait_id, "races": race_ref, "subraces": subrace_ref,
+            "name": label, "desc": [], "proficiencies": [],
+            "proficiency_choices": envelope, "url": "",
+        }
+        trait_refs.append({"index": trait_id, "name": label, "url": ""})
+
+
 def _attach_fixed_proficiencies(profs: list[dict], trait_refs: list[dict], id_prefix: str,
                                  race_ref: list[dict], subrace_ref: list[dict],
                                  traits_by_index: dict[str, dict]) -> None:
@@ -332,6 +452,7 @@ def _race_from_5etools(raw: dict, traits_by_index: dict[str, dict]) -> dict | No
     race_ref = [{"index": index, "name": raw["name"], "url": ""}]
     trait_refs = _trait_refs_from_entries(raw.get("entries", []), index, race_ref, [], traits_by_index)
     _attach_fixed_proficiencies(_proficiencies_from_5etools(raw), trait_refs, index, race_ref, [], traits_by_index)
+    _attach_choice_proficiencies(raw, trait_refs, index, race_ref, [], traits_by_index)
 
     return {
         "index": index, "name": raw["name"],
@@ -362,6 +483,7 @@ def _subrace_from_5etools(raw: dict, race_ids: set[str], traits_by_index: dict[s
     subrace_ref = [{"index": index, "name": raw["name"], "url": ""}]
     trait_refs = _trait_refs_from_entries(raw.get("entries", []), index, [], subrace_ref, traits_by_index)
     _attach_fixed_proficiencies(_proficiencies_from_5etools(raw), trait_refs, index, [], subrace_ref, traits_by_index)
+    _attach_choice_proficiencies(raw, trait_refs, index, [], subrace_ref, traits_by_index)
 
     return {
         "index": index, "name": raw["name"],

@@ -1,7 +1,7 @@
 """Builds Choice-shaped templates (id, source, label, description, count,
 options) from the SRD's "choose N of..." envelopes, per the architecture
 spec's central abstraction (docs/superpowers/specs/2026-09-16-builder-v2-architecture.md
-§1-2). Handles the two option_set_type shapes Phase 1 needs:
+§1-2). Handles the option_set_type shapes this project needs:
 `options_array` (an explicit option list — the common case) and
 `resource_list` for languages specifically (Backgrounds.json's
 language_options references "/api/2014/languages", which isn't bundled as
@@ -17,6 +17,17 @@ combined option, but only when every item inside it is a plain
 counted_reference — a bundle containing its own nested sub-choice returns
 None for that one option, same "skip rather than fake it" discipline as
 everything else in this module.
+
+Phase 4a (sourcebook races) adds two more: `any_skill` and `any_tool`
+(optionally narrowed by a `tool_category` key). Both are a genuinely
+different shape from every case above — the envelope carries NO options
+list of its own at all (a sourcebook race's "choose 2 skills of your
+choice" is a real 5etools "any": N wildcard, not an enumerated list), so
+the full candidate set is sourced from reference_data.SKILL_NAMES/TOOLS
+instead of from `from_field` itself. An enumerated race skill/tool choice
+(e.g. "choose 1 of {Perception, Stealth, Survival}") needs no new shape at
+all — official_source.py builds it as a plain `options_array`, the exact
+same mechanism every other choice in this module already uses.
 """
 from __future__ import annotations
 
@@ -91,6 +102,17 @@ def build_choice_options(from_field: dict) -> list[dict] | None:
         if url.rstrip("/").endswith("languages"):
             return [{"id": lang["index"], "label": lang["name"]} for lang in reference_data.LANGUAGES]
         return None  # an unrecognized resource type — nothing else is bundled in Phase 1
+
+    if set_type == "any_skill":
+        return [{"id": s_id, "label": name} for s_id, name in reference_data.SKILL_NAMES.items()]
+
+    if set_type == "any_tool":
+        category = from_field.get("tool_category")
+        return [
+            {"id": t["index"], "label": t["name"]}
+            for t in reference_data.TOOLS
+            if category is None or t["category"] == category
+        ]
 
     return None  # equipment_category and anything else — Phase 2+
 
