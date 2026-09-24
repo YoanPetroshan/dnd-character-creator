@@ -5,7 +5,15 @@ const STORAGE_KEY = "dnd-builder-draft-v2";
 
 export const emptyDraft: Draft = {
   name: "",
-  sources: ["srd"],
+  // Empty = "everything available" (server/engine/resolve.py's permissive
+  // default). This was `["srd"]` since Phase 0, before any sourcebook data
+  // existed — but SpeciesPage already lets a player pick any official race
+  // from the unfiltered /api/catalog list, and this draft is the base
+  // template for every new/persisted draft, so a non-empty default here
+  // silently breaks every sourcebook race pick with a spurious
+  // "unknown species" resolve() problem. No source-picker UI exists yet
+  // (future task) to let a player narrow this back down.
+  sources: [],
   preferences: {
     advancementType: "milestone",
     hitPointType: "fixed",
