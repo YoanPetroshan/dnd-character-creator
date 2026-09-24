@@ -36,10 +36,12 @@ def api_resolve():
 def api_catalog():
     return jsonify({
         "classes": [{"id": c["index"], "name": c["name"], "hitDie": c["hit_die"]} for c in _catalog.classes.values()],
-        "backgrounds": [{"id": b["index"], "name": b["name"]} for b in _catalog.backgrounds.values()],
+        "backgrounds": [
+            {"id": b["index"], "name": b["name"], "source": b.get("source", "")} for b in _catalog.backgrounds.values()
+        ],
         "species": [
             {
-                "id": r["index"], "name": r["name"],
+                "id": r["index"], "name": r["name"], "source": r.get("source", ""),
                 "subspecies": [{"id": s["index"], "name": s["name"]} for s in _catalog.subraces_of(r["index"])],
             }
             for r in _catalog.races.values()

@@ -169,7 +169,7 @@ def test_fixed_skill_proficiency_flows_through_resolve_into_the_sheet():
 
     catalog = load()
     draft = {
-        "name": "Test Aetherborn", "sources": ["srd"],
+        "name": "Test Aetherborn", "sources": ["psk"],
         "classes": [{"classId": "fighter", "level": 1, "choices": {}}],
         "background": {"id": "acolyte", "choices": {}},
         "species": {"id": "aetherborn-psk", "choices": {}},

@@ -778,6 +778,19 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     race = catalog.races.get(race_id) if race_id else None
     if race_id and not race:
         problems.append({"id": "unknown-species", "message": f"Unknown species '{race_id}'."})
+    elif race and draft.get("sources"):
+        # A filtered-out record and a genuinely-nonexistent one are
+        # indistinguishable from the player's point of view ("not a valid
+        # choice right now") — reuse the same problem id rather than
+        # introduce a new one. Bundled SRD races have no 'source' field at
+        # all (implicitly SRD), so they're always allowed regardless of
+        # draft.sources; only an official race whose book isn't in the
+        # allowed list gets rejected.
+        race_source = race.get("source") or ""
+        allowed_sources = {s.lower() for s in draft["sources"] if isinstance(s, str)}
+        if race_source and race_source.upper() != "SRD" and race_source.lower() not in allowed_sources:
+            problems.append({"id": "unknown-species", "message": f"Unknown species '{race_id}'."})
+            race = None
 
     subrace_id = species.get("subspeciesId")
     subrace = catalog.subraces.get(subrace_id) if subrace_id else None

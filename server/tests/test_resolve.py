@@ -565,6 +565,7 @@ def test_sourcebook_ability_bonus_choice_flows_through_resolve(catalog):
     # Choice machinery end to end for a Task 2/official_source.py-produced
     # envelope, with zero changes to resolve.py or catalog/choices.py.
     draft = _fighter_acolyte_human_draft(
+        sources=["psk"],
         species={"id": "aetherborn-psk", "choices": {"species:aetherborn-psk:ability-bonus": ["str", "dex"]}},
         abilities={"method": "manual", "base": {"STR": 14, "DEX": 12, "CON": 14, "INT": 10, "WIS": 12, "CHA": 8}},
     )
@@ -590,7 +591,7 @@ def test_race_damage_modifiers_carry_through_to_the_sheet(catalog):
     # (2026-09-24). resist/immune/vulnerable/conditionImmune are otherwise
     # empty for this race, so this also exercises the always-empty-list
     # (never null/missing) branches for immunities/conditionImmunities.
-    draft = _fighter_acolyte_human_draft(species={"id": "aasimar-vgm", "choices": {}})
+    draft = _fighter_acolyte_human_draft(sources=["vgm"], species={"id": "aasimar-vgm", "choices": {}})
     resolution = resolve(draft, catalog)
     assert resolution["sheet"]["damageModifiers"]["resistances"] == ["necrotic", "radiant"]
     assert resolution["sheet"]["damageModifiers"]["immunities"] == []
@@ -610,8 +611,11 @@ def test_subrace_only_resistance_flows_through_to_the_sheet(catalog):
     # races.json, 2026-09-24) — exercises _species_damage_modifiers'
     # race+subrace merge, not just the race-only path the brief's own
     # example test covers.
-    draft = _fighter_acolyte_human_draft(species={"id": "halfling-phb", "subspeciesId": "halfling-phb-stout-phb", "choices": {}})
+    draft = _fighter_acolyte_human_draft(
+        sources=["phb"], species={"id": "halfling-phb", "subspeciesId": "halfling-phb-stout-phb", "choices": {}}
+    )
     resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
     assert resolution["sheet"]["damageModifiers"]["resistances"] == ["poison"]
 
 
@@ -625,7 +629,7 @@ def test_choice_shaped_resistance_is_a_disclosed_cut_not_a_crash(catalog):
     # _damage_modifiers_from_5etools' docstring), so it must not crash
     # and must not be silently mis-modeled as an unconditional
     # resistance — it's simply filtered out, leaving an empty list.
-    draft = _fighter_acolyte_human_draft(species={"id": "dragonborn-phb", "choices": {}})
+    draft = _fighter_acolyte_human_draft(sources=["phb"], species={"id": "dragonborn-phb", "choices": {}})
     resolution = resolve(draft, catalog)
     assert resolution["problems"] == []
     assert resolution["sheet"]["damageModifiers"]["resistances"] == []
@@ -639,7 +643,7 @@ def test_race_innate_spells_resolve_against_the_bundled_srd_catalog(catalog):
     # part of Task 6's re-measured Step 2 finding 93/102 real innate
     # references resolve cleanly). spellId/name come from catalog.spells
     # itself, not official_source.py's raw-fallback name, when resolved.
-    draft = _fighter_acolyte_human_draft(species={"id": "aasimar-dmg", "choices": {}})
+    draft = _fighter_acolyte_human_draft(sources=["dmg"], species={"id": "aasimar-dmg", "choices": {}})
     resolution = resolve(draft, catalog)
     assert resolution["problems"] == []
     grants = {g["name"]: g for g in resolution["sheet"]["innateSpells"]}
@@ -664,7 +668,7 @@ def test_unresolvable_innate_spell_still_shows_its_name_with_a_null_spell_id(cat
     # Task 6's re-measured Step 2's 9/102 unresolvable real references).
     # Must degrade gracefully: spellId null, but name still shown, not
     # silently dropped from the sheet and not a crash.
-    draft = _fighter_acolyte_human_draft(species={"id": "triton-vgm", "choices": {}})
+    draft = _fighter_acolyte_human_draft(sources=["vgm"], species={"id": "triton-vgm", "choices": {}})
     resolution = resolve(draft, catalog)
     assert resolution["problems"] == []
     grants = {g["name"]: g for g in resolution["sheet"]["innateSpells"]}
@@ -687,7 +691,7 @@ def test_rest_wrapped_innate_spell_resolves_on_the_sheet_not_silently_dropped(ca
     # spell and must show up with a resolved spellId like any other
     # "daily"-wrapped grant.
     draft = _fighter_acolyte_human_draft(
-        species={"id": "gnome-phb", "subspeciesId": "gnome-phb-mark-of-scribing-erlw", "choices": {}}
+        sources=["phb"], species={"id": "gnome-phb", "subspeciesId": "gnome-phb-mark-of-scribing-erlw", "choices": {}}
     )
     resolution = resolve(draft, catalog)
     assert resolution["problems"] == []
@@ -704,8 +708,11 @@ def test_subrace_innate_spells_merge_with_the_parent_race_on_the_sheet(catalog):
     # real fetched races.json, 2026-09-24) — exercises
     # _species_innate_spells' race+subrace merge, mirroring the
     # damage-modifiers race+subrace merge test above.
-    draft = _fighter_acolyte_human_draft(species={"id": "dwarf-phb", "subspeciesId": "dwarf-phb-duergar-mtf", "choices": {}})
+    draft = _fighter_acolyte_human_draft(
+        sources=["phb"], species={"id": "dwarf-phb", "subspeciesId": "dwarf-phb-duergar-mtf", "choices": {}}
+    )
     resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
     grants = {g["name"]: g for g in resolution["sheet"]["innateSpells"]}
     assert grants["Enlarge/Reduce"]["spellId"] == "enlarge-reduce"
     assert grants["Enlarge/Reduce"]["level"] == 3
@@ -720,13 +727,54 @@ def test_choice_shaped_innate_ability_is_a_disclosed_candidate_list_not_a_crash(
     # choice-resolution machinery — same scope line Task 5 drew for
     # choice-shaped resistances), but carried through as a candidate list,
     # not dropped or crashed on.
-    draft = _fighter_acolyte_human_draft(species={"id": "aarakocra-mpmm", "choices": {}})
+    draft = _fighter_acolyte_human_draft(sources=["mpmm"], species={"id": "aarakocra-mpmm", "choices": {}})
     resolution = resolve(draft, catalog)
     assert resolution["problems"] == []
     grants = resolution["sheet"]["innateSpells"]
     assert len(grants) == 1
     assert grants[0]["name"] == "Gust of Wind"
     assert grants[0]["ability"] == {"choose": ["INT", "WIS", "CHA"]}
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_draft_sources_rejects_a_race_from_an_unlisted_sourcebook(catalog):
+    # aasimar-vgm's 'source' field is "VGM" (raw 5etools casing) — a
+    # draft.sources of just ["phb"] must reject it exactly like an
+    # unrecognized id: same problem id, race treated as absent (no
+    # damage modifiers/ability bonuses/etc. applied for it).
+    draft = _fighter_acolyte_human_draft(sources=["phb"], species={"id": "aasimar-vgm", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == [{"id": "unknown-species", "message": "Unknown species 'aasimar-vgm'."}]
+    assert resolution["sheet"]["species"] is None
+    assert resolution["sheet"]["damageModifiers"] == {"resistances": [], "immunities": [], "vulnerabilities": []}
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_draft_sources_allows_a_race_whose_book_is_listed(catalog):
+    draft = _fighter_acolyte_human_draft(sources=["phb", "vgm"], species={"id": "aasimar-vgm", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    assert resolution["sheet"]["species"]["id"] == "aasimar-vgm"
+    assert resolution["sheet"]["damageModifiers"]["resistances"] == ["necrotic", "radiant"]
+
+
+def test_empty_draft_sources_allows_every_race_unaffected(catalog):
+    # Today's default behavior, unaffected by the new filter — an
+    # empty/absent 'sources' list means no restriction at all.
+    draft = _fighter_acolyte_human_draft(sources=[])
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    assert resolution["sheet"]["species"]["id"] == "human"
+
+
+def test_bundled_srd_race_is_always_allowed_regardless_of_draft_sources(catalog):
+    # SRD races have no 'source' field at all (implicitly bundled/SRD) —
+    # they must never be filtered out even when draft.sources names only
+    # unrelated official books.
+    draft = _fighter_acolyte_human_draft(sources=["vgm"])  # human is bundled SRD, not "vgm"
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    assert resolution["sheet"]["species"]["id"] == "human"
 
 
 def test_non_list_classes_is_a_problem_not_a_crash(catalog):

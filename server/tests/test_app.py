@@ -73,6 +73,18 @@ def test_catalog_endpoint_lists_all_classes_backgrounds_species(client):
     assert fighter["hitDie"] == 10
     dwarf = next(s for s in body["species"] if s["id"] == "dwarf")
     assert dwarf["subspecies"] == [{"id": "hill-dwarf", "name": "Hill Dwarf"}]
+    # Bundled SRD species/backgrounds have no 'source' field of their own
+    # (implicitly SRD) — the catalog endpoint still exposes the key, just
+    # empty, so the frontend can group consistently either way.
+    assert dwarf["source"] == ""
+    acolyte = next(b for b in body["backgrounds"] if b["id"] == "acolyte")
+    assert acolyte["source"] == ""
+    if has_official():
+        # aasimar-vgm (official_source.py's own id convention): 'source'
+        # carries the real book abbreviation for frontend grouping.
+        aasimar = next((s for s in body["species"] if s["id"] == "aasimar-vgm"), None)
+        assert aasimar is not None
+        assert aasimar["source"] == "VGM"
 
 
 def test_catalog_class_detail_endpoint(client):
