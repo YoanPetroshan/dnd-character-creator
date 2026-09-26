@@ -1,9 +1,10 @@
 """resolve(draft, catalog) -> Resolution — the single entry point for all
 character-rules computation, per the architecture spec's engine contract
 (docs/superpowers/specs/2026-09-16-builder-v2-architecture.md §3). One
-fixed-order pass: sources → species ability bonuses → final ability scores
-→ derived stats → choice generation/validation (§4a) — never iterates to a
-fixpoint.
+fixed-order pass: sources → species+background ability bonuses (both flow
+into the SAME early pass — see _background_ability_bonuses, Phase 4b Task
+4) → final ability scores → derived stats → choice generation/validation
+(§4a) — never iterates to a fixpoint.
 
 Leveling (1-20) is in scope: each resolved class's subclassId is read but
 never trusted to gate a feature choice unless it actually matches, so any
@@ -189,6 +190,69 @@ def _species_ability_bonus_choice_template(race: dict | None, subrace: dict | No
         description = f"Choose {choose} ability score{'s' if choose != 1 else ''} to increase by 1."
         return build_choice_template(envelope, cid, source, "Ability Score Increase", description=description)
     return None
+
+
+def _background_ability_bonuses(bg: dict | None) -> dict[str, int]:
+    """Mirrors _species_ability_bonuses' shape for backgrounds (Phase 4b
+    Task 4). Always returns {} — backgrounds never grant a FIXED,
+    non-choice ability bonus; confirmed empirically against the real
+    fetched backgrounds.json (2026-09-26): every one of the 60 real
+    records with an `ability` field uses the `choose`/"weighted" shape
+    exclusively (see _ability_bonus_options_from_5etools_weighted_pair,
+    catalog/official_source.py), never a flat `{"str": 2}`-style fixed
+    entry. This function exists mainly for symmetry with
+    _species_ability_bonuses and to make explicit, in code, that ability
+    bonuses now flow from BOTH species and background through the SAME
+    early ability-score pass below (see the "Final ability scores"
+    comment) — not because any real data currently needs it to do
+    anything."""
+    return {}
+
+
+def _background_ability_bonus_choice_template(bg: dict | None, bg_id: str | None) -> dict | None:
+    """Mirrors _species_ability_bonus_choice_template for the 2024-style
+    background ability-score-improvement choice (Phase 4b Task 4). bg's
+    `ability_bonus_options` envelope (built by
+    _ability_bonus_options_from_5etools_weighted_pair — None for SRD's
+    bundled Acolyte and any background with no `ability` field, a safe
+    no-op) is flattened into up to 7 ordinary selectable "bundle" options
+    (6 "+2 to one of a 3-ability pool, +1 to a different one" split
+    combinations, plus 1 "+1 to all three" flat combination) — see that
+    function's own docstring for the full derivation."""
+    if not bg or not bg.get("ability_bonus_options"):
+        return None
+    envelope = bg["ability_bonus_options"]
+    cid = f"background:{bg_id}:ability-bonus"
+    source = {"kind": "background", "id": bg_id, "label": bg["name"] if bg else ""}
+    choose = envelope.get("choose", 1)
+    description = f"Choose {choose} ability score improvement option{'s' if choose != 1 else ''}."
+    return build_choice_template(envelope, cid, source, "Ability Score Improvement", description=description)
+
+
+def _background_ability_bonus_deltas(envelope: dict, built_options: list[dict]) -> dict[str, list[tuple[str, int]]]:
+    """Maps each ability-bonus bundle option's id (as computed by
+    catalog.choices' build_choice_template/_bundle_label_and_id, from this
+    SAME envelope) to its concrete (ability, delta) pairs — e.g.
+    "str-2+con-1" -> [("STR", 2), ("CON", 1)]. Read directly off the raw
+    envelope's own option `items` (ability_score + bonus, still fully
+    structured there) rather than re-deriving the id via a second,
+    independent implementation of _bundle_label_and_id's algorithm, which
+    would risk silently diverging from it. Paired by POSITION with
+    `built_options`: both this function's `envelope['from']['options']`
+    and build_choice_template's own internal walk over that exact same
+    list iterate in the same order, and every option this envelope ever
+    contains is a pure ability_bonus 'multiple' bundle (by construction of
+    _ability_bonus_options_from_5etools_weighted_pair) — so
+    build_choice_options never drops one as unresolvable, and the two
+    lists always stay aligned 1:1."""
+    raw_options = envelope.get("from", {}).get("options", [])
+    deltas_by_id: dict[str, list[tuple[str, int]]] = {}
+    for raw_opt, built_opt in zip(raw_options, built_options):
+        deltas_by_id[built_opt["id"]] = [
+            (item["ability_score"]["index"].upper(), item["bonus"])
+            for item in raw_opt.get("items", [])
+        ]
+    return deltas_by_id
 
 
 def _asi_granting_levels(catalog: Catalog, cls_id: str, max_level: int) -> list[int]:
@@ -848,8 +912,12 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         })
         subrace = None
 
-    # Final ability scores: base + species bonuses (2014-rules placement —
-    # backgrounds don't grant ability bonuses in this ruleset; see spec §4).
+    # Final ability scores: base + species bonuses + background bonuses.
+    # Backgrounds DO grant ability bonuses as of Phase 4b Task 4 — the
+    # 2024-style ability-score-improvement choice (see
+    # _background_ability_bonus_choice_template below) — so background
+    # selections flow into this SAME early pass alongside species' own,
+    # exactly like species_bonuses does just below.
     base_scores = (draft.get("abilities") or {}).get("base") or {}
     species_bonuses = _species_ability_bonuses(race, subrace)
     species_ability_choice_tpl = _species_ability_bonus_choice_template(race, subrace, race_id)
@@ -865,6 +933,22 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         for ab_id in selected_abilities:
             ab_key = ab_id.upper()
             species_bonuses[ab_key] = species_bonuses.get(ab_key, 0) + 1  # bundled data's `bonus` is always 1; if a future data source varies this, look it up from the option instead of hardcoding 1 here
+
+    background_bonuses = _background_ability_bonuses(bg)
+    background_ability_choice_tpl = _background_ability_bonus_choice_template(bg, bg_id)
+    if background_ability_choice_tpl:
+        background_choices_raw = background_dict.get("choices") if isinstance(background_dict.get("choices"), dict) else {}
+        valid_bundle_ids = {o["id"] for o in background_ability_choice_tpl["options"] if not o.get("disabled")}
+        raw_selected = background_choices_raw.get(background_ability_choice_tpl["id"]) or []
+        # Same dedupe-before-cap-and-apply discipline as species' own pass
+        # just above.
+        deduped_selected = list(dict.fromkeys(s for s in raw_selected if isinstance(s, str)))
+        selected_bundles = [s for s in deduped_selected if s in valid_bundle_ids][: background_ability_choice_tpl["count"]]
+        bundle_deltas = _background_ability_bonus_deltas(bg["ability_bonus_options"], background_ability_choice_tpl["options"])
+        for bundle_id in selected_bundles:
+            for ab_key, delta in bundle_deltas.get(bundle_id, []):
+                background_bonuses[ab_key] = background_bonuses.get(ab_key, 0) + delta
+
     final_scores: dict[str, int] = {}
     for ab in derived_mod.ABILITIES:
         raw = base_scores.get(ab, 10)
@@ -873,7 +957,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         except (TypeError, ValueError):
             problems.append({"id": f"ability-invalid-{ab}", "message": f"{ab} score {raw!r} isn't a valid number; using 10 instead."})
             base_score = 10
-        final_scores[ab] = base_score + species_bonuses.get(ab, 0)
+        final_scores[ab] = base_score + species_bonuses.get(ab, 0) + background_bonuses.get(ab, 0)
     for ab, score in final_scores.items():
         if not (1 <= score <= 30):
             problems.append({"id": f"ability-out-of-range-{ab}", "message": f"{ab} score {score} is out of the 1-30 range."})
@@ -929,6 +1013,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     level_row = primary.get("level_row") if primary else None
     if bg and bg_id:
         choice_templates += _background_choice_templates(bg, bg_id)
+        if background_ability_choice_tpl:
+            choice_templates.append(background_ability_choice_tpl)
     if race and race_id:
         choice_templates += _species_choice_templates(catalog, race, race_id, subrace)
         if species_ability_choice_tpl:

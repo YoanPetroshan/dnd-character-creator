@@ -579,6 +579,87 @@ def _ability_bonus_options_from_5etools(ability_list: list[dict]) -> dict | None
     return None
 
 
+def _ability_bonus_options_from_5etools_weighted_pair(ability_list: list[dict]) -> dict | None:
+    """Converts the 2024-style background ability-score-improvement rule
+    into a flattened `ability_bonus_options` envelope — Task 4 (Phase 4b).
+
+    The real rule, confirmed empirically and exhaustively (2026-09-26,
+    against the real fetched backgrounds.json, all 60 real records with an
+    `ability` field): every such record has EXACTLY 2 entries, both shaped
+    {"choose": {"weighted": {"from": [3 abilities], "weights": [...]}}} —
+    one entry with weights [2, 1] (the "split" option: +2 to one of the 3
+    abilities, +1 to a DIFFERENT one of the remaining 2, third untouched)
+    and one entry with weights [1, 1, 1] (the "flat" option: +1 to all
+    three, no further choice) — always the SAME 3-ability pool on both
+    entries. This is ONE universal mechanic with a per-background 3-ability
+    pool, not a per-background varying shape.
+
+    engine/asi.py's existing asi_combinations() was checked for reuse
+    first, per this task's brief, and turned out NOT to fit: it always
+    iterates the full 6-ability ABILITIES list (no pool-narrowing
+    parameter), and its own pair combinations are unordered +1/+1 pairs
+    (a standard ASI feat's "two abilities, both +1"), not this rule's
+    ordered +2/+1 pairs where swapping which ability gets which bonus is a
+    DIFFERENT selectable option. It also has no 3-ability "+1 to all"
+    shape at all. So this is new, purpose-built combinatorial code, not a
+    generalization of asi.py.
+
+    The player's real choice ("split vs flat, then — for split only —
+    which ability gets +2 vs +1") is flattened into ordinary, individually
+    selectable "bundle" options (matching catalog/choices.py's existing
+    "multiple" option_type, which already bundles multiple sub-items into
+    one selectable option for equipment — extended by this task to also
+    accept ability_bonus sub-items, see _bundle_label_and_id) rather than
+    inventing a new multi-layer choice UI concept: split contributes
+    P(3, 2) = 3 * 2 = 6 ordered pairs (pick which of 3 gets +2, then which
+    of the remaining 2 gets +1), flat contributes exactly 1 (no choice
+    left once "all three" is picked) — 7 total, re-derived here from the
+    weights/pool, not just asserted.
+
+    Only entries matching this exact 2-entry/weighted/count-3-pool shape
+    are handled; anything else (e.g. a future non-conforming record)
+    returns None rather than guessing, same "skip rather than fake it"
+    discipline as _ability_bonus_options_from_5etools (the sibling
+    species-side function, which explicitly does NOT handle this
+    "weighted" shape — see its own docstring)."""
+    weighted_entries = []
+    for entry in ability_list or []:
+        choose = entry.get("choose")
+        if not isinstance(choose, dict):
+            continue
+        weighted = choose.get("weighted")
+        if isinstance(weighted, dict):
+            weighted_entries.append(weighted)
+
+    if len(weighted_entries) != 2:
+        return None
+
+    split = next((w for w in weighted_entries if list(w.get("weights", [])) == [2, 1]), None)
+    flat = next((w for w in weighted_entries if list(w.get("weights", [])) == [1, 1, 1]), None)
+    if split is None or flat is None:
+        return None
+
+    pool = split.get("from", [])
+    if len(pool) != 3 or flat.get("from", []) != pool:
+        return None
+
+    def ability_ref(ab: str) -> dict:
+        return {"index": ab, "name": ab.upper(), "url": ""}
+
+    def bonus_item(ab: str, bonus: int) -> dict:
+        return {"option_type": "ability_bonus", "ability_score": ability_ref(ab), "bonus": bonus}
+
+    options = []
+    for high in pool:
+        for low in pool:
+            if low == high:
+                continue
+            options.append({"option_type": "multiple", "items": [bonus_item(high, 2), bonus_item(low, 1)]})
+    options.append({"option_type": "multiple", "items": [bonus_item(ab, 1) for ab in pool]})
+
+    return {"choose": 1, "type": "ability_bonuses", "from": {"option_set_type": "options_array", "options": options}}
+
+
 def _damage_modifiers_from_5etools(raw: dict) -> tuple[list[str], list[str], list[str]]:
     """Converts 5etools' resist/immune/vulnerable fields into plain
     string lists — a near-identity copy, string entries only.
@@ -1079,12 +1160,13 @@ def _background_from_5etools(raw: dict) -> dict | None:
     `language_options`/`languages` (Task 3 — fixed and choice-shaped
     language grants; see _language_grants_from_5etools for the full shape
     grounding, including a disclosed data-fidelity gap on 1 of 56 real
-    records) are now populated. `starting_equipment`/`starting_gold`/
-    `starting_equipment_options` (equipment package choices),
-    `ability_bonus_options` (the 2024-style weighted ability choice), and
-    `feats` are still deliberately left as placeholders — separate
-    follow-up tasks in this same plan (Tasks 4-6). `feature` is left
-    empty: engine/resolve.py never reads a
+    records) are now populated. `ability_bonus_options` (Task 4 — the
+    2024-style weighted ability-score-improvement choice; see
+    _ability_bonus_options_from_5etools_weighted_pair) is now populated
+    too. `starting_equipment`/`starting_gold`/`starting_equipment_options`
+    (equipment package choices) and `feats` are still deliberately left as
+    placeholders — separate follow-up tasks in this same plan (Tasks 5-6).
+    `feature` is left empty: engine/resolve.py never reads a
     background's `feature` field for anything mechanical today (confirmed
     by grep, Step 1) — SRD's own bundled backgrounds carry rich flavor
     text there that resolve.py still never consumes, so leaving it empty
@@ -1111,7 +1193,7 @@ def _background_from_5etools(raw: dict) -> dict | None:
         "starting_gold": None,  # Task 5
         "starting_equipment_options": [],  # Task 5
         "feature": {"name": "", "desc": []},  # not read mechanically by resolve.py today, see docstring above
-        "ability_bonus_options": None,  # Task 4
+        "ability_bonus_options": _ability_bonus_options_from_5etools_weighted_pair(raw.get("ability", [])),
         "source": raw.get("source", ""),
         "feats": [],  # Task 6
     }

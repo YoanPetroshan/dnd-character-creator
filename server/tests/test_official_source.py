@@ -914,3 +914,103 @@ def test_feylost_known_disclosed_language_fidelity_gap():
     envelope = feylost["language_options"]
     assert envelope["choose"] == 2  # real text wants 1 — known, disclosed gap
     assert envelope["from"]["option_set_type"] == "resource_list"  # real text wants a 4-item options_array
+
+
+# ---------------------------------------------------------------------------
+# Backgrounds (Phase 4b Task 4) — the 2024-style ability-score-improvement
+# choice. Real shape re-confirmed empirically (2026-09-26) against the
+# fetched backgrounds.json: every one of the 60 real records with an
+# `ability` field has EXACTLY 2 entries, both `{"choose": {"weighted":
+# {"from": [3 abilities], "weights": [...]}}}` — weights always either
+# [2, 1] (the split option: +2 to one of 3, +1 to a DIFFERENT one of the
+# remaining 2) or [1, 1, 1] (the flat option: +1 to all three), from-pool
+# size always 3, and the two entries' `from` lists always identical
+# (zero exceptions). This is ONE universal mechanic with a per-background
+# 3-ability pool, not a per-background varying shape — flattened here into
+# up to 7 concrete, individually-selectable "bundle" options (6 ordered
+# split combinations, P(3,2), plus 1 flat combination), matching how
+# catalog/choices.py's existing "multiple" option type already bundles
+# multiple sub-items (there: counted_reference equipment; here:
+# ability_bonus) into one selectable option.
+# ---------------------------------------------------------------------------
+
+def test_background_ability_choice_offers_all_split_and_flat_combinations():
+    # Aberrant Heir/EFA: STR/CON/CHA pool, confirmed against the real
+    # fetched data above. 6 split combinations (3 choices of which ability
+    # gets +2, times 2 remaining choices of which OTHER ability gets +1)
+    # plus exactly 1 flat combination (all three +1, no further choice) —
+    # 7 total, re-derived here, not just trusted from the plan's own memory.
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["name"] == "Aberrant Heir")
+    envelope = bg["ability_bonus_options"]
+    assert envelope["choose"] == 1
+    assert envelope["type"] == "ability_bonuses"
+    assert envelope["from"]["option_set_type"] == "options_array"
+    options = envelope["from"]["options"]
+    assert len(options) == 7  # 6 split combinations + 1 flat combination
+
+
+def test_background_ability_choice_options_are_multiple_bundles_of_ability_bonus_items():
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["name"] == "Aberrant Heir")
+    options = bg["ability_bonus_options"]["from"]["options"]
+    split_options = [o for o in options if len(o["items"]) == 2]
+    flat_options = [o for o in options if len(o["items"]) == 3]
+    assert len(split_options) == 6
+    assert len(flat_options) == 1
+    for opt in options:
+        assert opt["option_type"] == "multiple"
+        for item in opt["items"]:
+            assert item["option_type"] == "ability_bonus"
+            assert item["ability_score"]["index"] in {"str", "con", "cha"}
+
+
+def test_background_ability_choice_split_combinations_are_all_distinct_ordered_pairs():
+    # Every one of the 6 split options must be a distinct (high, low) pair
+    # from the 3-ability pool — e.g. "STR +2, CON +1" is a DIFFERENT option
+    # from "CON +2, STR +1", since a different ability gets the +2.
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["name"] == "Aberrant Heir")
+    options = bg["ability_bonus_options"]["from"]["options"]
+    split_pairs = set()
+    for opt in options:
+        if len(opt["items"]) != 2:
+            continue
+        high = next(i for i in opt["items"] if i["bonus"] == 2)
+        low = next(i for i in opt["items"] if i["bonus"] == 1)
+        split_pairs.add((high["ability_score"]["index"], low["ability_score"]["index"]))
+    assert split_pairs == {
+        ("str", "con"), ("str", "cha"),
+        ("con", "str"), ("con", "cha"),
+        ("cha", "str"), ("cha", "con"),
+    }
+
+
+def test_background_ability_choice_flat_combination_is_plus_one_to_all_three():
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["name"] == "Aberrant Heir")
+    options = bg["ability_bonus_options"]["from"]["options"]
+    flat = next(o for o in options if len(o["items"]) == 3)
+    assert {i["ability_score"]["index"] for i in flat["items"]} == {"str", "con", "cha"}
+    assert all(i["bonus"] == 1 for i in flat["items"])
+
+
+def test_background_with_no_ability_field_gets_no_options_envelope():
+    # A background with no ability-score entries at all must stay a clean
+    # None, not an empty/malformed dict — mirrors the race-side
+    # test_race_with_no_ability_choice_gets_no_options_envelope precedent.
+    backgrounds = load_official_backgrounds(official_dir())
+    no_ability_bgs = [b for b in backgrounds if b["ability_bonus_options"] is None]
+    assert len(no_ability_bgs) > 0  # sanity: not every background has the field
+
+
+def test_all_60_real_ability_field_backgrounds_get_a_7_option_envelope():
+    # Exhaustive check, not just the single Aberrant Heir spot-check above —
+    # confirms the "universal mechanic" claim holds for every real record,
+    # not just the one this task's tests happen to spot-check.
+    backgrounds = load_official_backgrounds(official_dir())
+    with_envelope = [b for b in backgrounds if b["ability_bonus_options"] is not None]
+    assert len(with_envelope) == 60
+    for bg in with_envelope:
+        options = bg["ability_bonus_options"]["from"]["options"]
+        assert len(options) == 7, bg["name"]

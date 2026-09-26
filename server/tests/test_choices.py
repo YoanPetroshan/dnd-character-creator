@@ -200,3 +200,59 @@ def test_any_tool_narrowed_to_musical_instrument_category():
     assert options is not None
     ids = {o["id"] for o in options}
     assert ids == {"bagpipes", "drum", "dulcimer", "flute", "lute", "lyre", "horn", "pan-flute", "shawm", "viol"}
+
+
+# --- Phase 4b Task 4: "multiple" bundles of ability_bonus sub-items --------
+#
+# The background 2024-style ability-score-improvement choice
+# (official_source.py's _ability_bonus_options_from_5etools_weighted_pair)
+# reuses the SAME "multiple" bundling mechanism already used for equipment
+# packages, extended to accept ability_bonus sub-items alongside the
+# original counted_reference ones — see _bundle_label_and_id.
+
+
+def test_multiple_bundle_of_ability_bonuses_resolves_to_one_option():
+    from_field = {
+        "option_set_type": "options_array",
+        "options": [
+            {"option_type": "multiple", "items": [
+                {"option_type": "ability_bonus", "ability_score": {"index": "str", "name": "STR"}, "bonus": 2},
+                {"option_type": "ability_bonus", "ability_score": {"index": "con", "name": "CON"}, "bonus": 1},
+            ]},
+        ],
+    }
+    options = build_choice_options(from_field)
+    assert options is not None
+    assert options == [{"id": "str-2+con-1", "label": "STR +2 + CON +1"}]
+
+
+def test_multiple_bundle_of_three_ability_bonuses_resolves_to_one_option():
+    from_field = {
+        "option_set_type": "options_array",
+        "options": [
+            {"option_type": "multiple", "items": [
+                {"option_type": "ability_bonus", "ability_score": {"index": "str", "name": "STR"}, "bonus": 1},
+                {"option_type": "ability_bonus", "ability_score": {"index": "con", "name": "CON"}, "bonus": 1},
+                {"option_type": "ability_bonus", "ability_score": {"index": "cha", "name": "CHA"}, "bonus": 1},
+            ]},
+        ],
+    }
+    options = build_choice_options(from_field)
+    assert options is not None
+    assert options == [{"id": "str-1+con-1+cha-1", "label": "STR +1 + CON +1 + CHA +1"}]
+
+
+def test_multiple_bundle_mixing_ability_bonus_and_counted_reference_is_dropped_not_faked():
+    # Not a real shape produced by any part of this codebase today, but the
+    # "skip rather than fake it" discipline in _bundle_label_and_id applies
+    # to a mixed bundle just as much as a nested-choice one.
+    from_field = {
+        "option_set_type": "options_array",
+        "options": [
+            {"option_type": "multiple", "items": [
+                {"option_type": "ability_bonus", "ability_score": {"index": "str", "name": "STR"}, "bonus": 2},
+                {"option_type": "counted_reference", "of": {"index": "longbow", "name": "Longbow"}, "count": 1},
+            ]},
+        ],
+    }
+    assert build_choice_options(from_field) is None

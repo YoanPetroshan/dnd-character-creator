@@ -13,10 +13,11 @@ data is also nested inside an unrepresentable option_type "choice" (see
 build_choice_options' "multiple" handling below), so there's nothing to
 gain by solving only half of that problem in Phase 2a. A "multiple" bundle
 (e.g. "leather armor, a longbow, and 20 arrows") IS resolved, as one
-combined option, but only when every item inside it is a plain
-counted_reference — a bundle containing its own nested sub-choice returns
-None for that one option, same "skip rather than fake it" discipline as
-everything else in this module.
+combined option, but only when every item inside it is uniformly a plain
+counted_reference OR uniformly an ability_bonus (Phase 4b Task 4 — see
+below) — a bundle containing its own nested sub-choice, or a mix of item
+types, returns None for that one option, same "skip rather than fake it"
+discipline as everything else in this module.
 
 Phase 4a (sourcebook races) adds two more: `any_skill` and `any_tool`
 (optionally narrowed by a `tool_category` key). Both are a genuinely
@@ -28,6 +29,13 @@ instead of from `from_field` itself. An enumerated race skill/tool choice
 (e.g. "choose 1 of {Perception, Stealth, Survival}") needs no new shape at
 all — official_source.py builds it as a plain `options_array`, the exact
 same mechanism every other choice in this module already uses.
+
+Phase 4b Task 4 (the 2024-style background ability-score-improvement
+choice) reuses the "multiple" bundle mechanism above for a NEW sub-item
+shape: bundles of `ability_bonus` items (e.g. "STR +2, CON +1", or
+"STR +1, CON +1, CHA +1") instead of `counted_reference` equipment items —
+see _bundle_label_and_id's own docstring for exactly which shapes are, and
+aren't, resolvable.
 """
 from __future__ import annotations
 
@@ -48,25 +56,39 @@ def _option_label(option: dict) -> str | None:
 
 
 def _bundle_label_and_id(items: list[dict]) -> tuple[str, str] | None:
-    """A 'multiple' option's items are themselves option-shaped. Only
-    resolvable if EVERY sub-item is a plain counted_reference — a nested
-    'choice' (e.g. "a martial weapon and a shield", where "a martial
-    weapon" is its own sub-choice) makes the whole bundle unrepresentable
-    in this phase's flat Choice model, so this returns None rather than
-    silently dropping the sub-choice's meaning.
+    """A 'multiple' option's items are themselves option-shaped. Resolvable
+    when EVERY sub-item is EITHER a plain counted_reference (the original,
+    Phase 1-era equipment-bundle case, e.g. "leather armor, a longbow, and
+    20 arrows") OR an ability_bonus (Phase 4b Task 4's background
+    ability-score-improvement bundles, e.g. "STR +2, CON +1") — but not a
+    mix of the two, and never a nested 'choice' (e.g. "a martial weapon
+    and a shield", where "a martial weapon" is its own sub-choice), which
+    makes the whole bundle unrepresentable in this phase's flat Choice
+    model. Returns None rather than silently dropping meaning in either
+    unresolvable case.
     """
     if not items:
         return None
-    label_parts = []
-    id_parts = []
-    for sub in items:
-        if sub.get("option_type") != "counted_reference":
-            return None
-        of = sub["of"]
-        count = sub.get("count", 1)
-        label_parts.append(f"{count}x {of['name']}" if count != 1 else of["name"])
-        id_parts.append(of["index"])  # quantities are not part of the id — see plan's Global Constraints
-    return " + ".join(label_parts), "+".join(id_parts)
+    sub_types = {sub.get("option_type") for sub in items}
+    if sub_types == {"counted_reference"}:
+        label_parts = []
+        id_parts = []
+        for sub in items:
+            of = sub["of"]
+            count = sub.get("count", 1)
+            label_parts.append(f"{count}x {of['name']}" if count != 1 else of["name"])
+            id_parts.append(of["index"])  # quantities are not part of the id — see plan's Global Constraints
+        return " + ".join(label_parts), "+".join(id_parts)
+    if sub_types == {"ability_bonus"}:
+        label_parts = []
+        id_parts = []
+        for sub in items:
+            ability = sub["ability_score"]
+            bonus = sub.get("bonus", 1)
+            label_parts.append(f"{ability['name']} +{bonus}")
+            id_parts.append(f"{ability['index']}-{bonus}")
+        return " + ".join(label_parts), "+".join(id_parts)
+    return None
 
 
 def build_choice_options(from_field: dict) -> list[dict] | None:
