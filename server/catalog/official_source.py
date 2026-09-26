@@ -81,7 +81,7 @@ if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
 from chargen.sources import official_dir, has_official  # noqa: E402  (must follow the sys.path fix above)
-from catalog.reference_data import SKILL_NAMES  # noqa: E402  (same reason)
+from catalog.reference_data import SKILL_NAMES, TOOLS  # noqa: E402  (same reason)
 
 
 def _slug(name: str) -> str:
@@ -300,6 +300,139 @@ def _tool_choice_envelope_from_5etools(tool_entry: dict) -> dict | None:
                 "from": {"option_set_type": "options_array", "options": options}}
 
     return None
+
+
+# Maps a generic category PLACEHOLDER string, as it appears literally
+# inside a background's enumerated `choose.from` list, to the matching
+# reference_data.TOOLS `category` value. Confirmed empirically (2026-09-26,
+# against the real fetched backgrounds.json) that 9 of the 10 real
+# enumerated tool choices mix literal tool names ("thieves' tools",
+# "disguise kit") with these generic placeholders — a shape races never
+# had (races' own enumerated tool choices are always literal names only,
+# per _tool_choice_envelope_from_5etools' docstring). "anyartisanstool"
+# (lowercased) is real, confirmed data too (e.g. Prismari Student/SCC,
+# Selesnya Initiate/GGR): the SAME string used as a top-level wildcard KEY
+# elsewhere is here reused as a from-list VALUE with an identical meaning.
+_TOOL_CHOICE_CATEGORY_PLACEHOLDERS = {
+    "musical instrument": "Musical Instrument",
+    "gaming set": "Gaming Sets",
+    "anyartisanstool": "Artisan's Tools",
+}
+
+
+def _background_tool_choice_option_from_5etools(name: str) -> list[dict]:
+    """Converts ONE entry of a background tool choice's `choose.from` list
+    into one or more options_array 'reference' option dicts. A literal tool
+    name (the common case, and the ONLY case races ever had) becomes exactly
+    one option, identical to _tool_choice_envelope_from_5etools' own
+    'choose' handling. A recognized generic category placeholder (see
+    _TOOL_CHOICE_CATEGORY_PLACEHOLDERS) is expanded into EVERY real,
+    concrete tool of that category from reference_data.TOOLS instead —
+    "choose 1 of {gaming set, musical instrument}" becomes "choose 1 of
+    {Dice Set, Playing Card Set, Bagpipes, Drum, ...}" — so the resulting
+    envelope is still a plain options_array of real, selectable catalog
+    tools, never a fake "Musical Instrument" option that doesn't exist as
+    an item. This is the SAME any_tool/tool_category filtering idea
+    choices.py's any_tool option_set_type already applies for the wildcard
+    case, just pre-expanded here into literal options since this shape is
+    an enumerated list, not a wildcard."""
+    category = _TOOL_CHOICE_CATEGORY_PLACEHOLDERS.get(name.lower())
+    if category is not None:
+        return [
+            {"option_type": "reference", "item": {"index": t["index"], "name": t["name"], "url": ""}}
+            for t in TOOLS if t["category"] == category
+        ]
+    return [{"option_type": "reference", "item": {"index": _slug(name), "name": _tool_display_name(name), "url": ""}}]
+
+
+# The three real int-valued tool wildcard keys seen anywhere in the real
+# fetched background data (2026-09-26) — the same "any"/"anyArtisansTool"/
+# "anyMusicalInstrument" trio races have, PLUS "anyGamingSet", a wildcard
+# key that appears on 17 real backgrounds (e.g. Noble/PHB, Criminal/PHB,
+# Soldier/PHB, Guard/XPHB) and that races NEVER carry (confirmed against
+# _tool_choice_envelope_from_5etools' own docstring, which enumerates
+# exactly the other three). Resolved via the SAME any_tool option_set_type
+# + tool_category filter races' wildcards already use, pointed at
+# reference_data.TOOLS' existing "Gaming Sets" category — no changes to
+# catalog/choices.py needed.
+_TOOL_WILDCARD_KEY_CATEGORY = {
+    "any": None,
+    "anyArtisansTool": "Artisan's Tools",
+    "anyMusicalInstrument": "Musical Instrument",
+    "anyGamingSet": "Gaming Sets",
+}
+
+
+def _background_tool_choice_envelopes_from_5etools(tool_entry: dict) -> list[dict]:
+    """Background equivalent of _tool_choice_envelope_from_5etools, EXTENDED
+    (not reused unmodified — verified against real data, Step 1, that races'
+    version would silently mishandle backgrounds in two ways):
+
+    1. races' version checks each wildcard key in turn and RETURNS on the
+       first match, so a background carrying two wildcard keys at once
+       would silently lose the second. Confirmed real (2026-09-26): Vizier/
+       PSA is {"anyArtisansTool": 1, "anyMusicalInstrument": 1} — both must
+       produce their own choice. This version collects every match instead
+       of returning early — this list is why starting_proficiency_choices
+       is a list, not a single optional envelope.
+    2. races' version has no "anyGamingSet" branch at all (see
+       _TOOL_WILDCARD_KEY_CATEGORY's docstring above) and its 'choose'
+       branch treats every `from` entry as a literal tool name, which would
+       invent fake "Musical Instrument"/"Gaming Set" options for 9 of the
+       10 real enumerated tool choices (see
+       _background_tool_choice_option_from_5etools).
+
+    Empirically confirmed a background entry never mixes a wildcard key
+    with 'choose' (checked against every real entry, 2026-09-26), so
+    checking wildcards first and falling back to 'choose' only when none
+    matched (same ordering races' version uses) cannot drop a choice
+    either way."""
+    envelopes = []
+    for key, category in _TOOL_WILDCARD_KEY_CATEGORY.items():
+        n = tool_entry.get(key)
+        if isinstance(n, int) and not isinstance(n, bool):
+            from_field = {"option_set_type": "any_tool"}
+            if category is not None:
+                from_field["tool_category"] = category
+            envelopes.append({"choose": n, "type": "proficiencies", "from": from_field})
+    if envelopes:
+        return envelopes
+
+    choose = tool_entry.get("choose")
+    if isinstance(choose, dict):
+        options = []
+        for name in choose.get("from", []):
+            options.extend(_background_tool_choice_option_from_5etools(name))
+        return [{"choose": choose.get("count", 1), "type": "proficiencies",
+                 "from": {"option_set_type": "options_array", "options": options}}]
+
+    return []
+
+
+def _proficiency_choices_from_5etools(raw: dict) -> list[dict]:
+    """Collects a background's skill/tool proficiency CHOICE envelope(s) —
+    as opposed to _proficiencies_from_5etools' fixed grants — into a flat
+    list, the shape engine/resolve.py's _background_choice_templates reads
+    (one Choice per list entry). At most one skill-choice envelope ever
+    exists per background (the skill side needs no background-specific
+    handling at all: _skill_choice_envelope_from_5etools, built for races,
+    is reused UNMODIFIED — confirmed empirically that background
+    skillProficiencies entries use only the same "any"/"choose" shapes
+    races already have, no generic placeholder or multi-wildcard
+    surprises). The tool side can contribute 0, 1, or 2 envelopes (2 only
+    for Vizier/PSA's simultaneous double-wildcard, confirmed real) via
+    _background_tool_choice_envelopes_from_5etools above, which IS
+    background-specific — see that function's own docstring for why races'
+    version can't be reused as-is here."""
+    skill_entry = (raw.get("skillProficiencies") or [{}])[0]
+    tool_entry = (raw.get("toolProficiencies") or [{}])[0]
+
+    choices: list[dict] = []
+    skill_envelope = _skill_choice_envelope_from_5etools(skill_entry)
+    if skill_envelope is not None:
+        choices.append(skill_envelope)
+    choices.extend(_background_tool_choice_envelopes_from_5etools(tool_entry))
+    return choices
 
 
 def _attach_choice_proficiencies(race_raw: dict, trait_refs: list[dict], id_prefix: str,
@@ -768,8 +901,12 @@ def _background_from_5etools(raw: dict) -> dict | None:
     background (confirmed empirically, Step 1: index, name,
     starting_proficiencies, language_options, languages,
     starting_equipment, starting_gold, starting_equipment_options,
-    feature, source) — plus one NEW field (`feats`, mirroring races' own
-    `source` precedent) this plan's later Task 6 populates.
+    feature, source) — plus two NEW fields: `feats` (mirroring races' own
+    `source` precedent, populated by this plan's later Task 6), and
+    `starting_proficiency_choices` (Task 2 — the CHOICE portion of
+    skillProficiencies/toolProficiencies, as opposed to the fixed grants
+    `starting_proficiencies` already carries; see
+    _proficiency_choices_from_5etools).
 
     Unlike races, backgrounds carry skillProficiencies/toolProficiencies
     as the exact same length-1-list-of-booleans shape
@@ -809,6 +946,7 @@ def _background_from_5etools(raw: dict) -> dict | None:
         "index": index,
         "name": raw["name"],
         "starting_proficiencies": _proficiencies_from_5etools(raw),
+        "starting_proficiency_choices": _proficiency_choices_from_5etools(raw),
         "language_options": None,  # Task 3
         "languages": [],  # Task 3
         "starting_equipment": [],  # Task 5

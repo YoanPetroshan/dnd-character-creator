@@ -2237,3 +2237,32 @@ def test_a_stale_choice_id_with_an_empty_selection_is_not_flagged_as_pruned(cata
     )
     resolution = resolve(draft, catalog)
     assert resolution["pruned"] == []
+
+
+# ---------------------------------------------------------------------------
+# Backgrounds (Phase 4b Task 2) — skill/tool proficiency CHOICES, including
+# the "any N" wildcard, flowing from _background_choice_templates all the
+# way through to sheet.proficiencies. Mirrors the species-side coverage
+# above (test_dwarf_tool_proficiency_choice_flows_into_sheet_tools) — the
+# same generic-choice-selection pass in resolve() needed a background-kind
+# branch added alongside the existing class/species ones, confirmed by
+# tracing it end to end here rather than assumed from the Choice template
+# existing.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_enumerated_background_skill_choice_appears_as_a_resolvable_choice(catalog):
+    # Cloistered Scholar/SCAG: fixed History + choose 1 of {arcana, nature,
+    # religion}. The fixed skill must NOT itself appear as a choice option
+    # set member choice; only the "choose" portion becomes a Choice.
+    draft = _fighter_acolyte_human_draft(
+        sources=["scag"], background={"id": "cloistered-scholar-scag", "choices": {}},
+    )
+    resolution = resolve(draft, catalog)
+    cids = {c["id"] for c in resolution["choices"]}
+    prof_cid = next((cid for cid in cids if cid.startswith("background:cloistered-scholar-scag:") and "proficiency-choice" in cid), None)
+    assert prof_cid is not None, f"expected a background proficiency choice, got: {cids}"
+    choice = next(c for c in resolution["choices"] if c["id"] == prof_cid)
+    assert choice["count"] == 1
+    assert {o["id"] for o in choice["options"]} == {"skill-arcana", "skill-nature", "skill-religion"}
+    assert choice["status"] == "pending"

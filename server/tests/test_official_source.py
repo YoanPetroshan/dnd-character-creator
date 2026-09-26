@@ -654,3 +654,140 @@ def test_background_srd_style_fields_present_and_correctly_shaped():
 
 def test_missing_official_data_returns_empty_list_not_crash(tmp_path):
     assert load_official_backgrounds(tmp_path) == []
+
+
+# ---------------------------------------------------------------------------
+# Backgrounds (Phase 4b Task 2) — skill/tool proficiency CHOICES, including
+# the "any N" wildcard. Real shapes grounded against the fetched
+# backgrounds.json (2026-09-26) via the brief's own grounding command.
+#
+# Two genuine mismatches from races (Phase 4a Task 3/4), found empirically
+# and NOT present in the brief's description, are handled here:
+#
+# 1. Backgrounds use an "anyGamingSet": N wildcard key races never carry
+#    (17 real backgrounds, e.g. Noble/PHB, Criminal/PHB, Soldier/PHB) —
+#    races' own _tool_choice_envelope_from_5etools only recognizes
+#    "any"/"anyArtisansTool"/"anyMusicalInstrument", so reusing it verbatim
+#    would silently drop this background's whole tool choice. Resolved via
+#    the SAME any_tool option_set_type + tool_category filter mechanism
+#    already used for the other two wildcards, pointed at reference_data's
+#    existing "Gaming Sets" category — no changes to choices.py needed.
+# 2. One background (Vizier/PSA) carries TWO wildcard keys at once
+#    ({"anyArtisansTool": 1, "anyMusicalInstrument": 1}) — races never do
+#    this (confirmed by that module's own docstring), and the race-side
+#    function returns after the FIRST match, silently dropping the second.
+#    Resolved by returning a list of every matching wildcard envelope,
+#    which the plan's own `starting_proficiency_choices: list[dict]` field
+#    already accommodates.
+# 3. Most REAL enumerated tool `choose.from` lists (9 of 10 found) mix
+#    literal tool names with generic category placeholders ("musical
+#    instrument", "gaming set", and even the literal string
+#    "anyArtisansTool" used as a from-list entry, e.g. Prismari
+#    Student/SCC) — NOT a shape races ever had. Treating these as literal
+#    tool names would invent fake, non-selectable options ("Musical
+#    Instrument"). Resolved by expanding each recognized category token
+#    into every real concrete tool of that category from reference_data,
+#    so the resulting envelope is still a plain options_array — no new
+#    envelope shape, per the brief.
+# ---------------------------------------------------------------------------
+
+def test_enumerated_tool_choice_on_a_background_becomes_an_options_array_choice():
+    # Archaeologist/ToA: {"choose": {"from": ["navigator's tools", "cartographer's tools"]}}
+    # — the one real enumerated tool choice made ONLY of literal tool names.
+    backgrounds = load_official_backgrounds(official_dir())
+    archaeologist_toa = next(b for b in backgrounds if b["index"] == "archaeologist-toa")
+    choices = archaeologist_toa["starting_proficiency_choices"]
+    assert len(choices) == 1
+    envelope = choices[0]
+    assert envelope["choose"] == 1
+    options = envelope["from"]["options"]
+    option_ids = {o["item"]["index"] for o in options}
+    assert option_ids == {"navigators-tools", "cartographers-tools"}
+
+
+def test_enumerated_skill_choice_coexists_with_a_fixed_skill_grant():
+    # Cloistered Scholar/SCAG: {"history": True, "choose": {"from": ["arcana", "nature", "religion"]}}
+    # — a fixed grant and a choice on the SAME raw entry. The fixed "history"
+    # skill must land on starting_proficiencies (Task 1's job), and ONLY the
+    # choice portion becomes a starting_proficiency_choices envelope.
+    backgrounds = load_official_backgrounds(official_dir())
+    cloistered_scholar = next(b for b in backgrounds if b["index"] == "cloistered-scholar-scag")
+    fixed_ids = {p["index"] for p in cloistered_scholar["starting_proficiencies"]}
+    assert "skill-history" in fixed_ids
+    choices = cloistered_scholar["starting_proficiency_choices"]
+    assert len(choices) == 1
+    envelope = choices[0]
+    assert envelope["choose"] == 1
+    option_ids = {o["item"]["index"] for o in envelope["from"]["options"]}
+    assert option_ids == {"skill-arcana", "skill-nature", "skill-religion"}
+
+
+def test_any_n_skill_wildcard_choice_reuses_the_any_skill_option_set_type():
+    # Custom Background/PHB: {"any": 2} — no enumerated list at all.
+    backgrounds = load_official_backgrounds(official_dir())
+    custom_bg = next(b for b in backgrounds if b["index"] == "custom-background-phb")
+    choices = custom_bg["starting_proficiency_choices"]
+    assert len(choices) == 1
+    envelope = choices[0]
+    assert envelope["choose"] == 2
+    assert envelope["from"]["option_set_type"] == "any_skill"
+
+
+def test_any_gaming_set_wildcard_tool_choice_is_a_new_shape_not_seen_on_races():
+    # Noble/PHB: {"anyGamingSet": 1} — races never carry this key; confirms
+    # it's resolved via any_tool + tool_category "Gaming Sets" all the same.
+    backgrounds = load_official_backgrounds(official_dir())
+    noble = next(b for b in backgrounds if b["index"] == "noble-phb")
+    choices = noble["starting_proficiency_choices"]
+    assert len(choices) == 1
+    envelope = choices[0]
+    assert envelope["choose"] == 1
+    assert envelope["from"]["option_set_type"] == "any_tool"
+    assert envelope["from"]["tool_category"] == "Gaming Sets"
+
+
+def test_background_with_both_a_skill_and_a_tool_choice_gets_two_envelopes():
+    # Inheritor/SCAG: skill choose{arcana,history,religion} AND tool
+    # choose{"musical instrument","gaming set"} (the latter all generic
+    # category placeholders — none are literal tool names).
+    backgrounds = load_official_backgrounds(official_dir())
+    inheritor = next(b for b in backgrounds if b["index"] == "inheritor-scag")
+    choices = inheritor["starting_proficiency_choices"]
+    assert len(choices) == 2
+    skill_envelopes = [c for c in choices if c["from"].get("option_set_type") == "options_array"
+                        and any(o["item"]["index"].startswith("skill-") for o in c["from"]["options"])]
+    tool_envelopes = [c for c in choices if c not in skill_envelopes]
+    assert len(skill_envelopes) == 1
+    assert {o["item"]["index"] for o in skill_envelopes[0]["from"]["options"]} == {
+        "skill-arcana", "skill-history", "skill-religion",
+    }
+    assert len(tool_envelopes) == 1
+    tool_option_ids = {o["item"]["index"] for o in tool_envelopes[0]["from"]["options"]}
+    # Expanded from the two generic category placeholders into every real
+    # concrete tool of those categories — never a fake "Musical Instrument"
+    # or "Gaming Set" option.
+    assert "dice-set" in tool_option_ids and "playing-card-set" in tool_option_ids
+    assert "lute" in tool_option_ids and "bagpipes" in tool_option_ids
+    assert "musical-instrument" not in tool_option_ids
+    assert "gaming-set" not in tool_option_ids
+
+
+def test_a_background_with_two_simultaneous_any_wildcards_gets_both():
+    # Vizier/PSA: {"anyArtisansTool": 1, "anyMusicalInstrument": 1} — races'
+    # own envelope-building function returns after the FIRST match and would
+    # silently drop the second; this must produce TWO envelopes.
+    backgrounds = load_official_backgrounds(official_dir())
+    vizier = next(b for b in backgrounds if b["index"] == "vizier-psa")
+    choices = vizier["starting_proficiency_choices"]
+    assert len(choices) == 2
+    categories = {c["from"]["tool_category"] for c in choices}
+    assert categories == {"Artisan's Tools", "Musical Instrument"}
+    assert all(c["choose"] == 1 and c["from"]["option_set_type"] == "any_tool" for c in choices)
+
+
+def test_background_with_neither_skill_nor_tool_choice_gets_an_empty_list():
+    # Aberrant Heir/EFA (used by the fixed-proficiency test above) grants
+    # only fixed skills/tools, no choice at all.
+    backgrounds = load_official_backgrounds(official_dir())
+    aberrant_heir = next(b for b in backgrounds if b["name"] == "Aberrant Heir")
+    assert aberrant_heir["starting_proficiency_choices"] == []

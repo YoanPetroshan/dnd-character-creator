@@ -344,6 +344,28 @@ def _feature_choice_templates(
     return templates
 
 
+def _background_proficiency_choice_label(envelope: dict) -> str:
+    """Background proficiency-choice envelopes (unlike races') don't come
+    attached to a named trait to borrow a label from — backgrounds have no
+    trait concept at all — so the label is derived from the envelope's own
+    shape instead: any_skill, or an options_array whose first option is a
+    "skill-"-prefixed reference, is a Skill Proficiency choice; any_tool (at
+    any tool_category, including the None/unnarrowed "any" wildcard) or an
+    options_array of anything else is a Tool Proficiency choice. Every real
+    envelope official_source.py's _proficiency_choices_from_5etools
+    produces is one or the other — there is no third shape."""
+    from_field = envelope.get("from", {})
+    set_type = from_field.get("option_set_type")
+    if set_type == "any_skill":
+        return "Skill Proficiency"
+    if set_type == "any_tool":
+        category = from_field.get("tool_category")
+        return f"Tool Proficiency ({category})" if category else "Tool Proficiency"
+    options = from_field.get("options", [])
+    first_index = (options[0].get("item") or {}).get("index", "") if options else ""
+    return "Skill Proficiency" if first_index.startswith("skill-") else "Tool Proficiency"
+
+
 def _background_choice_templates(bg: dict, bg_id: str) -> list[dict]:
     templates = []
     envelope = bg.get("language_options")
@@ -358,6 +380,29 @@ def _background_choice_templates(bg: dict, bg_id: str) -> list[dict]:
         tpl = build_choice_template(envelope, cid, source, "Languages", description=description)
         if tpl:
             templates.append(tpl)
+
+    # Skill/tool proficiency CHOICES (Phase 4b Task 2) — as opposed to
+    # starting_proficiencies' fixed grants. A background can carry more than
+    # one of these at once (a skill choice AND a tool choice together, e.g.
+    # Inheritor/SCAG — or even two simultaneous tool wildcards, e.g.
+    # Vizier/PSA's anyArtisansTool + anyMusicalInstrument), hence the index
+    # in the cid, mirroring every other multi-envelope choice_templates loop
+    # in this file (e.g. _asi_choice_templates' per-level cids). The
+    # ":proficiency-choice" substring is load-bearing, not decorative — same
+    # convention _species_choice_templates already established for the
+    # identical purpose: it's what the merge-site fix below (the sheet-
+    # proficiency scan) uses to recognize a background-sourced proficiency
+    # selection.
+    for i, prof_envelope in enumerate(bg.get("starting_proficiency_choices", []) or []):
+        cid = f"background:{bg_id}:proficiency-choice-{i}"
+        source = {"kind": "background", "id": bg_id, "label": bg["name"]}
+        label = _background_proficiency_choice_label(prof_envelope)
+        choose = prof_envelope.get("choose", 1)
+        description = f"Choose {choose} proficienc{'ies' if choose != 1 else 'y'} of your choice."
+        tpl = build_choice_template(prof_envelope, cid, source, label, description=description)
+        if tpl:
+            templates.append(tpl)
+
     return templates
 
 
