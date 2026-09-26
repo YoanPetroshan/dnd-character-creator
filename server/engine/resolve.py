@@ -748,6 +748,52 @@ def _chosen_equipment(equipment_choices: list[dict], item_lookup: dict) -> list[
     return result
 
 
+def _selected_gold_and_narrative_items(equipment_choices: list[dict]) -> tuple[int, list[str]]:
+    """A small, disclosed second pass over the SAME selected-equipment ids
+    _gather_equipped_items/_chosen_equipment already iterate (each
+    selected_id split on "+"), reading the parts THOSE functions
+    deliberately skip because they aren't real catalog.items entries.
+    official_source.py synthesizes exactly three such non-catalog "of"
+    references for 5etools bundle members with no catalog equivalent —
+    gp-{amount} (a gold value), flavor-{slug} ({"special": ...} flavor
+    text), and category-{slug}/unlisted-{slug} (an {"equipmentType": ...}
+    category placeholder or an unrecognized item name) — see that module's
+    _equipment_bundle_member_from_5etools/_counted_reference_for_item_name
+    docstrings. This does NOT change what item_lookup.get(item_id) returns
+    or how real catalog items are matched; it only recovers the gold
+    amount and narrative label from the ids those functions already saw
+    and silently dropped.
+
+    catalog/choices.py's own _bundle_label_and_id builds a bundle option's
+    "+"-joined id and " + "-joined label from the SAME per-member loop, in
+    the SAME order (id_parts.append(...)/label_parts.append(...) side by
+    side) — so zipping a selected option's id.split("+") against its own
+    label.split(" + ") recovers each member's real display label, rather
+    than re-deriving a lossy one from the synthetic id's slug."""
+    gold = 0
+    narrative_items: list[str] = []
+    for choice in equipment_choices:
+        options_by_id = {opt["id"]: opt for opt in choice.get("options", [])}
+        for selected_id in choice["selected"]:
+            option = options_by_id.get(selected_id)
+            if option is None:
+                continue
+            id_parts = selected_id.split("+")
+            label_parts = option["label"].split(" + ")
+            zipped = label_parts if len(label_parts) == len(id_parts) else None
+            for i, item_id in enumerate(id_parts):
+                if item_id.startswith("gp-"):
+                    amount = item_id[len("gp-"):]
+                    if amount.isdigit():
+                        gold += int(amount)
+                elif item_id.startswith(("flavor-", "category-", "unlisted-")):
+                    # zipped is None only if an item's own name literally
+                    # contains "+" or " + ", throwing off the split — falls
+                    # back to a slug-derived label rather than dropping it.
+                    narrative_items.append(zipped[i] if zipped else item_id.split("-", 1)[1].replace("-", " "))
+    return gold, narrative_items
+
+
 def _apply_background_overlap(class_templates: list[dict], bg: dict | None) -> None:
     if not bg:
         return
@@ -1122,6 +1168,19 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     equipped_items = _gather_equipped_items(equipment_choices, added_raw if isinstance(added_raw, list) else [], catalog.items)
     chosen_equipment = _chosen_equipment(equipment_choices, catalog.items)
 
+    # starting_gold is SRD's own fixed per-background field, shape
+    # {"quantity": N, "unit": "gp"} (confirmed against the bundled SRD
+    # Backgrounds file) — present on every SRD/official background but,
+    # until now, never read anywhere. A selected gp-{amount} bundle member
+    # (see _selected_gold_and_narrative_items) adds on top of it rather
+    # than replacing it, since a background can offer BOTH (e.g. SRD's own
+    # Acolyte grants a fixed 15 gp with no equipment-choice gold at all,
+    # while an official background's own bundle may carry gold only in the
+    # selectable option, with its fixed field left None).
+    fixed_gold = (bg.get("starting_gold") or {}).get("quantity", 0) if bg else 0
+    selected_gold, narrative_items = _selected_gold_and_narrative_items(equipment_choices)
+    starting_gold = fixed_gold + selected_gold
+
     def _spell_summaries(choice: dict | None) -> list[dict]:
         if not choice:
             return []
@@ -1443,7 +1502,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             "weapons": sorted(proficient_weapons),
             "tools": sorted(proficient_tools),
         },
-        "equipment": {"granted": granted_equipment, "chosen": chosen_equipment, "added": added_resolved},
+        "startingGold": starting_gold,
+        "equipment": {
+            "granted": granted_equipment, "chosen": chosen_equipment, "added": added_resolved,
+            "narrativeItems": narrative_items,
+        },
         "spells": spells_summary,
         "details": details,
         "damageModifiers": damage_modifiers,

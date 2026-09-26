@@ -1019,6 +1019,59 @@ def test_chosen_equipment_appears_on_the_sheet(catalog):
     assert "chain-mail" in chosen_ids
 
 
+def test_srd_acolyte_starting_gold_reaches_the_sheet(catalog):
+    # SRD Acolyte's own bundled starting_gold field is
+    # {"quantity": 15, "unit": "gp"} (chargen/data/srd/5e-SRD-Backgrounds.json,
+    # confirmed live) — this fixed field, present on every SRD/official
+    # background, was never read anywhere before this task.
+    resolution = resolve(_fighter_acolyte_human_draft(), catalog)
+    assert resolution["sheet"]["startingGold"] == 15
+
+
+def test_background_with_no_gold_gets_a_zero_not_null(catalog):
+    # No background selected at all (starting_gold field absent, no
+    # selected gold bundle member) should show startingGold == 0, not
+    # absent/None, matching this project's always-present-empty convention.
+    resolution = resolve(_empty_draft(), catalog)
+    assert resolution["sheet"]["startingGold"] == 0
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_selecting_a_gold_bundle_member_reaches_the_sheet(catalog):
+    # Aberrant Heir (EFA)'s own equipment choice (confirmed live): bundle A
+    # is "dagger+disguise-kit+clothes-costume+clothes-travelers+gp-16",
+    # bundle B is "gp-50" (gold-only). Its own starting_gold field is None,
+    # so all 50 gold here comes from the selected bundle member alone.
+    draft = _fighter_acolyte_human_draft(background={"id": "aberrant-heir-efa", "choices": {}})
+    resolution = resolve(draft, catalog)
+    equip_cid = next(c["id"] for c in resolution["choices"] if c["id"] == "background:aberrant-heir-efa:equipment-choice-0")
+    draft["background"]["choices"][equip_cid] = ["gp-50"]
+    resolution2 = resolve(draft, catalog)
+    assert resolution2["sheet"]["startingGold"] == 50
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_flavor_bundle_member_shows_up_as_narrative_text_not_silently_dropped(catalog):
+    # Acolyte (PHB, sourcebook variant, id "acolyte-phb")'s own equipment
+    # choice (confirmed live) is "book" (a real catalog item, "prayer
+    # book") vs. "flavor-prayer-wheel" (a synthetic flavor-text member,
+    # display label "Prayer wheel") — selecting the flavor option must
+    # surface its label in narrativeItems, not silently vanish.
+    draft = _fighter_acolyte_human_draft(background={"id": "acolyte-phb", "choices": {}})
+    resolution = resolve(draft, catalog)
+    equip_cid = next(c["id"] for c in resolution["choices"] if c["id"] == "background:acolyte-phb:equipment-choice-0")
+    draft["background"]["choices"][equip_cid] = ["flavor-prayer-wheel"]
+    resolution2 = resolve(draft, catalog)
+    assert resolution2["sheet"]["equipment"]["narrativeItems"] == ["Prayer wheel"]
+    # Confirm it's not ALSO silently added to granted/chosen as a fake item.
+    assert "flavor-prayer-wheel" not in {c["itemId"] for c in resolution2["sheet"]["equipment"]["chosen"]}
+
+
+def test_no_narrative_items_selected_gets_an_empty_list_not_null(catalog):
+    resolution = resolve(_fighter_acolyte_human_draft(), catalog)
+    assert resolution["sheet"]["equipment"]["narrativeItems"] == []
+
+
 def test_unhashable_choice_selection_element_is_not_a_crash(catalog):
     draft = _fighter_acolyte_human_draft(
         classes=[{"classId": "fighter", "level": 1, "choices": {"class:fighter:1:prof-choice-0": [["skill-athletics"], "skill-history"]}}],
@@ -2571,21 +2624,20 @@ def test_selecting_the_item_heavy_equipment_package_lands_its_real_items_on_the_
     assert resolution2["problems"] == []
     chosen_ids = {i["itemId"] for i in resolution2["sheet"]["equipment"]["chosen"]}
     assert {"dagger", "disguise-kit", "clothes-costume", "clothes-travelers"} <= chosen_ids
-    # Known, disclosed consumption-path gap (Task 5 report): the synthetic
-    # "16 GP" bundle member is NOT among the real catalog item ids above —
-    # this engine has no currency/gold field anywhere to receive it (not
-    # even for SRD's own bundled Acolyte's starting_gold), so it's silently
-    # dropped from the granted list at this final selection-to-sheet step,
-    # while still rendering correctly as part of the CHOICE offered above.
+    # The synthetic "16 GP" bundle member is deliberately NOT among the
+    # real catalog item ids above (it isn't a real item — see
+    # test_selecting_a_gold_bundle_member_reaches_the_sheet, Task 5b: it
+    # reaches the sheet instead via sheet["startingGold"]).
     assert "gp-16" not in chosen_ids
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 def test_selecting_the_gold_only_equipment_package_produces_no_problems(catalog):
     # Bundle B (50 GP only) is a single-member "multiple" bundle — selecting
-    # it must resolve cleanly (no crash, no reported problem), even though
-    # the synthetic gold item itself doesn't land on the sheet (same
-    # disclosed gap as above).
+    # it must resolve cleanly (no crash, no reported problem). The gold
+    # itself lands on sheet["startingGold"] (Task 5b), not as a fake
+    # catalog item in "chosen" — see test_selecting_a_gold_bundle_member_
+    # reaches_the_sheet.
     draft = _fighter_acolyte_human_draft(background={"id": "aberrant-heir-efa", "choices": {}})
     resolution = resolve(draft, catalog)
     equip_cid = next(cid for cid in {c["id"] for c in resolution["choices"]}
