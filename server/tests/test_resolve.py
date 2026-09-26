@@ -209,6 +209,26 @@ def test_dwarf_tool_proficiency_choice_flows_into_sheet_tools(catalog):
     assert "smiths-tools" in resolution2["sheet"]["proficiencies"]["tools"]
 
 
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_background_tool_proficiency_reaches_the_sheet(catalog):
+    # PRE-EXISTING gap (predates this plan, genuinely separate from the
+    # race/subrace trait-scanning bug the two tests above cover): resolve()'s
+    # background-scanning code only ever forwarded skill- prefixed entries
+    # out of a background's starting_proficiencies, so tool/weapon/armor
+    # grants never reached sheet.proficiencies. SRD's own bundled Acolyte has
+    # no such grant (only skill-insight/skill-religion — confirmed directly
+    # against chargen/data/srd/5e-SRD-Backgrounds.json), so this bug is only
+    # reachable via sourcebook data: acolyte-xphb's real Calligrapher's
+    # Supplies grant (confirmed against the real fetched official data,
+    # 2026-09-26: catalog.backgrounds["acolyte-xphb"]["starting_proficiencies"]
+    # == [skill-insight, skill-religion, calligraphers-supplies]).
+    draft = _fighter_acolyte_human_draft(sources=["xphb"], background={"id": "acolyte-xphb", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    tools = set(resolution["sheet"]["proficiencies"]["tools"])
+    assert "calligraphers-supplies" in tools
+
+
 def test_human_has_no_extra_weapon_tool_armor_from_traits(catalog):
     # Human has zero traits (chargen/data/srd/5e-SRD-Races.json: traits ==
     # []), so this confirms the new trait-scanning pass doesn't leak

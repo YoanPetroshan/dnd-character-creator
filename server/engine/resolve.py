@@ -1159,6 +1159,19 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 if not p["index"].startswith("skill-"):
                     _categorize_proficiency(p["index"])
 
+    # PRE-EXISTING gap (predates this plan, genuinely separate from the
+    # race/subrace trait-scanning gap fixed just above): the skill-scanning
+    # pass near the top of this function reads `bg.get("starting_proficiencies",
+    # [])` but only forwards skill- prefixed ids into `proficient_skills` — any
+    # tool/weapon/armor grant on a background (e.g. sourcebook Acolyte's
+    # Calligrapher's Supplies) never reached sheet.proficiencies. This second
+    # pass recategorizes every non-skill entry via the same
+    # `_categorize_proficiency` used for race traits and class-level grants.
+    if bg:
+        for p in bg.get("starting_proficiencies", []):
+            if not p["index"].startswith("skill-"):
+                _categorize_proficiency(p["index"])
+
     # Gating on `c["source"]["kind"] == "class"` alone is too broad — it also
     # covers feature subfeature choices, ASI choices, and spell choices
     # (cantrips/known spells), none of which are proficiency choices. A
