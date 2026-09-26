@@ -796,7 +796,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     subrace = catalog.subraces.get(subrace_id) if subrace_id else None
     if subrace_id and not subrace:
         problems.append({"id": "unknown-subspecies", "message": f"Unknown subspecies '{subrace_id}'."})
-    elif subrace and subrace.get("race", {}).get("index") != race_id:
+    elif subrace and (not race or subrace.get("race", {}).get("index") != race_id):
         problems.append({
             "id": "subspecies-mismatch",
             "message": f"'{subrace['name']}' isn't a subspecies of the selected species.",

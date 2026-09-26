@@ -758,6 +758,35 @@ def test_draft_sources_allows_a_race_whose_book_is_listed(catalog):
     assert resolution["sheet"]["damageModifiers"]["resistances"] == ["necrotic", "radiant"]
 
 
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_source_filtered_race_does_not_leak_its_orphaned_subrace_grants(catalog):
+    # Whole-branch review finding: Dwarf/PHB ("dwarf-phb") filtered out by
+    # draft.sources (here, ["mtf"] — PHB isn't listed) sets `race` to None
+    # and adds "unknown-species", exactly like an unresolvable race should.
+    # But the draft still names Duergar/MTF ("dwarf-phb-duergar-mtf") as
+    # its subspeciesId, and that subrace's OWN "race.index" field still
+    # says "dwarf-phb" (the string id, untouched by the source filter) —
+    # so the subspecies-mismatch guard right after the source filter
+    # (which only compared subrace.race.index against race_id) let the
+    # orphaned subrace survive even though its parent race resolved to
+    # None. _species_damage_modifiers/_species_condition_immunities/
+    # _species_innate_spells then merged from that orphaned subrace
+    # regardless, leaking Duergar's innate spells (Enlarge/Reduce,
+    # Invisibility) onto a sheet that simultaneously reports "no species
+    # selected" via problems. Confirmed against the SAME dwarf-phb /
+    # dwarf-phb-duergar-mtf pairing test_subrace_innate_spells_merge_with_
+    # the_parent_race_on_the_sheet already uses with an allowed source.
+    draft = _fighter_acolyte_human_draft(
+        sources=["mtf"], species={"id": "dwarf-phb", "subspeciesId": "dwarf-phb-duergar-mtf", "choices": {}}
+    )
+    resolution = resolve(draft, catalog)
+    assert any(p["id"] == "unknown-species" for p in resolution["problems"])
+    assert resolution["sheet"]["species"] is None
+    assert resolution["sheet"]["innateSpells"] == []
+    assert resolution["sheet"]["damageModifiers"] == {"resistances": [], "immunities": [], "vulnerabilities": []}
+    assert resolution["sheet"]["conditionImmunities"] == []
+
+
 def test_empty_draft_sources_allows_every_race_unaffected(catalog):
     # Today's default behavior, unaffected by the new filter — an
     # empty/absent 'sources' list means no restriction at all.
