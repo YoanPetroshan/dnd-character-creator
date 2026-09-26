@@ -791,3 +791,126 @@ def test_background_with_neither_skill_nor_tool_choice_gets_an_empty_list():
     backgrounds = load_official_backgrounds(official_dir())
     aberrant_heir = next(b for b in backgrounds if b["name"] == "Aberrant Heir")
     assert aberrant_heir["starting_proficiency_choices"] == []
+
+
+# ---------------------------------------------------------------------------
+# Backgrounds (Phase 4b Task 3) — fixed and choice LANGUAGE grants, converted
+# from languageProficiencies into bg["languages"] (fixed, SRD-shaped) and
+# bg["language_options"] (a Choice envelope). Real shapes grounded against
+# the fetched backgrounds.json (2026-09-26) via the brief's own dump
+# command; see _language_grants_from_5etools' own docstring for the full
+# empirical grounding, including a disclosed, known data-fidelity gap on
+# exactly 1 of 56 real records (Feylost/WBtW) that the brief's three claimed
+# shapes didn't anticipate.
+# ---------------------------------------------------------------------------
+
+def test_fixed_only_language_grant_has_no_choice_offered():
+    # Rune Carver/BGG: {"giant": True} — a fixed grant, no choice at all
+    # (confirmed empirically, 2026-09-26, the ONLY real record whose
+    # languageProficiencies is a single fixed-only entry).
+    backgrounds = load_official_backgrounds(official_dir())
+    rune_carver = next(b for b in backgrounds if b["index"] == "rune-carver-bgg")
+    assert rune_carver["languages"] == [{"index": "giant", "name": "Giant", "url": ""}]
+    assert rune_carver["language_options"] is None
+
+
+def test_any_standard_wildcard_reuses_the_resource_list_mechanism():
+    # Athlete/MOT: {"anyStandard": 1} — the common wildcard-only shape (46
+    # of 56 real records). Must source EVERY language via the SAME
+    # resource_list mechanism SRD's own bundled Acolyte already uses —
+    # option count matches len(reference_data.LANGUAGES) exactly, and no
+    # new catalog/choices.py code is needed for this to resolve.
+    from catalog import reference_data
+    from catalog.choices import build_choice_options
+    backgrounds = load_official_backgrounds(official_dir())
+    athlete = next(b for b in backgrounds if b["index"] == "athlete-mot")
+    assert athlete["languages"] == []
+    envelope = athlete["language_options"]
+    assert envelope["choose"] == 1
+    assert envelope["from"]["option_set_type"] == "resource_list"
+    options = build_choice_options(envelope["from"])
+    assert len(options) == len(reference_data.LANGUAGES)
+
+
+def test_enumerated_named_list_language_choice_with_other_handled_sanely():
+    # Boros Legionnaire/GGR: {"choose": {"from": ["celestial", "draconic",
+    # "goblin", "other"]}} — an enumerated choice with a literal "other"
+    # entry (4 of 8 real choose.from lists carry one), no anyStandard on
+    # the same entry at all.
+    backgrounds = load_official_backgrounds(official_dir())
+    boros = next(b for b in backgrounds if b["index"] == "boros-legionnaire-ggr")
+    assert boros["languages"] == []
+    envelope = boros["language_options"]
+    assert envelope["choose"] == 1
+    assert envelope["from"]["option_set_type"] == "options_array"
+    option_ids = {o["item"]["index"] for o in envelope["from"]["options"]}
+    assert option_ids == {"celestial", "draconic", "goblin", "other"}
+    other_option = next(o for o in envelope["from"]["options"] if o["item"]["index"] == "other")
+    assert other_option["item"]["name"] == "Other"
+
+
+def test_fixed_grant_combined_with_a_separate_any_standard_entry():
+    # Clan Crafter/SCAG: [{"dwarvish": True}, {"anyStandard": 1}] — a
+    # fixed grant and a wildcard choice as TWO SEPARATE outer-list entries
+    # (mirroring races' own Aetherborn-style fixed+choice precedent, Phase
+    # 4a Task 2, that the brief points at).
+    backgrounds = load_official_backgrounds(official_dir())
+    clan_crafter = next(b for b in backgrounds if b["index"] == "clan-crafter-scag")
+    assert clan_crafter["languages"] == [{"index": "dwarvish", "name": "Dwarvish", "url": ""}]
+    envelope = clan_crafter["language_options"]
+    assert envelope["choose"] == 1
+    assert envelope["from"]["option_set_type"] == "resource_list"
+
+
+def test_fixed_grant_combined_with_any_standard_on_the_same_entry():
+    # Giant Foundling/BGG: [{"giant": True, "anyStandard": 1}] — a fixed
+    # grant and a wildcard choice combined on the SAME single dict entry
+    # (as opposed to Clan Crafter's two separate entries above) — both
+    # must still be produced correctly.
+    backgrounds = load_official_backgrounds(official_dir())
+    giant_foundling = next(b for b in backgrounds if b["index"] == "giant-foundling-bgg")
+    assert giant_foundling["languages"] == [{"index": "giant", "name": "Giant", "url": ""}]
+    envelope = giant_foundling["language_options"]
+    assert envelope["choose"] == 1
+    assert envelope["from"]["option_set_type"] == "resource_list"
+
+
+def test_any_standard_combined_with_a_named_list_on_the_same_entry_is_additive():
+    # Haunted One/VRGR: {"anyStandard": 1, "choose": {"from": [8 exotic
+    # languages]}} on the SAME entry — a FOURTH real shape the brief's
+    # three claimed shapes didn't describe (found during this task, see
+    # _language_grants_from_5etools' own docstring for the full empirical
+    # grounding). This background's real published "Languages:" text
+    # ("Choose two, one of which must be Abyssal, Celestial, ... or
+    # Undercommon") confirms the ADDITIVE reading this function applies:
+    # total choose count = anyStandard (1) + the list choice's own count
+    # (1, defaulted) = 2, sourced via the same resource_list mechanism as
+    # a plain wildcard (the flat Choice model can't express the "at least
+    # one from the list" sub-constraint either way — disclosed, not a bug
+    # this task can fix).
+    backgrounds = load_official_backgrounds(official_dir())
+    haunted_one = next(b for b in backgrounds if b["index"] == "haunted-one-vrgr")
+    assert haunted_one["languages"] == []
+    envelope = haunted_one["language_options"]
+    assert envelope["choose"] == 2
+    assert envelope["from"]["option_set_type"] == "resource_list"
+
+
+def test_feylost_known_disclosed_language_fidelity_gap():
+    # Feylost/WBtW: {"anyStandard": 1, "choose": {"from": ["elvish",
+    # "gnomish", "goblin", "sylvan"]}} — the SAME combined shape as Haunted
+    # One above, but Feylost's real published text ("One of your choice of
+    # Elvish, Gnomish, Goblin, or Sylvan") wants choose:1 from exactly
+    # those 4 languages, NOT choose:2 from all 16. This test pins the
+    # CURRENT, disclosed behavior (additive, matching Haunted One's rule
+    # uniformly) rather than silently guessing a per-background special
+    # case — see _language_grants_from_5etools' docstring and the Task 3
+    # report for the full disclosure. If a future task special-cases this
+    # background, update this test to match the new, more-faithful
+    # behavior rather than deleting the coverage.
+    backgrounds = load_official_backgrounds(official_dir())
+    feylost = next(b for b in backgrounds if b["index"] == "feylost-wbtw")
+    assert feylost["languages"] == []
+    envelope = feylost["language_options"]
+    assert envelope["choose"] == 2  # real text wants 1 — known, disclosed gap
+    assert envelope["from"]["option_set_type"] == "resource_list"  # real text wants a 4-item options_array

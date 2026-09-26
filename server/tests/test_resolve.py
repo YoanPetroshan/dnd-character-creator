@@ -1498,6 +1498,49 @@ def test_background_chosen_languages_still_appear_no_regression(catalog):
     assert "celestial" in languages and "infernal" in languages
 
 
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_sourcebook_background_fixed_language_reaches_the_sheet_no_choice_offered(catalog):
+    # Phase 4b Task 3: Rune Carver/BGG grants a FIXED Giant language
+    # (languageProficiencies: [{"giant": True}], no choice at all).
+    # engine/resolve.py's fixed_languages list-comprehension (around line
+    # 1324) already reads bg.get("languages", []) unconditionally — this
+    # proves that existing, UNMODIFIED consumption path genuinely works for
+    # a real sourcebook (not just bundled SRD) background, with zero
+    # resolve.py changes needed for this task.
+    draft = _fighter_acolyte_human_draft(sources=["bgg"], background={"id": "rune-carver-bgg", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    assert "giant" in resolution["sheet"]["proficiencies"]["languages"]
+    cids = {c["id"] for c in resolution["choices"]}
+    assert not any(cid.endswith(":languages") for cid in cids if cid.startswith("background:"))
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_sourcebook_background_language_choice_reaches_the_sheet(catalog):
+    # Phase 4b Task 3: Giant Foundling/BGG combines a fixed Giant grant
+    # WITH a 1-language wildcard choice on the same languageProficiencies
+    # entry ({"giant": True, "anyStandard": 1}). Confirms
+    # _background_choice_templates' EXISTING bg.get("language_options")
+    # handling (engine/resolve.py, reused via _background_choice_templates)
+    # builds a real, selectable Choice for a sourcebook background exactly
+    # like it already does for SRD's own bundled Acolyte — proving the
+    # brief's "zero resolve.py changes needed" claim end-to-end, not just
+    # via the SRD-only test above.
+    draft = _fighter_acolyte_human_draft(sources=["bgg"], background={"id": "giant-foundling-bgg", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    cid = next(c["id"] for c in resolution["choices"] if c["id"] == "background:giant-foundling-bgg:languages")
+    languages_choice = next(c for c in resolution["choices"] if c["id"] == cid)
+    assert languages_choice["count"] == 1
+    assert len(languages_choice["options"]) == 16
+
+    draft["background"]["choices"][cid] = ["elvish"]
+    resolution2 = resolve(draft, catalog)
+    languages = resolution2["sheet"]["proficiencies"]["languages"]
+    assert "giant" in languages  # the fixed grant
+    assert "elvish" in languages  # the chosen wildcard pick
+
+
 def test_wizard_duplicate_cantrip_selection_is_deduplicated(catalog):
     # Regression test for dedup fix in commit 1aa299b: submitting the same
     # valid cantrip id multiple times (e.g. ["fire-bolt", "fire-bolt",

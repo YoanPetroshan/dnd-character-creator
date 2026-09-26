@@ -81,7 +81,9 @@ if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
 from chargen.sources import official_dir, has_official  # noqa: E402  (must follow the sys.path fix above)
-from catalog.reference_data import SKILL_NAMES, TOOLS  # noqa: E402  (same reason)
+from catalog.reference_data import SKILL_NAMES, TOOLS, LANGUAGES  # noqa: E402  (same reason)
+
+_LANGUAGES_BY_INDEX = {lang["index"]: lang for lang in LANGUAGES}
 
 
 def _slug(name: str) -> str:
@@ -895,6 +897,158 @@ def _subrace_from_5etools(raw: dict, race_ids: set[str], traits_by_index: dict[s
     }
 
 
+def _language_ref_from_key(key: str) -> dict | None:
+    """Looks up a 5etools language slug (a fixed-grant object key like
+    "giant", or a choose.from list entry like "deep speech") against
+    reference_data.LANGUAGES, returning the SRD-shaped {index, name, url}
+    reference, or None if it isn't a recognized language slug (not seen in
+    real data — every real key/entry confirmed, 2026-09-26, against the
+    brief's own dump command, resolves to a LANGUAGES index once run
+    through the same _slug() every other name in this module already
+    uses — e.g. "Deep Speech"/"deep speech" -> "deep-speech", matching
+    LANGUAGES' own entry)."""
+    lang = _LANGUAGES_BY_INDEX.get(_slug(key))
+    if lang is None:
+        return None
+    return {"index": lang["index"], "name": lang["name"], "url": ""}
+
+
+def _language_choice_option_from_5etools(name: str) -> dict:
+    """Converts ONE entry of a background language choice's `choose.from`
+    list into an options_array 'reference' option — the SAME mechanism
+    _skill_choice_envelope_from_5etools/_tool_choice_envelope_from_5etools
+    already use for their own enumerated lists. A literal "other" entry (4
+    of 8 real choose.from lists carry it, e.g. Boros Legionnaire/GGR)
+    means "or any other language of your choice" in the source text;
+    since this Choice model has no free-text option, it's represented as
+    its own distinctly labeled "Other" option (per the brief's own
+    guidance), not silently dropped or folded into the full language
+    list, which would make it indistinguishable from a real anyStandard
+    wildcard option."""
+    if name.lower() == "other":
+        return {"option_type": "reference", "item": {"index": "other", "name": "Other", "url": ""}}
+    lang = _language_ref_from_key(name)
+    if lang is not None:
+        return {"option_type": "reference", "item": lang}
+    # Unrecognized language name — not seen in real data (every non-"other"
+    # choose.from entry matches a reference_data.LANGUAGES slug exactly,
+    # confirmed empirically, 2026-09-26) — best-effort slug/title-case
+    # rather than silently dropping the option, same "disclosed, not
+    # exercised" fallback discipline as e.g. the armor-category branch in
+    # _proficiencies_from_5etools above.
+    return {"option_type": "reference", "item": {"index": _slug(name), "name": name.title(), "url": ""}}
+
+
+def _language_grants_from_5etools(raw: dict) -> tuple[list[dict], dict | None]:
+    """Converts a background's `languageProficiencies` field into
+    (fixed_grants, language_options_envelope) — the SRD-shaped
+    `bg["languages"]` / `bg["language_options"]` fields resolve.py already
+    reads (engine/resolve.py's fixed_languages list-comprehension and
+    _background_choice_templates' language_options handling — confirmed
+    UNCHANGED by this task, see this module's test coverage and
+    test_resolve.py's own background-language tests).
+
+    `languageProficiencies` is a list of dicts; confirmed empirically
+    (2026-09-26, via the brief's own dump command against the real
+    fetched backgrounds.json, 56 of 56 real records with this field) to
+    combine three key shapes, sometimes on the SAME dict entry:
+      - a literal language slug -> True: a FIXED grant (e.g.
+        {"giant": True} — Rune Carver/BGG, Giant Foundling/BGG).
+      - "anyStandard": N: a WILDCARD choice ("choose N of any language",
+        49/56 records) — semantically identical to SRD's own bundled
+        Acolyte language_options, so it reuses that SAME resource_list
+        mechanism verbatim (zero new catalog/choices.py code).
+      - "choose": {"from": [...]}: an ENUMERATED choice of N (N default
+        1) — 8/56 records; 6 of those 8 carry NO "anyStandard" on the same
+        entry and become a plain options_array envelope, the same
+        mechanism every other enumerated choice in this module already
+        uses.
+    Multiple dict entries in the outer list combine ADDITIVELY (e.g. Clan
+    Crafter/SCAG: {"dwarvish": True} + {"anyStandard": 1} as TWO separate
+    list entries — fixed Dwarvish AND a free pick), mirroring races' own
+    Aetherborn-style fixed+choice precedent (Phase 4a Task 2) the brief
+    points at.
+
+    KNOWN, DISCLOSED DATA-FIDELITY GAP (found during this task, 2026-09-26
+    — NOT one of the brief's three claimed shapes, and NOT a resolve.py
+    consumption-path bug, so NOT subject to this plan's Task-1b/2b
+    "spin off a dedicated follow-up task" precedent): exactly 2 of 56 real
+    records — Feylost/WBtW and Haunted One/VRGR — combine "anyStandard"
+    AND "choose" on the SAME dict entry, a FOURTH shape the brief never
+    describes. Their real published "Languages:" flavor text (read
+    directly off their own `entries`, not inferred) gives this identical
+    JSON shape CONTRADICTORY meanings:
+      - Haunted One/VRGR: "Choose two, one of which must be Abyssal,
+        Celestial, ... or Undercommon" — an ADDITIVE combination (1 free
+        pick + 1 pick constrained to the list = 2 total), matching this
+        function's general combining rule below exactly.
+      - Feylost/WBtW: "One of your choice of Elvish, Gnomish, Goblin, or
+        Sylvan" — a SINGLE pick from just the 4-item list; here the
+        accompanying "anyStandard": 1 key does NOT represent an
+        independent second grant — the real text has no second pick at
+        all.
+    No rule derivable from the JSON shape alone satisfies both (checked:
+    neither "always additive" nor "choose's own count overrides
+    anyStandard" fits both records). This function treats the combination
+    as ADDITIVE (total = anyStandard + choose's count, sourced via the
+    SAME resource_list mechanism as a plain anyStandard wildcard) —
+    correct for Haunted One, but produces an over-generous choose:2 (of
+    all 16 languages) for Feylost instead of its real choose:1 (of
+    exactly its 4 named languages). This is the one known exception,
+    affecting exactly 1 of 56 real background records with a
+    languageProficiencies field. Note the underlying flat "choose N from
+    set S" Choice model can't express Haunted One's real "at least one
+    from subset X" sub-constraint under EITHER reading, so neither record
+    is fully representable in this model regardless of which reading is
+    picked — disclosed here, and in the Task 3 report, for the controller
+    to decide whether it's worth a dedicated follow-up."""
+    fixed: list[dict] = []
+    any_count = 0
+    choose_count = 0
+    choose_options: list[dict] = []
+    saw_choice = False
+
+    for entry in raw.get("languageProficiencies") or []:
+        if not isinstance(entry, dict):
+            continue
+        for key, value in entry.items():
+            if key in ("anyStandard", "choose"):
+                continue
+            if value is True:
+                lang = _language_ref_from_key(key)
+                if lang is not None:
+                    fixed.append(lang)
+
+        any_n = entry.get("anyStandard")
+        if isinstance(any_n, int) and not isinstance(any_n, bool):
+            any_count += any_n
+            saw_choice = True
+
+        choose = entry.get("choose")
+        if isinstance(choose, dict):
+            choose_count += choose.get("count", 1)
+            saw_choice = True
+            choose_options.extend(_language_choice_option_from_5etools(name) for name in choose.get("from", []))
+
+    if not saw_choice:
+        return fixed, None
+
+    total = any_count + choose_count
+    if any_count == 0 and choose_options:
+        # A pure enumerated list, no wildcard slot at all — the common
+        # "choose N of {named list}" shape (6 of 8 real 'choose' records).
+        envelope = {"choose": total, "type": "languages",
+                    "from": {"option_set_type": "options_array", "options": choose_options}}
+    else:
+        # A wildcard is present, alone or combined with a named list (see
+        # this function's own docstring for the combined case's known,
+        # disclosed fidelity gap) — reuses SRD's own bundled Acolyte
+        # language_options mechanism verbatim.
+        envelope = {"choose": total, "type": "languages",
+                    "from": {"option_set_type": "resource_list", "resource_list_url": "/api/2014/languages"}}
+    return fixed, envelope
+
+
 def _background_from_5etools(raw: dict) -> dict | None:
     """Converts one raw 5etools background record into the SAME dict shape
     catalog/loader.py already produces for the bundled SRD Acolyte
@@ -922,12 +1076,15 @@ def _background_from_5etools(raw: dict) -> dict | None:
     weaponProficiencies/armorProficiencies key appears on any real
     background.)
 
-    `language_options`/`languages` (choice-shaped language grants),
-    `starting_equipment`/`starting_gold`/`starting_equipment_options`
-    (equipment package choices), `ability_bonus_options` (the 2024-style
-    weighted ability choice), and `feats` are all deliberately left as
-    placeholders — separate follow-up tasks in this same plan (Tasks
-    3-6). `feature` is left empty: engine/resolve.py never reads a
+    `language_options`/`languages` (Task 3 — fixed and choice-shaped
+    language grants; see _language_grants_from_5etools for the full shape
+    grounding, including a disclosed data-fidelity gap on 1 of 56 real
+    records) are now populated. `starting_equipment`/`starting_gold`/
+    `starting_equipment_options` (equipment package choices),
+    `ability_bonus_options` (the 2024-style weighted ability choice), and
+    `feats` are still deliberately left as placeholders — separate
+    follow-up tasks in this same plan (Tasks 4-6). `feature` is left
+    empty: engine/resolve.py never reads a
     background's `feature` field for anything mechanical today (confirmed
     by grep, Step 1) — SRD's own bundled backgrounds carry rich flavor
     text there that resolve.py still never consumes, so leaving it empty
@@ -941,14 +1098,15 @@ def _background_from_5etools(raw: dict) -> dict | None:
     source = (raw.get("source") or "unknown").lower()
     slug = _slug(raw["name"])
     index = f"{slug}-{source}"
+    fixed_languages, language_options = _language_grants_from_5etools(raw)
 
     return {
         "index": index,
         "name": raw["name"],
         "starting_proficiencies": _proficiencies_from_5etools(raw),
         "starting_proficiency_choices": _proficiency_choices_from_5etools(raw),
-        "language_options": None,  # Task 3
-        "languages": [],  # Task 3
+        "language_options": language_options,
+        "languages": fixed_languages,
         "starting_equipment": [],  # Task 5
         "starting_gold": None,  # Task 5
         "starting_equipment_options": [],  # Task 5
