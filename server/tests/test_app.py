@@ -59,16 +59,18 @@ def test_catalog_endpoint_lists_all_classes_backgrounds_species(client):
     assert resp.status_code == 200
     body = resp.get_json()
     assert len(body["classes"]) == 12
-    assert len(body["backgrounds"]) == 1
-    # Bundled SRD species count is exactly 9 — byte-identical when official
-    # sourcebook data hasn't been fetched on this machine. When it has (as on
-    # this dev machine), catalog/loader.py merges in the wider official race
-    # list, so this becomes a lower bound instead (see test_loader.py's own
-    # test_load_returns_expected_counts for the same split).
+    # Bundled SRD species/background counts are exactly 9/1 — byte-identical
+    # when official sourcebook data hasn't been fetched on this machine. When
+    # it has (as on this dev machine), catalog/loader.py merges in the wider
+    # official race/background lists, so these become lower bounds instead
+    # (see test_loader.py's own test_load_returns_expected_counts for the
+    # same split).
     if has_official():
         assert len(body["species"]) >= 9
+        assert len(body["backgrounds"]) >= 100  # 1 SRD + ~135 official (Phase 4b Task 1)
     else:
         assert len(body["species"]) == 9
+        assert len(body["backgrounds"]) == 1
     fighter = next(c for c in body["classes"] if c["id"] == "fighter")
     assert fighter["hitDie"] == 10
     dwarf = next(s for s in body["species"] if s["id"] == "dwarf")

@@ -762,6 +762,79 @@ def _subrace_from_5etools(raw: dict, race_ids: set[str], traits_by_index: dict[s
     }
 
 
+def _background_from_5etools(raw: dict) -> dict | None:
+    """Converts one raw 5etools background record into the SAME dict shape
+    catalog/loader.py already produces for the bundled SRD Acolyte
+    background (confirmed empirically, Step 1: index, name,
+    starting_proficiencies, language_options, languages,
+    starting_equipment, starting_gold, starting_equipment_options,
+    feature, source) — plus one NEW field (`feats`, mirroring races' own
+    `source` precedent) this plan's later Task 6 populates.
+
+    Unlike races, backgrounds carry skillProficiencies/toolProficiencies
+    as the exact same length-1-list-of-booleans shape
+    _proficiencies_from_5etools already converts for races (confirmed
+    empirically, Step 1, against a real XPHB Acolyte record) — that
+    function reads only skillProficiencies/toolProficiencies/
+    weaponProficiencies/armorProficiencies off whatever dict it's given
+    (via .get, all optional) and was never actually race-specific despite
+    its `race_raw` parameter name, so it's called here UNCHANGED, no
+    signature change needed. (Backgrounds carry no weapon/armor
+    proficiency fields in the real data, so those two loops simply no-op
+    for every background record — confirmed empirically, Step 1: no
+    weaponProficiencies/armorProficiencies key appears on any real
+    background.)
+
+    `language_options`/`languages` (choice-shaped language grants),
+    `starting_equipment`/`starting_gold`/`starting_equipment_options`
+    (equipment package choices), `ability_bonus_options` (the 2024-style
+    weighted ability choice), and `feats` are all deliberately left as
+    placeholders — separate follow-up tasks in this same plan (Tasks
+    3-6). `feature` is left empty: engine/resolve.py never reads a
+    background's `feature` field for anything mechanical today (confirmed
+    by grep, Step 1) — SRD's own bundled backgrounds carry rich flavor
+    text there that resolve.py still never consumes, so leaving it empty
+    here is consistent with the existing bundled-data behavior, not a new
+    gap this task introduces.
+
+    _copy-based records are skipped, same reasoning as races (see module
+    docstring)."""
+    if "_copy" in raw:
+        return None
+    source = (raw.get("source") or "unknown").lower()
+    slug = _slug(raw["name"])
+    index = f"{slug}-{source}"
+
+    return {
+        "index": index,
+        "name": raw["name"],
+        "starting_proficiencies": _proficiencies_from_5etools(raw),
+        "language_options": None,  # Task 3
+        "languages": [],  # Task 3
+        "starting_equipment": [],  # Task 5
+        "starting_gold": None,  # Task 5
+        "starting_equipment_options": [],  # Task 5
+        "feature": {"name": "", "desc": []},  # not read mechanically by resolve.py today, see docstring above
+        "ability_bonus_options": None,  # Task 4
+        "source": raw.get("source", ""),
+        "feats": [],  # Task 6
+    }
+
+
+def load_official_backgrounds(official_dir: Path) -> list[dict]:
+    bg_path = official_dir / "backgrounds.json"
+    if not bg_path.exists():
+        return []
+    with open(bg_path, encoding="utf-8") as f:
+        data = json.load(f)
+    backgrounds = []
+    for raw in data.get("background", []):
+        converted = _background_from_5etools(raw)
+        if converted is not None:
+            backgrounds.append(converted)
+    return backgrounds
+
+
 def load_official_races(official_dir: Path) -> tuple[list[dict], list[dict], dict[str, dict]]:
     races_path = official_dir / "races.json"
     if not races_path.exists():

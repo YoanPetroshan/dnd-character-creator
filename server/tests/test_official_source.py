@@ -4,7 +4,7 @@ import pytest
 # the one place that fixes sys.path so `chargen` (a sibling of server/,
 # not a subpackage) is importable at all; importing chargen.sources
 # directly here would fail with ModuleNotFoundError before that fix runs.
-from catalog.official_source import official_dir, has_official, load_official_races
+from catalog.official_source import official_dir, has_official, load_official_races, load_official_backgrounds
 
 pytestmark = pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 
@@ -576,3 +576,81 @@ def test_subrace_innate_spells_are_independent_of_the_parent_race():
     assert grants["Enlarge/Reduce"]["level"] == 3
     assert grants["Invisibility"]["level"] == 5
     assert all(g["ability"] == "INT" for g in duergar["innate_spells"])
+
+
+# ---------------------------------------------------------------------------
+# Backgrounds (Phase 4b Task 1) — scaffolding + fixed skill/tool
+# proficiencies only. Backgrounds carry proficiencies/languages/equipment as
+# DIRECT top-level fields in both the bundled SRD shape and the real 5etools
+# shape (confirmed empirically, Step 1) — unlike races, no separate
+# synthetic-trait indirection is needed here.
+# ---------------------------------------------------------------------------
+
+def test_loads_a_real_non_srd_background_with_a_source_qualified_id():
+    # Acolyte is reprinted in both PHB and XPHB in the real fetched data
+    # (confirmed empirically, Step 1) — the XPHB reprint must get its own
+    # source-qualified id, distinct from the bundled SRD "acolyte" id.
+    backgrounds = load_official_backgrounds(official_dir())
+    acolyte_records = [b for b in backgrounds if b["name"] == "Acolyte"]
+    assert len(acolyte_records) >= 1
+    xphb_acolyte = next(b for b in acolyte_records if b["index"].endswith("-xphb"))
+    assert xphb_acolyte["index"] == "acolyte-xphb"
+
+
+def test_no_id_collides_with_the_bundled_srd_background_id():
+    # Bundled SRD ids have no source suffix at all (e.g. "acolyte"), while
+    # every official id is source-qualified (e.g. "acolyte-xphb") — by
+    # construction these two id spaces can never intersect. Compare against
+    # the raw SRD file directly (not catalog.backgrounds), same reasoning as
+    # the equivalent race test above: loader.py's load() already merges
+    # official backgrounds in, so reading catalog.backgrounds here would
+    # trivially "pass" even if ids collided (the dict merge would just
+    # silently drop one side).
+    import json
+    from pathlib import Path
+    from catalog.loader import load
+    srd_path = Path(__file__).resolve().parents[2] / "chargen" / "data" / "srd" / "5e-SRD-Backgrounds.json"
+    with open(srd_path, encoding="utf-8") as f:
+        srd_ids = {b["index"] for b in json.load(f)}
+    official_backgrounds = load_official_backgrounds(official_dir())
+    official_ids = {b["index"] for b in official_backgrounds}
+    assert srd_ids.isdisjoint(official_ids)
+    # Sanity: the merged catalog really does contain both id spaces.
+    catalog = load()
+    assert srd_ids <= catalog.backgrounds.keys()
+    assert official_ids <= catalog.backgrounds.keys()
+
+
+def test_background_copy_based_records_are_skipped_not_crashed_on():
+    # Confirm the loader doesn't raise on the whole real dataset (known,
+    # from empirical grounding, to contain _copy records), and that most of
+    # the 135 real non-copy records survive.
+    backgrounds = load_official_backgrounds(official_dir())
+    assert len(backgrounds) > 100
+
+
+def test_fixed_skill_and_tool_proficiency_land_directly_on_the_background_dict():
+    # Aberrant Heir/EFA grants History + Intimidation skills and Disguise
+    # Kit tool proficiency, all as fixed (non-choice) grants — confirmed
+    # empirically against the real fetched backgrounds.json (Step 1).
+    backgrounds = load_official_backgrounds(official_dir())
+    aberrant_heir = next(b for b in backgrounds if b["name"] == "Aberrant Heir")
+    prof_ids = {p["index"] for p in aberrant_heir["starting_proficiencies"]}
+    assert {"skill-history", "skill-intimidation"} <= prof_ids
+    assert "disguise-kit" in prof_ids
+
+
+def test_background_srd_style_fields_present_and_correctly_shaped():
+    backgrounds = load_official_backgrounds(official_dir())
+    for b in backgrounds[:20]:  # spot-check a slice, not all 135 — this is a shape check
+        assert "index" in b and "name" in b and "source" in b
+        assert isinstance(b.get("starting_proficiencies", []), list)
+        assert isinstance(b.get("languages", []), list)
+        assert isinstance(b.get("starting_equipment", []), list)
+        assert isinstance(b.get("starting_equipment_options", []), list)
+        assert isinstance(b.get("feats", []), list)
+        assert isinstance(b.get("feature"), dict)
+
+
+def test_missing_official_data_returns_empty_list_not_crash(tmp_path):
+    assert load_official_backgrounds(tmp_path) == []

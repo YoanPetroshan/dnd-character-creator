@@ -55,12 +55,14 @@ class Catalog:
 
 
 def load() -> Catalog:
-    from .official_source import load_official_races, official_dir
+    from .official_source import load_official_races, load_official_backgrounds, official_dir
 
     official_races, official_subraces, official_traits = load_official_races(official_dir())
+    official_backgrounds = load_official_backgrounds(official_dir())
     races = {**_index_by(_load("5e-SRD-Races.json")), **_index_by(official_races)}
     subraces = {**_index_by(_load("5e-SRD-Subraces.json")), **_index_by(official_subraces)}
     traits = {**_index_by(_load("5e-SRD-Traits.json")), **official_traits}  # official_traits is already a dict — see load_official_races' own return type
+    backgrounds = {**_index_by(_load("5e-SRD-Backgrounds.json")), **_index_by(official_backgrounds)}
 
     return Catalog(
         classes=_index_by(_load("5e-SRD-Classes.json")),
@@ -70,7 +72,7 @@ def load() -> Catalog:
         races=races,
         subraces=subraces,
         traits=traits,
-        backgrounds=_index_by(_load("5e-SRD-Backgrounds.json")),
+        backgrounds=backgrounds,
         items=_index_by(_load("5e-SRD-Equipment.json")),
         spells=_index_by(_load("5e-SRD-Spells.json")),
     )
