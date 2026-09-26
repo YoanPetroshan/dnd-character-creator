@@ -575,6 +575,170 @@ EOF
 
 ---
 
+### Task 5b: Stop silently dropping synthetic equipment-bundle members (gold, and disclose the rest)
+
+**Why this task exists:** Task 5's own review — both the implementer and an independent reviewer, the latter running a LARGER empirical sweep than the implementer's own — found that `resolve.py`'s existing `_gather_equipped_items`/`_chosen_equipment` functions silently drop any selected equipment-bundle member that isn't a real `catalog.items` entry. Task 5's own conversion correctly synthesizes non-catalog members for three real shapes 5etools' data needs (a gold value, a `{"special": ...}` flavor-text item, an `{"equipmentType": ...}` category placeholder like "a musical instrument of your choice") — using synthetic ids `gp-{amount}`, `flavor-{slug}`, `category-{slug}` — but nothing downstream ever consumes them. **This is not a rare edge case: 75 of the 76 real backgrounds with an equipment choice (98.7%) contain at least one such member**, dominated by gold (34/76 backgrounds have a gold-only synthetic member; 41/76 also have a flavor/category one). Confirmed while grounding this task: `bg.get("starting_gold")` — SRD's own, always-existing FIXED gold field (present on the bundled Acolyte background too) — is ALSO never read anywhere in `resolve.py`/`catalog/loader.py`. This predates the whole plan entirely: no background, SRD or sourcebook, has ever shown starting gold on the sheet.
+
+**Scope for this task: solve gold completely (both the fixed `starting_gold` field and selected `gp-`-prefixed bundle members), and stop SILENTLY dropping the flavor/category placeholders (surface them as plain descriptive text) without attempting to resolve them into real catalog items.** A full "narrative equipment that isn't a real item" catalog/registration system is a materially larger, separate design problem — out of scope here, and explicitly disclosed as such rather than attempted.
+
+**Files:**
+- Modify: `server/engine/resolve.py`
+- Test: `server/tests/test_resolve.py`
+
+**Interfaces:**
+- Consumes: nothing new — reads `bg.get("starting_gold")` (SRD shape, already exists, never read) and the selected equipment Choice's `selected_id.split("+")` members (already exists, per-member lookup already happens in `_gather_equipped_items`/`_chosen_equipment`).
+- Produces: `sheet["startingGold"]: int` (always present, `0` when a background grants none — matching this project's established "always-present, empty/zero not null" convention from Phase 4a) and `sheet["equipment"]["narrativeItems"]: string[]` (or wherever the equipment sub-object currently lives on the sheet — confirm the real key path before choosing the new field's home) carrying the display labels of any selected `flavor-`/`category-`/`unlisted-` prefixed member, always present as `[]` when none.
+
+- [ ] **Step 1: Ground the exact current code**
+
+Confirmed at plan-writing time — `server/engine/resolve.py` around lines 710-746:
+
+```python
+def _gather_equipped_items(
+    equipment_choices: list[dict], added_entries: list[dict], item_lookup: dict,
+) -> list[dict]:
+    equipped: list[dict] = []
+    for choice in equipment_choices:
+        for selected_id in choice["selected"]:
+            for item_id in selected_id.split("+"):
+                item = item_lookup.get(item_id)
+                if item:
+                    equipped.append(item)
+    ...
+
+
+def _chosen_equipment(equipment_choices: list[dict], item_lookup: dict) -> list[dict]:
+    result: list[dict] = []
+    for choice in equipment_choices:
+        for selected_id in choice["selected"]:
+            for item_id in selected_id.split("+"):
+                item = item_lookup.get(item_id)
+                if item:
+                    result.append({"itemId": item_id, "name": item["name"], "qty": 1})
+    return result
+```
+
+Both functions already split a selected id on `"+"` and iterate the parts — a gold/flavor/category synthetic id (e.g. `"dagger+disguise-kit+costume+travelers-clothes+gp-1600"`) already gets split out as its own part, it's just silently skipped by `if item:` since `item_lookup.get("gp-1600")` is `None`. Confirm `bg.get("starting_gold")` is never read anywhere: `grep -n "starting_gold" server/engine/resolve.py server/catalog/loader.py` — confirmed empty at plan-writing time.
+
+- [ ] **Step 2: Write failing tests against real data**
+
+```python
+def test_srd_acolyte_starting_gold_reaches_the_sheet(catalog):
+    # SRD Acolyte's own bundled starting_gold field — confirm its real
+    # value (chargen/data/srd/5e-SRD-Backgrounds.json) before trusting
+    # this literal.
+    draft = _fighter_acolyte_human_draft()
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["startingGold"] > 0  # ground the exact real SRD Acolyte gold amount
+
+
+def test_background_with_no_gold_gets_a_zero_not_null(catalog):
+    # A background with neither starting_gold nor a selected gold bundle
+    # member should show startingGold == 0, not absent/None.
+    ...
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_selecting_a_gold_bundle_member_reaches_the_sheet(catalog):
+    # Ground the exact real background/bundle/gold-amount against Task 5's
+    # own research (Aberrant Heir/EFA's bundle A includes a gp-1600
+    # member, bundle B is gp-5000-only) before trusting this literal.
+    draft = _fighter_acolyte_human_draft(background={"id": "aberrant-heir-efa", "choices": {}})
+    resolution = resolve(draft, catalog)
+    equip_cid = next(c["id"] for c in resolution["choices"] if "equipment-choice" in c["id"])
+    draft["background"]["choices"][equip_cid] = ["<the real bundle-B option id, gold-only>"]
+    resolution2 = resolve(draft, catalog)
+    assert resolution2["sheet"]["startingGold"] == 5000  # re-ground the exact expected amount
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_flavor_or_category_bundle_member_shows_up_as_narrative_text_not_silently_dropped(catalog):
+    # Ground a real background whose equipment bundle has a flavor-/
+    # category-prefixed member (Task 5's own research found 41/76 real
+    # equipment-choice backgrounds have one) before trusting this literal.
+    ...
+```
+
+(Ground every literal against real data before trusting it — this plan's own track record shows every un-verified literal in a draft plan has needed correction at implementation time.)
+
+- [ ] **Step 3: Run to verify they fail**
+
+- [ ] **Step 4: Implement**
+
+Add `sheet["startingGold"]` computation: start from `bg.get("starting_gold", {}).get("quantity", 0)` if the field uses SRD's `{"quantity": N, "unit": "gp"}` shape (confirm this shape first), plus any selected `gp-{amount}` bundle member's amount (parse the amount back out of the id — the SAME id `_gather_equipped_items`/`_chosen_equipment` already iterate). Extend `_gather_equipped_items`/`_chosen_equipment`'s existing loop (or add a small parallel pass reading the SAME `equipment_choices`/`selected_id.split("+")` structure, matching this file's own established tolerance for a small, disclosed second pass over already-scanned data — see Task 3b/4b's precedent in the merged Phase 4a work) to also detect a `gp-` prefix and accumulate its amount, and a `flavor-`/`category-`/`unlisted-` prefix and accumulate its display label into a new `narrativeItems` list. Do NOT change what `item_lookup.get(item_id)` returns or how real catalog items are matched — this is purely additive.
+
+Wire `sheet["startingGold"]`/`sheet["equipment"]["narrativeItems"]` into `resolve()`'s `sheet = {...}` construction, matching the empty-not-null convention.
+
+- [ ] **Step 5: Run to verify tests pass, then full suite green**
+
+Run: `cd server && .venv/bin/python -m pytest -v` — full suite green (434 baseline + your new tests), no regressions. Re-check: does any existing test assert `sheet["equipment"]` has an EXACT key set that adding `narrativeItems` would break? (Grep for `sheet\["equipment"\]\s*==` or similar exact-dict assertions before assuming none exist.)
+
+- [ ] **Step 6: Empirical end-to-end check across the real dataset**
+
+```bash
+.venv/bin/python -c "
+from catalog.loader import load
+from engine.resolve import resolve
+catalog = load()
+gold_total = 0
+narrative_total = 0
+checked = 0
+for bg_id, bg in catalog.backgrounds.items():
+    envelopes = bg.get('starting_equipment_options') or []
+    if not envelopes:
+        continue
+    checked += 1
+    draft = {
+        'classes': [{'classId': 'fighter', 'level': 1, 'choices': {}}],
+        'background': {'id': bg_id, 'choices': {}},
+        'species': {'id': 'human', 'choices': {}},
+        'abilities': {'method': 'manual', 'base': {'STR': 16, 'DEX': 14, 'CON': 14, 'INT': 10, 'WIS': 12, 'CHA': 8}},
+        'equipment': {'choices': {}, 'added': [], 'skipped': True}, 'details': {},
+    }
+    r = resolve(draft, catalog)
+    if r['sheet']['startingGold'] > 0:
+        gold_total += 1
+    if r['sheet']['equipment'].get('narrativeItems'):
+        narrative_total += 1
+print(f'checked {checked} backgrounds with an equipment choice')
+print(f'{gold_total} produced nonzero startingGold before any selection (from bg fixed field alone)')
+print(f'{narrative_total} produced narrativeItems before any selection')
+"
+```
+
+(This checks the UNSELECTED/default state — confirm it doesn't crash and produces sane, non-negative numbers; a full per-option sweep selecting every real bundle, mirroring Task 5's own empirical check, is a good idea if time allows but not required to pass this task.)
+
+- [ ] **Step 7: Commit**
+
+```bash
+cd /Users/yoanpetrov/dnd-character-creator
+git add server/engine/resolve.py server/tests/test_resolve.py
+git commit -m "$(cat <<'EOF'
+fix: starting gold and narrative equipment no longer silently dropped
+
+resolve.py's _gather_equipped_items/_chosen_equipment already split a
+selected equipment id on "+" and iterate each part, but silently
+skipped any part that isn't a real catalog.items entry — meaning
+every gold-value, flavor-text, or category-placeholder bundle member
+Task 5's own conversion correctly synthesizes (gp-/flavor-/category-/
+unlisted- prefixed ids) vanished with no trace once selected. Not a
+rare case: 75/76 real equipment-choice backgrounds hit this. Also
+found bg.get("starting_gold") — SRD's own fixed gold field, present
+on the bundled Acolyte background too — was never read anywhere,
+predating this whole plan. New sheet.startingGold (always present,
+0 when none) and sheet.equipment.narrativeItems (always present, []
+when none) close the gold case completely and stop the flavor/
+category case from being silent, without attempting to resolve
+narrative-only gear into real catalog items (a separate, larger
+design problem, explicitly out of scope here).
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
+
 ### Task 6: Feat storage (inert) and source filtering for backgrounds
 
 **Files:**
