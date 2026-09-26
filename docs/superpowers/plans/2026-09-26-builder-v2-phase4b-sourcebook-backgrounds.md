@@ -228,6 +228,85 @@ EOF
 
 ---
 
+### Task 1b: Close a pre-existing gap — `resolve()` never consumed tool/weapon/armor proficiencies from backgrounds
+
+**Why this task exists:** Task 1's own review (implementer + independent reviewer, verified two ways — direct code reading and a live `resolve()` repro against real sourcebook data) found that `server/engine/resolve.py:1088` is the ONLY place a background's `starting_proficiencies` is read, and it only forwards `skill-` prefixed entries into `sheet.proficiencies.skills` — tool/weapon/armor grants from a background (e.g. `acolyte-xphb`'s real Calligrapher's Supplies grant) never reach `sheet.proficiencies.tools`. This is a genuinely SEPARATE code path from Phase 4a's Task 3b fix (which only touches race/subrace trait scanning, never reads `bg` at all) — so that fix does not cover this. Confirmed empirically: `catalog.backgrounds["acolyte-xphb"]["starting_proficiencies"]` contains the tool grant, but the resolved sheet's `tools` list comes back empty. Mirrors the Task 3→3b precedent from Phase 4a exactly — a per-task review found a bug in existing engine code, not introduced by this plan, that needs its own dedicated fix task before this phase can claim full proficiency fidelity.
+
+**Files:**
+- Modify: `server/engine/resolve.py`
+- Test: `server/tests/test_resolve.py`
+
+**Interfaces:**
+- Consumes: the EXISTING `_categorize_proficiency(prof_id: str) -> None` nested function inside `resolve()` (Phase 4a Task 3b already extended it once for race/subrace traits — reused unmodified here).
+- Produces: `sheet.proficiencies.armor/weapons/tools` now ALSO include grants from a background's `starting_proficiencies`, for every background (SRD and sourcebook).
+
+- [ ] **Step 1: Ground the exact current code**
+
+Confirmed at plan-writing time — `server/engine/resolve.py` around lines 1083-1160 has, in order: the skill-scanning block (`proficient_skills.update(...)` for classes/species/background/race traits, `bg.get("starting_proficiencies", [])` filtered to `skill-` only at the line this bug lives on), then `proficient_armor`/`proficient_weapons`/`proficient_tools` set init, then `_categorize_proficiency`'s definition, then the race/subrace trait second-pass Task 3b already added (`if race: trait_refs = ...`), then the class-level prof-choice loop. Re-locate this exact sequence before editing — other tasks in THIS plan (2-6) may run before or after this one depending on execution order, but none should have touched this exact block.
+
+- [ ] **Step 2: Write a failing test against REAL sourcebook data first**
+
+No `has_official()` skip needed if a bundled-SRD example existed, but confirmed at plan-writing time that SRD's own Acolyte has NO tool/weapon/armor proficiency grant (only `skill-insight`/`skill-religion`) — so this bug is only reachable via sourcebook data, and this test DOES need the skip guard:
+
+```python
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_background_tool_proficiency_reaches_the_sheet(catalog):
+    draft = _fighter_acolyte_human_draft(background={"id": "acolyte-xphb", "choices": {}})
+    resolution = resolve(draft, catalog)
+    tools = set(resolution["sheet"]["proficiencies"]["tools"])
+    # Ground the exact real tool id against catalog.backgrounds["acolyte-xphb"]
+    # ["starting_proficiencies"] before trusting this literal — this plan's
+    # own research found "calligraphers-supplies", re-verify it still matches.
+    assert "calligraphers-supplies" in tools
+```
+
+- [ ] **Step 3: Run to verify it fails**
+
+Run: `cd server && .venv/bin/python -m pytest tests/test_resolve.py -v -k background_tool_proficiency`
+Expected: FAIL — `tools` is empty despite the grant existing in the background dict.
+
+- [ ] **Step 4: Fix `resolve.py`**
+
+Add a small pass reading `bg.get("starting_proficiencies", [])` for non-skill entries, calling the existing `_categorize_proficiency`, placed right alongside the race/subrace trait second-pass Task 3b already added (same style, same reasoning — a small, disclosed second read of data already scanned once for skills):
+
+```python
+    if bg:
+        for p in bg.get("starting_proficiencies", []):
+            if not p["index"].startswith("skill-"):
+                _categorize_proficiency(p["index"])
+```
+
+- [ ] **Step 5: Run to verify it passes, then full suite green**
+
+Run: `cd server && .venv/bin/python -m pytest tests/test_resolve.py -v -k background_tool_proficiency`
+Then: `cd server && .venv/bin/python -m pytest -v` — full suite green (381 baseline from Task 1 + your new test). Re-check any existing test asserting an exact (not `in`-based) tools/armor/weapons list for any background — Phase 4a's own grounding found none for races; re-verify the same holds for backgrounds before assuming it.
+
+- [ ] **Step 6: Empirical end-to-end check, commit**
+
+```bash
+cd /Users/yoanpetrov/dnd-character-creator
+git add server/engine/resolve.py server/tests/test_resolve.py
+git commit -m "$(cat <<'EOF'
+fix: resolve() now consumes tool/weapon/armor proficiencies from backgrounds
+
+Backgrounds could always carry tool/weapon/armor proficiency grants
+(sourcebook data has plenty of real examples, e.g. acolyte-xphb's
+Calligrapher's Supplies), but resolve()'s background-scanning code
+only ever forwarded skill- prefixed entries into the sheet — a
+genuinely separate code path from Phase 4a's Task 3b fix, which only
+touches race/subrace trait scanning. Found during Phase 4b's own Task
+1 review, not introduced by it. Fixed by adding a small pass over
+bg.get("starting_proficiencies", []) calling the existing
+_categorize_proficiency for non-skill entries, mirroring Task 3b's
+own fix pattern exactly.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
+
 ### Task 2: Proficiency CHOICES for skills/tools, including the "any N" wildcard
 
 **Files:**
