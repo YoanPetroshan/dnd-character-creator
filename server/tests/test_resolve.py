@@ -2266,3 +2266,101 @@ def test_enumerated_background_skill_choice_appears_as_a_resolvable_choice(catal
     assert choice["count"] == 1
     assert {o["id"] for o in choice["options"]} == {"skill-arcana", "skill-nature", "skill-religion"}
     assert choice["status"] == "pending"
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_selecting_a_background_skill_choice_option_lands_it_on_the_sheet(catalog):
+    draft = _fighter_acolyte_human_draft(
+        sources=["scag"], background={"id": "cloistered-scholar-scag", "choices": {}},
+    )
+    resolution = resolve(draft, catalog)
+    prof_cid = next(cid for cid in {c["id"] for c in resolution["choices"]}
+                     if cid.startswith("background:cloistered-scholar-scag:") and "proficiency-choice" in cid)
+
+    draft["background"]["choices"][prof_cid] = ["skill-arcana"]
+    resolution2 = resolve(draft, catalog)
+    assert resolution2["problems"] == []
+    skills = resolution2["sheet"]["proficiencies"]["skills"]
+    assert "skill-arcana" in skills
+    assert "skill-history" in skills  # the fixed grant, unaffected
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_selecting_an_enumerated_background_tool_choice_option_lands_it_on_the_sheet(catalog):
+    # Archaeologist/ToA: choose 1 of {navigator's tools, cartographer's
+    # tools} — a purely literal-name enumerated tool choice.
+    draft = _fighter_acolyte_human_draft(
+        sources=["toa"], background={"id": "archaeologist-toa", "choices": {}},
+    )
+    resolution = resolve(draft, catalog)
+    prof_cid = next(cid for cid in {c["id"] for c in resolution["choices"]}
+                     if cid.startswith("background:archaeologist-toa:") and "proficiency-choice" in cid)
+
+    draft["background"]["choices"][prof_cid] = ["cartographers-tools"]
+    resolution2 = resolve(draft, catalog)
+    assert resolution2["problems"] == []
+    assert "cartographers-tools" in resolution2["sheet"]["proficiencies"]["tools"]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_any_n_wildcard_skill_choice_on_a_background_offers_every_skill(catalog):
+    # Custom Background/PHB: {"any": 2} — no enumerated list, sourced from
+    # reference_data.SKILL_NAMES via choices.py's any_skill option_set_type,
+    # the SAME mechanism Phase 4a built for races, reused unmodified.
+    from catalog.reference_data import SKILL_NAMES
+    draft = _fighter_acolyte_human_draft(
+        sources=["phb"], background={"id": "custom-background-phb", "choices": {}},
+    )
+    resolution = resolve(draft, catalog)
+    cids = {c["id"] for c in resolution["choices"]}
+    prof_cid = next(cid for cid in cids if cid.startswith("background:custom-background-phb:") and "proficiency-choice" in cid)
+    choice = next(c for c in resolution["choices"] if c["id"] == prof_cid)
+    assert choice["count"] == 2
+    assert {o["id"] for o in choice["options"]} == set(SKILL_NAMES.keys())
+
+    draft["background"]["choices"][prof_cid] = ["skill-athletics", "skill-persuasion"]
+    resolution2 = resolve(draft, catalog)
+    assert resolution2["problems"] == []
+    assert {"skill-athletics", "skill-persuasion"} <= set(resolution2["sheet"]["proficiencies"]["skills"])
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_any_gaming_set_wildcard_tool_choice_on_a_background_offers_only_gaming_sets(catalog):
+    # Noble/PHB: {"anyGamingSet": 1} — the wildcard shape races never had
+    # (Phase 4a's any_tool + tool_category filter, reused unmodified, just
+    # pointed at reference_data.TOOLS' existing "Gaming Sets" category).
+    draft = _fighter_acolyte_human_draft(
+        sources=["phb"], background={"id": "noble-phb", "choices": {}},
+    )
+    resolution = resolve(draft, catalog)
+    cids = {c["id"] for c in resolution["choices"]}
+    prof_cid = next(cid for cid in cids if cid.startswith("background:noble-phb:") and "proficiency-choice" in cid)
+    choice = next(c for c in resolution["choices"] if c["id"] == prof_cid)
+    assert choice["count"] == 1
+    assert {o["id"] for o in choice["options"]} == {"dice-set", "playing-card-set"}
+
+    draft["background"]["choices"][prof_cid] = ["dice-set"]
+    resolution2 = resolve(draft, catalog)
+    assert resolution2["problems"] == []
+    assert "dice-set" in resolution2["sheet"]["proficiencies"]["tools"]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_background_with_two_simultaneous_wildcard_choices_produces_two_selectable_choices(catalog):
+    # Vizier/PSA: {"anyArtisansTool": 1, "anyMusicalInstrument": 1} on one
+    # raw entry — must surface as TWO independent, independently-selectable
+    # Choices, not one overwriting the other.
+    draft = _fighter_acolyte_human_draft(
+        sources=["psa"], background={"id": "vizier-psa", "choices": {}},
+    )
+    resolution = resolve(draft, catalog)
+    prof_cids = [c["id"] for c in resolution["choices"]
+                 if c["id"].startswith("background:vizier-psa:") and "proficiency-choice" in c["id"]]
+    assert len(prof_cids) == 2
+
+    draft["background"]["choices"][prof_cids[0]] = ["smiths-tools"]
+    draft["background"]["choices"][prof_cids[1]] = ["lute"]
+    resolution2 = resolve(draft, catalog)
+    assert resolution2["problems"] == []
+    tools = set(resolution2["sheet"]["proficiencies"]["tools"])
+    assert {"smiths-tools", "lute"} <= tools

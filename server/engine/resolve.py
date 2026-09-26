@@ -1127,7 +1127,16 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # Derived stats.
     proficient_skills: set[str] = set()
     for c in choices:
-        if c["source"]["kind"] in ("class", "species"):
+        # "background" added here (Phase 4b Task 2): a background's own
+        # skill-proficiency CHOICE (as opposed to its fixed
+        # starting_proficiencies, read separately just below) previously had
+        # no path into proficient_skills at all — the exact same "new
+        # choice-producing feature needs an equally-new consumer path" gap
+        # Phase 4a Task 4b already found and fixed for species. Safe to add
+        # unconditionally: the only OTHER background-kind choice is the
+        # language choice, whose selected values are language ids, never
+        # "skill-"-prefixed, so this filter still excludes them.
+        if c["source"]["kind"] in ("class", "species", "background"):
             proficient_skills.update(s for s in c["selected"] if s.startswith("skill-"))
     if bg:
         proficient_skills.update(p["index"] for p in bg.get("starting_proficiencies", []) if p["index"].startswith("skill-"))
@@ -1248,6 +1257,25 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             # "is this even a real proficiency id" guard and would silently
             # miscategorize a string like "fire" or a language id into the
             # tools bucket.
+            for s in c["selected"]:
+                if not s.startswith("skill-"):
+                    _categorize_proficiency(s)
+        elif c["source"]["kind"] == "background" and "proficiency-choice" in c["id"]:
+            # Phase 4b Task 2's background equivalent of the species branch
+            # right above — same reasoning, same "proficiency-choice"
+            # substring convention (set by _background_choice_templates),
+            # narrowed the same way so the background's OTHER kind=
+            # "background" choice (its language choice, selected values are
+            # language ids) never reaches _categorize_proficiency. Without
+            # this branch, a selected TOOL from a background's tool
+            # proficiency choice (e.g. Archaeologist/ToA's Navigator's
+            # Tools-or-Cartographer's Tools pick) would resolve as a valid
+            # Choice selection yet never reach sheet.proficiencies.tools —
+            # confirmed by tracing it end to end while writing this task,
+            # not assumed from the Choice template existing (a selected
+            # SKILL from the same mechanism already reaches the sheet via
+            # the "background" addition to proficient_skills above, so only
+            # the non-skill/tool half of this wiring was actually missing).
             for s in c["selected"]:
                 if not s.startswith("skill-"):
                     _categorize_proficiency(s)
