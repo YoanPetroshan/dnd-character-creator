@@ -2528,3 +2528,90 @@ def test_background_with_two_simultaneous_wildcard_choices_produces_two_selectab
     assert resolution2["problems"] == []
     tools = set(resolution2["sheet"]["proficiencies"]["tools"])
     assert {"smiths-tools", "lute"} <= tools
+
+
+# ---------------------------------------------------------------------------
+# Backgrounds (Phase 4b Task 5) — the starting equipment PACKAGE CHOICE (A
+# or B), end to end through resolve(). Confirms the brief's own central
+# claim (needs zero resolve.py/choices.py changes) genuinely holds: the
+# EXISTING _equipment_choice_templates/starting_equipment_options pathway
+# (unchanged) and catalog/choices.py's EXISTING "multiple" bundle mechanism
+# (unchanged) already produce a correct, selectable Choice from what
+# official_source.py now populates.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_equipment_package_choice_becomes_a_two_option_multiple_bundle_choice(catalog):
+    draft = _fighter_acolyte_human_draft(background={"id": "aberrant-heir-efa", "choices": {}})
+    resolution = resolve(draft, catalog)
+    cids = {c["id"] for c in resolution["choices"]}
+    equip_cid = next((cid for cid in cids if cid.startswith("background:aberrant-heir-efa:") and "equipment-choice" in cid), None)
+    assert equip_cid is not None, f"expected an equipment package choice, got: {cids}"
+    equip_choice = next(c for c in resolution["choices"] if c["id"] == equip_cid)
+    assert len(equip_choice["options"]) == 2  # package A, package B
+    assert equip_choice["status"] == "pending"
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_selecting_the_item_heavy_equipment_package_lands_its_real_items_on_the_sheet(catalog):
+    # Selecting bundle A (dagger, disguise kit, costume, traveler's
+    # clothes, 16 GP) must land the four REAL catalog items on the sheet's
+    # chosen equipment — confirms the compound "+"-joined id genuinely
+    # round-trips through engine/resolve.py's existing, unchanged
+    # _chosen_equipment/_gather_equipped_items.
+    draft = _fighter_acolyte_human_draft(background={"id": "aberrant-heir-efa", "choices": {}})
+    resolution = resolve(draft, catalog)
+    equip_cid = next(cid for cid in {c["id"] for c in resolution["choices"]}
+                      if cid.startswith("background:aberrant-heir-efa:") and "equipment-choice" in cid)
+    equip_choice = next(c for c in resolution["choices"] if c["id"] == equip_cid)
+    item_bundle_option = next(o for o in equip_choice["options"] if "+" in o["id"])
+
+    draft["background"]["choices"][equip_cid] = [item_bundle_option["id"]]
+    resolution2 = resolve(draft, catalog)
+    assert resolution2["problems"] == []
+    chosen_ids = {i["itemId"] for i in resolution2["sheet"]["equipment"]["chosen"]}
+    assert {"dagger", "disguise-kit", "clothes-costume", "clothes-travelers"} <= chosen_ids
+    # Known, disclosed consumption-path gap (Task 5 report): the synthetic
+    # "16 GP" bundle member is NOT among the real catalog item ids above —
+    # this engine has no currency/gold field anywhere to receive it (not
+    # even for SRD's own bundled Acolyte's starting_gold), so it's silently
+    # dropped from the granted list at this final selection-to-sheet step,
+    # while still rendering correctly as part of the CHOICE offered above.
+    assert "gp-16" not in chosen_ids
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_selecting_the_gold_only_equipment_package_produces_no_problems(catalog):
+    # Bundle B (50 GP only) is a single-member "multiple" bundle — selecting
+    # it must resolve cleanly (no crash, no reported problem), even though
+    # the synthetic gold item itself doesn't land on the sheet (same
+    # disclosed gap as above).
+    draft = _fighter_acolyte_human_draft(background={"id": "aberrant-heir-efa", "choices": {}})
+    resolution = resolve(draft, catalog)
+    equip_cid = next(cid for cid in {c["id"] for c in resolution["choices"]}
+                      if cid.startswith("background:aberrant-heir-efa:") and "equipment-choice" in cid)
+    equip_choice = next(c for c in resolution["choices"] if c["id"] == equip_cid)
+    gold_only_option = next(o for o in equip_choice["options"] if o["id"] == "gp-50")
+
+    draft["background"]["choices"][equip_cid] = [gold_only_option["id"]]
+    resolution2 = resolve(draft, catalog)
+    assert resolution2["problems"] == []
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_athlete_mot_two_independent_equipment_choices_are_both_selectable(catalog):
+    # Athlete/MOT: two independent a/b entries in its raw startingEquipment
+    # must surface as two independent, independently-selectable Choices —
+    # the same "don't flatten independent choices together" pattern already
+    # proven for proficiency wildcards
+    # (test_background_with_two_simultaneous_wildcard_choices_produces_two_selectable_choices).
+    draft = _fighter_acolyte_human_draft(
+        sources=["mot"], background={"id": "athlete-mot", "choices": {}},
+    )
+    resolution = resolve(draft, catalog)
+    equip_cids = [c["id"] for c in resolution["choices"]
+                  if c["id"].startswith("background:athlete-mot:") and "equipment-choice" in c["id"]]
+    assert len(equip_cids) == 2
+    for cid in equip_cids:
+        choice = next(c for c in resolution["choices"] if c["id"] == cid)
+        assert len(choice["options"]) == 2

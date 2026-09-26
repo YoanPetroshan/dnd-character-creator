@@ -74,6 +74,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
+import re
 import sys
 
 _repo_root = Path(__file__).resolve().parents[2]  # server/catalog/official_source.py -> catalog -> server -> repo root
@@ -84,6 +85,100 @@ from chargen.sources import official_dir, has_official  # noqa: E402  (must foll
 from catalog.reference_data import SKILL_NAMES, TOOLS, LANGUAGES  # noqa: E402  (same reason)
 
 _LANGUAGES_BY_INDEX = {lang["index"]: lang for lang in LANGUAGES}
+
+# Task 5 (starting equipment package choice): loaded directly from the
+# bundled SRD file itself, the SAME data catalog/loader.py's Catalog.items
+# is built from (chargen/data/srd/5e-SRD-Equipment.json) — NOT re-derived
+# via a Catalog instance, since load_official_backgrounds() runs before
+# catalog/loader.py builds one (see loader.py's load(): official
+# backgrounds are converted before `items` is indexed) and this module
+# already has its own direct-file-read precedent for exactly this reason
+# (LANGUAGES above is a hand-maintained table for the same structural
+# reason: the resource this module needs isn't available as a Catalog
+# object yet at conversion time). Matched against 5etools item names via
+# _find_srd_equipment_item's word-set comparison, not a naive slug — see
+# that function's own docstring for why a naive slug (the convention
+# Phase 4a's weapon-id work used for PROFICIENCY CATEGORY ids, a
+# different, unrelated id namespace) does not work for specific equipment
+# ITEM ids.
+with open(_repo_root / "chargen" / "data" / "srd" / "5e-SRD-Equipment.json", encoding="utf-8") as _f:
+    _SRD_EQUIPMENT = json.load(_f)
+
+
+def _equipment_name_words(name: str) -> frozenset[str]:
+    """Normalizes an equipment name into a bag-of-words for matching,
+    stripping parenthetical qualifiers (SRD's "Ink (1 ounce bottle)" vs
+    5etools' bare "ink") and punctuation (commas, apostrophes — SRD names
+    equipment "Clothes, traveler's" while 5etools calls the same item
+    "traveler's clothes"; word ORDER differs too, which is exactly why
+    this compares as a set/frozenset, not a normalized string)."""
+    name = re.sub(r"\(.*?\)", " ", name.lower())
+    name = re.sub(r"[^a-z0-9 ]", " ", name)
+    return frozenset(w for w in name.split() if w)
+
+
+_SRD_EQUIPMENT_WORDS = [(_equipment_name_words(item["name"]), item) for item in _SRD_EQUIPMENT]
+_SRD_EQUIPMENT_BY_WORDS = {words: item for words, item in _SRD_EQUIPMENT_WORDS}  # exact-match fast path
+
+
+def _find_srd_equipment_item(name: str) -> dict | None:
+    """Looks up a 5etools equipment item name against the bundled SRD
+    237-item equipment list. Two passes: an exact word-set match first
+    (covers most items, e.g. "dagger" -> "Dagger", "disguise kit" ->
+    "Disguise Kit"), then a SUBSET pass (this item's words all appear
+    somewhere in the SRD entry's words) for the real cases an exact match
+    misses — a bare 5etools name that's short for a longer SRD one
+    ("costume" -> "Clothes, costume", "ink" -> "Ink (1 ounce bottle)").
+    Ties (5etools' bare "rope" is a word-subset of BOTH "Rope, hempen (50
+    feet)" and "Rope, silk (50 feet)" — the only real ambiguity found,
+    Task 5 grounding) are broken by taking the FIRST match in the
+    bundled file's own order, which happens to be the cheaper/more
+    standard "hempen" option here — a narrow, disclosed tie-break, not a
+    generically correct disambiguation rule.
+
+    Returns None for names with no catalog equivalent at all — confirmed
+    against the real data (Task 5 grounding, 2026-09-26): 8 of 91 real
+    distinct item names are generic category placeholders the 237-item
+    SRD equipment list was never meant to cover ("arcane focus",
+    "gaming set", "holy symbol", "musical instrument") or items simply
+    outside the bundled SRD subset ("arrows (20)", "bolts (20)", "iron
+    spikes", "robe") — callers synthesize a non-catalog reference for
+    these rather than dropping them; see
+    _equipment_bundle_member_from_5etools's docstring for the full,
+    disclosed consumption-path consequence of doing so."""
+    words = _equipment_name_words(name)
+    if not words:
+        return None
+    exact = _SRD_EQUIPMENT_BY_WORDS.get(words)
+    if exact is not None:
+        return exact
+    for item_words, item in _SRD_EQUIPMENT_WORDS:
+        if words <= item_words:
+            return item
+    return None
+
+
+def _sentence_case(text: str) -> str:
+    return text[:1].upper() + text[1:] if text else text
+
+
+# 5etools' three "pick a category, not a specific item" equipmentType
+# tokens seen in real startingEquipment bundles (Task 5 grounding,
+# 2026-09-26: setGaming x8, toolArtisan x6, instrumentMusical x6, across
+# all 135 real backgrounds — exhaustive, not a guess). Each is a nested
+# sub-choice smuggled inside what's otherwise a flat equipment bundle
+# (e.g. "a gaming set of your choice") — see
+# _equipment_bundle_member_from_5etools's docstring for why this is
+# represented as a synthetic, non-catalog reference rather than expanded
+# into its own nested choice (which catalog/choices.py's "multiple"
+# bundle mechanism has no way to represent at all — a bundle containing
+# its own sub-choice is exactly the "unrepresentable in this phase's flat
+# Choice model" case that module's own docstring already describes).
+_EQUIPMENT_TYPE_LABELS = {
+    "toolArtisan": "Artisan's Tools",
+    "setGaming": "Gaming Set",
+    "instrumentMusical": "Musical Instrument",
+}
 
 
 def _slug(name: str) -> str:
@@ -1130,6 +1225,149 @@ def _language_grants_from_5etools(raw: dict) -> tuple[list[dict], dict | None]:
     return fixed, envelope
 
 
+def _counted_reference_for_item_name(name: str, count: int = 1, display_label: str | None = None) -> dict:
+    """Builds one options_array 'counted_reference' sub-item for an
+    equipment bundle member that's (or names) a specific item, resolving
+    against the bundled SRD equipment list when possible so the id
+    matches a REAL catalog.items entry (so the granted item correctly
+    reaches the sheet once selected — see engine/resolve.py's
+    _gather_equipped_items/_chosen_equipment, both UNCHANGED by this
+    task). Falls back to a synthetic, non-catalog id/name for the ~9% of
+    real item names with no SRD equivalent (Task 5 grounding) — flagged
+    via this synthetic "unlisted-" id prefix rather than silently
+    dropping the member, matching this module's established fallback
+    discipline (e.g. _language_choice_option_from_5etools' own
+    unrecognized-name branch)."""
+    match = _find_srd_equipment_item(name)
+    if match is not None:
+        return {"option_type": "counted_reference", "count": count,
+                "of": {"index": match["index"], "name": display_label or match["name"]}}
+    return {"option_type": "counted_reference", "count": count,
+            "of": {"index": f"unlisted-{_slug(name)}", "name": display_label or _tool_display_name(name)}}
+
+
+def _equipment_bundle_member_from_5etools(item) -> dict:
+    """Converts ONE member of an equipment package bundle (one entry of a
+    background's startingEquipment `a`/`b`/... list) into an
+    options_array 'counted_reference' sub-item — catalog/choices.py's
+    _bundle_label_and_id requires EVERY member of a "multiple" bundle to
+    be uniformly one option_type (counted_reference or ability_bonus, see
+    that function's own docstring), so every real member shape found
+    (Task 5 grounding, 2026-09-26, exhaustive over all 135 real
+    backgrounds' a/b/c/d-keyed bundles: plain item-name strings, {item},
+    {item, displayName}, {item, quantity}, {displayName, item, quantity},
+    {special}, {special, quantity}, {value} gold, {equipmentType},
+    {displayName, equipmentType}) is normalized to this ONE shape here,
+    never represented as its own distinct option_type.
+
+    Three of these ten shapes ({value} gold, {special} flavor-only gear
+    with no catalog equivalent, {equipmentType} category placeholders
+    like "an artisan's tool of your choice") synthesize a NON-CATALOG
+    "of" reference — a stable id that deliberately does not match
+    anything in catalog.items. This is a disclosed, known consumption-
+    path gap, not fixed inline here (this plan's established
+    disclose-and-defer rule, Task 1->1b/Task 2->2b precedent): the CHOICE
+    OFFERED to the player is fully accurate (correct label/flavor text
+    for every member), but engine/resolve.py's existing, UNCHANGED
+    _gather_equipped_items/_chosen_equipment (which build the final
+    sheet's granted-equipment list from a SELECTED choice) look every
+    compound id's "+"-separated parts up against catalog.items and
+    silently skip whichever parts don't resolve — so selecting a bundle
+    containing one of these three shapes correctly shows/offers the full
+    bundle but silently drops JUST that one synthetic member (never the
+    whole bundle) from the final sheet. Two separate root causes, both
+    genuinely pre-existing and outside this task's own files: (1) this
+    engine has NO currency/gold field anywhere at all (confirmed by
+    grep, Task 5 investigation — not even SRD's own bundled Acolyte's
+    starting_gold, {"quantity": 15, "unit": "gp"}, is ever read by
+    resolve.py), so a gold amount has nowhere real to go; (2) there is no
+    mechanism anywhere in this codebase for official_source.py to
+    register a NEW item into catalog.items (unlike languages, which
+    reference_data.py hand-maintains as open SRD content — equipment
+    items are the bundled SRD file's own closed 237-item list). See the
+    Task 5 report for the full disclosure."""
+    if isinstance(item, str):
+        name = item.split("|", 1)[0].strip()
+        return _counted_reference_for_item_name(name)
+
+    if "value" in item:
+        # Confirmed copper pieces, Task 5 grounding: every real value
+        # across all 135 backgrounds (27 distinct values, 100-5000) is
+        # exactly divisible by 100, and SRD's own bundled Acolyte pouch
+        # (containsValue 1500 in the raw 5etools data) matches SRD's own
+        # starting_gold of 15 gp exactly at a 100:1 ratio.
+        gp = item["value"] // 100
+        return {"option_type": "counted_reference", "count": 1,
+                "of": {"index": f"gp-{gp}", "name": f"{gp} GP"}}
+
+    if "equipmentType" in item:
+        label = item.get("displayName") or _EQUIPMENT_TYPE_LABELS.get(item["equipmentType"], item["equipmentType"])
+        return {"option_type": "counted_reference", "count": 1,
+                "of": {"index": f"category-{_slug(label)}", "name": label}}
+
+    if "special" in item:
+        label = item.get("displayName") or _sentence_case(item["special"])
+        return {"option_type": "counted_reference", "count": item.get("quantity", 1),
+                "of": {"index": f"flavor-{_slug(label)}", "name": label}}
+
+    # {"item": "name|source"}, optionally with "displayName" and/or "quantity".
+    name = item["item"].split("|", 1)[0].strip()
+    return _counted_reference_for_item_name(name, count=item.get("quantity", 1), display_label=item.get("displayName"))
+
+
+def _starting_equipment_options_from_5etools(raw: dict) -> list[dict]:
+    """Converts a background's `startingEquipment` field into SRD-shaped
+    `starting_equipment_options` envelopes (one per independent A/B-style
+    choice) — `resolve.py`'s existing, UNCHANGED `_equipment_choice_
+    templates` reads this field the exact same way for every background
+    (confirmed by re-reading it fresh, Task 5 investigation: it iterates
+    `starting_equipment_options` by index and calls the generic
+    `build_choice_template`, no background-specific branch at all), and
+    `catalog/choices.py`'s existing, UNCHANGED "multiple" option-bundling
+    mechanism (`build_choice_options`/`_bundle_label_and_id`) already
+    resolves an options_array of "multiple" bundles once every bundle
+    member is uniformly counted_reference — which
+    _equipment_bundle_member_from_5etools guarantees for every real shape
+    found (see that function's own docstring). Zero resolve.py/choices.py
+    changes needed for the CHOICE ITSELF to be offered and rendered
+    correctly — see this function's own docstring above for the separate,
+    disclosed gap in what happens AFTER a bundle containing a synthetic
+    member is selected.
+
+    `startingEquipment` is a LIST of entries (Task 5 grounding corrects
+    the plan's own "exactly one entry" assumption, 2026-09-26): 75/135
+    real backgrounds carry ONLY a `"_"`-keyed entry (fixed equipment, no
+    package choice at all — e.g. Anthropologist/ToA) and produce NO
+    envelope here at all (that background's `starting_equipment_options`
+    stays an empty list; its FIXED equipment, and every background's
+    `starting_gold`, remain separate, still-unpopulated placeholders —
+    disclosed, out of this task's own stated scope, see the Task 5
+    report). A record can also carry MORE THAN ONE independent a/b-keyed
+    entry (Athlete/MOT: pick a discus-or-ball, AND separately pick a
+    charm-or-trophy) — each a/b-keyed entry in the list produces its OWN
+    envelope, never flattened together into one bigger choice (that would
+    misrepresent two independent 2-option choices as one 4-option
+    choice). Key casing varies too: lowercase `a`/`b` (most records) or
+    uppercase `A`/`B` (2024-era XPHB-sourced records) — handled
+    case-insensitively; one record (Charlatan/PHB) has FOUR options
+    (`a`/`b`/`c`/`d`), handled generically rather than hardcoding 2."""
+    envelopes = []
+    for entry in raw.get("startingEquipment") or []:
+        bundle_keys = [k for k in entry if k.lower() in ("a", "b", "c", "d")]
+        if not bundle_keys:
+            continue
+        bundle_keys.sort(key=str.lower)
+        options = [
+            {"option_type": "multiple", "items": [_equipment_bundle_member_from_5etools(i) for i in entry[key]]}
+            for key in bundle_keys
+        ]
+        envelopes.append({
+            "choose": 1, "type": "equipment",
+            "from": {"option_set_type": "options_array", "options": options},
+        })
+    return envelopes
+
+
 def _background_from_5etools(raw: dict) -> dict | None:
     """Converts one raw 5etools background record into the SAME dict shape
     catalog/loader.py already produces for the bundled SRD Acolyte
@@ -1163,10 +1401,22 @@ def _background_from_5etools(raw: dict) -> dict | None:
     records) are now populated. `ability_bonus_options` (Task 4 — the
     2024-style weighted ability-score-improvement choice; see
     _ability_bonus_options_from_5etools_weighted_pair) is now populated
-    too. `starting_equipment`/`starting_gold`/`starting_equipment_options`
-    (equipment package choices) and `feats` are still deliberately left as
-    placeholders — separate follow-up tasks in this same plan (Tasks 5-6).
-    `feature` is left empty: engine/resolve.py never reads a
+    too. `starting_equipment_options` (Task 5 — the A/B-style starting
+    equipment PACKAGE CHOICE; see _starting_equipment_options_from_5etools
+    for the full shape grounding, including a disclosed gap in what
+    happens after a bundle with a synthetic/non-catalog member is
+    selected) is now populated. `starting_equipment` (the FIXED,
+    no-choice `"_"`-keyed equipment list 75/135 real backgrounds carry —
+    e.g. Anthropologist/ToA has ONLY this, no package choice at all) and
+    `starting_gold` are still deliberately left as placeholders — Task 5's
+    own brief scoped it to the package CHOICE specifically ("Starting
+    equipment package choice (A or B)"), not fixed-equipment/gold
+    conversion, so that real, disclosed gap (a background with no a/b/c/d
+    entry at all currently gets ZERO starting equipment, fixed or
+    chosen) is left for a follow-up task rather than folded in here
+    unannounced. `feats` is a placeholder too — a separate follow-up task
+    in this same plan (Task 6). `feature` is left empty: engine/resolve.py
+    never reads a
     background's `feature` field for anything mechanical today (confirmed
     by grep, Step 1) — SRD's own bundled backgrounds carry rich flavor
     text there that resolve.py still never consumes, so leaving it empty
@@ -1189,9 +1439,9 @@ def _background_from_5etools(raw: dict) -> dict | None:
         "starting_proficiency_choices": _proficiency_choices_from_5etools(raw),
         "language_options": language_options,
         "languages": fixed_languages,
-        "starting_equipment": [],  # Task 5
-        "starting_gold": None,  # Task 5
-        "starting_equipment_options": [],  # Task 5
+        "starting_equipment": [],  # deliberately still a placeholder — see docstring above (fixed/no-choice equipment, out of Task 5's own stated scope)
+        "starting_gold": None,  # deliberately still a placeholder — see docstring above
+        "starting_equipment_options": _starting_equipment_options_from_5etools(raw),
         "feature": {"name": "", "desc": []},  # not read mechanically by resolve.py today, see docstring above
         "ability_bonus_options": _ability_bonus_options_from_5etools_weighted_pair(raw.get("ability", [])),
         "source": raw.get("source", ""),

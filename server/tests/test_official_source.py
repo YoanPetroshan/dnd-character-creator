@@ -1014,3 +1014,191 @@ def test_all_60_real_ability_field_backgrounds_get_a_7_option_envelope():
     for bg in with_envelope:
         options = bg["ability_bonus_options"]["from"]["options"]
         assert len(options) == 7, bg["name"]
+
+
+# ---------------------------------------------------------------------------
+# Backgrounds (Phase 4b Task 5) — the starting equipment PACKAGE CHOICE
+# (A or B). Real shape grounded (2026-09-26) against the fetched
+# backgrounds.json via the brief's own dump command, then verified
+# EXHAUSTIVELY over all 135 real records (the brief's own "startingEquipment
+# is a list with exactly one entry" assumption does not hold — see below).
+#
+# `startingEquipment` is a LIST of entries, not always length 1: 75/135 real
+# records (e.g. Anthropologist/ToA) carry ONLY a `"_"`-keyed entry (fixed
+# equipment, no package choice) and correctly produce NO envelope here — see
+# test_background_with_only_fixed_equipment_gets_no_choice_envelope below.
+# Key casing varies: lowercase `a`/`b` (42 records) or uppercase `A`/`B` (34
+# records, 2024-era XPHB-sourced) — both handled. One record (Charlatan/PHB)
+# has FOUR options (`a`/`b`/`c`/`d`). One record (Athlete/MOT) carries TWO
+# independent a/b-keyed entries in its startingEquipment list — each must
+# become its OWN "choose 1 of 2" envelope, not merged into one "choose 1 of
+# 4" envelope (that would misrepresent two independent choices as one).
+#
+# Every real bundle-member shape found (10 total, exhaustive over every
+# a/b/c/d-keyed bundle in all 135 records) is normalized to a uniform
+# counted_reference sub-item so catalog/choices.py's EXISTING "multiple"
+# bundle mechanism (_bundle_label_and_id) resolves every bundle unmodified —
+# no choices.py changes needed. Three of those ten shapes ({"value": N}
+# gold, {"special": ...} flavor-only gear, {"equipmentType": ...} category
+# placeholders) synthesize a non-catalog reference; see
+# _equipment_bundle_member_from_5etools's own docstring, and the Task 5
+# report, for the disclosed consumption-path consequence (verified
+# end-to-end in test_resolve.py: the choice itself renders correctly, but a
+# synthetic member is silently dropped from the final sheet on selection,
+# same as this engine's pre-existing, total absence of any gold/currency
+# field at all — confirmed by grep, not something this task introduces).
+# ---------------------------------------------------------------------------
+
+def test_aberrant_heir_equipment_choice_is_a_two_option_bundle_choice():
+    # Aberrant Heir/EFA: bundle A = dagger, disguise kit, costume,
+    # traveler's clothes, 16 GP (1600 "value" = COPPER, confirmed: 1600 / 100
+    # = 16, matching SRD's own bundled Acolyte convention — its pouch
+    # "containsValue": 1500 in the raw 5etools data corresponds to SRD's own
+    # starting_gold of exactly 15 gp). Bundle B = 50 GP only (5000 value).
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["index"] == "aberrant-heir-efa")
+    envelopes = bg["starting_equipment_options"]
+    assert len(envelopes) == 1
+    envelope = envelopes[0]
+    assert envelope["choose"] == 1
+    assert envelope["type"] == "equipment"
+    assert envelope["from"]["option_set_type"] == "options_array"
+    options = envelope["from"]["options"]
+    assert len(options) == 2
+    bundle_a, bundle_b = options
+    assert bundle_a["option_type"] == "multiple"
+    assert bundle_b["option_type"] == "multiple"
+    a_ids = {i["of"]["index"] for i in bundle_a["items"]}
+    assert a_ids == {"dagger", "disguise-kit", "clothes-costume", "clothes-travelers", "gp-16"}
+    assert bundle_b["items"] == [
+        {"option_type": "counted_reference", "count": 1, "of": {"index": "gp-50", "name": "50 GP"}},
+    ]
+
+
+def test_gold_value_is_converted_from_copper_to_gold_pieces_not_left_as_copper():
+    # Getting the unit wrong makes every converted gold amount 100x wrong —
+    # explicitly called out by the brief as a risk to verify, not assume.
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["index"] == "aberrant-heir-efa")
+    options = bg["starting_equipment_options"][0]["from"]["options"]
+    gold_only = next(o for o in options if len(o["items"]) == 1)
+    assert gold_only["items"][0]["of"] == {"index": "gp-50", "name": "50 GP"}  # NOT "gp-5000"/"5000 GP"
+
+
+def test_uppercase_ab_keys_are_handled_the_same_as_lowercase():
+    # Acolyte/XPHB uses "A"/"B" (2024-era), not "a"/"b" (PHB-era) — confirmed
+    # empirically, Step 1.
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["index"] == "acolyte-xphb")
+    envelopes = bg["starting_equipment_options"]
+    assert len(envelopes) == 1
+    assert len(envelopes[0]["from"]["options"]) == 2
+
+
+def test_charlatan_phb_gets_four_options_not_hardcoded_two():
+    # Charlatan/PHB uses a/b/c/d, the one real 4-option record — handled
+    # generically, not by assuming every background has exactly 2 options.
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["index"] == "charlatan-phb")
+    options = bg["starting_equipment_options"][0]["from"]["options"]
+    assert len(options) == 4
+
+
+def test_athlete_mot_two_independent_ab_entries_become_two_separate_envelopes():
+    # Athlete/MOT carries TWO a/b-keyed entries in its startingEquipment
+    # list (pick a discus-or-ball, AND separately pick a charm-or-trophy) —
+    # must be two independent "choose 1 of 2" envelopes, never flattened
+    # into one "choose 1 of 4" envelope (which would let a player pick e.g.
+    # "discus + charm" as ONE option instead of two separate choices).
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["index"] == "athlete-mot")
+    envelopes = bg["starting_equipment_options"]
+    assert len(envelopes) == 2
+    for envelope in envelopes:
+        assert len(envelope["from"]["options"]) == 2
+    first_ids = {i["of"]["index"] for i in envelopes[0]["from"]["options"][0]["items"]}
+    second_ids = {i["of"]["index"] for i in envelopes[1]["from"]["options"][0]["items"]}
+    assert first_ids != second_ids
+
+
+def test_background_with_only_fixed_equipment_gets_no_choice_envelope():
+    # Anthropologist/ToA's startingEquipment has only a "_"-keyed (fixed,
+    # no-choice) entry — no a/b package choice at all. Its
+    # starting_equipment_options must stay an empty list, not a malformed
+    # or fabricated envelope.
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["index"] == "anthropologist-toa")
+    assert bg["starting_equipment_options"] == []
+
+
+def test_item_names_resolve_against_bundled_srd_equipment_ids_not_a_naive_slug():
+    # "traveler's clothes"/"costume" don't match a naive slug of their
+    # 5etools name against catalog.items (SRD's own ids are "clothes-
+    # travelers"/"clothes-costume" — reversed word order) — must resolve via
+    # a real name-based lookup, not silently mismatch or fall back to
+    # synthetic ids for items that DO exist in the SRD catalog.
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["index"] == "aberrant-heir-efa")
+    items = bg["starting_equipment_options"][0]["from"]["options"][0]["items"]
+    by_index = {i["of"]["index"]: i["of"]["name"] for i in items}
+    assert by_index["clothes-travelers"] == "Clothes, traveler's"
+    assert by_index["clothes-costume"] == "Clothes, costume"
+
+
+def test_unresolvable_item_name_gets_a_flagged_synthetic_reference_not_dropped():
+    # Knight of the Gauntlet/FRHoF references a plain "holy symbol" — the
+    # SRD equipment catalog only has holy symbols as an equipment_category
+    # (amulet/emblem/reliquary), never a generic "Holy Symbol" item, so this
+    # is genuinely unresolvable against catalog.items. Must still appear as
+    # a real, correctly-labeled bundle member (flagged via the "unlisted-"
+    # id prefix), never silently dropped from the bundle.
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["index"] == "knight-of-the-gauntlet-frhof")
+    items = bg["starting_equipment_options"][0]["from"]["options"][0]["items"]
+    holy_symbol = next(i for i in items if i["of"]["index"] == "unlisted-holy-symbol")
+    assert holy_symbol["of"]["name"] == "Holy Symbol"
+
+
+def test_equipment_type_category_placeholder_becomes_a_labeled_synthetic_reference():
+    # Artisan/XPHB's bundle A includes {"equipmentType": "toolArtisan"} — a
+    # nested "pick a specific artisan's tool" sub-choice smuggled inside an
+    # otherwise-flat bundle, which catalog/choices.py's "multiple" mechanism
+    # has no way to represent as a real nested choice (see
+    # _bundle_label_and_id's own docstring) — represented here as a single,
+    # clearly-labeled synthetic placeholder instead of silently dropping the
+    # whole bundle option.
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["index"] == "artisan-xphb")
+    items = bg["starting_equipment_options"][0]["from"]["options"][0]["items"]
+    tool = next(i for i in items if i["of"]["index"] == "category-artisans-tools")
+    assert tool["of"]["name"] == "Artisan's Tools"
+
+
+def test_quantity_is_carried_onto_the_counted_reference_not_dropped():
+    # Artisan/XPHB's bundle A includes {"item": "pouch|xphb", "quantity": 2}
+    # — the quantity must land on the sub-item's `count`, not be silently
+    # discarded (which would under-grant the bundle).
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["index"] == "artisan-xphb")
+    items = bg["starting_equipment_options"][0]["from"]["options"][0]["items"]
+    pouch = next(i for i in items if i["of"]["index"] == "pouch")
+    assert pouch["count"] == 2
+
+
+def test_every_real_bundle_member_is_uniformly_a_counted_reference():
+    # Exhaustive check: every real background's every equipment-choice
+    # bundle member must be option_type "counted_reference" — the ONE
+    # uniform shape catalog/choices.py's _bundle_label_and_id resolves for
+    # a "multiple" bundle. Any other option_type here would silently break
+    # that bundle's resolvability (_bundle_label_and_id returns None for a
+    # non-uniform bundle).
+    backgrounds = load_official_backgrounds(official_dir())
+    checked_any = False
+    for bg in backgrounds:
+        for envelope in bg["starting_equipment_options"]:
+            for option in envelope["from"]["options"]:
+                assert option["option_type"] == "multiple"
+                for item in option["items"]:
+                    assert item["option_type"] == "counted_reference", bg["name"]
+                    checked_any = True
+    assert checked_any  # sanity: real data was actually exercised
