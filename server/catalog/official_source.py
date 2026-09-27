@@ -1756,3 +1756,80 @@ def load_official_races(official_dir: Path) -> tuple[list[dict], list[dict], dic
             subraces.append(converted)
 
     return races, subraces, traits_by_index
+
+
+# --- Feats (Phase 4c-i) ---
+#
+# UNLIKE races/subraces/traits/backgrounds above, there is NO bundled SRD
+# feats file at all — the 2014 SRD has no feats mechanic — so
+# load_official_feats() has no SRD counterpart to merge against in
+# loader.py's load(): Catalog.feats is populated purely from this official
+# data, and is simply an empty dict when official data hasn't been fetched
+# on this machine (load_official_feats returns [] when feats.json is
+# missing, see below), not a partial merge.
+#
+# Step 1 grounding (2026-09-27, against the real fetched feats.json): 305
+# raw records, 0 carrying a "_copy" key — unlike races/backgrounds, this
+# dataset has no _copy/_mod reprint shorthand at all, so every record is
+# already complete and none are skipped for that reason (the `_copy` check
+# below is kept anyway, matching every other loader in this module, in case
+# a future data refresh introduces one). 47 feat names repeat across
+# sourcebooks (e.g. "Alert" in both PHB and XPHB), but EVERY repeat is a
+# distinct-source pair — confirmed exhaustively, not sampled, that no two
+# records share both the same name AND the same source — so the same
+# source-qualified index scheme races/backgrounds already use
+# ("alert-phb", "alert-xphb") is collision-free here too.
+
+
+def _feat_from_5etools(raw: dict) -> dict | None:
+    """Task 1 (this task) is scaffolding ONLY: the shape below carries every
+    field a later task in this same plan will populate (ability bonuses —
+    Task 2; proficiencies — Task 3; languages — Task 4; resistances/
+    immunities/senses — Task 5; expertise/saving-throw proficiencies/
+    prerequisite checking — Task 6), each left as an empty/None placeholder
+    for now, mirroring the exact scaffold-first-populate-later pattern both
+    Phase 4a's load_official_races() and Phase 4b's load_official_backgrounds()
+    used for their own first tasks. `entries` is carried through raw and
+    unconverted — display-only for now, same "pure data pass-through" scope
+    line _damage_modifiers_from_5etools' docstring draws elsewhere in this
+    module."""
+    if "_copy" in raw:
+        return None
+    source = (raw.get("source") or "unknown").lower()
+    slug = _slug(raw["name"])
+    index = f"{slug}-{source}"
+
+    return {
+        "index": index,
+        "name": raw["name"],
+        "source": raw.get("source", ""),
+        "category": raw.get("category", ""),
+        "entries": raw.get("entries", []),
+        "prerequisite": raw.get("prerequisite", []),  # Task 6 (prerequisite checking)
+        "ability_bonuses": [],  # Task 2
+        "ability_bonus_options": None,  # Task 2
+        "proficiencies": [],  # Task 3 — skill/tool/weapon/armor, fixed grants
+        "proficiency_choices": None,  # Task 3
+        "languages": [],  # Task 4
+        "language_options": None,  # Task 4
+        "resist": [],  # Task 5
+        "immune": [],  # Task 5
+        "condition_immune": [],  # Task 5
+        "senses": {},  # Task 5
+        "expertise_skills": [],  # Task 6
+        "saving_throw_proficiencies": [],  # Task 6
+    }
+
+
+def load_official_feats(official_dir: Path) -> list[dict]:
+    feats_path = official_dir / "feats.json"
+    if not feats_path.exists():
+        return []
+    with open(feats_path, encoding="utf-8") as f:
+        data = json.load(f)
+    feats = []
+    for raw in data.get("feat", []):
+        converted = _feat_from_5etools(raw)
+        if converted is not None:
+            feats.append(converted)
+    return feats

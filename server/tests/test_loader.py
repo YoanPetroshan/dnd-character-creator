@@ -18,11 +18,13 @@ def test_load_returns_expected_counts():
         assert len(catalog.subraces) >= 4
         assert len(catalog.traits) >= 38
         assert len(catalog.backgrounds) >= 100  # 1 SRD + ~135 official (Phase 4b Task 1)
+        assert len(catalog.feats) > 250  # official-only, no SRD merge — 2014 SRD has no feats (Phase 4c-i Task 1)
     else:
         assert len(catalog.races) == 9
         assert len(catalog.subraces) == 4
         assert len(catalog.traits) == 38
         assert len(catalog.backgrounds) == 1
+        assert len(catalog.feats) == 0  # no bundled SRD feats file at all — trivially empty, not a partial merge
 
 
 def test_classes_indexed_by_srd_index():
@@ -104,3 +106,15 @@ def test_spells_indexed_by_index():
     assert len(catalog.spells) == 319
     assert catalog.spells["fireball"]["name"] == "Fireball"
     assert catalog.spells["fireball"]["level"] == 3
+
+
+def test_feats_indexed_by_source_qualified_index_official_only_no_srd_merge():
+    # 2014 SRD has no feats mechanic at all, unlike races/subraces/traits/
+    # backgrounds, so Catalog.feats has no bundled-file half of the merge —
+    # it's populated purely from official sourcebook data (Phase 4c-i Task 1).
+    catalog = load()
+    if not has_official():
+        assert catalog.feats == {}
+        return
+    assert "alert-phb" in catalog.feats
+    assert catalog.feats["alert-phb"]["name"] == "Alert"

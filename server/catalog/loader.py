@@ -35,6 +35,7 @@ class Catalog:
     backgrounds: dict[str, dict] = field(default_factory=dict)
     items: dict[str, dict] = field(default_factory=dict)
     spells: dict[str, dict] = field(default_factory=dict)
+    feats: dict[str, dict] = field(default_factory=dict)
 
     def class_level_row(self, class_id: str, level: int) -> dict | None:
         for row in self.levels:
@@ -55,14 +56,18 @@ class Catalog:
 
 
 def load() -> Catalog:
-    from .official_source import load_official_races, load_official_backgrounds, official_dir
+    from .official_source import (
+        load_official_races, load_official_backgrounds, load_official_feats, official_dir,
+    )
 
     official_races, official_subraces, official_traits = load_official_races(official_dir())
     official_backgrounds = load_official_backgrounds(official_dir())
+    official_feats = load_official_feats(official_dir())
     races = {**_index_by(_load("5e-SRD-Races.json")), **_index_by(official_races)}
     subraces = {**_index_by(_load("5e-SRD-Subraces.json")), **_index_by(official_subraces)}
     traits = {**_index_by(_load("5e-SRD-Traits.json")), **official_traits}  # official_traits is already a dict — see load_official_races' own return type
     backgrounds = {**_index_by(_load("5e-SRD-Backgrounds.json")), **_index_by(official_backgrounds)}
+    feats = _index_by(official_feats)  # NO SRD merge — 2014 SRD has no feats at all (Phase 4c-i Task 1)
 
     return Catalog(
         classes=_index_by(_load("5e-SRD-Classes.json")),
@@ -75,4 +80,5 @@ def load() -> Catalog:
         backgrounds=backgrounds,
         items=_index_by(_load("5e-SRD-Equipment.json")),
         spells=_index_by(_load("5e-SRD-Spells.json")),
+        feats=feats,
     )

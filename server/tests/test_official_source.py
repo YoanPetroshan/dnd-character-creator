@@ -4,7 +4,9 @@ import pytest
 # the one place that fixes sys.path so `chargen` (a sibling of server/,
 # not a subpackage) is importable at all; importing chargen.sources
 # directly here would fail with ModuleNotFoundError before that fix runs.
-from catalog.official_source import official_dir, has_official, load_official_races, load_official_backgrounds
+from catalog.official_source import (
+    official_dir, has_official, load_official_races, load_official_backgrounds, load_official_feats,
+)
 
 pytestmark = pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 
@@ -1372,3 +1374,71 @@ def test_feats_multiple_true_entries_are_alternatives_not_a_triple_grant():
     ruined = next(b for b in backgrounds if b["index"] == "ruined-bmt")
     assert ruined["feats"] == []
     assert ruined["feat_options"] == ["alert", "skilled", "tough"]
+
+
+# --- load_official_feats() scaffolding (Phase 4c-i Task 1) ---
+#
+# There is NO bundled SRD feats file at all — the 2014 SRD has no feats
+# mechanic — so Catalog.feats (loader.py) is populated ONLY from this
+# official data, with no SRD merge step, unlike races/backgrounds/traits.
+#
+# Step 1 grounding (2026-09-27, against the real fetched feats.json):
+# 305 raw records, 0 carrying a "_copy" key (unlike races/backgrounds,
+# this dataset has no _copy/_mod reprints at all — every record is
+# already a complete, standalone entry), so all 305 survive conversion.
+# 47 names repeat, but EVERY repeat is a distinct-source reprint pair
+# (e.g. Alert/PHB + Alert/XPHB) — no same-source collision exists, so the
+# source-qualified index scheme already used for races/backgrounds is
+# collision-free here too, confirmed exhaustively, not sampled.
+
+
+def test_loads_a_real_feat_with_a_source_qualified_id():
+    feats = load_official_feats(official_dir())
+    alert = next(f for f in feats if f["name"] == "Alert")
+    assert alert["index"].endswith("-phb") or alert["index"].endswith("-xphb")  # ground the real source
+
+
+def test_total_feat_count_matches_real_data():
+    feats = load_official_feats(official_dir())
+    assert len(feats) > 250  # sanity: most of the 305 real non-copy records survived (all 305 do, confirmed)
+
+
+def test_category_is_preserved():
+    feats = load_official_feats(official_dir())
+    origin_feats = [f for f in feats if f.get("category") == "O"]
+    assert len(origin_feats) == 35  # 35 real Origin-category feats, confirmed exhaustively (Step 1)
+
+
+def test_no_same_source_name_collides_on_index():
+    # 47 real feat names repeat across sourcebooks (e.g. Alert PHB/XPHB),
+    # but never within the SAME source — confirmed exhaustively, Step 1.
+    # Source-qualified indexes must therefore all be unique.
+    feats = load_official_feats(official_dir())
+    indexes = [f["index"] for f in feats]
+    assert len(indexes) == len(set(indexes))
+
+
+def test_placeholder_fields_present_but_empty_scaffolding_only():
+    # Task 1 is scaffolding ONLY — ability bonuses/proficiencies/languages/
+    # resistances/expertise/prerequisites are populated by Tasks 2-6, not
+    # here. This test locks in the shape without asserting real content.
+    feats = load_official_feats(official_dir())
+    alert = next(f for f in feats if f["index"] == "alert-phb")
+    assert alert["ability_bonuses"] == []
+    assert alert["ability_bonus_options"] is None
+    assert alert["proficiencies"] == []
+    assert alert["proficiency_choices"] is None
+    assert alert["languages"] == []
+    assert alert["language_options"] is None
+    assert alert["resist"] == []
+    assert alert["immune"] == []
+    assert alert["condition_immune"] == []
+    assert alert["senses"] == {}
+    assert alert["expertise_skills"] == []
+    assert alert["saving_throw_proficiencies"] == []
+    assert isinstance(alert["prerequisite"], list)
+    assert isinstance(alert["entries"], list) and len(alert["entries"]) > 0
+
+
+def test_missing_official_feats_data_returns_empty_list_not_crash(tmp_path):
+    assert load_official_feats(tmp_path) == []
