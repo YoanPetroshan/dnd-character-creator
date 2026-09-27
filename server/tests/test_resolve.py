@@ -1097,18 +1097,89 @@ def test_selecting_a_gold_bundle_member_reaches_the_sheet(catalog):
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_acolyte_phb_fixed_equipment_and_gold_reach_the_sheet(catalog):
+    # Finding 1 of the final whole-branch review (2026-09-27): Acolyte
+    # (PHB, sourcebook variant, id "acolyte-phb")'s startingEquipment has
+    # ONLY a "_"-keyed fixed entry (no a/b/c/d package choice at all is
+    # relevant to gold here — its a/b choice is prayer book vs. prayer
+    # wheel, neither of which carries gold). Before this fix,
+    # official_source.py hardcoded starting_equipment/starting_gold to
+    # []/None regardless of real data, so this record's sheet showed
+    # startingGold == 0 (a WRONG, actively misleading zero — the field
+    # didn't even exist before this whole plan) and no fixed equipment at
+    # all. The real published Acolyte text grants 15 gp (a pouch
+    # containing 1500 "copper" in the raw 5etools data, the same 100:1
+    # copper-to-gp ratio Task 5 already established) plus a holy symbol,
+    # sticks of incense, vestments, and a set of common clothes.
+    draft = _fighter_acolyte_human_draft(sources=["phb"], background={"id": "acolyte-phb", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["startingGold"] == 15
+    granted_ids = {g["itemId"] for g in resolution["sheet"]["equipment"]["granted"]}
+    assert "clothes-common" in granted_ids
+    assert resolution["sheet"]["equipment"]["narrativeItems"] == [
+        "holy symbol (a gift to you when you entered the priesthood)",
+        "Sticks of incense",
+        "Vestments",
+    ]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_rewarded_bmt_feat_alternatives_do_not_all_land_in_granted_feats(catalog):
+    # Finding 2 of the final whole-branch review (2026-09-27): Rewarded/
+    # BMT's real text is "You gain the Lucky, Magic Initiate, or Skilled
+    # feat (your choice)" — a choice of one, not a simultaneous grant of
+    # all three. Before this fix, sheet.grantedFeats would have been
+    # ["lucky", "magic-initiate", "skilled"] (inert today, but silently
+    # over-granting once Phase 4c starts consuming this data for real).
+    draft = _fighter_acolyte_human_draft(sources=["phb", "bmt"], background={"id": "rewarded-bmt", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    assert resolution["sheet"]["grantedFeats"] == []
+    assert resolution["sheet"]["featOptions"] == ["lucky", "magic-initiate", "skilled"]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_clan_crafter_language_choice_does_not_grant_a_free_wildcard_pick(catalog):
+    # Finding 2 of the final whole-branch review (2026-09-27): Clan
+    # Crafter/SCAG's real text is "Dwarvish or one of your choice if you
+    # already speak Dwarvish" — a single, conditionally-substituted grant,
+    # not Dwarvish PLUS an unconditional free pick. Before this fix, this
+    # background would also have offered a "Languages" Choice (any
+    # language, count 1) alongside the fixed Dwarvish grant.
+    draft = _fighter_acolyte_human_draft(sources=["phb", "scag"], background={"id": "clan-crafter-scag", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    assert "dwarvish" in resolution["sheet"]["proficiencies"]["languages"]
+    language_choices = [c for c in resolution["choices"] if c["id"] == "background:clan-crafter-scag:languages"]
+    assert language_choices == []
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 def test_flavor_bundle_member_shows_up_as_narrative_text_not_silently_dropped(catalog):
     # Acolyte (PHB, sourcebook variant, id "acolyte-phb")'s own equipment
     # choice (confirmed live) is "book" (a real catalog item, "prayer
     # book") vs. "flavor-prayer-wheel" (a synthetic flavor-text member,
     # display label "Prayer wheel") — selecting the flavor option must
     # surface its label in narrativeItems, not silently vanish.
+    #
+    # Acolyte/PHB's FIXED "_"-keyed list (holy symbol, incense, vestments —
+    # see test_acolyte_phb_fixed_equipment_and_gold_reach_the_sheet below,
+    # Finding 1 of the final whole-branch review) now ALSO contributes its
+    # own narrative items unconditionally, ahead of whatever the player
+    # separately selected — this test's expected list grew to include them
+    # (it used to assert just ["Prayer wheel"], back when the fixed list
+    # contributed nothing at all).
     draft = _fighter_acolyte_human_draft(sources=["phb"], background={"id": "acolyte-phb", "choices": {}})
     resolution = resolve(draft, catalog)
     equip_cid = next(c["id"] for c in resolution["choices"] if c["id"] == "background:acolyte-phb:equipment-choice-0")
     draft["background"]["choices"][equip_cid] = ["flavor-prayer-wheel"]
     resolution2 = resolve(draft, catalog)
-    assert resolution2["sheet"]["equipment"]["narrativeItems"] == ["Prayer wheel"]
+    assert resolution2["sheet"]["equipment"]["narrativeItems"] == [
+        "holy symbol (a gift to you when you entered the priesthood)",
+        "Sticks of incense",
+        "Vestments",
+        "Prayer wheel",
+    ]
     # Confirm it's not ALSO silently added to granted/chosen as a fake item.
     assert "flavor-prayer-wheel" not in {c["itemId"] for c in resolution2["sheet"]["equipment"]["chosen"]}
 

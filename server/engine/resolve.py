@@ -1196,6 +1196,16 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     selected_gold, narrative_items = _selected_gold_and_narrative_items(equipment_choices)
     starting_gold = fixed_gold + selected_gold
 
+    # bg["starting_narrative_items"] (Finding 1 of the final whole-branch
+    # review, official_source.py's _fixed_starting_equipment_from_5etools)
+    # carries the FIXED "_"-keyed list's own flavor/category/no-catalog-
+    # match members (e.g. Acolyte/PHB's holy symbol, incense, vestments) —
+    # previously narrative_items only ever came from a SELECTED
+    # equipment-choice bundle member. Fixed items are prepended so they
+    # read as "always granted" ahead of whatever the player separately
+    # chose.
+    narrative_items = list(bg.get("starting_narrative_items", [])) + narrative_items if bg else narrative_items
+
     def _spell_summaries(choice: dict | None) -> list[dict]:
         if not choice:
             return []
@@ -1499,6 +1509,14 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # innate_spells' own "always present, empty when absent" convention
     # just above.
     granted_feats = list(bg.get("feats", [])) if bg else []
+    # Finding 2 of the final whole-branch review (2026-09-27): a background
+    # whose real `feats` data is an "alternatives" grant (Rewarded/Ruined,
+    # BMT — "gain Lucky, Magic Initiate, or Skilled, your choice") now
+    # contributes nothing to `granted_feats` and instead surfaces its
+    # candidates here, kept distinct from an actual grant for the same
+    # inert-pass-through reason `feat_options` itself exists in
+    # official_source.py — see that field's own docstring.
+    feat_options = list(bg.get("feat_options", [])) if bg else []
 
     sheet = {
         "name": draft.get("name") or "",
@@ -1535,6 +1553,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "conditionImmunities": condition_immunities,
         "innateSpells": innate_spells,
         "grantedFeats": granted_feats,
+        "featOptions": feat_options,
     }
 
     return {

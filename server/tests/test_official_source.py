@@ -850,16 +850,23 @@ def test_enumerated_named_list_language_choice_with_other_handled_sanely():
 
 
 def test_fixed_grant_combined_with_a_separate_any_standard_entry():
-    # Clan Crafter/SCAG: [{"dwarvish": True}, {"anyStandard": 1}] — a
-    # fixed grant and a wildcard choice as TWO SEPARATE outer-list entries
-    # (mirroring races' own Aetherborn-style fixed+choice precedent, Phase
-    # 4a Task 2, that the brief points at).
+    # Clan Crafter/SCAG: [{"dwarvish": True}, {"anyStandard": 1}] — a fixed
+    # grant and a wildcard choice as TWO SEPARATE outer-list entries.
+    # CORRECTED by Finding 2 of the final whole-branch review (2026-09-27):
+    # this used to assert the additive reading (fixed Dwarvish AND a free
+    # wildcard pick), matching this module's PREVIOUS docstring claim for
+    # this exact record — that claim was wrong. Clan Crafter's real
+    # published "Languages:" text is "Dwarvish or one of your choice if
+    # you already speak Dwarvish": a single grant, conditionally
+    # substituted, not an additional pick stacked on top. Only the fixed
+    # Dwarvish grant is kept; no language_options envelope is offered at
+    # all (see test_fixed_grant_combined_with_any_standard_on_the_same_entry
+    # below for the genuinely-additive same-entry shape, Giant Foundling,
+    # which is unaffected by this correction).
     backgrounds = load_official_backgrounds(official_dir())
     clan_crafter = next(b for b in backgrounds if b["index"] == "clan-crafter-scag")
     assert clan_crafter["languages"] == [{"index": "dwarvish", "name": "Dwarvish", "url": ""}]
-    envelope = clan_crafter["language_options"]
-    assert envelope["choose"] == 1
-    assert envelope["from"]["option_set_type"] == "resource_list"
+    assert clan_crafter["language_options"] is None
 
 
 def test_fixed_grant_combined_with_any_standard_on_the_same_entry():
@@ -1205,6 +1212,76 @@ def test_every_real_bundle_member_is_uniformly_a_counted_reference():
 
 
 # ---------------------------------------------------------------------------
+# Backgrounds (final whole-branch review, Finding 1, 2026-09-27) — the
+# FIXED, no-choice "_"-keyed startingEquipment list converts into real
+# starting_equipment/starting_gold/starting_narrative_items instead of the
+# hardcoded []/None placeholders Task 5 deliberately left behind. See
+# _fixed_starting_equipment_from_5etools' own docstring for the full shape
+# grounding.
+# ---------------------------------------------------------------------------
+
+def test_acolyte_phb_fixed_list_produces_real_equipment_gold_and_narrative():
+    # Acolyte/PHB's "_" list (confirmed real, 2026-09-27): a holy symbol
+    # (no SRD catalog match — a real item, but treated as narrative, same
+    # as a flavor/category placeholder), 5x sticks of incense (flavor),
+    # vestments (flavor), common clothes (a real catalog match), and a
+    # pouch containing 1500 "copper" (15 gp).
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["index"] == "acolyte-phb")
+    assert bg["starting_equipment"] == [
+        {"equipment": {"index": "clothes-common", "name": "Clothes, common"}, "quantity": 1},
+    ]
+    assert bg["starting_gold"] == {"quantity": 15, "unit": "gp"}
+    assert bg["starting_narrative_items"] == [
+        "holy symbol (a gift to you when you entered the priesthood)",
+        "Sticks of incense",
+        "Vestments",
+    ]
+
+
+def test_background_with_only_fixed_equipment_gets_real_equipment_not_a_placeholder():
+    # Anthropologist/ToA carries ONLY a "_"-keyed entry (no a/b package
+    # choice at all — see test_background_with_only_fixed_equipment_gets_
+    # no_choice_envelope above, which covers starting_equipment_options'
+    # own, unaffected, empty-list behavior). Before this fix this
+    # background got ZERO starting equipment and ZERO gold, fixed or
+    # chosen — sanity-checking that it now gets SOMETHING real.
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["index"] == "anthropologist-toa")
+    assert bg["starting_equipment_options"] == []  # unaffected by this fix
+    assert bg["starting_gold"] is not None
+    assert bg["starting_gold"]["quantity"] > 0
+
+
+def test_multiple_underscore_entries_in_one_record_are_all_collected():
+    # Prismari Student/SCC (confirmed real, 2026-09-27): TWO separate
+    # "_"-keyed entries in its startingEquipment list — one BEFORE its
+    # artisan's-tools-or-instrument a/b choice (ink + ink pen), one AFTER
+    # it (a school uniform, flavor, + a pouch containing 1000 copper =
+    # 10gp). Both must be collected, not just the first found.
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["index"] == "prismari-student-scc")
+    equipment_ids = {e["equipment"]["index"] for e in bg["starting_equipment"]}
+    assert equipment_ids == {"ink-1-ounce-bottle", "ink-pen"}
+    assert bg["starting_gold"] == {"quantity": 10, "unit": "gp"}
+    assert bg["starting_narrative_items"] == ["School uniform"]
+
+
+def test_contains_value_pouch_shape_converts_to_gold_same_as_bare_value():
+    # The "_"-only gold shape ({"item": "pouch|phb", "containsValue": N} /
+    # {"special": "purse", "containsValue": N}) must resolve to the SAME
+    # synthetic gp-N reference the a/b choice bundles' bare {"value": N}
+    # shape already produces (Task 5) — verified directly against
+    # _equipment_bundle_member_from_5etools, not just through the
+    # higher-level fixed-equipment conversion above.
+    from catalog.official_source import _equipment_bundle_member_from_5etools
+    pouch_member = _equipment_bundle_member_from_5etools({"item": "pouch|phb", "containsValue": 1500})
+    assert pouch_member["of"]["index"] == "gp-15"
+    purse_member = _equipment_bundle_member_from_5etools({"special": "purse", "containsValue": 2000})
+    assert purse_member["of"]["index"] == "gp-20"
+
+
+# ---------------------------------------------------------------------------
 # Backgrounds (Phase 4b Task 6) — inert feat storage. Real shape confirmed
 # against the fetched backgrounds.json (2026-09-27): `feats` is a list of
 # single-key boolean-map dicts, `{"<feat-name>|<source>": True}`, the SAME
@@ -1222,6 +1299,13 @@ def test_every_real_bundle_member_is_uniformly_a_counted_reference():
 # needed. This is a disclosed, deliberate exclusion (feats stay inert, no
 # catalog to resolve a wildcard against), not a dropped grant of a kind
 # this task claims to produce.
+#
+# CORRECTED by Finding 2 of the final whole-branch review (2026-09-27):
+# `_feats_from_5etools` now returns (feats, feat_options) instead of a
+# single list — see that function's own docstring. `feats` stays a
+# single-element fixed grant for the 69/71 real records with exactly one
+# True-valued entry (every test below except the multi-entry one), and
+# `feat_options` is empty for all of them.
 # ---------------------------------------------------------------------------
 
 def test_feats_boolean_map_becomes_a_plain_list_of_stripped_feat_ids():
@@ -1230,6 +1314,7 @@ def test_feats_boolean_map_becomes_a_plain_list_of_stripped_feat_ids():
     backgrounds = load_official_backgrounds(official_dir())
     bg = next(b for b in backgrounds if b["index"] == "aberrant-heir-efa")
     assert bg["feats"] == ["aberrant-dragonmark"]
+    assert bg["feat_options"] == []
 
 
 def test_feats_with_no_field_at_all_gets_an_empty_list():
@@ -1239,6 +1324,7 @@ def test_feats_with_no_field_at_all_gets_an_empty_list():
     # used here to isolate the no-field case).
     bg = next(b for b in backgrounds if b["index"] == "acolyte-phb")
     assert bg["feats"] == []
+    assert bg["feat_options"] == []
 
 
 def test_feats_anyfromcategory_wildcard_is_excluded_not_crashed_on():
@@ -1249,11 +1335,25 @@ def test_feats_anyfromcategory_wildcard_is_excluded_not_crashed_on():
     backgrounds = load_official_backgrounds(official_dir())
     bg = next(b for b in backgrounds if b["index"] == "haunted-one-rhw")
     assert bg["feats"] == ["survivor"]
+    assert bg["feat_options"] == []
 
 
-def test_feats_multiple_fixed_grants_all_land_in_the_list():
-    # Rewarded/BMT grants three feats at once (Lucky, Magic Initiate,
-    # Skilled) — confirmed empirically.
+def test_feats_multiple_true_entries_are_alternatives_not_a_triple_grant():
+    # Rewarded/BMT's real published text is "You gain the Lucky, Magic
+    # Initiate, or Skilled feat (your choice)" — a CHOICE of one, not a
+    # simultaneous grant of all three. CORRECTED by Finding 2 of the final
+    # whole-branch review (2026-09-27): this test used to assert
+    # bg["feats"] == ["lucky", "magic-initiate", "skilled"] (all three
+    # granted at once), matching Task 6's original always-additive
+    # behavior — that behavior over-granted. Now `feats` stays empty (no
+    # unconditional grant) and the three candidates land in the new
+    # `feat_options` field instead. Ruined/BMT (Alert/Skilled/Tough) is the
+    # identical shape.
     backgrounds = load_official_backgrounds(official_dir())
     bg = next(b for b in backgrounds if b["index"] == "rewarded-bmt")
-    assert bg["feats"] == ["lucky", "magic-initiate", "skilled"]
+    assert bg["feats"] == []
+    assert bg["feat_options"] == ["lucky", "magic-initiate", "skilled"]
+
+    ruined = next(b for b in backgrounds if b["index"] == "ruined-bmt")
+    assert ruined["feats"] == []
+    assert ruined["feat_options"] == ["alert", "skilled", "tough"]

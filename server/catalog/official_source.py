@@ -240,6 +240,33 @@ def _proficiencies_from_5etools(race_raw: dict) -> list[dict]:
     special-case those key names (confirmed empirically: no real entry's
     value is anything other than True, a dict, or an int).
 
+    DISCLOSED, DELIBERATE SIMPLIFICATION (named explicitly by Finding 2 of
+    the final whole-branch review, 2026-09-27, for CONSISTENCY with how
+    _feats_from_5etools/_language_grants_from_5etools now handle their own
+    "multiple entries means alternatives, not simultaneous" cases): this
+    function and _proficiency_choices_from_5etools below both index
+    `toolProficiencies` (and every other of these four fields) with a bare
+    `[0]`, reading only the FIRST outer-list entry. For races and for
+    every real background's toolProficiencies except one, that's a
+    no-op — the field is always length-1 in real data (Step 1's own
+    confirmation above). The one real exception is House Agent/ERLW's
+    background, whose toolProficiencies is a 12-entry list, one pair per
+    Eberron dragonmarked house (confirmed 2026-09-27) — 5etools' own
+    "alternatives, not simultaneous" convention again, exactly like
+    Rewarded/Ruined's feats and Clan Crafter's languages, but this ONE
+    real case is deliberately NOT resolved the same way those two were:
+    which of the 12 pairs actually applies depends on which dragonmarked
+    house the player's character belongs to, narrative context this data
+    model has no slot for at all (unlike feats/languages, where "grant
+    nothing mechanical, disclose the choice" or "keep just the one real
+    fixed grant" were both clean, context-free resolutions). So this
+    keeps the existing `[0]` behavior (silently correct for every record
+    but this one, silently wrong — always resolves to House Cannith's
+    pair regardless of the player's actual house — for House Agent) but
+    now DISCLOSED here rather than silent, matching this project's
+    "disclose rather than silently drop/guess" discipline even where the
+    underlying narrow gap isn't itself being fixed.
+
     Skill ids get the "skill-" prefix + hyphenation
     reference_data.SKILL_ABILITY/SKILL_NAMES already use (e.g.
     "skill-intimidation") — resolve.py's existing trait-proficiency-
@@ -520,7 +547,12 @@ def _proficiency_choices_from_5etools(raw: dict) -> list[dict]:
     for Vizier/PSA's simultaneous double-wildcard, confirmed real) via
     _background_tool_choice_envelopes_from_5etools above, which IS
     background-specific — see that function's own docstring for why races'
-    version can't be reused as-is here."""
+    version can't be reused as-is here.
+
+    Reads only entry `[0]` of `toolProficiencies` too, the SAME disclosed,
+    deliberate simplification _proficiencies_from_5etools' own docstring
+    explains in full (House Agent/ERLW's 12 narrative-context-dependent
+    dragonmarked-house alternatives) — not repeated here."""
     skill_entry = (raw.get("skillProficiencies") or [{}])[0]
     tool_entry = (raw.get("toolProficiencies") or [{}])[0]
 
@@ -1139,11 +1171,31 @@ def _language_grants_from_5etools(raw: dict) -> tuple[list[dict], dict | None]:
         entry and become a plain options_array envelope, the same
         mechanism every other enumerated choice in this module already
         uses.
-    Multiple dict entries in the outer list combine ADDITIVELY (e.g. Clan
-    Crafter/SCAG: {"dwarvish": True} + {"anyStandard": 1} as TWO separate
-    list entries — fixed Dwarvish AND a free pick), mirroring races' own
-    Aetherborn-style fixed+choice precedent (Phase 4a Task 2) the brief
-    points at.
+    Multiple dict entries in the outer list do NOT always combine
+    additively — CORRECTED by Finding 2 of the final whole-branch review
+    (2026-09-27), which disproved this docstring's own previous claim
+    that Clan Crafter/SCAG's {"dwarvish": True} + {"anyStandard": 1}, as
+    TWO separate list entries, means "fixed Dwarvish AND a free pick".
+    Clan Crafter's real published "Languages:" text (read directly off
+    its own `entries`, not inferred) is "Dwarvish or one of your choice
+    if you already speak Dwarvish" — a SINGLE grant, conditionally
+    SUBSTITUTED, not an additional pick stacked on top. Confirmed
+    empirically that Clan Crafter is the ONLY real background whose
+    languageProficiencies has more than one OUTER-LIST entry at all (every
+    other multi-key combination, e.g. Giant Foundling/BGG below, packs
+    everything onto a SINGLE dict entry instead) — so this correction
+    changes behavior for exactly the one record it was wrong about, and
+    cannot affect any other real record. The distinguishing signal used
+    below: when a SEPARATE list entry contributes ONLY a fixed grant (no
+    wildcard/choose of its own on that same entry) and another separate
+    entry contributes a wildcard/choose, that split-across-entries shape
+    reads as "X, or Y if condition" — only the fixed grant is kept, the
+    wildcard is dropped entirely. A fixed grant COMBINED WITH a wildcard
+    on the SAME dict entry (Giant Foundling/BGG: {"giant": True,
+    "anyStandard": 1}, real text "Giant AND one other language of your
+    choice") is unaffected by this change and still combines additively,
+    exactly as before — see
+    test_fixed_grant_combined_with_any_standard_on_the_same_entry.
 
     KNOWN, DISCLOSED DATA-FIDELITY GAP (found during this task, 2026-09-26
     — NOT one of the brief's three claimed shapes, and NOT a resolve.py
@@ -1183,10 +1235,12 @@ def _language_grants_from_5etools(raw: dict) -> tuple[list[dict], dict | None]:
     choose_count = 0
     choose_options: list[dict] = []
     saw_choice = False
+    saw_fixed_only_entry = False  # a separate list entry granting a fixed language with no wildcard/choose of its own on that same entry — see docstring
 
     for entry in raw.get("languageProficiencies") or []:
         if not isinstance(entry, dict):
             continue
+        entry_granted_fixed = False
         for key, value in entry.items():
             if key in ("anyStandard", "choose"):
                 continue
@@ -1194,17 +1248,31 @@ def _language_grants_from_5etools(raw: dict) -> tuple[list[dict], dict | None]:
                 lang = _language_ref_from_key(key)
                 if lang is not None:
                     fixed.append(lang)
+                    entry_granted_fixed = True
 
+        entry_has_wildcard = False
         any_n = entry.get("anyStandard")
         if isinstance(any_n, int) and not isinstance(any_n, bool):
             any_count += any_n
             saw_choice = True
+            entry_has_wildcard = True
 
         choose = entry.get("choose")
         if isinstance(choose, dict):
             choose_count += choose.get("count", 1)
             saw_choice = True
+            entry_has_wildcard = True
             choose_options.extend(_language_choice_option_from_5etools(name) for name in choose.get("from", []))
+
+        if entry_granted_fixed and not entry_has_wildcard:
+            saw_fixed_only_entry = True
+
+    if saw_fixed_only_entry and saw_choice:
+        # "X, or Y if you already know X" (Clan Crafter/SCAG, the only real
+        # record this fires for) — the wildcard/enumerated portion read
+        # from a DIFFERENT entry than the fixed grant is a conditional
+        # SUBSTITUTE for it, not an additional pick — see docstring above.
+        return fixed, None
 
     if not saw_choice:
         return fixed, None
@@ -1290,13 +1358,31 @@ def _equipment_bundle_member_from_5etools(item) -> dict:
         name = item.split("|", 1)[0].strip()
         return _counted_reference_for_item_name(name)
 
-    if "value" in item:
-        # Confirmed copper pieces, Task 5 grounding: every real value
+    if "value" in item or "containsValue" in item:
+        # Confirmed copper pieces, Task 5 grounding: every real "value"
         # across all 135 backgrounds (27 distinct values, 100-5000) is
         # exactly divisible by 100, and SRD's own bundled Acolyte pouch
         # (containsValue 1500 in the raw 5etools data) matches SRD's own
-        # starting_gold of 15 gp exactly at a 100:1 ratio.
-        gp = item["value"] // 100
+        # starting_gold of 15 gp exactly at a 100:1 ratio. That mention of
+        # Acolyte's OWN "containsValue" was, at the time Task 5 wrote it,
+        # aspirational, not yet handled: this function's actual branch
+        # condition only ever checked "value", never "containsValue" — a
+        # gap invisible to Task 5's own tests because nothing consumed the
+        # "_"-keyed fixed list those "containsValue" entries live in until
+        # Finding 1 of the final whole-branch review (2026-09-27) wired it
+        # up. Confirmed empirically at that point: "containsValue" (always
+        # on a container, `{"item": "pouch|phb", "containsValue": N}` or
+        # `{"special": "purse", "containsValue": N}`) appears ONLY inside
+        # "_"-keyed fixed lists, never inside an a/b/c/d choice bundle,
+        # where the bare `{"value": N}` shape is the only one seen — so
+        # merging both into this one branch is additive, not a behavior
+        # change for any existing a/b/c/d choice this function already
+        # handles. The container's own name (pouch/purse) is discarded
+        # exactly like a bare gold value's non-existent container would
+        # be — it's flavor for "here is where your money is", not a
+        # trackable inventory item in its own right.
+        cp = item["value"] if "value" in item else item["containsValue"]
+        gp = cp // 100
         return {"option_type": "counted_reference", "count": 1,
                 "of": {"index": f"gp-{gp}", "name": f"{gp} GP"}}
 
@@ -1368,7 +1454,100 @@ def _starting_equipment_options_from_5etools(raw: dict) -> list[dict]:
     return envelopes
 
 
-def _feats_from_5etools(raw: dict) -> list[str]:
+def _fixed_starting_equipment_from_5etools(raw: dict) -> tuple[list[dict], dict | None, list[str]]:
+    """Converts a background's FIXED, always-granted startingEquipment
+    members — every `"_"`-keyed entry (5etools' convention for "granted
+    regardless of the A/B/C/D package choice", as opposed to
+    _starting_equipment_options_from_5etools' CHOICE-shaped a/b/c/d
+    entries) — into SRD's own starting_equipment/starting_gold shape.
+    Fixes Finding 1 of the final whole-branch review (2026-09-27):
+    `_background_from_5etools` used to hardcode `starting_equipment: []`/
+    `starting_gold: None` regardless of the real data, silently zeroing
+    out equipment AND gold for the 74/135 real backgrounds that carry a
+    `"_"` entry (58 with ONLY a `"_"` entry, no a/b choice at all; 16 more
+    with BOTH a choice AND a `"_"` entry, whose fixed part was lost) —
+    most visibly, `sheet.startingGold` actively reporting a wrong `0`
+    where before this whole plan the field simply didn't exist.
+
+    `startingEquipment` can carry MORE THAN ONE `"_"`-keyed entry —
+    confirmed real, 2026-09-27: Prismari Student/SCC has one `"_"` entry
+    BEFORE its artisan's-tools-or-instrument a/b choice (ink + ink pen)
+    and a SECOND `"_"` entry AFTER it (school uniform + a 10gp pouch).
+    Every `"_"`-keyed entry's members are collected, not just the first,
+    matching the "don't silently drop a second occurrence" discipline
+    _starting_equipment_options_from_5etools already applies to a/b/c/d
+    entries.
+
+    Each member is converted through the SAME
+    _equipment_bundle_member_from_5etools every a/b/c/d CHOICE bundle
+    member already goes through (Task 5, extended by this fix to also
+    recognize the `"containsValue"` gold shape — see that function's own
+    updated docstring), so a real catalog item, a gold value, a category
+    placeholder, and flavor-only gear are all recognized identically
+    whether they're offered as a choice or granted outright.
+
+    The resulting per-member triage mirrors engine/resolve.py's OWN
+    _selected_gold_and_narrative_items exactly, by synthetic-id prefix:
+    "gp-*" sums into `starting_gold`; ("flavor-", "category-",
+    "unlisted-")-prefixed members become narrative text (an UNLISTED/
+    no-catalog-match real item — e.g. Acolyte/PHB's "holy symbol", one of
+    the ~9% of real item names with no SRD equivalent, Task 5 grounding —
+    is treated the SAME as a flavor/category placeholder here: it has no
+    catalog entry to land on, so showing its label as narrative text is
+    the only way it doesn't silently vanish, exactly the outcome
+    _selected_gold_and_narrative_items already gives an unlisted CHOSEN
+    member); everything else is a genuine catalog match, converted to
+    SRD's own `starting_equipment` shape (`[{"equipment": {index, name},
+    "quantity": N}, ...]`) that engine/resolve.py's existing, UNCHANGED
+    `_fixed_equipment` already consumes (confirmed by reading it first:
+    it looks up `entry["equipment"]["index"]` against `catalog.items` and
+    reads `entry["quantity"]` — exactly what's produced here; already
+    wired at this function's call site in resolve(), `granted_equipment
+    += _fixed_equipment(bg.get("starting_equipment", []), ...)`, so no
+    resolve.py change is needed for the equipment/gold half of this fix —
+    only the narrative-item half needs new resolve.py wiring, since
+    narrativeItems was previously built ONLY from selected equipment-
+    choice members).
+
+    `starting_gold` is only ever a populated `{"quantity": N, "unit":
+    "gp"}` dict when at least one gold-shaped member was actually seen —
+    a background whose `"_"` list carries no gold at all (not observed in
+    real data, but not assumed away either) stays `None`, the same
+    "no data means no data, not a fabricated zero" distinction SRD's own
+    bundled field already draws."""
+    members: list = []
+    for entry in raw.get("startingEquipment") or []:
+        underscore = entry.get("_")
+        if isinstance(underscore, list):
+            members.extend(underscore)
+
+    starting_equipment: list[dict] = []
+    narrative_items: list[str] = []
+    gold_total = 0
+    saw_gold = False
+
+    for member in members:
+        bundle_item = _equipment_bundle_member_from_5etools(member)
+        of_ref = bundle_item["of"]
+        item_id = of_ref["index"]
+        if item_id.startswith("gp-"):
+            saw_gold = True
+            amount = item_id[len("gp-"):]
+            if amount.isdigit():
+                gold_total += int(amount)
+        elif item_id.startswith(("flavor-", "category-", "unlisted-")):
+            narrative_items.append(of_ref["name"])
+        else:
+            starting_equipment.append({
+                "equipment": {"index": item_id, "name": of_ref["name"]},
+                "quantity": bundle_item.get("count", 1),
+            })
+
+    starting_gold = {"quantity": gold_total, "unit": "gp"} if saw_gold else None
+    return starting_equipment, starting_gold, narrative_items
+
+
+def _feats_from_5etools(raw: dict) -> tuple[list[str], list[str]]:
     """Converts a background's `feats` field — confirmed empirically
     (Step 1, 2026-09-27) to be a list of single-key boolean-map dicts,
     `{"<feat name>|<source>": True}`, the SAME convention
@@ -1376,28 +1555,56 @@ def _feats_from_5etools(raw: dict) -> list[str]:
     of feat ids: `|source` stripped, the remaining name run through the
     same `_slug` every other |source-suffixed field already gets.
 
-    Pure inert data pass-through, per the brief: no resolution against a
-    feat catalog (none exists in this app yet), no prerequisite checking,
-    no effect application.
+    Pure inert data pass-through: no resolution against a feat catalog
+    (none exists in this app yet), no prerequisite checking, no effect
+    application.
 
-    Only `is True` entries are converted — the SAME filter
-    _proficiencies_from_5etools already applies to exclude choice/wildcard
-    envelopes without needing to special-case their key names. This
-    matters here too: 4 real records (Haunted One/RHW, Investigator/RHW,
-    Mist Wanderer, Spirit Medium) carry a SECOND entry alongside their
-    plain grant, `{"anyFromCategory": {"category": [...]}}` — a "pick any
-    feat from category X" wildcard whose value is a dict, not True. That
-    entry is excluded by this same `is True` check, not by name — a
-    wildcard feat grant like this has nothing to resolve against without a
-    feat catalog, so it's silently dropped rather than guessed at
-    (disclosed here, not a bug: the brief scopes this task to inert fixed
-    grants only)."""
-    feats: list[str] = []
+    Returns (feats, feat_options) — fixed a "one true grant" alternatives
+    split, Finding 2 of the final whole-branch review (2026-09-27):
+    Task 6's original version combined EVERY `is True` entry additively
+    into one `feats` list, which is correct for 69 of 71 real records
+    (exactly one `is True` entry each) but wrong for the other two —
+    Rewarded/BMT: `[{"lucky|phb": True}, {"magic initiate|phb": True},
+    {"skilled|phb": True}]`, whose real published text is "You gain the
+    Lucky, Magic Initiate, or Skilled feat (your choice)" — a CHOICE of
+    one, not a grant of all three; Ruined/BMT is the identical shape
+    (Alert/Skilled/Tough). Additive combination was silently over-
+    granting both — inert today (feats aren't a mechanic yet, Phase 4c's
+    job) but would silently over-grant once Phase 4c starts consuming
+    this data for real. `feat_options` carries the "one of these"
+    alternatives for that 2-record case, mirroring the fixed-vs-choice
+    field pairs this same module already uses everywhere else
+    (starting_proficiencies/starting_proficiency_choices, languages/
+    language_options, ability_bonuses/ability_bonus_options) rather than
+    inventing a new convention. `feats` stays a single-element list for
+    every real record with exactly one grant (unchanged from before), and
+    both lists are empty together only when the background has no `feats`
+    field, or only a wildcard entry (see below), at all.
+
+    Only `is True` entries are considered in the first place — the SAME
+    filter _proficiencies_from_5etools already applies to exclude choice/
+    wildcard envelopes without needing to special-case their key names.
+    This matters here too: 4 real records (Haunted One/RHW, Investigator/
+    RHW, Mist Wanderer, Spirit Medium) carry a SECOND entry alongside
+    their plain grant, `{"anyFromCategory": {"category": [...]}}` — a
+    "pick any feat from category X" wildcard whose value is a dict, not
+    True. That entry is excluded by this same `is True` check, not by
+    name — a wildcard feat grant like this has nothing to resolve against
+    without a feat catalog, so it's silently dropped rather than guessed
+    at (disclosed here, not a bug: still out of scope)."""
+    true_feat_ids: list[str] = []
     for entry in raw.get("feats") or []:
         for feat_key, granted in entry.items():
             if granted is True:
-                feats.append(_slug(feat_key.split("|", 1)[0].strip()))
-    return feats
+                true_feat_ids.append(_slug(feat_key.split("|", 1)[0].strip()))
+
+    if len(true_feat_ids) > 1:
+        # More than one simultaneous True-valued entry means ALTERNATIVES
+        # ("one of these"), not a simultaneous grant of every one of them
+        # — see docstring above. Rewarded/Ruined (BMT) are the only two
+        # real records this branch is exercised by.
+        return [], true_feat_ids
+    return true_feat_ids, []
 
 
 def _background_from_5etools(raw: dict) -> dict | None:
@@ -1430,26 +1637,33 @@ def _background_from_5etools(raw: dict) -> dict | None:
     `language_options`/`languages` (Task 3 — fixed and choice-shaped
     language grants; see _language_grants_from_5etools for the full shape
     grounding, including a disclosed data-fidelity gap on 1 of 56 real
-    records) are now populated. `ability_bonus_options` (Task 4 — the
-    2024-style weighted ability-score-improvement choice; see
+    records, and a Finding-2 correction to that function's own additive-
+    combination rule) are now populated. `ability_bonus_options` (Task 4 —
+    the 2024-style weighted ability-score-improvement choice; see
     _ability_bonus_options_from_5etools_weighted_pair) is now populated
     too. `starting_equipment_options` (Task 5 — the A/B-style starting
     equipment PACKAGE CHOICE; see _starting_equipment_options_from_5etools
     for the full shape grounding, including a disclosed gap in what
     happens after a bundle with a synthetic/non-catalog member is
-    selected) is now populated. `starting_equipment` (the FIXED,
-    no-choice `"_"`-keyed equipment list 75/135 real backgrounds carry —
-    e.g. Anthropologist/ToA has ONLY this, no package choice at all) and
-    `starting_gold` are still deliberately left as placeholders — Task 5's
-    own brief scoped it to the package CHOICE specifically ("Starting
-    equipment package choice (A or B)"), not fixed-equipment/gold
-    conversion, so that real, disclosed gap (a background with no a/b/c/d
-    entry at all currently gets ZERO starting equipment, fixed or
-    chosen) is left for a follow-up task rather than folded in here
-    unannounced. `feats` (Task 6 — see _feats_from_5etools for the full
-    shape grounding, including a disclosed exclusion of a non-boolean
-    "anyFromCategory" wildcard entry this app has no feat catalog to
-    resolve against) is now populated too — pure inert data, no mechanical
+    selected) is now populated. `starting_equipment`/`starting_gold` (the
+    FIXED, no-choice `"_"`-keyed equipment list 74/135 real backgrounds
+    carry — e.g. Anthropologist/ToA has ONLY this, no package choice at
+    all) — a real, disclosed gap Task 5 deliberately left as a follow-up
+    (its own brief scoped it to the package CHOICE specifically) — are now
+    also populated, fixed by Finding 1 of the final whole-branch review
+    (2026-09-27); see _fixed_starting_equipment_from_5etools for the full
+    shape grounding. That same function also returns this record's fixed-
+    grant NARRATIVE items (flavor-only gear / category placeholders /
+    no-catalog-match items from the `"_"` list), carried on the new
+    `starting_narrative_items` field — engine/resolve.py merges this with
+    its own selection-driven narrative items (previously the ONLY source
+    of sheet.equipment.narrativeItems) into one list. `feats`/
+    `feat_options` (Task 6, corrected by Finding 2 — see
+    _feats_from_5etools for the full shape grounding, including a
+    disclosed exclusion of a non-boolean "anyFromCategory" wildcard entry
+    this app has no feat catalog to resolve against, and the fixed-vs-
+    alternatives split that replaces Task 6's original always-additive
+    behavior) are now populated too — pure inert data, no mechanical
     effect. `feature` is left empty: engine/resolve.py
     never reads a
     background's `feature` field for anything mechanical today (confirmed
@@ -1466,6 +1680,8 @@ def _background_from_5etools(raw: dict) -> dict | None:
     slug = _slug(raw["name"])
     index = f"{slug}-{source}"
     fixed_languages, language_options = _language_grants_from_5etools(raw)
+    fixed_equipment, fixed_gold, fixed_narrative_items = _fixed_starting_equipment_from_5etools(raw)
+    feats, feat_options = _feats_from_5etools(raw)
 
     return {
         "index": index,
@@ -1474,13 +1690,15 @@ def _background_from_5etools(raw: dict) -> dict | None:
         "starting_proficiency_choices": _proficiency_choices_from_5etools(raw),
         "language_options": language_options,
         "languages": fixed_languages,
-        "starting_equipment": [],  # deliberately still a placeholder — see docstring above (fixed/no-choice equipment, out of Task 5's own stated scope)
-        "starting_gold": None,  # deliberately still a placeholder — see docstring above
+        "starting_equipment": fixed_equipment,
+        "starting_gold": fixed_gold,
         "starting_equipment_options": _starting_equipment_options_from_5etools(raw),
+        "starting_narrative_items": fixed_narrative_items,
         "feature": {"name": "", "desc": []},  # not read mechanically by resolve.py today, see docstring above
         "ability_bonus_options": _ability_bonus_options_from_5etools_weighted_pair(raw.get("ability", [])),
         "source": raw.get("source", ""),
-        "feats": _feats_from_5etools(raw),
+        "feats": feats,
+        "feat_options": feat_options,
     }
 
 
