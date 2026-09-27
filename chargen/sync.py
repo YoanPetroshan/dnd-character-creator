@@ -66,6 +66,8 @@ OFFICIAL_TARGETS = [
      "desc": "Races and subraces — the full official arsenal"},
     {"key": "backgrounds", "filename": "backgrounds.json",
      "desc": "Backgrounds — the full official arsenal"},
+    {"key": "feats", "filename": "feats.json",
+     "desc": "Feats — the full official arsenal (Phase 4c grounding)"},
 ]
 
 TARGETS = [
