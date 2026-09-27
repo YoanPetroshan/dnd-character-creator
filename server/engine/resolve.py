@@ -923,6 +923,21 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     bg = catalog.backgrounds.get(bg_id) if bg_id else None
     if bg_id and not bg:
         problems.append({"id": "unknown-background", "message": f"Unknown background '{bg_id}'."})
+    elif bg and draft.get("sources"):
+        # Mirrors the race-side source filter immediately below, exactly
+        # (Phase 4a Task 7): a filtered-out record and a genuinely-
+        # nonexistent one are indistinguishable from the player's point of
+        # view ("not a valid choice right now") — reuse the same
+        # "unknown-background" problem id rather than introduce a new one.
+        # Bundled SRD backgrounds have no 'source' field at all (implicitly
+        # SRD), so they're always allowed regardless of draft.sources; only
+        # an official background whose book isn't in the allowed list gets
+        # rejected.
+        bg_source = bg.get("source") or ""
+        allowed_sources = {s.lower() for s in draft["sources"] if isinstance(s, str)}
+        if bg_source and bg_source.upper() != "SRD" and bg_source.lower() not in allowed_sources:
+            problems.append({"id": "unknown-background", "message": f"Unknown background '{bg_id}'."})
+            bg = None
 
     species_raw = draft.get("species")
     if species_raw is not None and not isinstance(species_raw, dict):
@@ -1477,6 +1492,13 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     damage_modifiers = _species_damage_modifiers(race, subrace)
     condition_immunities = _species_condition_immunities(race, subrace)
     innate_spells = _species_innate_spells(race, subrace, catalog)
+    # Phase 4b Task 6: a background's `feats` field is pure inert data —
+    # the ids land on the sheet unchanged, no prerequisite checking, no
+    # effect application, nothing else in this function reads them. Always
+    # a list (never null), mirroring damage_modifiers/condition_immunities/
+    # innate_spells' own "always present, empty when absent" convention
+    # just above.
+    granted_feats = list(bg.get("feats", [])) if bg else []
 
     sheet = {
         "name": draft.get("name") or "",
@@ -1512,6 +1534,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "damageModifiers": damage_modifiers,
         "conditionImmunities": condition_immunities,
         "innateSpells": innate_spells,
+        "grantedFeats": granted_feats,
     }
 
     return {

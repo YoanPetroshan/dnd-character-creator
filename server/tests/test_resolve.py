@@ -45,6 +45,7 @@ def test_empty_draft_resolves_without_error_or_problems(catalog):
     assert resolution["sheet"]["name"] == ""
     assert resolution["sheet"]["level"] == 0
     assert resolution["sheet"]["classes"] == []
+    assert resolution["sheet"]["grantedFeats"] == []
 
 
 def test_fighter_acolyte_human_produces_expected_sheet_and_derived(catalog):
@@ -55,6 +56,9 @@ def test_fighter_acolyte_human_produces_expected_sheet_and_derived(catalog):
     assert sheet["level"] == 1
     assert sheet["classes"] == [{"id": "fighter", "name": "Fighter", "level": 1, "subclass": None}]
     assert sheet["background"] == {"id": "acolyte", "name": "Acolyte"}
+    # Bundled SRD Acolyte carries no `feats` field — always present as []
+    # rather than null, mirroring Task 5's damageModifiers precedent.
+    assert sheet["grantedFeats"] == []
     assert sheet["species"]["id"] == "human"
     assert sheet["species"]["subspecies"] is None
     # Human's +1 to every ability (chargen/data/srd/5e-SRD-Races.json)
@@ -826,6 +830,48 @@ def test_bundled_srd_race_is_always_allowed_regardless_of_draft_sources(catalog)
     assert resolution["sheet"]["species"]["id"] == "human"
 
 
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_draft_sources_rejects_a_background_from_an_unlisted_sourcebook(catalog):
+    # aberrant-heir-efa's 'source' field is "EFA" (raw 5etools casing) — a
+    # draft.sources of just ["phb"] must reject it exactly like an
+    # unrecognized id: same problem id (mirrors Phase 4a Task 7's race-side
+    # test), background treated as absent (no ability bonuses/feats/etc.
+    # applied for it).
+    draft = _fighter_acolyte_human_draft(sources=["phb"], background={"id": "aberrant-heir-efa", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == [{"id": "unknown-background", "message": "Unknown background 'aberrant-heir-efa'."}]
+    assert resolution["sheet"]["background"] is None
+    assert resolution["sheet"]["grantedFeats"] == []
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_draft_sources_allows_a_background_whose_book_is_listed(catalog):
+    draft = _fighter_acolyte_human_draft(sources=["phb", "efa"], background={"id": "aberrant-heir-efa", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    assert resolution["sheet"]["background"]["id"] == "aberrant-heir-efa"
+    assert resolution["sheet"]["grantedFeats"] == ["aberrant-dragonmark"]
+
+
+def test_empty_draft_sources_allows_every_background_unaffected(catalog):
+    # Today's default behavior, unaffected by the new filter — an
+    # empty/absent 'sources' list means no restriction at all.
+    draft = _fighter_acolyte_human_draft(sources=[])
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    assert resolution["sheet"]["background"]["id"] == "acolyte"
+
+
+def test_bundled_srd_background_is_always_allowed_regardless_of_draft_sources(catalog):
+    # SRD backgrounds have no 'source' field at all (implicitly bundled/
+    # SRD) — they must never be filtered out even when draft.sources names
+    # only unrelated official books.
+    draft = _fighter_acolyte_human_draft(sources=["vgm"])  # acolyte is bundled SRD, not "vgm"
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    assert resolution["sheet"]["background"]["id"] == "acolyte"
+
+
 def test_non_list_classes_is_a_problem_not_a_crash(catalog):
     draft = _fighter_acolyte_human_draft(classes={"classId": "fighter"})
     resolution = resolve(draft, catalog)  # must not raise
@@ -1042,7 +1088,7 @@ def test_selecting_a_gold_bundle_member_reaches_the_sheet(catalog):
     # is "dagger+disguise-kit+clothes-costume+clothes-travelers+gp-16",
     # bundle B is "gp-50" (gold-only). Its own starting_gold field is None,
     # so all 50 gold here comes from the selected bundle member alone.
-    draft = _fighter_acolyte_human_draft(background={"id": "aberrant-heir-efa", "choices": {}})
+    draft = _fighter_acolyte_human_draft(sources=["efa"], background={"id": "aberrant-heir-efa", "choices": {}})
     resolution = resolve(draft, catalog)
     equip_cid = next(c["id"] for c in resolution["choices"] if c["id"] == "background:aberrant-heir-efa:equipment-choice-0")
     draft["background"]["choices"][equip_cid] = ["gp-50"]
@@ -1057,7 +1103,7 @@ def test_flavor_bundle_member_shows_up_as_narrative_text_not_silently_dropped(ca
     # book") vs. "flavor-prayer-wheel" (a synthetic flavor-text member,
     # display label "Prayer wheel") — selecting the flavor option must
     # surface its label in narrativeItems, not silently vanish.
-    draft = _fighter_acolyte_human_draft(background={"id": "acolyte-phb", "choices": {}})
+    draft = _fighter_acolyte_human_draft(sources=["phb"], background={"id": "acolyte-phb", "choices": {}})
     resolution = resolve(draft, catalog)
     equip_cid = next(c["id"] for c in resolution["choices"] if c["id"] == "background:acolyte-phb:equipment-choice-0")
     draft["background"]["choices"][equip_cid] = ["flavor-prayer-wheel"]
@@ -2595,7 +2641,7 @@ def test_background_with_two_simultaneous_wildcard_choices_produces_two_selectab
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 def test_equipment_package_choice_becomes_a_two_option_multiple_bundle_choice(catalog):
-    draft = _fighter_acolyte_human_draft(background={"id": "aberrant-heir-efa", "choices": {}})
+    draft = _fighter_acolyte_human_draft(sources=["efa"], background={"id": "aberrant-heir-efa", "choices": {}})
     resolution = resolve(draft, catalog)
     cids = {c["id"] for c in resolution["choices"]}
     equip_cid = next((cid for cid in cids if cid.startswith("background:aberrant-heir-efa:") and "equipment-choice" in cid), None)
@@ -2612,7 +2658,7 @@ def test_selecting_the_item_heavy_equipment_package_lands_its_real_items_on_the_
     # chosen equipment — confirms the compound "+"-joined id genuinely
     # round-trips through engine/resolve.py's existing, unchanged
     # _chosen_equipment/_gather_equipped_items.
-    draft = _fighter_acolyte_human_draft(background={"id": "aberrant-heir-efa", "choices": {}})
+    draft = _fighter_acolyte_human_draft(sources=["efa"], background={"id": "aberrant-heir-efa", "choices": {}})
     resolution = resolve(draft, catalog)
     equip_cid = next(cid for cid in {c["id"] for c in resolution["choices"]}
                       if cid.startswith("background:aberrant-heir-efa:") and "equipment-choice" in cid)
@@ -2638,7 +2684,7 @@ def test_selecting_the_gold_only_equipment_package_produces_no_problems(catalog)
     # itself lands on sheet["startingGold"] (Task 5b), not as a fake
     # catalog item in "chosen" — see test_selecting_a_gold_bundle_member_
     # reaches_the_sheet.
-    draft = _fighter_acolyte_human_draft(background={"id": "aberrant-heir-efa", "choices": {}})
+    draft = _fighter_acolyte_human_draft(sources=["efa"], background={"id": "aberrant-heir-efa", "choices": {}})
     resolution = resolve(draft, catalog)
     equip_cid = next(cid for cid in {c["id"] for c in resolution["choices"]}
                       if cid.startswith("background:aberrant-heir-efa:") and "equipment-choice" in cid)

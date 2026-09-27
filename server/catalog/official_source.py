@@ -1368,6 +1368,38 @@ def _starting_equipment_options_from_5etools(raw: dict) -> list[dict]:
     return envelopes
 
 
+def _feats_from_5etools(raw: dict) -> list[str]:
+    """Converts a background's `feats` field — confirmed empirically
+    (Step 1, 2026-09-27) to be a list of single-key boolean-map dicts,
+    `{"<feat name>|<source>": True}`, the SAME convention
+    skillProficiencies/toolProficiencies already use — into a plain list
+    of feat ids: `|source` stripped, the remaining name run through the
+    same `_slug` every other |source-suffixed field already gets.
+
+    Pure inert data pass-through, per the brief: no resolution against a
+    feat catalog (none exists in this app yet), no prerequisite checking,
+    no effect application.
+
+    Only `is True` entries are converted — the SAME filter
+    _proficiencies_from_5etools already applies to exclude choice/wildcard
+    envelopes without needing to special-case their key names. This
+    matters here too: 4 real records (Haunted One/RHW, Investigator/RHW,
+    Mist Wanderer, Spirit Medium) carry a SECOND entry alongside their
+    plain grant, `{"anyFromCategory": {"category": [...]}}` — a "pick any
+    feat from category X" wildcard whose value is a dict, not True. That
+    entry is excluded by this same `is True` check, not by name — a
+    wildcard feat grant like this has nothing to resolve against without a
+    feat catalog, so it's silently dropped rather than guessed at
+    (disclosed here, not a bug: the brief scopes this task to inert fixed
+    grants only)."""
+    feats: list[str] = []
+    for entry in raw.get("feats") or []:
+        for feat_key, granted in entry.items():
+            if granted is True:
+                feats.append(_slug(feat_key.split("|", 1)[0].strip()))
+    return feats
+
+
 def _background_from_5etools(raw: dict) -> dict | None:
     """Converts one raw 5etools background record into the SAME dict shape
     catalog/loader.py already produces for the bundled SRD Acolyte
@@ -1414,8 +1446,11 @@ def _background_from_5etools(raw: dict) -> dict | None:
     conversion, so that real, disclosed gap (a background with no a/b/c/d
     entry at all currently gets ZERO starting equipment, fixed or
     chosen) is left for a follow-up task rather than folded in here
-    unannounced. `feats` is a placeholder too — a separate follow-up task
-    in this same plan (Task 6). `feature` is left empty: engine/resolve.py
+    unannounced. `feats` (Task 6 — see _feats_from_5etools for the full
+    shape grounding, including a disclosed exclusion of a non-boolean
+    "anyFromCategory" wildcard entry this app has no feat catalog to
+    resolve against) is now populated too — pure inert data, no mechanical
+    effect. `feature` is left empty: engine/resolve.py
     never reads a
     background's `feature` field for anything mechanical today (confirmed
     by grep, Step 1) — SRD's own bundled backgrounds carry rich flavor
@@ -1445,7 +1480,7 @@ def _background_from_5etools(raw: dict) -> dict | None:
         "feature": {"name": "", "desc": []},  # not read mechanically by resolve.py today, see docstring above
         "ability_bonus_options": _ability_bonus_options_from_5etools_weighted_pair(raw.get("ability", [])),
         "source": raw.get("source", ""),
-        "feats": [],  # Task 6
+        "feats": _feats_from_5etools(raw),
     }
 
 

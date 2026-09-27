@@ -1202,3 +1202,58 @@ def test_every_real_bundle_member_is_uniformly_a_counted_reference():
                     assert item["option_type"] == "counted_reference", bg["name"]
                     checked_any = True
     assert checked_any  # sanity: real data was actually exercised
+
+
+# ---------------------------------------------------------------------------
+# Backgrounds (Phase 4b Task 6) — inert feat storage. Real shape confirmed
+# against the fetched backgrounds.json (2026-09-27): `feats` is a list of
+# single-key boolean-map dicts, `{"<feat-name>|<source>": True}`, the SAME
+# convention skillProficiencies/toolProficiencies already use — but with
+# one genuine divergence from the brief's own description: 4 real records
+# (Haunted One/RHW, Investigator/RHW, Mist Wanderer, Spirit Medium) carry a
+# SECOND, non-boolean entry alongside the plain grant,
+# `{"anyFromCategory": {"category": ["DG"]}}` — a "pick any feat from
+# category DG" wildcard this app has no feat catalog to resolve against
+# (per the brief's own explicit instruction not to attempt that). Handled
+# the same way _proficiencies_from_5etools already handles the identical
+# "value is True vs. a dict/int" distinction for skill/tool wildcards: only
+# `is True` entries are converted, so the wildcard entry is silently
+# excluded by the SAME generic check, no anyFromCategory-specific code
+# needed. This is a disclosed, deliberate exclusion (feats stay inert, no
+# catalog to resolve a wildcard against), not a dropped grant of a kind
+# this task claims to produce.
+# ---------------------------------------------------------------------------
+
+def test_feats_boolean_map_becomes_a_plain_list_of_stripped_feat_ids():
+    # Aberrant Heir/EFA: {"feats": [{"aberrant dragonmark|efa": true}]} —
+    # confirmed empirically, Step 1.
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["index"] == "aberrant-heir-efa")
+    assert bg["feats"] == ["aberrant-dragonmark"]
+
+
+def test_feats_with_no_field_at_all_gets_an_empty_list():
+    backgrounds = load_official_backgrounds(official_dir())
+    # Acolyte/PHB carries no `feats` field in the real data (its XPHB
+    # reprint does — "magic initiate; cleric" — so PHB specifically is
+    # used here to isolate the no-field case).
+    bg = next(b for b in backgrounds if b["index"] == "acolyte-phb")
+    assert bg["feats"] == []
+
+
+def test_feats_anyfromcategory_wildcard_is_excluded_not_crashed_on():
+    # Haunted One/RHW carries a real fixed feat grant (Survivor) AND a
+    # non-boolean anyFromCategory wildcard entry in the same list — the
+    # wildcard must be silently excluded (no feat catalog to resolve it
+    # against), while the fixed grant still comes through.
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["index"] == "haunted-one-rhw")
+    assert bg["feats"] == ["survivor"]
+
+
+def test_feats_multiple_fixed_grants_all_land_in_the_list():
+    # Rewarded/BMT grants three feats at once (Lucky, Magic Initiate,
+    # Skilled) — confirmed empirically.
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["index"] == "rewarded-bmt")
+    assert bg["feats"] == ["lucky", "magic-initiate", "skilled"]
