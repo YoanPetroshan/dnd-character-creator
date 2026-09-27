@@ -1359,28 +1359,35 @@ def _equipment_bundle_member_from_5etools(item) -> dict:
         return _counted_reference_for_item_name(name)
 
     if "value" in item or "containsValue" in item:
-        # Confirmed copper pieces, Task 5 grounding: every real "value"
-        # across all 135 backgrounds (27 distinct values, 100-5000) is
-        # exactly divisible by 100, and SRD's own bundled Acolyte pouch
-        # (containsValue 1500 in the raw 5etools data) matches SRD's own
-        # starting_gold of 15 gp exactly at a 100:1 ratio. That mention of
-        # Acolyte's OWN "containsValue" was, at the time Task 5 wrote it,
-        # aspirational, not yet handled: this function's actual branch
-        # condition only ever checked "value", never "containsValue" — a
-        # gap invisible to Task 5's own tests because nothing consumed the
-        # "_"-keyed fixed list those "containsValue" entries live in until
-        # Finding 1 of the final whole-branch review (2026-09-27) wired it
-        # up. Confirmed empirically at that point: "containsValue" (always
-        # on a container, `{"item": "pouch|phb", "containsValue": N}` or
-        # `{"special": "purse", "containsValue": N}`) appears ONLY inside
-        # "_"-keyed fixed lists, never inside an a/b/c/d choice bundle,
-        # where the bare `{"value": N}` shape is the only one seen — so
-        # merging both into this one branch is additive, not a behavior
-        # change for any existing a/b/c/d choice this function already
-        # handles. The container's own name (pouch/purse) is discarded
-        # exactly like a bare gold value's non-existent container would
-        # be — it's flavor for "here is where your money is", not a
-        # trackable inventory item in its own right.
+        # Confirmed copper pieces, Task 5 grounding, corrected 2026-09-27:
+        # every real "value" INSIDE an a/b/c/d choice bundle (27 distinct
+        # values, 100-5000) is exactly divisible by 100 — but this is NOT
+        # true of every "containsValue"/"value" across the whole dataset:
+        # two "_"-keyed fixed entries (Haunted One/VRGR, Investigator/VRGR)
+        # carry a real "value": 10 (1 silver piece), only reachable once
+        # Finding 1 of the final whole-branch review wired the "_" list
+        # into this function at all. Floor division below intentionally
+        # rounds a sub-100cp amount down to "gp-0" — the caller
+        # (_fixed_starting_equipment_from_5etools) is responsible for NOT
+        # treating a "gp-0" id as "0 gp granted" (that would be the exact
+        # "fabricated zero is worse than absent" problem Finding 1 itself
+        # exists to fix, just for a different amount) — sub-gp coinage
+        # simply isn't tracked by this app, a disclosed, narrow gap.
+        #
+        # SRD's own bundled Acolyte pouch (containsValue 1500 in the raw
+        # 5etools data) matches SRD's own starting_gold of 15 gp exactly
+        # at a 100:1 ratio, confirming the conversion ratio itself.
+        # "containsValue" (always on a container, `{"item": "pouch|phb",
+        # "containsValue": N}` or `{"special": "purse", "containsValue":
+        # N}`) appears ONLY inside "_"-keyed fixed lists, never inside an
+        # a/b/c/d choice bundle, where the bare `{"value": N}` shape is
+        # the only one seen — so merging both into this one branch is
+        # additive, not a behavior change for any existing a/b/c/d choice
+        # this function already handles. The container's own name
+        # (pouch/purse) is discarded exactly like a bare gold value's
+        # non-existent container would be — it's flavor for "here is
+        # where your money is", not a trackable inventory item in its
+        # own right.
         cp = item["value"] if "value" in item else item["containsValue"]
         gp = cp // 100
         return {"option_type": "counted_reference", "count": 1,
@@ -1531,9 +1538,20 @@ def _fixed_starting_equipment_from_5etools(raw: dict) -> tuple[list[dict], dict 
         of_ref = bundle_item["of"]
         item_id = of_ref["index"]
         if item_id.startswith("gp-"):
-            saw_gold = True
             amount = item_id[len("gp-"):]
-            if amount.isdigit():
+            # A sub-1-gp amount (e.g. 10cp = 1sp) floors to "gp-0" in
+            # _equipment_bundle_member_from_5etools, which has no
+            # sub-gp unit to represent it in. Confirmed real, 2026-09-27:
+            # Haunted One/VRGR and Investigator/VRGR both end their fixed
+            # gear with "...and 1 sp". Setting saw_gold here regardless
+            # would reintroduce the exact "wrong explicit 0 is worse than
+            # absent" problem this whole function exists to fix — so a
+            # gp-0 member is treated as "no gp-trackable amount", not "0
+            # gp", leaving starting_gold None rather than a fabricated
+            # zero. The amount itself is simply not tracked below 1 gp; a
+            # disclosed, narrow gap, not a silent wrong answer.
+            if amount.isdigit() and int(amount) > 0:
+                saw_gold = True
                 gold_total += int(amount)
         elif item_id.startswith(("flavor-", "category-", "unlisted-")):
             narrative_items.append(of_ref["name"])

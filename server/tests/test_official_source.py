@@ -1267,6 +1267,21 @@ def test_multiple_underscore_entries_in_one_record_are_all_collected():
     assert bg["starting_narrative_items"] == ["School uniform"]
 
 
+def test_sub_one_gp_fixed_amount_leaves_starting_gold_none_not_a_fabricated_zero():
+    # Haunted One/VRGR and Investigator/VRGR (confirmed real, 2026-09-27):
+    # their "_" list ends with a real 10-copper (1 silver piece) amount,
+    # which floors to "gp-0" — this must NOT surface as
+    # starting_gold == {"quantity": 0, ...}, the exact "fabricated zero is
+    # worse than absent" anti-pattern the final whole-branch review's
+    # Finding 1 exists to eliminate, just for a smaller amount. Sub-gp
+    # coinage isn't tracked by this app; starting_gold stays None rather
+    # than lying about it being zero.
+    backgrounds = load_official_backgrounds(official_dir())
+    for index in ("haunted-one-vrgr", "investigator-vrgr"):
+        bg = next(b for b in backgrounds if b["index"] == index)
+        assert bg["starting_gold"] is None
+
+
 def test_contains_value_pouch_shape_converts_to_gold_same_as_bare_value():
     # The "_"-only gold shape ({"item": "pouch|phb", "containsValue": N} /
     # {"special": "purse", "containsValue": N}) must resolve to the SAME
