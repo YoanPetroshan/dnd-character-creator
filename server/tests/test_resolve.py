@@ -6,7 +6,7 @@ from catalog.loader import load
 # why every caller in this plan does it this way.
 from catalog.official_source import has_official
 from engine.derived import hit_point_max_multiclass
-from engine.resolve import _DETAIL_FIELDS, resolve
+from engine.resolve import _DETAIL_FIELDS, _feat_senses, _resolve_granted_feats, resolve
 
 
 @pytest.fixture(scope="module")
@@ -626,6 +626,116 @@ def test_a_race_with_no_damage_modifiers_gets_empty_lists(catalog):
     resolution = resolve(_fighter_acolyte_human_draft(), catalog)  # Human, no resistances
     assert resolution["sheet"]["damageModifiers"] == {"resistances": [], "immunities": [], "vulnerabilities": []}
     assert resolution["sheet"]["conditionImmunities"] == []
+    # Phase 4c-i Task 5: a character with no granted feats (bundled SRD
+    # Acolyte carries no `feats` field at all) must be a complete safe
+    # no-op — sheet.senses defaults to an empty dict, same "always
+    # present, empty when absent" convention damageModifiers/
+    # conditionImmunities already use.
+    assert resolution["sheet"]["senses"] == {}
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_background_granted_feat_resistance_reaches_the_sheet(catalog):
+    # House Lyrandar Heir/EFA grants the Mark of Storm/EFA feat (fixed,
+    # not a choice — confirmed against the real fetched backgrounds.json/
+    # feats.json, 2026-09-28), which itself grants a fixed lightning
+    # resistance. This is the ONLY way resolve() has today to know a
+    # character "has" a feat at all — no ASI-feat-choice or standalone
+    # feat-selection mechanic exists yet (grep-confirmed) — so it's the
+    # real path this task's merge logic is exercised through end to end.
+    draft = _fighter_acolyte_human_draft(
+        sources=["phb", "efa"], background={"id": "house-lyrandar-heir-efa", "choices": {}},
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    assert resolution["sheet"]["grantedFeats"] == ["mark-of-storm"]
+    assert resolution["sheet"]["damageModifiers"]["resistances"] == ["lightning"]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_feat_resistance_adds_to_an_existing_race_resistance_not_replacing_it(catalog):
+    # Aasimar/VGM already grants necrotic+radiant resistance (see
+    # test_race_damage_modifiers_carry_through_to_the_sheet above);
+    # stacking House Lyrandar Heir/EFA's Mark of Storm (lightning) on top
+    # must ADD to that list, not replace it — the exact behavior this
+    # task's brief called out by name. Order: race-then-subrace-then-feats
+    # (the same left-to-right merge _species_damage_modifiers/
+    # _species_condition_immunities already use for race+subrace).
+    draft = _fighter_acolyte_human_draft(
+        sources=["vgm", "phb", "efa"],
+        species={"id": "aasimar-vgm", "choices": {}},
+        background={"id": "house-lyrandar-heir-efa", "choices": {}},
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    assert resolution["sheet"]["damageModifiers"]["resistances"] == ["necrotic", "radiant", "lightning"]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_ambiguous_granted_feat_slug_does_not_crash_or_guess_a_source(catalog):
+    # Aberrant Heir/EFA grants "aberrant-dragonmark" — a bare, source-less
+    # slug that matches FEATS in two different real sourcebooks (EFA and
+    # ERLW, confirmed 2026-09-28), so which source-variant is actually
+    # meant can't be determined from the grant alone. Must not crash and
+    # must not silently pick one arbitrarily — see _resolve_granted_feats'
+    # own docstring. (Neither variant carries resist/immune/senses data
+    # today, so this also confirms the ambiguity guard doesn't silently
+    # drop something that WOULD have mattered.)
+    draft = _fighter_acolyte_human_draft(sources=["phb", "efa"], background={"id": "aberrant-heir-efa", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    assert resolution["sheet"]["grantedFeats"] == ["aberrant-dragonmark"]
+    assert resolution["sheet"]["damageModifiers"] == {"resistances": [], "immunities": [], "vulnerabilities": []}
+    assert resolution["sheet"]["senses"] == {}
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_resolve_granted_feats_matches_an_unambiguous_bare_slug(catalog):
+    # Direct unit test of the slug-matching helper itself — a background's
+    # granted-feat id is bare/source-less ("mark-of-storm"), but
+    # catalog.feats is keyed "slug-source" ("mark-of-storm-efa"; see
+    # _feats_from_5etools' own docstring in official_source.py for why).
+    # "mark-of-storm" matches exactly one real feat (EFA only), so it must
+    # resolve to that feat's own dict, carrying its resist data.
+    resolved = _resolve_granted_feats(["mark-of-storm"], catalog)
+    assert len(resolved) == 1
+    assert resolved[0]["index"] == "mark-of-storm-efa"
+    assert resolved[0]["resist"] == ["lightning"]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_resolve_granted_feats_skips_an_ambiguous_bare_slug(catalog):
+    # "alert" matches feats in BOTH PHB and XPHB (confirmed 2026-09-28) —
+    # which source-variant a bare grant means can't be determined from the
+    # id alone, so it's skipped rather than guessing.
+    resolved = _resolve_granted_feats(["alert"], catalog)
+    assert resolved == []
+
+
+def test_resolve_granted_feats_with_no_catalog_match_is_a_safe_no_op(catalog):
+    resolved = _resolve_granted_feats(["not-a-real-feat"], catalog)
+    assert resolved == []
+
+
+def test_feat_senses_merges_multiple_granted_feats():
+    feats = [{"senses": {"blindsight": 15}}, {"senses": {"truesight": 60}}]
+    assert _feat_senses(feats) == {"blindsight": 15, "truesight": 60}
+
+
+def test_feat_senses_same_type_resolves_to_the_higher_range_not_additive():
+    # RAW: multiple sources of the same sense type (e.g. two sources of
+    # darkvision/blindsight) don't stack additively — the higher range
+    # wins, unless a specific ability explicitly says otherwise (none of
+    # the real granted-feat senses data does). Order-independent: the
+    # higher value wins regardless of which feat is processed first.
+    lower_then_higher = [{"senses": {"blindsight": 10}}, {"senses": {"blindsight": 15}}]
+    higher_then_lower = [{"senses": {"blindsight": 15}}, {"senses": {"blindsight": 10}}]
+    assert _feat_senses(lower_then_higher) == {"blindsight": 15}
+    assert _feat_senses(higher_then_lower) == {"blindsight": 15}
+
+
+def test_feat_senses_with_no_feats_is_an_empty_dict():
+    assert _feat_senses([]) == {}
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")

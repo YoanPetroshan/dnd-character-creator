@@ -851,6 +851,32 @@ def _condition_immunities_from_5etools(raw: dict) -> list[str]:
     return [entry for entry in (raw.get("conditionImmune") or []) if isinstance(entry, str)]
 
 
+def _senses_from_5etools(raw: dict) -> dict[str, int]:
+    """Converts 5etools' `senses` field into a flat {sense_type: range}
+    dict — a NEW field with no race-side precedent to reuse (races.json
+    carries 0/160 records with a `senses` field at all, confirmed
+    2026-09-28: Phase 4a's race work genuinely never modeled senses, not
+    an oversight this function needs to account for).
+
+    Empirically confirmed (2026-09-28, against the real fetched
+    feats.json): all 4 feats carrying `senses` (Aberrant Anatomy, Blind
+    Fighting, Boon of Truesight, Skulker) use the SAME shape — a list
+    containing exactly one single-key dict, e.g. [{"blindsight": 15}] —
+    never multiple list entries, never multiple keys on one entry. Built
+    generally (accumulating every key across every list entry) rather
+    than narrowly special-cased to "exactly one entry" today, so a future
+    data refresh adding a multi-sense feat degrades gracefully instead of
+    silently dropping the second sense."""
+    senses: dict[str, int] = {}
+    for entry in raw.get("senses") or []:
+        if not isinstance(entry, dict):
+            continue
+        for sense_type, value in entry.items():
+            if isinstance(value, int):
+                senses[sense_type] = value
+    return senses
+
+
 def _clean_innate_spell_name(raw: str) -> str:
     """Strips 5etools' spell-reference decorations from an
     additionalSpells.innate spell-name string: a trailing "|source" (e.g.
@@ -1829,6 +1855,17 @@ def _feat_from_5etools(raw: dict) -> dict | None:
     slug = _slug(raw["name"])
     index = f"{slug}-{source}"
     fixed_languages, language_options = _language_grants_from_5etools(raw)
+    # Task 5: resist/immune/senses — reuses the SAME race-side
+    # _damage_modifiers_from_5etools/_condition_immunities_from_5etools
+    # conversion machinery UNCHANGED (both already read off a generic raw
+    # dict via .get, nothing race-specific despite living next to
+    # race-only code — see _background_from_5etools' own docstring for
+    # this same reuse precedent). Feats carry no `vulnerable` field in the
+    # real data (0/305, confirmed 2026-09-28), so that third return value
+    # is discarded here rather than added to the scaffold. `senses` has no
+    # race-side counterpart to reuse — see _senses_from_5etools' own
+    # docstring.
+    feat_resist, feat_immune, _feat_vulnerable = _damage_modifiers_from_5etools(raw)
 
     return {
         "index": index,
@@ -1868,10 +1905,10 @@ def _feat_from_5etools(raw: dict) -> dict | None:
         # cant").
         "languages": fixed_languages,
         "language_options": language_options,
-        "resist": [],  # Task 5
-        "immune": [],  # Task 5
-        "condition_immune": [],  # Task 5
-        "senses": {},  # Task 5
+        "resist": feat_resist,
+        "immune": feat_immune,
+        "condition_immune": _condition_immunities_from_5etools(raw),
+        "senses": _senses_from_5etools(raw),
         "expertise_skills": [],  # Task 6
         "saving_throw_proficiencies": [],  # Task 6
     }

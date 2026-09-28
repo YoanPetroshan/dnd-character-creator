@@ -77,26 +77,39 @@ def _species_ability_bonuses(race: dict | None, subrace: dict | None) -> dict[st
     return bonuses
 
 
-def _species_damage_modifiers(race: dict | None, subrace: dict | None) -> dict[str, list[str]]:
-    """Merges resist/immune/vulnerable from BOTH race and subrace, the
-    same race-then-subrace-additions relationship _species_ability_bonuses
-    already merges for ability score bonuses. This goes beyond Task 5's
-    brief, which only mentions reading race.get("resist", []) — extended
-    to also read subrace here because real fetched official data
-    (races.json, confirmed 2026-09-24) has resist entries on SUBRACE
-    records too: all four Genasi subraces (Air/Fire/Water/EEPC+MPMM) each
-    grant a different elemental resistance, and Stout Halfling/PHB grants
-    poison resistance — both only on the subrace, never the parent race.
-    Reading race-only would silently drop these, the exact category of
-    gap this plan already caught twice before (Task 3->3b, Task 4->4b for
-    race-trait proficiencies) — disclosed here rather than repeating that
-    pattern a third time. Deduplicates (preserving first-seen order) in
-    case a value is ever repeated across race+subrace, though not seen in
-    real data today."""
+def _species_damage_modifiers(race: dict | None, subrace: dict | None, feats: list[dict] | None = None) -> dict[str, list[str]]:
+    """Merges resist/immune/vulnerable from race, subrace, AND (Phase 4c-i
+    Task 5) every resolved granted feat, the same race-then-subrace-
+    additions relationship _species_ability_bonuses already merges for
+    ability score bonuses, now extended one step further. This goes
+    beyond Task 5 (Phase 4a)'s original brief, which only mentions reading
+    race.get("resist", []) — extended to also read subrace here because
+    real fetched official data (races.json, confirmed 2026-09-24) has
+    resist entries on SUBRACE records too: all four Genasi subraces
+    (Air/Fire/Water/EEPC+MPMM) each grant a different elemental
+    resistance, and Stout Halfling/PHB grants poison resistance — both
+    only on the subrace, never the parent race. Reading race-only would
+    silently drop these, the exact category of gap this plan already
+    caught twice before (Task 3->3b, Task 4->4b for race-trait
+    proficiencies) — disclosed here rather than repeating that pattern a
+    third time. Deduplicates (preserving first-seen order) in case a
+    value is ever repeated across race+subrace+feats, though not seen in
+    real data today.
+
+    `feats` (Phase 4c-i Task 5) is a list of resolved feat dicts — see
+    _resolve_granted_feats — folded into the SAME race/subrace merge loop
+    below rather than a separate parallel path, so a feat's resistance
+    ADDS to whatever race/subrace already granted (deduplicated by the
+    existing "if entry not in resistances" check), never replacing it.
+    `feats=None` (every pre-existing call site before this task) behaves
+    identically to the original two-argument signature — `*(feats or
+    [])` contributes nothing when absent, so a character with no granted
+    feats is a byte-identical safe no-op versus this function's Phase 4a
+    behavior."""
     resistances: list[str] = []
     immunities: list[str] = []
     vulnerabilities: list[str] = []
-    for src in (race, subrace):
+    for src in (race, subrace, *(feats or [])):
         if not src:
             continue
         for entry in src.get("resist", []):
@@ -111,17 +124,85 @@ def _species_damage_modifiers(race: dict | None, subrace: dict | None) -> dict[s
     return {"resistances": resistances, "immunities": immunities, "vulnerabilities": vulnerabilities}
 
 
-def _species_condition_immunities(race: dict | None, subrace: dict | None) -> list[str]:
-    """Same race+subrace merge as _species_damage_modifiers, for
-    conditionImmune (e.g. Autognome/AAG's disease immunity)."""
+def _species_condition_immunities(race: dict | None, subrace: dict | None, feats: list[dict] | None = None) -> list[str]:
+    """Same race+subrace(+feats, Phase 4c-i Task 5) merge as
+    _species_damage_modifiers, for conditionImmune (e.g. Autognome/AAG's
+    disease immunity). See that function's own docstring for the
+    `feats=None`-is-a-safe-no-op reasoning."""
     immunities: list[str] = []
-    for src in (race, subrace):
+    for src in (race, subrace, *(feats or [])):
         if not src:
             continue
         for entry in src.get("condition_immune", []):
             if entry not in immunities:
                 immunities.append(entry)
     return immunities
+
+
+def _resolve_granted_feats(granted_feat_ids: list[str], catalog: Catalog) -> list[dict]:
+    """Resolves a background's granted-feat ids (bare, source-less slugs
+    — e.g. "mark-of-storm" — see official_source._feats_from_5etools'
+    own docstring for why the source suffix is stripped there) against
+    catalog.feats, which is keyed "slug-source" (e.g. "mark-of-storm-
+    efa"). This is the ONLY mechanism resolve() has today to know a
+    character actually "has" a feat: no ASI-feat-choice or standalone
+    feat-selection exists yet (confirmed by grep, 2026-09-28) — a
+    background's `feats` field, previously pure inert pass-through
+    (Phase 4b Task 6: "no effect application, nothing else in this
+    function reads them"), is now also read here for its mechanical
+    resist/immune/condition_immune/senses effects.
+
+    Matches by comparing each catalog feat's OWN name run through the
+    same bare slugging _feats_from_5etools already applies to the grant
+    side, not by string-prefixing the "slug-source" index — prefix
+    matching risks a false match when one feat's slug is itself a prefix
+    of another's (e.g. a hypothetical "Mark of Storm II" would
+    prefix-match a "mark-of-storm" grant).
+
+    When a bare slug matches feats in MORE THAN ONE source (9 real cases
+    today — Alert, Healer, Lucky, Magic Initiate, Savage Attacker,
+    Skilled, Tavern Brawler, Tough, all PHB+XPHB reprints, plus Aberrant
+    Dragonmark/EFA+ERLW — confirmed 2026-09-28 against the real fetched
+    data), which specific source-variant a background actually grants
+    can't be determined from the bare id alone, so it's skipped entirely
+    rather than guessing a source. None of these 9 ambiguous feats carry
+    resist/immune/conditionImmune/senses data today (confirmed against
+    the real fetched feats.json), so this gap has zero effect on this
+    task's actual output, but the guard is kept general rather than
+    narrowly special-cased to today's data."""
+    by_bare_slug: dict[str, list[dict]] = {}
+    for feat in catalog.feats.values():
+        bare_slug = feat["name"].lower().replace(" ", "-").replace("'", "").replace("/", "-")
+        by_bare_slug.setdefault(bare_slug, []).append(feat)
+    resolved = []
+    for feat_id in granted_feat_ids:
+        matches = by_bare_slug.get(feat_id, [])
+        if len(matches) == 1:
+            resolved.append(matches[0])
+    return resolved
+
+
+def _feat_senses(feats: list[dict]) -> dict[str, int]:
+    """Merges `senses` from every resolved granted feat into a flat
+    {sense_type: range} dict — a NEW sheet field with no race-side
+    precedent to merge against (races.json carries 0/160 records with a
+    `senses` field at all, confirmed 2026-09-28 — Phase 4a's race work
+    genuinely never modeled senses, not a gap this task needs to close on
+    the race side), so this is purely feat-sourced for now.
+
+    When two feats grant the SAME sense type (e.g. two sources of
+    blindsight), the HIGHER range wins — confirmed D&D 5e RAW (multiple
+    sources of the same special sense, e.g. darkvision, don't stack
+    additively; the longer range applies, unless a specific ability
+    explicitly states otherwise, which none of the real granted-feat
+    senses data does), not assumed. This mirrors real data too: Blind
+    Fighting/XPHB and Skulker/XPHB both grant exactly blindsight 10."""
+    senses: dict[str, int] = {}
+    for feat in feats:
+        for sense_type, value in feat.get("senses", {}).items():
+            if sense_type not in senses or value > senses[sense_type]:
+                senses[sense_type] = value
+    return senses
 
 
 def _species_innate_spells(race: dict | None, subrace: dict | None, catalog: Catalog) -> list[dict]:
@@ -1499,15 +1580,15 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         for s in c["selected"]
     ]
 
-    damage_modifiers = _species_damage_modifiers(race, subrace)
-    condition_immunities = _species_condition_immunities(race, subrace)
-    innate_spells = _species_innate_spells(race, subrace, catalog)
-    # Phase 4b Task 6: a background's `feats` field is pure inert data —
-    # the ids land on the sheet unchanged, no prerequisite checking, no
-    # effect application, nothing else in this function reads them. Always
-    # a list (never null), mirroring damage_modifiers/condition_immunities/
+    # Phase 4b Task 6: a background's `feats` field lands on the sheet as a
+    # list of bare ids unchanged — no prerequisite checking here. Always a
+    # list (never null), mirroring damage_modifiers/condition_immunities/
     # innate_spells' own "always present, empty when absent" convention
-    # just above.
+    # just below. Phase 4c-i Task 5: no longer PURELY inert — also resolved
+    # (best-effort; see _resolve_granted_feats) against catalog.feats just
+    # below, so each granted feat's resist/immune/condition_immune/senses
+    # can be folded into the SAME sheet fields race/subrace already
+    # populate.
     granted_feats = list(bg.get("feats", [])) if bg else []
     # Finding 2 of the final whole-branch review (2026-09-27): a background
     # whose real `feats` data is an "alternatives" grant (Rewarded/Ruined,
@@ -1515,8 +1596,17 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # contributes nothing to `granted_feats` and instead surfaces its
     # candidates here, kept distinct from an actual grant for the same
     # inert-pass-through reason `feat_options` itself exists in
-    # official_source.py — see that field's own docstring.
+    # official_source.py — see that field's own docstring. feat_options
+    # candidates are NOT resolved for effects (Task 5) — they're
+    # unresolved alternatives, not something the character actually has
+    # yet.
     feat_options = list(bg.get("feat_options", [])) if bg else []
+    resolved_feats = _resolve_granted_feats(granted_feats, catalog)
+
+    damage_modifiers = _species_damage_modifiers(race, subrace, resolved_feats)
+    condition_immunities = _species_condition_immunities(race, subrace, resolved_feats)
+    senses = _feat_senses(resolved_feats)
+    innate_spells = _species_innate_spells(race, subrace, catalog)
 
     sheet = {
         "name": draft.get("name") or "",
@@ -1554,6 +1644,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "innateSpells": innate_spells,
         "grantedFeats": granted_feats,
         "featOptions": feat_options,
+        "senses": senses,
     }
 
     return {

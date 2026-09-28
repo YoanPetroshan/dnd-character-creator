@@ -1744,3 +1744,114 @@ def test_harper_agent_thieves_cant_is_a_disclosed_unrecognized_language_gap():
     feat = next(f for f in feats if f["name"] == "Harper Agent")
     assert feat["languages"] == []
     assert feat["language_options"] is None
+
+
+# ---------------------------------------------------------------------------
+# load_official_feats() resistances/immunities/condition immunities/senses
+# (Phase 4c-i Task 5) — reuses the SAME _damage_modifiers_from_5etools/
+# _condition_immunities_from_5etools conversion machinery built for races
+# (Phase 4a Task 5) directly, confirmed dict-shape-agnostic (both already
+# take a raw dict and read resist/immune/vulnerable/conditionImmune off it
+# via .get, nothing race-specific despite living next to race-only code).
+# `senses` is a brand-new field with no race-side precedent — races.json
+# carries 0/160 records with a `senses` field at all (confirmed 2026-09-28),
+# so this is feat-only conversion, built fresh.
+#
+# Grounded (2026-09-28) against the real fetched feats.json: 11/305 feats
+# carry `resist`, 2 carry `immune`, 2 carry `conditionImmune`, 4 carry
+# `senses` — a small surface. Of the 11 `resist` records, 6 use a plain
+# string list (Boon of the Furious Storm, Boon of the Soul Drinker, Ember
+# of the Fire Giant, Fury of the Frost Giant, Infernal Constitution, Mark
+# of Storm) and 5 use the SAME CHOICE shape
+# (`{"choose": {"from": [...]}}`) races' Dragonborn already exercises
+# (Boon of Energy Resistance, Dragonscarred, Portal Jumper, Scion of the
+# Outer Planes, Spell Resistant) — _damage_modifiers_from_5etools already
+# filters non-string entries out (a disclosed, existing cut, not new here),
+# so those 5 feats' `resist` lands empty, same as Dragonborn's on the race
+# side. `senses` is always a list containing exactly one single-key dict
+# (e.g. [{"blindsight": 15}]) across all 4 real records — never multiple
+# list entries, never multiple keys on one entry — confirmed exhaustively,
+# not sampled.
+# ---------------------------------------------------------------------------
+
+
+def test_ember_of_the_fire_giant_grants_a_fixed_fire_resistance():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Ember of the Fire Giant")
+    assert feat["resist"] == ["fire"]
+    assert feat["immune"] == []
+    assert feat["condition_immune"] == []
+    assert feat["senses"] == {}
+
+
+def test_infernal_constitution_grants_two_fixed_resistances():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Infernal Constitution")
+    assert feat["resist"] == ["cold", "poison"]
+
+
+def test_choice_shaped_feat_resistance_is_a_disclosed_cut_not_a_crash():
+    # Boon of Energy Resistance/EGW: {"choose": {"from": [9 damage types],
+    # "count": 2}} — the SAME choice shape races' Dragonborn already
+    # exercises (_damage_modifiers_from_5etools' own docstring). Resolving
+    # that choice is out of scope for this pure-data-pass-through reuse, so
+    # it must not crash and must not be silently mis-modeled as an
+    # unconditional resistance — just filtered to empty, same as the race
+    # side's own disclosed cut.
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Boon of Energy Resistance")
+    assert feat["resist"] == []
+
+
+def test_boon_of_blazing_dawn_grants_a_fixed_immunity():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Boon of Blazing Dawn")
+    assert feat["immune"] == ["radiant"]
+
+
+def test_boon_of_poison_mastery_grants_both_immunity_and_condition_immunity():
+    # The one real feat carrying BOTH immune and conditionImmune at once.
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Boon of Poison Mastery")
+    assert feat["immune"] == ["poison"]
+    assert feat["condition_immune"] == ["poisoned"]
+
+
+def test_boon_of_terror_grants_a_fixed_condition_immunity():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Boon of Terror")
+    assert feat["condition_immune"] == ["frightened"]
+
+
+def test_aberrant_anatomy_grants_blindsight_15():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Aberrant Anatomy")
+    assert feat["senses"] == {"blindsight": 15}
+
+
+def test_blind_fighting_and_skulker_both_grant_blindsight_10():
+    # Skulker repeats across PHB (no senses field — the older Skulker never
+    # granted blindsight) and XPHB (the 2024 reprint that does) —
+    # confirmed 2026-09-28 against the real fetched feats.json, so the
+    # XPHB record is selected explicitly by id, same "-source" disambig
+    # convention every other reprint-aware test in this file already uses.
+    feats = load_official_feats(official_dir())
+    blind_fighting = next(f for f in feats if f["name"] == "Blind Fighting")
+    skulker_xphb = next(f for f in feats if f["index"] == "skulker-xphb")
+    assert blind_fighting["senses"] == {"blindsight": 10}
+    assert skulker_xphb["senses"] == {"blindsight": 10}
+
+
+def test_boon_of_truesight_grants_truesight_60():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Boon of Truesight")
+    assert feat["senses"] == {"truesight": 60}
+
+
+def test_a_feat_with_none_of_these_fields_gets_empty_defaults():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Alert")
+    assert feat["resist"] == []
+    assert feat["immune"] == []
+    assert feat["condition_immune"] == []
+    assert feat["senses"] == {}
