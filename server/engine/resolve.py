@@ -247,16 +247,17 @@ def _feat_ability_bonuses(feats: list[dict]) -> dict[str, int]:
     "Final ability scores" section, which now also feeds resolved granted
     feats into this same early pass, not just species/background).
 
-    A feat's CHOICE portion (ability_bonus_options, e.g. Ability Score
-    Improvement's own +2-or-+1/+1) is deliberately not read here — this is
-    a DEFERRED gap, not a RAW-justified one (final whole-branch review,
-    Finding 3, 2026-09-28): official_source.py's catalog conversion does
-    build the ability_bonus_options envelope, but no _feat_choice_templates
-    function exists to turn it into a selectable Choice (unlike
-    _background_choice_templates/_species_choice_templates), so there is
-    nothing for this function to read a SELECTED choice back out of yet.
-    Left for a later slice; matches _background_ability_bonuses' "fixed
-    grants only" scope only incidentally, not by the same RAW reasoning."""
+    A feat's CHOICE portion (ability_bonus_options, e.g. a hypothetical
+    "+1 to one of two abilities" feat) is deliberately NOT read here —
+    this function stays "fixed grants only", mirroring
+    _background_ability_bonuses' own scope exactly. That choice portion is
+    now handled (Phase 4c-ii Task 2, closing the gap this docstring used to
+    describe) by a separate early pass right alongside this function's own
+    call site in resolve()'s "Final ability scores" section, via
+    _feat_ability_bonus_choice_templates/_feat_ability_bonus_deltas — kept
+    apart from this function for the same reason species/background keep
+    their own fixed-vs-choice ability-bonus logic in two separate
+    functions each."""
     bonuses: dict[str, int] = {}
     for feat in feats:
         for entry in feat.get("ability_bonuses", []):
@@ -494,6 +495,72 @@ def _background_ability_bonus_deltas(envelope: dict, built_options: list[dict]) 
     return deltas_by_id
 
 
+def _feat_ability_bonus_choice_templates(feats: list[dict]) -> list[dict]:
+    """Feat-side counterpart to _background_ability_bonus_choice_template/
+    _species_ability_bonus_choice_template (Phase 4c-ii Task 2) — plural,
+    unlike those two, because `feats` is itself a list (a background can in
+    principle grant more than one feat via `feat_refs`), not a single
+    `bg`/`race`. Built and applied EARLY in resolve()'s "Final ability
+    scores" section, exactly like its species/background siblings — NOT
+    inside _feat_choice_templates below, whose own language_options block
+    is safe to build lazily (a language selection never feeds final
+    ability scores) while an ability-bonus selection does, and final_scores
+    must already reflect it by the time that early pass runs. The built
+    templates are also appended to choice_templates later (mirroring
+    background_ability_choice_tpl/species_ability_choice_tpl's own
+    "compute once early, append later" pattern) so the choice is still
+    visible to the player, not just silently applied."""
+    templates = []
+    for feat in feats:
+        envelope = feat.get("ability_bonus_options")
+        if not envelope:
+            continue
+        cid = f"feat:{feat['index']}:ability-bonus"
+        source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
+        choose = envelope.get("choose", 1)
+        description = f"Choose {choose} ability score{'s' if choose != 1 else ''} to increase by 1."
+        tpl = build_choice_template(envelope, cid, source, "Ability Score Increase", description=description)
+        if tpl:
+            templates.append(tpl)
+    return templates
+
+
+def _feat_ability_bonus_deltas(envelope: dict) -> dict[str, list[tuple[str, int]]]:
+    """Feat-side counterpart to _background_ability_bonus_deltas — but NOT
+    a direct reuse of it (confirmed by reading
+    _feat_ability_bonus_options_from_5etools, catalog/official_source.py,
+    fresh for this task): a feat's ability_bonus_options envelope uses the
+    SAME simple, non-bundled "ability_bonus" option shape species' own
+    Half-Elf choice already uses (_ability_bonus_options_from_5etools),
+    NOT background's "multiple"-bundle shape
+    (_ability_bonus_options_from_5etools_weighted_pair) — every option is a
+    single {"option_type": "ability_bonus", "ability_score": {...},
+    "bonus": ...} entry, never a bundle of several under an "items" key.
+    _background_ability_bonus_deltas reads exactly that "items" key, which
+    a plain ability_bonus option simply doesn't have, so it would silently
+    return [] for every feat option — hence this small, disclosed variant
+    instead of a direct call.
+
+    No `built_options`/zip-by-position needed either (unlike the
+    background version): build_choice_options (catalog/choices.py) sets a
+    plain ability_bonus option's id to `option["ability_score"]["index"]`
+    directly, so the raw envelope's own option IS already keyed by the
+    same id build_choice_template produces — reading it straight off the
+    envelope is simpler and can't drift out of sync with a separate
+    built_options list the way a position-based zip could."""
+    raw_options = envelope.get("from", {}).get("options", [])
+    deltas_by_id: dict[str, list[tuple[str, int]]] = {}
+    for raw_opt in raw_options:
+        if raw_opt.get("option_type") != "ability_bonus":
+            continue
+        ability_score = raw_opt.get("ability_score") or {}
+        index = ability_score.get("index")
+        if not index:
+            continue
+        deltas_by_id[index] = [(index.upper(), raw_opt.get("bonus", 1))]
+    return deltas_by_id
+
+
 def _asi_granting_levels(catalog: Catalog, cls_id: str, max_level: int) -> list[int]:
     """ability_score_bonuses in a level row is a CUMULATIVE count, not a
     per-level flag — the actual ASI-granting levels are wherever the
@@ -711,18 +778,35 @@ def _background_choice_templates(bg: dict, bg_id: str) -> list[dict]:
 
 def _feat_choice_templates(feats: list[dict]) -> list[dict]:
     """A granted feat's own choice-shaped fields, mirrored from
-    _background_choice_templates' proficiency-choice block above (same
-    build_choice_template call, same cid/source/label/description shape).
-    Handles `proficiency_choices` only, e.g. Crafter/XPHB's real "choose 3
-    of 8 artisan's tools" grant (Artisan/XPHB's own feat grant) — a feat's
-    `ability_bonus_options`/`language_options` are a separate follow-up
-    task in this same plan, not handled here. The ":proficiency-choice"
-    substring in the cid is load-bearing for the same reason it is in
-    _background_choice_templates' cid (see that function's own comment):
-    it's what the merge-site fixes below use to recognize a feat-sourced
-    proficiency selection."""
+    _background_choice_templates' proficiency-choice/language blocks above
+    (same build_choice_template call, same cid/source/label/description
+    shape). Handles `proficiency_choices` (Phase 4c-ii Task 1, e.g.
+    Crafter/XPHB's real "choose 3 of 8 artisan's tools" grant) and
+    `language_options` (Phase 4c-ii Task 2, same "resource_list" envelope
+    shape backgrounds' own language_options already uses — confirmed
+    against official_source.py: a feat's language_options is built by the
+    SAME _language_grants_from_5etools conversion backgrounds use). A
+    feat's `ability_bonus_options` is deliberately NOT handled here — see
+    _feat_ability_bonus_choice_templates' own docstring for why that one
+    field needs a separate, EARLY pass instead (it feeds final ability
+    scores, which are already computed by the time this function is even
+    called). The ":proficiency-choice"/":languages" substrings in each cid
+    are load-bearing for the same reason they are in
+    _background_choice_templates' own cids (see that function's own
+    comment): they're what the merge-site fixes elsewhere in this file use
+    to recognize a feat-sourced proficiency or language selection."""
     templates = []
     for feat in feats:
+        language_envelope = feat.get("language_options")
+        if language_envelope:
+            cid = f"feat:{feat['index']}:languages"
+            source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
+            choose = language_envelope.get("choose", 1)
+            description = f"Choose {choose} language{'s' if choose != 1 else ''} of your choice."
+            tpl = build_choice_template(language_envelope, cid, source, "Languages", description=description)
+            if tpl:
+                templates.append(tpl)
+
         for i, prof_envelope in enumerate(feat.get("proficiency_choices", []) or []):
             cid = f"feat:{feat['index']}:proficiency-choice-{i}"
             source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
@@ -1472,6 +1556,41 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             for ab_key, delta in bundle_deltas.get(bundle_id, []):
                 background_bonuses[ab_key] = background_bonuses.get(ab_key, 0) + delta
 
+    # Phase 4c-ii Task 2: a FOURTH source into this same early pass — a
+    # background-granted feat's own ability_bonus_options CHOICE (as
+    # opposed to _feat_ability_bonuses' fixed-only grant, folded in via
+    # `feat_bonuses` above). `feats` (plural) means more than one template
+    # can exist at once in principle, hence a loop rather than the
+    # single-`if` shape species/background use above. A feat has no
+    # section of its own in the Draft — every real and synthetic
+    # background-granted feat's own Choice selections live under the SAME
+    # `background.choices` dict the background's own choices already use
+    # (confirmed against test_selecting_the_crafter_tool_choice_reaches_
+    # the_sheet's exact draft shape, Phase 4c-ii Task 1) — hence reading
+    # from `background_choices_raw` here too, not a separate dict. Feats
+    # are keyed by their OWN ability-bonus cid (not zipped by position with
+    # feat_ability_choice_tpls) so a feat whose envelope build_choice_
+    # template somehow can't resolve doesn't silently misalign the two
+    # lists.
+    feats_by_ability_bonus_cid = {
+        f"feat:{f['index']}:ability-bonus": f for f in resolved_feats if f.get("ability_bonus_options")
+    }
+    feat_ability_choice_tpls = _feat_ability_bonus_choice_templates(resolved_feats)
+    if feat_ability_choice_tpls:
+        feat_background_choices_raw = background_dict.get("choices") if isinstance(background_dict.get("choices"), dict) else {}
+        for feat_ability_tpl in feat_ability_choice_tpls:
+            valid_feat_ability_ids = {o["id"] for o in feat_ability_tpl["options"] if not o.get("disabled")}
+            raw_selected = feat_background_choices_raw.get(feat_ability_tpl["id"]) or []
+            # Same dedupe-before-cap-and-apply discipline as species'/
+            # background's own passes above.
+            deduped_selected = list(dict.fromkeys(s for s in raw_selected if isinstance(s, str)))
+            selected_feat_abilities = [s for s in deduped_selected if s in valid_feat_ability_ids][: feat_ability_tpl["count"]]
+            source_feat = feats_by_ability_bonus_cid.get(feat_ability_tpl["id"])
+            feat_ability_deltas = _feat_ability_bonus_deltas(source_feat["ability_bonus_options"]) if source_feat else {}
+            for ab_id in selected_feat_abilities:
+                for ab_key, delta in feat_ability_deltas.get(ab_id, []):
+                    feat_bonuses[ab_key] = feat_bonuses.get(ab_key, 0) + delta
+
     final_scores: dict[str, int] = {}
     for ab in derived_mod.ABILITIES:
         raw = base_scores.get(ab, 10)
@@ -1554,6 +1673,13 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # safe no-op in that case, not gated behind `if bg and bg_id` like the
     # background-choice-templates call just above.
     choice_templates += _feat_choice_templates(resolved_feats)
+    # Phase 4c-ii Task 2: `feat_ability_choice_tpls` was already built (and
+    # applied to `feat_bonuses`) EARLY, in the "Final ability scores"
+    # section above — appended here, unconditionally, mirroring exactly how
+    # background_ability_choice_tpl/species_ability_choice_tpl (also built
+    # early) get appended to choice_templates at their own call sites,
+    # rather than rebuilding the templates a second time here.
+    choice_templates += feat_ability_choice_tpls
     if race and race_id:
         choice_templates += _species_choice_templates(catalog, race, race_id, subrace)
         if species_ability_choice_tpl:
