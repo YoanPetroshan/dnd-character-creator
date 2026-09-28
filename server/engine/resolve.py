@@ -537,7 +537,23 @@ def _feat_ability_bonus_choice_templates(feats: list[dict], origin: str | None =
     multi-feat list would collide all of them onto the same prefix,
     which is never the actual call shape either background or ASI call
     sites use. Defaults to None (unchanged Phase 4c-ii behavior, the
-    `feat:{index}:...` shape background-granted feats already use)."""
+    `feat:{index}:...` shape background-granted feats already use).
+
+    Final whole-branch review (2026-09-28), Important #1: an ASI-origin
+    feat's cascaded ability-bonus card (and _feat_choice_templates'
+    sibling proficiency/language cards below) used to render with a bare
+    generic label ("Ability Score Increase") and no level, making two
+    different feats' cascaded cards on ClassPage indistinguishable. Two
+    fixes, both here: (1) the label is now prefixed with the feat's own
+    name (e.g. "Skill Expert: Ability Score Increase") so the card is
+    self-identifying regardless of level display; (2) when `origin` is
+    given, the feat dict is the one `_resolve_asi_selected_feats` builds,
+    which always carries `_asi_level` (the ASI-granting level this pick
+    was made at) — that level is copied onto `source["level"]` so
+    ChoiceCard's existing `source.level != null` display (already used
+    for class-kind sources) picks it up for free. A background-granted
+    feat's cascaded choice (no `origin`) has no natural "level" to show
+    and is left without one, same as before."""
     pairs: list[tuple[dict, dict]] = []
     for feat in feats:
         envelope = feat.get("ability_bonus_options")
@@ -546,9 +562,12 @@ def _feat_ability_bonus_choice_templates(feats: list[dict], origin: str | None =
         cid_prefix = origin if origin is not None else f"feat:{feat['index']}"
         cid = f"{cid_prefix}:ability-bonus"
         source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
+        if origin is not None and feat.get("_asi_level") is not None:
+            source["level"] = feat["_asi_level"]
         choose = envelope.get("choose", 1)
         description = f"Choose {choose} ability score{'s' if choose != 1 else ''} to increase by 1."
-        tpl = build_choice_template(envelope, cid, source, "Ability Score Increase", description=description)
+        label = f"{feat['name']}: Ability Score Increase"
+        tpl = build_choice_template(envelope, cid, source, label, description=description)
         if tpl:
             pairs.append((tpl, feat))
     return pairs
@@ -983,24 +1002,43 @@ def _feat_choice_templates(feats: list[dict], origin: str | None = None) -> list
     multi-feat list would collide all of them onto the same prefix,
     which is never the actual call shape either background or ASI call
     sites use. Defaults to None (unchanged Phase 4c-ii behavior, the
-    `feat:{index}:...` shape background-granted feats already use)."""
+    `feat:{index}:...` shape background-granted feats already use).
+
+    Final whole-branch review (2026-09-28), Important #1: same two fixes
+    as _feat_ability_bonus_choice_templates' own docstring above —
+    (1) every label built here is now prefixed with the feat's own name
+    (e.g. "Skill Expert: Skill Proficiency") so a cascaded card is
+    self-identifying, applied to BOTH the ASI-origin path AND the
+    background-granted path (a background-granted feat's cascaded choice
+    on BackgroundPage has the exact same ambiguity problem); (2) when
+    `origin` is given, `source["level"]` is set from the feat dict's own
+    `_asi_level` (set by _resolve_asi_selected_feats) so ChoiceCard's
+    existing level display picks it up. A background-granted feat (no
+    `origin`) has no natural level and stays unset."""
     templates = []
     for feat in feats:
         cid_prefix = origin if origin is not None else f"feat:{feat['index']}"
+        feat_level = feat.get("_asi_level") if origin is not None else None
         language_envelope = feat.get("language_options")
         if language_envelope:
             cid = f"{cid_prefix}:languages"
             source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
+            if feat_level is not None:
+                source["level"] = feat_level
             choose = language_envelope.get("choose", 1)
             description = f"Choose {choose} language{'s' if choose != 1 else ''} of your choice."
-            tpl = build_choice_template(language_envelope, cid, source, "Languages", description=description)
+            label = f"{feat['name']}: Languages"
+            tpl = build_choice_template(language_envelope, cid, source, label, description=description)
             if tpl:
                 templates.append(tpl)
 
         for i, prof_envelope in enumerate(feat.get("proficiency_choices", []) or []):
             cid = f"{cid_prefix}:proficiency-choice-{i}"
             source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
-            label = _background_proficiency_choice_label(prof_envelope)
+            if feat_level is not None:
+                source["level"] = feat_level
+            base_label = _background_proficiency_choice_label(prof_envelope)
+            label = f"{feat['name']}: {base_label}"
             choose = prof_envelope.get("choose", 1)
             description = f"Choose {choose} proficienc{'ies' if choose != 1 else 'y'} of your choice."
             tpl = build_choice_template(prof_envelope, cid, source, label, description=description)
