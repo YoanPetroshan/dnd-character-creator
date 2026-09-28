@@ -697,14 +697,14 @@ def _feat_source_allowed(feat: dict, sources) -> bool:
 
 def _resolve_asi_selected_feats(
     resolved_classes: list[dict], catalog: Catalog, sources=None,
-) -> tuple[list[dict], dict[str, list[tuple[str, int]]]]:
+) -> tuple[list[dict], dict[str, list[tuple[str, int]]], dict[str, list[tuple[str, int]]]]:
     """ASI-or-feat Task 3: the ASI-level counterpart to
     _resolve_granted_feats (background grants). Reads each resolved
     class's OWN `class_choices` for a `class:{cls_id}:{lvl}:asi` selection
     (deduped first) naming a `feat:{index}` option (offered by
     _asi_choice_templates) rather than an ASI-combo id, at every
     ASI-granting level that class has actually reached. Returns
-    (asi_feat_picks, feat_deltas_by_cid):
+    (asi_feat_picks, feat_deltas_by_cid, chosen_ability_deltas_by_origin):
 
     - asi_feat_picks: resolved feat dicts, each a shallow COPY of the
       catalog record (never the shared record itself) tagged with
@@ -721,6 +721,17 @@ def _resolve_asi_selected_feats(
       `ability_bonus_options` pick, if any), for _apply_asi_progression to
       apply at the right point in its per-level walk. Only levels with a
       non-empty delta get an entry.
+    - chosen_ability_deltas_by_origin: Task 4 (ASI-or-feat) addition — that
+      pick's own CHOSEN ability_bonus_options delta ONLY (never the fixed
+      ability_bonuses half feat_deltas_by_cid also folds in), keyed by the
+      pick's own `_asi_origin` (never `feat_deltas_by_cid`'s cid — a
+      class/level ASI cid can only ever hold ONE pick anyway, but the key
+      shape must match _feat_instance_key for _feat_prerequisite_problems
+      to find it). For _feat_prerequisite_problems to subtract back out
+      before checking that SAME pick's own prerequisite (never reused for
+      _apply_asi_progression's cap-gated application, which still needs
+      the fixed+chosen combined total from feat_deltas_by_cid). Only picks
+      with a non-empty chosen delta get an entry.
 
     The sub-choice selection is validated exactly like resolve()'s own
     early background-feat ability-bonus pass (dedupe, keep only enabled
@@ -735,6 +746,7 @@ def _resolve_asi_selected_feats(
     ignores it (it isn't a valid option id)."""
     asi_feat_picks: list[dict] = []
     feat_deltas_by_cid: dict[str, list[tuple[str, int]]] = {}
+    chosen_ability_deltas_by_origin: dict[str, list[tuple[str, int]]] = {}
     for rc in resolved_classes:
         cls_id, cls, level, class_choices = rc["cls_id"], rc["cls"], rc["level"], rc["class_choices"]
         if not (cls_id and cls):
@@ -755,6 +767,7 @@ def _resolve_asi_selected_feats(
             asi_feat_picks.append(feat)
 
             deltas = [(e["ability_score"]["index"].upper(), e["bonus"]) for e in feat.get("ability_bonuses", [])]
+            chosen_deltas: list[tuple[str, int]] = []
             for ability_tpl, _ in _feat_ability_bonus_choice_templates([feat], origin=origin):
                 valid_ids = {o["id"] for o in ability_tpl["options"] if not o.get("disabled")}
                 raw_sub = class_choices.get(ability_tpl["id"]) or []
@@ -762,10 +775,13 @@ def _resolve_asi_selected_feats(
                 chosen = [s for s in deduped if s in valid_ids][: ability_tpl["count"]]
                 deltas_by_option = _feat_ability_bonus_deltas(feat["ability_bonus_options"])
                 for opt_id in chosen:
-                    deltas.extend(deltas_by_option.get(opt_id, []))
+                    chosen_deltas.extend(deltas_by_option.get(opt_id, []))
+            deltas.extend(chosen_deltas)
             if deltas:
                 feat_deltas_by_cid[cid] = deltas
-    return asi_feat_picks, feat_deltas_by_cid
+            if chosen_deltas:
+                chosen_ability_deltas_by_origin[origin] = chosen_deltas
+    return asi_feat_picks, feat_deltas_by_cid, chosen_ability_deltas_by_origin
 
 
 def _class_choice_templates(cls: dict, cls_id: str) -> list[dict]:
@@ -1185,8 +1201,29 @@ def _feat_prerequisite_alt_met(alt: dict, total_level: int, final_scores: dict[s
     return True
 
 
+def _feat_instance_key(feat: dict) -> str:
+    """A per-INSTANCE key for a resolved feat dict (Task 4, ASI-or-feat).
+    The SAME catalog feat (same `feat['index']`) can be picked at TWO
+    different ASI instances — two different classes, or two different
+    levels of the same class — each with its OWN chosen ability-bonus
+    sub-choice (e.g. Grappler taken at both Fighter 4 and Ranger 8, one
+    instance +1 STR, the other +1 DEX). A bare-index-keyed dict would
+    collide the two instances' deltas, silently overwriting one with the
+    other. `_asi_origin` (Task 1's origin param, set by
+    _resolve_asi_selected_feats) is exactly the unique cid prefix
+    _feat_ability_bonus_choice_templates already scopes that instance's own
+    choice templates under, so reusing it here as the dict key is
+    guaranteed to match. A background-granted feat carries no `_asi_origin`
+    (there's only ever one instance of a given background grant), so it
+    falls back to its bare `feat:{index}` — the SAME default cid prefix
+    _feat_ability_bonus_choice_templates itself uses for an un-scoped
+    (origin=None) call."""
+    return feat.get("_asi_origin") or f"feat:{feat['index']}"
+
+
 def _feat_prerequisite_problems(
     feats: list[dict], total_level: int, final_scores: dict[str, int], use_prerequisites: bool,
+    chosen_ability_deltas_by_instance: dict[str, list[tuple[str, int]]] | None = None,
 ) -> list[dict]:
     """Structural precedent: _multiclass_prerequisite_problems above — same
     "only check if the preference is on," same "append a problem, NEVER
@@ -1233,9 +1270,27 @@ def _feat_prerequisite_problems(
     per-feat, per-check adjustment (computed fresh for each feat in the
     loop, not shared across feats): a DIFFERENT simultaneously-granted
     feat's bonus, or species'/background's own bonus, legitimately still
-    counts, since it isn't F's own contribution being subtracted."""
+    counts, since it isn't F's own contribution being subtracted.
+
+    Task 4 (ASI-or-feat) extends this SAME discipline to a feat's own
+    CHOSEN ability_bonus_options delta, via the new
+    `chosen_ability_deltas_by_instance` param — keyed by _feat_instance_key
+    (see its own docstring), NOT bare `feat['index']`, since the same
+    catalog feat picked at two different ASI instances (two classes, or
+    two levels of one class) each carries its OWN chosen delta. 10 real
+    General feats combine an ability prerequisite with a choice-shaped
+    ability bonus (Athlete, Charger, Dual Wielder, Grappler, Inspiring
+    Leader, Observant, Polearm Master, Ritual Caster, Sentinel, Speedy),
+    confirmed 2026-09-28. Callers build this dict from TWO sources merged
+    together: resolve()'s early background-feat ability-choice pass (its
+    own chosen-only deltas, keyed by bare `feat:{index}`), and
+    _resolve_asi_selected_feats' `chosen_ability_deltas_by_origin` return
+    value (keyed by `_asi_origin`) — never the ASI-side `feat_deltas_by_cid`
+    return value, whose entries COMBINE the fixed and chosen deltas and
+    would double-subtract the fixed half already handled above."""
     if not use_prerequisites:
         return []
+    chosen_ability_deltas_by_instance = chosen_ability_deltas_by_instance or {}
     problems = []
     for feat in feats:
         prereq = _feat_structured_prerequisite(feat)
@@ -1249,6 +1304,10 @@ def _feat_prerequisite_problems(
         for entry in feat.get("ability_bonuses", []):
             ab = entry["ability_score"]["index"].upper()
             scores_without_own_bonus[ab] = scores_without_own_bonus.get(ab, 0) - entry["bonus"]
+        # Task 4: subtract THIS feat's own CHOSEN ability-bonus delta back
+        # out too, same discipline, keyed by this feat's own instance.
+        for ab_key, delta in chosen_ability_deltas_by_instance.get(_feat_instance_key(feat), []):
+            scores_without_own_bonus[ab_key] = scores_without_own_bonus.get(ab_key, 0) - delta
         if not any(_feat_prerequisite_alt_met(alt, total_level, scores_without_own_bonus) for alt in prereq):
             problems.append({
                 "id": f"feat-prerequisite-unmet-{feat['index']}",
@@ -1705,7 +1764,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # and put it before earlier levels' cap checks); and its own choice
     # templates are built origin-scoped in the per-class loop, not with the
     # default un-scoped `feat:{index}:...` cids (which would duplicate them).
-    asi_feat_picks, asi_feat_deltas_by_cid = _resolve_asi_selected_feats(resolved_classes, catalog, draft.get("sources"))
+    asi_feat_picks, asi_feat_deltas_by_cid, asi_chosen_ability_deltas_by_origin = _resolve_asi_selected_feats(
+        resolved_classes, catalog, draft.get("sources"),
+    )
     asi_feats_by_cid = {f["_asi_cid"]: f for f in asi_feat_picks}
     prerequisite_blocked_asi_feat_cids: set[str] = set()
 
@@ -1810,6 +1871,20 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # silent-desync risk that duplication used to carry.
     feat_ability_choice_pairs = _feat_ability_bonus_choice_templates(background_feats)
     feat_ability_choice_tpls = [tpl for tpl, _ in feat_ability_choice_pairs]
+    # Task 4 (ASI-or-feat): this SAME loop already computes each
+    # background-granted feat's own selected ability-bonus ids and their
+    # deltas (feeding `feat_bonuses` above) — also record them here, keyed
+    # by _feat_instance_key(source_feat) (a background grant has no
+    # `_asi_origin`, so this is its bare `feat:{index}`), so
+    # _feat_prerequisite_problems can subtract a feat's own CHOSEN bonus
+    # back out before checking THAT feat's own prerequisite, exactly like
+    # it already does for a feat's FIXED ability_bonuses. Merged with the
+    # ASI-side `asi_chosen_ability_deltas_by_origin` (from
+    # _resolve_asi_selected_feats above) at the _feat_prerequisite_problems
+    # call site below — no key-collision risk, since the two prefixes
+    # (`feat:{index}` vs `class:...:asi:feat:{index}`) are structurally
+    # distinct.
+    background_chosen_ability_deltas_by_instance: dict[str, list[tuple[str, int]]] = {}
     if feat_ability_choice_tpls:
         feat_background_choices_raw = background_dict.get("choices") if isinstance(background_dict.get("choices"), dict) else {}
         for feat_ability_tpl, source_feat in feat_ability_choice_pairs:
@@ -1820,9 +1895,13 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             deduped_selected = list(dict.fromkeys(s for s in raw_selected if isinstance(s, str)))
             selected_feat_abilities = [s for s in deduped_selected if s in valid_feat_ability_ids][: feat_ability_tpl["count"]]
             feat_ability_deltas = _feat_ability_bonus_deltas(source_feat["ability_bonus_options"])
+            instance_chosen_deltas: list[tuple[str, int]] = []
             for ab_id in selected_feat_abilities:
                 for ab_key, delta in feat_ability_deltas.get(ab_id, []):
                     feat_bonuses[ab_key] = feat_bonuses.get(ab_key, 0) + delta
+                    instance_chosen_deltas.append((ab_key, delta))
+            if instance_chosen_deltas:
+                background_chosen_ability_deltas_by_instance[_feat_instance_key(source_feat)] = instance_chosen_deltas
 
     final_scores: dict[str, int] = {}
     for ab in derived_mod.ABILITIES:
@@ -1917,7 +1996,22 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # (the loop above reassigns it via _apply_asi_progression before this
     # line runs), matching what a player's actual final character sheet
     # shows.
-    problems += _feat_prerequisite_problems(resolved_feats, total_level, final_scores, use_feat_prereqs)
+    #
+    # Task 4 (ASI-or-feat): merges BOTH sources of "a feat's own CHOSEN
+    # ability-bonus delta" — the background-side dict built above
+    # (background_chosen_ability_deltas_by_instance, keyed by bare
+    # `feat:{index}`) and the ASI-side one returned by
+    # _resolve_asi_selected_feats (asi_chosen_ability_deltas_by_origin,
+    # keyed by `_asi_origin`) — into one dict keyed by _feat_instance_key,
+    # so _feat_prerequisite_problems can subtract each feat's own chosen
+    # bonus back out before checking THAT feat's own prerequisite. No key
+    # collision risk: the two prefixes are structurally distinct.
+    chosen_ability_deltas_by_instance = {
+        **background_chosen_ability_deltas_by_instance, **asi_chosen_ability_deltas_by_origin,
+    }
+    problems += _feat_prerequisite_problems(
+        resolved_feats, total_level, final_scores, use_feat_prereqs, chosen_ability_deltas_by_instance,
+    )
 
     modifiers = derived_mod.ability_modifiers(final_scores)
     # Prof bonus is confirmed class-agnostic at a given level (per the

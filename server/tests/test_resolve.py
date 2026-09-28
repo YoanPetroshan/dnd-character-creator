@@ -3457,6 +3457,53 @@ def test_feat_prerequisite_cannot_be_satisfied_by_the_feats_own_granted_bonus_en
     }]
 
 
+def test_feat_prerequisite_cannot_be_satisfied_by_the_feats_own_chosen_bonus_end_to_end(catalog, monkeypatch):
+    # Task 4 (ASI-or-feat): the CHOSEN counterpart of the FIXED-bonus test
+    # just above. Before this task, `_feat_prerequisite_problems` only
+    # subtracted a feat's own FIXED `ability_bonuses` back out — its own
+    # CHOSEN `ability_bonus_options` pick was never subtracted, so a
+    # background-granted feat's own chosen ability bonus COULD bootstrap
+    # its own prerequisite (unlike an ASI-level pick, which is separately
+    # gated by _apply_asi_progression before it's even applied — this gap
+    # only exists for a background grant, which has no such gate; see
+    # _feat_instance_key's docstring for why the fix threads a per-instance
+    # dict rather than reusing a bare feat-index key).
+    #
+    # Base CHA 12, Human's own +1 (species) brings it to 13 — but that 13
+    # is base+species ONLY (nothing chosen yet). This feat's own
+    # ability_bonus_options choice grants a FURTHER +1 CHA the player
+    # selects, which the sheet legitimately shows fully applied (final CHA
+    # 14) — but the prerequisite check must evaluate against this feat's
+    # own CHOSEN +1 subtracted back out too (13, species only), which DOES
+    # meet CHA >= 13 on its own — so pick a prerequisite of 14 instead,
+    # unmet without the feat's own chosen +1.
+    feat = _synthetic_feat(
+        index="synthetic-chosen-bootstrap-e2e-test", name="Synthetic Chosen Bootstrap E2E",
+        ability_bonus_options={
+            "choose": 1,
+            "from": {
+                "option_set_type": "options_array",
+                "options": [
+                    {"option_type": "ability_bonus", "ability_score": {"index": "cha", "name": "CHA"}, "bonus": 1},
+                ],
+            },
+        },
+        prerequisite=[{"ability": [{"cha": 14}]}],
+    )
+    _grant_synthetic_feat(catalog, monkeypatch, feat)
+    draft = _fighter_acolyte_human_draft(
+        abilities={"method": "manual", "base": {"STR": 16, "DEX": 14, "CON": 14, "INT": 10, "WIS": 12, "CHA": 12}},
+        preferences={"usePrerequisites": {"feats": True}},
+        background={"id": "acolyte", "choices": {"feat:synthetic-chosen-bootstrap-e2e-test:ability-bonus": ["cha"]}},
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["abilities"]["CHA"] == 14  # 12 base + 1 Human + 1 this feat's own CHOSEN bonus — fully applied
+    assert resolution["problems"] == [{
+        "id": "feat-prerequisite-unmet-synthetic-chosen-bootstrap-e2e-test",
+        "message": "Synthetic Chosen Bootstrap E2E's prerequisite isn't met.",
+    }]
+
+
 # --- Direct unit tests of the small feat-effect helper functions ---------
 
 def test_feat_ability_bonuses_sums_across_multiple_feats():
@@ -3574,6 +3621,63 @@ def test_feat_prerequisite_problems_self_bonus_subtraction_is_per_feat_not_share
         "id": "feat-prerequisite-unmet-synthetic-multi-feat-a-test",
         "message": "Synthetic Multi Feat A's prerequisite isn't met.",
     }]
+
+
+def test_feat_prerequisite_problems_chosen_ability_bonus_delta_cannot_satisfy_its_own_prerequisite():
+    # Task 4 (ASI-or-feat): the CHOSEN half of a feat's own ability bonus
+    # (ability_bonus_options, as opposed to the fixed ability_bonuses
+    # already covered by the tests above) must be subtracted back out too,
+    # via the new `chosen_ability_deltas_by_instance` param, keyed by
+    # `_feat_instance_key` — a background-granted instance (no `_asi_origin`
+    # tag) keys by its bare `feat:{index}`. final_scores mirrors exactly
+    # what resolve() passes in: ALREADY including this feat's own chosen
+    # +1 (11 base + this feat's own chosen +1 = 12... wait, use a real
+    # boundary: 12 base + chosen +1 = 13, prerequisite needs 13 -> without
+    # subtracting the chosen delta this would wrongly look met).
+    feat = _synthetic_feat(
+        index="synthetic-chosen-bonus-unit-test", name="Synthetic Chosen Bonus Unit",
+        prerequisite=[{"ability": [{"cha": 13}]}],
+    )
+    final_scores = {"CHA": 13}  # 12 base + this feat's own CHOSEN +1, already folded in by resolve()
+    chosen = {"feat:synthetic-chosen-bonus-unit-test": [("CHA", 1)]}
+    problems = _feat_prerequisite_problems(
+        [feat], total_level=1, final_scores=final_scores, use_prerequisites=True,
+        chosen_ability_deltas_by_instance=chosen,
+    )
+    assert problems == [{
+        "id": "feat-prerequisite-unmet-synthetic-chosen-bonus-unit-test",
+        "message": "Synthetic Chosen Bonus Unit's prerequisite isn't met.",
+    }]
+
+
+def test_feat_prerequisite_problems_chosen_deltas_by_instance_dont_collide_across_asi_origins():
+    # Task 4: the SAME catalog feat (same `index`) picked at two different
+    # ASI instances (two different classes here) each carries its OWN
+    # chosen ability-bonus delta, keyed by `_asi_origin` rather than bare
+    # index — proves a bare-index-keyed dict would have collided the two.
+    feat_a = _synthetic_feat(
+        index="synthetic-grappler-like-test", name="Synthetic Grappler Like A",
+        prerequisite=[{"ability": [{"str": 13}]}],
+        _asi_origin="class:fighter:4:asi:feat:synthetic-grappler-like-test",
+    )
+    feat_b = _synthetic_feat(
+        index="synthetic-grappler-like-test", name="Synthetic Grappler Like B",
+        prerequisite=[{"ability": [{"dex": 13}]}],
+        _asi_origin="class:ranger:8:asi:feat:synthetic-grappler-like-test",
+    )
+    final_scores = {"STR": 13, "DEX": 13}
+    chosen = {
+        "class:fighter:4:asi:feat:synthetic-grappler-like-test": [("STR", 1)],
+        "class:ranger:8:asi:feat:synthetic-grappler-like-test": [("DEX", 1)],
+    }
+    problems = _feat_prerequisite_problems(
+        [feat_a, feat_b], total_level=8, final_scores=final_scores, use_prerequisites=True,
+        chosen_ability_deltas_by_instance=chosen,
+    )
+    # Both instances' own chosen delta is subtracted back out for ITS OWN
+    # check only — neither instance's delta leaks into the other's.
+    assert len(problems) == 2
+    assert {p["id"] for p in problems} == {"feat-prerequisite-unmet-synthetic-grappler-like-test"}
 
 
 def test_feat_choice_templates_origin_param_scopes_the_cid(catalog):
@@ -3785,7 +3889,7 @@ def test_resolve_asi_selected_feats_returns_origin_tagged_feats_and_per_cid_delt
             "class:fighter:8:asi:feat:skill-expert-xphb:ability-bonus": ["wis"],
         },
     }]
-    feats, deltas_by_cid = _resolve_asi_selected_feats(resolved_classes, catalog)
+    feats, deltas_by_cid, chosen_deltas_by_origin = _resolve_asi_selected_feats(resolved_classes, catalog)
     assert [f["index"] for f in feats] == ["actor-xphb", "skill-expert-xphb"]
     assert [f["_asi_origin"] for f in feats] == [
         "class:fighter:4:asi:feat:actor-xphb", "class:fighter:8:asi:feat:skill-expert-xphb",
@@ -3794,6 +3898,15 @@ def test_resolve_asi_selected_feats_returns_origin_tagged_feats_and_per_cid_delt
     assert deltas_by_cid == {
         "class:fighter:4:asi": [("CHA", 1)],
         "class:fighter:8:asi": [("WIS", 1)],
+    }
+    # Task 4 (ASI-or-feat): the third return value carries ONLY each pick's
+    # own CHOSEN sub-choice delta (never a fixed ability_bonuses grant —
+    # Actor/XPHB's fixed CHA +1 has no entry here at all), keyed by
+    # `_asi_origin` rather than by cid (a class/level ASI cid can only ever
+    # hold one pick, but _feat_prerequisite_problems looks this up via
+    # _feat_instance_key, which reads `_asi_origin`).
+    assert chosen_deltas_by_origin == {
+        "class:fighter:8:asi:feat:skill-expert-xphb": [("WIS", 1)],
     }
 
 
