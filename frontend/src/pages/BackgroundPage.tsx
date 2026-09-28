@@ -24,7 +24,9 @@ export function BackgroundPage() {
     dispatch({ type: "SET_CHOICE_SELECTION", source: "background", choiceId, selected });
   }
 
-  const choices = resolution ? resolution.choices.filter((c) => c.source.kind === "background") : [];
+  const choices = resolution
+    ? resolution.choices.filter((c) => c.source.kind === "background" || c.source.kind === "feat")
+    : [];
 
   return (
     <div className="page">

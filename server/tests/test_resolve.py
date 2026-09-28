@@ -3142,15 +3142,19 @@ def test_a_granted_feats_full_mechanical_effects_all_land_on_the_sheet(catalog, 
 
 
 def test_a_feats_choice_shaped_effects_are_all_offered_but_inert_unselected(catalog, monkeypatch):
-    # Renamed from test_a_feats_ability_bonus_and_language_choice_shaped_
-    # effects_are_converted_but_not_yet_offered_as_a_choice (Phase 4c-ii
-    # Task 1's rename) now that Task 2 closes the REMAINING half of the
-    # gap that older name pinned: official_source.py's catalog conversion
-    # builds ability_bonus_options/proficiency_choices/language_options
-    # envelopes for a feat that has them, and as of Task 1
-    # (proficiency_choices) + Task 2 (ability_bonus_options/
-    # language_options) _feat_choice_templates/_feat_ability_bonus_choice_
-    # templates now turn ALL THREE into real, selectable Choices — see
+    # This test has been renamed twice as the gap it pins has closed:
+    # it started as test_a_feats_choice_shaped_effects_are_converted_but_
+    # never_offered_as_a_choice (pinning the full gap); Task 1 renamed it
+    # to test_a_feats_ability_bonus_and_language_choice_shaped_effects_
+    # are_converted_but_not_yet_offered_as_a_choice after closing the
+    # proficiency_choices third; and this commit (Task 2) renames it again
+    # to its CURRENT name above, now that Task 2 closes the REMAINING two
+    # thirds: official_source.py's catalog conversion builds
+    # ability_bonus_options/proficiency_choices/language_options envelopes
+    # for a feat that has them, and as of Task 1 (proficiency_choices) +
+    # Task 2 (ability_bonus_options/language_options)
+    # _feat_choice_templates/_feat_ability_bonus_choice_templates now turn
+    # ALL THREE into real, selectable Choices — see
     # test_a_synthetic_feats_ability_bonus_choice_is_offered_and_applies/
     # test_a_synthetic_feats_language_choice_is_offered_and_applies below
     # for the "selecting one actually applies" half; this test instead

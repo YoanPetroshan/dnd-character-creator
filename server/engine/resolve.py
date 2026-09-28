@@ -275,10 +275,13 @@ def _feat_proficiency_ids(feats: list[dict]) -> list[str]:
     already feed: skill-prefixed ids into proficient_skills, everything
     else through _categorize_proficiency.
 
-    A feat's CHOICE portion (proficiency_choices, e.g. Prodigy/XGE's
-    skill-or-tool pick) is not read here — same deferred-not-RAW-justified
-    gap as _feat_ability_bonuses (see that function's docstring); real
-    backgrounds affected include Crafter/XPHB and Musician/XPHB."""
+    A feat's CHOICE portion (proficiency_choices, e.g. Crafter/XPHB's and
+    Musician/XPHB's tool pick) is deliberately NOT read here — this
+    function stays "fixed grants only", mirroring _feat_ability_bonuses'
+    own scope. That choice portion is handled separately (Phase 4c-ii Task
+    1, closing the gap this docstring used to describe) by
+    _feat_choice_templates, which builds a real, selectable Choice for it
+    instead."""
     ids: list[str] = []
     for feat in feats:
         ids.extend(p["index"] for p in feat.get("proficiencies", []))
@@ -293,8 +296,12 @@ def _feat_languages(feats: list[dict]) -> list[str]:
     race+background languages already combine into.
 
     A feat's CHOICE portion (language_options, e.g. a hypothetical
-    "learn any one language" feat) is not read here — same deferred-not-
-    RAW-justified gap as _feat_ability_bonuses/_feat_proficiency_ids."""
+    "learn any one language" feat) is deliberately NOT read here — this
+    function stays "fixed grants only", mirroring _feat_ability_bonuses'/
+    _feat_proficiency_ids' own scope. That choice portion is handled
+    separately (Phase 4c-ii Task 2, closing the gap this docstring used to
+    describe) by _feat_choice_templates, which builds a real, selectable
+    Choice for it instead."""
     return [lang["index"] for feat in feats for lang in feat.get("languages", [])]
 
 
@@ -495,7 +502,7 @@ def _background_ability_bonus_deltas(envelope: dict, built_options: list[dict]) 
     return deltas_by_id
 
 
-def _feat_ability_bonus_choice_templates(feats: list[dict]) -> list[dict]:
+def _feat_ability_bonus_choice_templates(feats: list[dict]) -> list[tuple[dict, dict]]:
     """Feat-side counterpart to _background_ability_bonus_choice_template/
     _species_ability_bonus_choice_template (Phase 4c-ii Task 2) — plural,
     unlike those two, because `feats` is itself a list (a background can in
@@ -509,8 +516,21 @@ def _feat_ability_bonus_choice_templates(feats: list[dict]) -> list[dict]:
     templates are also appended to choice_templates later (mirroring
     background_ability_choice_tpl/species_ability_choice_tpl's own
     "compute once early, append later" pattern) so the choice is still
-    visible to the player, not just silently applied."""
-    templates = []
+    visible to the player, not just silently applied.
+
+    Returns (template, feat) pairs rather than bare templates — Finding 3
+    of the final whole-branch review (2026-09-28): the cid this function
+    builds (f"feat:{feat['index']}:ability-bonus") used to be reconstructed
+    a SECOND time by resolve()'s own `feats_by_ability_bonus_cid` lookup
+    dict, to map a selected cid back to its feat. Two independent
+    constructions of the same string format is a silent-desync risk — if
+    one changed and not the other, the lookup would quietly return nothing
+    (the Choice would show as resolved but apply zero effect, and nothing
+    would catch it). Returning the feat alongside its own template lets
+    the caller build that lookup (or just iterate paired) directly off
+    this return value instead, so there's only ever one place the cid
+    format is written."""
+    pairs: list[tuple[dict, dict]] = []
     for feat in feats:
         envelope = feat.get("ability_bonus_options")
         if not envelope:
@@ -521,8 +541,8 @@ def _feat_ability_bonus_choice_templates(feats: list[dict]) -> list[dict]:
         description = f"Choose {choose} ability score{'s' if choose != 1 else ''} to increase by 1."
         tpl = build_choice_template(envelope, cid, source, "Ability Score Increase", description=description)
         if tpl:
-            templates.append(tpl)
-    return templates
+            pairs.append((tpl, feat))
+    return pairs
 
 
 def _feat_ability_bonus_deltas(envelope: dict) -> dict[str, list[tuple[str, int]]]:
@@ -1521,9 +1541,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # exactly like species_bonuses does just below. Phase 4c-i Task 6:
     # `resolved_feats` (already computed above, right after `bg` itself)
     # is a THIRD source into this same pass, via _feat_ability_bonuses —
-    # a fixed-only grant, same "no choice mechanism for an auto-granted
-    # feat" scope every other feat-effects function in this file shares
-    # (see that function's own docstring).
+    # that function stays fixed-grants-only by design (mirroring
+    # _background_ability_bonuses' own scope). The feat's CHOICE portion
+    # (ability_bonus_options) is no longer an unhandled gap: it's the
+    # FOURTH source folded in just below via feat_ability_choice_tpls
+    # (Phase 4c-ii Task 2).
     feat_bonuses = _feat_ability_bonuses(resolved_feats)
     base_scores = (draft.get("abilities") or {}).get("base") or {}
     species_bonuses = _species_ability_bonuses(race, subrace)
@@ -1567,26 +1589,27 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # `background.choices` dict the background's own choices already use
     # (confirmed against test_selecting_the_crafter_tool_choice_reaches_
     # the_sheet's exact draft shape, Phase 4c-ii Task 1) — hence reading
-    # from `background_choices_raw` here too, not a separate dict. Feats
-    # are keyed by their OWN ability-bonus cid (not zipped by position with
-    # feat_ability_choice_tpls) so a feat whose envelope build_choice_
-    # template somehow can't resolve doesn't silently misalign the two
-    # lists.
-    feats_by_ability_bonus_cid = {
-        f"feat:{f['index']}:ability-bonus": f for f in resolved_feats if f.get("ability_bonus_options")
-    }
-    feat_ability_choice_tpls = _feat_ability_bonus_choice_templates(resolved_feats)
+    # from `background_choices_raw` here too, not a separate dict.
+    #
+    # `_feat_ability_bonus_choice_templates` returns (template, feat) pairs
+    # rather than bare templates precisely so each feat is looked up
+    # directly off its own pair here, instead of this call site
+    # reconstructing the "feat:{index}:ability-bonus" cid a second time to
+    # build its own lookup dict — see that function's own docstring
+    # (Finding 3 of the final whole-branch review, 2026-09-28) for the
+    # silent-desync risk that duplication used to carry.
+    feat_ability_choice_pairs = _feat_ability_bonus_choice_templates(resolved_feats)
+    feat_ability_choice_tpls = [tpl for tpl, _ in feat_ability_choice_pairs]
     if feat_ability_choice_tpls:
         feat_background_choices_raw = background_dict.get("choices") if isinstance(background_dict.get("choices"), dict) else {}
-        for feat_ability_tpl in feat_ability_choice_tpls:
+        for feat_ability_tpl, source_feat in feat_ability_choice_pairs:
             valid_feat_ability_ids = {o["id"] for o in feat_ability_tpl["options"] if not o.get("disabled")}
             raw_selected = feat_background_choices_raw.get(feat_ability_tpl["id"]) or []
             # Same dedupe-before-cap-and-apply discipline as species'/
             # background's own passes above.
             deduped_selected = list(dict.fromkeys(s for s in raw_selected if isinstance(s, str)))
             selected_feat_abilities = [s for s in deduped_selected if s in valid_feat_ability_ids][: feat_ability_tpl["count"]]
-            source_feat = feats_by_ability_bonus_cid.get(feat_ability_tpl["id"])
-            feat_ability_deltas = _feat_ability_bonus_deltas(source_feat["ability_bonus_options"]) if source_feat else {}
+            feat_ability_deltas = _feat_ability_bonus_deltas(source_feat["ability_bonus_options"])
             for ab_id in selected_feat_abilities:
                 for ab_key, delta in feat_ability_deltas.get(ab_id, []):
                     feat_bonuses[ab_key] = feat_bonuses.get(ab_key, 0) + delta
