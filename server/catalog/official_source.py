@@ -216,6 +216,19 @@ def _pluralize(slug: str) -> str:
 # the wrong bucket, visibly, not lost data).
 _WEAPON_ID_OVERRIDES = {
     "light-crossbow": "crossbows-light",
+    # Phase 4c-i Task 3: feats (never races/backgrounds — confirmed
+    # empirically, real feats.json) grant broad weapon CATEGORIES rather
+    # than specific named weapons — "martial"/"simple" match
+    # 5e-SRD-Classes.json's own top-level proficiency ids verbatim (e.g.
+    # Fighter: "simple-weapons", "martial-weapons"); the generic
+    # _pluralize path below would otherwise produce "martials"/"simples".
+    # "improvised" (Tavern Brawler/XPHB) has no bundled-SRD precedent —
+    # no class or race ever grants it — but follows the identical
+    # "-weapons" suffix convention, disclosed here rather than guessed at
+    # silently.
+    "martial": "martial-weapons",
+    "simple": "simple-weapons",
+    "improvised": "improvised-weapons",
 }
 
 
@@ -1818,8 +1831,26 @@ def _feat_from_5etools(raw: dict) -> dict | None:
         "prerequisite": raw.get("prerequisite", []),  # Task 6 (prerequisite checking)
         "ability_bonuses": _ability_bonuses_from_5etools(raw.get("ability", [])),
         "ability_bonus_options": _feat_ability_bonus_options_from_5etools(raw.get("ability", [])),
-        "proficiencies": [],  # Task 3 — skill/tool/weapon/armor, fixed grants
-        "proficiency_choices": None,  # Task 3
+        # Task 3: skill/tool/weapon/armor proficiencies — reuses the SAME
+        # race/background-side conversion machinery UNCHANGED
+        # (_proficiencies_from_5etools/_proficiency_choices_from_5etools
+        # read generic dicts, never actually race/background-specific
+        # despite their parameter names — see _background_from_5etools'
+        # own docstring for this same precedent). The background-side
+        # list-returning _proficiency_choices_from_5etools (not races'
+        # trait-attaching _attach_choice_proficiencies, which needs a
+        # traits list feats don't have) is the right fit here: a feat can
+        # carry a skill choice AND a tool choice simultaneously (Prodigy/
+        # XGE, confirmed real), so a flat list of envelopes is required,
+        # exactly what that function already returns. One real, disclosed
+        # gap: Weapon Master (PHB)'s weaponProficiencies uses a
+        # "choose"/"fromFilter" filter-query DSL shape no existing choice
+        # machinery models (see _WEAPON_ID_OVERRIDES' own comment for the
+        # fixed-grant side of this same weapon-category divergence) — left
+        # unconverted, not guessed at; see test_official_source.py's
+        # Task 3 section docstring for the full reasoning.
+        "proficiencies": _proficiencies_from_5etools(raw),
+        "proficiency_choices": _proficiency_choices_from_5etools(raw),
         "languages": [],  # Task 4
         "language_options": None,  # Task 4
         "resist": [],  # Task 5

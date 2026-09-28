@@ -1426,8 +1426,10 @@ def test_placeholder_fields_present_but_empty_scaffolding_only():
     alert = next(f for f in feats if f["index"] == "alert-phb")
     assert alert["ability_bonuses"] == []
     assert alert["ability_bonus_options"] is None
+    # proficiencies/proficiency_choices are now Task 3 real conversion
+    # (Alert/PHB just happens to grant neither), not scaffolding.
     assert alert["proficiencies"] == []
-    assert alert["proficiency_choices"] is None
+    assert alert["proficiency_choices"] == []
     assert alert["languages"] == []
     assert alert["language_options"] is None
     assert alert["resist"] == []
@@ -1487,3 +1489,152 @@ def test_ability_score_improvement_feat_has_no_live_ability_bonus_grant():
     asi = next(f for f in feats if f["name"] == "Ability Score Improvement")
     assert asi["ability_bonuses"] == []
     assert asi["ability_bonus_options"] is None
+
+
+# --- load_official_feats() skill/tool/weapon/armor proficiency grants -----
+# (Phase 4c-i Task 3)
+#
+# Grounded (2026-09-28) against the real fetched feats.json: only 12/305
+# feats carry skillProficiencies, 10 toolProficiencies, 6 armorProficiencies,
+# 4 weaponProficiencies. Skill/tool/armor all reuse the SAME shapes races/
+# backgrounds already established (fixed True grants,
+# _skill_choice_envelope_from_5etools/_tool_choice_envelope_from_5etools's
+# "any"/"anyArtisansTool"/"anyMusicalInstrument"/"choose" envelopes,
+# _proficiencies_from_5etools's armor category handling) — reused directly,
+# unmodified, via _proficiencies_from_5etools/_proficiency_choices_from_5etools
+# (the background-side list-of-envelopes function, needed here too: Prodigy
+# carries a skill choice AND a tool wildcard simultaneously).
+#
+# Weapon is the one real divergence: 3 of the 4 real weaponProficiencies
+# feats use broad CATEGORY keys ("firearms"/"martial"/"improvised") races
+# never had as fixed grants (races only ever grant specific named weapons,
+# e.g. "battleaxe|phb") — the generic pluralize path would produce wrong ids
+# ("martials", "improviseds") for two of these, so _WEAPON_ID_OVERRIDES
+# gained "martial"/"simple"/"improvised" entries (confirmed against
+# 5e-SRD-Classes.json's own "simple-weapons"/"martial-weapons" ids for the
+# first two; "improvised-weapons" has no bundled-SRD precedent but follows
+# the same suffix convention, disclosed in _WEAPON_ID_OVERRIDES' own
+# comment). The 4th, Weapon Master (PHB), uses a completely different
+# "choose": {"fromFilter": "...", "count": 4} shape — a filter-query DSL
+# string, not an enumerable "from" list — that no existing race/background
+# choice machinery has ever modeled (races' own real Hobgoblin/VGM carries
+# the identical fromFilter shape, silently unconverted today, a pre-existing
+# gap outside this task's scope). Converting a filter-query DSL is a
+# meaningfully bigger feature (a new option_set_type in catalog/choices.py)
+# than this task's declared file scope (official_source.py +
+# test_official_source.py only), so it is DELIBERATELY left unconverted
+# here too — the fixed-grant loop's `is True` check already skips it
+# harmlessly (a dict is never `is True`), so this is a disclosed omission,
+# not a crash or silently-wrong data. See test below that locks this in.
+
+
+def test_aberrant_anatomy_grants_a_fixed_skill_proficiency():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Aberrant Anatomy" and f["source"] == "RHW")
+    assert feat["proficiencies"] == [{"index": "skill-perception", "name": "Skill: Perception", "url": ""}]
+    assert feat["proficiency_choices"] == []
+
+
+def test_boon_of_skill_grants_every_skill_as_a_fixed_list():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Boon of Skill")
+    assert len(feat["proficiencies"]) == 18
+    assert all(p["index"].startswith("skill-") for p in feat["proficiencies"])
+
+
+def test_keen_mind_xphb_offers_an_enumerated_skill_choice():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Keen Mind" and f["source"] == "XPHB")
+    assert feat["proficiencies"] == []
+    assert len(feat["proficiency_choices"]) == 1
+    envelope = feat["proficiency_choices"][0]
+    assert envelope["choose"] == 1
+    assert envelope["type"] == "proficiencies"
+    ids = {o["item"]["index"] for o in envelope["from"]["options"]}
+    assert ids == {"skill-arcana", "skill-history", "skill-investigation", "skill-nature", "skill-religion"}
+
+
+def test_echoing_soul_offers_a_wildcard_any_skill_choice():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Echoing Soul")
+    envelope = feat["proficiency_choices"][0]
+    assert envelope == {"choose": 1, "type": "proficiencies", "from": {"option_set_type": "any_skill"}}
+
+
+def test_poisoner_grants_a_fixed_tool_proficiency():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Poisoner" and f["source"] == "TCE")
+    assert feat["proficiencies"] == [{"index": "poisoners-kit", "name": "Poisoner's Kit", "url": ""}]
+
+
+def test_crafter_offers_an_enumerated_tool_choice_of_count_three():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Crafter")
+    envelope = feat["proficiency_choices"][0]
+    assert envelope["choose"] == 3
+    assert len(envelope["from"]["options"]) == 8
+
+
+def test_artificer_initiate_offers_a_wildcard_artisans_tool_choice():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Artificer Initiate")
+    envelope = feat["proficiency_choices"][0]
+    assert envelope == {"choose": 1, "type": "proficiencies",
+                         "from": {"option_set_type": "any_tool", "tool_category": "Artisan's Tools"}}
+
+
+def test_musician_offers_a_wildcard_musical_instrument_choice_of_three():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Musician")
+    envelope = feat["proficiency_choices"][0]
+    assert envelope == {"choose": 3, "type": "proficiencies",
+                         "from": {"option_set_type": "any_tool", "tool_category": "Musical Instrument"}}
+
+
+def test_prodigy_offers_both_a_skill_choice_and_a_tool_choice_simultaneously():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Prodigy")
+    assert len(feat["proficiency_choices"]) == 2
+    types = [env["from"]["option_set_type"] for env in feat["proficiency_choices"]]
+    assert types == ["options_array", "any_tool"]
+
+
+def test_heavily_armored_grants_fixed_heavy_armor_proficiency():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Heavily Armored" and f["source"] == "PHB")
+    assert feat["proficiencies"] == [{"index": "heavy-armor", "name": "Heavy armor", "url": ""}]
+
+
+def test_lightly_armored_xphb_grants_light_armor_and_shield_proficiency():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Lightly Armored" and f["source"] == "XPHB")
+    indexes = {p["index"] for p in feat["proficiencies"]}
+    assert indexes == {"light-armor", "shields"}
+
+
+def test_gunner_grants_fixed_firearms_weapon_proficiency():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Gunner")
+    assert feat["proficiencies"] == [{"index": "firearms", "name": "Firearms", "url": ""}]
+
+
+def test_martial_weapon_training_grants_fixed_martial_weapons_proficiency():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Martial Weapon Training")
+    assert feat["proficiencies"] == [{"index": "martial-weapons", "name": "Martial weapons", "url": ""}]
+
+
+def test_tavern_brawler_xphb_grants_fixed_improvised_weapons_proficiency():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Tavern Brawler" and f["source"] == "XPHB")
+    assert feat["proficiencies"] == [{"index": "improvised-weapons", "name": "Improvised weapons", "url": ""}]
+
+
+def test_weapon_master_fromfilter_weapon_choice_is_a_disclosed_unconverted_gap():
+    # See the section docstring above: a "choose"/"fromFilter" filter-query
+    # DSL shape, never modeled by any existing race/background choice
+    # machinery — deliberately left unconverted rather than guessed at.
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Weapon Master" and f["source"] == "PHB")
+    assert feat["proficiencies"] == []
+    assert feat["proficiency_choices"] == []
