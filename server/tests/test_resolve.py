@@ -7,7 +7,7 @@ from catalog.loader import load
 from catalog.official_source import has_official
 from engine.derived import hit_point_max_multiclass
 from engine.resolve import (
-    _DETAIL_FIELDS, _feat_ability_bonus_choice_templates, _feat_ability_bonuses,
+    _DETAIL_FIELDS, _asi_choice_templates, _feat_ability_bonus_choice_templates, _feat_ability_bonuses,
     _feat_choice_templates, _feat_expertise_skills, _feat_languages,
     _feat_prerequisite_problems, _feat_proficiency_ids, _feat_saving_throw_proficiencies,
     _feat_senses, _resolve_granted_feats, resolve,
@@ -3600,3 +3600,43 @@ def test_feat_ability_bonus_choice_templates_origin_param_scopes_the_cid(catalog
     assert default_pairs[0][0]["id"] == "feat:skill-expert-xphb:ability-bonus"
     assert scoped_pairs[0][0]["id"] == "class:fighter:4:asi:feat:skill-expert-xphb:ability-bonus"
     assert scoped_pairs[0][1] is skill_expert  # the paired feat itself is unaffected by origin
+
+
+def test_asi_choice_templates_includes_eligible_general_feats(catalog):
+    templates = _asi_choice_templates(
+        "fighter", "Fighter", [4], {4: {"STR": 15, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10}},
+        catalog, total_level=4, use_prerequisites=False,
+    )
+    assert len(templates) == 1
+    option_ids = {o["id"] for o in templates[0]["options"]}
+    assert "feat:actor-xphb" in option_ids  # grounded 2026-09-28 via catalog.feats
+    # The literal "Ability Score Improvement" catalog feat must never appear as its own option.
+    assert not any("ability-score-improvement" in oid for oid in option_ids)
+    # 21 existing ASI combos (asi_mod.asi_combinations(): 6 "+2 to one
+    # ability" options + C(6,2)=15 "+1 to two abilities" options — grounded
+    # 2026-09-28 against engine/asi.py's own docstring; the brief's "7" was
+    # a stale shorthand) + 94 General feats (95 minus the ASI-feat
+    # exclusion, grounded 2026-09-28: Counter(category) gives 'G': 95).
+    assert len(option_ids) == 21 + 94
+
+
+def test_asi_choice_templates_disables_a_feat_option_with_unmet_prerequisite(catalog):
+    # Grappler/XPHB requires STR >= 13 or DEX >= 13 (grounded 2026-09-28:
+    # catalog.feats["grappler-xphb"]["prerequisite"] ==
+    # [{"level": 4, "ability": [{"str": 13}]}, {"level": 4, "ability": [{"dex": 13}]}]).
+    templates = _asi_choice_templates(
+        "fighter", "Fighter", [4], {4: {"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10}},
+        catalog, total_level=4, use_prerequisites=True,
+    )
+    grappler_option = next(o for o in templates[0]["options"] if o["id"] == "feat:grappler-xphb")
+    assert grappler_option.get("disabled") is True
+    assert "prerequisite" in grappler_option.get("disabledReason", "").lower()
+
+
+def test_asi_choice_templates_feat_options_not_disabled_when_prerequisites_off(catalog):
+    templates = _asi_choice_templates(
+        "fighter", "Fighter", [4], {4: {"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10}},
+        catalog, total_level=4, use_prerequisites=False,
+    )
+    grappler_option = next(o for o in templates[0]["options"] if o["id"] == "feat:grappler-xphb")
+    assert not grappler_option.get("disabled")

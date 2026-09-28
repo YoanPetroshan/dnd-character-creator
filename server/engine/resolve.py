@@ -1130,7 +1130,17 @@ def _asi_option_label(deltas: list[tuple[str, int]]) -> str:
 
 def _asi_choice_templates(
     cls_id: str, cls_name: str, asi_levels: list[int], scores_by_level: dict[int, dict[str, int]],
+    catalog: Catalog, total_level: int, use_prerequisites: bool,
 ) -> list[dict]:
+    # "General"-category feats (category == "G") double as the "take a feat
+    # instead" branch of this choice. The literal "Ability Score
+    # Improvement" catalog entry is excluded because it duplicates this
+    # app's own hardcoded 7-combo ASI mechanic below, not a distinct choice.
+    general_feats = [
+        f for f in catalog.feats.values()
+        if f.get("category") == "G" and f["name"] != "Ability Score Improvement"
+    ]
+    general_feats.sort(key=lambda f: f["name"])
     templates = []
     for lvl in asi_levels:
         current_scores = scores_by_level.get(lvl, {})
@@ -1141,11 +1151,19 @@ def _asi_choice_templates(
                 option["disabled"] = True
                 option["disabledReason"] = "would exceed the ability score cap of 20"
             options.append(option)
+        for feat in general_feats:
+            option = {"id": f"feat:{feat['index']}", "label": feat["name"]}
+            prereq = _feat_structured_prerequisite(feat)
+            if use_prerequisites and prereq is not None:
+                if not any(_feat_prerequisite_alt_met(alt, total_level, current_scores) for alt in prereq):
+                    option["disabled"] = True
+                    option["disabledReason"] = "prerequisite not met"
+            options.append(option)
         cid = f"class:{cls_id}:{lvl}:asi"
         source = {"kind": "class", "id": cls_id, "label": cls_name, "level": lvl}
         templates.append({
             "id": cid, "source": source, "label": "Ability Score Improvement",
-            "description": "Increase one ability score by 2, or two ability scores by 1 each.",
+            "description": "Increase one ability score by 2, or two ability scores by 1 each — or take a feat instead.",
             "count": 1,
             "options": options,
         })
@@ -1645,6 +1663,12 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         if not (1 <= score <= 30):
             problems.append({"id": f"ability-out-of-range-{ab}", "message": f"{ab} score {score} is out of the 1-30 range."})
 
+    # Read here (before the per-class loop) so _asi_choice_templates can use
+    # it below; `use_prereqs` (multiclass) is derived from the SAME dict
+    # further down, near _multiclass_prerequisite_problems.
+    use_prerequisites_prefs = (draft.get("preferences") or {}).get("usePrerequisites", {})
+    use_feat_prereqs = bool(use_prerequisites_prefs.get("feats"))
+
     choice_templates: list[dict] = []
     for rc in resolved_classes:
         rc_cls, rc_cls_id, rc_level, rc_subclass_id = rc["cls"], rc["cls_id"], rc["level"], rc["subclass_id"]
@@ -1663,19 +1687,20 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc["level_row"] = rc_level_row
         feature_refs = _cumulative_feature_refs(catalog, rc_cls_id, rc_subclass_id, rc_level)
         choice_templates += _feature_choice_templates(catalog, rc_cls_id, rc_cls["name"], feature_refs, rc_subclass_id)
-        choice_templates += _asi_choice_templates(rc_cls_id, rc_cls["name"], rc_asi_levels, rc_asi_scores_by_level)
+        choice_templates += _asi_choice_templates(
+            rc_cls_id, rc_cls["name"], rc_asi_levels, rc_asi_scores_by_level, catalog, total_level, use_feat_prereqs,
+        )
 
-    use_prerequisites_prefs = (draft.get("preferences") or {}).get("usePrerequisites", {})
     use_prereqs = bool(use_prerequisites_prefs.get("multiclass"))
     problems += _multiclass_prerequisite_problems(resolved_classes, final_scores, use_prereqs)
     # Phase 4c-i Task 6: a NEW sibling key on the SAME usePrerequisites
-    # dict the multiclass toggle already uses (confirmed fresh, this task
-    # — `use_prerequisites_prefs` above is that exact dict), not a
-    # separate preferences shape. `final_scores` here is already
-    # POST-ASI-progression (the loop above reassigns it via
-    # _apply_asi_progression before this line runs), matching what a
-    # player's actual final character sheet shows.
-    use_feat_prereqs = bool(use_prerequisites_prefs.get("feats"))
+    # dict the multiclass toggle already uses (`use_prerequisites_prefs`,
+    # read once before the per-class loop above so _asi_choice_templates
+    # could also use it via `use_feat_prereqs`) — not a separate
+    # preferences shape. `final_scores` here is already POST-ASI-progression
+    # (the loop above reassigns it via _apply_asi_progression before this
+    # line runs), matching what a player's actual final character sheet
+    # shows.
     problems += _feat_prerequisite_problems(resolved_feats, total_level, final_scores, use_feat_prereqs)
 
     modifiers = derived_mod.ability_modifiers(final_scores)
