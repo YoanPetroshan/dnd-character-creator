@@ -140,7 +140,9 @@ def _species_condition_immunities(race: dict | None, subrace: dict | None, feats
     return immunities
 
 
-def _resolve_granted_feats(granted_feat_ids: list[str], catalog: Catalog) -> list[dict]:
+def _resolve_granted_feats(
+    granted_feat_ids: list[str], catalog: Catalog, granted_feat_refs: list[str] | None = None,
+) -> list[dict]:
     """Resolves a background's granted-feat ids (bare, source-less slugs
     — e.g. "mark-of-storm" — see official_source._feats_from_5etools'
     own docstring for why the source suffix is stripped there) against
@@ -153,24 +155,47 @@ def _resolve_granted_feats(granted_feat_ids: list[str], catalog: Catalog) -> lis
     function reads them"), is now also read here for its mechanical
     resist/immune/condition_immune/senses effects.
 
-    Matches by comparing each catalog feat's OWN name run through the
-    same bare slugging _feats_from_5etools already applies to the grant
-    side, not by string-prefixing the "slug-source" index — prefix
-    matching risks a false match when one feat's slug is itself a prefix
-    of another's (e.g. a hypothetical "Mark of Storm II" would
-    prefix-match a "mark-of-storm" grant).
+    `granted_feat_refs` (Finding 1 of the final whole-branch review,
+    2026-09-28), when given, is a list PARALLEL to `granted_feat_ids` —
+    official_source._feats_from_5etools' new `feat_refs` field, an exact
+    "slug-source" catalog id (e.g. "tavern-brawler-xphb") built from the
+    SAME raw grant key the bare slug was stripped from, so the source
+    that was thrown away building the bare id is recovered here. For each
+    index, an exact match against catalog.feats by this ref is tried
+    FIRST — that's an unambiguous, exact lookup, not a guess: the ref
+    names the specific source-variant the raw data itself grants. Only
+    when no ref is available at that index (None/missing — e.g. a
+    shorter or absent `granted_feat_refs`, as every hand-authored test
+    dict in this file's own tests builds via `_grant_synthetic_feat`) or
+    the ref doesn't match any real catalog feat (e.g. a future data
+    anomaly) does resolution fall back to the bare-slug logic below.
+    `granted_feat_refs=None` (every call site before this task, and any
+    future caller that doesn't have one) is a byte-identical no-op vs.
+    the original bare-slug-only behavior.
 
-    When a bare slug matches feats in MORE THAN ONE source (9 real cases
-    today — Alert, Healer, Lucky, Magic Initiate, Savage Attacker,
-    Skilled, Tavern Brawler, Tough, all PHB+XPHB reprints, plus Aberrant
-    Dragonmark/EFA+ERLW — confirmed 2026-09-28 against the real fetched
-    data), which specific source-variant a background actually grants
-    can't be determined from the bare id alone, so it's skipped entirely
-    rather than guessing a source. None of these 9 ambiguous feats carry
-    resist/immune/conditionImmune/senses data today (confirmed against
-    the real fetched feats.json), so this gap has zero effect on this
-    task's actual output, but the guard is kept general rather than
-    narrowly special-cased to today's data.
+    The bare-slug fallback matches by comparing each catalog feat's OWN
+    name run through the same bare slugging _feats_from_5etools already
+    applies to the grant side, not by string-prefixing the "slug-source"
+    index — prefix matching risks a false match when one feat's slug is
+    itself a prefix of another's (e.g. a hypothetical "Mark of Storm II"
+    would prefix-match a "mark-of-storm" grant).
+
+    When a bare slug (with no usable ref) matches feats in MORE THAN ONE
+    source (9 real bare slugs — Alert, Healer, Lucky, Magic Initiate,
+    Savage Attacker, Skilled, Tavern Brawler, Tough, all PHB+XPHB
+    reprints, plus Aberrant Dragonmark/EFA+ERLW — confirmed 2026-09-28
+    against the real fetched data), which specific source-variant a
+    background actually grants can't be determined from the bare id
+    alone, so it's skipped entirely rather than guessing a source. This
+    guard is now reached far less often than before Finding 1's fix: 28
+    of the 70 real unambiguous single-feat background grants used to hit
+    it purely because their `feat_refs` didn't exist yet, even though the
+    raw data named an exact source all along (e.g. Sailor/XPHB's "tavern
+    brawler|xphb" now resolves via its ref to tavern-brawler-xphb
+    directly, never reaching this fallback at all). The guard is kept —
+    a background could in principle still name only a bare slug with no
+    recoverable source (no real case today) — general rather than
+    special-cased to today's data.
 
     A DIFFERENT, previously undisclosed failure mode (Phase 4c-i Task 6,
     found by Task 5's own review): 4 real backgrounds (Acolyte/XPHB,
@@ -179,12 +204,13 @@ def _resolve_granted_feats(granted_feat_ids: list[str], catalog: Catalog) -> lis
     cleric|xphb") that used to slug to "magic-initiate;-cleric" — matching
     ZERO catalog feats, not "more than one." Fixed at the source
     (official_source._feats_from_5etools now strips the ";"-suffix before
-    slugging, so these grants recover as plain "magic-initiate") rather
-    than here — see that function's own docstring for the full
-    grounding. Once recovered, they fall into the SAME ambiguous-source
-    guard above (Magic Initiate has both a PHB and an XPHB record), so
-    this function's own behavior for them is unchanged: still skipped,
-    just via the disclosed path instead of a silent, undisclosed one.
+    slugging, so these grants recover as plain "magic-initiate", and its
+    ref as "magic-initiate-xphb") rather than here — see that function's
+    own docstring for the full grounding. With Finding 1's fix, these 4
+    records now resolve EXACTLY via their ref (Magic Initiate/XPHB is a
+    real, unambiguous catalog entry) — they no longer fall into the
+    bare-slug ambiguity guard above at all, a further improvement Finding
+    1 incidentally brings along.
 
     Uses catalog.official_source.slug() (fixed here too, same task) rather
     than re-implementing that exact three-.replace() body inline a second
@@ -193,8 +219,13 @@ def _resolve_granted_feats(granted_feat_ids: list[str], catalog: Catalog) -> lis
     by_bare_slug: dict[str, list[dict]] = {}
     for feat in catalog.feats.values():
         by_bare_slug.setdefault(slug(feat["name"]), []).append(feat)
+    refs = granted_feat_refs or []
     resolved = []
-    for feat_id in granted_feat_ids:
+    for i, feat_id in enumerate(granted_feat_ids):
+        ref = refs[i] if i < len(refs) else None
+        if ref and ref in catalog.feats:
+            resolved.append(catalog.feats[ref])
+            continue
         matches = by_bare_slug.get(feat_id, [])
         if len(matches) == 1:
             resolved.append(matches[0])
@@ -888,7 +919,33 @@ def _feat_prerequisite_problems(
     takes that same already-resolved list rather than re-resolving it a
     second time — this stays consistent with that, rather than the
     (catalog, feat_ids) shape floated at plan-writing time before the
-    current code (and its actual resolution point) was read fresh."""
+    current code (and its actual resolution point) was read fresh.
+
+    Finding 2 of the final whole-branch review (2026-09-28): `final_scores`
+    is ALREADY post-hoist (Task 6) — it includes every resolved granted
+    feat's own `ability_bonuses`, folded in during the SAME early
+    ability-score pass species/background bonuses feed (see resolve()'s
+    "Final ability scores" comment, and _feat_ability_bonuses' own
+    docstring). Checking feat F's prerequisite against that score
+    unmodified would let F's OWN ability bonus satisfy F's OWN
+    prerequisite — e.g. Actor/XPHB (real: CHA +1 fixed bonus, prerequisite
+    CHA >= 13) could bootstrap its own gate using the CHA+1 it itself
+    grants, which is wrong: a prerequisite is checked against the
+    character BEFORE the feat being considered is applied. No CURRENT
+    real background grant happens to combine a self-satisfying bonus+
+    prerequisite this way (so this was latent, not visibly broken), but 7
+    real XPHB feats have exactly this shape (Actor, Crossbow Expert,
+    Defensive Duelist, Great Weapon Master, Keen Mind, Sharpshooter,
+    Skulker — confirmed 2026-09-28) and it will matter the moment feats
+    become player-selectable (the deliberately-deferred "ASI or feat"
+    mechanic).
+
+    Fixed by subtracting each feat's OWN ability_bonuses back out of
+    final_scores before checking THAT feat's own prerequisite — a
+    per-feat, per-check adjustment (computed fresh for each feat in the
+    loop, not shared across feats): a DIFFERENT simultaneously-granted
+    feat's bonus, or species'/background's own bonus, legitimately still
+    counts, since it isn't F's own contribution being subtracted."""
     if not use_prerequisites:
         return []
     problems = []
@@ -896,7 +953,15 @@ def _feat_prerequisite_problems(
         prereq = _feat_structured_prerequisite(feat)
         if prereq is None:
             continue  # no prerequisite data, or a shape this app can't verify — never enforced, not guessed at
-        if not any(_feat_prerequisite_alt_met(alt, total_level, final_scores) for alt in prereq):
+        # Subtract THIS feat's own ability_bonuses back out — see docstring
+        # above. A fresh copy per feat: other feats' own bonuses (and
+        # species'/background's) are left untouched in `final_scores`
+        # itself and in every other feat's own check this same loop runs.
+        scores_without_own_bonus = dict(final_scores)
+        for entry in feat.get("ability_bonuses", []):
+            ab = entry["ability_score"]["index"].upper()
+            scores_without_own_bonus[ab] = scores_without_own_bonus.get(ab, 0) - entry["bonus"]
+        if not any(_feat_prerequisite_alt_met(alt, total_level, scores_without_own_bonus) for alt in prereq):
             problems.append({
                 "id": f"feat-prerequisite-unmet-{feat['index']}",
                 "message": f"{feat['name']}'s prerequisite isn't met.",
@@ -1285,7 +1350,17 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # candidates are NOT resolved for effects — they're unresolved
     # alternatives, not something the character actually has yet.
     feat_options = list(bg.get("feat_options", [])) if bg else []
-    resolved_feats = _resolve_granted_feats(granted_feats, catalog)
+    # Finding 1 of the final whole-branch review (2026-09-28): `feat_refs`
+    # is a THIRD, source-qualified parallel to `granted_feats` (see
+    # official_source._feats_from_5etools' own docstring) — passed through
+    # so _resolve_granted_feats can try an exact "slug-source" match
+    # before falling back to its bare-slug ambiguity logic. Bundled SRD
+    # backgrounds and hand-authored test dicts carry no `feat_refs` key at
+    # all, so this defaults to `[]`, a safe no-op (see that function's own
+    # docstring for why `granted_feat_refs=None`/empty behaves identically
+    # to before this fix).
+    granted_feat_refs = list(bg.get("feat_refs", [])) if bg else []
+    resolved_feats = _resolve_granted_feats(granted_feats, catalog, granted_feat_refs)
 
     species_raw = draft.get("species")
     if species_raw is not None and not isinstance(species_raw, dict):

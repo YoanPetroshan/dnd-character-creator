@@ -1332,6 +1332,9 @@ def test_feats_boolean_map_becomes_a_plain_list_of_stripped_feat_ids():
     bg = next(b for b in backgrounds if b["index"] == "aberrant-heir-efa")
     assert bg["feats"] == ["aberrant-dragonmark"]
     assert bg["feat_options"] == []
+    # Finding 1 of the final whole-branch review (2026-09-28): feat_refs
+    # recovers the source the bare slug above throws away.
+    assert bg["feat_refs"] == ["aberrant-dragonmark-efa"]
 
 
 def test_feats_with_no_field_at_all_gets_an_empty_list():
@@ -1342,6 +1345,7 @@ def test_feats_with_no_field_at_all_gets_an_empty_list():
     bg = next(b for b in backgrounds if b["index"] == "acolyte-phb")
     assert bg["feats"] == []
     assert bg["feat_options"] == []
+    assert bg["feat_refs"] == []
 
 
 def test_feats_anyfromcategory_wildcard_is_excluded_not_crashed_on():
@@ -1353,6 +1357,7 @@ def test_feats_anyfromcategory_wildcard_is_excluded_not_crashed_on():
     bg = next(b for b in backgrounds if b["index"] == "haunted-one-rhw")
     assert bg["feats"] == ["survivor"]
     assert bg["feat_options"] == []
+    assert bg["feat_refs"] == ["survivor-rhw"]
 
 
 def test_feats_multiple_true_entries_are_alternatives_not_a_triple_grant():
@@ -1365,15 +1370,59 @@ def test_feats_multiple_true_entries_are_alternatives_not_a_triple_grant():
     # behavior — that behavior over-granted. Now `feats` stays empty (no
     # unconditional grant) and the three candidates land in the new
     # `feat_options` field instead. Ruined/BMT (Alert/Skilled/Tough) is the
-    # identical shape.
+    # identical shape. feat_refs stays empty here too (Finding 1 of the
+    # final whole-branch review, 2026-09-28) — these are unresolved
+    # alternatives, not an actual grant to build a source-qualified ref
+    # for.
     backgrounds = load_official_backgrounds(official_dir())
     bg = next(b for b in backgrounds if b["index"] == "rewarded-bmt")
     assert bg["feats"] == []
     assert bg["feat_options"] == ["lucky", "magic-initiate", "skilled"]
+    assert bg["feat_refs"] == []
 
     ruined = next(b for b in backgrounds if b["index"] == "ruined-bmt")
     assert ruined["feats"] == []
     assert ruined["feat_options"] == ["alert", "skilled", "tough"]
+    assert ruined["feat_refs"] == []
+
+
+# --- Finding 1 of the final whole-branch review (2026-09-28): feat_refs,
+# the source-qualified parallel to `feats` that lets engine.resolve.
+# _resolve_granted_feats recover the source a bare slug throws away
+# --------------------------------------------------------------------------
+
+def test_feat_refs_recovers_the_source_a_bare_slug_would_otherwise_lose():
+    # Sailor/XPHB: {"tavern brawner|xphb" ... } -- real key is "tavern
+    # brawler|xphb". Tavern Brawler exists in BOTH PHB and XPHB (an
+    # ambiguous bare slug — see engine.resolve._resolve_granted_feats'
+    # own docstring), so without feat_refs this grant is unresolvable from
+    # `feats` alone; feat_refs disambiguates it exactly.
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["index"] == "sailor-xphb")
+    assert bg["feats"] == ["tavern-brawler"]
+    assert bg["feat_refs"] == ["tavern-brawler-xphb"]
+
+
+def test_feat_refs_lowercases_a_capitalized_real_grant_key():
+    # Noble/XPHB is the ONE real record whose grant key is capitalized
+    # ("Skilled|xphb", confirmed 2026-09-28) — slug() lowercases
+    # unconditionally, so the ref must still come out "skilled-xphb", not
+    # "Skilled-xphb".
+    backgrounds = load_official_backgrounds(official_dir())
+    bg = next(b for b in backgrounds if b["index"] == "noble-xphb")
+    assert bg["feats"] == ["skilled"]
+    assert bg["feat_refs"] == ["skilled-xphb"]
+
+
+def test_feat_refs_recovers_the_source_for_the_semicolon_suffixed_variant_too():
+    # The ";"-suffixed spell-list-restricted Magic Initiate variant (see
+    # the semicolon-fix section above) must ALSO get a correct
+    # source-qualified ref, not just a correct bare slug — the ";"-strip
+    # happens before slugging for both true_feat_ids and true_feat_refs.
+    backgrounds = load_official_backgrounds(official_dir())
+    for bg_id in ("acolyte-xphb", "guide-xphb", "moonwell-pilgrim-frhof", "sage-xphb"):
+        bg = next(b for b in backgrounds if b["index"] == bg_id)
+        assert bg["feat_refs"] == ["magic-initiate-xphb"], f"{bg_id}: {bg['feat_refs']!r}"
 
 
 # --- load_official_feats() scaffolding (Phase 4c-i Task 1) ---

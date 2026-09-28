@@ -676,19 +676,29 @@ def test_feat_resistance_adds_to_an_existing_race_resistance_not_replacing_it(ca
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
-def test_ambiguous_granted_feat_slug_does_not_crash_or_guess_a_source(catalog):
+def test_aberrant_heir_efa_resolves_its_exact_source_and_grants_no_bonus_it_shouldnt(catalog):
     # Aberrant Heir/EFA grants "aberrant-dragonmark" — a bare, source-less
     # slug that matches FEATS in two different real sourcebooks (EFA and
-    # ERLW, confirmed 2026-09-28), so which source-variant is actually
-    # meant can't be determined from the grant alone. Must not crash and
-    # must not silently pick one arbitrarily — see _resolve_granted_feats'
-    # own docstring. (Neither variant carries resist/immune/senses data
-    # today, so this also confirms the ambiguity guard doesn't silently
-    # drop something that WOULD have mattered.)
+    # ERLW, confirmed 2026-09-28): only the ERLW variant has a fixed CON+1
+    # ability bonus (`"ability": [{"con": 1}]`); the EFA variant has none
+    # (`"ability": null`) and a non-structured, campaign-gated
+    # prerequisite instead. Before Finding 1's fix (final whole-branch
+    # review, 2026-09-28), the bare slug alone couldn't disambiguate these
+    # two, so the grant was silently skipped entirely (see this test's own
+    # prior version, which asserted damageModifiers/senses stayed empty
+    # because NOTHING resolved). Finding 1's `feat_refs` field recovers
+    # the exact source ("aberrant-dragonmark-efa") straight from the raw
+    # grant key, so this now resolves the CORRECT (EFA) variant directly —
+    # and, critically, must NOT pick up the ERLW variant's CON+1 bonus,
+    # which this background was never meant to grant.
     draft = _fighter_acolyte_human_draft(sources=["phb", "efa"], background={"id": "aberrant-heir-efa", "choices": {}})
     resolution = resolve(draft, catalog)
     assert resolution["problems"] == []
     assert resolution["sheet"]["grantedFeats"] == ["aberrant-dragonmark"]
+    # No ability bonus at all — the EFA variant grants none; if the
+    # ambiguous-source guard had instead silently picked the OTHER (ERLW)
+    # source-variant, CON would be 1 higher than base+species here.
+    assert resolution["sheet"]["abilities"]["CON"] == 15  # 14 base + 1 bundled-SRD Human, no feat bonus
     assert resolution["sheet"]["damageModifiers"] == {"resistances": [], "immunities": [], "vulnerabilities": []}
     assert resolution["sheet"]["senses"] == {}
 
@@ -711,7 +721,11 @@ def test_resolve_granted_feats_matches_an_unambiguous_bare_slug(catalog):
 def test_resolve_granted_feats_skips_an_ambiguous_bare_slug(catalog):
     # "alert" matches feats in BOTH PHB and XPHB (confirmed 2026-09-28) —
     # which source-variant a bare grant means can't be determined from the
-    # id alone, so it's skipped rather than guessing.
+    # id alone, so it's skipped rather than guessing. Called with NO
+    # `granted_feat_refs` argument (real backgrounds always carry one as
+    # of Finding 1's fix — see the feat_refs-specific tests below — so
+    # this specifically exercises the bare-slug-only fallback path a
+    # hand-authored/refless caller would hit).
     resolved = _resolve_granted_feats(["alert"], catalog)
     assert resolved == []
 
@@ -719,6 +733,65 @@ def test_resolve_granted_feats_skips_an_ambiguous_bare_slug(catalog):
 def test_resolve_granted_feats_with_no_catalog_match_is_a_safe_no_op(catalog):
     resolved = _resolve_granted_feats(["not-a-real-feat"], catalog)
     assert resolved == []
+
+
+# --- Finding 1 of the final whole-branch review (2026-09-28): `feat_refs`
+# lets _resolve_granted_feats disambiguate a source-ambiguous bare slug via
+# an exact "slug-source" match, tried before the bare-slug fallback above
+# --------------------------------------------------------------------------
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_resolve_granted_feats_with_a_ref_resolves_an_otherwise_ambiguous_bare_slug(catalog):
+    # "alert" alone is ambiguous (see the test right above) — but paired
+    # with its real ref ("alert-xphb"), it resolves to the EXACT
+    # source-variant the ref names, not a guess.
+    resolved = _resolve_granted_feats(["alert"], catalog, ["alert-xphb"])
+    assert len(resolved) == 1
+    assert resolved[0]["index"] == "alert-xphb"
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_resolve_granted_feats_falls_back_to_bare_slug_when_the_ref_doesnt_match(catalog):
+    # A ref that names no real catalog feat (a data anomaly, or simply
+    # absent) falls back to the bare-slug logic rather than resolving to
+    # nothing outright — "mark-of-storm" is unambiguous on its own.
+    resolved = _resolve_granted_feats(["mark-of-storm"], catalog, ["mark-of-storm-not-a-real-source"])
+    assert len(resolved) == 1
+    assert resolved[0]["index"] == "mark-of-storm-efa"
+
+
+def test_resolve_granted_feats_with_no_refs_argument_is_a_byte_identical_no_op(catalog):
+    # `granted_feat_refs=None` (the default, and what every pre-Finding-1
+    # call site used) must behave EXACTLY like passing no third argument
+    # at all — confirms the new parameter is additive, not a behavior
+    # change for any existing caller.
+    assert _resolve_granted_feats(["not-a-real-feat"], catalog) == _resolve_granted_feats(["not-a-real-feat"], catalog, None)
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_resolve_granted_feats_with_a_shorter_refs_list_falls_back_for_the_missing_tail(catalog):
+    # A `granted_feat_refs` shorter than `granted_feat_ids` (e.g.
+    # hand-authored test data that only sets one of the two) must fall
+    # back to the bare-slug logic for every id past the end of `refs`,
+    # not crash on an index error.
+    resolved = _resolve_granted_feats(["mark-of-storm", "survivor"], catalog, ["mark-of-storm-efa"])
+    assert {f["index"] for f in resolved} == {"mark-of-storm-efa", "survivor-rhw"}
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_sailor_xphb_grants_tavern_brawler_xphb_and_its_improvised_weapons_proficiency_reaches_the_sheet(catalog):
+    # The concrete real-data case named by Finding 1 itself: Sailor/XPHB's
+    # raw grant key is "tavern brawler|xphb" — Tavern Brawler exists in
+    # BOTH PHB and XPHB (an ambiguous bare slug on its own, confirmed
+    # 2026-09-28), so before this fix the grant was silently skipped and
+    # Tavern Brawler/XPHB's fixed improvised-weapons proficiency never
+    # reached the sheet. feat_refs ("tavern-brawler-xphb") now resolves it
+    # exactly.
+    draft = _fighter_acolyte_human_draft(sources=["phb", "xphb"], background={"id": "sailor-xphb", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    assert resolution["sheet"]["grantedFeats"] == ["tavern-brawler"]
+    assert "improvised-weapons" in resolution["sheet"]["proficiencies"]["weapons"]
 
 
 def test_feat_senses_merges_multiple_granted_feats():
@@ -3159,6 +3232,45 @@ def test_feats_prerequisite_toggle_is_independent_of_the_existing_multiclass_tog
     }]
 
 
+def test_feat_prerequisite_cannot_be_satisfied_by_the_feats_own_granted_bonus_end_to_end(catalog, monkeypatch):
+    # Finding 2 of the final whole-branch review (2026-09-28): since
+    # Task 6's hoist, `final_scores` (passed to _feat_prerequisite_problems)
+    # already includes every resolved feat's own ability_bonuses, folded
+    # into the SAME early ability-score pass species/background bonuses
+    # feed (see resolve()'s "Final ability scores" section). A feat whose
+    # OWN ability_bonuses would push its OWN prerequisite over the line
+    # must not be able to bootstrap itself this way — 7 real XPHB feats
+    # have exactly this shape (Actor, Crossbow Expert, Defensive Duelist,
+    # Great Weapon Master, Keen Mind, Sharpshooter, Skulker; confirmed
+    # 2026-09-28), though none is reachable via a real background grant
+    # today, so this is exercised via a synthetic feat, mirroring this
+    # section's other synthetic-feat tests.
+    #
+    # Base CHA 11, Human's own +1 (species) brings it to 12 — BELOW the
+    # CHA-13 gate on its own. This feat ALSO grants CHA +1, which the
+    # sheet legitimately shows (final CHA 13, still fully applied — "never
+    # blocked or hidden", same as every other feat-prerequisite test in
+    # this section) — but the prerequisite check must evaluate against
+    # this feat's own +1 subtracted back out (12, species only), which is
+    # still below 13, so the prerequisite reports UNMET.
+    feat = _synthetic_feat(
+        index="synthetic-self-bootstrap-e2e-test", name="Synthetic Self Bootstrap E2E",
+        ability_bonuses=[{"ability_score": {"index": "cha", "name": "CHA", "url": ""}, "bonus": 1}],
+        prerequisite=[{"ability": [{"cha": 13}]}],
+    )
+    _grant_synthetic_feat(catalog, monkeypatch, feat)
+    draft = _fighter_acolyte_human_draft(
+        abilities={"method": "manual", "base": {"STR": 16, "DEX": 14, "CON": 14, "INT": 10, "WIS": 12, "CHA": 11}},
+        preferences={"usePrerequisites": {"feats": True}},
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["abilities"]["CHA"] == 13  # 11 base + 1 Human + 1 this feat's own bonus — fully applied
+    assert resolution["problems"] == [{
+        "id": "feat-prerequisite-unmet-synthetic-self-bootstrap-e2e-test",
+        "message": "Synthetic Self Bootstrap E2E's prerequisite isn't met.",
+    }]
+
+
 # --- Direct unit tests of the small feat-effect helper functions ---------
 
 def test_feat_ability_bonuses_sums_across_multiple_feats():
@@ -3212,3 +3324,67 @@ def test_feat_prerequisite_problems_toggle_off_is_always_empty():
 
 def test_feat_prerequisite_problems_with_no_granted_feats_is_always_empty():
     assert _feat_prerequisite_problems([], total_level=1, final_scores={}, use_prerequisites=True) == []
+
+
+def test_feat_prerequisite_problems_direct_self_bonus_cannot_satisfy_its_own_prerequisite():
+    # Finding 2 of the final whole-branch review (2026-09-28), direct unit
+    # test of _feat_prerequisite_problems itself (see the end-to-end
+    # version above for the full real-data grounding). `final_scores`
+    # here mirrors exactly what resolve() actually passes in: ALREADY
+    # including this feat's own ability_bonuses (base 12 + this feat's
+    # own +1 = 13) — the regression case the task brief itself specifies:
+    # base 12, feat grants +1 to that ability, feat's own prerequisite
+    # requires 13 — must report UNMET (12 < 13), not met.
+    feat = _synthetic_feat(
+        index="synthetic-self-bootstrap-unit-test", name="Synthetic Self Bootstrap Unit",
+        ability_bonuses=[{"ability_score": {"index": "cha"}, "bonus": 1}],
+        prerequisite=[{"ability": [{"cha": 13}]}],
+    )
+    final_scores = {"CHA": 13}  # 12 base + this feat's own +1, already folded in by resolve()
+    problems = _feat_prerequisite_problems([feat], total_level=1, final_scores=final_scores, use_prerequisites=True)
+    assert problems == [{
+        "id": "feat-prerequisite-unmet-synthetic-self-bootstrap-unit-test",
+        "message": "Synthetic Self Bootstrap Unit's prerequisite isn't met.",
+    }]
+
+
+def test_feat_prerequisite_problems_a_legitimate_bonus_from_elsewhere_still_satisfies_it():
+    # Contrast case: only a feat's OWN ability_bonuses are subtracted back
+    # out — a +1 legitimately coming from species/background/another feat
+    # must still count. Modeled as a feat with NO ability_bonuses of its
+    # own, prerequisite met by a score that already reflects some other
+    # source's bonus (nothing here to subtract back out at all).
+    feat = _synthetic_feat(
+        index="synthetic-legit-bonus-unit-test", name="Synthetic Legit Bonus Unit",
+        prerequisite=[{"ability": [{"cha": 13}]}],
+    )
+    final_scores = {"CHA": 13}
+    problems = _feat_prerequisite_problems([feat], total_level=1, final_scores=final_scores, use_prerequisites=True)
+    assert problems == []
+
+
+def test_feat_prerequisite_problems_self_bonus_subtraction_is_per_feat_not_shared():
+    # Two simultaneously-granted feats, each with its own ability_bonuses
+    # — Feat A's own bonus must not be subtracted when checking Feat B's
+    # prerequisite (and vice versa), only each feat's OWN contribution.
+    # Feat A grants STR +1 with an STR-13 prerequisite (final STR 13 = 12
+    # base + A's own +1 -> A's own check subtracts A's own +1 back out:
+    # 12 < 13, unmet). Feat B grants DEX +1 (irrelevant to A) with a
+    # DEX-13 prerequisite already met by base DEX alone (13 base + B's own
+    # +1 = 14; subtracting B's own +1 back out: 13 >= 13, met).
+    feat_a = _synthetic_feat(
+        index="synthetic-multi-feat-a-test", name="Synthetic Multi Feat A",
+        ability_bonuses=[{"ability_score": {"index": "str"}, "bonus": 1}],
+        prerequisite=[{"ability": [{"str": 13}]}],
+    )
+    feat_b = _synthetic_feat(
+        index="synthetic-multi-feat-b-test", name="Synthetic Multi Feat B",
+        ability_bonuses=[{"ability_score": {"index": "dex"}, "bonus": 1}],
+        prerequisite=[{"ability": [{"dex": 13}]}],
+    )
+    final_scores = {"STR": 13, "DEX": 14}  # STR: 12 base + A's own +1; DEX: 13 base + B's own +1
+    problems = _feat_prerequisite_problems([feat_a, feat_b], total_level=1, final_scores=final_scores, use_prerequisites=True)
+    assert problems == [{
+        "id": "feat-prerequisite-unmet-synthetic-multi-feat-a-test",
+        "message": "Synthetic Multi Feat A's prerequisite isn't met.",
+    }]

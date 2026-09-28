@@ -1634,7 +1634,7 @@ def _fixed_starting_equipment_from_5etools(raw: dict) -> tuple[list[dict], dict 
     return starting_equipment, starting_gold, narrative_items
 
 
-def _feats_from_5etools(raw: dict) -> tuple[list[str], list[str]]:
+def _feats_from_5etools(raw: dict) -> tuple[list[str], list[str], list[str]]:
     """Converts a background's `feats` field — confirmed empirically
     (Step 1, 2026-09-27) to be a list of single-key boolean-map dicts,
     `{"<feat name>|<source>": True}`, the SAME convention
@@ -1683,8 +1683,9 @@ def _feats_from_5etools(raw: dict) -> tuple[list[str], list[str]]:
     silently breaking a FUTURE feat variant that does carry one of those
     fields.
 
-    Returns (feats, feat_options) — fixed a "one true grant" alternatives
-    split, Finding 2 of the final whole-branch review (2026-09-27):
+    Returns (feats, feat_options, feat_refs) — fixed a "one true grant"
+    alternatives split, Finding 2 of the final whole-branch review
+    (2026-09-27):
     Task 6's original version combined EVERY `is True` entry additively
     into one `feats` list, which is correct for 69 of 71 real records
     (exactly one `is True` entry each) but wrong for the other two —
@@ -1715,25 +1716,65 @@ def _feats_from_5etools(raw: dict) -> tuple[list[str], list[str]]:
     True. That entry is excluded by this same `is True` check, not by
     name — a wildcard feat grant like this has nothing to resolve against
     without a feat catalog, so it's silently dropped rather than guessed
-    at (disclosed here, not a bug: still out of scope)."""
+    at (disclosed here, not a bug: still out of scope).
+
+    Returns a THIRD value, `feat_refs` (Finding 1 of the final whole-branch
+    review, 2026-09-28): a source-qualified reference list, parallel to
+    `feats` (empty whenever `feats` itself is empty, e.g. the alternatives
+    branch below), built as `slug(bare_name) + "-" + source.lower()` — the
+    EXACT SAME "slug(name)-source" convention this module already uses to
+    build every catalog feat's own `index` (see _feat_from_5etools) —
+    rather than the bare, source-stripped slug `true_feat_ids` above
+    throws the source away to produce.
+
+    Root cause this fixes: the raw grant key ALREADY names the source
+    (e.g. "tavern brawler|xphb"), but `true_feat_ids` above discards
+    everything after "|" before slugging, leaving engine.resolve.
+    _resolve_granted_feats nothing to disambiguate with when a bare slug
+    matches feats in more than one source (9 real slugs do — see that
+    function's own docstring) — 28 of 70 real unambiguous single-feat
+    grants were hitting that ambiguity guard and being silently skipped
+    even though the source was known all along. `feat_refs` recovers it:
+    resolve.py tries an exact match against catalog.feats by this
+    "slug-source" id FIRST, falling back to the existing bare-slug/
+    ambiguity logic only when no ref is available (hand-authored test
+    data built without this field) or the ref doesn't match any real
+    catalog feat.
+
+    One real grant key is capitalized ("Skilled|xphb", Noble/XPHB,
+    confirmed 2026-09-28) — `slug()` lowercases unconditionally, so
+    `slug("Skilled")` -> "skilled" and the resulting ref ("skilled-xphb")
+    matches catalog.feats' own index exactly, same as every lowercase
+    grant key."""
     true_feat_ids: list[str] = []
+    true_feat_refs: list[str] = []
     for entry in raw.get("feats") or []:
         for feat_key, granted in entry.items():
             if granted is True:
-                # ";"-strip BEFORE slugging (see docstring above): recovers
-                # the base feat name from a spell-list-restricted variant
-                # like "magic initiate; cleric" -> "magic initiate", the
-                # only real pattern this dataset uses a literal ";" for.
-                bare_name = feat_key.split("|", 1)[0].split(";", 1)[0].strip()
-                true_feat_ids.append(slug(bare_name))
+                # "|" splits the source suffix off FIRST (kept for
+                # feat_refs below), then ";"-strip BEFORE slugging (see
+                # docstring above): recovers the base feat name from a
+                # spell-list-restricted variant like "magic initiate;
+                # cleric" -> "magic initiate", the only real pattern this
+                # dataset uses a literal ";" for.
+                name_part, _, source_part = feat_key.partition("|")
+                bare_name = name_part.split(";", 1)[0].strip()
+                bare_slug = slug(bare_name)
+                true_feat_ids.append(bare_slug)
+                source_part = source_part.strip().lower()
+                true_feat_refs.append(f"{bare_slug}-{source_part}" if source_part else "")
 
     if len(true_feat_ids) > 1:
         # More than one simultaneous True-valued entry means ALTERNATIVES
         # ("one of these"), not a simultaneous grant of every one of them
         # — see docstring above. Rewarded/Ruined (BMT) are the only two
-        # real records this branch is exercised by.
-        return [], true_feat_ids
-    return true_feat_ids, []
+        # real records this branch is exercised by. feat_refs stays empty
+        # here too, mirroring `feats` itself — these candidates are
+        # unresolved alternatives, not an actual grant to resolve against
+        # the catalog (see engine.resolve._resolve_granted_feats' own
+        # "feat_options candidates are NOT resolved for effects" comment).
+        return [], true_feat_ids, []
+    return true_feat_ids, [], true_feat_refs
 
 
 def _background_from_5etools(raw: dict) -> dict | None:
@@ -1810,7 +1851,7 @@ def _background_from_5etools(raw: dict) -> dict | None:
     index = f"{name_slug}-{source}"
     fixed_languages, language_options = _language_grants_from_5etools(raw)
     fixed_equipment, fixed_gold, fixed_narrative_items = _fixed_starting_equipment_from_5etools(raw)
-    feats, feat_options = _feats_from_5etools(raw)
+    feats, feat_options, feat_refs = _feats_from_5etools(raw)
 
     return {
         "index": index,
@@ -1828,6 +1869,13 @@ def _background_from_5etools(raw: dict) -> dict | None:
         "source": raw.get("source", ""),
         "feats": feats,
         "feat_options": feat_options,
+        # Finding 1 of the final whole-branch review (2026-09-28): a
+        # source-qualified parallel to `feats` — see _feats_from_5etools'
+        # own docstring. engine.resolve._resolve_granted_feats tries this
+        # FIRST (exact match against catalog.feats), falling back to the
+        # bare-slug/ambiguity logic only when it's absent or doesn't match
+        # (e.g. hand-authored test data built without this field).
+        "feat_refs": feat_refs,
     }
 
 
