@@ -24,8 +24,15 @@ export function BackgroundPage() {
     dispatch({ type: "SET_CHOICE_SELECTION", source: "background", choiceId, selected });
   }
 
+  // The "feat" branch here is for a background-granted feat's own cascaded
+  // proficiency/ability-bonus/language choices (cid "feat:{index}:...").
+  // Excluding a "class:"-prefixed cid keeps this from ALSO picking up an
+  // ASI-selected feat's cascaded choices (cid
+  // "class:{clsId}:{lvl}:asi:feat:{index}:...", same source.kind "feat")
+  // — those belong on ClassPage only, which already scopes by that same
+  // "class:" cid prefix.
   const choices = resolution
-    ? resolution.choices.filter((c) => c.source.kind === "background" || c.source.kind === "feat")
+    ? resolution.choices.filter((c) => (c.source.kind === "background" || c.source.kind === "feat") && !c.id.startsWith("class:"))
     : [];
 
   return (
