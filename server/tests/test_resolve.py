@@ -7,7 +7,8 @@ from catalog.loader import load
 from catalog.official_source import has_official
 from engine.derived import hit_point_max_multiclass
 from engine.resolve import (
-    _DETAIL_FIELDS, _feat_ability_bonuses, _feat_expertise_skills, _feat_languages,
+    _DETAIL_FIELDS, _feat_ability_bonus_choice_templates, _feat_ability_bonuses,
+    _feat_choice_templates, _feat_expertise_skills, _feat_languages,
     _feat_prerequisite_problems, _feat_proficiency_ids, _feat_saving_throw_proficiencies,
     _feat_senses, _resolve_granted_feats, resolve,
 )
@@ -3573,3 +3574,29 @@ def test_feat_prerequisite_problems_self_bonus_subtraction_is_per_feat_not_share
         "id": "feat-prerequisite-unmet-synthetic-multi-feat-a-test",
         "message": "Synthetic Multi Feat A's prerequisite isn't met.",
     }]
+
+
+def test_feat_choice_templates_origin_param_scopes_the_cid(catalog):
+    # Skill Expert/XPHB (grounded 2026-09-28 via catalog.feats): a real
+    # proficiency_choices entry (any_skill, choose 1) and no
+    # language_options — origin-scoping only needs to be checked against
+    # whichever cid-building block actually fires for this feat.
+    skill_expert = catalog.feats.get("skill-expert-xphb")
+    assert skill_expert is not None, "ground the real catalog id before trusting this test"
+    default_templates = _feat_choice_templates([skill_expert])
+    scoped_templates = _feat_choice_templates([skill_expert], origin="class:fighter:4:asi:feat:skill-expert-xphb")
+    assert default_templates, "Skill Expert/XPHB should produce at least one choice template"
+    assert all(t["id"].startswith("feat:skill-expert-xphb:") for t in default_templates)
+    assert all(t["id"].startswith("class:fighter:4:asi:feat:skill-expert-xphb:") for t in scoped_templates)
+    # Same label/description/options — only the cid prefix differs.
+    assert [t["label"] for t in default_templates] == [t["label"] for t in scoped_templates]
+
+
+def test_feat_ability_bonus_choice_templates_origin_param_scopes_the_cid(catalog):
+    skill_expert = catalog.feats.get("skill-expert-xphb")
+    assert skill_expert is not None, "ground the real catalog id before trusting this test"
+    default_pairs = _feat_ability_bonus_choice_templates([skill_expert])
+    scoped_pairs = _feat_ability_bonus_choice_templates([skill_expert], origin="class:fighter:4:asi:feat:skill-expert-xphb")
+    assert default_pairs[0][0]["id"] == "feat:skill-expert-xphb:ability-bonus"
+    assert scoped_pairs[0][0]["id"] == "class:fighter:4:asi:feat:skill-expert-xphb:ability-bonus"
+    assert scoped_pairs[0][1] is skill_expert  # the paired feat itself is unaffected by origin

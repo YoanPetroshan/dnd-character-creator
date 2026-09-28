@@ -502,7 +502,7 @@ def _background_ability_bonus_deltas(envelope: dict, built_options: list[dict]) 
     return deltas_by_id
 
 
-def _feat_ability_bonus_choice_templates(feats: list[dict]) -> list[tuple[dict, dict]]:
+def _feat_ability_bonus_choice_templates(feats: list[dict], origin: str | None = None) -> list[tuple[dict, dict]]:
     """Feat-side counterpart to _background_ability_bonus_choice_template/
     _species_ability_bonus_choice_template (Phase 4c-ii Task 2) — plural,
     unlike those two, because `feats` is itself a list (a background can in
@@ -529,13 +529,22 @@ def _feat_ability_bonus_choice_templates(feats: list[dict]) -> list[tuple[dict, 
     would catch it). Returning the feat alongside its own template lets
     the caller build that lookup (or just iterate paired) directly off
     this return value instead, so there's only ever one place the cid
-    format is written."""
+    format is written.
+
+    `origin`, when given, replaces the default `feat:{feat['index']}`
+    prefix in every cid this call builds. Only ever pass a non-None
+    origin when `feats` has exactly ONE entry — origin-scoping a
+    multi-feat list would collide all of them onto the same prefix,
+    which is never the actual call shape either background or ASI call
+    sites use. Defaults to None (unchanged Phase 4c-ii behavior, the
+    `feat:{index}:...` shape background-granted feats already use)."""
     pairs: list[tuple[dict, dict]] = []
     for feat in feats:
         envelope = feat.get("ability_bonus_options")
         if not envelope:
             continue
-        cid = f"feat:{feat['index']}:ability-bonus"
+        cid_prefix = origin if origin is not None else f"feat:{feat['index']}"
+        cid = f"{cid_prefix}:ability-bonus"
         source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
         choose = envelope.get("choose", 1)
         description = f"Choose {choose} ability score{'s' if choose != 1 else ''} to increase by 1."
@@ -796,7 +805,7 @@ def _background_choice_templates(bg: dict, bg_id: str) -> list[dict]:
     return templates
 
 
-def _feat_choice_templates(feats: list[dict]) -> list[dict]:
+def _feat_choice_templates(feats: list[dict], origin: str | None = None) -> list[dict]:
     """A granted feat's own choice-shaped fields, mirrored from
     _background_choice_templates' proficiency-choice/language blocks above
     (same build_choice_template call, same cid/source/label/description
@@ -814,12 +823,21 @@ def _feat_choice_templates(feats: list[dict]) -> list[dict]:
     are load-bearing for the same reason they are in
     _background_choice_templates' own cids (see that function's own
     comment): they're what the merge-site fixes elsewhere in this file use
-    to recognize a feat-sourced proficiency or language selection."""
+    to recognize a feat-sourced proficiency or language selection.
+
+    `origin`, when given, replaces the default `feat:{feat['index']}`
+    prefix in every cid this call builds. Only ever pass a non-None
+    origin when `feats` has exactly ONE entry — origin-scoping a
+    multi-feat list would collide all of them onto the same prefix,
+    which is never the actual call shape either background or ASI call
+    sites use. Defaults to None (unchanged Phase 4c-ii behavior, the
+    `feat:{index}:...` shape background-granted feats already use)."""
     templates = []
     for feat in feats:
+        cid_prefix = origin if origin is not None else f"feat:{feat['index']}"
         language_envelope = feat.get("language_options")
         if language_envelope:
-            cid = f"feat:{feat['index']}:languages"
+            cid = f"{cid_prefix}:languages"
             source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
             choose = language_envelope.get("choose", 1)
             description = f"Choose {choose} language{'s' if choose != 1 else ''} of your choice."
@@ -828,7 +846,7 @@ def _feat_choice_templates(feats: list[dict]) -> list[dict]:
                 templates.append(tpl)
 
         for i, prof_envelope in enumerate(feat.get("proficiency_choices", []) or []):
-            cid = f"feat:{feat['index']}:proficiency-choice-{i}"
+            cid = f"{cid_prefix}:proficiency-choice-{i}"
             source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
             label = _background_proficiency_choice_label(prof_envelope)
             choose = prof_envelope.get("choose", 1)
