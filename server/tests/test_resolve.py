@@ -3657,12 +3657,15 @@ def test_asi_choice_templates_feat_options_not_disabled_when_prerequisites_off(c
 # - chef-xphb: FIXED proficiencies == [cooks-utensils], plus a choice-shaped
 #   ability_bonus_options (con/wis).
 # Fixture base scores: STR 16 DEX 14 CON 14 INT 10 WIS 12 CHA 8, plus
-# Human's +1 to every ability.
+# Human's +1 to every ability. Feat options honor draft.sources (fix round
+# 1), and the fixture is SRD-only, so these drafts add "xphb".
+_SRD_AND_XPHB = ["srd", "xphb"]
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 def test_asi_selected_feat_with_no_choice_content_applies_fixed_effects(catalog):
     draft = _fighter_acolyte_human_draft(
+        sources=_SRD_AND_XPHB,
         classes=[{"classId": "fighter", "level": 4, "choices": {"class:fighter:4:asi": ["feat:actor-xphb"]}}],
     )
     resolution = resolve(draft, catalog)
@@ -3680,7 +3683,7 @@ def test_asi_selected_feat_with_no_choice_content_applies_fixed_effects(catalog)
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 def test_asi_selected_feat_with_proficiency_and_ability_choice_cascades_and_applies(catalog):
     fighter_choices: dict = {"class:fighter:4:asi": ["feat:skill-expert-xphb"]}
-    draft = _fighter_acolyte_human_draft(classes=[{"classId": "fighter", "level": 4, "choices": fighter_choices}])
+    draft = _fighter_acolyte_human_draft(sources=_SRD_AND_XPHB, classes=[{"classId": "fighter", "level": 4, "choices": fighter_choices}])
     resolution = resolve(draft, catalog)
     cascaded = {c["id"]: c for c in resolution["choices"] if c["source"]["kind"] == "feat"}
     prof_cid = "class:fighter:4:asi:feat:skill-expert-xphb:proficiency-choice-0"
@@ -3706,7 +3709,7 @@ def test_asi_selected_feat_with_proficiency_and_ability_choice_cascades_and_appl
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 def test_asi_selected_feat_fixed_tool_applies_while_its_ability_choice_cascades(catalog):
     fighter_choices: dict = {"class:fighter:4:asi": ["feat:chef-xphb"]}
-    draft = _fighter_acolyte_human_draft(classes=[{"classId": "fighter", "level": 4, "choices": fighter_choices}])
+    draft = _fighter_acolyte_human_draft(sources=_SRD_AND_XPHB, classes=[{"classId": "fighter", "level": 4, "choices": fighter_choices}])
     resolution = resolve(draft, catalog)
     assert "cooks-utensils" in resolution["sheet"]["proficiencies"]["tools"]
     cascaded_ids = [c["id"] for c in resolution["choices"] if c["source"]["kind"] == "feat"]
@@ -3718,11 +3721,12 @@ def test_asi_selected_feat_fixed_tool_applies_while_its_ability_choice_cascades(
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 def test_asi_selected_feat_ability_bonus_feeds_later_levels_cap_check(catalog):
     # The ordering guard: the feat's delta must be applied INSIDE the
-    # per-level walk, so level 8's cap check sees it. STR 17 base + 1
+    # per-level walk, so level 6's cap check sees it. STR 17 base + 1
     # Human = 18; Skill Expert's +1 STR at level 4 -> 19; str-plus-2 at
-    # level 8 must then be disabled (21 > 20). Were the feat's delta not
-    # applied before level 8 is walked, 18 + 2 = 20 would look allowed.
+    # level 6 must then be disabled (21 > 20). Were the feat's delta not
+    # applied before level 6 is walked, 18 + 2 = 20 would look allowed.
     draft = _fighter_acolyte_human_draft(
+        sources=_SRD_AND_XPHB,
         classes=[{"classId": "fighter", "level": 8, "choices": {
             "class:fighter:4:asi": ["feat:skill-expert-xphb"],
             "class:fighter:4:asi:feat:skill-expert-xphb:ability-bonus": ["str"],
@@ -3747,7 +3751,7 @@ def test_the_ability_score_improvement_catalog_feat_is_never_offered(catalog):
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 def test_two_classes_selecting_the_same_feat_at_different_asi_levels_do_not_collide(catalog):
-    draft = _fighter_acolyte_human_draft(classes=[
+    draft = _fighter_acolyte_human_draft(sources=_SRD_AND_XPHB, classes=[
         {"classId": "fighter", "level": 4, "choices": {
             "class:fighter:4:asi": ["feat:skill-expert-xphb"],
             "class:fighter:4:asi:feat:skill-expert-xphb:ability-bonus": ["str"],
@@ -3810,3 +3814,131 @@ def test_asi_progression_with_no_feat_selection_is_a_byte_identical_no_op(catalo
     asi_8 = next(c for c in resolution["choices"] if c["id"] == "class:fighter:8:asi")
     assert asi_8["status"] == "pending"
     assert next(o for o in asi_8["options"] if o["id"] == "str-plus-2").get("disabled") is True
+
+
+# --- ASI-or-feat, Task 3 fix round 1 ---
+
+
+def _feat_prereqs_on():
+    return {"usePrerequisites": {"feats": True}}
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_prerequisite_disabled_asi_feat_pick_applies_nothing_and_is_reported(catalog):
+    # Actor/XPHB: prerequisite CHA >= 13, fixed CHA +1. Fixture CHA 8 + 1 = 9.
+    draft = _fighter_acolyte_human_draft(
+        sources=_SRD_AND_XPHB, preferences=_feat_prereqs_on(),
+        classes=[{"classId": "fighter", "level": 4, "choices": {"class:fighter:4:asi": ["feat:actor-xphb"]}}],
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["abilities"]["CHA"] == 9  # Actor's +1 NOT applied
+    assert "actor-xphb" not in resolution["sheet"]["grantedFeats"]
+    assert [p["id"] for p in resolution["problems"]] == ["feat-prerequisite-unmet-actor-xphb"]
+    asi_choice = next(c for c in resolution["choices"] if c["id"] == "class:fighter:4:asi")
+    actor_option = next(o for o in asi_choice["options"] if o["id"] == "feat:actor-xphb")
+    assert actor_option.get("disabled") is True
+    # Same display as an over-cap combo pick: a disabled selection is pending.
+    assert asi_choice["selected"] == [] and asi_choice["status"] == "pending"
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_asi_feat_prerequisite_is_checked_at_its_own_level_not_against_final_scores(catalog):
+    # Reviewer's repro: CHA 10 + 1 Human = 11 at level 4 (Actor disabled),
+    # then cha-plus-2 at level 6 -> 13. Previously Actor applied (CHA 14)
+    # with NO problem, since the final-scores check (14 - 1 = 13) passed.
+    draft = _fighter_acolyte_human_draft(
+        sources=_SRD_AND_XPHB, preferences=_feat_prereqs_on(),
+        abilities={"method": "manual", "base": {"STR": 16, "DEX": 14, "CON": 14, "INT": 10, "WIS": 12, "CHA": 10}},
+        classes=[{"classId": "fighter", "level": 6, "choices": {
+            "class:fighter:4:asi": ["feat:actor-xphb"],
+            "class:fighter:6:asi": ["cha-plus-2"],
+        }}],
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["abilities"]["CHA"] == 13
+    assert "actor-xphb" not in resolution["sheet"]["grantedFeats"]
+    assert [p["id"] for p in resolution["problems"]] == ["feat-prerequisite-unmet-actor-xphb"]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_grappler_own_chosen_bonus_cannot_satisfy_its_own_prerequisite_at_an_asi_level(catalog):
+    # Grappler/XPHB: STR >= 13 OR DEX >= 13; its own choice is +1 STR or DEX.
+    # STR 10/DEX 10 + 1 Human = 11/11; picking Grappler and its +1 STR must
+    # NOT reach 13 (or even 12) with prerequisites on.
+    choices = {
+        "class:fighter:4:asi": ["feat:grappler-xphb"],
+        "class:fighter:4:asi:feat:grappler-xphb:ability-bonus": ["str"],
+    }
+    base = {"STR": 10, "DEX": 10, "CON": 14, "INT": 10, "WIS": 12, "CHA": 8}
+    on = resolve(_fighter_acolyte_human_draft(
+        sources=_SRD_AND_XPHB, preferences=_feat_prereqs_on(), abilities={"method": "manual", "base": base},
+        classes=[{"classId": "fighter", "level": 4, "choices": dict(choices)}],
+    ), catalog)
+    assert on["sheet"]["abilities"]["STR"] == 11
+    assert not any(c["source"]["kind"] == "feat" for c in on["choices"])  # a blocked pick cascades nothing
+    assert "feat-prerequisite-unmet-grappler-xphb" in [p["id"] for p in on["problems"]]
+    # The stale sub-choice selection is surfaced as pruned, not silently kept.
+    assert [p["choiceId"] for p in on["pruned"]] == ["class:fighter:4:asi:feat:grappler-xphb:ability-bonus"]
+    off = resolve(_fighter_acolyte_human_draft(
+        sources=_SRD_AND_XPHB, abilities={"method": "manual", "base": base},
+        classes=[{"classId": "fighter", "level": 4, "choices": dict(choices)}],
+    ), catalog)
+    assert off["sheet"]["abilities"]["STR"] == 12  # toggle off: applies
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_asi_feat_ability_bonus_is_capped_at_20_but_the_feat_still_applies(catalog):
+    # STR 19 + 1 Human = 20; Skill Expert's chosen +1 STR would make 21.
+    draft = _fighter_acolyte_human_draft(
+        sources=_SRD_AND_XPHB,
+        abilities={"method": "manual", "base": {"STR": 19, "DEX": 14, "CON": 14, "INT": 10, "WIS": 12, "CHA": 8}},
+        classes=[{"classId": "fighter", "level": 4, "choices": {
+            "class:fighter:4:asi": ["feat:skill-expert-xphb"],
+            "class:fighter:4:asi:feat:skill-expert-xphb:ability-bonus": ["str"],
+            "class:fighter:4:asi:feat:skill-expert-xphb:proficiency-choice-0": ["skill-arcana"],
+        }}],
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["abilities"]["STR"] == 20
+    assert resolution["problems"] == []
+    assert "skill-expert-xphb" in resolution["sheet"]["grantedFeats"]
+    assert "skill-arcana" in resolution["sheet"]["proficiencies"]["skills"]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_a_duplicated_single_asi_pick_is_deduped_and_applies(catalog):
+    draft = _fighter_acolyte_human_draft(
+        sources=_SRD_AND_XPHB,
+        classes=[{"classId": "fighter", "level": 6, "choices": {
+            "class:fighter:4:asi": ["feat:actor-xphb", "feat:actor-xphb"],
+            "class:fighter:6:asi": ["str-plus-2", "str-plus-2"],
+        }}],
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["abilities"]["CHA"] == 8 + 1 + 1
+    assert resolution["sheet"]["abilities"]["STR"] == 16 + 1 + 2
+    assert "actor-xphb" in resolution["sheet"]["grantedFeats"]
+    for cid in ("class:fighter:4:asi", "class:fighter:6:asi"):
+        assert next(c for c in resolution["choices"] if c["id"] == cid)["status"] == "resolved"
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_asi_feat_options_honor_draft_sources(catalog):
+    def feat_option_ids(sources):
+        draft = _fighter_acolyte_human_draft(
+            sources=sources,
+            classes=[{"classId": "fighter", "level": 4, "choices": {"class:fighter:4:asi": ["feat:actor-xphb"]}}],
+        )
+        resolution = resolve(draft, catalog)
+        asi_choice = next(c for c in resolution["choices"] if c["id"] == "class:fighter:4:asi")
+        return resolution, {o["id"] for o in asi_choice["options"] if o["id"].startswith("feat:")}
+
+    srd_only, srd_ids = feat_option_ids(["srd"])
+    assert srd_ids == set()  # the 2014 SRD has no feats
+    assert srd_only["sheet"]["abilities"]["CHA"] == 9  # an un-offered feat pick is never applied
+    assert srd_only["sheet"]["grantedFeats"] == []
+    _, xphb_ids = feat_option_ids(["srd", "xphb"])
+    assert "feat:actor-xphb" in xphb_ids
+    assert all(catalog.feats[i[len("feat:"):]]["source"] == "XPHB" for i in xphb_ids)
+    _, unrestricted_ids = feat_option_ids([])  # empty sources = no filtering, same as races/backgrounds
+    assert len(unrestricted_ids) == 94
