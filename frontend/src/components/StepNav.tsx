@@ -8,13 +8,16 @@ interface Step {
   // Most steps only ever show choices of their own kind. The Background
   // step also renders feat-sourced choices (a background-granted feat's
   // proficiency/ability-bonus/language picks — see BackgroundPage.tsx),
-  // so its badge count must include "feat" too or it'll undercount.
+  // so its badge count must include "feat" too or it'll undercount. The
+  // Class step has the same situation: a feat picked at an ASI slot can
+  // cascade its own proficiency/ability-bonus/language sub-choices (see
+  // ClassPage.tsx), so it also needs "feat" in its kind list.
   kind: ChoiceSourceKind[] | null;
 }
 
 const STEPS: Step[] = [
   { path: "/home", label: "Home", kind: null },
-  { path: "/class", label: "Клас", kind: ["class"] },
+  { path: "/class", label: "Клас", kind: ["class", "feat"] },
   { path: "/background", label: "Background", kind: ["background", "feat"] },
   { path: "/species", label: "Species", kind: ["species"] },
   { path: "/abilities", label: "Abilities", kind: null },
