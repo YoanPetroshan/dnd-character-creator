@@ -794,6 +794,52 @@ def test_sailor_xphb_grants_tavern_brawler_xphb_and_its_improvised_weapons_profi
     assert "improvised-weapons" in resolution["sheet"]["proficiencies"]["weapons"]
 
 
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_crafter_xphb_tool_choice_is_offered_as_a_real_choice(catalog):
+    # Artisan/XPHB grants Crafter/XPHB, whose real proficiency_choices is
+    # "choose 3 of 8 named artisan's tools" (carpenter's/leatherworker's/
+    # mason's/potter's/smith's/tinker's/weaver's/woodcarver's tools,
+    # confirmed directly against the loaded catalog) — this must now
+    # surface as a real, selectable Choice, not silently do nothing.
+    draft = _fighter_acolyte_human_draft(sources=["xphb"], background={"id": "artisan-xphb", "choices": {}})
+    resolution = resolve(draft, catalog)
+    cids = {c["id"] for c in resolution["choices"]}
+    tool_cid = next((cid for cid in cids if "crafter-xphb" in cid and "proficiency-choice" in cid), None)
+    assert tool_cid is not None, f"expected a feat-sourced tool choice, got: {cids}"
+    choice = next(c for c in resolution["choices"] if c["id"] == tool_cid)
+    assert choice["count"] == 3
+    assert choice["source"]["kind"] == "feat"
+    option_ids = {o["id"] for o in choice["options"]}
+    assert option_ids == {
+        "carpenters-tools", "leatherworkers-tools", "masons-tools", "potters-tools",
+        "smiths-tools", "tinkers-tools", "weavers-tools", "woodcarvers-tools",
+    }
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_selecting_the_crafter_tool_choice_reaches_the_sheet(catalog):
+    draft = _fighter_acolyte_human_draft(sources=["xphb"], background={"id": "artisan-xphb", "choices": {}})
+    resolution = resolve(draft, catalog)
+    tool_cid = next(cid for cid in {c["id"] for c in resolution["choices"]}
+                     if "crafter-xphb" in cid and "proficiency-choice" in cid)
+
+    draft["background"]["choices"][tool_cid] = ["carpenters-tools", "leatherworkers-tools", "masons-tools"]
+    resolution2 = resolve(draft, catalog)
+    assert resolution2["problems"] == []
+    assert {"carpenters-tools", "leatherworkers-tools", "masons-tools"} <= set(resolution2["sheet"]["proficiencies"]["tools"])
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_a_feat_with_no_choice_shaped_content_is_a_safe_no_op(catalog):
+    # A background granting a feat with ONLY fixed content (Sailor/XPHB ->
+    # Tavern Brawler/XPHB, whose real proficiency_choices is [], already
+    # real from Phase 4c-i's own final-review fix) must produce zero
+    # feat-sourced choices.
+    draft = _fighter_acolyte_human_draft(sources=["phb", "xphb"], background={"id": "sailor-xphb", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert not any(c["source"]["kind"] == "feat" for c in resolution["choices"])
+
+
 def test_feat_senses_merges_multiple_granted_feats():
     feats = [{"senses": {"blindsight": 15}}, {"senses": {"truesight": 60}}]
     assert _feat_senses(feats) == {"blindsight": 15, "truesight": 60}
@@ -3095,17 +3141,23 @@ def test_a_granted_feats_full_mechanical_effects_all_land_on_the_sheet(catalog, 
     assert resolution["sheet"]["expertiseSkills"] == ["skill-arcana"]
 
 
-def test_a_feats_choice_shaped_effects_are_converted_but_never_offered_as_a_choice(catalog, monkeypatch):
-    # Pins a real, disclosed gap (final whole-branch review, Finding 3,
-    # 2026-09-28), not a passing feature: official_source.py's catalog
-    # conversion DOES build ability_bonus_options/proficiency_choices/
-    # language_options envelopes for a feat that has them, but resolve()
-    # never turns any of the three into a selectable Choice (no
-    # _feat_choice_templates function exists, unlike
-    # _background_choice_templates/_species_choice_templates) and never
-    # merges a selection's effect onto the sheet (see
-    # _feat_ability_bonuses'/_feat_proficiency_ids'/_feat_languages' own
-    # docstrings).
+def test_a_feats_ability_bonus_and_language_choice_shaped_effects_are_converted_but_not_yet_offered_as_a_choice(catalog, monkeypatch):
+    # Pins the REMAINING half of a real, disclosed gap (final whole-branch
+    # review, Finding 3, 2026-09-28), not a passing feature:
+    # official_source.py's catalog conversion DOES build
+    # ability_bonus_options/proficiency_choices/language_options envelopes
+    # for a feat that has them. Phase 4c-ii Task 1 closed the
+    # proficiency_choices third of this gap (_feat_choice_templates now
+    # exists and IS wired in — see
+    # test_crafter_xphb_tool_choice_is_offered_as_a_real_choice/
+    # test_selecting_the_crafter_tool_choice_reaches_the_sheet above for
+    # real-data coverage of that closed half). ability_bonus_options and
+    # language_options remain open — a separate follow-up task in this same
+    # plan — so this test now pins ONLY those two, plus confirms the
+    # proficiency_choices envelope on THIS synthetic feat is offered but,
+    # being unselected in this draft, still doesn't move the needle on
+    # sheet.proficiencies.skills (an unselected Choice has no effect,
+    # exactly like every other unselected Choice in this engine).
     #
     # CORRECTION (re-review, 2026-09-28): an earlier version of this
     # comment claimed "no real background grants a choice-only feat
@@ -3113,17 +3165,12 @@ def test_a_feats_choice_shaped_effects_are_converted_but_never_offered_as_a_choi
     # is FALSE. Four real, unambiguous single-candidate cases exist:
     # Artisan/XPHB -> Crafter/XPHB, Entertainer/XPHB -> Musician/XPHB,
     # Harper/FRHoF -> Harper Agent, Purple Dragon Squire/FRHoF -> Purple
-    # Dragon Rook. A real end-to-end test (e.g.
-    # background={"id": "artisan-xphb"}, confirming grantedFeats ==
-    # ["crafter"] and sheet.proficiencies.tools == [] where 3-of-8
-    # artisan's tools should be offered) would be a stronger regression
-    # guard than this synthetic one and is a good, cheap follow-up — not
-    # done here to keep this fix round scoped to what was already
-    # verified. This SYNTHETIC feat test still exercises the real code
-    # path with all three envelope shapes simultaneously (broader
-    # coverage in one test than any single real feat currently offers),
-    # so it stays as a real regression guard on its own merits, not a
-    # placeholder for the missing real-data test.
+    # Dragon Rook. Artisan/XPHB -> Crafter/XPHB is now the real end-to-end
+    # test named above, closing that follow-up. This SYNTHETIC feat test
+    # still exercises the real code path with all three envelope shapes
+    # simultaneously (broader coverage in one test than any single real
+    # feat currently offers), so it stays as a real regression guard on
+    # its own merits for the two still-open shapes.
     feat = _synthetic_feat(
         index="synthetic-choice-feat-test", name="Synthetic Choice Feat",
         ability_bonus_options={
@@ -3148,12 +3195,16 @@ def test_a_feats_choice_shaped_effects_are_converted_but_never_offered_as_a_choi
     resolution = resolve(draft, catalog)
     assert resolution["problems"] == []
     assert resolution["sheet"]["grantedFeats"] == ["synthetic-choice-feat"]
-    # The gap: no Choice template sourced from this feat is ever offered...
+    # The remaining gap: the feat-sourced Choice list contains ONLY the
+    # proficiency_choices envelope (Task 1's closed half) — no
+    # ability-bonus or language Choice is ever offered for this feat.
     feat_sourced_choices = [c for c in resolution["choices"] if c.get("source", {}).get("kind") == "feat"]
-    assert feat_sourced_choices == []
+    assert len(feat_sourced_choices) == 1
+    assert "proficiency-choice" in feat_sourced_choices[0]["id"]
     # ...and correspondingly none of the three choice-shaped effects reach
-    # the sheet — abilities/skills/languages are byte-identical to the
-    # same draft resolved WITHOUT the feat grant at all.
+    # the sheet UNSELECTED — abilities/skills/languages are byte-identical
+    # to the same draft resolved WITHOUT the feat grant at all (the
+    # proficiency choice exists now but nothing in this draft selects it).
     assert resolution["sheet"]["abilities"] == baseline["sheet"]["abilities"]
     assert resolution["sheet"]["proficiencies"]["skills"] == baseline["sheet"]["proficiencies"]["skills"]
     assert resolution["sheet"]["proficiencies"]["languages"] == baseline["sheet"]["proficiencies"]["languages"]

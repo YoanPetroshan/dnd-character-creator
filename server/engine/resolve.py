@@ -709,6 +709,32 @@ def _background_choice_templates(bg: dict, bg_id: str) -> list[dict]:
     return templates
 
 
+def _feat_choice_templates(feats: list[dict]) -> list[dict]:
+    """A granted feat's own choice-shaped fields, mirrored from
+    _background_choice_templates' proficiency-choice block above (same
+    build_choice_template call, same cid/source/label/description shape).
+    Handles `proficiency_choices` only, e.g. Crafter/XPHB's real "choose 3
+    of 8 artisan's tools" grant (Artisan/XPHB's own feat grant) — a feat's
+    `ability_bonus_options`/`language_options` are a separate follow-up
+    task in this same plan, not handled here. The ":proficiency-choice"
+    substring in the cid is load-bearing for the same reason it is in
+    _background_choice_templates' cid (see that function's own comment):
+    it's what the merge-site fixes below use to recognize a feat-sourced
+    proficiency selection."""
+    templates = []
+    for feat in feats:
+        for i, prof_envelope in enumerate(feat.get("proficiency_choices", []) or []):
+            cid = f"feat:{feat['index']}:proficiency-choice-{i}"
+            source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
+            label = _background_proficiency_choice_label(prof_envelope)
+            choose = prof_envelope.get("choose", 1)
+            description = f"Choose {choose} proficienc{'ies' if choose != 1 else 'y'} of your choice."
+            tpl = build_choice_template(prof_envelope, cid, source, label, description=description)
+            if tpl:
+                templates.append(tpl)
+    return templates
+
+
 def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrace: dict | None) -> list[dict]:
     templates = []
     trait_refs = list(race.get("traits", [])) + (list(subrace.get("racial_traits", [])) if subrace else [])
@@ -1522,6 +1548,12 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choice_templates += _background_choice_templates(bg, bg_id)
         if background_ability_choice_tpl:
             choice_templates.append(background_ability_choice_tpl)
+    # Phase 4c-ii Task 1: `resolved_feats` is already computed above (right
+    # after `bg` itself is resolved) regardless of whether `bg` is present —
+    # it defaults to `[]` when there's no background, so this call is a
+    # safe no-op in that case, not gated behind `if bg and bg_id` like the
+    # background-choice-templates call just above.
+    choice_templates += _feat_choice_templates(resolved_feats)
     if race and race_id:
         choice_templates += _species_choice_templates(catalog, race, race_id, subrace)
         if species_ability_choice_tpl:
@@ -1752,7 +1784,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         # unconditionally: the only OTHER background-kind choice is the
         # language choice, whose selected values are language ids, never
         # "skill-"-prefixed, so this filter still excludes them.
-        if c["source"]["kind"] in ("class", "species", "background"):
+        if c["source"]["kind"] in ("class", "species", "background", "feat"):
             proficient_skills.update(s for s in c["selected"] if s.startswith("skill-"))
     if bg:
         proficient_skills.update(p["index"] for p in bg.get("starting_proficiencies", []) if p["index"].startswith("skill-"))
@@ -1912,6 +1944,15 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             for s in c["selected"]:
                 if not s.startswith("skill-"):
                     _categorize_proficiency(s)
+        elif c["source"]["kind"] == "feat" and "proficiency-choice" in c["id"]:
+            # Phase 4c-ii Task 1's feat equivalent of the species/background
+            # branches above — same reasoning, same "proficiency-choice"
+            # substring convention (set by _feat_choice_templates), e.g.
+            # Crafter/XPHB's selected tool(s) (Artisan/XPHB's feat grant)
+            # reaching sheet.proficiencies.tools.
+            for s in c["selected"]:
+                if not s.startswith("skill-"):
+                    _categorize_proficiency(s)
 
     for rc in resolved_classes:
         if not rc["cls"]:
@@ -1969,7 +2010,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         _feat_languages(resolved_feats)  # Phase 4c-i Task 6 — see that function's own docstring
     chosen_languages = [
         s for c in choices
-        if c["source"]["kind"] in ("background", "species") and c["id"].endswith(":languages")
+        if c["source"]["kind"] in ("background", "species", "feat") and c["id"].endswith(":languages")
         for s in c["selected"]
     ]
 
