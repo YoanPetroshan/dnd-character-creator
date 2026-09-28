@@ -5,25 +5,29 @@ import type { ChoiceSourceKind } from "../types";
 interface Step {
   path: string;
   label: string;
-  kind: ChoiceSourceKind | null;
+  // Most steps only ever show choices of their own kind. The Background
+  // step also renders feat-sourced choices (a background-granted feat's
+  // proficiency/ability-bonus/language picks — see BackgroundPage.tsx),
+  // so its badge count must include "feat" too or it'll undercount.
+  kind: ChoiceSourceKind[] | null;
 }
 
 const STEPS: Step[] = [
   { path: "/home", label: "Home", kind: null },
-  { path: "/class", label: "Клас", kind: "class" },
-  { path: "/background", label: "Background", kind: "background" },
-  { path: "/species", label: "Species", kind: "species" },
+  { path: "/class", label: "Клас", kind: ["class"] },
+  { path: "/background", label: "Background", kind: ["background", "feat"] },
+  { path: "/species", label: "Species", kind: ["species"] },
   { path: "/abilities", label: "Abilities", kind: null },
-  { path: "/equipment", label: "Equipment", kind: "equipment" },
+  { path: "/equipment", label: "Equipment", kind: ["equipment"] },
   { path: "/export", label: "Export", kind: null },
 ];
 
 export function StepNav() {
   const { resolution } = useResolutionContext();
 
-  function pendingCount(kind: ChoiceSourceKind | null): number {
-    if (!kind || !resolution) return 0;
-    return resolution.choices.filter((c) => c.source.kind === kind && c.status === "pending").length;
+  function pendingCount(kinds: ChoiceSourceKind[] | null): number {
+    if (!kinds || !resolution) return 0;
+    return resolution.choices.filter((c) => kinds.includes(c.source.kind) && c.status === "pending").length;
   }
 
   return (

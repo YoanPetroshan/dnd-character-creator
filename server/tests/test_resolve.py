@@ -794,6 +794,52 @@ def test_sailor_xphb_grants_tavern_brawler_xphb_and_its_improvised_weapons_profi
     assert "improvised-weapons" in resolution["sheet"]["proficiencies"]["weapons"]
 
 
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_crafter_xphb_tool_choice_is_offered_as_a_real_choice(catalog):
+    # Artisan/XPHB grants Crafter/XPHB, whose real proficiency_choices is
+    # "choose 3 of 8 named artisan's tools" (carpenter's/leatherworker's/
+    # mason's/potter's/smith's/tinker's/weaver's/woodcarver's tools,
+    # confirmed directly against the loaded catalog) — this must now
+    # surface as a real, selectable Choice, not silently do nothing.
+    draft = _fighter_acolyte_human_draft(sources=["xphb"], background={"id": "artisan-xphb", "choices": {}})
+    resolution = resolve(draft, catalog)
+    cids = {c["id"] for c in resolution["choices"]}
+    tool_cid = next((cid for cid in cids if "crafter-xphb" in cid and "proficiency-choice" in cid), None)
+    assert tool_cid is not None, f"expected a feat-sourced tool choice, got: {cids}"
+    choice = next(c for c in resolution["choices"] if c["id"] == tool_cid)
+    assert choice["count"] == 3
+    assert choice["source"]["kind"] == "feat"
+    option_ids = {o["id"] for o in choice["options"]}
+    assert option_ids == {
+        "carpenters-tools", "leatherworkers-tools", "masons-tools", "potters-tools",
+        "smiths-tools", "tinkers-tools", "weavers-tools", "woodcarvers-tools",
+    }
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_selecting_the_crafter_tool_choice_reaches_the_sheet(catalog):
+    draft = _fighter_acolyte_human_draft(sources=["xphb"], background={"id": "artisan-xphb", "choices": {}})
+    resolution = resolve(draft, catalog)
+    tool_cid = next(cid for cid in {c["id"] for c in resolution["choices"]}
+                     if "crafter-xphb" in cid and "proficiency-choice" in cid)
+
+    draft["background"]["choices"][tool_cid] = ["carpenters-tools", "leatherworkers-tools", "masons-tools"]
+    resolution2 = resolve(draft, catalog)
+    assert resolution2["problems"] == []
+    assert {"carpenters-tools", "leatherworkers-tools", "masons-tools"} <= set(resolution2["sheet"]["proficiencies"]["tools"])
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_a_feat_with_no_choice_shaped_content_is_a_safe_no_op(catalog):
+    # A background granting a feat with ONLY fixed content (Sailor/XPHB ->
+    # Tavern Brawler/XPHB, whose real proficiency_choices is [], already
+    # real from Phase 4c-i's own final-review fix) must produce zero
+    # feat-sourced choices.
+    draft = _fighter_acolyte_human_draft(sources=["phb", "xphb"], background={"id": "sailor-xphb", "choices": {}})
+    resolution = resolve(draft, catalog)
+    assert not any(c["source"]["kind"] == "feat" for c in resolution["choices"])
+
+
 def test_feat_senses_merges_multiple_granted_feats():
     feats = [{"senses": {"blindsight": 15}}, {"senses": {"truesight": 60}}]
     assert _feat_senses(feats) == {"blindsight": 15, "truesight": 60}
@@ -3095,35 +3141,26 @@ def test_a_granted_feats_full_mechanical_effects_all_land_on_the_sheet(catalog, 
     assert resolution["sheet"]["expertiseSkills"] == ["skill-arcana"]
 
 
-def test_a_feats_choice_shaped_effects_are_converted_but_never_offered_as_a_choice(catalog, monkeypatch):
-    # Pins a real, disclosed gap (final whole-branch review, Finding 3,
-    # 2026-09-28), not a passing feature: official_source.py's catalog
-    # conversion DOES build ability_bonus_options/proficiency_choices/
-    # language_options envelopes for a feat that has them, but resolve()
-    # never turns any of the three into a selectable Choice (no
-    # _feat_choice_templates function exists, unlike
-    # _background_choice_templates/_species_choice_templates) and never
-    # merges a selection's effect onto the sheet (see
-    # _feat_ability_bonuses'/_feat_proficiency_ids'/_feat_languages' own
-    # docstrings).
-    #
-    # CORRECTION (re-review, 2026-09-28): an earlier version of this
-    # comment claimed "no real background grants a choice-only feat
-    # unambiguously" — that claim was checked against the real data and
-    # is FALSE. Four real, unambiguous single-candidate cases exist:
-    # Artisan/XPHB -> Crafter/XPHB, Entertainer/XPHB -> Musician/XPHB,
-    # Harper/FRHoF -> Harper Agent, Purple Dragon Squire/FRHoF -> Purple
-    # Dragon Rook. A real end-to-end test (e.g.
-    # background={"id": "artisan-xphb"}, confirming grantedFeats ==
-    # ["crafter"] and sheet.proficiencies.tools == [] where 3-of-8
-    # artisan's tools should be offered) would be a stronger regression
-    # guard than this synthetic one and is a good, cheap follow-up — not
-    # done here to keep this fix round scoped to what was already
-    # verified. This SYNTHETIC feat test still exercises the real code
-    # path with all three envelope shapes simultaneously (broader
-    # coverage in one test than any single real feat currently offers),
-    # so it stays as a real regression guard on its own merits, not a
-    # placeholder for the missing real-data test.
+def test_a_feats_choice_shaped_effects_are_all_offered_but_inert_unselected(catalog, monkeypatch):
+    # This test has been renamed twice as the gap it pins has closed:
+    # it started as test_a_feats_choice_shaped_effects_are_converted_but_
+    # never_offered_as_a_choice (pinning the full gap); Task 1 renamed it
+    # to test_a_feats_ability_bonus_and_language_choice_shaped_effects_
+    # are_converted_but_not_yet_offered_as_a_choice after closing the
+    # proficiency_choices third; and this commit (Task 2) renames it again
+    # to its CURRENT name above, now that Task 2 closes the REMAINING two
+    # thirds: official_source.py's catalog conversion builds
+    # ability_bonus_options/proficiency_choices/language_options envelopes
+    # for a feat that has them, and as of Task 1 (proficiency_choices) +
+    # Task 2 (ability_bonus_options/language_options)
+    # _feat_choice_templates/_feat_ability_bonus_choice_templates now turn
+    # ALL THREE into real, selectable Choices — see
+    # test_a_synthetic_feats_ability_bonus_choice_is_offered_and_applies/
+    # test_a_synthetic_feats_language_choice_is_offered_and_applies below
+    # for the "selecting one actually applies" half; this test instead
+    # confirms all three are OFFERED together on one feat, and that
+    # leaving them unselected still has no effect (an unselected Choice
+    # does nothing, exactly like every other Choice in this engine).
     feat = _synthetic_feat(
         index="synthetic-choice-feat-test", name="Synthetic Choice Feat",
         ability_bonus_options={
@@ -3148,15 +3185,95 @@ def test_a_feats_choice_shaped_effects_are_converted_but_never_offered_as_a_choi
     resolution = resolve(draft, catalog)
     assert resolution["problems"] == []
     assert resolution["sheet"]["grantedFeats"] == ["synthetic-choice-feat"]
-    # The gap: no Choice template sourced from this feat is ever offered...
-    feat_sourced_choices = [c for c in resolution["choices"] if c.get("source", {}).get("kind") == "feat"]
-    assert feat_sourced_choices == []
-    # ...and correspondingly none of the three choice-shaped effects reach
-    # the sheet — abilities/skills/languages are byte-identical to the
+    # All three choice-shaped fields are now offered as real, distinct
+    # feat-sourced Choices.
+    feat_sourced_ids = {c["id"] for c in resolution["choices"] if c.get("source", {}).get("kind") == "feat"}
+    assert feat_sourced_ids == {
+        "feat:synthetic-choice-feat-test:ability-bonus",
+        "feat:synthetic-choice-feat-test:languages",
+        "feat:synthetic-choice-feat-test:proficiency-choice-0",
+    }
+    # ...but none of the three choice-shaped effects reach the sheet
+    # UNSELECTED — abilities/skills/languages are byte-identical to the
     # same draft resolved WITHOUT the feat grant at all.
     assert resolution["sheet"]["abilities"] == baseline["sheet"]["abilities"]
     assert resolution["sheet"]["proficiencies"]["skills"] == baseline["sheet"]["proficiencies"]["skills"]
     assert resolution["sheet"]["proficiencies"]["languages"] == baseline["sheet"]["proficiencies"]["languages"]
+
+
+def test_a_synthetic_feats_ability_bonus_choice_is_offered_and_applies(catalog, monkeypatch):
+    # DISCLOSED (Phase 4c-ii Task 2): no real background->feat grant
+    # reaches this path today (confirmed 2026-09-28 against the real data
+    # — zero real feats granted by a background carry an
+    # ability_bonus_options envelope) — mirrors the SAME synthetic-feat
+    # testing convention Phase 4c-i's own test file already established
+    # for its own no-real-coverage cases (see e.g.
+    # test_a_granted_feats_full_mechanical_effects_all_land_on_the_sheet
+    # above).
+    feat = _synthetic_feat(
+        index="synthetic-ability-choice-feat-test", name="Synthetic Ability Choice Feat",
+        ability_bonus_options={
+            "choose": 1,
+            "from": {
+                "option_set_type": "options_array",
+                "options": [
+                    {"option_type": "ability_bonus", "ability_score": {"index": "str", "name": "STR"}, "bonus": 1},
+                    {"option_type": "ability_bonus", "ability_score": {"index": "dex", "name": "DEX"}, "bonus": 1},
+                ],
+            },
+        },
+    )
+    _grant_synthetic_feat(catalog, monkeypatch, feat)
+    draft = _fighter_acolyte_human_draft()  # STR 16, DEX 14 base; bundled SRD Human grants +1 to every ability
+    baseline = resolve(_fighter_acolyte_human_draft(), catalog)  # same draft, no feat grant
+
+    unselected = resolve(draft, catalog)
+    assert unselected["problems"] == []
+    ability_choice = next(
+        c for c in unselected["choices"]
+        if c["source"]["kind"] == "feat" and c["id"] == "feat:synthetic-ability-choice-feat-test:ability-bonus"
+    )
+    assert ability_choice["count"] == 1
+    assert {o["id"] for o in ability_choice["options"]} == {"str", "dex"}
+    # Unselected: no effect on the sheet.
+    assert unselected["sheet"]["abilities"] == baseline["sheet"]["abilities"]
+
+    draft["background"]["choices"]["feat:synthetic-ability-choice-feat-test:ability-bonus"] = ["dex"]
+    selected = resolve(draft, catalog)
+    assert selected["problems"] == []
+    assert selected["sheet"]["abilities"]["DEX"] == 16  # 14 base + 1 Human + 1 feat choice
+    assert selected["sheet"]["abilities"]["STR"] == baseline["sheet"]["abilities"]["STR"]  # unaffected — not selected
+
+
+def test_a_synthetic_feats_language_choice_is_offered_and_applies(catalog, monkeypatch):
+    # Same disclosure as test_a_synthetic_feats_ability_bonus_choice_is_
+    # offered_and_applies immediately above.
+    feat = _synthetic_feat(
+        index="synthetic-language-choice-feat-test", name="Synthetic Language Choice Feat",
+        language_options={
+            "choose": 1,
+            "from": {"option_set_type": "resource_list", "resource_list_url": "api/2014/languages"},
+        },
+    )
+    _grant_synthetic_feat(catalog, monkeypatch, feat)
+    draft = _fighter_acolyte_human_draft()
+    baseline = resolve(_fighter_acolyte_human_draft(), catalog)
+
+    unselected = resolve(draft, catalog)
+    assert unselected["problems"] == []
+    language_choice = next(
+        c for c in unselected["choices"]
+        if c["source"]["kind"] == "feat" and c["id"] == "feat:synthetic-language-choice-feat-test:languages"
+    )
+    assert language_choice["count"] == 1
+    assert "draconic" in {o["id"] for o in language_choice["options"]}
+    # Unselected: no effect on the sheet.
+    assert unselected["sheet"]["proficiencies"]["languages"] == baseline["sheet"]["proficiencies"]["languages"]
+
+    draft["background"]["choices"]["feat:synthetic-language-choice-feat-test:languages"] = ["draconic"]
+    selected = resolve(draft, catalog)
+    assert selected["problems"] == []
+    assert "draconic" in selected["sheet"]["proficiencies"]["languages"]
 
 
 def test_feat_ability_bonus_adds_to_an_existing_species_bonus_not_replacing_it(catalog, monkeypatch):
