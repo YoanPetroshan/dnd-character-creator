@@ -1442,3 +1442,48 @@ def test_placeholder_fields_present_but_empty_scaffolding_only():
 
 def test_missing_official_feats_data_returns_empty_list_not_crash(tmp_path):
     assert load_official_feats(tmp_path) == []
+
+
+# --- load_official_feats() ability bonus grants (Phase 4c-i Task 2) -------
+#
+# Grounded (2026-09-28) against the real fetched feats.json: the "ability"
+# field reuses the SAME {"choose": {"from": [...], "amount"/"count": N}}
+# envelope races/backgrounds already use, sometimes a flat fixed bonus
+# ({"cha": 1}, no "choose" at all) instead. Key finding: "Ability Score
+# Improvement" itself carries TWO entries, one keyed "amount": 2 and one
+# keyed "count": 2 — but BOTH are marked "hidden": true, meaning both
+# represent the existing class-level ASI mechanic (out of scope this
+# slice, per the design spec), not a live ability_bonus_options grant.
+# Once hidden entries are excluded, every surviving amount/count value in
+# the real data is 1 (or absent, defaulting to 1 — e.g. Epic Boons'
+# "from"-only entries) — unlike races' Custom Lineage (amount=2, genuinely
+# ambiguous), there's no live ambiguity between "amount" and "count" left
+# to guess at for feats.
+
+
+def test_actor_grants_a_fixed_charisma_bonus():
+    feats = load_official_feats(official_dir())
+    actor = next(f for f in feats if f["name"] == "Actor")
+    assert actor["ability_bonuses"] == [{"ability_score": {"index": "cha", "name": "CHA", "url": ""}, "bonus": 1}]
+    assert actor["ability_bonus_options"] is None
+
+
+def test_athlete_offers_a_choice_of_str_or_dex():
+    feats = load_official_feats(official_dir())
+    athlete = next(f for f in feats if f["name"] == "Athlete")
+    envelope = athlete["ability_bonus_options"]
+    assert envelope["choose"] == 1
+    assert envelope["type"] == "ability_bonuses"
+    ids = {o["ability_score"]["index"] for o in envelope["from"]["options"]}
+    assert ids == {"str", "dex"}
+    assert athlete["ability_bonuses"] == []
+
+
+def test_ability_score_improvement_feat_has_no_live_ability_bonus_grant():
+    # Both of its real entries are marked "hidden": true (one "amount": 2,
+    # one "count": 2) — they describe the existing class-level ASI
+    # mechanic, not a feat-granted bonus to convert here.
+    feats = load_official_feats(official_dir())
+    asi = next(f for f in feats if f["name"] == "Ability Score Improvement")
+    assert asi["ability_bonuses"] == []
+    assert asi["ability_bonus_options"] is None

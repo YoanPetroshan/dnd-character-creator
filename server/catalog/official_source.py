@@ -645,6 +645,9 @@ def _attach_fixed_proficiencies(profs: list[dict], trait_refs: list[dict], id_pr
     traits_by_index[target_id]["proficiencies"].extend(profs)
 
 
+_ABILITY_KEYS = frozenset({"str", "dex", "con", "int", "wis", "cha"})
+
+
 def _ability_bonuses_from_5etools(ability_list: list[dict]) -> list[dict]:
     """Converts 5etools' `ability` field (a list of dicts, each either a
     flat {"cha": 2, ...} fixed-bonus map or containing a "choose" sub-key)
@@ -655,11 +658,18 @@ def _ability_bonuses_from_5etools(ability_list: list[dict]) -> list[dict]:
     this module, for the same reason: build_choice_template only ever
     looks at ability_bonus_options, and _species_ability_bonuses only
     ever looks at ability_bonuses — keeping them separate here means both
-    existing functions need no changes."""
+    existing functions need no changes.
+
+    Only recognized ability-abbreviation keys become a bonus — every other
+    key on an entry (races/backgrounds only ever had "choose"; feats
+    (Phase 4c-i Task 2) also add "hidden" and "max" alongside "choose" on
+    some real entries, e.g. Ability Score Improvement's "hidden" flag and
+    Epic Boons' "max" score cap) is skipped rather than misread as a bogus
+    ability bonus."""
     bonuses = []
     for entry in ability_list or []:
         for key, val in entry.items():
-            if key == "choose":
+            if key not in _ABILITY_KEYS:
                 continue
             bonuses.append({"ability_score": {"index": key, "name": key.upper(), "url": ""}, "bonus": val})
     return bonuses
@@ -1806,8 +1816,8 @@ def _feat_from_5etools(raw: dict) -> dict | None:
         "category": raw.get("category", ""),
         "entries": raw.get("entries", []),
         "prerequisite": raw.get("prerequisite", []),  # Task 6 (prerequisite checking)
-        "ability_bonuses": [],  # Task 2
-        "ability_bonus_options": None,  # Task 2
+        "ability_bonuses": _ability_bonuses_from_5etools(raw.get("ability", [])),
+        "ability_bonus_options": _feat_ability_bonus_options_from_5etools(raw.get("ability", [])),
         "proficiencies": [],  # Task 3 — skill/tool/weapon/armor, fixed grants
         "proficiency_choices": None,  # Task 3
         "languages": [],  # Task 4
@@ -1819,6 +1829,47 @@ def _feat_from_5etools(raw: dict) -> dict | None:
         "expertise_skills": [],  # Task 6
         "saving_throw_proficiencies": [],  # Task 6
     }
+
+
+def _feat_ability_bonus_options_from_5etools(ability_list: list[dict]) -> dict | None:
+    """Feat-side counterpart to _ability_bonus_options_from_5etools (races)
+    — reuses the SAME output envelope shape, but with a small necessary
+    variant on which "choose" entries it accepts, grounded against the
+    real fetched feats.json (2026-09-28, Task 2):
+
+    - Entries marked "hidden": true are skipped entirely. The only real
+      case is "Ability Score Improvement" itself, which carries TWO such
+      entries (one "amount": 2, one "count": 2) — both describing the
+      EXISTING class-level ASI mechanic, not a feat-granted bonus; wiring
+      that connection is explicitly out of scope for this slice (design
+      spec).
+    - Both "amount" and "count" are accepted as the count key (unlike
+      races' _ability_bonus_options_from_5etools, which only accepts
+      "count" — races' one real "amount" case, Custom Lineage, is
+      genuinely ambiguous at amount=2, between +2-to-one and +1-to-two).
+      For feats, once hidden entries are excluded, every surviving
+      amount/count value in the real data is 1 — no live ambiguity to
+      guess at, confirmed exhaustively.
+    - A missing amount/count key (common on Epic Boon feats, which only
+      carry "from" plus a separate top-level "max" score cap this simple
+      envelope doesn't model) defaults to 1 — "pick one ability from this
+      list, +1" — matching every such real entry's actual text."""
+    for entry in ability_list or []:
+        if entry.get("hidden"):
+            continue
+        choose = entry.get("choose")
+        if not isinstance(choose, dict):
+            continue
+        from_list = choose.get("from", [])
+        if not from_list:
+            continue
+        count = choose.get("amount", choose.get("count", 1))
+        options = [
+            {"option_type": "ability_bonus", "ability_score": {"index": ab, "name": ab.upper(), "url": ""}, "bonus": 1}
+            for ab in from_list
+        ]
+        return {"choose": count, "type": "ability_bonuses", "from": {"option_set_type": "options_array", "options": options}}
+    return None
 
 
 def load_official_feats(official_dir: Path) -> list[dict]:
