@@ -181,11 +181,24 @@ _EQUIPMENT_TYPE_LABELS = {
 }
 
 
-def _slug(name: str) -> str:
+def slug(name: str) -> str:
     # "/" added (Task 6): spell names like "Enlarge/Reduce" need it to match
     # the bundled SRD spell catalog's own id ("enlarge-reduce") — no
     # pre-existing caller (race/subrace/tool names) ever contains "/", so
     # this is additive, not a behavior change for any current use.
+    #
+    # Made public (Phase 4c-i Task 6, was `_slug`): engine/resolve.py's
+    # _resolve_granted_feats used to duplicate this exact three-.replace()
+    # body inline rather than importing it — a real drift risk, especially
+    # now that this function's own body is what Task 6 had to reason about
+    # for the semicolon-suffixed background-feat-grant bug (see
+    # _feats_from_5etools' docstring). loader.py already imports several
+    # non-underscore names from this module (load_official_races,
+    # official_dir, etc.) as the established "what's meant to be used
+    # elsewhere" convention — no existing precedent anywhere in this
+    # module for a second module reaching across to import an
+    # underscore-prefixed "private" helper, so this is renamed to a
+    # genuinely public name rather than having resolve.py do that.
     return name.lower().replace(" ", "-").replace("'", "").replace("/", "-")
 
 
@@ -299,7 +312,7 @@ def _proficiencies_from_5etools(race_raw: dict) -> list[dict]:
     target despite the surface resemblance.
 
     Tool ids need only the same apostrophe/space normalization race/
-    subrace names already get via _slug (e.g. "poisoner's kit" ->
+    subrace names already get via slug() (e.g. "poisoner's kit" ->
     "poisoners-kit", confirmed to match catalog.items' own
     "poisoners-kit" id exactly).
 
@@ -327,18 +340,18 @@ def _proficiencies_from_5etools(race_raw: dict) -> list[dict]:
 
     for skill_id, granted in (race_raw.get("skillProficiencies") or [{}])[0].items():
         if granted is True:
-            index = f"skill-{_slug(skill_id)}"
+            index = f"skill-{slug(skill_id)}"
             name = f"Skill: {SKILL_NAMES.get(index, skill_id.title())}"
             profs.append({"index": index, "name": name, "url": ""})
 
     for tool_key, granted in (race_raw.get("toolProficiencies") or [{}])[0].items():
         if granted is True:
-            index = _slug(tool_key)
+            index = slug(tool_key)
             profs.append({"index": index, "name": _tool_display_name(tool_key), "url": ""})
 
     for weapon_key, granted in (race_raw.get("weaponProficiencies") or [{}])[0].items():
         if granted is True:
-            weapon_slug = _slug(weapon_key.split("|", 1)[0].strip())
+            weapon_slug = slug(weapon_key.split("|", 1)[0].strip())
             index = _WEAPON_ID_OVERRIDES.get(weapon_slug) or _pluralize(weapon_slug)
             profs.append({"index": index, "name": _category_display_name(index), "url": ""})
 
@@ -354,7 +367,7 @@ def _proficiencies_from_5etools(race_raw: dict) -> list[dict]:
                 # than silently dropping the grant; not seen in real data
                 # (only "light" appears there), so disclosed rather than
                 # guessed at further.
-                index = _slug(armor_key)
+                index = slug(armor_key)
             profs.append({"index": index, "name": _category_display_name(index), "url": ""})
 
     return profs
@@ -390,7 +403,7 @@ def _skill_choice_envelope_from_5etools(skill_entry: dict) -> dict | None:
     if isinstance(choose, dict):
         options = []
         for name in choose.get("from", []):
-            index = f"skill-{_slug(name)}"
+            index = f"skill-{slug(name)}"
             options.append({
                 "option_type": "reference",
                 "item": {"index": index, "name": f"Skill: {SKILL_NAMES.get(index, name.title())}", "url": ""},
@@ -430,7 +443,7 @@ def _tool_choice_envelope_from_5etools(tool_entry: dict) -> dict | None:
     choose = tool_entry.get("choose")
     if isinstance(choose, dict):
         options = [
-            {"option_type": "reference", "item": {"index": _slug(name), "name": _tool_display_name(name), "url": ""}}
+            {"option_type": "reference", "item": {"index": slug(name), "name": _tool_display_name(name), "url": ""}}
             for name in choose.get("from", [])
         ]
         return {"choose": choose.get("count", 1), "type": "proficiencies",
@@ -479,7 +492,7 @@ def _background_tool_choice_option_from_5etools(name: str) -> list[dict]:
             {"option_type": "reference", "item": {"index": t["index"], "name": t["name"], "url": ""}}
             for t in TOOLS if t["category"] == category
         ]
-    return [{"option_type": "reference", "item": {"index": _slug(name), "name": _tool_display_name(name), "url": ""}}]
+    return [{"option_type": "reference", "item": {"index": slug(name), "name": _tool_display_name(name), "url": ""}}]
 
 
 # The three real int-valued tool wildcard keys seen anywhere in the real
@@ -609,7 +622,7 @@ def _attach_choice_proficiencies(race_raw: dict, trait_refs: list[dict], id_pref
     ):
         if envelope is None:
             continue
-        trait_id = f"{id_prefix}-trait-choice-{_slug(label)}"
+        trait_id = f"{id_prefix}-trait-choice-{slug(label)}"
         traits_by_index[trait_id] = {
             "index": trait_id, "races": race_ref, "subraces": subrace_ref,
             "name": label, "desc": [], "proficiencies": [],
@@ -1033,7 +1046,7 @@ def _innate_spells_from_5etools(race_raw: dict) -> list[dict]:
                     continue
                 results.append({
                     "name": clean.title(),
-                    "spell_id": _slug(clean),
+                    "spell_id": slug(clean),
                     "level": level,
                     "uses": uses,
                     "ability": ability,
@@ -1071,7 +1084,7 @@ def _race_from_5etools(raw: dict, traits_by_index: dict[str, dict]) -> dict | No
     if "_copy" in raw:
         return None
     source = (raw.get("source") or "unknown").lower()
-    index = f"{_slug(raw['name'])}-{source}"
+    index = f"{slug(raw['name'])}-{source}"
 
     size_map = {"S": "Small", "M": "Medium", "L": "Large"}
     sizes = raw.get("size") or ["M"]
@@ -1115,12 +1128,12 @@ def _subrace_from_5etools(raw: dict, race_ids: set[str], traits_by_index: dict[s
     race_source = raw.get("raceSource")
     if not race_name or not race_source:
         return None
-    race_index = f"{_slug(race_name)}-{race_source.lower()}"
+    race_index = f"{slug(race_name)}-{race_source.lower()}"
     if race_index not in race_ids:
         return None  # dangling reference — not seen in real data, but skip rather than crash
 
     source = (raw.get("source") or "unknown").lower()
-    index = f"{race_index}-{_slug(raw['name'])}-{source}"
+    index = f"{race_index}-{slug(raw['name'])}-{source}"
 
     subrace_ref = [{"index": index, "name": raw["name"], "url": ""}]
     trait_refs = _trait_refs_from_entries(raw.get("entries", []), index, [], subrace_ref, traits_by_index)
@@ -1161,10 +1174,10 @@ def _language_ref_from_key(key: str) -> dict | None:
     reference, or None if it isn't a recognized language slug (not seen in
     real data — every real key/entry confirmed, 2026-09-26, against the
     brief's own dump command, resolves to a LANGUAGES index once run
-    through the same _slug() every other name in this module already
+    through the same slug() every other name in this module already
     uses — e.g. "Deep Speech"/"deep speech" -> "deep-speech", matching
     LANGUAGES' own entry)."""
-    lang = _LANGUAGES_BY_INDEX.get(_slug(key))
+    lang = _LANGUAGES_BY_INDEX.get(slug(key))
     if lang is None:
         return None
     return {"index": lang["index"], "name": lang["name"], "url": ""}
@@ -1193,7 +1206,7 @@ def _language_choice_option_from_5etools(name: str) -> dict:
     # rather than silently dropping the option, same "disclosed, not
     # exercised" fallback discipline as e.g. the armor-category branch in
     # _proficiencies_from_5etools above.
-    return {"option_type": "reference", "item": {"index": _slug(name), "name": name.title(), "url": ""}}
+    return {"option_type": "reference", "item": {"index": slug(name), "name": name.title(), "url": ""}}
 
 
 def _language_grants_from_5etools(raw: dict) -> tuple[list[dict], dict | None]:
@@ -1367,7 +1380,7 @@ def _counted_reference_for_item_name(name: str, count: int = 1, display_label: s
         return {"option_type": "counted_reference", "count": count,
                 "of": {"index": match["index"], "name": display_label or match["name"]}}
     return {"option_type": "counted_reference", "count": count,
-            "of": {"index": f"unlisted-{_slug(name)}", "name": display_label or _tool_display_name(name)}}
+            "of": {"index": f"unlisted-{slug(name)}", "name": display_label or _tool_display_name(name)}}
 
 
 def _equipment_bundle_member_from_5etools(item) -> dict:
@@ -1452,12 +1465,12 @@ def _equipment_bundle_member_from_5etools(item) -> dict:
     if "equipmentType" in item:
         label = item.get("displayName") or _EQUIPMENT_TYPE_LABELS.get(item["equipmentType"], item["equipmentType"])
         return {"option_type": "counted_reference", "count": 1,
-                "of": {"index": f"category-{_slug(label)}", "name": label}}
+                "of": {"index": f"category-{slug(label)}", "name": label}}
 
     if "special" in item:
         label = item.get("displayName") or _sentence_case(item["special"])
         return {"option_type": "counted_reference", "count": item.get("quantity", 1),
-                "of": {"index": f"flavor-{_slug(label)}", "name": label}}
+                "of": {"index": f"flavor-{slug(label)}", "name": label}}
 
     # {"item": "name|source"}, optionally with "displayName" and/or "quantity".
     name = item["item"].split("|", 1)[0].strip()
@@ -1627,11 +1640,48 @@ def _feats_from_5etools(raw: dict) -> tuple[list[str], list[str]]:
     `{"<feat name>|<source>": True}`, the SAME convention
     skillProficiencies/toolProficiencies already use — into a plain list
     of feat ids: `|source` stripped, the remaining name run through the
-    same `_slug` every other |source-suffixed field already gets.
+    same `slug()` every other |source-suffixed field already gets.
 
     Pure inert data pass-through: no resolution against a feat catalog
     (none exists in this app yet), no prerequisite checking, no effect
     application.
+
+    Semicolon-suffixed spell-list variant names (Phase 4c-i Task 6 fix,
+    found by Task 5's own review): 4 real records (Acolyte/XPHB, Guide/
+    XPHB, Moonwell Pilgrim/FRHoF, Sage/XPHB) grant not plain "magic
+    initiate|xphb" but a spell-list-restricted variant, e.g. "magic
+    initiate; cleric|xphb" — confirmed against the real fetched
+    backgrounds.json (2026-09-28) to be the ONLY grant keys in the whole
+    dataset containing a literal ";" (checked exhaustively, not assumed
+    from this one case). catalog.feats has no record named "Magic
+    Initiate; Cleric" at all — the real Magic Initiate feat record is
+    named plain "Magic Initiate" in both PHB and XPHB (confirmed against
+    feats.json) — so slugging the ";"-suffixed grant key verbatim used to
+    produce "magic-initiate;-cleric", which matched ZERO catalog feats
+    and was silently dropped by engine.resolve._resolve_granted_feats'
+    own "no match" path (a DIFFERENT failure mode from that function's
+    disclosed "ambiguous source, more than one match" guard — this was
+    "wrong slug, no match at all"). The "; <spell list>" suffix names
+    which spell list the grant is restricted to — modeling that
+    restriction would mean granting specific spells/cantrips, which
+    `additionalSpells` being out of scope for this whole plan (design
+    spec) already rules out — so the fix here is only to recover the
+    grant as PLAIN "Magic Initiate" (stripping everything from the first
+    ";" onward before slugging), not to model the restriction itself.
+    Once fixed, these 4 records resolve exactly like the OTHER plain
+    "magic initiate|xphb"/"magic initiate|phb" grants already do: still
+    silently skipped, but via the SAME already-disclosed "matches feats
+    in more than one source" ambiguity guard every other plain Magic
+    Initiate grant hits (Magic Initiate has both a PHB and an XPHB
+    record) — not a new, separate zero-match gap. No effect on this
+    task's own ability_bonuses/proficiencies/languages/resist/immune/
+    senses/expertise_skills/saving_throw_proficiencies output either way
+    (confirmed: neither real Magic Initiate record carries any of those
+    fields today), but fixing the slug itself (rather than only
+    documenting the gap) keeps this function's output honest about what
+    the grant actually names, and avoids the same ";"-suffix pattern
+    silently breaking a FUTURE feat variant that does carry one of those
+    fields.
 
     Returns (feats, feat_options) — fixed a "one true grant" alternatives
     split, Finding 2 of the final whole-branch review (2026-09-27):
@@ -1670,7 +1720,12 @@ def _feats_from_5etools(raw: dict) -> tuple[list[str], list[str]]:
     for entry in raw.get("feats") or []:
         for feat_key, granted in entry.items():
             if granted is True:
-                true_feat_ids.append(_slug(feat_key.split("|", 1)[0].strip()))
+                # ";"-strip BEFORE slugging (see docstring above): recovers
+                # the base feat name from a spell-list-restricted variant
+                # like "magic initiate; cleric" -> "magic initiate", the
+                # only real pattern this dataset uses a literal ";" for.
+                bare_name = feat_key.split("|", 1)[0].split(";", 1)[0].strip()
+                true_feat_ids.append(slug(bare_name))
 
     if len(true_feat_ids) > 1:
         # More than one simultaneous True-valued entry means ALTERNATIVES
@@ -1751,8 +1806,8 @@ def _background_from_5etools(raw: dict) -> dict | None:
     if "_copy" in raw:
         return None
     source = (raw.get("source") or "unknown").lower()
-    slug = _slug(raw["name"])
-    index = f"{slug}-{source}"
+    name_slug = slug(raw["name"])
+    index = f"{name_slug}-{source}"
     fixed_languages, language_options = _language_grants_from_5etools(raw)
     fixed_equipment, fixed_gold, fixed_narrative_items = _fixed_starting_equipment_from_5etools(raw)
     feats, feat_options = _feats_from_5etools(raw)
@@ -1852,8 +1907,8 @@ def _feat_from_5etools(raw: dict) -> dict | None:
     if "_copy" in raw:
         return None
     source = (raw.get("source") or "unknown").lower()
-    slug = _slug(raw["name"])
-    index = f"{slug}-{source}"
+    name_slug = slug(raw["name"])
+    index = f"{name_slug}-{source}"
     fixed_languages, language_options = _language_grants_from_5etools(raw)
     # Task 5: resist/immune/senses — reuses the SAME race-side
     # _damage_modifiers_from_5etools/_condition_immunities_from_5etools
@@ -1909,9 +1964,67 @@ def _feat_from_5etools(raw: dict) -> dict | None:
         "immune": feat_immune,
         "condition_immune": _condition_immunities_from_5etools(raw),
         "senses": _senses_from_5etools(raw),
-        "expertise_skills": [],  # Task 6
-        "saving_throw_proficiencies": [],  # Task 6
+        "expertise_skills": _expertise_skills_from_5etools(raw),
+        "saving_throw_proficiencies": _saving_throw_proficiencies_from_5etools(raw),
     }
+
+
+def _expertise_skills_from_5etools(raw: dict) -> list[str]:
+    """Converts feats.json's `expertise` field — a list of single-key
+    dicts, either {"<skill>": True} (a FIXED grant) or
+    {"anyProficientSkill": N} (a CHOICE of N already-proficient skills to
+    gain expertise in) — into a plain list of skill ids, `skill-{slug}`
+    (the SAME id shape _proficiencies_from_5etools already produces for
+    sheet.proficiencies.skills, so sheet.expertiseSkills entries line up
+    with them 1:1, and both can be rendered/compared the same way).
+
+    Only `is True` fixed entries convert; the anyProficientSkill choice
+    portion has no choice mechanism to resolve against today (no
+    feat-selection UI exists at all — see engine.resolve.
+    _resolve_granted_feats' own docstring for why a background's `feats`
+    grant is still the ONLY way this app knows a character "has" a feat),
+    so it's silently excluded here — the same "pure data pass-through, no
+    choice resolution" scope line _ability_bonuses_from_5etools already
+    draws for its own choose-N sibling field (ability_bonus_options).
+    Confirmed against the real fetched feats.json (2026-09-28): 7 real
+    records carry this field (Aberrant Anatomy/RHW, Boon of Skill/XPHB,
+    Boon of Terror/FRHoF, Echoing Soul/RHW, Prodigy/XGE, Skill Expert/TCE,
+    Skill Expert/XPHB) — only 2 (Aberrant Anatomy: perception; Boon of
+    Terror: intimidation) are fixed; the other 5 are exclusively
+    anyProficientSkill and contribute nothing here."""
+    skills = []
+    for entry in raw.get("expertise") or []:
+        for key, val in entry.items():
+            if val is True:
+                skills.append(f"skill-{slug(key)}")
+    return skills
+
+
+def _saving_throw_proficiencies_from_5etools(raw: dict) -> list[str]:
+    """Converts feats.json's `savingThrowProficiencies` field into a plain
+    list of ability ids ("STR", "DEX", ...) for a FIXED grant — only an
+    `is True` ability-keyed entry counts; a `{"choose": {"from": [...]}}`
+    entry (a CHOICE of which ability gains the proficiency) is out of
+    scope, the same reasoning _expertise_skills_from_5etools' own
+    anyProficientSkill exclusion uses just above.
+
+    Confirmed against the real fetched feats.json (2026-09-28): only 2
+    real records carry this field at all (Resilient/PHB, Resilient/XPHB),
+    and BOTH are exclusively choice-shaped (`[{"choose": {"from": ["str",
+    ... ]}}]` — pick one of six) with no fixed entry at all. This
+    function's fixed-only conversion therefore returns [] for every real
+    feat today — mirrors _background_ability_bonuses' own "always {}
+    today, kept for symmetry and to make the merge point explicit"
+    precedent: the conversion is implemented generally (not narrowly
+    special-cased to today's all-choice reality) so a future sourcebook
+    feat that DOES carry a fixed saving-throw grant is picked up without
+    any further code change here."""
+    throws = []
+    for entry in raw.get("savingThrowProficiencies") or []:
+        for key, val in entry.items():
+            if val is True and key in _ABILITY_KEYS:
+                throws.append(key.upper())
+    return throws
 
 
 def _feat_ability_bonus_options_from_5etools(ability_list: list[dict]) -> dict | None:

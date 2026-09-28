@@ -6,7 +6,11 @@ from catalog.loader import load
 # why every caller in this plan does it this way.
 from catalog.official_source import has_official
 from engine.derived import hit_point_max_multiclass
-from engine.resolve import _DETAIL_FIELDS, _feat_senses, _resolve_granted_feats, resolve
+from engine.resolve import (
+    _DETAIL_FIELDS, _feat_ability_bonuses, _feat_expertise_skills, _feat_languages,
+    _feat_prerequisite_problems, _feat_proficiency_ids, _feat_saving_throw_proficiencies,
+    _feat_senses, _resolve_granted_feats, resolve,
+)
 
 
 @pytest.fixture(scope="module")
@@ -2894,3 +2898,317 @@ def test_athlete_mot_two_independent_equipment_choices_are_both_selectable(catal
     for cid in equip_cids:
         choice = next(c for c in resolution["choices"] if c["id"] == cid)
         assert len(choice["options"]) == 2
+
+
+# ---------------------------------------------------------------------------
+# Phase 4c-i Task 6: expertise, saving-throw proficiencies, structured
+# prerequisite checking, and wiring EVERY granted-feat effect type (ability
+# bonuses, proficiencies, languages, resistances/senses, expertise, saving
+# throws) onto the sheet via a hoisted _resolve_granted_feats call — see
+# resolve()'s own comment at that (new, earlier) call site for why it moved.
+#
+# Real-data grounding for this section (2026-09-28): scanning EVERY real
+# background's resolved `feats` grant (36 unambiguous real grants across
+# 36 real backgrounds) turns up ZERO with a fixed ability_bonus, ZERO with
+# a fixed skill/tool/weapon/armor proficiency, ZERO with expertise, and
+# ZERO with a fixed saving-throw-proficiency grant — background-origin
+# feats are, by RAW design, "Origin feats" meant to be takeable at level 1
+# with no ability-score/level gate, and none of the ones with real
+# ability/proficiency/expertise/saving-throw data (Aberrant Dragonmark,
+# Tavern Brawler, Purple Dragon Rook, Resilient, Prodigy, etc.) happen to
+# ALSO be an unambiguous real background grant (either nothing grants them,
+# or the grant is itself ambiguous — see _resolve_granted_feats' own
+# 9-ambiguous-slugs docstring). The ONE real, unambiguous, non-empty
+# end-to-end combination that exists is Dragon Cultist/FRHoF -> Cult of the
+# Dragon Initiate/FRHoF -> a fixed Draconic language grant (see
+# test_background_granted_feat_language_reaches_the_sheet below) — used for
+# a genuinely real end-to-end language test. Every other effect type is
+# proven end-to-end via a SYNTHETIC feat record injected into a real,
+# loaded Catalog (monkeypatch.setitem on catalog.feats / a background's own
+# "feats" list — both plain dicts, restored automatically after each test),
+# not a real sourcebook combination, since none exists today — disclosed
+# here rather than silently claimed as "real data" coverage it isn't. Mark
+# of Storm/EFA (already used by Task 5's own resistance tests) IS real,
+# unambiguous, and carries a genuinely non-structured prerequisite
+# (`[{"campaign": ["Eberron"], "exclusiveFeatCategory": ["D"]}]`), so it's
+# reused here for the real end-to-end "non-structured prerequisite is
+# never enforced" case.
+
+
+def _synthetic_feat(**overrides) -> dict:
+    """A minimal, fully-shaped feat dict matching EXACTLY what
+    official_source._feat_from_5etools produces (every field Task 6's
+    merge logic reads), with every effect field empty/falsy by default —
+    callers override only the fields their test actually exercises. Not a
+    real catalog feat: used to inject a controlled, synthetic feat into a
+    real, loaded Catalog via monkeypatch (see this section's own docstring
+    for why no real background+feat combination covers most of these
+    effect types today)."""
+    feat = {
+        "index": "synthetic-feat-test", "name": "Synthetic Feat", "source": "TEST", "category": "",
+        "entries": [], "prerequisite": [],
+        "ability_bonuses": [], "ability_bonus_options": None,
+        "proficiencies": [], "proficiency_choices": [],
+        "languages": [], "language_options": None,
+        "resist": [], "immune": [], "condition_immune": [], "senses": {},
+        "expertise_skills": [], "saving_throw_proficiencies": [],
+    }
+    feat.update(overrides)
+    return feat
+
+
+def _grant_synthetic_feat(catalog, monkeypatch, feat: dict, bg_id: str = "acolyte") -> None:
+    """Injects `feat` into `catalog.feats` and makes `bg_id` (SRD-bundled
+    Acolyte by default — always present, official data or not) grant it
+    via its own bare, source-less slug — mirroring exactly how a real
+    background's `feats` field names a grant (see
+    official_source._feats_from_5etools' own docstring). Both mutations
+    are plain-dict monkeypatches (Catalog.feats / a background's own
+    "feats" key), auto-reverted after the test, even though `catalog`
+    itself is a module-scoped fixture shared across the whole file."""
+    from engine.resolve import slug as _slug_reexport  # local import: avoids a module-level name clash with this file's own use of "slug" as a variable name elsewhere
+    monkeypatch.setitem(catalog.feats, feat["index"], feat)
+    monkeypatch.setitem(catalog.backgrounds[bg_id], "feats", [_slug_reexport(feat["name"])])
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_background_granted_feat_language_reaches_the_sheet(catalog):
+    # Dragon Cultist/FRHoF grants Cult of the Dragon Initiate/FRHoF (fixed,
+    # unambiguous — confirmed 2026-09-28), which itself grants a fixed
+    # Draconic language — the ONE real, unambiguous, non-empty
+    # background+feat combination this task's own real-data scan (see this
+    # section's docstring) turned up.
+    draft = _fighter_acolyte_human_draft(
+        sources=["phb", "frhof"], background={"id": "dragon-cultist-frhof", "choices": {}},
+    )
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    assert resolution["sheet"]["grantedFeats"] == ["cult-of-the-dragon-initiate"]
+    assert "draconic" in resolution["sheet"]["proficiencies"]["languages"]
+
+
+def test_a_granted_feats_full_mechanical_effects_all_land_on_the_sheet(catalog, monkeypatch):
+    # Synthetic (see section docstring): a single feat carrying an ability
+    # bonus, a skill AND a tool proficiency, a language, a resistance, a
+    # sense, an expertise skill, and a saving-throw proficiency all at
+    # once — proves every effect type this task wires reaches the sheet
+    # together, through the SAME hoisted _resolve_granted_feats call.
+    feat = _synthetic_feat(
+        index="synthetic-omni-feat-test", name="Synthetic Omni Feat",
+        ability_bonuses=[{"ability_score": {"index": "wis", "name": "WIS", "url": ""}, "bonus": 1}],
+        proficiencies=[{"index": "skill-arcana"}, {"index": "smiths-tools"}],
+        languages=[{"index": "draconic", "name": "Draconic", "url": ""}],
+        resist=["fire"],
+        senses={"darkvision": 60},
+        expertise_skills=["skill-arcana"],
+        saving_throw_proficiencies=["WIS"],
+    )
+    _grant_synthetic_feat(catalog, monkeypatch, feat)
+    draft = _fighter_acolyte_human_draft()  # WIS base 12
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    assert resolution["sheet"]["grantedFeats"] == ["synthetic-omni-feat"]
+    assert resolution["sheet"]["abilities"]["WIS"] == 14  # 12 base + 1 bundled-SRD Human (+1 to every ability) + 1 feat
+    assert "skill-arcana" in resolution["sheet"]["proficiencies"]["skills"]
+    assert "smiths-tools" in resolution["sheet"]["proficiencies"]["tools"]
+    assert "draconic" in resolution["sheet"]["proficiencies"]["languages"]
+    assert "WIS" in resolution["sheet"]["proficiencies"]["savingThrows"]
+    assert resolution["sheet"]["damageModifiers"]["resistances"] == ["fire"]
+    assert resolution["sheet"]["senses"] == {"darkvision": 60}
+    assert resolution["sheet"]["expertiseSkills"] == ["skill-arcana"]
+
+
+def test_feat_ability_bonus_adds_to_an_existing_species_bonus_not_replacing_it(catalog, monkeypatch):
+    # Mirrors test_feat_resistance_adds_to_an_existing_race_resistance_not_
+    # replacing_it (Task 5) for the ability-score merge instead: a feat's
+    # ability bonus must ADD alongside species/background bonuses in the
+    # SAME early pass, not overwrite them.
+    feat = _synthetic_feat(
+        ability_bonuses=[{"ability_score": {"index": "str", "name": "STR", "url": ""}, "bonus": 1}],
+    )
+    _grant_synthetic_feat(catalog, monkeypatch, feat)
+    draft = _fighter_acolyte_human_draft()  # Human grants +1 to every ability
+    resolution = resolve(draft, catalog)
+    assert resolution["sheet"]["abilities"]["STR"] == 18  # 16 base + 1 Human + 1 feat
+    assert resolution["sheet"]["abilities"]["DEX"] == 15  # unaffected — Human only, no feat bonus here
+
+
+def test_expertise_skills_is_always_an_empty_list_when_no_feat_grants_it(catalog):
+    resolution = resolve(_fighter_acolyte_human_draft(), catalog)  # bundled SRD Acolyte grants no feat
+    assert resolution["sheet"]["expertiseSkills"] == []
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_an_srd_only_draft_with_no_official_data_is_completely_unaffected(catalog):
+    # No `sources` beyond srd, bundled SRD Acolyte (no `feats` field at
+    # all) — every Task 6 field/merge point must be a complete no-op.
+    resolution = resolve(_fighter_acolyte_human_draft(), catalog)
+    assert resolution["problems"] == []
+    assert resolution["sheet"]["grantedFeats"] == []
+    assert resolution["sheet"]["expertiseSkills"] == []
+    assert resolution["sheet"]["proficiencies"]["savingThrows"] == ["STR", "CON"]  # Fighter only, no feat additions
+
+
+def test_feat_prerequisite_unmet_level_produces_a_problem_only_when_the_toggle_is_on(catalog, monkeypatch):
+    feat = _synthetic_feat(index="synthetic-level-gate-test", name="Synthetic Level Gate", prerequisite=[{"level": 4}])
+    _grant_synthetic_feat(catalog, monkeypatch, feat)
+    draft = _fighter_acolyte_human_draft()  # level 1 total — below the level-4 gate
+
+    off = resolve(draft, catalog)
+    assert off["problems"] == []
+    assert off["sheet"]["grantedFeats"] == ["synthetic-level-gate"]  # never blocked/hidden, toggle or not
+
+    draft["preferences"] = {"usePrerequisites": {"feats": True}}
+    on = resolve(draft, catalog)
+    assert on["problems"] == [{
+        "id": "feat-prerequisite-unmet-synthetic-level-gate-test",
+        "message": "Synthetic Level Gate's prerequisite isn't met.",
+    }]
+    assert on["sheet"]["grantedFeats"] == ["synthetic-level-gate"]  # still granted — a problem, not a block
+
+
+def test_feat_prerequisite_met_level_produces_no_problem_when_the_toggle_is_on(catalog, monkeypatch):
+    feat = _synthetic_feat(index="synthetic-level-gate-met-test", name="Synthetic Level Gate Met", prerequisite=[{"level": 1}])
+    _grant_synthetic_feat(catalog, monkeypatch, feat)
+    draft = _fighter_acolyte_human_draft(preferences={"usePrerequisites": {"feats": True}})  # level 1 total, meets a level-1 gate
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+
+
+def test_feat_prerequisite_unmet_ability_score_produces_a_problem_only_when_the_toggle_is_on(catalog, monkeypatch):
+    # Ability requirement shape mirrors the real data's own
+    # [{"level": N, "ability": [{"<ab>": minimum}]}] alternative — CHA 13
+    # required, character's own CHA is 8 (see _fighter_acolyte_human_draft).
+    feat = _synthetic_feat(
+        index="synthetic-ability-gate-test", name="Synthetic Ability Gate",
+        prerequisite=[{"level": 1, "ability": [{"cha": 13}]}],
+    )
+    _grant_synthetic_feat(catalog, monkeypatch, feat)
+    draft = _fighter_acolyte_human_draft()
+
+    off = resolve(draft, catalog)
+    assert off["problems"] == []
+
+    draft["preferences"] = {"usePrerequisites": {"feats": True}}
+    on = resolve(draft, catalog)
+    assert on["problems"] == [{
+        "id": "feat-prerequisite-unmet-synthetic-ability-gate-test",
+        "message": "Synthetic Ability Gate's prerequisite isn't met.",
+    }]
+
+
+def test_feat_prerequisite_met_ability_score_produces_no_problem_when_the_toggle_is_on(catalog, monkeypatch):
+    feat = _synthetic_feat(
+        index="synthetic-ability-gate-met-test", name="Synthetic Ability Gate Met",
+        prerequisite=[{"ability": [{"str": 13}]}],  # STR 16 in _fighter_acolyte_human_draft
+    )
+    _grant_synthetic_feat(catalog, monkeypatch, feat)
+    draft = _fighter_acolyte_human_draft(preferences={"usePrerequisites": {"feats": True}})
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_feat_with_a_non_structured_prerequisite_produces_no_problem_regardless_of_the_toggle(catalog):
+    # Mark of Storm/EFA's real prerequisite (`[{"campaign": ["Eberron"],
+    # "exclusiveFeatCategory": ["D"]}]`) carries only unmodeled keys — this
+    # app can neither confirm nor deny it, so it must never be enforced,
+    # toggle on or off (disclosed non-enforcement, not a silent
+    # approximation). Reuses House Lyrandar Heir/EFA, the same real grant
+    # Task 5's own resistance tests already exercise.
+    draft = _fighter_acolyte_human_draft(
+        sources=["phb", "efa"], background={"id": "house-lyrandar-heir-efa", "choices": {}},
+    )
+    off = resolve(draft, catalog)
+    assert off["problems"] == []
+
+    draft["preferences"] = {"usePrerequisites": {"feats": True}}
+    on = resolve(draft, catalog)
+    assert on["problems"] == []  # still no problem — the toggle has nothing it CAN check here
+
+
+def test_feat_with_no_prerequisite_data_produces_no_problem_when_the_toggle_is_on(catalog, monkeypatch):
+    feat = _synthetic_feat()  # prerequisite=[] by default
+    _grant_synthetic_feat(catalog, monkeypatch, feat)
+    draft = _fighter_acolyte_human_draft(preferences={"usePrerequisites": {"feats": True}})
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+
+
+def test_feats_prerequisite_toggle_is_independent_of_the_existing_multiclass_toggle(catalog, monkeypatch):
+    # The SAME preferences.usePrerequisites dict now carries both a
+    # "multiclass" key (pre-existing, Phase 3b-i) and a "feats" key (this
+    # task) — turning ONE on must not affect the other's own behavior.
+    # Fighter's multi_classing prerequisite (STR 13 OR DEX 13) is met by
+    # _fighter_acolyte_human_draft's own scores, so the multiclass check
+    # alone would produce nothing regardless; the point here is that
+    # turning feats ON with multiclass OFF (and vice versa) each produce
+    # exactly the ONE problem their own toggle covers, not both, not
+    # neither.
+    feat = _synthetic_feat(index="synthetic-isolation-gate-test", name="Synthetic Isolation Gate", prerequisite=[{"level": 99}])
+    _grant_synthetic_feat(catalog, monkeypatch, feat)
+    draft = _fighter_acolyte_human_draft(preferences={"usePrerequisites": {"multiclass": True}})
+    only_multiclass_on = resolve(draft, catalog)
+    assert only_multiclass_on["problems"] == []  # feats toggle off — the unmet level-99 gate is never surfaced
+
+    draft["preferences"] = {"usePrerequisites": {"feats": True}}
+    only_feats_on = resolve(draft, catalog)
+    assert only_feats_on["problems"] == [{
+        "id": "feat-prerequisite-unmet-synthetic-isolation-gate-test",
+        "message": "Synthetic Isolation Gate's prerequisite isn't met.",
+    }]
+
+
+# --- Direct unit tests of the small feat-effect helper functions ---------
+
+def test_feat_ability_bonuses_sums_across_multiple_feats():
+    feats = [
+        {"ability_bonuses": [{"ability_score": {"index": "str"}, "bonus": 1}]},
+        {"ability_bonuses": [{"ability_score": {"index": "str"}, "bonus": 1}, {"ability_score": {"index": "dex"}, "bonus": 2}]},
+    ]
+    assert _feat_ability_bonuses(feats) == {"STR": 2, "DEX": 2}
+
+
+def test_feat_ability_bonuses_with_no_feats_is_an_empty_dict():
+    assert _feat_ability_bonuses([]) == {}
+
+
+def test_feat_proficiency_ids_flattens_every_resolved_feats_grants():
+    feats = [{"proficiencies": [{"index": "skill-arcana"}]}, {"proficiencies": [{"index": "smiths-tools"}]}]
+    assert _feat_proficiency_ids(feats) == ["skill-arcana", "smiths-tools"]
+
+
+def test_feat_proficiency_ids_with_no_feats_is_an_empty_list():
+    assert _feat_proficiency_ids([]) == []
+
+
+def test_feat_languages_flattens_every_resolved_feats_grants():
+    feats = [{"languages": [{"index": "draconic"}]}, {"languages": [{"index": "sylvan"}]}]
+    assert _feat_languages(feats) == ["draconic", "sylvan"]
+
+
+def test_feat_expertise_skills_dedupes_preserving_first_seen_order():
+    feats = [{"expertise_skills": ["skill-arcana", "skill-history"]}, {"expertise_skills": ["skill-arcana"]}]
+    assert _feat_expertise_skills(feats) == ["skill-arcana", "skill-history"]
+
+
+def test_feat_expertise_skills_with_no_feats_is_an_empty_list():
+    assert _feat_expertise_skills([]) == []
+
+
+def test_feat_saving_throw_proficiencies_dedupes_preserving_first_seen_order():
+    feats = [{"saving_throw_proficiencies": ["WIS", "CHA"]}, {"saving_throw_proficiencies": ["WIS"]}]
+    assert _feat_saving_throw_proficiencies(feats) == ["WIS", "CHA"]
+
+
+def test_feat_saving_throw_proficiencies_with_no_feats_is_an_empty_list():
+    assert _feat_saving_throw_proficiencies([]) == []
+
+
+def test_feat_prerequisite_problems_toggle_off_is_always_empty():
+    feats = [_synthetic_feat(prerequisite=[{"level": 99}])]
+    assert _feat_prerequisite_problems(feats, total_level=1, final_scores={}, use_prerequisites=False) == []
+
+
+def test_feat_prerequisite_problems_with_no_granted_feats_is_always_empty():
+    assert _feat_prerequisite_problems([], total_level=1, final_scores={}, use_prerequisites=True) == []

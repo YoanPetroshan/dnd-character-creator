@@ -53,6 +53,7 @@ from __future__ import annotations
 
 from catalog.choices import build_choice_template
 from catalog.loader import Catalog
+from catalog.official_source import slug
 from . import asi as asi_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
@@ -169,17 +170,136 @@ def _resolve_granted_feats(granted_feat_ids: list[str], catalog: Catalog) -> lis
     resist/immune/conditionImmune/senses data today (confirmed against
     the real fetched feats.json), so this gap has zero effect on this
     task's actual output, but the guard is kept general rather than
-    narrowly special-cased to today's data."""
+    narrowly special-cased to today's data.
+
+    A DIFFERENT, previously undisclosed failure mode (Phase 4c-i Task 6,
+    found by Task 5's own review): 4 real backgrounds (Acolyte/XPHB,
+    Guide/XPHB, Moonwell Pilgrim/FRHoF, Sage/XPHB) grant a ";"-suffixed
+    spell-list-restricted Magic Initiate variant (e.g. "magic initiate;
+    cleric|xphb") that used to slug to "magic-initiate;-cleric" — matching
+    ZERO catalog feats, not "more than one." Fixed at the source
+    (official_source._feats_from_5etools now strips the ";"-suffix before
+    slugging, so these grants recover as plain "magic-initiate") rather
+    than here — see that function's own docstring for the full
+    grounding. Once recovered, they fall into the SAME ambiguous-source
+    guard above (Magic Initiate has both a PHB and an XPHB record), so
+    this function's own behavior for them is unchanged: still skipped,
+    just via the disclosed path instead of a silent, undisclosed one.
+
+    Uses catalog.official_source.slug() (fixed here too, same task) rather
+    than re-implementing that exact three-.replace() body inline a second
+    time — a real drift risk now that slug() itself needed the ";"-strip
+    fix above; a duplicated copy here could easily have been missed."""
     by_bare_slug: dict[str, list[dict]] = {}
     for feat in catalog.feats.values():
-        bare_slug = feat["name"].lower().replace(" ", "-").replace("'", "").replace("/", "-")
-        by_bare_slug.setdefault(bare_slug, []).append(feat)
+        by_bare_slug.setdefault(slug(feat["name"]), []).append(feat)
     resolved = []
     for feat_id in granted_feat_ids:
         matches = by_bare_slug.get(feat_id, [])
         if len(matches) == 1:
             resolved.append(matches[0])
     return resolved
+
+
+def _feat_ability_bonuses(feats: list[dict]) -> dict[str, int]:
+    """Feat-sourced counterpart to _species_ability_bonuses/
+    _background_ability_bonuses (Phase 4c-i Task 6) — sums each resolved
+    granted feat's own FIXED `ability_bonuses` (feat["ability_bonuses"],
+    populated by official_source._ability_bonuses_from_5etools — the SAME
+    {"ability_score": {"index": ...}, "bonus": ...} shape race/background
+    already use) into the SAME flat {ability: total_bonus} dict those two
+    functions already produce, so all three sources fold into ONE final
+    ability score via simple addition at the call site (see resolve()'s
+    "Final ability scores" section, which now also feeds resolved granted
+    feats into this same early pass, not just species/background).
+
+    A feat's CHOICE portion (ability_bonus_options, e.g. Ability Score
+    Improvement's own +2-or-+1/+1) is deliberately not read here — no
+    choice mechanism exists for a background-granted feat today (feats
+    are all-or-nothing auto-grants, not something the player separately
+    configures a sub-choice for — see _resolve_granted_feats' own
+    docstring), matching _background_ability_bonuses' identical
+    "fixed grants only" scope."""
+    bonuses: dict[str, int] = {}
+    for feat in feats:
+        for entry in feat.get("ability_bonuses", []):
+            ab = entry["ability_score"]["index"].upper()
+            bonuses[ab] = bonuses.get(ab, 0) + entry["bonus"]
+    return bonuses
+
+
+def _feat_proficiency_ids(feats: list[dict]) -> list[str]:
+    """Flattens every resolved granted feat's FIXED `proficiencies`
+    entries (feat["proficiencies"], the SAME {"index": ...}-dict-list
+    shape race traits'/backgrounds' own starting_proficiencies already
+    use) into a plain list of raw ids. The caller feeds this into the
+    SAME two merge points race-trait/background proficiency grants
+    already feed: skill-prefixed ids into proficient_skills, everything
+    else through _categorize_proficiency.
+
+    A feat's CHOICE portion (proficiency_choices, e.g. Prodigy/XGE's
+    skill-or-tool pick) is not read here — same "no choice mechanism for
+    an auto-granted feat" reasoning as _feat_ability_bonuses."""
+    ids: list[str] = []
+    for feat in feats:
+        ids.extend(p["index"] for p in feat.get("proficiencies", []))
+    return ids
+
+
+def _feat_languages(feats: list[dict]) -> list[str]:
+    """Flattens every resolved granted feat's FIXED `languages` entries
+    (feat["languages"], the SAME {"index": ...}-dict-list shape race/
+    background `languages` already use) into a plain list of language
+    ids — merged by the caller into the SAME `fixed_languages` list
+    race+background languages already combine into.
+
+    A feat's CHOICE portion (language_options, e.g. a hypothetical
+    "learn any one language" feat) is not read here, same reasoning as
+    _feat_ability_bonuses/_feat_proficiency_ids."""
+    return [lang["index"] for feat in feats for lang in feat.get("languages", [])]
+
+
+def _feat_expertise_skills(feats: list[dict]) -> list[str]:
+    """Flattens every resolved granted feat's FIXED `expertise_skills`
+    (official_source._expertise_skills_from_5etools' own "skill-{slug}"
+    ids) into sheet.expertiseSkills — a brand-new sheet field (Phase 4c-i
+    Task 6) with no race/background-side precedent to merge against
+    (expertise is a feat-only mechanic in the bundled+official data
+    today, confirmed by grep). Deduplicates (preserving first-seen order)
+    in case two granted feats ever named the same skill, though not seen
+    in real data today (only 2 real feats carry a fixed entry at all —
+    see _expertise_skills_from_5etools' own docstring — and no background
+    grants both)."""
+    skills: list[str] = []
+    for feat in feats:
+        for skill_id in feat.get("expertise_skills", []):
+            if skill_id not in skills:
+                skills.append(skill_id)
+    return skills
+
+
+def _feat_saving_throw_proficiencies(feats: list[dict]) -> list[str]:
+    """Flattens every resolved granted feat's FIXED
+    `saving_throw_proficiencies` (already-uppercased ability ids, e.g.
+    "CON" — official_source._saving_throw_proficiencies_from_5etools) into
+    a plain list; the caller merges this into sheet.proficiencies.
+    savingThrows alongside the class-granted entries already there (the
+    field was class-only before this task). Deduplicates (preserving
+    first-seen order), same reasoning as _feat_expertise_skills.
+
+    Real-data note: both real feats with this field (Resilient/PHB,
+    Resilient/XPHB) are choice-shaped in the raw data, so
+    official_source.py's own conversion returns [] for them today (see
+    that module's docstring) — this function's actual effect is exercised
+    end to end by synthetic feat data in tests, not by a real background
+    grant, until a sourcebook adds a feat with a genuinely FIXED
+    saving-throw-proficiency grant."""
+    throws: list[str] = []
+    for feat in feats:
+        for ab in feat.get("saving_throw_proficiencies", []):
+            if ab not in throws:
+                throws.append(ab)
+    return throws
 
 
 def _feat_senses(feats: list[dict]) -> dict[str, int]:
@@ -669,6 +789,121 @@ def _multiclass_prerequisite_problems(resolved_classes: list[dict], final_scores
     return problems
 
 
+# The set of feat-prerequisite keys this app can actually verify — see
+# _feat_structured_prerequisite's own docstring for the full real-data
+# grounding (85/305 real feats carry a prerequisite made ENTIRELY of these
+# two keys; every other real key — campaign, other, otherSummary,
+# feature, race, proficiency, feat, background, spellcasting/
+# spellcasting2020/spellcastingFeature, featCategory/
+# exclusiveFeatCategory — is left unmodeled and never enforced).
+_STRUCTURED_FEAT_PREREQUISITE_KEYS = {"level", "ability"}
+
+
+def _feat_structured_prerequisite(feat: dict) -> list[dict] | None:
+    """Returns feat["prerequisite"] (a 5etools-shaped list of alternative
+    requirement objects — met if ANY ONE alternative is fully met, exactly
+    like multi_classing.prerequisite_options' own "choose N of these"
+    OR-semantics above) when EVERY alternative in it consists SOLELY of
+    "level" and/or "ability" keys — the only two prerequisite shapes this
+    app can verify against final_scores/total_level. Returns None (no
+    problem ever raised) when the feat has no prerequisite data at all,
+    OR when ANY alternative carries a key this app can't check (campaign,
+    feature, proficiency, feat, race, background, spellcasting*,
+    featCategory/exclusiveFeatCategory, other, otherSummary).
+
+    Deliberately an ALL-or-nothing gate per feat, not a per-alternative
+    partial check: an OR-of-alternatives prerequisite where one
+    alternative is verifiable and another isn't (e.g. Purple Dragon
+    Commandant/FRHoF: "level 4 + Purple Dragon Rook feat" OR "martial
+    weapon-group proficiency" — confirmed real, 2026-09-28) can't be
+    soundly evaluated: verifying only the checkable alternative and
+    failing it would be a FALSE "unmet" whenever the unverifiable
+    alternative is actually the one the character satisfies. Skipping the
+    whole feat in that case is the same "disclosed non-enforcement, not a
+    silently wrong enforcement" choice this task's brief calls for
+    generally, not narrowly special-cased to fully-non-structured feats.
+
+    85/305 real feats (2026-09-28) are entirely level/ability — everything
+    from single-alternative ("Ability Score Improvement": level 4 only) to
+    multi-alternative OR shapes (Athlete/Charger/Grappler/etc.: level 4 +
+    (STR 13 OR DEX 13), two separate alternative objects) — both are
+    handled identically by _feat_prerequisite_alt_met's own per-alternative
+    check below."""
+    prereq = feat.get("prerequisite") or []
+    if not prereq:
+        return None
+    if not all(
+        isinstance(alt, dict) and set(alt.keys()) <= _STRUCTURED_FEAT_PREREQUISITE_KEYS
+        for alt in prereq
+    ):
+        return None
+    return prereq
+
+
+def _feat_prerequisite_alt_met(alt: dict, total_level: int, final_scores: dict[str, int]) -> bool:
+    """Checks ONE alternative requirement object (both its "level" and
+    "ability" keys must be satisfied together — AND within an
+    alternative, exactly like _multiclass_prerequisite_problems' own
+    `all(...)` over a class's plain `prerequisites` list). `ability`'s own
+    value is a LIST of single-key {ability: minimum} dicts — real data's
+    only multi-entry case (Ritual Caster/PHB: `[{"int": 13}, {"wis":
+    13}]`, published text "Intelligence or Wisdom 13 or higher") is
+    itself an OR of independent options, not a simultaneous requirement to
+    meet every one, confirmed against the real published feat text — so
+    meeting ANY ONE entry in the list satisfies this alt's own ability
+    requirement."""
+    level_req = alt.get("level")
+    if isinstance(level_req, int) and total_level < level_req:
+        return False
+    ability_req = alt.get("ability")
+    if ability_req:
+        if not any(
+            final_scores.get(ab.upper(), 0) >= minimum
+            for entry in ability_req if isinstance(entry, dict)
+            for ab, minimum in entry.items()
+        ):
+            return False
+    return True
+
+
+def _feat_prerequisite_problems(
+    feats: list[dict], total_level: int, final_scores: dict[str, int], use_prerequisites: bool,
+) -> list[dict]:
+    """Structural precedent: _multiclass_prerequisite_problems above — same
+    "only check if the preference is on," same "append a problem, NEVER
+    block or hide the underlying grant" (a feat with an unmet prerequisite
+    still fully applies its effects; this only surfaces a `problems` entry
+    for the player to see), same per-item problem id convention
+    (f"multiclass-prerequisite-unmet-{cls_id}" there ->
+    f"feat-prerequisite-unmet-{feat_id}" here).
+
+    Takes already-RESOLVED feat dicts (mirrors _multiclass_prerequisite_
+    problems taking already-resolved `resolved_classes`, not raw class
+    ids + catalog) rather than (catalog, feat_ids) — resolve() already
+    computes `resolved_feats` once, early, via _resolve_granted_feats (the
+    Task 6 hoist — see resolve()'s own comment at that call site), and
+    every OTHER feat-effects function added by this same task
+    (_feat_ability_bonuses, _feat_proficiency_ids, _feat_languages,
+    _feat_expertise_skills, _feat_saving_throw_proficiencies) already
+    takes that same already-resolved list rather than re-resolving it a
+    second time — this stays consistent with that, rather than the
+    (catalog, feat_ids) shape floated at plan-writing time before the
+    current code (and its actual resolution point) was read fresh."""
+    if not use_prerequisites:
+        return []
+    problems = []
+    for feat in feats:
+        prereq = _feat_structured_prerequisite(feat)
+        if prereq is None:
+            continue  # no prerequisite data, or a shape this app can't verify — never enforced, not guessed at
+        if not any(_feat_prerequisite_alt_met(alt, total_level, final_scores) for alt in prereq):
+            problems.append({
+                "id": f"feat-prerequisite-unmet-{feat['index']}",
+                "message": f"{feat['name']}'s prerequisite isn't met.",
+            })
+    return problems
+
+
 def _asi_option_label(deltas: list[tuple[str, int]]) -> str:
     return " and ".join(f"{ab} +{delta}" for ab, delta in deltas)
 
@@ -1020,6 +1255,38 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             problems.append({"id": "unknown-background", "message": f"Unknown background '{bg_id}'."})
             bg = None
 
+    # Phase 4b Task 6: a background's `feats` field lands on the sheet as a
+    # list of bare ids unchanged — no prerequisite checking here. Always a
+    # list (never null), mirroring damage_modifiers/condition_immunities/
+    # innate_spells' own "always present, empty when absent" convention.
+    # Phase 4c-i Task 5: no longer PURELY inert — resolved (best-effort;
+    # see _resolve_granted_feats) against catalog.feats so each granted
+    # feat's resist/immune/condition_immune/senses can be folded into the
+    # SAME sheet fields race/subrace already populate. Phase 4c-i Task 6
+    # HOISTS this resolution from its old position (right before sheet
+    # assembly, well after ability scores and proficiencies were already
+    # finalized) up to HERE — right after `bg` itself is resolved, and
+    # before species/ability-score/proficiency processing below — because
+    # this task adds MORE feat-granted effect types (ability bonuses,
+    # proficiencies, languages, expertise, saving throws) that need to
+    # flow into the SAME early merge points species/background bonuses
+    # and race/background proficiencies already feed, not a separate,
+    # later, parallel path. `resolved_feats` (used throughout the rest of
+    # resolve()) is a real structural relocation of existing Task 5 logic,
+    # not new resolution behavior.
+    granted_feats = list(bg.get("feats", [])) if bg else []
+    # Finding 2 of the final whole-branch review (2026-09-27): a background
+    # whose real `feats` data is an "alternatives" grant (Rewarded/Ruined,
+    # BMT — "gain Lucky, Magic Initiate, or Skilled, your choice") now
+    # contributes nothing to `granted_feats` and instead surfaces its
+    # candidates here, kept distinct from an actual grant for the same
+    # inert-pass-through reason `feat_options` itself exists in
+    # official_source.py — see that field's own docstring. feat_options
+    # candidates are NOT resolved for effects — they're unresolved
+    # alternatives, not something the character actually has yet.
+    feat_options = list(bg.get("feat_options", [])) if bg else []
+    resolved_feats = _resolve_granted_feats(granted_feats, catalog)
+
     species_raw = draft.get("species")
     if species_raw is not None and not isinstance(species_raw, dict):
         problems.append({"id": "malformed-species", "message": "'species' must be an object."})
@@ -1054,12 +1321,18 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         })
         subrace = None
 
-    # Final ability scores: base + species bonuses + background bonuses.
-    # Backgrounds DO grant ability bonuses as of Phase 4b Task 4 — the
-    # 2024-style ability-score-improvement choice (see
+    # Final ability scores: base + species bonuses + background bonuses +
+    # feat bonuses. Backgrounds DO grant ability bonuses as of Phase 4b
+    # Task 4 — the 2024-style ability-score-improvement choice (see
     # _background_ability_bonus_choice_template below) — so background
     # selections flow into this SAME early pass alongside species' own,
-    # exactly like species_bonuses does just below.
+    # exactly like species_bonuses does just below. Phase 4c-i Task 6:
+    # `resolved_feats` (already computed above, right after `bg` itself)
+    # is a THIRD source into this same pass, via _feat_ability_bonuses —
+    # a fixed-only grant, same "no choice mechanism for an auto-granted
+    # feat" scope every other feat-effects function in this file shares
+    # (see that function's own docstring).
+    feat_bonuses = _feat_ability_bonuses(resolved_feats)
     base_scores = (draft.get("abilities") or {}).get("base") or {}
     species_bonuses = _species_ability_bonuses(race, subrace)
     species_ability_choice_tpl = _species_ability_bonus_choice_template(race, subrace, race_id)
@@ -1099,7 +1372,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         except (TypeError, ValueError):
             problems.append({"id": f"ability-invalid-{ab}", "message": f"{ab} score {raw!r} isn't a valid number; using 10 instead."})
             base_score = 10
-        final_scores[ab] = base_score + species_bonuses.get(ab, 0) + background_bonuses.get(ab, 0)
+        final_scores[ab] = base_score + species_bonuses.get(ab, 0) + background_bonuses.get(ab, 0) + feat_bonuses.get(ab, 0)
     for ab, score in final_scores.items():
         if not (1 <= score <= 30):
             problems.append({"id": f"ability-out-of-range-{ab}", "message": f"{ab} score {score} is out of the 1-30 range."})
@@ -1124,8 +1397,18 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choice_templates += _feature_choice_templates(catalog, rc_cls_id, rc_cls["name"], feature_refs, rc_subclass_id)
         choice_templates += _asi_choice_templates(rc_cls_id, rc_cls["name"], rc_asi_levels, rc_asi_scores_by_level)
 
-    use_prereqs = bool((draft.get("preferences") or {}).get("usePrerequisites", {}).get("multiclass"))
+    use_prerequisites_prefs = (draft.get("preferences") or {}).get("usePrerequisites", {})
+    use_prereqs = bool(use_prerequisites_prefs.get("multiclass"))
     problems += _multiclass_prerequisite_problems(resolved_classes, final_scores, use_prereqs)
+    # Phase 4c-i Task 6: a NEW sibling key on the SAME usePrerequisites
+    # dict the multiclass toggle already uses (confirmed fresh, this task
+    # — `use_prerequisites_prefs` above is that exact dict), not a
+    # separate preferences shape. `final_scores` here is already
+    # POST-ASI-progression (the loop above reassigns it via
+    # _apply_asi_progression before this line runs), matching what a
+    # player's actual final character sheet shows.
+    use_feat_prereqs = bool(use_prerequisites_prefs.get("feats"))
+    problems += _feat_prerequisite_problems(resolved_feats, total_level, final_scores, use_feat_prereqs)
 
     modifiers = derived_mod.ability_modifiers(final_scores)
     # Prof bonus is confirmed class-agnostic at a given level (per the
@@ -1398,6 +1681,13 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             if not trait:
                 continue
             proficient_skills.update(p["index"] for p in trait.get("proficiencies", []) if p["index"].startswith("skill-"))
+    # Phase 4c-i Task 6: a granted feat's own FIXED skill-proficiency grant
+    # (e.g. a hypothetical background-granted Skilled/Prodigy-style feat)
+    # feeds this SAME set, mirroring the bg/race passes just above — see
+    # _feat_proficiency_ids' own docstring for why only fixed grants (not
+    # a feat's own proficiency_choices) are read.
+    feat_proficiency_ids = _feat_proficiency_ids(resolved_feats)
+    proficient_skills.update(p for p in feat_proficiency_ids if p.startswith("skill-"))
 
     proficient_armor: set[str] = set()
     proficient_weapons: set[str] = set()
@@ -1477,6 +1767,16 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             if not p["index"].startswith("skill-"):
                 _categorize_proficiency(p["index"])
 
+    # Phase 4c-i Task 6: a granted feat's own FIXED non-skill proficiency
+    # grant (e.g. Tavern Brawler/XPHB's improvised-weapon proficiency)
+    # feeds the SAME `_categorize_proficiency` used for race/background
+    # grants just above — `feat_proficiency_ids` was already computed
+    # once, earlier, for the proficient_skills pass, reused here rather
+    # than recomputed.
+    for p_id in feat_proficiency_ids:
+        if not p_id.startswith("skill-"):
+            _categorize_proficiency(p_id)
+
     # Gating on `c["source"]["kind"] == "class"` alone is too broad — it also
     # covers feature subfeature choices, ASI choices, and spell choices
     # (cantrips/known spells), none of which are proficiency choices. A
@@ -1541,7 +1841,17 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             for p in rc["cls"].get("multi_classing", {}).get("proficiencies", []):
                 _categorize_proficiency(p["index"])
 
+    # Phase 4c-i Task 6: was class-only (primary class's saving_throws
+    # field) — a granted feat's own FIXED saving-throw-proficiency grant
+    # (see _feat_saving_throw_proficiencies' own docstring for why real
+    # data contributes nothing here today) now extends this SAME list,
+    # deduped so a feat naming an ability the class already covers
+    # doesn't produce a duplicate entry in derived.savingThrows/
+    # sheet.proficiencies.savingThrows.
     proficient_save_abilities = [st["index"].upper() for st in (cls.get("saving_throws", []) if cls else [])]
+    for ab in _feat_saving_throw_proficiencies(resolved_feats):
+        if ab not in proficient_save_abilities:
+            proficient_save_abilities.append(ab)
 
     hp_type = (draft.get("preferences") or {}).get("hitPointType")
     if hp_type not in ("fixed", "manual"):
@@ -1573,36 +1883,22 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     }
 
     fixed_languages = [lang["index"] for lang in (bg.get("languages", []) if bg else [])] + \
-        [lang["index"] for lang in (race.get("languages", []) if race else [])]
+        [lang["index"] for lang in (race.get("languages", []) if race else [])] + \
+        _feat_languages(resolved_feats)  # Phase 4c-i Task 6 — see that function's own docstring
     chosen_languages = [
         s for c in choices
         if c["source"]["kind"] in ("background", "species") and c["id"].endswith(":languages")
         for s in c["selected"]
     ]
 
-    # Phase 4b Task 6: a background's `feats` field lands on the sheet as a
-    # list of bare ids unchanged — no prerequisite checking here. Always a
-    # list (never null), mirroring damage_modifiers/condition_immunities/
-    # innate_spells' own "always present, empty when absent" convention
-    # just below. Phase 4c-i Task 5: no longer PURELY inert — also resolved
-    # (best-effort; see _resolve_granted_feats) against catalog.feats just
-    # below, so each granted feat's resist/immune/condition_immune/senses
-    # can be folded into the SAME sheet fields race/subrace already
-    # populate.
-    granted_feats = list(bg.get("feats", [])) if bg else []
-    # Finding 2 of the final whole-branch review (2026-09-27): a background
-    # whose real `feats` data is an "alternatives" grant (Rewarded/Ruined,
-    # BMT — "gain Lucky, Magic Initiate, or Skilled, your choice") now
-    # contributes nothing to `granted_feats` and instead surfaces its
-    # candidates here, kept distinct from an actual grant for the same
-    # inert-pass-through reason `feat_options` itself exists in
-    # official_source.py — see that field's own docstring. feat_options
-    # candidates are NOT resolved for effects (Task 5) — they're
-    # unresolved alternatives, not something the character actually has
-    # yet.
-    feat_options = list(bg.get("feat_options", [])) if bg else []
-    resolved_feats = _resolve_granted_feats(granted_feats, catalog)
-
+    # granted_feats/feat_options/resolved_feats are now computed much
+    # earlier (Phase 4c-i Task 6 hoist — right after `bg` itself is
+    # resolved, see that call site's own comment) so this task's
+    # ability-bonus/proficiency/language/expertise/saving-throw merges
+    # could feed the SAME early passes species/background/race already
+    # feed. damage_modifiers/condition_immunities/senses (Task 5) still
+    # read `resolved_feats` here, unchanged — only WHERE it's computed
+    # moved, not what these three lines do.
     damage_modifiers = _species_damage_modifiers(race, subrace, resolved_feats)
     condition_immunities = _species_condition_immunities(race, subrace, resolved_feats)
     senses = _feat_senses(resolved_feats)
@@ -1645,6 +1941,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "grantedFeats": granted_feats,
         "featOptions": feat_options,
         "senses": senses,
+        "expertiseSkills": _feat_expertise_skills(resolved_feats),
     }
 
     return {

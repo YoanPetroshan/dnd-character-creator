@@ -1419,9 +1419,13 @@ def test_no_same_source_name_collides_on_index():
 
 
 def test_placeholder_fields_present_but_empty_scaffolding_only():
-    # Task 1 is scaffolding ONLY — ability bonuses/proficiencies/languages/
-    # resistances/expertise/prerequisites are populated by Tasks 2-6, not
-    # here. This test locks in the shape without asserting real content.
+    # Task 1 was scaffolding ONLY — ability bonuses/proficiencies/languages/
+    # resistances (Tasks 2-5) and expertise/saving-throw-proficiencies
+    # (Task 6) are now real conversions, not placeholders (see the Task 6
+    # section below for feats that DO carry expertise/saving-throw data).
+    # Alert/PHB just happens to have empty values for every one of these
+    # fields in the real data, so this still locks in the shape (every key
+    # present, right type) without asserting non-trivial content.
     feats = load_official_feats(official_dir())
     alert = next(f for f in feats if f["index"] == "alert-phb")
     assert alert["ability_bonuses"] == []
@@ -1855,3 +1859,112 @@ def test_a_feat_with_none_of_these_fields_gets_empty_defaults():
     assert feat["immune"] == []
     assert feat["condition_immune"] == []
     assert feat["senses"] == {}
+
+
+# --- Feats (Phase 4c-i Task 6): expertise/saving-throw-proficiency grants,
+# and the ";"-suffix background-feat-grant slug fix -------------------------
+#
+# expertise/savingThrowProficiencies real-data grounding (2026-09-28,
+# against the real fetched feats.json): 7 real feats carry an `expertise`
+# field (Aberrant Anatomy/RHW, Boon of Skill/XPHB, Boon of Terror/FRHoF,
+# Echoing Soul/RHW, Prodigy/XGE, Skill Expert/TCE, Skill Expert/XPHB) — only
+# 2 are FIXED (`{"<skill>": true}`); the other 5 are exclusively
+# `{"anyProficientSkill": N}`, a CHOICE this app has no mechanism to
+# resolve for an auto-granted feat (see _expertise_skills_from_5etools' own
+# docstring) and so contribute nothing. Only 2 real feats carry a
+# `savingThrowProficiencies` field at all (Resilient/PHB, Resilient/XPHB),
+# and BOTH are exclusively choice-shaped (`{"choose": {"from": [...]}}`) —
+# zero real fixed saving-throw-proficiency grants exist today, so this
+# field converts to [] for every real feat, mirroring
+# _background_ability_bonuses' own "always {} today, kept for symmetry"
+# precedent.
+
+
+def test_aberrant_anatomy_grants_a_fixed_perception_expertise():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["index"] == "aberrant-anatomy-rhw")
+    assert feat["expertise_skills"] == ["skill-perception"]
+
+
+def test_boon_of_terror_grants_a_fixed_intimidation_expertise():
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["index"] == "boon-of-terror-frhof")
+    assert feat["expertise_skills"] == ["skill-intimidation"]
+
+
+def test_prodigy_anyproficientskill_choice_contributes_no_fixed_expertise():
+    # Prodigy/XGE's real `expertise` field is exclusively
+    # `[{"anyProficientSkill": 1}]` — a CHOICE, not a fixed grant. No choice
+    # mechanism exists for an auto-granted feat (see
+    # _expertise_skills_from_5etools' own docstring), so this must convert
+    # to an empty list, not crash and not guess a skill.
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["index"] == "prodigy-xge")
+    assert feat["expertise_skills"] == []
+
+
+def test_resilient_choice_shaped_saving_throw_contributes_no_fixed_grant():
+    # Both real Resilient records (PHB, XPHB) are exclusively
+    # `[{"choose": {"from": [...]}}]` — no fixed ability-keyed entry at
+    # all, so saving_throw_proficiencies must be [] for both, not a guess
+    # at which ability the choice might resolve to.
+    feats = load_official_feats(official_dir())
+    for feat in feats:
+        if feat["name"] == "Resilient":
+            assert feat["saving_throw_proficiencies"] == []
+
+
+def test_no_real_feat_has_a_fixed_saving_throw_proficiency_today():
+    # Exhaustive real-data check (2026-09-28): confirms the "always []
+    # today" claim above isn't narrowly checked against Resilient alone.
+    feats = load_official_feats(official_dir())
+    assert all(f["saving_throw_proficiencies"] == [] for f in feats)
+
+
+def test_prerequisite_field_is_preserved_raw_for_task_6_structured_checking():
+    # Confirms the scaffold's raw prerequisite pass-through (Task 1) is
+    # still intact and unconverted — engine/resolve.py's own
+    # _feat_structured_prerequisite/_feat_prerequisite_alt_met (Task 6)
+    # read this raw 5etools shape directly, not a normalized one.
+    feats = load_official_feats(official_dir())
+    actor = next(f for f in feats if f["index"] == "actor-xphb")
+    assert actor["prerequisite"] == [{"level": 4, "ability": [{"cha": 13}]}]
+
+
+# --- The ";"-suffix background-feat-grant slug fix (Task 6, found by Task
+# 5's own review) ------------------------------------------------------------
+#
+# 4 real background records (Acolyte/XPHB, Guide/XPHB, Moonwell Pilgrim/
+# FRHoF, Sage/XPHB) grant a spell-list-restricted Magic Initiate variant,
+# e.g. `{"magic initiate; cleric|xphb": true}` — the ONLY grant keys in the
+# whole real dataset containing a literal ";" (confirmed exhaustively,
+# 2026-09-28). Before this fix, `_feats_from_5etools` slugged this key
+# VERBATIM ("magic-initiate;-cleric"), which matched ZERO catalog feats —
+# a silent, undisclosed "wrong slug, no match at all" failure, distinct
+# from the already-disclosed "matches feats in more than one source"
+# ambiguity guard every OTHER plain "magic initiate|<source>" grant hits.
+
+
+def test_semicolon_suffixed_magic_initiate_variant_recovers_the_base_feat_slug():
+    backgrounds = load_official_backgrounds(official_dir())
+    for bg_id in ("acolyte-xphb", "guide-xphb", "moonwell-pilgrim-frhof", "sage-xphb"):
+        bg = next(b for b in backgrounds if b["index"] == bg_id)
+        # Recovered as the PLAIN base feat slug — matching exactly what a
+        # plain "magic initiate|<source>" grant (no ";" suffix) already
+        # produces elsewhere in the real data — not left semicolon-mangled.
+        assert bg["feats"] == ["magic-initiate"], f"{bg_id}: {bg['feats']!r}"
+
+
+def test_no_other_real_background_feat_grant_key_contains_a_semicolon():
+    # Confirms the ";"-strip fix is scoped to the real pattern it targets
+    # (Magic Initiate's spell-list variants) and isn't silently truncating
+    # some OTHER, unrelated real feat name that happens to contain a ";" —
+    # exhaustive check, not sampled: every other real grant key converts
+    # identically whether or not the ";"-strip is applied.
+    backgrounds = load_official_backgrounds(official_dir())
+    semicolon_bearing_bg_ids = {"acolyte-xphb", "guide-xphb", "moonwell-pilgrim-frhof", "sage-xphb"}
+    for bg in backgrounds:
+        if bg["index"] in semicolon_bearing_bg_ids:
+            continue
+        for feat_id in bg["feats"] + bg["feat_options"]:
+            assert ";" not in feat_id, f"{bg['index']}: unexpected semicolon in {feat_id!r}"
