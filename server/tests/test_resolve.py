@@ -3099,19 +3099,31 @@ def test_a_feats_choice_shaped_effects_are_converted_but_never_offered_as_a_choi
     # Pins a real, disclosed gap (final whole-branch review, Finding 3,
     # 2026-09-28), not a passing feature: official_source.py's catalog
     # conversion DOES build ability_bonus_options/proficiency_choices/
-    # language_options envelopes for a feat that has them (real examples:
-    # Crafter/XPHB, Musician/XPHB, Harper Agent, Purple Dragon Rook — all
-    # choice-shaped, none exercised end to end here since no real
-    # background grants one unambiguously), but resolve() never turns any
-    # of the three into a selectable Choice (no _feat_choice_templates
-    # function exists, unlike _background_choice_templates/
-    # _species_choice_templates) and never merges a selection's effect
-    # onto the sheet (see _feat_ability_bonuses'/_feat_proficiency_ids'/
-    # _feat_languages' own docstrings). This test uses a SYNTHETIC feat
-    # (same section convention) with all three envelopes shaped exactly
-    # as build_choice_options resolves them, so if a future slice adds the
-    # mechanism, this test starts failing and must be updated rather than
-    # silently continuing to pass.
+    # language_options envelopes for a feat that has them, but resolve()
+    # never turns any of the three into a selectable Choice (no
+    # _feat_choice_templates function exists, unlike
+    # _background_choice_templates/_species_choice_templates) and never
+    # merges a selection's effect onto the sheet (see
+    # _feat_ability_bonuses'/_feat_proficiency_ids'/_feat_languages' own
+    # docstrings).
+    #
+    # CORRECTION (re-review, 2026-09-28): an earlier version of this
+    # comment claimed "no real background grants a choice-only feat
+    # unambiguously" — that claim was checked against the real data and
+    # is FALSE. Four real, unambiguous single-candidate cases exist:
+    # Artisan/XPHB -> Crafter/XPHB, Entertainer/XPHB -> Musician/XPHB,
+    # Harper/FRHoF -> Harper Agent, Purple Dragon Squire/FRHoF -> Purple
+    # Dragon Rook. A real end-to-end test (e.g.
+    # background={"id": "artisan-xphb"}, confirming grantedFeats ==
+    # ["crafter"] and sheet.proficiencies.tools == [] where 3-of-8
+    # artisan's tools should be offered) would be a stronger regression
+    # guard than this synthetic one and is a good, cheap follow-up — not
+    # done here to keep this fix round scoped to what was already
+    # verified. This SYNTHETIC feat test still exercises the real code
+    # path with all three envelope shapes simultaneously (broader
+    # coverage in one test than any single real feat currently offers),
+    # so it stays as a real regression guard on its own merits, not a
+    # placeholder for the missing real-data test.
     feat = _synthetic_feat(
         index="synthetic-choice-feat-test", name="Synthetic Choice Feat",
         ability_bonus_options={
