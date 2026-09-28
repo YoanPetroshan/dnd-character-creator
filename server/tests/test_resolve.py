@@ -2992,20 +2992,24 @@ def test_athlete_mot_two_independent_equipment_choices_are_both_selectable(catal
 # ALSO be an unambiguous real background grant (either nothing grants them,
 # or the grant is itself ambiguous — see _resolve_granted_feats' own
 # 9-ambiguous-slugs docstring). The ONE real, unambiguous, non-empty
-# end-to-end combination that exists is Dragon Cultist/FRHoF -> Cult of the
-# Dragon Initiate/FRHoF -> a fixed Draconic language grant (see
-# test_background_granted_feat_language_reaches_the_sheet below) — used for
-# a genuinely real end-to-end language test. Every other effect type is
-# proven end-to-end via a SYNTHETIC feat record injected into a real,
-# loaded Catalog (monkeypatch.setitem on catalog.feats / a background's own
-# "feats" list — both plain dicts, restored automatically after each test),
-# not a real sourcebook combination, since none exists today — disclosed
-# here rather than silently claimed as "real data" coverage it isn't. Mark
-# of Storm/EFA (already used by Task 5's own resistance tests) IS real,
-# unambiguous, and carries a genuinely non-structured prerequisite
-# (`[{"campaign": ["Eberron"], "exclusiveFeatCategory": ["D"]}]`), so it's
-# reused here for the real end-to-end "non-structured prerequisite is
-# never enforced" case.
+# end-to-end combination with a MECHANICAL effect to grant is Dragon
+# Cultist/FRHoF -> Cult of the Dragon Initiate/FRHoF -> a fixed Draconic
+# language grant (see test_background_granted_feat_language_reaches_the_sheet
+# below) — used for a genuinely real end-to-end language test. (A second
+# real, unambiguous combination exists — House Lyrandar Heir/EFA -> Mark of
+# Storm/EFA, immediately below — but its only real end-to-end use in this
+# section is the non-structured-prerequisite case, not a mechanical-effect
+# grant, so it doesn't compete with the "ONE" claim above.) Every other
+# effect type is proven end-to-end via a SYNTHETIC feat record injected
+# into a real, loaded Catalog (monkeypatch.setitem on catalog.feats / a
+# background's own "feats" list — both plain dicts, restored automatically
+# after each test), not a real sourcebook combination, since none exists
+# today — disclosed here rather than silently claimed as "real data"
+# coverage it isn't. Mark of Storm/EFA (already used by Task 5's own
+# resistance tests) IS real, unambiguous, and carries a genuinely
+# non-structured prerequisite (`[{"campaign": ["Eberron"],
+# "exclusiveFeatCategory": ["D"]}]`), so it's reused here for the real
+# end-to-end "non-structured prerequisite is never enforced" case.
 
 
 def _synthetic_feat(**overrides) -> dict:
@@ -3089,6 +3093,58 @@ def test_a_granted_feats_full_mechanical_effects_all_land_on_the_sheet(catalog, 
     assert resolution["sheet"]["damageModifiers"]["resistances"] == ["fire"]
     assert resolution["sheet"]["senses"] == {"darkvision": 60}
     assert resolution["sheet"]["expertiseSkills"] == ["skill-arcana"]
+
+
+def test_a_feats_choice_shaped_effects_are_converted_but_never_offered_as_a_choice(catalog, monkeypatch):
+    # Pins a real, disclosed gap (final whole-branch review, Finding 3,
+    # 2026-09-28), not a passing feature: official_source.py's catalog
+    # conversion DOES build ability_bonus_options/proficiency_choices/
+    # language_options envelopes for a feat that has them (real examples:
+    # Crafter/XPHB, Musician/XPHB, Harper Agent, Purple Dragon Rook — all
+    # choice-shaped, none exercised end to end here since no real
+    # background grants one unambiguously), but resolve() never turns any
+    # of the three into a selectable Choice (no _feat_choice_templates
+    # function exists, unlike _background_choice_templates/
+    # _species_choice_templates) and never merges a selection's effect
+    # onto the sheet (see _feat_ability_bonuses'/_feat_proficiency_ids'/
+    # _feat_languages' own docstrings). This test uses a SYNTHETIC feat
+    # (same section convention) with all three envelopes shaped exactly
+    # as build_choice_options resolves them, so if a future slice adds the
+    # mechanism, this test starts failing and must be updated rather than
+    # silently continuing to pass.
+    feat = _synthetic_feat(
+        index="synthetic-choice-feat-test", name="Synthetic Choice Feat",
+        ability_bonus_options={
+            "choose": 1,
+            "from": {
+                "option_set_type": "options_array",
+                "options": [
+                    {"option_type": "ability_bonus", "ability_score": {"index": "str", "name": "STR"}, "bonus": 1},
+                    {"option_type": "ability_bonus", "ability_score": {"index": "dex", "name": "DEX"}, "bonus": 1},
+                ],
+            },
+        },
+        proficiency_choices=[{"choose": 1, "from": {"option_set_type": "any_skill"}}],
+        language_options={
+            "choose": 1,
+            "from": {"option_set_type": "resource_list", "resource_list_url": "api/2014/languages"},
+        },
+    )
+    _grant_synthetic_feat(catalog, monkeypatch, feat)
+    draft = _fighter_acolyte_human_draft()  # STR/DEX both known baseline values
+    baseline = resolve(_fighter_acolyte_human_draft(), catalog)  # same draft, no feat grant, for comparison
+    resolution = resolve(draft, catalog)
+    assert resolution["problems"] == []
+    assert resolution["sheet"]["grantedFeats"] == ["synthetic-choice-feat"]
+    # The gap: no Choice template sourced from this feat is ever offered...
+    feat_sourced_choices = [c for c in resolution["choices"] if c.get("source", {}).get("kind") == "feat"]
+    assert feat_sourced_choices == []
+    # ...and correspondingly none of the three choice-shaped effects reach
+    # the sheet — abilities/skills/languages are byte-identical to the
+    # same draft resolved WITHOUT the feat grant at all.
+    assert resolution["sheet"]["abilities"] == baseline["sheet"]["abilities"]
+    assert resolution["sheet"]["proficiencies"]["skills"] == baseline["sheet"]["proficiencies"]["skills"]
+    assert resolution["sheet"]["proficiencies"]["languages"] == baseline["sheet"]["proficiencies"]["languages"]
 
 
 def test_feat_ability_bonus_adds_to_an_existing_species_bonus_not_replacing_it(catalog, monkeypatch):

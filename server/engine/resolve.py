@@ -212,10 +212,13 @@ def _resolve_granted_feats(
     bare-slug ambiguity guard above at all, a further improvement Finding
     1 incidentally brings along.
 
-    Uses catalog.official_source.slug() (fixed here too, same task) rather
+    Uses catalog.official_source.slug() (made public this task) rather
     than re-implementing that exact three-.replace() body inline a second
-    time — a real drift risk now that slug() itself needed the ";"-strip
-    fix above; a duplicated copy here could easily have been missed."""
+    time — a real drift risk given how much this task already had to
+    reason about that function's exact behavior for the semicolon-strip
+    fix above (the ";"-strip itself lives in _feats_from_5etools, which
+    strips before calling slug() — slug() itself is unchanged; a
+    duplicated copy here could easily have drifted from either)."""
     by_bare_slug: dict[str, list[dict]] = {}
     for feat in catalog.feats.values():
         by_bare_slug.setdefault(slug(feat["name"]), []).append(feat)
@@ -245,12 +248,15 @@ def _feat_ability_bonuses(feats: list[dict]) -> dict[str, int]:
     feats into this same early pass, not just species/background).
 
     A feat's CHOICE portion (ability_bonus_options, e.g. Ability Score
-    Improvement's own +2-or-+1/+1) is deliberately not read here — no
-    choice mechanism exists for a background-granted feat today (feats
-    are all-or-nothing auto-grants, not something the player separately
-    configures a sub-choice for — see _resolve_granted_feats' own
-    docstring), matching _background_ability_bonuses' identical
-    "fixed grants only" scope."""
+    Improvement's own +2-or-+1/+1) is deliberately not read here — this is
+    a DEFERRED gap, not a RAW-justified one (final whole-branch review,
+    Finding 3, 2026-09-28): official_source.py's catalog conversion does
+    build the ability_bonus_options envelope, but no _feat_choice_templates
+    function exists to turn it into a selectable Choice (unlike
+    _background_choice_templates/_species_choice_templates), so there is
+    nothing for this function to read a SELECTED choice back out of yet.
+    Left for a later slice; matches _background_ability_bonuses' "fixed
+    grants only" scope only incidentally, not by the same RAW reasoning."""
     bonuses: dict[str, int] = {}
     for feat in feats:
         for entry in feat.get("ability_bonuses", []):
@@ -269,8 +275,9 @@ def _feat_proficiency_ids(feats: list[dict]) -> list[str]:
     else through _categorize_proficiency.
 
     A feat's CHOICE portion (proficiency_choices, e.g. Prodigy/XGE's
-    skill-or-tool pick) is not read here — same "no choice mechanism for
-    an auto-granted feat" reasoning as _feat_ability_bonuses."""
+    skill-or-tool pick) is not read here — same deferred-not-RAW-justified
+    gap as _feat_ability_bonuses (see that function's docstring); real
+    backgrounds affected include Crafter/XPHB and Musician/XPHB."""
     ids: list[str] = []
     for feat in feats:
         ids.extend(p["index"] for p in feat.get("proficiencies", []))
@@ -285,8 +292,8 @@ def _feat_languages(feats: list[dict]) -> list[str]:
     race+background languages already combine into.
 
     A feat's CHOICE portion (language_options, e.g. a hypothetical
-    "learn any one language" feat) is not read here, same reasoning as
-    _feat_ability_bonuses/_feat_proficiency_ids."""
+    "learn any one language" feat) is not read here — same deferred-not-
+    RAW-justified gap as _feat_ability_bonuses/_feat_proficiency_ids."""
     return [lang["index"] for feat in feats for lang in feat.get("languages", [])]
 
 
