@@ -1274,7 +1274,14 @@ def _language_grants_from_5etools(raw: dict) -> tuple[list[dict], dict | None]:
                     entry_granted_fixed = True
 
         entry_has_wildcard = False
-        any_n = entry.get("anyStandard")
+        # "anyStandard" is backgrounds' own wildcard key; "any" is the
+        # feat-side synonym (Task 4 grounding, 2026-09-28, against the real
+        # fetched feats.json — every one of the 7 real feats with a
+        # languageProficiencies wildcard uses "any", never "anyStandard";
+        # confirmed 0/56 real background records use "any" either, so
+        # reading both keys here is collision-free for the already-covered
+        # background path).
+        any_n = entry.get("anyStandard", entry.get("any"))
         if isinstance(any_n, int) and not isinstance(any_n, bool):
             any_count += any_n
             saw_choice = True
@@ -1821,6 +1828,7 @@ def _feat_from_5etools(raw: dict) -> dict | None:
     source = (raw.get("source") or "unknown").lower()
     slug = _slug(raw["name"])
     index = f"{slug}-{source}"
+    fixed_languages, language_options = _language_grants_from_5etools(raw)
 
     return {
         "index": index,
@@ -1851,8 +1859,15 @@ def _feat_from_5etools(raw: dict) -> dict | None:
         # Task 3 section docstring for the full reasoning.
         "proficiencies": _proficiencies_from_5etools(raw),
         "proficiency_choices": _proficiency_choices_from_5etools(raw),
-        "languages": [],  # Task 4
-        "language_options": None,  # Task 4
+        # Task 4: language grants — reuses the SAME background-side
+        # _language_grants_from_5etools conversion machinery directly (see
+        # that function's own docstring for the "any"/"anyStandard" key
+        # variant this reuse required, and test_official_source.py's Task 4
+        # section for the full real-data grounding, including the one
+        # disclosed unrecognized-language gap, Harper Agent's "thieves'
+        # cant").
+        "languages": fixed_languages,
+        "language_options": language_options,
         "resist": [],  # Task 5
         "immune": [],  # Task 5
         "condition_immune": [],  # Task 5

@@ -1638,3 +1638,109 @@ def test_weapon_master_fromfilter_weapon_choice_is_a_disclosed_unconverted_gap()
     feat = next(f for f in feats if f["name"] == "Weapon Master" and f["source"] == "PHB")
     assert feat["proficiencies"] == []
     assert feat["proficiency_choices"] == []
+
+
+# ---------------------------------------------------------------------------
+# load_official_feats() language grants (Phase 4c-i Task 4) — reuses the SAME
+# _language_grants_from_5etools conversion machinery built for backgrounds
+# (Phase 4b Task 3) directly. Grounded (2026-09-28) against the real fetched
+# feats.json: only 7/305 feats carry languageProficiencies at all.
+#
+# One real, necessary variant: every feat wildcard entry uses the key "any"
+# (e.g. {"any": 1}), never backgrounds' "anyStandard" — confirmed, 0/7 feat
+# records use "anyStandard" and 0/56 background records use "any" (checked
+# both directions against the real fetched data), so
+# _language_grants_from_5etools now reads either key with no ambiguity or
+# collision risk to the already-covered background path.
+#
+# One real, disclosed gap: Harper Agent/FRHoF's {"thieves' cant": True} is
+# NOT a recognized language slug in reference_data.LANGUAGES (Thieves' Cant
+# is a secret argot, not one of the 16 standard/exotic D&D languages the SRD
+# table models) — _language_ref_from_key already returns None for any
+# unrecognized key (same fallback discipline documented on that function),
+# so this fixed grant is silently dropped rather than guessed at. See
+# test_harper_agent_thieves_cant_is_a_disclosed_unrecognized_language_gap
+# below.
+# ---------------------------------------------------------------------------
+
+
+def test_fey_teleportation_grants_a_fixed_language_no_choice_offered():
+    # Fey Teleportation/XGE: {"sylvan": True} — a single fixed-only entry,
+    # structurally identical to backgrounds' Rune Carver case.
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Fey Teleportation")
+    assert feat["languages"] == [{"index": "sylvan", "name": "Sylvan", "url": ""}]
+    assert feat["language_options"] is None
+
+
+def test_echoing_soul_offers_an_any_wildcard_language_choice():
+    # Echoing Soul/RHW: {"any": 1} — the feat-side wildcard key, reusing the
+    # SAME resource_list mechanism as backgrounds' "anyStandard".
+    from catalog import reference_data
+    from catalog.choices import build_choice_options
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Echoing Soul")
+    assert feat["languages"] == []
+    envelope = feat["language_options"]
+    assert envelope["choose"] == 1
+    assert envelope["from"]["option_set_type"] == "resource_list"
+    options = build_choice_options(envelope["from"])
+    assert len(options) == len(reference_data.LANGUAGES)
+
+
+def test_linguist_offers_an_any_wildcard_choice_of_three():
+    # Linguist/PHB: {"any": 3} — same wildcard key, a higher count.
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Linguist")
+    assert feat["languages"] == []
+    envelope = feat["language_options"]
+    assert envelope["choose"] == 3
+    assert envelope["from"]["option_set_type"] == "resource_list"
+
+
+def test_symbiotic_being_offers_an_any_wildcard_language_choice():
+    # Symbiotic Being/RHW: {"any": 1} — same shape as Echoing Soul/Prodigy.
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Symbiotic Being")
+    assert feat["languages"] == []
+    envelope = feat["language_options"]
+    assert envelope["choose"] == 1
+    assert envelope["from"]["option_set_type"] == "resource_list"
+
+
+def test_prodigy_also_offers_an_any_wildcard_language_choice():
+    # Prodigy/XGE: {"any": 1} — Prodigy already has proficiency_choices
+    # coverage (Task 3); this pins its SEPARATE language_options envelope.
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Prodigy")
+    assert feat["languages"] == []
+    envelope = feat["language_options"]
+    assert envelope["choose"] == 1
+    assert envelope["from"]["option_set_type"] == "resource_list"
+
+
+def test_cult_of_the_dragon_initiate_fixed_draconic_conditionally_substitutes_the_wildcard():
+    # Cult of the Dragon Initiate/FRHoF: [{"draconic": True}, {"any": 1}] —
+    # TWO separate outer-list entries, one fixed-only and one wildcard-only.
+    # Real published text: "You know Draconic. If you already know Draconic
+    # when you select this feat, you instead learn one language of your
+    # choice" — the SAME "X, or Y if you already know X" conditional-
+    # substitute shape backgrounds' Clan Crafter established, so this feat
+    # hits the SAME saw_fixed_only_entry-and-saw_choice branch: only the
+    # fixed Draconic grant is kept, no language_options envelope offered.
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Cult of the Dragon Initiate")
+    assert feat["languages"] == [{"index": "draconic", "name": "Draconic", "url": ""}]
+    assert feat["language_options"] is None
+
+
+def test_harper_agent_thieves_cant_is_a_disclosed_unrecognized_language_gap():
+    # Harper Agent/FRHoF: {"thieves' cant": True} — Thieves' Cant is not a
+    # recognized language slug in reference_data.LANGUAGES (it's a secret
+    # argot, not one of the SRD's 16 standard/exotic languages), so this
+    # fixed grant is silently dropped, same disclosed fallback
+    # _language_ref_from_key already documents for any unrecognized key.
+    feats = load_official_feats(official_dir())
+    feat = next(f for f in feats if f["name"] == "Harper Agent")
+    assert feat["languages"] == []
+    assert feat["language_options"] is None
