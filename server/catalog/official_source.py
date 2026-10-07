@@ -2027,13 +2027,33 @@ def _expertise_skills_from_5etools(raw: dict) -> list[str]:
     with them 1:1, and both can be rendered/compared the same way).
 
     Only `is True` fixed entries convert; the anyProficientSkill choice
-    portion has no choice mechanism to resolve against today (no
-    feat-selection UI exists at all — see engine.resolve.
-    _resolve_granted_feats' own docstring for why a background's `feats`
-    grant is still the ONLY way this app knows a character "has" a feat),
-    so it's silently excluded here — the same "pure data pass-through, no
-    choice resolution" scope line _ability_bonuses_from_5etools already
-    draws for its own choose-N sibling field (ability_bonus_options).
+    portion has no choice mechanism to resolve against today and is
+    silently excluded here — the same "pure data pass-through, no choice
+    resolution" scope line _ability_bonuses_from_5etools already draws
+    for its own choose-N sibling field (ability_bonus_options). Feats
+    themselves ARE fully player-selectable as of the ASI-or-feat plan
+    (2026-09-28+) — via a background's fixed/chosen `feats` grant (see
+    engine.resolve._resolve_granted_feats) AND via free selection of any
+    of the 94 General feats at a class level that grants an Ability Score
+    Improvement (see engine.resolve._resolve_asi_selected_feats) — this
+    docstring previously said no feat-selection UI existed at all, which
+    predates that plan and is now stale; only the anyProficientSkill
+    CHOICE within an already-selected feat is unconverted, not feat
+    selection itself.
+
+    DISCLOSED GAP (real, not hypothetical, flagged by the ASI-or-feat
+    final whole-branch review, 2026-09-28): because anyProficientSkill
+    silently converts to nothing, a player who picks Skill Expert/XPHB —
+    the design spec's own primary worked example, and now directly,
+    prominently reachable via a free ASI-level feat pick, not just an
+    obscure background grant — never gets the expertise-skill choice the
+    feat's real text promises; `sheet.expertiseSkills` ends up `[]` for
+    that pick with no warning shown. See
+    _saving_throw_proficiencies_from_5etools' own docstring just below for
+    the matching gap on Resilient. Converting these choice-shaped
+    envelopes into a real, selectable Choice is real catalog-layer scope,
+    not attempted here.
+
     Confirmed against the real fetched feats.json (2026-09-28): 7 real
     records carry this field (Aberrant Anatomy/RHW, Boon of Skill/XPHB,
     Boon of Terror/FRHoF, Echoing Soul/RHW, Prodigy/XGE, Skill Expert/TCE,
@@ -2055,6 +2075,18 @@ def _saving_throw_proficiencies_from_5etools(raw: dict) -> list[str]:
     entry (a CHOICE of which ability gains the proficiency) is out of
     scope, the same reasoning _expertise_skills_from_5etools' own
     anyProficientSkill exclusion uses just above.
+
+    DISCLOSED GAP (same as _expertise_skills_from_5etools' own gap just
+    above, flagged by the ASI-or-feat final whole-branch review,
+    2026-09-28): Resilient/PHB and Resilient/XPHB are the concrete real
+    examples — both are exclusively choice-shaped, so this function
+    returns `[]` for both, and `sheet.savingThrowProficiencies` never
+    reflects a Resilient pick's real saving-throw proficiency. Resilient
+    is directly, prominently reachable via a free ASI-level feat pick
+    (not just an obscure background grant) as of the ASI-or-feat plan, so
+    a player picking it expects a real benefit and silently gets none.
+    Converting this choice-shaped envelope into a real, selectable Choice
+    is real catalog-layer scope, not attempted here.
 
     Confirmed against the real fetched feats.json (2026-09-28): only 2
     real records carry this field at all (Resilient/PHB, Resilient/XPHB),

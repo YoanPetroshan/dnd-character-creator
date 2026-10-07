@@ -43,7 +43,9 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
   }, [classId]);
 
   const classChoices = resolution
-    ? resolution.choices.filter((c) => c.source.kind === "class" && c.id.startsWith(`class:${classId}:`))
+    ? resolution.choices.filter(
+        (c) => (c.source.kind === "class" || c.source.kind === "feat") && c.id.startsWith(`class:${classId}:`)
+      )
     : [];
   const featureChoices = classChoices.filter((c) => !isSpellChoiceId(c.id));
   const spellChoices = classChoices.filter((c) => isSpellChoiceId(c.id));

@@ -147,10 +147,10 @@ def _resolve_granted_feats(
     — e.g. "mark-of-storm" — see official_source._feats_from_5etools'
     own docstring for why the source suffix is stripped there) against
     catalog.feats, which is keyed "slug-source" (e.g. "mark-of-storm-
-    efa"). This is the ONLY mechanism resolve() has today to know a
-    character actually "has" a feat: no ASI-feat-choice or standalone
-    feat-selection exists yet (confirmed by grep, 2026-09-28) — a
-    background's `feats` field, previously pure inert pass-through
+    efa"). This was the ONLY mechanism resolve() had to know a character
+    actually "has" a feat until the ASI-or-feat mechanic (2026-09-29)
+    added its sibling, _resolve_asi_selected_feats, for a feat taken at a
+    class's ASI level — a background's `feats` field, previously pure inert pass-through
     (Phase 4b Task 6: "no effect application, nothing else in this
     function reads them"), is now also read here for its mechanical
     resist/immune/condition_immune/senses effects.
@@ -502,7 +502,7 @@ def _background_ability_bonus_deltas(envelope: dict, built_options: list[dict]) 
     return deltas_by_id
 
 
-def _feat_ability_bonus_choice_templates(feats: list[dict]) -> list[tuple[dict, dict]]:
+def _feat_ability_bonus_choice_templates(feats: list[dict], origin: str | None = None) -> list[tuple[dict, dict]]:
     """Feat-side counterpart to _background_ability_bonus_choice_template/
     _species_ability_bonus_choice_template (Phase 4c-ii Task 2) — plural,
     unlike those two, because `feats` is itself a list (a background can in
@@ -529,17 +529,45 @@ def _feat_ability_bonus_choice_templates(feats: list[dict]) -> list[tuple[dict, 
     would catch it). Returning the feat alongside its own template lets
     the caller build that lookup (or just iterate paired) directly off
     this return value instead, so there's only ever one place the cid
-    format is written."""
+    format is written.
+
+    `origin`, when given, replaces the default `feat:{feat['index']}`
+    prefix in every cid this call builds. Only ever pass a non-None
+    origin when `feats` has exactly ONE entry — origin-scoping a
+    multi-feat list would collide all of them onto the same prefix,
+    which is never the actual call shape either background or ASI call
+    sites use. Defaults to None (unchanged Phase 4c-ii behavior, the
+    `feat:{index}:...` shape background-granted feats already use).
+
+    Final whole-branch review (2026-09-28), Important #1: an ASI-origin
+    feat's cascaded ability-bonus card (and _feat_choice_templates'
+    sibling proficiency/language cards below) used to render with a bare
+    generic label ("Ability Score Increase") and no level, making two
+    different feats' cascaded cards on ClassPage indistinguishable. Two
+    fixes, both here: (1) the label is now prefixed with the feat's own
+    name (e.g. "Skill Expert: Ability Score Increase") so the card is
+    self-identifying regardless of level display; (2) when `origin` is
+    given, the feat dict is the one `_resolve_asi_selected_feats` builds,
+    which always carries `_asi_level` (the ASI-granting level this pick
+    was made at) — that level is copied onto `source["level"]` so
+    ChoiceCard's existing `source.level != null` display (already used
+    for class-kind sources) picks it up for free. A background-granted
+    feat's cascaded choice (no `origin`) has no natural "level" to show
+    and is left without one, same as before."""
     pairs: list[tuple[dict, dict]] = []
     for feat in feats:
         envelope = feat.get("ability_bonus_options")
         if not envelope:
             continue
-        cid = f"feat:{feat['index']}:ability-bonus"
+        cid_prefix = origin if origin is not None else f"feat:{feat['index']}"
+        cid = f"{cid_prefix}:ability-bonus"
         source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
+        if origin is not None and feat.get("_asi_level") is not None:
+            source["level"] = feat["_asi_level"]
         choose = envelope.get("choose", 1)
         description = f"Choose {choose} ability score{'s' if choose != 1 else ''} to increase by 1."
-        tpl = build_choice_template(envelope, cid, source, "Ability Score Increase", description=description)
+        label = f"{feat['name']}: Ability Score Increase"
+        tpl = build_choice_template(envelope, cid, source, label, description=description)
         if tpl:
             pairs.append((tpl, feat))
     return pairs
@@ -601,29 +629,181 @@ def _asi_granting_levels(catalog: Catalog, cls_id: str, max_level: int) -> list[
 
 def _apply_asi_progression(
     base_scores: dict[str, int], asi_levels: list[int], class_choices: dict, cls_id: str | None,
-) -> tuple[dict[int, dict[str, int]], dict[str, int]]:
+    asi_feats_by_cid: dict[str, dict] | None = None,
+    feat_deltas_by_cid: dict[str, list[tuple[str, int]]] | None = None,
+    total_level: int = 0, use_feat_prerequisites: bool = False,
+) -> tuple[dict[int, dict[str, int]], dict[str, int], set[str]]:
     """Walks ASI-granting levels in ascending order, applying each
     level's stored selection (if present and valid) to a running
-    ability-score state. Returns (scores_by_level, final_scores):
-    scores_by_level[lvl] is the state BEFORE that level's own ASI is
-    applied (used by _asi_choice_templates to compute which options are
-    disabled for that specific level's choice — a combo that's fine at
-    level 4 might exceed the cap by level 8 once earlier ASIs stack),
-    and final_scores is the state after every level's ASI has been
-    applied — this becomes the actual final ability scores used for
-    `modifiers` and everything derived from them."""
+    ability-score state. Returns (scores_by_level, final_scores,
+    prerequisite_blocked_feat_cids): scores_by_level[lvl] is the state
+    BEFORE that level's own ASI is applied (used by _asi_choice_templates
+    to compute which options are disabled for that specific level's
+    choice — a combo that's fine at level 4 might exceed the cap by level
+    8 once earlier ASIs stack), and final_scores is the state after every
+    level's ASI has been applied — this becomes the actual final ability
+    scores used for `modifiers` and everything derived from them.
+
+    The selection is deduped first (same `dict.fromkeys` discipline the
+    generic choice pass uses), so a duplicated single pick like
+    ["str-plus-2", "str-plus-2"] applies instead of silently not applying
+    while the generic pass shows it resolved.
+
+    ASI-or-feat Task 3: `asi_feats_by_cid` (a level's `class:{cls_id}:{lvl}:asi`
+    cid -> the feat picked there instead of a combo) and
+    `feat_deltas_by_cid` (that feat's total ability-bonus delta: fixed
+    ability_bonuses + its own already-chosen ability_bonus_options pick)
+    both come from _resolve_asi_selected_feats. A feat pick is handled
+    exactly like a combo pick, at that level's own point in the walk:
+    - If its option would be shown disabled at THIS level (prerequisite
+      unmet against these same running scores, via the same
+      _feat_option_prerequisite_met helper _asi_choice_templates uses),
+      the feat is not applied at all; its cid is returned in
+      prerequisite_blocked_feat_cids so resolve() can leave it out of
+      `resolved_feats` (none of its other effects apply either) and
+      report it.
+    - Otherwise its delta is applied only if it doesn't push any score
+      over 20 (asi_mod.asi_exceeds_cap, the SAME check combos get). The
+      feat itself still counts as taken; only the increase is skipped.
+      (The background-side equivalent — a background-granted feat's own
+      ability bonus, folded into `feat_bonuses` before this walk — stays
+      uncapped: a pre-existing Phase 4c-ii gap, out of this plan's scope.)
+
+    What keeps scores in range: resolve()'s 1-30 range check runs BEFORE
+    this walk, on the pre-ASI scores, and nothing re-checks afterwards.
+    This walk never needs it, because every delta it applies — combo or
+    feat — is cap-gated at 20, so it never raises any score above
+    max(20, that score's pre-walk value).
+
+    With no feat maps passed (or empty ones) the feat branch is never
+    taken and this is the combo-only behavior."""
     combos = dict(asi_mod.asi_combinations())
+    asi_feats_by_cid = asi_feats_by_cid or {}
+    feat_deltas_by_cid = feat_deltas_by_cid or {}
     scores_by_level: dict[int, dict[str, int]] = {}
+    blocked_feat_cids: set[str] = set()
     running = dict(base_scores)
     for lvl in asi_levels:
         scores_by_level[lvl] = dict(running)
         cid = f"class:{cls_id}:{lvl}:asi"
         raw_selected = class_choices.get(cid) or []
-        if isinstance(raw_selected, list) and len(raw_selected) == 1 and raw_selected[0] in combos:
-            deltas = combos[raw_selected[0]]
+        selected = list(dict.fromkeys(s for s in raw_selected if isinstance(s, str))) if isinstance(raw_selected, list) else []
+        if len(selected) == 1 and selected[0] in combos:
+            deltas = combos[selected[0]]
             if not asi_mod.asi_exceeds_cap(deltas, running):
                 running = asi_mod.apply_asi(deltas, running)
-    return scores_by_level, running
+        elif cid in asi_feats_by_cid:
+            if not _feat_option_prerequisite_met(asi_feats_by_cid[cid], total_level, running, use_feat_prerequisites):
+                blocked_feat_cids.add(cid)
+                continue
+            deltas = feat_deltas_by_cid.get(cid, [])
+            if deltas and not asi_mod.asi_exceeds_cap(deltas, running):
+                running = asi_mod.apply_asi(deltas, running)
+    return scores_by_level, running, blocked_feat_cids
+
+
+def _feat_source_allowed(feat: dict, sources) -> bool:
+    """The SAME draft.sources filter resolve() applies to a race or
+    background record, for a feat: no filtering when `sources` is empty or
+    absent; a record with no source, or an "SRD" one, is always allowed;
+    otherwise its source must be in the allowed list (case-insensitive)."""
+    if not sources:
+        return True
+    allowed_sources = {s.lower() for s in sources if isinstance(s, str)}
+    feat_source = feat.get("source") or ""
+    return not (feat_source and feat_source.upper() != "SRD" and feat_source.lower() not in allowed_sources)
+
+
+def _resolve_asi_selected_feats(
+    resolved_classes: list[dict], catalog: Catalog, sources=None,
+) -> tuple[list[dict], dict[str, list[tuple[str, int]]]]:
+    """ASI-or-feat Task 3: the ASI-level counterpart to
+    _resolve_granted_feats (background grants). Reads each resolved
+    class's OWN `class_choices` for a `class:{cls_id}:{lvl}:asi` selection
+    (deduped first) naming a `feat:{index}` option (offered by
+    _asi_choice_templates) rather than an ASI-combo id, at every
+    ASI-granting level that class has actually reached. Returns
+    (asi_feat_picks, feat_deltas_by_cid):
+
+    - asi_feat_picks: resolved feat dicts, each a shallow COPY of the
+      catalog record (never the shared record itself) tagged with
+      `_asi_cid` (the level's ASI cid), `_asi_level`, and
+      `_asi_origin = f"{cid}:feat:{index}"` — the prefix passed as Task 1's
+      `origin` param wherever this feat's own choice templates are built,
+      so the same feat taken at two classes/levels never collides on cid.
+      These are CANDIDATES: _apply_asi_progression decides, at each
+      pick's own level, whether its prerequisite is met; resolve() then
+      appends only the picks that weren't blocked to `resolved_feats`, so
+      every generic feat-effects consumer picks them up unchanged.
+    - feat_deltas_by_cid: that level's total ability-bonus delta (fixed
+      `ability_bonuses` + the feat's own already-selected
+      `ability_bonus_options` pick, if any), for _apply_asi_progression to
+      apply at the right point in its per-level walk. Only levels with a
+      non-empty delta get an entry.
+
+    Task 4 (ASI-or-feat) fix round 1: an earlier version of this function
+    also returned a 3rd value, `chosen_ability_deltas_by_origin`, meant to
+    feed _feat_prerequisite_problems' self-bonus subtraction for
+    ASI-selected feats too. Removed: it was provably either redundant or
+    actively wrong. A pick only ever reaches `resolved_feats` (and
+    therefore _feat_prerequisite_problems) after ALREADY passing
+    _apply_asi_progression's own gate, which checks that SAME pick's
+    prerequisite against that level's running scores with the pick's own
+    delta excluded by construction (the delta hasn't been applied yet when
+    the gate runs) — so re-subtracting it a second time in
+    _feat_prerequisite_problems is never needed for a delta that WAS
+    applied. Worse, for a delta that was cap-skipped (Task 3's
+    asi_exceeds_cap: the feat is still granted, but that specific
+    ability-score increase wasn't applied because the score was already at
+    20), re-subtracting a delta that was never actually applied to
+    final_scores produces a FALSE POSITIVE "prerequisite unmet" problem.
+    See _feat_prerequisite_problems' own docstring for the full
+    explanation of why only background-granted feats need this parameter.
+
+    The sub-choice selection is validated exactly like resolve()'s own
+    early background-feat ability-bonus pass (dedupe, keep only enabled
+    option ids, cap to `count`), and its cid comes from the SAME
+    _feat_ability_bonus_choice_templates call that builds the visible
+    template — never reconstructed by hand here (Finding 3, 2026-09-28).
+
+    Only a feat that _asi_choice_templates would actually offer
+    (_is_asi_eligible_feat, and allowed by draft.sources via
+    _feat_source_allowed) is resolved; a hand-edited draft naming some
+    other catalog feat is ignored here just as the generic choice pass
+    ignores it (it isn't a valid option id)."""
+    asi_feat_picks: list[dict] = []
+    feat_deltas_by_cid: dict[str, list[tuple[str, int]]] = {}
+    for rc in resolved_classes:
+        cls_id, cls, level, class_choices = rc["cls_id"], rc["cls"], rc["level"], rc["class_choices"]
+        if not (cls_id and cls):
+            continue
+        for lvl in _asi_granting_levels(catalog, cls_id, level):
+            cid = f"class:{cls_id}:{lvl}:asi"
+            raw_selected = class_choices.get(cid) or []
+            if not isinstance(raw_selected, list):
+                continue
+            selected = list(dict.fromkeys(s for s in raw_selected if isinstance(s, str)))
+            if not (len(selected) == 1 and selected[0].startswith("feat:")):
+                continue
+            catalog_feat = catalog.feats.get(selected[0][len("feat:"):])
+            if not (catalog_feat and _is_asi_eligible_feat(catalog_feat) and _feat_source_allowed(catalog_feat, sources)):
+                continue
+            origin = f"{cid}:feat:{catalog_feat['index']}"
+            feat = {**catalog_feat, "_asi_cid": cid, "_asi_level": lvl, "_asi_origin": origin}
+            asi_feat_picks.append(feat)
+
+            deltas = [(e["ability_score"]["index"].upper(), e["bonus"]) for e in feat.get("ability_bonuses", [])]
+            for ability_tpl, _ in _feat_ability_bonus_choice_templates([feat], origin=origin):
+                valid_ids = {o["id"] for o in ability_tpl["options"] if not o.get("disabled")}
+                raw_sub = class_choices.get(ability_tpl["id"]) or []
+                deduped = list(dict.fromkeys(s for s in raw_sub if isinstance(s, str)))
+                chosen = [s for s in deduped if s in valid_ids][: ability_tpl["count"]]
+                deltas_by_option = _feat_ability_bonus_deltas(feat["ability_bonus_options"])
+                for opt_id in chosen:
+                    deltas.extend(deltas_by_option.get(opt_id, []))
+            if deltas:
+                feat_deltas_by_cid[cid] = deltas
+    return asi_feat_picks, feat_deltas_by_cid
 
 
 def _class_choice_templates(cls: dict, cls_id: str) -> list[dict]:
@@ -796,7 +976,7 @@ def _background_choice_templates(bg: dict, bg_id: str) -> list[dict]:
     return templates
 
 
-def _feat_choice_templates(feats: list[dict]) -> list[dict]:
+def _feat_choice_templates(feats: list[dict], origin: str | None = None) -> list[dict]:
     """A granted feat's own choice-shaped fields, mirrored from
     _background_choice_templates' proficiency-choice/language blocks above
     (same build_choice_template call, same cid/source/label/description
@@ -814,23 +994,51 @@ def _feat_choice_templates(feats: list[dict]) -> list[dict]:
     are load-bearing for the same reason they are in
     _background_choice_templates' own cids (see that function's own
     comment): they're what the merge-site fixes elsewhere in this file use
-    to recognize a feat-sourced proficiency or language selection."""
+    to recognize a feat-sourced proficiency or language selection.
+
+    `origin`, when given, replaces the default `feat:{feat['index']}`
+    prefix in every cid this call builds. Only ever pass a non-None
+    origin when `feats` has exactly ONE entry — origin-scoping a
+    multi-feat list would collide all of them onto the same prefix,
+    which is never the actual call shape either background or ASI call
+    sites use. Defaults to None (unchanged Phase 4c-ii behavior, the
+    `feat:{index}:...` shape background-granted feats already use).
+
+    Final whole-branch review (2026-09-28), Important #1: same two fixes
+    as _feat_ability_bonus_choice_templates' own docstring above —
+    (1) every label built here is now prefixed with the feat's own name
+    (e.g. "Skill Expert: Skill Proficiency") so a cascaded card is
+    self-identifying, applied to BOTH the ASI-origin path AND the
+    background-granted path (a background-granted feat's cascaded choice
+    on BackgroundPage has the exact same ambiguity problem); (2) when
+    `origin` is given, `source["level"]` is set from the feat dict's own
+    `_asi_level` (set by _resolve_asi_selected_feats) so ChoiceCard's
+    existing level display picks it up. A background-granted feat (no
+    `origin`) has no natural level and stays unset."""
     templates = []
     for feat in feats:
+        cid_prefix = origin if origin is not None else f"feat:{feat['index']}"
+        feat_level = feat.get("_asi_level") if origin is not None else None
         language_envelope = feat.get("language_options")
         if language_envelope:
-            cid = f"feat:{feat['index']}:languages"
+            cid = f"{cid_prefix}:languages"
             source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
+            if feat_level is not None:
+                source["level"] = feat_level
             choose = language_envelope.get("choose", 1)
             description = f"Choose {choose} language{'s' if choose != 1 else ''} of your choice."
-            tpl = build_choice_template(language_envelope, cid, source, "Languages", description=description)
+            label = f"{feat['name']}: Languages"
+            tpl = build_choice_template(language_envelope, cid, source, label, description=description)
             if tpl:
                 templates.append(tpl)
 
         for i, prof_envelope in enumerate(feat.get("proficiency_choices", []) or []):
-            cid = f"feat:{feat['index']}:proficiency-choice-{i}"
+            cid = f"{cid_prefix}:proficiency-choice-{i}"
             source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
-            label = _background_proficiency_choice_label(prof_envelope)
+            if feat_level is not None:
+                source["level"] = feat_level
+            base_label = _background_proficiency_choice_label(prof_envelope)
+            label = f"{feat['name']}: {base_label}"
             choose = prof_envelope.get("choose", 1)
             description = f"Choose {choose} proficienc{'ies' if choose != 1 else 'y'} of your choice."
             tpl = build_choice_template(prof_envelope, cid, source, label, description=description)
@@ -1034,8 +1242,29 @@ def _feat_prerequisite_alt_met(alt: dict, total_level: int, final_scores: dict[s
     return True
 
 
+def _feat_instance_key(feat: dict) -> str:
+    """A per-INSTANCE key for a resolved feat dict (Task 4, ASI-or-feat).
+    The SAME catalog feat (same `feat['index']`) can be picked at TWO
+    different ASI instances — two different classes, or two different
+    levels of the same class — each with its OWN chosen ability-bonus
+    sub-choice (e.g. Grappler taken at both Fighter 4 and Ranger 8, one
+    instance +1 STR, the other +1 DEX). A bare-index-keyed dict would
+    collide the two instances' deltas, silently overwriting one with the
+    other. `_asi_origin` (Task 1's origin param, set by
+    _resolve_asi_selected_feats) is exactly the unique cid prefix
+    _feat_ability_bonus_choice_templates already scopes that instance's own
+    choice templates under, so reusing it here as the dict key is
+    guaranteed to match. A background-granted feat carries no `_asi_origin`
+    (there's only ever one instance of a given background grant), so it
+    falls back to its bare `feat:{index}` — the SAME default cid prefix
+    _feat_ability_bonus_choice_templates itself uses for an un-scoped
+    (origin=None) call."""
+    return feat.get("_asi_origin") or f"feat:{feat['index']}"
+
+
 def _feat_prerequisite_problems(
     feats: list[dict], total_level: int, final_scores: dict[str, int], use_prerequisites: bool,
+    chosen_ability_deltas_by_instance: dict[str, list[tuple[str, int]]] | None = None,
 ) -> list[dict]:
     """Structural precedent: _multiclass_prerequisite_problems above — same
     "only check if the preference is on," same "append a problem, NEVER
@@ -1082,9 +1311,43 @@ def _feat_prerequisite_problems(
     per-feat, per-check adjustment (computed fresh for each feat in the
     loop, not shared across feats): a DIFFERENT simultaneously-granted
     feat's bonus, or species'/background's own bonus, legitimately still
-    counts, since it isn't F's own contribution being subtracted."""
+    counts, since it isn't F's own contribution being subtracted.
+
+    Task 4 (ASI-or-feat) extends this SAME discipline to a feat's own
+    CHOSEN ability_bonus_options delta, via the new
+    `chosen_ability_deltas_by_instance` param — keyed by _feat_instance_key
+    (see its own docstring), NOT bare `feat['index']`, since the same
+    catalog feat picked at two different ASI instances (two classes, or
+    two levels of one class) each carries its OWN chosen delta. 10 real
+    General feats combine an ability prerequisite with a choice-shaped
+    ability bonus (Athlete, Charger, Dual Wielder, Grappler, Inspiring
+    Leader, Observant, Polearm Master, Ritual Caster, Sentinel, Speedy),
+    confirmed 2026-09-28.
+
+    Fix round 1 (reviewer finding): this param is fed ONLY
+    resolve()'s early background-feat ability-choice pass's own
+    chosen-only deltas (keyed by bare `feat:{index}`) — deliberately
+    NEVER anything derived from an ASI-selected feat. An ASI-selected
+    feat's own prerequisite is already checked, using that level's own
+    running scores with that pick's own delta excluded by construction
+    (the check runs inside _apply_asi_progression's per-level gate,
+    BEFORE the delta is applied), and a pick that fails that gate is
+    filtered out of `resolved_feats` before this function ever sees it.
+    An earlier version of this fix ALSO built and merged in a dict from
+    _resolve_asi_selected_feats (a since-removed 3rd return value,
+    `chosen_ability_deltas_by_origin`) — proven wrong: for a pick whose
+    delta was cap-skipped (asi_exceeds_cap: the feat still applies, but
+    that specific ability-score increase doesn't, because the score was
+    already at the 20 cap), re-subtracting a delta that was never
+    actually added to `final_scores` produces a false "prerequisite
+    unmet" problem for a feat whose prerequisite is genuinely fine. Only
+    a background-granted feat needs this explicit subtraction at all,
+    since it has no equivalent per-level gate — its own chosen bonus is
+    applied unconditionally, with nothing else ever checking whether its
+    prerequisite held before that bonus landed."""
     if not use_prerequisites:
         return []
+    chosen_ability_deltas_by_instance = chosen_ability_deltas_by_instance or {}
     problems = []
     for feat in feats:
         prereq = _feat_structured_prerequisite(feat)
@@ -1098,6 +1361,10 @@ def _feat_prerequisite_problems(
         for entry in feat.get("ability_bonuses", []):
             ab = entry["ability_score"]["index"].upper()
             scores_without_own_bonus[ab] = scores_without_own_bonus.get(ab, 0) - entry["bonus"]
+        # Task 4: subtract THIS feat's own CHOSEN ability-bonus delta back
+        # out too, same discipline, keyed by this feat's own instance.
+        for ab_key, delta in chosen_ability_deltas_by_instance.get(_feat_instance_key(feat), []):
+            scores_without_own_bonus[ab_key] = scores_without_own_bonus.get(ab_key, 0) - delta
         if not any(_feat_prerequisite_alt_met(alt, total_level, scores_without_own_bonus) for alt in prereq):
             problems.append({
                 "id": f"feat-prerequisite-unmet-{feat['index']}",
@@ -1110,9 +1377,45 @@ def _asi_option_label(deltas: list[tuple[str, int]]) -> str:
     return " and ".join(f"{ab} +{delta}" for ab, delta in deltas)
 
 
+def _is_asi_eligible_feat(feat: dict) -> bool:
+    # "General"-category feats (category == "G") double as the "take a feat
+    # instead" branch of an ASI choice. The literal "Ability Score
+    # Improvement" catalog entry is excluded because it duplicates this
+    # app's own hardcoded ASI-combo mechanic, not a distinct choice. Shared
+    # by _asi_choice_templates (which options to offer) and
+    # _resolve_asi_selected_feats (which selections to honor) so the two
+    # can't drift apart.
+    return feat.get("category") == "G" and feat["name"] != "Ability Score Improvement"
+
+
+def _feat_option_prerequisite_met(
+    feat: dict, total_level: int, scores: dict[str, int], use_prerequisites: bool,
+) -> bool:
+    """Whether an ASI-level feat option is ENABLED as far as its
+    prerequisite goes, against a given level's running scores. Shared by
+    _asi_choice_templates (the option's `disabled` flag) and
+    _apply_asi_progression (whether a feat picked there applies), so the
+    option shown and the effect applied always agree. Off-toggle, or no
+    structured prerequisite this app can verify, means met."""
+    if not use_prerequisites:
+        return True
+    prereq = _feat_structured_prerequisite(feat)
+    if prereq is None:
+        return True
+    return any(_feat_prerequisite_alt_met(alt, total_level, scores) for alt in prereq)
+
+
 def _asi_choice_templates(
     cls_id: str, cls_name: str, asi_levels: list[int], scores_by_level: dict[int, dict[str, int]],
+    catalog: Catalog, total_level: int, use_prerequisites: bool, sources=None,
 ) -> list[dict]:
+    # `sources` is draft.sources: feat options are filtered exactly like a
+    # race/background record (see _feat_source_allowed). SRD-only drafts
+    # therefore get zero feat options — the 2014 SRD has no feats.
+    general_feats = [
+        f for f in catalog.feats.values() if _is_asi_eligible_feat(f) and _feat_source_allowed(f, sources)
+    ]
+    general_feats.sort(key=lambda f: f["name"])
     templates = []
     for lvl in asi_levels:
         current_scores = scores_by_level.get(lvl, {})
@@ -1123,11 +1426,17 @@ def _asi_choice_templates(
                 option["disabled"] = True
                 option["disabledReason"] = "would exceed the ability score cap of 20"
             options.append(option)
+        for feat in general_feats:
+            option = {"id": f"feat:{feat['index']}", "label": feat["name"]}
+            if not _feat_option_prerequisite_met(feat, total_level, current_scores, use_prerequisites):
+                option["disabled"] = True
+                option["disabledReason"] = "prerequisite not met"
+            options.append(option)
         cid = f"class:{cls_id}:{lvl}:asi"
         source = {"kind": "class", "id": cls_id, "label": cls_name, "level": lvl}
         templates.append({
             "id": cid, "source": source, "label": "Ability Score Improvement",
-            "description": "Increase one ability score by 2, or two ability scores by 1 each.",
+            "description": "Increase one ability score by 2, or two ability scores by 1 each — or take a feat instead.",
             "count": 1,
             "options": options,
         })
@@ -1497,7 +1806,24 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # docstring for why `granted_feat_refs=None`/empty behaves identically
     # to before this fix).
     granted_feat_refs = list(bg.get("feat_refs", [])) if bg else []
-    resolved_feats = _resolve_granted_feats(granted_feats, catalog, granted_feat_refs)
+    background_feats = _resolve_granted_feats(granted_feats, catalog, granted_feat_refs)
+    # ASI-or-feat Task 3: a feat a class took INSTEAD of an ASI joins the
+    # SAME `resolved_feats` list (assembled right after the per-class ASI
+    # loop below, once each pick's prerequisite has been checked at its own
+    # level), so every generic feat-effects consumer (proficiencies,
+    # languages, expertise, saving throws, senses, damage modifiers,
+    # condition immunities, prerequisite problems) applies it with no
+    # special-casing. `background_feats` is kept apart for exactly the
+    # three places where an ASI-selected feat must NOT be handled the
+    # background way: its ability bonus (fixed + chosen) is applied inside
+    # _apply_asi_progression's per-level walk via `asi_feat_deltas_by_cid`,
+    # not in the early flat `feat_bonuses` pass (that would double-apply it
+    # and put it before earlier levels' cap checks); and its own choice
+    # templates are built origin-scoped in the per-class loop, not with the
+    # default un-scoped `feat:{index}:...` cids (which would duplicate them).
+    asi_feat_picks, asi_feat_deltas_by_cid = _resolve_asi_selected_feats(resolved_classes, catalog, draft.get("sources"))
+    asi_feats_by_cid = {f["_asi_cid"]: f for f in asi_feat_picks}
+    prerequisite_blocked_asi_feat_cids: set[str] = set()
 
     species_raw = draft.get("species")
     if species_raw is not None and not isinstance(species_raw, dict):
@@ -1546,7 +1872,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # (ability_bonus_options) is no longer an unhandled gap: it's the
     # FOURTH source folded in just below via feat_ability_choice_tpls
     # (Phase 4c-ii Task 2).
-    feat_bonuses = _feat_ability_bonuses(resolved_feats)
+    feat_bonuses = _feat_ability_bonuses(background_feats)  # ASI-selected feats' bonuses: see _apply_asi_progression
     base_scores = (draft.get("abilities") or {}).get("base") or {}
     species_bonuses = _species_ability_bonuses(race, subrace)
     species_ability_choice_tpl = _species_ability_bonus_choice_template(race, subrace, race_id)
@@ -1598,8 +1924,24 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # build its own lookup dict — see that function's own docstring
     # (Finding 3 of the final whole-branch review, 2026-09-28) for the
     # silent-desync risk that duplication used to carry.
-    feat_ability_choice_pairs = _feat_ability_bonus_choice_templates(resolved_feats)
+    feat_ability_choice_pairs = _feat_ability_bonus_choice_templates(background_feats)
     feat_ability_choice_tpls = [tpl for tpl, _ in feat_ability_choice_pairs]
+    # Task 4 (ASI-or-feat): this SAME loop already computes each
+    # background-granted feat's own selected ability-bonus ids and their
+    # deltas (feeding `feat_bonuses` above) — also record them here, keyed
+    # by _feat_instance_key(source_feat) (a background grant has no
+    # `_asi_origin`, so this is its bare `feat:{index}`), so
+    # _feat_prerequisite_problems can subtract a feat's own CHOSEN bonus
+    # back out before checking THAT feat's own prerequisite, exactly like
+    # it already does for a feat's FIXED ability_bonuses. Passed to
+    # _feat_prerequisite_problems' `chosen_ability_deltas_by_instance` param
+    # BELOW UNMIXED with anything ASI-derived (fix round 1: an earlier
+    # version also merged in a dict built from _resolve_asi_selected_feats,
+    # which was removed as provably redundant-or-wrong — see
+    # _feat_prerequisite_problems' own docstring for why only a
+    # background-granted feat's own chosen bonus needs this explicit
+    # subtraction at all).
+    background_chosen_ability_deltas_by_instance: dict[str, list[tuple[str, int]]] = {}
     if feat_ability_choice_tpls:
         feat_background_choices_raw = background_dict.get("choices") if isinstance(background_dict.get("choices"), dict) else {}
         for feat_ability_tpl, source_feat in feat_ability_choice_pairs:
@@ -1610,9 +1952,13 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             deduped_selected = list(dict.fromkeys(s for s in raw_selected if isinstance(s, str)))
             selected_feat_abilities = [s for s in deduped_selected if s in valid_feat_ability_ids][: feat_ability_tpl["count"]]
             feat_ability_deltas = _feat_ability_bonus_deltas(source_feat["ability_bonus_options"])
+            instance_chosen_deltas: list[tuple[str, int]] = []
             for ab_id in selected_feat_abilities:
                 for ab_key, delta in feat_ability_deltas.get(ab_id, []):
                     feat_bonuses[ab_key] = feat_bonuses.get(ab_key, 0) + delta
+                    instance_chosen_deltas.append((ab_key, delta))
+            if instance_chosen_deltas:
+                background_chosen_ability_deltas_by_instance[_feat_instance_key(source_feat)] = instance_chosen_deltas
 
     final_scores: dict[str, int] = {}
     for ab in derived_mod.ABILITIES:
@@ -1627,6 +1973,12 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         if not (1 <= score <= 30):
             problems.append({"id": f"ability-out-of-range-{ab}", "message": f"{ab} score {score} is out of the 1-30 range."})
 
+    # Read here (before the per-class loop) so _asi_choice_templates can use
+    # it below; `use_prereqs` (multiclass) is derived from the SAME dict
+    # further down, near _multiclass_prerequisite_problems.
+    use_prerequisites_prefs = (draft.get("preferences") or {}).get("usePrerequisites", {})
+    use_feat_prereqs = bool(use_prerequisites_prefs.get("feats"))
+
     choice_templates: list[dict] = []
     for rc in resolved_classes:
         rc_cls, rc_cls_id, rc_level, rc_subclass_id = rc["cls"], rc["cls_id"], rc["level"], rc["subclass_id"]
@@ -1634,7 +1986,26 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         if not (rc_cls and rc_cls_id):
             continue
         rc_asi_levels = _asi_granting_levels(catalog, rc_cls_id, rc_level)
-        rc_asi_scores_by_level, final_scores = _apply_asi_progression(final_scores, rc_asi_levels, rc_class_choices, rc_cls_id)
+        rc_asi_scores_by_level, final_scores, rc_blocked_feat_cids = _apply_asi_progression(
+            final_scores, rc_asi_levels, rc_class_choices, rc_cls_id,
+            asi_feats_by_cid, asi_feat_deltas_by_cid, total_level, use_feat_prereqs,
+        )
+        prerequisite_blocked_asi_feat_cids |= rc_blocked_feat_cids
+        # A feat picked at an ASI level whose option is disabled there
+        # (prerequisite unmet at THAT level's running scores — the same
+        # data the option's `disabled` flag is computed from) is not
+        # applied at all, exactly like an over-cap combo pick; reported
+        # here so the player sees why, since unlike an over-cap combo it
+        # may not be obvious from the option list alone.
+        for blocked_cid in sorted(rc_blocked_feat_cids):
+            blocked_feat = asi_feats_by_cid[blocked_cid]
+            problems.append({
+                "id": f"feat-prerequisite-unmet-{blocked_feat['index']}",
+                "message": (
+                    f"{blocked_feat['name']}'s prerequisite isn't met at {rc_cls['name']} level "
+                    f"{blocked_feat['_asi_level']}, so it isn't applied."
+                ),
+            })
         rc["asi_levels"] = rc_asi_levels  # stashed for Task 4's prerequisite check convenience, and for sheet assembly
 
         if rc["index"] == 0:
@@ -1645,20 +2016,66 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc["level_row"] = rc_level_row
         feature_refs = _cumulative_feature_refs(catalog, rc_cls_id, rc_subclass_id, rc_level)
         choice_templates += _feature_choice_templates(catalog, rc_cls_id, rc_cls["name"], feature_refs, rc_subclass_id)
-        choice_templates += _asi_choice_templates(rc_cls_id, rc_cls["name"], rc_asi_levels, rc_asi_scores_by_level)
+        choice_templates += _asi_choice_templates(
+            rc_cls_id, rc_cls["name"], rc_asi_levels, rc_asi_scores_by_level, catalog, total_level, use_feat_prereqs,
+            draft.get("sources"),
+        )
+        # ASI-or-feat Task 3: a feat THIS class took at one of its own ASI
+        # levels cascades its own choice-shaped content right here, scoped
+        # under that feat's `_asi_origin` (Task 1's `origin` param, one feat
+        # per call as that param requires). The selections live in this
+        # class's own `class_choices`, already merged into `all_selections`
+        # below; the generic "feat"-kind merge sites (skills, tools,
+        # languages) pick them up by source.kind + cid substring unchanged.
+        # The ability-bonus template's selection was already applied via
+        # _resolve_asi_selected_feats/_apply_asi_progression above — it's
+        # built again here (same function, same cid) only to be shown. A
+        # prerequisite-blocked pick cascades nothing: it isn't applied.
+        for asi_feat in asi_feat_picks:
+            if asi_feat["_asi_cid"] in rc_blocked_feat_cids:
+                continue
+            if asi_feat["_asi_origin"].startswith(f"class:{rc_cls_id}:"):
+                choice_templates += _feat_choice_templates([asi_feat], origin=asi_feat["_asi_origin"])
+                choice_templates += [
+                    tpl for tpl, _ in _feat_ability_bonus_choice_templates([asi_feat], origin=asi_feat["_asi_origin"])
+                ]
 
-    use_prerequisites_prefs = (draft.get("preferences") or {}).get("usePrerequisites", {})
+    asi_selected_feats = [f for f in asi_feat_picks if f["_asi_cid"] not in prerequisite_blocked_asi_feat_cids]
+    resolved_feats = background_feats + asi_selected_feats
+
     use_prereqs = bool(use_prerequisites_prefs.get("multiclass"))
     problems += _multiclass_prerequisite_problems(resolved_classes, final_scores, use_prereqs)
     # Phase 4c-i Task 6: a NEW sibling key on the SAME usePrerequisites
-    # dict the multiclass toggle already uses (confirmed fresh, this task
-    # — `use_prerequisites_prefs` above is that exact dict), not a
-    # separate preferences shape. `final_scores` here is already
-    # POST-ASI-progression (the loop above reassigns it via
-    # _apply_asi_progression before this line runs), matching what a
-    # player's actual final character sheet shows.
-    use_feat_prereqs = bool(use_prerequisites_prefs.get("feats"))
-    problems += _feat_prerequisite_problems(resolved_feats, total_level, final_scores, use_feat_prereqs)
+    # dict the multiclass toggle already uses (`use_prerequisites_prefs`,
+    # read once before the per-class loop above so _asi_choice_templates
+    # could also use it via `use_feat_prereqs`) — not a separate
+    # preferences shape. `final_scores` here is already POST-ASI-progression
+    # (the loop above reassigns it via _apply_asi_progression before this
+    # line runs), matching what a player's actual final character sheet
+    # shows.
+    #
+    # Task 4 (ASI-or-feat): passes ONLY the background-side dict built
+    # above (background_chosen_ability_deltas_by_instance, keyed by bare
+    # `feat:{index}`) — nothing ASI-derived is merged in here (fix round
+    # 1). An ASI-selected feat's own prerequisite is already checked
+    # earlier, inside _apply_asi_progression's per-level gate (Task 3),
+    # against that level's own running scores with the pick's own delta
+    # excluded by construction (the gate runs BEFORE that delta is
+    # applied) — a pick that fails that gate is filtered out of
+    # `resolved_feats` entirely and never reaches this call. So an
+    # ASI-origin feat here has ALREADY had its own bonus's influence on
+    # its own prerequisite correctly excluded; re-subtracting it a second
+    # time via this parameter would be redundant at best (the delta WAS
+    # applied, so it's already legitimately excluded by the gate's own
+    # scores) and wrong at worst (if the delta was cap-skipped by
+    # asi_exceeds_cap — the feat still granted, but that specific
+    # increase never applied — subtracting a delta that was never added
+    # to `final_scores` produces a false "prerequisite unmet"). Only a
+    # background-granted feat needs the explicit subtraction this
+    # function does, since it has no equivalent per-level gate.
+    problems += _feat_prerequisite_problems(
+        resolved_feats, total_level, final_scores, use_feat_prereqs, background_chosen_ability_deltas_by_instance,
+    )
 
     modifiers = derived_mod.ability_modifiers(final_scores)
     # Prof bonus is confirmed class-agnostic at a given level (per the
@@ -1695,7 +2112,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # it defaults to `[]` when there's no background, so this call is a
     # safe no-op in that case, not gated behind `if bg and bg_id` like the
     # background-choice-templates call just above.
-    choice_templates += _feat_choice_templates(resolved_feats)
+    choice_templates += _feat_choice_templates(background_feats)  # ASI-selected feats' templates: built origin-scoped in the per-class loop
     # Phase 4c-ii Task 2: `feat_ability_choice_tpls` was already built (and
     # applied to `feat_bonuses`) EARLY, in the "Final ability scores"
     # section above — appended here, unconditionally, mirroring exactly how
@@ -2210,7 +2627,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "damageModifiers": damage_modifiers,
         "conditionImmunities": condition_immunities,
         "innateSpells": innate_spells,
-        "grantedFeats": granted_feats,
+        # Background grants keep their bare-slug ids (unchanged); a feat
+        # taken at an ASI level is appended by its full catalog index
+        # (e.g. "actor-xphb") — the exact id it was selected by.
+        "grantedFeats": granted_feats + [f["index"] for f in asi_selected_feats],
         "featOptions": feat_options,
         "senses": senses,
         "expertiseSkills": _feat_expertise_skills(resolved_feats),
