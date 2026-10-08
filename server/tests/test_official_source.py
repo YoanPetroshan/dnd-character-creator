@@ -2028,3 +2028,45 @@ def test_choice_shaped_expertise_and_saving_throw_become_envelopes():
     options = feats["resilient-xphb"]["saving_throw_choices"][0]["from"]["options"]
     assert [o["item"]["index"] for o in options] == ["str", "dex", "con", "int", "wis", "cha"]
     assert feats["actor-xphb"]["saving_throw_choices"] == []
+
+
+# --- feats' additionalSpells: fixed spell names (feat-additional-spells plan, slice 1) ---
+
+def _feats_by_id():
+    return {f["index"]: f for f in load_official_feats(official_dir())}
+
+
+def test_feat_innate_spells_inherit_ability_and_daily_use():
+    feats = _feats_by_id()
+    assert feats["telepathic-xphb"]["innate_spells"] == [
+        {"name": "Detect Thoughts", "spell_id": "detect-thoughts", "level": None, "uses": "1/day",
+         "ability": "inherit", "variant": None}
+    ]
+
+
+def test_feat_innate_spells_strip_source_suffix_and_at_will():
+    spells = _feats_by_id()["telekinetic-xphb"]["innate_spells"]
+    assert [(s["name"], s["uses"], s["ability"]) for s in spells] == [("Mage Hand", "at-will", "inherit")]
+
+
+def test_feat_innate_spells_numeric_level_keys_and_choose_ability():
+    feat = _feats_by_id()["mark-of-storm-efa"]
+    by_name = {s["name"]: s for s in feat["innate_spells"]}
+    assert by_name["Thunderclap"]["level"] is None and by_name["Thunderclap"]["uses"] == "at-will"
+    assert by_name["Gust Of Wind"]["level"] == 3 and by_name["Gust Of Wind"]["uses"] == "1/day"
+    assert all(s["ability"] == {"choose": ["INT", "WIS", "CHA"]} for s in feat["innate_spells"])
+    assert len(feat["innate_spells"]) == 2  # expanded is not modelled
+
+
+def test_feat_prepared_maps_to_prepared_and_first_entry_fallback():
+    feats = _feats_by_id()
+    assert [(s["name"], s["uses"]) for s in feats["cloying-mists-abh"]["innate_spells"]] == [("Fog Cloud", "prepared")]
+    assert [(s["name"], s["uses"]) for s in feats["cold-caster-frhof"]["innate_spells"]] == [("Ray Of Frost", "at-will")]
+
+
+def test_feat_innate_spells_skipped_deferred_and_slot_keyed():
+    feats = _feats_by_id()
+    assert feats["rune-shaper-bgg"]["innate_spells"] == []
+    assert feats["magic-initiate-xphb"]["innate_spells"] == []  # multi-entry named variants: deferred
+    assert feats["abjuration-adept-au"]["innate_spells"] == []  # slot-level keys
+    assert [s["name"] for s in feats["fey-touched-xphb"]["innate_spells"]] == ["Misty Step"]  # filter items ignored

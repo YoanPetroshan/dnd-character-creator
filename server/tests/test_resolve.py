@@ -3077,6 +3077,7 @@ def _synthetic_feat(**overrides) -> dict:
         "languages": [], "language_options": None,
         "resist": [], "immune": [], "condition_immune": [], "senses": {},
         "expertise_skills": [], "saving_throw_proficiencies": [],
+        "innate_spells": [],
     }
     feat.update(overrides)
     return feat
@@ -4546,3 +4547,40 @@ def test_potent_dragonmark_cannot_satisfy_itself(catalog):
         [_fighter4_asi("potent-dragonmark-efa")], ["srd", "xphb", "efa"], "acolyte-xphb"), catalog)
     assert "feat-prerequisite-unmet-potent-dragonmark-efa" in [p["id"] for p in res["problems"]]
     assert "potent-dragonmark-efa" not in res["sheet"]["grantedFeats"]
+
+
+# --- feats' additionalSpells: fixed innate spells on the sheet (slice 1) ---
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_asi_feat_innate_spell_inherit_ability(catalog):
+    fc = {"class:fighter:4:asi": ["feat:telepathic-xphb"]}
+    draft = _fighter_acolyte_human_draft(sources=_SRD_AND_XPHB, classes=[{"classId": "fighter", "level": 4, "choices": fc}])
+    r = resolve(draft, catalog)
+    assert {
+        "spellId": "detect-thoughts", "name": "Detect Thoughts", "level": None, "uses": "1/day",
+        "ability": {"choose": ["INT", "WIS", "CHA"]}, "variant": None, "featId": "telepathic-xphb",
+    } in r["sheet"]["innateSpells"]
+    fc["class:fighter:4:asi:feat:telepathic-xphb:ability-bonus"] = ["wis"]
+    r2 = resolve(draft, catalog)
+    entry = next(e for e in r2["sheet"]["innateSpells"] if e["featId"] == "telepathic-xphb")
+    assert entry["ability"] == "WIS"
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_background_granted_feat_innate_spells_on_sheet(catalog):
+    draft = _fighter_acolyte_human_draft(sources=["srd", "efa"], background={"id": "house-cannith-heir-efa", "choices": {}})
+    r = resolve(draft, catalog)
+    spells = {(e["name"], e["uses"]) for e in r["sheet"]["innateSpells"] if e.get("featId") == "mark-of-making-efa"}
+    assert ("Mending", "at-will") in spells and ("Magic Weapon", "1/day") in spells
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_unresolvable_feat_spell_keeps_name_with_null_spell_id(catalog):
+    draft = _fighter_acolyte_human_draft(sources=["srd", "lfl"], background={"id": "shadowmoor-expert-lfl", "choices": {}})
+    r = resolve(draft, catalog)
+    hex_entries = [e for e in r["sheet"]["innateSpells"] if e["name"] == "Hex"]
+    assert hex_entries and hex_entries[0]["spellId"] is None
+
+
+def test_srd_draft_has_no_innate_spells(catalog):
+    assert resolve(_fighter_acolyte_human_draft(), catalog)["sheet"]["innateSpells"] == []

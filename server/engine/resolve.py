@@ -411,16 +411,56 @@ def _species_innate_spells(race: dict | None, subrace: dict | None, catalog: Cat
         if not src:
             continue
         for entry in src.get("innate_spells", []):
-            spell = catalog.spells.get(entry["spell_id"])
-            innate.append({
-                "spellId": entry["spell_id"] if spell else None,
-                "name": spell["name"] if spell else entry["name"],
-                "level": entry["level"],
-                "uses": entry["uses"],
-                "ability": entry["ability"],
-                "variant": entry["variant"],
-            })
+            innate.append(_innate_entry_to_sheet(entry, catalog))
     return innate
+
+
+def _innate_entry_to_sheet(entry: dict, catalog: Catalog) -> dict:
+    """One catalog innate-spell entry -> sheet shape, resolving spell_id
+    against catalog.spells (spellId None + fallback name when absent)."""
+    spell = catalog.spells.get(entry["spell_id"])
+    return {
+        "spellId": entry["spell_id"] if spell else None,
+        "name": spell["name"] if spell else entry["name"],
+        "level": entry["level"],
+        "uses": entry["uses"],
+        "ability": entry["ability"],
+        "variant": entry["variant"],
+    }
+
+
+def _feat_cid_prefix(feat: dict) -> str:
+    """Same cid prefix _feat_choice_templates scopes a feat's choices under."""
+    return feat.get("_asi_origin") or f"feat:{feat['index']}"
+
+
+def _feat_spell_ability(feat: dict, ability, choices: list[dict]):
+    """Resolves the literal "inherit" ability to the ability the feat
+    increased (its :ability-bonus choice): the picked ability, the
+    candidate list while pending, or None if the feat has no such choice."""
+    if ability != "inherit":
+        return ability
+    cid = f"{_feat_cid_prefix(feat)}:ability-bonus"
+    choice = next((c for c in choices if c["id"] == cid), None)
+    if choice is None:
+        return None
+    if choice.get("selected"):
+        return choice["selected"][0].upper()
+    return {"choose": [o["id"].upper() for o in choice["options"]]}
+
+
+def _feat_innate_spells(feats: list[dict], catalog: Catalog, choices: list[dict]) -> list[dict]:
+    """Sheet innate-spell entries granted by feats (fixed names), each
+    tagged with its featId. Not filtered by character level, matching
+    the race behaviour."""
+    out: list[dict] = []
+    for feat in feats:
+        for entry in feat.get("innate_spells", []) or []:
+            sheet_entry = _innate_entry_to_sheet(entry, catalog)
+            sheet_entry["ability"] = _feat_spell_ability(feat, entry["ability"], choices)
+            sheet_entry["featId"] = feat["index"]
+            out.append(sheet_entry)
+    return out
 
 
 def _species_ability_bonus_choice_template(race: dict | None, subrace: dict | None, race_id: str | None) -> dict | None:
@@ -2921,7 +2961,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     damage_modifiers = _species_damage_modifiers(race, subrace, resolved_feats)
     condition_immunities = _species_condition_immunities(race, subrace, resolved_feats)
     senses = _feat_senses(resolved_feats)
-    innate_spells = _species_innate_spells(race, subrace, catalog)
+    innate_spells = _species_innate_spells(race, subrace, catalog) + _feat_innate_spells(resolved_feats, catalog, choices)
 
     sheet = {
         "name": draft.get("name") or "",

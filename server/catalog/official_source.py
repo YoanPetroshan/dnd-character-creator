@@ -2017,7 +2017,81 @@ def _feat_from_5etools(raw: dict) -> dict | None:
         "saving_throw_proficiencies": _saving_throw_proficiencies_from_5etools(raw),
         "expertise_choices": _expertise_choices_from_5etools(raw),
         "saving_throw_choices": _saving_throw_choices_from_5etools(raw),
+        # feat-additional-spells plan: fixed spell-name grants only (see
+        # _feat_innate_spells_from_5etools).
+        "innate_spells": _feat_innate_spells_from_5etools(raw, index),
     }
+
+
+# Rune Shaper lists 14 runes but the rule is "know half your proficiency
+# bonus" — a flat list would misrepresent it, so it is skipped.
+_FEAT_SPELLS_SKIP = {"rune-shaper-bgg"}
+
+
+def _feat_spell_uses_and_items(mechanism: str, level_value) -> list[tuple[str, list]]:
+    """Feat-side counterpart of _innate_spell_uses_and_names (left
+    untouched for races): returns (uses, items) pairs for ONE
+    additionalSpells[mechanism][level_key] value. A plain list means
+    at-will for innate/known and "prepared" for prepared; dict wrappers
+    "will", "daily"/"rest" (every count key, including "1e") and "ritual"
+    are recognised; anything else is skipped."""
+    if isinstance(level_value, list):
+        return [("prepared" if mechanism == "prepared" else "at-will", level_value)]
+    out: list[tuple[str, list]] = []
+    if isinstance(level_value, dict):
+        for wrapper, value in level_value.items():
+            if wrapper == "will" and isinstance(value, list):
+                out.append(("at-will", value))
+            elif wrapper in ("daily", "rest") and isinstance(value, dict):
+                for items in value.values():
+                    if isinstance(items, list):
+                        out.append(("1/day", items))
+            elif wrapper == "ritual" and isinstance(value, list):
+                out.append(("ritual", value))
+    return out
+
+
+def _feat_innate_spells_from_5etools(raw: dict, index: str) -> list[dict]:
+    """Converts a feat's additionalSpells into race-shaped innate_spells
+    entries — ONLY fixed spell names (string items) under innate/known/
+    prepared with level key "_" or a character-level digit. Skipped:
+    `expanded`, slot-level "sN" keys, choose/filter items, the
+    _FEAT_SPELLS_SKIP feats, and multi-entry feats whose entries all carry
+    a "name" (mutually exclusive variants, deferred). A multi-entry feat
+    without names (Cold Caster) keeps only its first entry (disclosed)."""
+    if index in _FEAT_SPELLS_SKIP:
+        return []
+    entries = [e for e in (raw.get("additionalSpells") or []) if isinstance(e, dict)]
+    if len(entries) > 1:
+        if all("name" in e for e in entries):
+            return []
+        entries = entries[:1]
+    results: list[dict] = []
+    for entry in entries:
+        ability = "inherit" if entry.get("ability") == "inherit" else _innate_spell_ability(entry.get("ability"))
+        for mechanism in ("innate", "known", "prepared"):
+            block = entry.get(mechanism)
+            if not isinstance(block, dict):
+                continue
+            for key, level_value in block.items():
+                if key == "_":
+                    level = None
+                elif key.isdigit():
+                    level = int(key)
+                else:
+                    continue
+                for uses, items in _feat_spell_uses_and_items(mechanism, level_value):
+                    for item in items:
+                        if not isinstance(item, str):
+                            continue
+                        clean = _clean_innate_spell_name(item)
+                        if not clean:
+                            continue
+                        results.append({
+                            "name": clean.title(), "spell_id": slug(clean), "level": level,
+                            "uses": uses, "ability": ability, "variant": None,
+                        })
+    return results
 
 
 def _expertise_skills_from_5etools(raw: dict) -> list[str]:
