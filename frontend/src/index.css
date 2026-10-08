@@ -351,3 +351,73 @@ main {
   border-left: 3px solid #e0a800;
   border-radius: 0 4px 4px 0;
 }
+
+/* --- Mobile/touch structural rules (no visual restyling) --- */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* >=16px prevents iOS Safari zooming on focus. */
+input,
+select,
+textarea,
+button {
+  font-size: 16px;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: 20px;
+  height: 20px;
+  margin: 0 8px 0 0;
+  flex: 0 0 auto;
+}
+
+button,
+.tab-bar button,
+.point-buy-stepper button,
+.choice-card__header {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.choice-picker li,
+.picker-list li,
+.item-browser-list li,
+.inventory-list li {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.choice-picker label,
+.picker-list label,
+.item-browser-list label,
+.inventory-list label,
+.ability-method-selector label,
+fieldset label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.ability-method-selector {
+  flex-wrap: wrap;
+}
+
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.ability-table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.item-browser-list,
+.inventory-list,
+.spell-library-list {
+  overscroll-behavior: contain;
+}
