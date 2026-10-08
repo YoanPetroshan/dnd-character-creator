@@ -1969,6 +1969,7 @@ def _feat_from_5etools(raw: dict) -> dict | None:
     # race-side counterpart to reuse — see _senses_from_5etools' own
     # docstring.
     feat_resist, feat_immune, _feat_vulnerable = _damage_modifiers_from_5etools(raw)
+    feat_innate_spells, feat_spell_choices = _feat_spells_from_5etools(raw, index)
 
     return {
         "index": index,
@@ -2019,7 +2020,8 @@ def _feat_from_5etools(raw: dict) -> dict | None:
         "saving_throw_choices": _saving_throw_choices_from_5etools(raw),
         # feat-additional-spells plan: fixed spell-name grants only (see
         # _feat_innate_spells_from_5etools).
-        "innate_spells": _feat_innate_spells_from_5etools(raw, index),
+        "innate_spells": feat_innate_spells,
+        "spell_choices": feat_spell_choices,
     }
 
 
@@ -2051,22 +2053,65 @@ def _feat_spell_uses_and_items(mechanism: str, level_value) -> list[tuple[str, l
     return out
 
 
-def _feat_innate_spells_from_5etools(raw: dict, index: str) -> list[dict]:
-    """Converts a feat's additionalSpells into race-shaped innate_spells
-    entries — ONLY fixed spell names (string items) under innate/known/
-    prepared with level key "_" or a character-level digit. Skipped:
-    `expanded`, slot-level "sN" keys, choose/filter items, the
-    _FEAT_SPELLS_SKIP feats, and multi-entry feats whose entries all carry
-    a "name" (mutually exclusive variants, deferred). A multi-entry feat
-    without names (Cold Caster) keeps only its first entry (disclosed)."""
+_SPELL_SCHOOL_CODES = {
+    "A": "abjuration", "C": "conjuration", "D": "divination", "E": "enchantment",
+    "V": "evocation", "I": "illusion", "N": "necromancy", "T": "transmutation",
+}
+
+
+def _parse_spell_filter(text: str) -> dict | None:
+    """Parses a 5etools spell query ("level=1|school=E;D") into
+    {"level": [int], "class": [lowercase], "school": [full lowercase
+    names], "ritual": True}. Any unrecognised key (or malformed value)
+    makes the whole filter unusable -> None."""
+    result: dict = {}
+    for part in text.split("|"):
+        if "=" not in part:
+            return None
+        key, value = part.split("=", 1)
+        key = key.strip().lower()
+        values = [v.strip().lower() for v in value.split(";") if v.strip()]
+        if key == "level":
+            try:
+                result["level"] = [int(v) for v in values]
+            except ValueError:
+                return None
+        elif key == "class":
+            result["class"] = values
+        elif key == "school":
+            schools = [_SPELL_SCHOOL_CODES.get(v.upper()) for v in values]
+            if not schools or None in schools:
+                return None
+            result["school"] = schools
+        elif key == "components & miscellaneous":
+            if "ritual" not in values:
+                return None
+            result["ritual"] = True
+        else:
+            return None
+    return result or None
+
+
+def _feat_spells_from_5etools(raw: dict, index: str) -> tuple[list[dict], list[dict]]:
+    """Converts a feat's additionalSpells into (innate_spells,
+    spell_choices). innate_spells: race-shaped entries for fixed spell
+    names (string items) under innate/known/prepared with level key "_" or
+    a character-level digit. spell_choices: one entry per
+    {"choose": "<query>"} item: {variant, level, uses, ability, count,
+    filter, from}. Skipped: `expanded`, slot-level "sN" keys, the
+    _FEAT_SPELLS_SKIP feats, unparseable filters, and multi-entry feats
+    whose entries all carry a "name" (mutually exclusive variants,
+    deferred). A multi-entry feat without names (Cold Caster) keeps only
+    its first entry (disclosed)."""
     if index in _FEAT_SPELLS_SKIP:
-        return []
+        return [], []
     entries = [e for e in (raw.get("additionalSpells") or []) if isinstance(e, dict)]
     if len(entries) > 1:
         if all("name" in e for e in entries):
-            return []
+            return [], []
         entries = entries[:1]
     results: list[dict] = []
+    choices: list[dict] = []
     for entry in entries:
         ability = "inherit" if entry.get("ability") == "inherit" else _innate_spell_ability(entry.get("ability"))
         for mechanism in ("innate", "known", "prepared"):
@@ -2082,6 +2127,14 @@ def _feat_innate_spells_from_5etools(raw: dict, index: str) -> list[dict]:
                     continue
                 for uses, items in _feat_spell_uses_and_items(mechanism, level_value):
                     for item in items:
+                        if isinstance(item, dict) and isinstance(item.get("choose"), str):
+                            parsed = _parse_spell_filter(item["choose"])
+                            if parsed is not None:
+                                choices.append({
+                                    "variant": None, "level": level, "uses": uses, "ability": ability,
+                                    "count": item.get("count", 1), "filter": parsed, "from": None,
+                                })
+                            continue
                         if not isinstance(item, str):
                             continue
                         clean = _clean_innate_spell_name(item)
@@ -2091,7 +2144,7 @@ def _feat_innate_spells_from_5etools(raw: dict, index: str) -> list[dict]:
                             "name": clean.title(), "spell_id": slug(clean), "level": level,
                             "uses": uses, "ability": ability, "variant": None,
                         })
-    return results
+    return results, choices
 
 
 def _expertise_skills_from_5etools(raw: dict) -> list[str]:

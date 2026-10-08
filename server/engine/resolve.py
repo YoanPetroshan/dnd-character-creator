@@ -454,13 +454,89 @@ def _feat_innate_spells(feats: list[dict], catalog: Catalog, choices: list[dict]
     tagged with its featId. Not filtered by character level, matching
     the race behaviour."""
     out: list[dict] = []
+    by_id = {c["id"]: c for c in choices}
     for feat in feats:
         for entry in feat.get("innate_spells", []) or []:
             sheet_entry = _innate_entry_to_sheet(entry, catalog)
             sheet_entry["ability"] = _feat_spell_ability(feat, entry["ability"], choices)
             sheet_entry["featId"] = feat["index"]
             out.append(sheet_entry)
+        for i, sc in enumerate(feat.get("spell_choices", []) or []):
+            choice = by_id.get(f"{_feat_cid_prefix(feat)}:spell-choice-{i}")
+            if not choice:
+                continue
+            for sid in choice.get("selected", []):
+                spell = catalog.spells.get(sid)
+                if not spell:
+                    continue
+                out.append({
+                    "spellId": sid, "name": spell["name"], "level": sc["level"], "uses": sc["uses"],
+                    "ability": _feat_spell_ability(feat, sc["ability"], choices),
+                    "variant": None, "featId": feat["index"],
+                })
     return out
+
+
+def _spell_filter_options(catalog: Catalog, flt: dict) -> list[dict]:
+    """Catalog spells matching a parsed feat spell filter (see
+    official_source._parse_spell_filter), sorted by (level, name), as
+    reference options."""
+    matches = []
+    for sp in catalog.spells.values():
+        if "level" in flt and sp["level"] not in flt["level"]:
+            continue
+        if "class" in flt and not any(c["index"] in flt["class"] for c in sp.get("classes", [])):
+            continue
+        if "school" in flt and (sp.get("school") or {}).get("index") not in flt["school"]:
+            continue
+        if flt.get("ritual") and not sp.get("ritual"):
+            continue
+        matches.append(sp)
+    matches.sort(key=lambda sp: (sp["level"], sp["name"]))
+    return [{"option_type": "reference", "item": {"index": sp["index"], "name": sp["name"]}} for sp in matches]
+
+
+def _spell_filter_description(count: int, flt: dict) -> str:
+    level = flt.get("level")
+    if level == [0]:
+        noun = "cantrip"
+    else:
+        noun = (f"level {' or '.join(str(x) for x in level)} " if level else "") + "spell"
+    if flt.get("school"):
+        noun = " or ".join(x.title() for x in flt["school"]) + " " + noun
+    if flt.get("class"):
+        noun += " from the " + " or ".join(x.title() for x in flt["class"]) + " list"
+    if flt.get("ritual"):
+        noun += " with the Ritual tag"
+    return f"Choose {count} {noun}{'s' if count != 1 else ''}."
+
+
+def _feat_spell_choice_templates(feats: list[dict], catalog: Catalog, origin: str | None = None) -> list[dict]:
+    """Spell-pick Choices for feats' `spell_choices` filter entries. Cids
+    are `{prefix}:spell-choice-{i}` (i = position in the feat's
+    spell_choices), prefix as in _feat_choice_templates."""
+    templates = []
+    for feat in feats:
+        prefix = origin if origin is not None else f"feat:{feat['index']}"
+        for i, sc in enumerate(feat.get("spell_choices", []) or []):
+            flt = sc.get("filter")
+            if not flt:
+                continue
+            options = _spell_filter_options(catalog, flt)
+            if not options:
+                continue
+            source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
+            if origin is not None and feat.get("_asi_level") is not None:
+                source["level"] = feat["_asi_level"]
+            kind = "Cantrip" if flt.get("level") == [0] else "Spell"
+            envelope = {"choose": sc["count"], "from": {"option_set_type": "options_array", "options": options}}
+            tpl = build_choice_template(
+                envelope, f"{prefix}:spell-choice-{i}", source, f"{feat['name']}: {kind}",
+                description=_spell_filter_description(sc["count"], flt),
+            )
+            if tpl:
+                templates.append(tpl)
+    return templates
 
 
 def _species_ability_bonus_choice_template(race: dict | None, subrace: dict | None, race_id: str | None) -> dict | None:
@@ -2383,6 +2459,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 continue
             if asi_feat["_asi_origin"].startswith(f"class:{rc_cls_id}:"):
                 choice_templates += _feat_choice_templates([asi_feat], origin=asi_feat["_asi_origin"])
+                choice_templates += _feat_spell_choice_templates([asi_feat], catalog, origin=asi_feat["_asi_origin"])
                 choice_templates += [
                     tpl for tpl, _ in _feat_ability_bonus_choice_templates([asi_feat], origin=asi_feat["_asi_origin"])
                 ]
@@ -2459,6 +2536,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # it defaults to `[]` when there's no background, so this call is a
     # safe no-op in that case, not gated behind `if bg and bg_id` like the
     # background-choice-templates call just above.
+    choice_templates += _feat_spell_choice_templates(background_feats, catalog)
     choice_templates += _feat_choice_templates(background_feats)  # ASI-selected feats' templates: built origin-scoped in the per-class loop
     # Phase 4c-ii Task 2: `feat_ability_choice_tpls` was already built (and
     # applied to `feat_bonuses`) EARLY, in the "Final ability scores"

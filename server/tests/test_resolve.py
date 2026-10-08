@@ -11,7 +11,7 @@ from engine.resolve import (
     _feat_choice_templates, _feat_expertise_skills, _feat_languages,
     _feat_prerequisite_problems, _feat_proficiency_ids, _feat_saving_throw_proficiencies,
     _HeldFeatState, _feat_prerequisite_unmet_reason,
-    _feat_senses, _gate_expertise_choices, _resolve_granted_feats, resolve,
+    _feat_senses, _gate_expertise_choices, _spell_filter_options, _resolve_granted_feats, resolve,
 )
 
 
@@ -3077,7 +3077,7 @@ def _synthetic_feat(**overrides) -> dict:
         "languages": [], "language_options": None,
         "resist": [], "immune": [], "condition_immune": [], "senses": {},
         "expertise_skills": [], "saving_throw_proficiencies": [],
-        "innate_spells": [],
+        "innate_spells": [], "spell_choices": [],
     }
     feat.update(overrides)
     return feat
@@ -4584,3 +4584,71 @@ def test_unresolvable_feat_spell_keeps_name_with_null_spell_id(catalog):
 
 def test_srd_draft_has_no_innate_spells(catalog):
     assert resolve(_fighter_acolyte_human_draft(), catalog)["sheet"]["innateSpells"] == []
+
+
+# --- feats' additionalSpells: query-filter selectors (slice 3) ---
+
+def test_parse_spell_filter():
+    from catalog.official_source import _parse_spell_filter
+    assert _parse_spell_filter("level=1|school=E;D") == {"level": [1], "school": ["enchantment", "divination"]}
+    assert _parse_spell_filter("level=1|components & miscellaneous=ritual") == {"level": [1], "ritual": True}
+    assert _parse_spell_filter("level=0|class=Sorcerer") == {"level": [0], "class": ["sorcerer"]}
+    assert _parse_spell_filter("level=1|bogus=x") is None
+
+
+def test_spell_filter_options_by_level_and_school(catalog):
+    opts = _spell_filter_options(catalog, {"level": [1], "school": ["illusion", "necromancy"]})
+    ids = [o["item"]["index"] for o in opts]
+    assert len(opts) == 6 and "color-spray" in ids and "inflict-wounds" in ids
+
+
+_FEY_CID = "class:fighter:4:asi:feat:fey-touched-xphb:spell-choice-0"
+
+
+def _fey_draft(selection=None, feat_pick=True):
+    fc = {"class:fighter:4:asi": ["feat:fey-touched-xphb"] if feat_pick else []}
+    if selection is not None:
+        fc[_FEY_CID] = selection
+    return _fighter_acolyte_human_draft(sources=_SRD_AND_XPHB, classes=[{"classId": "fighter", "level": 4, "choices": fc}])
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_fey_touched_spell_choice_pending_then_adds_innate_spell(catalog):
+    r = resolve(_fey_draft(), catalog)
+    choice = next(c for c in r["choices"] if c["id"] == _FEY_CID)
+    assert len(choice["options"]) == 15 and choice["status"] == "pending"
+    r2 = resolve(_fey_draft(["bless"]), catalog)
+    assert next(c for c in r2["choices"] if c["id"] == _FEY_CID)["status"] == "resolved"
+    by_name = {e["name"]: e for e in r2["sheet"]["innateSpells"]}
+    assert by_name["Misty Step"]["uses"] == "1/day"
+    assert by_name["Bless"]["uses"] == "1/day" and by_name["Bless"]["featId"] == "fey-touched-xphb"
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_fey_touched_invalid_spell_selection_is_dropped(catalog):
+    r = resolve(_fey_draft(["fire-bolt"]), catalog)
+    choice = next(c for c in r["choices"] if c["id"] == _FEY_CID)
+    assert choice["selected"] == []
+    assert "Fire Bolt" not in [e["name"] for e in r["sheet"]["innateSpells"]]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_deselecting_the_feat_prunes_its_spell_choice(catalog):
+    draft = _fey_draft(["bless"], feat_pick=False)
+    r = resolve(draft, catalog)
+    assert _FEY_CID in [p["choiceId"] for p in r["pruned"]]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_aberrant_dragonmark_cantrip_and_level_one_choices(catalog):
+    base = "feat:aberrant-dragonmark-efa:spell-choice-"
+    draft = _fighter_acolyte_human_draft(sources=["srd", "efa"], background={"id": "aberrant-heir-efa", "choices": {}})
+    r = resolve(draft, catalog)
+    c0 = next(c for c in r["choices"] if c["id"] == base + "0")
+    c1 = next(c for c in r["choices"] if c["id"] == base + "1")
+    assert c0["count"] == 1 and len(c0["options"]) == 14 and len(c1["options"]) == 17
+    draft["background"]["choices"] = {base + "0": ["acid-splash"], base + "1": ["burning-hands"]}
+    r2 = resolve(draft, catalog)
+    by_name = {e["name"]: e for e in r2["sheet"]["innateSpells"] if e.get("featId") == "aberrant-dragonmark-efa"}
+    assert by_name["Acid Splash"]["uses"] == "at-will" and by_name["Acid Splash"]["ability"] == "CON"
+    assert by_name["Burning Hands"]["uses"] == "1/day" and by_name["Burning Hands"]["ability"] == "CON"
