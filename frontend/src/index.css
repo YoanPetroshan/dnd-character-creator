@@ -421,3 +421,14 @@ fieldset label {
 .spell-library-list {
   overscroll-behavior: contain;
 }
+
+/* Notch / home-indicator safe areas (viewport-fit=cover). */
+.step-nav {
+  padding-left: max(8px, env(safe-area-inset-left));
+  padding-right: max(8px, env(safe-area-inset-right));
+  padding-top: max(8px, env(safe-area-inset-top));
+}
+
+main {
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
