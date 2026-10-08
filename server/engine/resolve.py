@@ -60,6 +60,7 @@ from . import asi as asi_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
 from . import spells as spells_mod
+from .normalize import normalize_draft
 
 _DETAIL_FIELDS = (
     "alignment", "faith", "lifestyle",
@@ -2123,7 +2124,7 @@ def _apply_species_overlap(class_templates: list[dict], race: dict | None, subra
 
 
 def resolve(draft: dict, catalog: Catalog) -> dict:
-    problems: list[dict] = []
+    draft, problems = normalize_draft(draft)
     warnings: list[dict] = []
 
     classes_raw = draft.get("classes")

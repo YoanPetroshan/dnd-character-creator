@@ -28,6 +28,17 @@ CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
 _catalog = load_catalog()
 
 
+@app.errorhandler(Exception)
+def handle_unexpected(exc):
+    """Every failure is JSON so the SPA can show a readable message
+    instead of choking on an HTML error page."""
+    from werkzeug.exceptions import HTTPException
+    if isinstance(exc, HTTPException):
+        return jsonify({"error": exc.description or exc.name}), exc.code
+    app.logger.exception("unhandled error")
+    return jsonify({"error": "The server couldn't process this character. Check the draft and try again."}), 500
+
+
 @app.route("/api/health")
 def health():
     return jsonify({"ok": True})
