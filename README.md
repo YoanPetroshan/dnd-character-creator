@@ -21,6 +21,19 @@ the `dnd-app-bg` play app's builder. Produces three exports per character:
 
 Then open http://127.0.0.1:5300/
 
+## Testing on a phone
+
+Phone and computer must be on the same Wi-Fi. Find the computer's LAN IP with
+`ipconfig getifaddr en0` (macOS may show a firewall prompt).
+
+- Option A (one origin, closest to production): from `frontend/` run
+  `npm run build`, then from `server/` run
+  `HOST=0.0.0.0 ../.venv/bin/python app.py` and open `http://<LAN-IP>:8000`.
+  Flask serves the built app and the API. The default host is `127.0.0.1`
+  (LAN access is opt-in); set `FLASK_DEBUG=1` for the debugger.
+- Option B (hot reload): run the backend as above, then `npm run dev:lan`
+  in `frontend/` and open `http://<LAN-IP>:5173`.
+
 ## Test
 
     .venv/bin/pytest tests/ -v
