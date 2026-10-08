@@ -971,11 +971,10 @@ def _innate_spell_ability(ability_raw) -> str | dict | None:
     a `{"choose": [...]}` list of candidate abilities the player picks
     from (e.g. Aarakocra/MPMM: `{"choose": ["int", "wis", "cha"]}`).
 
-    Resolving that choice into a single committed ability is out of scope
-    here — same "record the real data, don't build new choice-resolution
-    machinery" line Task 5 drew for choice-shaped resistances — so the
-    candidate list is carried through as descriptive data for display,
-    not wired into catalog/choices.py's Choice machinery."""
+    Race candidate lists are carried through as descriptive data. For feats
+    the list is resolved by engine.resolve's `{prefix}:spell-ability`
+    Choice (see _feat_spell_choice_templates); feat text can also override
+    it via _feat_spell_ability_override."""
     if isinstance(ability_raw, str):
         return ability_raw.upper()
     if isinstance(ability_raw, dict) and isinstance(ability_raw.get("choose"), list):
@@ -2034,6 +2033,29 @@ def _feat_from_5etools(raw: dict) -> dict | None:
 # bonus" — a flat list would misrepresent it, so it is skipped.
 _FEAT_SPELLS_SKIP = {"rune-shaper-bgg"}
 
+# The feat's own text decides which spellcasting-ability rule applies, since
+# the raw additionalSpells `ability` is often missing or a generic choose list.
+_INHERIT_ABILITY_RE = re.compile(r"spellcasting ability[^.]*?\bis the ability increased by this feat", re.I)
+_SAME_AS_FEAT_ABILITY_RE = re.compile(r"spellcasting ability[^.]*?chosen for your [^.]*?feat", re.I)
+
+
+def _feat_spell_ability_override(raw: dict, index: str | None = None) -> str | dict | None:
+    """Returns {"sameAsFeat": "<feat index>"} when the feat text says its
+    spellcasting ability is the one chosen for another feat (and its
+    prerequisites name exactly one feat), "inherit" when the text says it is
+    the ability increased by this feat (and the feat has an ability
+    increase), else None (no override)."""
+    text = json.dumps(raw.get("entries") or [])
+    if _SAME_AS_FEAT_ABILITY_RE.search(text):
+        refs = [ref for prereq in (raw.get("prerequisite") or []) if isinstance(prereq, dict)
+                for ref in (prereq.get("feat") or []) if isinstance(ref, str)]
+        if len(refs) == 1:
+            name, _, src = refs[0].partition("|")
+            return {"sameAsFeat": f"{slug(name)}-{src.strip().lower()}"}
+    if _INHERIT_ABILITY_RE.search(text) and raw.get("ability"):
+        return "inherit"
+    return None
+
 
 def _feat_spell_uses_and_items(mechanism: str, level_value) -> list[tuple[str, list]]:
     """Feat-side counterpart of _innate_spell_uses_and_names (left
@@ -2123,9 +2145,14 @@ def _feat_spells_from_5etools(raw: dict, index: str) -> tuple[list[dict], list[d
     results: list[dict] = []
     choices: list[dict] = []
     folded: dict[tuple, dict] = {}
+    override = _feat_spell_ability_override(raw, index)
     for entry in entries:
         variant = entry["name"] if variants else None
         ability = "inherit" if entry.get("ability") == "inherit" else _innate_spell_ability(entry.get("ability"))
+        if isinstance(override, dict):
+            ability = override
+        elif override == "inherit" and (ability is None or isinstance(ability, dict)):
+            ability = "inherit"
         for mechanism in ("innate", "known", "prepared"):
             block = entry.get(mechanism)
             if not isinstance(block, dict):

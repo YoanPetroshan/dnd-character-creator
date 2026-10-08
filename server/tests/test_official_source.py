@@ -2115,7 +2115,7 @@ def test_magic_connoisseur_catalog_shape():
     got = [(c["variant"], c["filter"]["level"], c["filter"]["class"]) for c in mc["spell_choices"]]
     assert got == [(v, [lvl], [v.split()[0].lower()]) for v in mc["spell_variants"] for lvl in (1, 2)]
     for c in mc["spell_choices"]:
-        assert (c["uses"], c["ability"], c["count"], c["from"]) == ("1/day", "inherit", 1, None)
+        assert (c["uses"], c["ability"], c["count"], c["from"]) == ("1/day", {"sameAsFeat": "magic-initiate-xphb"}, 1, None)
 
 
 def test_light_bringer_catalog_shape():
@@ -2127,3 +2127,29 @@ def test_light_bringer_catalog_shape():
     c = lb["spell_choices"][0]
     assert (c["variant"], c["filter"], c["count"], c["uses"]) == (
         "Cleric Cantrip", {"level": [0], "class": ["cleric"]}, 1, "at-will")
+
+
+# --- feat spellcasting-ability rule driven by feat text (feat-spell-ability plan, slice 1) ---
+
+def test_feats_saying_ability_is_the_increased_one_inherit_it():
+    feats = _feats_by_id()
+    for fid in ("light-bringer-abh", "cloying-mists-abh", "treacherous-allure-abh", "vampire-touched-abh",
+                "ritual-caster-xphb", "cold-caster-frhof", "enclave-magic-frhof"):
+        entries = feats[fid]["innate_spells"] + feats[fid]["spell_choices"]
+        assert entries, fid
+        assert all(e["ability"] == "inherit" for e in entries), fid
+
+
+def test_magic_connoisseur_follows_the_magic_initiate_ability():
+    choices = _feats_by_id()["magic-connoisseur-au"]["spell_choices"]
+    assert choices
+    assert all(c["ability"] == {"sameAsFeat": "magic-initiate-xphb"} for c in choices)
+
+
+def test_feat_ability_rule_leaves_true_choose_fixed_and_already_inherit_alone():
+    feats = _feats_by_id()
+    assert all(s["ability"] == {"choose": ["INT", "WIS", "CHA"]} for s in feats["mark-of-storm-efa"]["innate_spells"])
+    wizard = [e for e in feats["magic-initiate-phb"]["spell_choices"] + feats["magic-initiate-phb"]["innate_spells"]
+              if e["variant"] and "Wizard" in e["variant"]]
+    assert wizard and all(e["ability"] == "INT" for e in wizard)
+    assert all(e["ability"] == "inherit" for e in feats["warlike-familiar-au"]["innate_spells"] + feats["warlike-familiar-au"]["spell_choices"])

@@ -4871,3 +4871,11 @@ def test_light_bringer_switching_variant_prunes_the_stale_cantrip_pick(catalog):
         _LB + "spell-variant": ["light"], _LB + "spell-choice-0": ["guidance"]}), catalog)
     assert _LB + "spell-choice-0" in [p["choiceId"] for p in res["pruned"]]
     assert [e["spellId"] for e in _feat_spells(res, "light-bringer-abh")] == ["light"]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_light_bringer_spell_ability_follows_its_ability_bonus_pick(catalog):
+    res = resolve(_asi_feat_spell_draft("light-bringer-abh", {_LB + "spell-variant": ["light"], _LB + "ability-bonus": ["cha"]}), catalog)
+    assert [e["ability"] for e in _feat_spells(res, "light-bringer-abh") if e["name"] == "Light"] == ["CHA"]
+    res = resolve(_asi_feat_spell_draft("light-bringer-abh", {_LB + "spell-variant": ["light"]}), catalog)
+    assert [e["ability"] for e in _feat_spells(res, "light-bringer-abh") if e["name"] == "Light"] == [{"choose": ["INT", "WIS", "CHA"]}]
