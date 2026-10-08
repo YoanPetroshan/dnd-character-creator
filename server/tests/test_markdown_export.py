@@ -335,3 +335,21 @@ def test_multiline_detail_value_stays_intact_and_does_not_break_list_structure()
     # bullet breaks out of the Markdown list structure), so the backstory
     # label should not be on the same line as the value's first line.
     assert "- **Предистория:** Първи ред." not in text
+
+
+def test_renders_armor_weapon_and_tool_proficiencies():
+    resolution = _sample_resolution()
+    resolution["sheet"]["proficiencies"].update(
+        {"armor": ["light-armor", "shields"], "weapons": ["simple-weapons"], "tools": ["smiths-tools"]}
+    )
+    text = to_markdown(resolution)
+    assert "## Владеене" in text
+    assert "**Брони:** Light armor, Shields" in text
+    assert "**Оръжия:** Simple weapons" in text
+    assert "**Инструменти:** Smiths tools" in text
+    assert "light-armor" not in text
+
+
+def test_proficiency_section_shows_a_placeholder_when_empty():
+    text = to_markdown(_sample_resolution())
+    assert "## Владеене\n—" in text

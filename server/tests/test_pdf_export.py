@@ -311,3 +311,14 @@ def test_detail_and_equipment_sections_match_markdown_export():
 
     assert pdf_export._DETAIL_SECTIONS == markdown_export._DETAIL_SECTIONS
     assert pdf_export._EQUIPMENT_SECTIONS == markdown_export._EQUIPMENT_SECTIONS
+
+
+def test_renders_armor_weapon_and_tool_proficiencies():
+    resolution = _sample_resolution()
+    resolution["sheet"]["proficiencies"].update(
+        {"armor": ["light-armor"], "weapons": ["simple-weapons"], "tools": ["smiths-tools"]}
+    )
+    text = _extract_text(to_pdf(resolution))
+    assert "Владеене" in text
+    assert "Light armor" in text and "Simple weapons" in text and "Smiths tools" in text
+    assert "light-armor" not in text

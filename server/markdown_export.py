@@ -8,9 +8,10 @@ already produces them — no new engine computation happens here.
 """
 from __future__ import annotations
 
-from catalog.reference_data import ABILITIES, LANGUAGES, SKILL_NAMES
+from catalog.reference_data import ABILITIES, LANGUAGES, SKILL_NAMES, proficiency_label
 
 _LANGUAGE_NAMES = {lang["index"]: lang["name"] for lang in LANGUAGES}
+_PROFICIENCY_SECTIONS = (("armor", "Брони"), ("weapons", "Оръжия"), ("tools", "Инструменти"))
 
 _DETAIL_SECTIONS = [
     ("Данни за героя", [("alignment", "Мирогледие"), ("faith", "Вяра/Божество"), ("lifestyle", "Начин на живот")]),
@@ -144,6 +145,17 @@ def to_markdown(resolution: dict) -> str:
     lines.append(
         ", ".join(_LANGUAGE_NAMES.get(lang_id, lang_id) for lang_id in languages) if languages else "—"
     )
+    lines.append("")
+
+    lines.append("## Владеене")
+    any_prof = False
+    for key, label in _PROFICIENCY_SECTIONS:
+        entries = sheet["proficiencies"].get(key) or []
+        if entries:
+            any_prof = True
+            lines.append(f"- **{label}:** " + ", ".join(proficiency_label(e) for e in entries))
+    if not any_prof:
+        lines.append("—")
     lines.append("")
 
     equipment = sheet["equipment"]

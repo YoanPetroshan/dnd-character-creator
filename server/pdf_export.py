@@ -13,10 +13,11 @@ from pathlib import Path
 
 from fpdf import FPDF
 
-from catalog.reference_data import ABILITIES, LANGUAGES, SKILL_NAMES
+from catalog.reference_data import ABILITIES, LANGUAGES, SKILL_NAMES, proficiency_label
 
 _FONT_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
 _LANGUAGE_NAMES = {lang["index"]: lang["name"] for lang in LANGUAGES}
+_PROFICIENCY_SECTIONS = (("armor", "Брони"), ("weapons", "Оръжия"), ("tools", "Инструменти"))
 
 _DETAIL_SECTIONS = [
     ("Данни за героя", [("alignment", "Мирогледие"), ("faith", "Вяра/Божество"), ("lifestyle", "Начин на живот")]),
@@ -158,6 +159,16 @@ def to_pdf(resolution: dict) -> bytes:
     pdf.h2("Езици")
     languages = sheet["proficiencies"]["languages"]
     pdf.body(", ".join(_LANGUAGE_NAMES.get(lang_id, lang_id) for lang_id in languages) if languages else "—")
+
+    pdf.h2("Владеене")
+    any_prof = False
+    for key, label in _PROFICIENCY_SECTIONS:
+        entries = sheet["proficiencies"].get(key) or []
+        if entries:
+            any_prof = True
+            pdf.body(f"{label}: " + ", ".join(proficiency_label(e) for e in entries))
+    if not any_prof:
+        pdf.body("—")
 
     equipment = sheet["equipment"]
     pdf.h2("Екипировка")

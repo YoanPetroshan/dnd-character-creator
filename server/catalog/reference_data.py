@@ -158,3 +158,9 @@ FULL_CASTER_CLASSES = {"bard", "cleric", "druid", "sorcerer", "wizard"}
 # the set describes a real RAW fact about both classes, independent of
 # which code branch currently reads it.
 HALF_CASTER_CLASSES = {"paladin", "ranger"}
+
+
+def proficiency_label(prof_id: str) -> str:
+    """Human-readable form of a slug proficiency id ("light-armor" ->
+    "Light armor"), used by the markdown/PDF exports."""
+    return prof_id.replace("-", " ").capitalize()
