@@ -3077,7 +3077,7 @@ def _synthetic_feat(**overrides) -> dict:
         "languages": [], "language_options": None,
         "resist": [], "immune": [], "condition_immune": [], "senses": {},
         "expertise_skills": [], "saving_throw_proficiencies": [],
-        "innate_spells": [], "spell_choices": [],
+        "innate_spells": [], "spell_choices": [], "spell_variants": [],
     }
     feat.update(overrides)
     return feat
@@ -4652,3 +4652,66 @@ def test_aberrant_dragonmark_cantrip_and_level_one_choices(catalog):
     by_name = {e["name"]: e for e in r2["sheet"]["innateSpells"] if e.get("featId") == "aberrant-dragonmark-efa"}
     assert by_name["Acid Splash"]["uses"] == "at-will" and by_name["Acid Splash"]["ability"] == "CON"
     assert by_name["Burning Hands"]["uses"] == "1/day" and by_name["Burning Hands"]["ability"] == "CON"
+
+
+# --- feats' additionalSpells: variant selection (slice 4) ---
+
+_MI_VARIANT = "feat:magic-initiate-phb:spell-variant"
+
+
+def _astral_draft(choices):
+    return _fighter_acolyte_human_draft(sources=["srd", "phb", "aag"], background={"id": "astral-drifter-aag", "choices": choices})
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_magic_initiate_variant_choice_pending_without_dependent_choices(catalog):
+    r = resolve(_astral_draft({}), catalog)
+    feat_choices = [c for c in r["choices"] if c["source"]["kind"] == "feat"]
+    assert [c["id"] for c in feat_choices] == [_MI_VARIANT]
+    assert len(feat_choices[0]["options"]) == 6 and feat_choices[0]["status"] == "pending"
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_magic_initiate_variant_selection_reveals_spell_choices(catalog):
+    r = resolve(_astral_draft({_MI_VARIANT: ["wizard-spells"]}), catalog)
+    spell_choices = [c for c in r["choices"] if ":spell-choice-" in c["id"]]
+    by_count = sorted((c["count"], len(c["options"])) for c in spell_choices)
+    assert by_count == [(1, 27), (2, 14)]
+    cid = next(c["id"] for c in spell_choices if c["count"] == 2)
+    lvl1 = next(c["id"] for c in spell_choices if c["count"] == 1)
+    r2 = resolve(_astral_draft({_MI_VARIANT: ["wizard-spells"], cid: ["fire-bolt", "light"], lvl1: ["magic-missile"]}), catalog)
+    mine = [e for e in r2["sheet"]["innateSpells"] if e.get("featId") == "magic-initiate-phb"]
+    assert {e["name"] for e in mine} == {"Fire Bolt", "Light", "Magic Missile"}
+    assert all(e["ability"] == "INT" for e in mine)
+    # switching variant leaves the stale picks reported as pruned
+    r3 = resolve(_astral_draft({_MI_VARIANT: ["cleric-spells"], cid: ["fire-bolt"]}), catalog)
+    assert cid in [p["choiceId"] for p in r3["pruned"]]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_scion_variant_with_fixed_spell_and_no_dependent_choices(catalog):
+    draft = _fighter_acolyte_human_draft(sources=["srd", "sato"], background={"id": "gate-warden-sato", "choices": {}})
+    cid = "feat:scion-of-the-outer-planes-sato:spell-variant"
+    draft["background"]["choices"][cid] = ["good-outer-plane"]
+    r = resolve(draft, catalog)
+    mine = {e["name"]: e for e in r["sheet"]["innateSpells"] if e.get("featId") == "scion-of-the-outer-planes-sato"}
+    assert mine["Sacred Flame"]["uses"] == "at-will"
+    assert [c for c in r["choices"] if ":spell-choice-" in c["id"]] == []
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_initiate_of_high_sorcery_choose_from_list(catalog):
+    draft = _fighter_acolyte_human_draft(sources=["srd", "dsotdq"], background={"id": "mage-of-high-sorcery-dsotdq", "choices": {}})
+    draft["background"]["choices"]["feat:initiate-of-high-sorcery-dsotdq:spell-variant"] = ["solinari"]
+    r = resolve(draft, catalog)
+    pick = next(c for c in r["choices"] if ":spell-choice-" in c["id"] and c["count"] == 2)
+    assert {o["id"] for o in pick["options"]} == {
+        "comprehend-languages", "detect-evil-and-good", "protection-from-evil-and-good", "shield"}
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_restricted_magic_initiate_background_offers_only_its_hinted_variant(catalog):
+    draft = _fighter_acolyte_human_draft(sources=["srd", "xphb"], background={"id": "acolyte-xphb", "choices": {}})
+    r = resolve(draft, catalog)
+    variant = next(c for c in r["choices"] if c["id"] == "feat:magic-initiate-xphb:spell-variant")
+    assert [o["id"] for o in variant["options"]] == ["cleric-spells"]

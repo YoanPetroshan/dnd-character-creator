@@ -2067,6 +2067,35 @@ def test_feat_prepared_maps_to_prepared_and_first_entry_fallback():
 def test_feat_innate_spells_skipped_deferred_and_slot_keyed():
     feats = _feats_by_id()
     assert feats["rune-shaper-bgg"]["innate_spells"] == []
-    assert feats["magic-initiate-xphb"]["innate_spells"] == []  # multi-entry named variants: deferred
+    assert feats["magic-initiate-xphb"]["innate_spells"] == []  # only filter choices, no fixed spells
     assert feats["abjuration-adept-au"]["innate_spells"] == []  # slot-level keys
     assert [s["name"] for s in feats["fey-touched-xphb"]["innate_spells"]] == ["Misty Step"]  # filter items ignored
+
+
+# --- feats' additionalSpells: variants (slice 4) ---
+
+def test_spell_variants_listed_for_multi_entry_feats():
+    feats = _feats_by_id()
+    assert feats["magic-initiate-xphb"]["spell_variants"] == ["Cleric Spells", "Druid Spells", "Wizard Spells"]
+    scion = feats["scion-of-the-outer-planes-sato"]
+    assert len(scion["spell_variants"]) == 5
+    chaotic = [s for s in scion["innate_spells"] if s["variant"] == "Chaotic Outer Plane"]
+    assert [s["name"] for s in chaotic] == ["Minor Illusion"]
+    assert feats["telepathic-xphb"]["spell_variants"] == []
+
+
+def test_variant_choice_entries_carry_variant_and_choose_from_lists():
+    feats = _feats_by_id()
+    mi = feats["magic-initiate-xphb"]["spell_choices"]
+    assert {c["variant"] for c in mi} == {"Cleric Spells", "Druid Spells", "Wizard Spells"}
+    solinari = [c for c in feats["initiate-of-high-sorcery-dsotdq"]["spell_choices"]
+                if c["variant"] == "Solinari" and c["from"]]
+    assert solinari[0]["filter"] is None and solinari[0]["count"] == 2
+    assert solinari[0]["from"] == ["comprehend-languages", "detect-evil-and-good", "protection-from-evil-and-good", "shield"]
+
+
+def test_background_feat_variant_hint_for_restricted_magic_initiate():
+    from catalog.official_source import load_official_backgrounds
+    bgs = {b["index"]: b for b in load_official_backgrounds(official_dir())}
+    assert bgs["acolyte-xphb"]["feat_variant_hints"] == {"magic-initiate-xphb": "Cleric Spells"}
+    assert bgs["astral-drifter-aag"]["feat_variant_hints"] == {}

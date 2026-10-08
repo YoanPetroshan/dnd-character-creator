@@ -456,13 +456,25 @@ def _feat_innate_spells(feats: list[dict], catalog: Catalog, choices: list[dict]
     out: list[dict] = []
     by_id = {c["id"]: c for c in choices}
     for feat in feats:
+        prefix = _feat_cid_prefix(feat)
+        variant_choice = by_id.get(f"{prefix}:spell-variant")
+        chosen = slug(variant_choice["selected"][0]) if variant_choice and variant_choice.get("selected") else None
+
+        def applies(variant):
+            return variant is None or slug(variant) == chosen
+
         for entry in feat.get("innate_spells", []) or []:
+            if not applies(entry.get("variant")):
+                continue
             sheet_entry = _innate_entry_to_sheet(entry, catalog)
+            sheet_entry["variant"] = None
             sheet_entry["ability"] = _feat_spell_ability(feat, entry["ability"], choices)
             sheet_entry["featId"] = feat["index"]
             out.append(sheet_entry)
         for i, sc in enumerate(feat.get("spell_choices", []) or []):
-            choice = by_id.get(f"{_feat_cid_prefix(feat)}:spell-choice-{i}")
+            if not applies(sc.get("variant")):
+                continue
+            choice = by_id.get(f"{prefix}:spell-choice-{i}")
             if not choice:
                 continue
             for sid in choice.get("selected", []):
@@ -511,28 +523,68 @@ def _spell_filter_description(count: int, flt: dict) -> str:
     return f"Choose {count} {noun}{'s' if count != 1 else ''}."
 
 
-def _feat_spell_choice_templates(feats: list[dict], catalog: Catalog, origin: str | None = None) -> list[dict]:
-    """Spell-pick Choices for feats' `spell_choices` filter entries. Cids
-    are `{prefix}:spell-choice-{i}` (i = position in the feat's
-    spell_choices), prefix as in _feat_choice_templates."""
+def _feat_spell_choice_templates(
+    feats: list[dict], catalog: Catalog, origin: str | None = None,
+    raw_selections: dict | None = None, variant_hints: dict | None = None,
+) -> list[dict]:
+    """Spell Choices for feats' `spell_choices` plus, for feats with
+    mutually exclusive `spell_variants`, the variant picker
+    (`{prefix}:spell-variant`). Dependent choices (`{prefix}:spell-choice-{i}`,
+    i = position in the FULL spell_choices list, stable across variants)
+    are built only for the variant selected in `raw_selections` (the raw
+    Draft selections of the owner: background choices or the owning
+    class's choices). `variant_hints` ({feat index: variant name}) restricts
+    a background-granted variant feat to a single option."""
+    raw_selections = raw_selections or {}
+    variant_hints = variant_hints or {}
     templates = []
     for feat in feats:
         prefix = origin if origin is not None else f"feat:{feat['index']}"
+        source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
+        if origin is not None and feat.get("_asi_level") is not None:
+            source["level"] = feat["_asi_level"]
+        chosen = None
+        variants = feat.get("spell_variants") or []
+        if variants:
+            hinted = variant_hints.get(feat["index"])
+            offered = [v for v in variants if v == hinted] or variants
+            options = []
+            for name in offered:
+                fixed = [e["name"] for e in feat.get("innate_spells", []) if e.get("variant") == name]
+                options.append({"id": slug(name), "label": f"{name} ({', '.join(fixed)})" if fixed else name})
+            vcid = f"{prefix}:spell-variant"
+            templates.append({
+                "id": vcid, "source": source, "label": f"{feat['name']}: Spell List",
+                "description": "Choose which spell list this feat draws from.",
+                "count": 1, "options": options,
+            })
+            raw = raw_selections.get(vcid)
+            raw = [x for x in raw if isinstance(x, str)] if isinstance(raw, list) else []
+            valid = {o["id"] for o in options}
+            chosen = next((x for x in raw if x in valid), None)
+            if chosen is None:
+                continue  # dependent templates only appear once a variant is picked
         for i, sc in enumerate(feat.get("spell_choices", []) or []):
-            flt = sc.get("filter")
-            if not flt:
+            if sc.get("variant") is not None and slug(sc["variant"]) != chosen:
                 continue
-            options = _spell_filter_options(catalog, flt)
-            if not options:
+            count = sc["count"]
+            if sc.get("filter"):
+                options = _spell_filter_options(catalog, sc["filter"])
+                description = _spell_filter_description(count, sc["filter"])
+                kind = "Cantrip" if sc["filter"].get("level") == [0] else "Spell"
+            else:
+                options = [
+                    {"option_type": "reference", "item": {"index": sid, "name": catalog.spells[sid]["name"]}}
+                    for sid in (sc.get("from") or []) if sid in catalog.spells
+                ]
+                count = min(count, len(options))
+                description = f"Choose {count} spell{'s' if count != 1 else ''} from the listed options."
+                kind = "Spell"
+            if not options or count < 1:
                 continue
-            source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
-            if origin is not None and feat.get("_asi_level") is not None:
-                source["level"] = feat["_asi_level"]
-            kind = "Cantrip" if flt.get("level") == [0] else "Spell"
-            envelope = {"choose": sc["count"], "from": {"option_set_type": "options_array", "options": options}}
+            envelope = {"choose": count, "from": {"option_set_type": "options_array", "options": options}}
             tpl = build_choice_template(
-                envelope, f"{prefix}:spell-choice-{i}", source, f"{feat['name']}: {kind}",
-                description=_spell_filter_description(sc["count"], flt),
+                envelope, f"{prefix}:spell-choice-{i}", source, f"{feat['name']}: {kind}", description=description,
             )
             if tpl:
                 templates.append(tpl)
@@ -2459,7 +2511,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 continue
             if asi_feat["_asi_origin"].startswith(f"class:{rc_cls_id}:"):
                 choice_templates += _feat_choice_templates([asi_feat], origin=asi_feat["_asi_origin"])
-                choice_templates += _feat_spell_choice_templates([asi_feat], catalog, origin=asi_feat["_asi_origin"])
+                choice_templates += _feat_spell_choice_templates(
+                    [asi_feat], catalog, origin=asi_feat["_asi_origin"], raw_selections=rc_class_choices,
+                )
                 choice_templates += [
                     tpl for tpl, _ in _feat_ability_bonus_choice_templates([asi_feat], origin=asi_feat["_asi_origin"])
                 ]
@@ -2536,7 +2590,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # it defaults to `[]` when there's no background, so this call is a
     # safe no-op in that case, not gated behind `if bg and bg_id` like the
     # background-choice-templates call just above.
-    choice_templates += _feat_spell_choice_templates(background_feats, catalog)
+    choice_templates += _feat_spell_choice_templates(
+        background_feats, catalog,
+        raw_selections=background_dict.get("choices") if isinstance(background_dict.get("choices"), dict) else {},
+        variant_hints=(bg.get("feat_variant_hints") if bg else None) or {},
+    )
     choice_templates += _feat_choice_templates(background_feats)  # ASI-selected feats' templates: built origin-scoped in the per-class loop
     # Phase 4c-ii Task 2: `feat_ability_choice_tpls` was already built (and
     # applied to `feat_bonuses`) EARLY, in the "Final ability scores"

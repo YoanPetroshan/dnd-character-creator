@@ -1876,6 +1876,9 @@ def _background_from_5etools(raw: dict) -> dict | None:
         # bare-slug/ambiguity logic only when it's absent or doesn't match
         # (e.g. hand-authored test data built without this field).
         "feat_refs": feat_refs,
+        # feat-additional-spells plan: {feat ref: variant name} for
+        # spell-list-restricted grants ("magic initiate; cleric|xphb").
+        "feat_variant_hints": _feat_variant_hints_from_5etools(raw),
     }
 
 
@@ -1969,7 +1972,7 @@ def _feat_from_5etools(raw: dict) -> dict | None:
     # race-side counterpart to reuse — see _senses_from_5etools' own
     # docstring.
     feat_resist, feat_immune, _feat_vulnerable = _damage_modifiers_from_5etools(raw)
-    feat_innate_spells, feat_spell_choices = _feat_spells_from_5etools(raw, index)
+    feat_innate_spells, feat_spell_choices, feat_spell_variants = _feat_spells_from_5etools(raw, index)
 
     return {
         "index": index,
@@ -2022,6 +2025,7 @@ def _feat_from_5etools(raw: dict) -> dict | None:
         # _feat_innate_spells_from_5etools).
         "innate_spells": feat_innate_spells,
         "spell_choices": feat_spell_choices,
+        "spell_variants": feat_spell_variants,
     }
 
 
@@ -2092,27 +2096,33 @@ def _parse_spell_filter(text: str) -> dict | None:
     return result or None
 
 
-def _feat_spells_from_5etools(raw: dict, index: str) -> tuple[list[dict], list[dict]]:
+def _feat_spells_from_5etools(raw: dict, index: str) -> tuple[list[dict], list[dict], list[str]]:
     """Converts a feat's additionalSpells into (innate_spells,
-    spell_choices). innate_spells: race-shaped entries for fixed spell
-    names (string items) under innate/known/prepared with level key "_" or
-    a character-level digit. spell_choices: one entry per
-    {"choose": "<query>"} item: {variant, level, uses, ability, count,
-    filter, from}. Skipped: `expanded`, slot-level "sN" keys, the
-    _FEAT_SPELLS_SKIP feats, unparseable filters, and multi-entry feats
-    whose entries all carry a "name" (mutually exclusive variants,
-    deferred). A multi-entry feat without names (Cold Caster) keeps only
-    its first entry (disclosed)."""
+    spell_choices, spell_variants). innate_spells: race-shaped entries for
+    fixed spell names (string items) under innate/known/prepared with
+    level key "_" or a character-level digit. spell_choices: one entry
+    per {"choose": ...} item: {variant, level, uses, ability, count,
+    filter, from} — a query string becomes `filter`, a
+    {"from": [names], "count": n} dict becomes `from` (slugs). Multi-entry
+    feats whose entries ALL carry a "name" are mutually exclusive variants
+    (Magic Initiate's spell lists...): every grant/choice is tagged with
+    its entry name and spell_variants lists the names. A multi-entry feat
+    without names (Cold Caster) keeps only its first entry (disclosed).
+    Skipped: `expanded`, slot-level "sN" keys, unparseable filters, and
+    the _FEAT_SPELLS_SKIP feats."""
     if index in _FEAT_SPELLS_SKIP:
-        return [], []
+        return [], [], []
     entries = [e for e in (raw.get("additionalSpells") or []) if isinstance(e, dict)]
+    variants: list[str] = []
     if len(entries) > 1:
-        if all("name" in e for e in entries):
-            return [], []
-        entries = entries[:1]
+        if all(isinstance(e.get("name"), str) for e in entries):
+            variants = [e["name"] for e in entries]
+        else:
+            entries = entries[:1]
     results: list[dict] = []
     choices: list[dict] = []
     for entry in entries:
+        variant = entry["name"] if variants else None
         ability = "inherit" if entry.get("ability") == "inherit" else _innate_spell_ability(entry.get("ability"))
         for mechanism in ("innate", "known", "prepared"):
             block = entry.get(mechanism)
@@ -2127,13 +2137,16 @@ def _feat_spells_from_5etools(raw: dict, index: str) -> tuple[list[dict], list[d
                     continue
                 for uses, items in _feat_spell_uses_and_items(mechanism, level_value):
                     for item in items:
-                        if isinstance(item, dict) and isinstance(item.get("choose"), str):
-                            parsed = _parse_spell_filter(item["choose"])
-                            if parsed is not None:
-                                choices.append({
-                                    "variant": None, "level": level, "uses": uses, "ability": ability,
-                                    "count": item.get("count", 1), "filter": parsed, "from": None,
-                                })
+                        if isinstance(item, dict) and "choose" in item:
+                            spec = item["choose"]
+                            base = {"variant": variant, "level": level, "uses": uses, "ability": ability}
+                            if isinstance(spec, str):
+                                parsed = _parse_spell_filter(spec)
+                                if parsed is not None:
+                                    choices.append({**base, "count": item.get("count", 1), "filter": parsed, "from": None})
+                            elif isinstance(spec, dict) and isinstance(spec.get("from"), list):
+                                names = [slug(_clean_innate_spell_name(n)) for n in spec["from"] if isinstance(n, str)]
+                                choices.append({**base, "count": spec.get("count", 1), "filter": None, "from": names})
                             continue
                         if not isinstance(item, str):
                             continue
@@ -2142,9 +2155,26 @@ def _feat_spells_from_5etools(raw: dict, index: str) -> tuple[list[dict], list[d
                             continue
                         results.append({
                             "name": clean.title(), "spell_id": slug(clean), "level": level,
-                            "uses": uses, "ability": ability, "variant": None,
+                            "uses": uses, "ability": ability, "variant": variant,
                         })
-    return results, choices
+    return results, choices, variants
+
+
+def _feat_variant_hints_from_5etools(raw: dict) -> dict[str, str]:
+    """A background grant like "magic initiate; cleric|xphb" names a
+    spell-list-restricted variant. Returns {feat ref: "<Name> Spells"}
+    (e.g. {"magic-initiate-xphb": "Cleric Spells"}) for those grants."""
+    hints: dict[str, str] = {}
+    for entry in raw.get("feats") or []:
+        for feat_key, granted in entry.items():
+            if granted is not True:
+                continue
+            name_part, _, source_part = feat_key.partition("|")
+            base, sep, variant = name_part.partition(";")
+            if not sep or not variant.strip() or not source_part.strip():
+                continue
+            hints[f"{slug(base.strip())}-{source_part.strip().lower()}"] = f"{variant.strip().title()} Spells"
+    return hints
 
 
 def _expertise_skills_from_5etools(raw: dict) -> list[str]:
