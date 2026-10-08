@@ -1664,8 +1664,9 @@ def _feats_from_5etools(raw: dict) -> tuple[list[str], list[str], list[str]]:
     "wrong slug, no match at all"). The "; <spell list>" suffix names
     which spell list the grant is restricted to — modeling that
     restriction would mean granting specific spells/cantrips, which
-    `additionalSpells` being out of scope for this whole plan (design
-    spec) already rules out — so the fix here is only to recover the
+    `additionalSpells` being out of scope for this plan (design
+    spec; feats' spell grants were later added separately, see
+    _feat_spells_from_5etools) already rules out — so the fix here is only to recover the
     grant as PLAIN "Magic Initiate" (stripping everything from the first
     ";" onward before slugging), not to model the restriction itself.
     Once fixed, these 4 records resolve exactly like the OTHER plain
