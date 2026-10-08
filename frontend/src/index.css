@@ -332,3 +332,13 @@ main {
 .add-class {
   margin-bottom: 16px;
 }
+
+.choice-pruned {
+  margin: -4px 0 8px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  color: #8a5a00;
+  background: #fff7e0;
+  border-left: 3px solid #e0a800;
+  border-radius: 0 4px 4px 0;
+}

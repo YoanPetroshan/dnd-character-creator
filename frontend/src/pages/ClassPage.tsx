@@ -49,6 +49,7 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
     : [];
   const featureChoices = classChoices.filter((c) => !isSpellChoiceId(c.id));
   const spellChoices = classChoices.filter((c) => isSpellChoiceId(c.id));
+  const prunedReasons = new Map((resolution?.pruned ?? []).map((p) => [p.choiceId, p.reason]));
   const hasSpells = spellChoices.length > 0;
   const effectiveTab: ClassTab = hasSpells ? tab : "features";
 
@@ -164,7 +165,14 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
         <div id={panelFeaturesId} role="tabpanel" aria-labelledby={tabFeaturesId}>
           {!loading && featureChoices.length === 0 && <p>Няма избори за този клас.</p>}
           {featureChoices.map((choice) => (
-            <ChoiceCard key={choice.id} choice={choice} onChange={handleChange} />
+            <div key={choice.id}>
+              <ChoiceCard choice={choice} onChange={handleChange} />
+              {prunedReasons.has(choice.id) && (
+                <p className="choice-pruned" role="note">
+                  {prunedReasons.get(choice.id)}
+                </p>
+              )}
+            </div>
           ))}
         </div>
       )}
@@ -172,7 +180,14 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
       {effectiveTab === "spells" && (
         <div id={panelSpellsId} role="tabpanel" aria-labelledby={tabSpellsId}>
           {spellChoices.map((choice) => (
-            <ChoiceCard key={choice.id} choice={choice} onChange={handleChange} />
+            <div key={choice.id}>
+              <ChoiceCard choice={choice} onChange={handleChange} />
+              {prunedReasons.has(choice.id) && (
+                <p className="choice-pruned" role="note">
+                  {prunedReasons.get(choice.id)}
+                </p>
+              )}
+            </div>
           ))}
 
           <SpellLibrary key={classId} classId={classId} />
