@@ -11,7 +11,10 @@ const EXPORT_FORMATS = {
 type ExportFormat = keyof typeof EXPORT_FORMATS;
 
 export function ExportPage() {
-  const { draft } = useDraft();
+  const { draft, dispatch } = useDraft();
+  const resetDraft = () => {
+    if (window.confirm("Нулиране на черновата? Текущият герой ще бъде изтрит.")) dispatch({ type: "RESET" });
+  };
   const { resolution, loading, error, retry } = useResolutionContext();
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportingFormat, setExportingFormat] = useState<ExportFormat | null>(null);
@@ -22,12 +25,19 @@ export function ExportPage() {
         <p>Грешка: {error}</p>
         <button type="button" onClick={retry}>
           Опитай пак
+        </button>{" "}
+        <button type="button" onClick={resetDraft}>
+          Нулирай чернова
         </button>
       </div>
     );
   if (!resolution) return <div className="page">Зареждане…</div>;
 
-  const pendingChoices = resolution.choices.filter((c) => c.status === "pending");
+  // Must mirror server/app.py `_pending_export_problems`: equipment choices
+  // never block export.
+  const allPending = resolution.choices.filter((c) => c.status === "pending");
+  const pendingChoices = allPending.filter((c) => c.source.kind !== "equipment");
+  const pendingEquipment = allPending.filter((c) => c.source.kind === "equipment");
   const canExport = resolution.problems.length === 0 && pendingChoices.length === 0;
 
   async function handleExport(format: ExportFormat) {
@@ -41,8 +51,15 @@ export function ExportPage() {
         body: JSON.stringify(draft),
       });
       if (!resp.ok) {
-        const body = (await resp.json()) as { problems?: { message: string }[] };
-        throw new Error(body.problems?.map((p) => p.message).join("; ") ?? `export failed: ${resp.status}`);
+        let body: { problems?: { message: string }[]; error?: string } = {};
+        try {
+          body = await resp.json();
+        } catch {
+          // non-JSON error body
+        }
+        throw new Error(
+          body.problems?.map((p) => p.message).join("; ") ?? body.error ?? `export failed: ${resp.status}`
+        );
       }
       const blob = await resp.blob();
       const filename = `${(draft.name || "character").replace(/[\\/:*?"<>|]/g, "_")}.${config.extension}`;
@@ -101,6 +118,9 @@ export function ExportPage() {
             ))}
           </ul>
         </div>
+      )}
+      {pendingEquipment.length > 0 && (
+        <p>Не всички избори за екипировка са направени ({pendingEquipment.length}) — това не блокира експорта.</p>
       )}
       {canExport && <p>Всичко е готово за експорт.</p>}
       {exportError && <p style={{ color: "red" }}>{exportError}</p>}

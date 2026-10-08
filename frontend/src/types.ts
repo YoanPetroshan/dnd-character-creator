@@ -192,6 +192,7 @@ export interface Preferences {
 }
 
 export interface Draft {
+  draftVersion?: number;
   name: string;
   sources: string[];
   preferences: Preferences;

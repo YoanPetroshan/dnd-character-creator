@@ -3,7 +3,12 @@ import type { Ability, ChoiceSourceKind, Draft } from "./types";
 
 const STORAGE_KEY = "dnd-builder-draft-v2";
 
+/** Bump when the draft shape changes incompatibly. Stored/imported drafts
+ *  with a NEWER version than this build are rejected rather than guessed at. */
+export const DRAFT_VERSION = 1;
+
 export const emptyDraft: Draft = {
+  draftVersion: DRAFT_VERSION,
   name: "",
   // Empty = "everything available" (server/engine/resolve.py's permissive
   // default). This was `["srd"]` since Phase 0, before any sourcebook data
@@ -218,10 +223,41 @@ function reducer(state: Draft, action: Action): Draft {
   }
 }
 
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function mergeInto(defaults: unknown, stored: unknown): unknown {
+  if (isPlainObject(defaults)) {
+    if (!isPlainObject(stored)) return defaults;
+    const out: Record<string, unknown> = { ...defaults };
+    for (const [k, v] of Object.entries(stored)) {
+      out[k] = k in defaults ? mergeInto(defaults[k], v) : v;
+    }
+    return out;
+  }
+  if (Array.isArray(defaults)) return Array.isArray(stored) ? stored : defaults;
+  // primitive default: keep stored only when it has the same type
+  return typeof stored === typeof defaults ? stored : defaults;
+}
+
+/** Deep-merge a stored/imported draft over the defaults so keys added by a
+ *  newer build never come back undefined. Throws on non-objects or on a
+ *  draft written by a newer app version. */
+export function mergeDraft(stored: unknown): Draft {
+  if (!isPlainObject(stored)) throw new Error("This file isn't a character draft.");
+  const v = stored.draftVersion;
+  if (typeof v === "number" && v > DRAFT_VERSION) {
+    throw new Error("This draft was saved by a newer version of the app.");
+  }
+  const merged = mergeInto(emptyDraft, stored) as Draft;
+  return { ...merged, draftVersion: DRAFT_VERSION };
+}
+
 function loadInitial(): Draft {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...emptyDraft, ...(JSON.parse(raw) as Partial<Draft>) };
+    if (raw) return mergeDraft(JSON.parse(raw));
   } catch {
     // corrupt or inaccessible storage — fall through to a fresh draft
   }

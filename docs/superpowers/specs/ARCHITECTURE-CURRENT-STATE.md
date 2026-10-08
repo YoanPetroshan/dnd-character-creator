@@ -227,3 +227,10 @@ Functional (not visual) phone support; CSS changes are structural only so a late
 - iOS Safari may evict localStorage (the draft) after ~7 days without a visit; export or keep a copy of drafts you care about.
 - PWA/service worker deliberately skipped: iOS standalone mode breaks blob downloads and a service worker adds stale-cache risk for little gain.
 - OUTSTANDING: the export flow (share sheet / download) has only been verified on desktop Chrome; check on a real iPhone and Android device.
+
+## Draft & API robustness (Slice 1, 2026-10-08)
+- `server/engine/normalize.py` `normalize_draft()` runs first in `resolve()`: it coerces container types (non-dict draft/preferences/abilities/equipment, non-list sources, non-string ids, non-list choice selections) and ints (level, base abilities, equipment qty; integral floats and numeric strings accepted, bools/fractions rejected). Every replaced value is reported as a `problems` entry (`malformed-*`, `level-unsupported`, `ability-invalid-<AB>`, `equipment-qty-invalid`) instead of being silently guessed. It never mutates its input. `resolve()` no longer raises on any JSON-shaped draft.
+- `server/app.py` has an `errorhandler(Exception)`: every unexpected failure is JSON `{"error": ...}` (500); HTTPExceptions keep their code but are JSON too.
+- Frontend: `DraftContext` deep-merges stored/imported drafts over `emptyDraft` (`mergeDraft`) and carries `draftVersion` (`DRAFT_VERSION = 1`; newer-version drafts are rejected). HomePage has "Нов герой" (confirm + RESET), "Изтегли/Качи чернова (.json)" (share sheet on touch devices, file input for import), and "Нулирай чернова" in the resolve-error banner (also on the Export error screen). `useResolution`/`ExportPage` surface the server's JSON `error` text.
+- Export gate: the frontend `canExport` now equals the server's `_pending_export_problems` (equipment-kind pending choices do not block; they are listed as an informational note).
+- Tests: server suite is 746 passing (includes `tests/test_normalize.py`, a malformed-draft matrix for `resolve()` and `/api/resolve`). The frontend has no test runner; verified by `npm run build` and in-browser.

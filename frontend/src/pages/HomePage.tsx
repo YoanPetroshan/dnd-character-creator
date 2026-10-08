@@ -1,9 +1,61 @@
-import { useDraft } from "../DraftContext";
+import { useRef, useState } from "react";
+import { mergeDraft, useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
 
 export function HomePage() {
   const { draft, dispatch } = useDraft();
   const { resolution, loading, error, retry } = useResolutionContext();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [draftMessage, setDraftMessage] = useState<string | null>(null);
+
+  const resetDraft = () => {
+    if (window.confirm("Нулиране на черновата? Текущият герой ще бъде изтрит.")) {
+      dispatch({ type: "RESET" });
+      setDraftMessage(null);
+    }
+  };
+
+  async function downloadDraft() {
+    const blob = new Blob([JSON.stringify(draft, null, 2)], { type: "application/json" });
+    const filename = `${(draft.name || "character").replace(/[\\/:*?"<>|]/g, "_")}.draft.json`;
+    if (typeof File !== "undefined" && navigator.canShare && window.matchMedia("(pointer: coarse)").matches) {
+      const file = new File([blob], filename, { type: "application/json" });
+      if (navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file] });
+          return;
+        } catch (e) {
+          if (e instanceof DOMException && e.name === "AbortError") return;
+        }
+      }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+
+  async function uploadDraft(file: File | undefined) {
+    if (!file) return;
+    try {
+      const imported = mergeDraft(JSON.parse(await file.text()));
+      if (draft.classes.length > 0 || draft.name) {
+        if (!window.confirm("Качването ще замени текущата чернова. Продължаване?")) return;
+      }
+      dispatch({ type: "SET_DRAFT", draft: imported });
+      setDraftMessage("Черновата е качена.");
+    } catch (e) {
+      setDraftMessage(e instanceof SyntaxError ? "Файлът не е валиден JSON." : e instanceof Error ? e.message : String(e));
+    } finally {
+      if (fileInput.current) fileInput.current.value = "";
+    }
+  }
+
   return (
     <div className="page">
       <h1>Home</h1>
@@ -16,6 +68,26 @@ export function HomePage() {
         />
       </label>
       <p>Saved as you type — reload the page and this name should still be here.</p>
+
+      <div>
+        <button type="button" onClick={resetDraft}>
+          Нов герой
+        </button>{" "}
+        <button type="button" onClick={downloadDraft}>
+          Изтегли чернова (.json)
+        </button>{" "}
+        <button type="button" onClick={() => fileInput.current?.click()}>
+          Качи чернова (.json)
+        </button>
+        <input
+          ref={fileInput}
+          type="file"
+          accept=".json,application/json"
+          hidden
+          onChange={(e) => uploadDraft(e.target.files?.[0])}
+        />
+        {draftMessage && <p role="status">{draftMessage}</p>}
+      </div>
 
       <h2>Preferences</h2>
       <fieldset>
@@ -89,6 +161,9 @@ export function HomePage() {
           Грешка: {error}{" "}
           <button type="button" onClick={retry}>
             Опитай пак
+          </button>{" "}
+          <button type="button" onClick={resetDraft}>
+            Нулирай чернова
           </button>
         </p>
       )}

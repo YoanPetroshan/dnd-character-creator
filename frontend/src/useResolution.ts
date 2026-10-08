@@ -29,9 +29,17 @@ export function useResolution(draft: Draft): ResolutionState & { retry: () => vo
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(draft),
       })
-        .then((resp) => {
-          if (!resp.ok) throw new Error(`resolve failed: ${resp.status}`);
-          return resp.json() as Promise<Resolution>;
+        .then(async (resp) => {
+          if (!resp.ok) {
+            let detail = "";
+            try {
+              detail = ((await resp.json()) as { error?: string }).error ?? "";
+            } catch {
+              // non-JSON error body
+            }
+            throw new Error(detail || `resolve failed: ${resp.status}`);
+          }
+          return (await resp.json()) as Resolution;
         })
         .then((resolution) => {
           if (id !== requestId.current) return; // a newer request already won
