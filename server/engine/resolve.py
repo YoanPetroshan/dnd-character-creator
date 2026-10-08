@@ -1286,7 +1286,23 @@ _STRUCTURED_FEAT_PREREQUISITE_KEYS = {"level", "ability"}
 # Keys the ASI-level gate (the walk + option reasons) can verify. A superset
 # of _STRUCTURED_FEAT_PREREQUISITE_KEYS, which the background second pass
 # (_feat_prerequisite_problems) keeps using — never widen that one.
-_ASI_GATE_PREREQUISITE_KEYS = {"level", "ability", "feat", "spellcasting2020", "feature"}
+_ASI_GATE_PREREQUISITE_KEYS = {"level", "ability", "feat", "spellcasting2020", "feature", "proficiency"}
+
+# Which held app proficiency ids satisfy a 5etools prerequisite proficiency
+# entry. Real data has exactly these five shapes.
+_PROFICIENCY_PREREQ_SATISFIERS = {
+    ("armor", "light"): {"light-armor", "all-armor"},
+    ("armor", "medium"): {"medium-armor", "all-armor"},
+    ("armor", "heavy"): {"heavy-armor", "all-armor"},
+    ("armor", "shield"): {"shields"},
+    ("weaponGroup", "martial"): {"martial-weapons"},
+}
+
+
+def _proficiency_entry_key(entry):
+    if isinstance(entry, dict) and len(entry) == 1:
+        return next(iter(entry.items()))
+    return None
 
 
 def _feat_ref_index(ref: str) -> str:
@@ -1300,6 +1316,10 @@ def _alt_value_is_valid(key: str, value) -> bool:
         return isinstance(value, int)
     if key == "feat":
         return isinstance(value, list) and bool(value) and all(isinstance(r, str) and "|" in r for r in value)
+    if key == "proficiency":
+        return isinstance(value, list) and bool(value) and all(
+            _proficiency_entry_key(e) in _PROFICIENCY_PREREQ_SATISFIERS for e in value
+        )
     if key == "spellcasting2020":
         return isinstance(value, bool)
     if key == "feature":
@@ -1386,6 +1406,11 @@ def _feat_prerequisite_alt_met(
     if "feat" in alt and not any(_feat_ref_index(r) in held.feat_indices for r in alt["feat"]):
         return False
     if (alt.get("spellcasting2020") or "feature" in alt) and not held.has_spellcasting_feature:
+        return False
+    if not all(
+        held.proficiency_ids & _PROFICIENCY_PREREQ_SATISFIERS[_proficiency_entry_key(e)]
+        for e in alt.get("proficiency", [])
+    ):
         return False
     return True
 
@@ -1576,6 +1601,14 @@ def _feat_prerequisite_failing_parts(
         ))
     if (alt.get("spellcasting2020") or "feature" in alt) and not (held and held.has_spellcasting_feature):
         parts.append("the Spellcasting or Pact Magic feature")
+    for entry in alt.get("proficiency", []):
+        satisfiers = _PROFICIENCY_PREREQ_SATISFIERS[_proficiency_entry_key(entry)]
+        if not (held and held.proficiency_ids & satisfiers):
+            kind, value = _proficiency_entry_key(entry)
+            if kind == "weaponGroup":
+                parts.append("martial weapon proficiency")
+            else:
+                parts.append(f"{value} armor proficiency" if value != "shield" else "shield proficiency")
     if "feat" in alt and not _feat_prerequisite_alt_met({"feat": alt["feat"]}, total_level, scores, held):
         names = []
         for ref in alt["feat"]:
@@ -2216,6 +2249,23 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc["cls"] and spells_mod.single_class_spell_slots(catalog, rc["cls_id"], rc["level"])
         for rc in resolved_classes
     )
+    # FIXED proficiency grants only (class, race/subrace traits, background);
+    # proficiency CHOICE selections aren't available before the ASI walk.
+    for rc in resolved_classes:
+        if not rc["cls"]:
+            continue
+        class_profs = (
+            rc["cls"].get("proficiencies", []) if rc["index"] == 0
+            else rc["cls"].get("multi_classing", {}).get("proficiencies", [])
+        )
+        held.proficiency_ids.update(p["index"] for p in class_profs)
+    if race:
+        for ref in list(race.get("traits", [])) + (list(subrace.get("racial_traits", [])) if subrace else []):
+            trait = catalog.traits.get(ref["index"])
+            if trait:
+                held.proficiency_ids.update(p["index"] for p in trait.get("proficiencies", []))
+    if bg:
+        held.proficiency_ids.update(p["index"] for p in bg.get("starting_proficiencies", []))
 
     choice_templates: list[dict] = []
     for rc in resolved_classes:

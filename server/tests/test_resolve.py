@@ -4438,3 +4438,92 @@ def test_spellfire_adept_feature_alternative(catalog):
     assert _opt_disabled(res, "spellfire-adept-frhof").get("disabled") is True
     res = resolve(_multiclass_feat_draft([{"classId": "wizard", "level": 4, "choices": {}}], sources), catalog)
     assert not _opt_disabled(res, "spellfire-adept-frhof", "wizard").get("disabled")
+
+
+def _asi_picks(cls, picks):
+    return {"classId": cls, "level": max(picks), "choices": {f"class:{cls}:{lvl}:asi": [f"feat:{f}"] for lvl, f in picks.items()}}
+
+
+def _unmet_ids(res):
+    return [p["id"] for p in res["problems"] if p["id"].startswith("feat-prerequisite-unmet-")]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_armor_feat_chain_is_satisfied_in_order(catalog):
+    picks = {4: "lightly-armored-xphb", 8: "moderately-armored-xphb", 12: "heavily-armored-xphb", 16: "heavy-armor-master-xphb"}
+    res = resolve(_multiclass_feat_draft([_asi_picks("wizard", picks)], _SRD_AND_XPHB), catalog)
+    assert _unmet_ids(res) == []
+    armor = set(res["sheet"]["proficiencies"]["armor"])
+    assert {"light-armor", "shields", "medium-armor", "heavy-armor"} <= armor
+    assert set(picks.values()) <= set(res["sheet"]["grantedFeats"])
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_armor_feat_order_matters(catalog):
+    picks = {4: "moderately-armored-xphb", 8: "lightly-armored-xphb"}
+    res = resolve(_multiclass_feat_draft([_asi_picks("wizard", picks)], _SRD_AND_XPHB), catalog)
+    assert _unmet_ids(res) == ["feat-prerequisite-unmet-moderately-armored-xphb"]
+    assert "medium-armor" not in res["sheet"]["proficiencies"]["armor"]
+    assert "lightly-armored-xphb" in res["sheet"]["grantedFeats"]
+    opt = _opt_disabled(res, "moderately-armored-xphb", "wizard", 4)
+    assert opt["disabledReason"] == "prerequisite not met: requires light armor proficiency"
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_heavy_armor_master_does_not_chain_off_a_blocked_heavily_armored(catalog):
+    picks = {4: "heavily-armored-xphb", 8: "heavy-armor-master-xphb"}
+    res = resolve(_multiclass_feat_draft([_asi_picks("wizard", picks)], _SRD_AND_XPHB), catalog)
+    assert set(_unmet_ids(res)) == {"feat-prerequisite-unmet-heavily-armored-xphb", "feat-prerequisite-unmet-heavy-armor-master-xphb"}
+    assert "heavy-armor" not in res["sheet"]["proficiencies"]["armor"]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_synthetic_feat_requiring_heavy_armor_is_blocked_for_a_wizard(catalog, monkeypatch):
+    monkeypatch.setitem(catalog.feats, "test-heavy-xphb", {
+        **catalog.feats["heavily-armored-xphb"], "index": "test-heavy-xphb", "name": "Test Heavy",
+        "prerequisite": [{"level": 4, "proficiency": [{"armor": "heavy"}]}],
+    })
+    res = resolve(_multiclass_feat_draft([_asi_picks("wizard", {4: "test-heavy-xphb"})], _SRD_AND_XPHB), catalog)
+    assert _unmet_ids(res) == ["feat-prerequisite-unmet-test-heavy-xphb"]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_fighter_class_proficiency_satisfies_armor_prerequisite(catalog):
+    res = resolve(_multiclass_feat_draft([_fighter4_asi()], _SRD_AND_XPHB), catalog)
+    assert not _opt_disabled(res, "heavy-armor-master-xphb").get("disabled")
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_race_granted_armor_proficiency_satisfies_prerequisite(catalog):
+    draft = _multiclass_feat_draft([{"classId": "wizard", "level": 4, "choices": {}}], _SRD_AND_XPHB + ["phb"])
+    draft["species"] = {"id": "dwarf-phb", "subspeciesId": "dwarf-phb-mountain-phb", "choices": {}}
+    res = resolve(draft, catalog)
+    assert not [p for p in res["problems"] if p["id"] == "subspecies-mismatch"]
+    assert not _opt_disabled(res, "medium-armor-master-xphb", "wizard").get("disabled")
+    plain = resolve(_multiclass_feat_draft([{"classId": "wizard", "level": 4, "choices": {}}], _SRD_AND_XPHB), catalog)
+    assert _opt_disabled(plain, "medium-armor-master-xphb", "wizard").get("disabled") is True
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_shield_master_needs_shield_proficiency(catalog):
+    wiz = resolve(_multiclass_feat_draft([{"classId": "wizard", "level": 4, "choices": {}}], _SRD_AND_XPHB), catalog)
+    assert _opt_disabled(wiz, "shield-master-xphb", "wizard").get("disabled") is True
+    cleric = resolve(_multiclass_feat_draft([{"classId": "cleric", "level": 4, "choices": {}}], _SRD_AND_XPHB), catalog)
+    assert not _opt_disabled(cleric, "shield-master-xphb", "cleric").get("disabled")
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_purple_dragon_commandant_or_alternatives(catalog):
+    sources = ["srd", "xphb", "frhof"]
+    wiz = [{"classId": "wizard", "level": 4, "choices": {}}]
+    res = resolve(_multiclass_feat_draft(wiz, sources, "acolyte-xphb"), catalog)
+    opt = _opt_disabled(res, "purple-dragon-commandant-frhof", "wizard")
+    assert opt["disabled"] is True and opt["disabledReason"] == "prerequisite not met"
+    res = resolve(_multiclass_feat_draft(wiz, sources, "purple-dragon-squire-frhof"), catalog)
+    assert not _opt_disabled(res, "purple-dragon-commandant-frhof", "wizard").get("disabled")
+    res = resolve(_multiclass_feat_draft([_fighter4_asi()], sources, "acolyte-xphb"), catalog)
+    assert not _opt_disabled(res, "purple-dragon-commandant-frhof").get("disabled")
+    res = resolve(_multiclass_feat_draft(
+        [_asi_picks("wizard", {4: "martial-weapon-training-xphb", 8: "purple-dragon-commandant-frhof"})], sources), catalog)
+    assert _unmet_ids(res) == []
+    assert not _opt_disabled(res, "purple-dragon-commandant-frhof", "wizard", 8).get("disabled")
