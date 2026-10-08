@@ -1286,11 +1286,28 @@ _STRUCTURED_FEAT_PREREQUISITE_KEYS = {"level", "ability"}
 # Keys the ASI-level gate (the walk + option reasons) can verify. A superset
 # of _STRUCTURED_FEAT_PREREQUISITE_KEYS, which the background second pass
 # (_feat_prerequisite_problems) keeps using — never widen that one.
-_ASI_GATE_PREREQUISITE_KEYS = {"level", "ability"}
+_ASI_GATE_PREREQUISITE_KEYS = {"level", "ability", "feat"}
+
+
+def _feat_ref_index(ref: str) -> str:
+    """A 5etools "name|source" feat reference -> its catalog index."""
+    name, _, source = ref.partition("|")
+    return f"{slug(name)}-{source.lower()}"
+
+
+def _alt_value_is_valid(key: str, value) -> bool:
+    if key == "level":
+        return isinstance(value, int)
+    if key == "feat":
+        return isinstance(value, list) and bool(value) and all(isinstance(r, str) and "|" in r for r in value)
+    return True  # level/ability shapes are tolerated as before
 
 
 def _alt_is_verifiable(alt, supported_keys) -> bool:
-    return isinstance(alt, dict) and set(alt.keys()) <= supported_keys
+    return (
+        isinstance(alt, dict) and set(alt.keys()) <= supported_keys
+        and all(_alt_value_is_valid(k, v) for k, v in alt.items())
+    )
 
 
 def _feat_structured_prerequisite(feat: dict, supported_keys=None) -> list[dict] | None:
@@ -1358,6 +1375,9 @@ def _feat_prerequisite_alt_met(
             for ab, minimum in entry.items()
         ):
             return False
+    held = held or _HeldFeatState()
+    if "feat" in alt and not any(_feat_ref_index(r) in held.feat_indices for r in alt["feat"]):
+        return False
     return True
 
 
@@ -1545,6 +1565,12 @@ def _feat_prerequisite_failing_parts(
             f"{ab.upper()} {minimum}"
             for entry in ability_req if isinstance(entry, dict) for ab, minimum in entry.items()
         ))
+    if "feat" in alt and not _feat_prerequisite_alt_met({"feat": alt["feat"]}, total_level, scores, held):
+        names = []
+        for ref in alt["feat"]:
+            record = (catalog.feats.get(_feat_ref_index(ref)) if catalog else None)
+            names.append(f"the {record['name']} feat" if record else f"the {ref.partition('|')[0].title()} feat")
+        parts.append(" or ".join(names))
     return parts
 
 

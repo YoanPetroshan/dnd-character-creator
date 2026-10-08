@@ -4290,3 +4290,97 @@ def test_feat_prerequisite_unmet_reason_names_the_failing_ability(catalog):
     reason = _feat_prerequisite_unmet_reason(catalog.feats["actor-xphb"], 4, {"CHA": 9}, True, _HeldFeatState(), catalog)
     assert "prerequisite not met" in reason and "CHA 13" in reason
     assert _feat_prerequisite_unmet_reason(catalog.feats["actor-xphb"], 4, {"CHA": 9}, False, _HeldFeatState(), catalog) is None
+
+
+def _asi4_option(resolution, feat_index, cid="class:fighter:4:asi"):
+    choice = next(c for c in resolution["choices"] if c["id"] == cid)
+    return choice, next(o for o in choice["options"] if o["id"] == f"feat:{feat_index}")
+
+
+def _fighter4_feat_draft(background_id, sources, feat_index=None, level=4, **overrides):
+    choices = {f"class:fighter:{level}:asi": [f"feat:{feat_index}"]} if feat_index else {}
+    return _fighter_acolyte_human_draft(
+        sources=sources, preferences=_feat_prereqs_on(),
+        background={"id": background_id, "choices": {}},
+        classes=[{"classId": "fighter", "level": level, "choices": choices}],
+        **overrides,
+    )
+
+
+_SRD_XPHB_EFA = ["srd", "xphb", "efa"]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_feat_prerequisite_met_by_background_granted_feat(catalog):
+    res = resolve(_fighter4_feat_draft("house-cannith-heir-efa", ["srd", "efa"]), catalog)
+    _, opt = _asi4_option(res, "greater-mark-of-making-efa")
+    assert not opt.get("disabled")
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_feat_prerequisite_unmet_without_the_required_feat_names_it(catalog):
+    res = resolve(_fighter4_feat_draft("acolyte-xphb", _SRD_XPHB_EFA), catalog)
+    _, opt = _asi4_option(res, "greater-mark-of-making-efa")
+    assert opt.get("disabled") is True
+    assert opt["disabledReason"] == "prerequisite not met: requires the Mark of Making feat"
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_hand_edited_pick_missing_required_feat_is_blocked_and_reported(catalog):
+    res = resolve(_fighter4_feat_draft("acolyte-xphb", _SRD_XPHB_EFA, "greater-mark-of-making-efa"), catalog)
+    assert "feat-prerequisite-unmet-greater-mark-of-making-efa" in [p["id"] for p in res["problems"]]
+    assert "greater-mark-of-making-efa" not in res["sheet"]["grantedFeats"]
+    choice, _ = _asi4_option(res, "greater-mark-of-making-efa")
+    assert choice["selected"] == [] and choice["status"] == "pending"
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_magic_connoisseur_needs_magic_initiate_from_the_background(catalog):
+    sources = ["srd", "xphb", "au", "efa"]
+    for bg, enabled in (("acolyte-xphb", True), ("sage-xphb", True), ("house-cannith-heir-efa", False)):
+        res = resolve(_fighter4_feat_draft(bg, sources), catalog)
+        _, opt = _asi4_option(res, "magic-connoisseur-au")
+        assert bool(opt.get("disabled")) is (not enabled), bg
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_au_familiar_feats_are_always_disabled(catalog):
+    for bg in ("acolyte-xphb", "house-cannith-heir-efa"):
+        res = resolve(_fighter4_feat_draft(bg, ["srd", "xphb", "au", "efa"]), catalog)
+        _, opt = _asi4_option(res, "elemental-familiar-au")
+        assert opt.get("disabled") is True and "Familiar Friend" in opt["disabledReason"]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_feat_prerequisites_toggled_off_enables_feat_gated_options(catalog):
+    draft = _fighter4_feat_draft("acolyte-xphb", _SRD_XPHB_EFA)
+    draft["preferences"] = {}
+    res = resolve(draft, catalog)
+    _, opt = _asi4_option(res, "greater-mark-of-making-efa")
+    assert not opt.get("disabled")
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_earlier_asi_feat_satisfies_later_pick_but_not_the_reverse(catalog, monkeypatch):
+    monkeypatch.setitem(catalog.feats, "test-chain-xphb", {
+        **catalog.feats["actor-xphb"], "index": "test-chain-xphb", "name": "Test Chain",
+        "prerequisite": [{"level": 4, "feat": ["actor|xphb"]}],
+    })
+    base = {"STR": 16, "DEX": 14, "CON": 14, "INT": 10, "WIS": 12, "CHA": 14}
+    ab = {"method": "manual", "base": base}
+
+    def run(first, second):
+        return resolve(_fighter_acolyte_human_draft(
+            sources=_SRD_AND_XPHB, preferences=_feat_prereqs_on(), abilities=ab,
+            classes=[{"classId": "fighter", "level": 8, "choices": {
+                "class:fighter:4:asi": [f"feat:{first}"], "class:fighter:6:asi": [f"feat:{second}"],
+            }}],
+        ), catalog)
+
+    ok = run("actor-xphb", "test-chain-xphb")
+    assert not [p for p in ok["problems"] if p["id"].startswith("feat-prerequisite-unmet")]
+    assert {"actor-xphb", "test-chain-xphb"} <= set(ok["sheet"]["grantedFeats"])
+    swapped = run("test-chain-xphb", "actor-xphb")
+    assert "feat-prerequisite-unmet-test-chain-xphb" in [p["id"] for p in swapped["problems"]]
+    assert "test-chain-xphb" not in swapped["sheet"]["grantedFeats"]
+    assert "actor-xphb" in swapped["sheet"]["grantedFeats"]
