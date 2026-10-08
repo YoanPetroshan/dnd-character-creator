@@ -1,4 +1,5 @@
-import { NavLink } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { useResolutionContext } from "../ResolutionContext";
 import type { ChoiceSourceKind } from "../types";
 
@@ -37,6 +38,13 @@ const STEPS: Step[] = [
 
 export function StepNav() {
   const { resolution } = useResolutionContext();
+  const navRef = useRef<HTMLElement>(null);
+  const { pathname } = useLocation();
+
+  // Keep the active step visible when the nav scrolls horizontally on phones.
+  useEffect(() => {
+    navRef.current?.querySelector(".active")?.scrollIntoView?.({ inline: "nearest", block: "nearest" });
+  }, [pathname]);
 
   function pendingCount(step: Step): number {
     if (!step.kind || !resolution) return 0;
@@ -47,7 +55,7 @@ export function StepNav() {
   }
 
   return (
-    <nav className="step-nav">
+    <nav className="step-nav" ref={navRef}>
       {STEPS.map((step) => {
         const count = pendingCount(step);
         return (
