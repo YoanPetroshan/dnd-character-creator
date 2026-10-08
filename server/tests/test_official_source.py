@@ -2017,3 +2017,14 @@ def test_no_other_real_background_feat_grant_key_contains_a_semicolon():
             continue
         for feat_id in bg["feats"] + bg["feat_options"]:
             assert ";" not in feat_id, f"{bg['index']}: unexpected semicolon in {feat_id!r}"
+
+
+def test_choice_shaped_expertise_and_saving_throw_become_envelopes():
+    feats = {f["index"]: f for f in load_official_feats(official_dir())}
+    assert feats["skill-expert-xphb"]["expertise_choices"] == [
+        {"choose": 1, "type": "proficiencies", "from": {"option_set_type": "any_skill"}}
+    ]
+    assert feats["aberrant-anatomy-rhw"]["expertise_choices"] == []  # fixed grant only
+    options = feats["resilient-xphb"]["saving_throw_choices"][0]["from"]["options"]
+    assert [o["item"]["index"] for o in options] == ["str", "dex", "con", "int", "wis", "cha"]
+    assert feats["actor-xphb"]["saving_throw_choices"] == []

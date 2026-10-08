@@ -3800,7 +3800,8 @@ def test_asi_selected_feat_with_proficiency_and_ability_choice_cascades_and_appl
     cascaded = {c["id"]: c for c in resolution["choices"] if c["source"]["kind"] == "feat"}
     prof_cid = "class:fighter:4:asi:feat:skill-expert-xphb:proficiency-choice-0"
     ability_cid = "class:fighter:4:asi:feat:skill-expert-xphb:ability-bonus"
-    assert set(cascaded) == {prof_cid, ability_cid}
+    expertise_cid = "class:fighter:4:asi:feat:skill-expert-xphb:expertise-choice-0"
+    assert set(cascaded) == {prof_cid, ability_cid, expertise_cid}
     assert all(c["status"] == "pending" for c in cascaded.values())
     # No un-scoped background-style duplicate of the same feat's choices.
     assert not any(c["id"].startswith("feat:") for c in resolution["choices"])
@@ -3808,7 +3809,9 @@ def test_asi_selected_feat_with_proficiency_and_ability_choice_cascades_and_appl
 
     fighter_choices[prof_cid] = ["skill-arcana"]
     fighter_choices[ability_cid] = ["str"]
+    fighter_choices[expertise_cid] = ["skill-arcana"]
     resolution2 = resolve(draft, catalog)
+    assert resolution2["sheet"]["expertiseSkills"] == ["skill-arcana"]
     assert resolution2["problems"] == []
     assert resolution2["pruned"] == []
     assert resolution2["sheet"]["abilities"]["STR"] == resolution["sheet"]["abilities"]["STR"] + 1 == 16 + 1 + 1
@@ -3816,6 +3819,7 @@ def test_asi_selected_feat_with_proficiency_and_ability_choice_cascades_and_appl
     cascaded2 = {c["id"]: c for c in resolution2["choices"] if c["source"]["kind"] == "feat"}
     assert cascaded2[prof_cid]["status"] == "resolved"
     assert cascaded2[ability_cid]["status"] == "resolved"
+    assert cascaded2[expertise_cid]["status"] == "resolved"
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
@@ -4061,3 +4065,22 @@ def test_asi_feat_options_honor_draft_sources(catalog):
     assert all(catalog.feats[i[len("feat:"):]]["source"] == "XPHB" for i in xphb_ids)
     _, unrestricted_ids = feat_option_ids([])  # empty sources = no filtering, same as races/backgrounds
     assert len(unrestricted_ids) == 94
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_asi_selected_resilient_offers_and_applies_a_saving_throw_proficiency(catalog):
+    # Resilient/XPHB: the real `savingThrowProficiencies` choose-one-of-six
+    # was silently dropped before the choice-shaped conversion existed.
+    fighter_choices: dict = {"class:fighter:4:asi": ["feat:resilient-xphb"]}
+    draft = _fighter_acolyte_human_draft(sources=_SRD_AND_XPHB, classes=[{"classId": "fighter", "level": 4, "choices": fighter_choices}])
+    resolution = resolve(draft, catalog)
+    save_cid = "class:fighter:4:asi:feat:resilient-xphb:save-choice-0"
+    cascaded = {c["id"]: c for c in resolution["choices"] if c["source"]["kind"] == "feat"}
+    assert save_cid in cascaded and cascaded[save_cid]["status"] == "pending"
+    assert {o["id"] for o in cascaded[save_cid]["options"]} == {"str", "dex", "con", "int", "wis", "cha"}
+    assert "WIS" not in resolution["sheet"]["proficiencies"]["savingThrows"]
+
+    fighter_choices[save_cid] = ["wis"]
+    fighter_choices["class:fighter:4:asi:feat:resilient-xphb:ability-bonus"] = ["wis"]
+    resolution2 = resolve(draft, catalog)
+    assert "WIS" in resolution2["sheet"]["proficiencies"]["savingThrows"]

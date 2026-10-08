@@ -2014,6 +2014,8 @@ def _feat_from_5etools(raw: dict) -> dict | None:
         "senses": _senses_from_5etools(raw),
         "expertise_skills": _expertise_skills_from_5etools(raw),
         "saving_throw_proficiencies": _saving_throw_proficiencies_from_5etools(raw),
+        "expertise_choices": _expertise_choices_from_5etools(raw),
+        "saving_throw_choices": _saving_throw_choices_from_5etools(raw),
     }
 
 
@@ -2041,18 +2043,9 @@ def _expertise_skills_from_5etools(raw: dict) -> list[str]:
     CHOICE within an already-selected feat is unconverted, not feat
     selection itself.
 
-    DISCLOSED GAP (real, not hypothetical, flagged by the ASI-or-feat
-    final whole-branch review, 2026-09-28): because anyProficientSkill
-    silently converts to nothing, a player who picks Skill Expert/XPHB —
-    the design spec's own primary worked example, and now directly,
-    prominently reachable via a free ASI-level feat pick, not just an
-    obscure background grant — never gets the expertise-skill choice the
-    feat's real text promises; `sheet.expertiseSkills` ends up `[]` for
-    that pick with no warning shown. See
-    _saving_throw_proficiencies_from_5etools' own docstring just below for
-    the matching gap on Resilient. Converting these choice-shaped
-    envelopes into a real, selectable Choice is real catalog-layer scope,
-    not attempted here.
+    The anyProficientSkill CHOICE portion is converted separately by
+    _expertise_choices_from_5etools (closes the Skill Expert gap the
+    ASI-or-feat final review disclosed).
 
     Confirmed against the real fetched feats.json (2026-09-28): 7 real
     records carry this field (Aberrant Anatomy/RHW, Boon of Skill/XPHB,
@@ -2068,6 +2061,57 @@ def _expertise_skills_from_5etools(raw: dict) -> list[str]:
     return skills
 
 
+def _expertise_choices_from_5etools(raw: dict) -> list[dict]:
+    """The CHOICE portion of feats.json's `expertise` field —
+    `{"anyProficientSkill": N}` — as a `proficiency_choices`-style envelope
+    ({"choose": N, "from": {"option_set_type": "any_skill"}}) that
+    engine.resolve._feat_choice_templates turns into a real, selectable
+    Choice. Closes the gap _expertise_skills_from_5etools' docstring
+    discloses (Skill Expert, Prodigy, Boon of Skill, Echoing Soul).
+
+    DISCLOSED NARROWING: the real rule says the skill must be one the
+    character is already proficient in; the option list here is every
+    skill (no dependency on the rest of the resolve pass), so that
+    restriction is described in the card text but not enforced."""
+    envelopes = []
+    for entry in raw.get("expertise") or []:
+        n = entry.get("anyProficientSkill")
+        if isinstance(n, int) and not isinstance(n, bool) and n > 0:
+            envelopes.append({"choose": n, "type": "proficiencies", "from": {"option_set_type": "any_skill"}})
+    return envelopes
+
+
+def _saving_throw_choices_from_5etools(raw: dict) -> list[dict]:
+    """The CHOICE portion of feats.json's `savingThrowProficiencies` field —
+    `{"choose": {"from": ["str", ...], "count"?: N}}` (Resilient/PHB and
+    /XPHB) — as an options_array envelope whose option ids are the bare
+    lowercase ability keys; engine.resolve uppercases a selection before
+    merging it into the saving-throw proficiency list."""
+    envelopes = []
+    for entry in raw.get("savingThrowProficiencies") or []:
+        choose = entry.get("choose")
+        if not isinstance(choose, dict):
+            continue
+        options = [
+            {"option_type": "reference", "item": {"index": k, "name": SAVE_ABILITY_NAMES[k], "url": ""}}
+            for k in choose.get("from", [])
+            if k in SAVE_ABILITY_NAMES
+        ]
+        if options:
+            envelopes.append({
+                "choose": choose.get("count", 1),
+                "type": "proficiencies",
+                "from": {"option_set_type": "options_array", "options": options},
+            })
+    return envelopes
+
+
+SAVE_ABILITY_NAMES = {
+    "str": "Strength", "dex": "Dexterity", "con": "Constitution",
+    "int": "Intelligence", "wis": "Wisdom", "cha": "Charisma",
+}
+
+
 def _saving_throw_proficiencies_from_5etools(raw: dict) -> list[str]:
     """Converts feats.json's `savingThrowProficiencies` field into a plain
     list of ability ids ("STR", "DEX", ...) for a FIXED grant — only an
@@ -2076,17 +2120,9 @@ def _saving_throw_proficiencies_from_5etools(raw: dict) -> list[str]:
     scope, the same reasoning _expertise_skills_from_5etools' own
     anyProficientSkill exclusion uses just above.
 
-    DISCLOSED GAP (same as _expertise_skills_from_5etools' own gap just
-    above, flagged by the ASI-or-feat final whole-branch review,
-    2026-09-28): Resilient/PHB and Resilient/XPHB are the concrete real
-    examples — both are exclusively choice-shaped, so this function
-    returns `[]` for both, and `sheet.savingThrowProficiencies` never
-    reflects a Resilient pick's real saving-throw proficiency. Resilient
-    is directly, prominently reachable via a free ASI-level feat pick
-    (not just an obscure background grant) as of the ASI-or-feat plan, so
-    a player picking it expects a real benefit and silently gets none.
-    Converting this choice-shaped envelope into a real, selectable Choice
-    is real catalog-layer scope, not attempted here.
+    The choice-shaped portion (Resilient) is converted separately by
+    _saving_throw_choices_from_5etools (closes the gap the ASI-or-feat
+    final review disclosed).
 
     Confirmed against the real fetched feats.json (2026-09-28): only 2
     real records carry this field at all (Resilient/PHB, Resilient/XPHB),

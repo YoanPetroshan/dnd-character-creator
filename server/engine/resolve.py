@@ -1044,7 +1044,44 @@ def _feat_choice_templates(feats: list[dict], origin: str | None = None) -> list
             tpl = build_choice_template(prof_envelope, cid, source, label, description=description)
             if tpl:
                 templates.append(tpl)
+
+        # Skill Expert-style expertise picks and Resilient's saving-throw
+        # pick (see official_source._expertise_choices_from_5etools /
+        # _saving_throw_choices_from_5etools). Deliberately NOT named
+        # "proficiency-choice" so the proficiency merge branch in resolve()
+        # never feeds these ids to _categorize_proficiency.
+        for i, env in enumerate(feat.get("expertise_choices", []) or []):
+            source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
+            if feat_level is not None:
+                source["level"] = feat_level
+            choose = env.get("choose", 1)
+            description = f"Choose {choose} skill{'s' if choose != 1 else ''} you are proficient in to gain Expertise."
+            tpl = build_choice_template(env, f"{cid_prefix}:expertise-choice-{i}", source, f"{feat['name']}: Expertise", description=description)
+            if tpl:
+                templates.append(tpl)
+
+        for i, env in enumerate(feat.get("saving_throw_choices", []) or []):
+            source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
+            if feat_level is not None:
+                source["level"] = feat_level
+            choose = env.get("choose", 1)
+            description = f"Choose {choose} ability{'s' if choose != 1 else ''} to gain saving throw proficiency in."
+            tpl = build_choice_template(env, f"{cid_prefix}:save-choice-{i}", source, f"{feat['name']}: Saving Throw", description=description)
+            if tpl:
+                templates.append(tpl)
     return templates
+
+
+def _feat_selected_choice_values(choices: list[dict], marker: str) -> list[str]:
+    """Selected option ids of every feat-sourced Choice whose cid contains
+    `marker` (":expertise-choice-" / ":save-choice-"), deduped in order."""
+    out: list[str] = []
+    for c in choices:
+        if c["source"]["kind"] == "feat" and marker in c["id"]:
+            for sel in c.get("selected", []):
+                if sel not in out:
+                    out.append(sel)
+    return out
 
 
 def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrace: dict | None) -> list[dict]:
@@ -2538,7 +2575,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # doesn't produce a duplicate entry in derived.savingThrows/
     # sheet.proficiencies.savingThrows.
     proficient_save_abilities = [st["index"].upper() for st in (cls.get("saving_throws", []) if cls else [])]
-    for ab in _feat_saving_throw_proficiencies(resolved_feats):
+    for ab in _feat_saving_throw_proficiencies(resolved_feats) + [
+        a.upper() for a in _feat_selected_choice_values(choices, ":save-choice-")
+    ]:
         if ab not in proficient_save_abilities:
             proficient_save_abilities.append(ab)
 
@@ -2633,7 +2672,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "grantedFeats": granted_feats + [f["index"] for f in asi_selected_feats],
         "featOptions": feat_options,
         "senses": senses,
-        "expertiseSkills": _feat_expertise_skills(resolved_feats),
+        "expertiseSkills": _feat_expertise_skills(resolved_feats) + [
+            s for s in _feat_selected_choice_values(choices, ":expertise-choice-")
+            if s not in _feat_expertise_skills(resolved_feats)
+        ],
     }
 
     return {
