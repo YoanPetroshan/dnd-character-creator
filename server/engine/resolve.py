@@ -1275,13 +1275,14 @@ def _multiclass_prerequisite_problems(resolved_classes: list[dict], final_scores
     return problems
 
 
-# The set of feat-prerequisite keys this app can actually verify — see
-# _feat_structured_prerequisite's own docstring for the full real-data
-# grounding (85/305 real feats carry a prerequisite made ENTIRELY of these
-# two keys; every other real key — campaign, other, otherSummary,
-# feature, race, proficiency, feat, background, spellcasting/
-# spellcasting2020/spellcastingFeature, featCategory/
-# exclusiveFeatCategory — is left unmodeled and never enforced).
+# The feat-prerequisite keys the BACKGROUND second pass
+# (_feat_prerequisite_problems) can verify against final_scores/total_level
+# alone: just level and ability. Every other real key (campaign, other,
+# otherSummary, feature, race, proficiency, feat, background,
+# spellcasting*, featCategory, exclusiveFeatCategory) is not checked there.
+# NEVER widen this set: it would give false problems for ASI-gated picks.
+# The ASI walk and option reasons use the wider _ASI_GATE_PREREQUISITE_KEYS
+# below, which also needs the held-feat state.
 _STRUCTURED_FEAT_PREREQUISITE_KEYS = {"level", "ability"}
 # Keys the ASI-level gate (the walk + option reasons) can verify. A superset
 # of _STRUCTURED_FEAT_PREREQUISITE_KEYS, which the background second pass
@@ -1343,9 +1344,8 @@ def _feat_structured_prerequisite(feat: dict, supported_keys=None) -> list[dict]
     """Returns feat["prerequisite"] (a 5etools-shaped list of alternative
     requirement objects — met if ANY ONE alternative is fully met, exactly
     like multi_classing.prerequisite_options' own "choose N of these"
-    OR-semantics above) when EVERY alternative in it consists SOLELY of
-    "level" and/or "ability" keys — the only two prerequisite shapes this
-    app can verify against final_scores/total_level. Returns None (no
+    OR-semantics above) when EVERY alternative in it is verifiable under
+    `supported_keys` (key subset and valid value shapes). Returns None (no
     problem ever raised) when the feat has no prerequisite data at all,
     OR when ANY alternative carries a key this app can't check (campaign,
     feature, proficiency, feat, race, background, spellcasting*,
@@ -1363,7 +1363,12 @@ def _feat_structured_prerequisite(feat: dict, supported_keys=None) -> list[dict]
     silently wrong enforcement" choice this task's brief calls for
     generally, not narrowly special-cased to fully-non-structured feats.
 
-    85/305 real feats (2026-09-28) are entirely level/ability — everything
+    `supported_keys` defaults to level/ability (background second pass);
+    the ASI gate passes _ASI_GATE_PREREQUISITE_KEYS. Real-data shapes
+    (2026-10-08): of the 94 ASI-eligible feats, 50 are entirely
+    level/ability; the other 44 use feat / spellcasting2020 / feature /
+    proficiency / featCategory, enforced only by the ASI gate. Level/ability
+    examples — everything
     from single-alternative ("Ability Score Improvement": level 4 only) to
     multi-alternative OR shapes (Athlete/Charger/Grappler/etc.: level 4 +
     (STR 13 OR DEX 13), two separate alternative objects) — both are
