@@ -4978,3 +4978,11 @@ def test_synthetic_asi_feat_has_independent_ability_bonus_and_spell_ability(cata
     assert [o["id"] for o in _choice(res, origin + "spell-ability")["options"]] == ["int", "wis"]
     res = run({origin + "ability-bonus": ["con"], origin + "spell-ability": ["wis"]})
     assert [e["ability"] for e in _feat_spells(res, "synthetic-asi-spell-test")] == ["WIS"]
+
+
+def test_spell_filter_description_grammar():
+    from engine.resolve import _spell_filter_description as d
+    assert d(2, {"level": [0], "class": ["cleric"]}) == "Choose 2 cantrips from the Cleric list."
+    assert d(1, {"level": [0], "class": ["cleric"]}) == "Choose 1 cantrip from the Cleric list."
+    assert d(1, {"level": [1], "school": ["enchantment", "divination"]}) == "Choose 1 Enchantment or Divination level 1 spell."
+    assert d(2, {"level": [1], "ritual": True}) == "Choose 2 level 1 spells with the Ritual tag."

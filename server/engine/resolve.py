@@ -533,16 +533,19 @@ def _spell_filter_options(catalog: Catalog, flt: dict) -> list[dict]:
 def _spell_filter_description(count: int, flt: dict) -> str:
     level = flt.get("level")
     if level == [0]:
-        noun = "cantrip"
+        core = "cantrip"
     else:
-        noun = (f"level {' or '.join(str(x) for x in level)} " if level else "") + "spell"
+        core = (f"level {' or '.join(str(x) for x in level)} " if level else "") + "spell"
+    if count != 1:
+        core += "s"
+    noun = core
     if flt.get("school"):
         noun = " or ".join(x.title() for x in flt["school"]) + " " + noun
     if flt.get("class"):
         noun += " from the " + " or ".join(x.title() for x in flt["class"]) + " list"
     if flt.get("ritual"):
         noun += " with the Ritual tag"
-    return f"Choose {count} {noun}{'s' if count != 1 else ''}."
+    return f"Choose {count} {noun}."
 
 
 def _feat_spell_choice_templates(
