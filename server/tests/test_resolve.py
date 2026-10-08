@@ -10,7 +10,7 @@ from engine.resolve import (
     _DETAIL_FIELDS, _asi_choice_templates, _feat_ability_bonus_choice_templates, _feat_ability_bonuses,
     _feat_choice_templates, _feat_expertise_skills, _feat_languages,
     _feat_prerequisite_problems, _feat_proficiency_ids, _feat_saving_throw_proficiencies,
-    _feat_senses, _resolve_granted_feats, resolve,
+    _feat_senses, _gate_expertise_choices, _resolve_granted_feats, resolve,
 )
 
 
@@ -3820,6 +3820,83 @@ def test_asi_selected_feat_with_proficiency_and_ability_choice_cascades_and_appl
     assert cascaded2[prof_cid]["status"] == "resolved"
     assert cascaded2[ability_cid]["status"] == "resolved"
     assert cascaded2[expertise_cid]["status"] == "resolved"
+
+
+_SE_PREFIX = "class:fighter:4:asi:feat:skill-expert-xphb"
+_SE_EXP = _SE_PREFIX + ":expertise-choice-0"
+_SE_PROF = _SE_PREFIX + ":proficiency-choice-0"
+
+
+def _skill_expert_resolution(catalog, extra):
+    fc = {"class:fighter:4:asi": ["feat:skill-expert-xphb"], **extra}
+    draft = _fighter_acolyte_human_draft(sources=_SRD_AND_XPHB, classes=[{"classId": "fighter", "level": 4, "choices": fc}])
+    return resolve(draft, catalog)
+
+
+def _enabled(choice):
+    return {o["id"] for o in choice["options"] if not o.get("disabled")}
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_expertise_options_limited_to_proficient_skills(catalog):
+    r = _skill_expert_resolution(catalog, {})
+    exp = next(c for c in r["choices"] if c["id"] == _SE_EXP)
+    assert _enabled(exp) == {"skill-insight", "skill-religion"}
+    ath = next(o for o in exp["options"] if o["id"] == "skill-athletics")
+    assert ath["disabled"] is True and ath["disabledReason"] == "not proficient"
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_expertise_options_include_feat_proficiency_pick(catalog):
+    r = _skill_expert_resolution(catalog, {_SE_PROF: ["skill-arcana"]})
+    exp = next(c for c in r["choices"] if c["id"] == _SE_EXP)
+    assert _enabled(exp) == {"skill-arcana", "skill-insight", "skill-religion"}
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_expertise_on_proficient_skill_resolves(catalog):
+    r = _skill_expert_resolution(catalog, {
+        "class:fighter:1:prof-choice-0": ["skill-athletics", "skill-perception"],
+        _SE_EXP: ["skill-athletics"],
+    })
+    exp = next(c for c in r["choices"] if c["id"] == _SE_EXP)
+    assert exp["status"] == "resolved"
+    assert r["sheet"]["expertiseSkills"] == ["skill-athletics"]
+    assert r["pruned"] == []
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_expertise_pick_pruned_when_skill_not_proficient_and_no_leak(catalog):
+    r = _skill_expert_resolution(catalog, {
+        "class:fighter:1:prof-choice-0": ["skill-acrobatics", "skill-perception"],
+        _SE_EXP: ["skill-athletics"],
+    })
+    exp = next(c for c in r["choices"] if c["id"] == _SE_EXP)
+    assert exp["selected"] == [] and exp["status"] == "pending"
+    assert r["sheet"]["expertiseSkills"] == []
+    assert r["problems"] == []
+    entries = [p for p in r["pruned"] if p["choiceId"] == _SE_EXP]
+    assert len(entries) == 1 and "Athletics" in entries[0]["reason"]
+    assert len(r["pruned"]) == 1
+    assert "skill-athletics" not in r["sheet"]["proficiencies"]["skills"]
+
+
+def test_gate_expertise_choices_helper():
+    exp = {
+        "id": "feat:x:expertise-choice-0", "source": {"kind": "feat"}, "label": "X: Expertise", "count": 1,
+        "options": [{"id": "skill-arcana", "label": "Arcana"}, {"id": "skill-history", "label": "History"}],
+        "selected": ["skill-history"], "status": "resolved",
+    }
+    other = {"id": "class:fighter:1:prof-choice-0", "source": {"kind": "class"}, "label": "P", "count": 1,
+             "options": [{"id": "skill-history", "label": "History"}], "selected": ["skill-history"], "status": "resolved"}
+    choices = [exp, other]
+    pruned = _gate_expertise_choices(choices, {"skill-arcana"})
+    assert len(pruned) == 1 and pruned[0]["choiceId"] == "feat:x:expertise-choice-0"
+    assert choices[0]["selected"] == [] and choices[0]["status"] == "pending"
+    opts = {o["id"]: o for o in choices[0]["options"]}
+    assert opts["skill-history"]["disabled"] is True
+    assert not opts["skill-arcana"].get("disabled")
+    assert choices[1] is other and other["selected"] == ["skill-history"] and "disabled" not in other["options"][0]
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")

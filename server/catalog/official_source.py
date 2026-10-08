@@ -2070,10 +2070,8 @@ def _expertise_choices_from_5etools(raw: dict) -> list[dict]:
     Choice. Closes the gap _expertise_skills_from_5etools' docstring
     discloses (Skill Expert, Prodigy, Boon of Skill, Echoing Soul).
 
-    DISCLOSED NARROWING: the real rule says the skill must be one the
-    character is already proficient in; the option list here is every
-    skill (no dependency on the rest of the resolve pass), so that
-    restriction is described in the card text but not enforced."""
+    The options here are every skill; they are gated to proficient skills
+    by engine.resolve._gate_expertise_choices."""
     envelopes = []
     for entry in raw.get("expertise") or []:
         n = entry.get("anyProficientSkill")

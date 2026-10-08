@@ -1097,6 +1097,34 @@ def _feat_selected_choice_values(choices: list[dict], marker: str) -> list[str]:
     return out
 
 
+def _gate_expertise_choices(choices: list[dict], proficient_skills: set[str]) -> list[dict]:
+    """Restrict every feat-sourced Expertise Choice to skills the character
+    is proficient in. Mutates `choices` in place (entries replaced by index);
+    returns non-blocking pruned entries for selections that were dropped."""
+    pruned: list[dict] = []
+    for i, c in enumerate(choices):
+        if c["source"]["kind"] != "feat" or ":expertise-choice-" not in c["id"]:
+            continue
+        options = [
+            o if (o["id"] in proficient_skills or o.get("disabled"))
+            else {**o, "disabled": True, "disabledReason": "not proficient"}
+            for o in c["options"]
+        ]
+        selected = c.get("selected", [])
+        kept = [s for s in selected if s in proficient_skills]
+        dropped = [s for s in selected if s not in proficient_skills]
+        if dropped:
+            labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
+            names = ", ".join(labels.get(d, d) for d in dropped)
+            pruned.append({
+                "choiceId": c["id"],
+                "reason": f"'{c['label']}': {names} is no longer a proficient skill; the Expertise selection was ignored.",
+            })
+        choices[i] = {**c, "options": options, "selected": kept,
+                      "status": "resolved" if len(kept) == c["count"] else "pending"}
+    return pruned
+
+
 def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrace: dict | None) -> list[dict]:
     templates = []
     trait_refs = list(race.get("traits", [])) + (list(subrace.get("racial_traits", [])) if subrace else [])
@@ -2456,7 +2484,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         # unconditionally: the only OTHER background-kind choice is the
         # language choice, whose selected values are language ids, never
         # "skill-"-prefixed, so this filter still excludes them.
-        if c["source"]["kind"] in ("class", "species", "background", "feat"):
+        # Expertise picks are not proficiency grants (they must already be
+        # proficient), so they never feed this set.
+        if c["source"]["kind"] in ("class", "species", "background", "feat") and ":expertise-choice-" not in c["id"]:
             proficient_skills.update(s for s in c["selected"] if s.startswith("skill-"))
     if bg:
         proficient_skills.update(p["index"] for p in bg.get("starting_proficiencies", []) if p["index"].startswith("skill-"))
@@ -2474,6 +2504,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # a feat's own proficiency_choices) are read.
     feat_proficiency_ids = _feat_proficiency_ids(resolved_feats)
     proficient_skills.update(p for p in feat_proficiency_ids if p.startswith("skill-"))
+    pruned += _gate_expertise_choices(choices, proficient_skills)
 
     proficient_armor: set[str] = set()
     proficient_weapons: set[str] = set()
