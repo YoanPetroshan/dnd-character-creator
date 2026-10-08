@@ -4,8 +4,25 @@
     {
       "name": "frontend-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "frontend", "run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "dev"
+      ],
       "port": 5173
+    },
+    {
+      "name": "backend",
+      "runtimeExecutable": "/Users/yoanpetrov/dnd-character-creator/.venv/bin/flask",
+      "runtimeArgs": [
+        "--app",
+        "server/app.py",
+        "run",
+        "--port",
+        "8000"
+      ],
+      "port": 8000
     }
   ]
 }
