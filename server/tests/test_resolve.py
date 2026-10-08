@@ -4748,3 +4748,126 @@ def test_ritual_caster_over_count_after_level_down_is_pruned_not_a_problem(catal
     assert c["selected"] == ["find-familiar", "alarm"]
     assert _RC_CID in [p["choiceId"] for p in r["pruned"]]
     assert not [p for p in r["problems"] if _RC_CID in p.get("message", "") or _RC_CID in p.get("id", "")]
+
+
+# --- end-to-end: Magic Connoisseur (AU) and Light Bringer (ABH) ---
+
+_MC = "class:fighter:4:asi:feat:magic-connoisseur-au:"
+_LB = "class:fighter:4:asi:feat:light-bringer-abh:"
+
+
+def _asi_feat_spell_draft(feat_index, extra, background_id="acolyte-xphb"):
+    choices = {"class:fighter:4:asi": [f"feat:{feat_index}"], **extra}
+    return _fighter_acolyte_human_draft(
+        sources=["srd", "xphb", "au", "abh"], preferences=_feat_prereqs_on(),
+        background={"id": background_id, "choices": {}},
+        classes=[{"classId": "fighter", "level": 4, "choices": choices}],
+    )
+
+
+def _choice(res, cid):
+    return next((c for c in res["choices"] if c["id"] == cid), None)
+
+
+def _feat_spells(res, feat_id):
+    return [e for e in res["sheet"]["innateSpells"] if e.get("featId") == feat_id]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_magic_connoisseur_variant_pending_with_no_dependent_choices_or_spells(catalog):
+    res = resolve(_asi_feat_spell_draft("magic-connoisseur-au", {}), catalog)
+    variant = _choice(res, _MC + "spell-variant")
+    assert variant["status"] == "pending"
+    assert [o["id"] for o in variant["options"]] == ["cleric-spells", "druid-spells", "wizard-spells"]
+    assert [c for c in res["choices"] if ":spell-choice-" in c["id"]] == []
+    assert _feat_spells(res, "magic-connoisseur-au") == []
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_magic_connoisseur_selecting_variant_reveals_level_1_and_2_choices(catalog):
+    res = resolve(_asi_feat_spell_draft("magic-connoisseur-au", {_MC + "spell-variant": ["wizard-spells"]}), catalog)
+    # cids index the full list (cleric 0-1, druid 2-3, wizard 4-5) so they stay stable across variants
+    spell_cids = sorted(c["id"] for c in res["choices"] if ":spell-choice-" in c["id"])
+    assert spell_cids == [_MC + "spell-choice-4", _MC + "spell-choice-5"]
+    lvl1, lvl2 = _choice(res, _MC + "spell-choice-4"), _choice(res, _MC + "spell-choice-5")
+    assert (lvl1["count"], len(lvl1["options"]), lvl1["status"]) == (1, 27, "pending")
+    assert (lvl2["count"], len(lvl2["options"]), lvl2["status"]) == (1, 31, "pending")
+    assert "shield" in [o["id"] for o in lvl1["options"]]
+    assert "invisibility" in [o["id"] for o in lvl2["options"]]
+    assert "shield" not in [o["id"] for o in lvl2["options"]]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_magic_connoisseur_selected_spells_become_daily_innate_spells_with_inherited_ability(catalog):
+    picks = {_MC + "spell-variant": ["wizard-spells"], _MC + "spell-choice-4": ["shield"],
+             _MC + "spell-choice-5": ["invisibility"]}
+    # ability not yet chosen: the entries carry the open INT/WIS/CHA choice
+    res = resolve(_asi_feat_spell_draft("magic-connoisseur-au", picks), catalog)
+    spells = _feat_spells(res, "magic-connoisseur-au")
+    assert [(e["name"], e["uses"]) for e in spells] == [("Shield", "1/day"), ("Invisibility", "1/day")]
+    assert all(e["ability"] == {"choose": ["INT", "WIS", "CHA"]} for e in spells)
+    # choosing the feat's ability increase resolves "inherit" to that ability
+    res = resolve(_asi_feat_spell_draft("magic-connoisseur-au", {**picks, _MC + "ability-bonus": ["wis"]}), catalog)
+    spells = _feat_spells(res, "magic-connoisseur-au")
+    assert [(e["spellId"], e["ability"], e["variant"]) for e in spells] == [
+        ("shield", "WIS", None), ("invisibility", "WIS", None)]
+    assert not [p for p in res["problems"] if "magic-connoisseur" in p["id"]]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_magic_connoisseur_picks_from_another_variants_list_are_ignored(catalog):
+    # cid -4 belongs to Wizard Spells; with Cleric Spells selected it must not apply
+    res = resolve(_asi_feat_spell_draft("magic-connoisseur-au", {
+        _MC + "spell-variant": ["cleric-spells"], _MC + "spell-choice-4": ["shield"]}), catalog)
+    assert _feat_spells(res, "magic-connoisseur-au") == []
+    assert _MC + "spell-choice-4" in [p["choiceId"] for p in res["pruned"]]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_magic_connoisseur_only_pickable_when_background_grants_magic_initiate(catalog):
+    for bg, ok in (("acolyte-xphb", True), ("house-cannith-heir-efa", False)):
+        res = resolve(_asi_feat_spell_draft("magic-connoisseur-au", {}, background_id=bg), catalog)
+        picked = "magic-connoisseur-au" in res["sheet"]["grantedFeats"]
+        assert picked is ok, bg
+        assert (_choice(res, _MC + "spell-variant") is not None) is ok, bg
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_light_bringer_variant_and_ability_pending_with_no_spells(catalog):
+    res = resolve(_asi_feat_spell_draft("light-bringer-abh", {}), catalog)
+    variant = _choice(res, _LB + "spell-variant")
+    assert variant["status"] == "pending"
+    assert [o["id"] for o in variant["options"]] == ["light", "cleric-cantrip"]
+    assert _choice(res, _LB + "ability-bonus")["status"] == "pending"
+    assert [c for c in res["choices"] if ":spell-choice-" in c["id"]] == []
+    assert _feat_spells(res, "light-bringer-abh") == []
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_light_bringer_fixed_light_variant_grants_light_without_a_spell_choice(catalog):
+    res = resolve(_asi_feat_spell_draft("light-bringer-abh", {_LB + "spell-variant": ["light"]}), catalog)
+    assert [c for c in res["choices"] if ":spell-choice-" in c["id"]] == []
+    spells = _feat_spells(res, "light-bringer-abh")
+    assert [(e["spellId"], e["name"], e["uses"], e["variant"]) for e in spells] == [
+        ("light", "Light", "at-will", None)]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_light_bringer_cleric_cantrip_variant_offers_cleric_cantrips_and_grants_pick(catalog):
+    res = resolve(_asi_feat_spell_draft("light-bringer-abh", {_LB + "spell-variant": ["cleric-cantrip"]}), catalog)
+    pick = _choice(res, _LB + "spell-choice-0")
+    assert (pick["count"], pick["status"]) == (1, "pending")
+    ids = [o["id"] for o in pick["options"]]
+    assert len(ids) == 7 and {"guidance", "sacred-flame", "light"} <= set(ids)
+    assert _feat_spells(res, "light-bringer-abh") == []
+    res = resolve(_asi_feat_spell_draft("light-bringer-abh", {
+        _LB + "spell-variant": ["cleric-cantrip"], _LB + "spell-choice-0": ["guidance"]}), catalog)
+    assert [(e["spellId"], e["uses"]) for e in _feat_spells(res, "light-bringer-abh")] == [("guidance", "at-will")]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_light_bringer_switching_variant_prunes_the_stale_cantrip_pick(catalog):
+    res = resolve(_asi_feat_spell_draft("light-bringer-abh", {
+        _LB + "spell-variant": ["light"], _LB + "spell-choice-0": ["guidance"]}), catalog)
+    assert _LB + "spell-choice-0" in [p["choiceId"] for p in res["pruned"]]
+    assert [e["spellId"] for e in _feat_spells(res, "light-bringer-abh")] == ["light"]

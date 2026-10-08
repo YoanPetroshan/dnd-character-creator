@@ -2106,3 +2106,24 @@ def test_ritual_caster_xphb_folds_level_scaled_counts_into_one_choice():
     assert len(choices) == 1
     assert choices[0]["filter"] == {"level": [1], "ritual": True}
     assert choices[0]["count_by_level"] == {"1": 2, "5": 1, "9": 1, "13": 1, "17": 1}
+
+
+def test_magic_connoisseur_catalog_shape():
+    mc = _feats_by_id()["magic-connoisseur-au"]
+    assert mc["innate_spells"] == []
+    assert mc["spell_variants"] == ["Cleric Spells", "Druid Spells", "Wizard Spells"]
+    got = [(c["variant"], c["filter"]["level"], c["filter"]["class"]) for c in mc["spell_choices"]]
+    assert got == [(v, [lvl], [v.split()[0].lower()]) for v in mc["spell_variants"] for lvl in (1, 2)]
+    for c in mc["spell_choices"]:
+        assert (c["uses"], c["ability"], c["count"], c["from"]) == ("1/day", "inherit", 1, None)
+
+
+def test_light_bringer_catalog_shape():
+    lb = _feats_by_id()["light-bringer-abh"]
+    assert lb["spell_variants"] == ["Light", "Cleric Cantrip"]
+    assert [(s["name"], s["spell_id"], s["uses"], s["variant"]) for s in lb["innate_spells"]] == [
+        ("Light", "light", "at-will", "Light")]
+    assert len(lb["spell_choices"]) == 1
+    c = lb["spell_choices"][0]
+    assert (c["variant"], c["filter"], c["count"], c["uses"]) == (
+        "Cleric Cantrip", {"level": [0], "class": ["cleric"]}, 1, "at-will")
