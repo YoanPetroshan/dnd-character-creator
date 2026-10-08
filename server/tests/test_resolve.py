@@ -4384,3 +4384,57 @@ def test_earlier_asi_feat_satisfies_later_pick_but_not_the_reverse(catalog, monk
     assert "feat-prerequisite-unmet-test-chain-xphb" in [p["id"] for p in swapped["problems"]]
     assert "test-chain-xphb" not in swapped["sheet"]["grantedFeats"]
     assert "actor-xphb" in swapped["sheet"]["grantedFeats"]
+
+
+def _multiclass_feat_draft(classes, sources, background_id="acolyte-xphb", **overrides):
+    return _fighter_acolyte_human_draft(
+        sources=sources, preferences=_feat_prereqs_on(),
+        background={"id": background_id, "choices": {}}, classes=classes, **overrides,
+    )
+
+
+def _fighter4_asi(feat_index=None):
+    choices = {"class:fighter:4:asi": [f"feat:{feat_index}"]} if feat_index else {}
+    return {"classId": "fighter", "level": 4, "choices": choices}
+
+
+def _opt_disabled(res, feat_index, cls_id="fighter", level=4):
+    _, opt = _asi4_option(res, feat_index, f"class:{cls_id}:{level}:asi")
+    return opt
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_war_caster_requires_a_spellcasting_class(catalog):
+    res = resolve(_multiclass_feat_draft([_fighter4_asi()], _SRD_AND_XPHB), catalog)
+    opt = _opt_disabled(res, "war-caster-xphb")
+    assert opt.get("disabled") is True and "Spellcasting or Pact Magic" in opt["disabledReason"]
+    for cls in ("wizard", "warlock"):
+        res = resolve(_multiclass_feat_draft(
+            [{"classId": cls, "level": 4, "choices": {}}], _SRD_AND_XPHB), catalog)
+        assert not _opt_disabled(res, "war-caster-xphb", cls).get("disabled"), cls
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_war_caster_with_multiclass_paladin_needs_a_slot_granting_level(catalog):
+    p1 = resolve(_multiclass_feat_draft(
+        [_fighter4_asi(), {"classId": "paladin", "level": 1, "choices": {}}], _SRD_AND_XPHB), catalog)
+    assert _opt_disabled(p1, "war-caster-xphb").get("disabled") is True
+    p2 = resolve(_multiclass_feat_draft(
+        [_fighter4_asi(), {"classId": "paladin", "level": 2, "choices": {}}], _SRD_AND_XPHB), catalog)
+    assert not _opt_disabled(p2, "war-caster-xphb").get("disabled")
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_hand_edited_war_caster_pick_without_spellcasting_is_blocked(catalog):
+    res = resolve(_multiclass_feat_draft([_fighter4_asi("war-caster-xphb")], _SRD_AND_XPHB), catalog)
+    assert "feat-prerequisite-unmet-war-caster-xphb" in [p["id"] for p in res["problems"]]
+    assert "war-caster-xphb" not in res["sheet"]["grantedFeats"]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_spellfire_adept_feature_alternative(catalog):
+    sources = ["srd", "xphb", "frhof"]
+    res = resolve(_multiclass_feat_draft([_fighter4_asi()], sources), catalog)
+    assert _opt_disabled(res, "spellfire-adept-frhof").get("disabled") is True
+    res = resolve(_multiclass_feat_draft([{"classId": "wizard", "level": 4, "choices": {}}], sources), catalog)
+    assert not _opt_disabled(res, "spellfire-adept-frhof", "wizard").get("disabled")

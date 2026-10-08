@@ -1286,7 +1286,7 @@ _STRUCTURED_FEAT_PREREQUISITE_KEYS = {"level", "ability"}
 # Keys the ASI-level gate (the walk + option reasons) can verify. A superset
 # of _STRUCTURED_FEAT_PREREQUISITE_KEYS, which the background second pass
 # (_feat_prerequisite_problems) keeps using — never widen that one.
-_ASI_GATE_PREREQUISITE_KEYS = {"level", "ability", "feat"}
+_ASI_GATE_PREREQUISITE_KEYS = {"level", "ability", "feat", "spellcasting2020", "feature"}
 
 
 def _feat_ref_index(ref: str) -> str:
@@ -1300,7 +1300,14 @@ def _alt_value_is_valid(key: str, value) -> bool:
         return isinstance(value, int)
     if key == "feat":
         return isinstance(value, list) and bool(value) and all(isinstance(r, str) and "|" in r for r in value)
-    return True  # level/ability shapes are tolerated as before
+    if key == "spellcasting2020":
+        return isinstance(value, bool)
+    if key == "feature":
+        return (
+            isinstance(value, list) and bool(value)
+            and all(isinstance(v, str) and v in ("Spellcasting", "Pact Magic") for v in value)
+        )
+    return True  # ability shape is tolerated as before
 
 
 def _alt_is_verifiable(alt, supported_keys) -> bool:
@@ -1377,6 +1384,8 @@ def _feat_prerequisite_alt_met(
             return False
     held = held or _HeldFeatState()
     if "feat" in alt and not any(_feat_ref_index(r) in held.feat_indices for r in alt["feat"]):
+        return False
+    if (alt.get("spellcasting2020") or "feature" in alt) and not held.has_spellcasting_feature:
         return False
     return True
 
@@ -1565,6 +1574,8 @@ def _feat_prerequisite_failing_parts(
             f"{ab.upper()} {minimum}"
             for entry in ability_req if isinstance(entry, dict) for ab, minimum in entry.items()
         ))
+    if (alt.get("spellcasting2020") or "feature" in alt) and not (held and held.has_spellcasting_feature):
+        parts.append("the Spellcasting or Pact Magic feature")
     if "feat" in alt and not _feat_prerequisite_alt_met({"feat": alt["feat"]}, total_level, scores, held):
         names = []
         for ref in alt["feat"]:
@@ -2199,6 +2210,12 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     held = _HeldFeatState()
     for bg_feat in background_feats:
         held.add_feat(bg_feat)
+    # Pre-walk inputs use the FINAL character (same simplification as
+    # total_level): permissive, never a false disable.
+    held.has_spellcasting_feature = any(
+        rc["cls"] and spells_mod.single_class_spell_slots(catalog, rc["cls_id"], rc["level"])
+        for rc in resolved_classes
+    )
 
     choice_templates: list[dict] = []
     for rc in resolved_classes:
