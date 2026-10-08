@@ -223,6 +223,14 @@ def to_markdown(resolution: dict) -> str:
                 lines.append("")
         lines.append("")
 
+    innate = sheet.get("innateSpells") or []
+    if innate:
+        lines.append("## Вродени заклинания")
+        for e in innate:
+            level = f", от ниво {e['level']}" if e.get("level") else ""
+            lines.append(f"- {e['name']} ({e.get('uses', '')}{level})")
+        lines.append("")
+
     details = sheet["details"]
     if details:
         for section_label, fields in _DETAIL_SECTIONS:

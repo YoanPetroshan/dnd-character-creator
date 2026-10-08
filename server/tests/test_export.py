@@ -1,5 +1,7 @@
+import pytest
 import yaml
 
+from catalog.official_source import has_official
 from export import to_yaml
 
 
@@ -235,3 +237,27 @@ def test_to_yaml_includes_every_class_for_a_multiclass_character():
     ]
     assert "Fighter" in text
     assert "Wizard" in text
+
+
+def _aasimar_resolution():
+    from catalog.loader import load
+    from catalog.official_source import has_official
+    from engine.resolve import resolve
+    draft = {
+        "name": "Aas", "sources": ["srd", "dmg"],
+        "classes": [{"classId": "fighter", "level": 3, "choices": {}}],
+        "background": {"choices": {}}, "species": {"id": "aasimar-dmg", "choices": {}},
+        "abilities": {"method": "manual", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10}},
+        "equipment": {"choices": {}, "added": [], "skipped": True}, "details": {},
+    }
+    return resolve(draft, load())
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_to_yaml_includes_innate_spells():
+    doc = yaml.safe_load(to_yaml(_aasimar_resolution()))
+    assert "Lesser Restoration" in [e["name"] for e in doc["innateSpells"]]
+
+
+def test_to_yaml_innate_spells_default_to_empty_when_sheet_lacks_the_key():
+    assert yaml.safe_load(to_yaml(_sample_resolution()))["innateSpells"] == []

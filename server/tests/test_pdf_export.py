@@ -322,3 +322,11 @@ def test_renders_armor_weapon_and_tool_proficiencies():
     assert "Владеене" in text
     assert "Light armor" in text and "Simple weapons" in text and "Smiths tools" in text
     assert "light-armor" not in text
+
+
+def test_pdf_renders_innate_spells_section_and_tolerates_missing_key():
+    base = _sample_resolution()
+    assert to_pdf(base)  # no innateSpells key: still renders
+    base["sheet"]["innateSpells"] = [{"name": "Lesser Restoration", "uses": "1/day", "level": 3}]
+    text = "".join(p.extract_text() for p in PdfReader(io.BytesIO(to_pdf(base))).pages)
+    assert "Lesser Restoration" in text

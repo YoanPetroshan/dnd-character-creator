@@ -353,3 +353,19 @@ def test_renders_armor_weapon_and_tool_proficiencies():
 def test_proficiency_section_shows_a_placeholder_when_empty():
     text = to_markdown(_sample_resolution())
     assert "## Владеене\n—" in text
+
+
+def test_markdown_renders_innate_spells_section():
+    import pytest
+    from catalog.official_source import has_official
+    if not has_official():
+        pytest.skip("official data not fetched on this machine")
+    from test_export import _aasimar_resolution
+    text = to_markdown(_aasimar_resolution())
+    assert "## Вродени заклинания" in text
+    assert "- Lesser Restoration (1/day, от ниво 3)" in text
+
+
+def test_markdown_without_innate_spells_key_renders_no_section():
+    text = to_markdown(_sample_resolution())
+    assert "Вродени заклинания" not in text

@@ -227,6 +227,13 @@ def to_pdf(resolution: dict) -> bytes:
                 for s in class_spells["known"]:
                     pdf.bullet(f"{s['name']} (ниво {s['level']})")
 
+    innate = sheet.get("innateSpells") or []
+    if innate:
+        pdf.h2("Вродени заклинания")
+        for e in innate:
+            level = f", от ниво {e['level']}" if e.get("level") else ""
+            pdf.bullet(f"{e['name']} ({e.get('uses', '')}{level})")
+
     details = sheet["details"]
     if details:
         for section_label, fields in _DETAIL_SECTIONS:

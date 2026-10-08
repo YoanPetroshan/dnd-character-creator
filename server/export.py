@@ -41,6 +41,7 @@ def to_yaml(resolution: dict) -> str:
         "proficiencies": sheet["proficiencies"],
         "equipment": sheet["equipment"],
         "spells": sheet["spells"],
+        "innateSpells": sheet.get("innateSpells", []),
     }
     # allow_unicode=True: character names in this app are routinely
     # Cyrillic (the app's own examples are Bulgarian) — without this,
