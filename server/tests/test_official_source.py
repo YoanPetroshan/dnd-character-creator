@@ -2099,3 +2099,10 @@ def test_background_feat_variant_hint_for_restricted_magic_initiate():
     bgs = {b["index"]: b for b in load_official_backgrounds(official_dir())}
     assert bgs["acolyte-xphb"]["feat_variant_hints"] == {"magic-initiate-xphb": "Cleric Spells"}
     assert bgs["astral-drifter-aag"]["feat_variant_hints"] == {}
+
+
+def test_ritual_caster_xphb_folds_level_scaled_counts_into_one_choice():
+    choices = _feats_by_id()["ritual-caster-xphb"]["spell_choices"]
+    assert len(choices) == 1
+    assert choices[0]["filter"] == {"level": [1], "ritual": True}
+    assert choices[0]["count_by_level"] == {"1": 2, "5": 1, "9": 1, "13": 1, "17": 1}

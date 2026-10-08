@@ -525,7 +525,7 @@ def _spell_filter_description(count: int, flt: dict) -> str:
 
 def _feat_spell_choice_templates(
     feats: list[dict], catalog: Catalog, origin: str | None = None,
-    raw_selections: dict | None = None, variant_hints: dict | None = None,
+    raw_selections: dict | None = None, variant_hints: dict | None = None, total_level: int = 0,
 ) -> list[dict]:
     """Spell Choices for feats' `spell_choices` plus, for feats with
     mutually exclusive `spell_variants`, the variant picker
@@ -568,6 +568,8 @@ def _feat_spell_choice_templates(
             if sc.get("variant") is not None and slug(sc["variant"]) != chosen:
                 continue
             count = sc["count"]
+            if sc.get("count_by_level"):
+                count = sum(n for lvl, n in sc["count_by_level"].items() if int(lvl) <= total_level)
             if sc.get("filter"):
                 options = _spell_filter_options(catalog, sc["filter"])
                 description = _spell_filter_description(count, sc["filter"])
@@ -587,6 +589,8 @@ def _feat_spell_choice_templates(
                 envelope, f"{prefix}:spell-choice-{i}", source, f"{feat['name']}: {kind}", description=description,
             )
             if tpl:
+                if sc.get("count_by_level"):
+                    tpl["count_by_level"] = sc["count_by_level"]
                 templates.append(tpl)
     return templates
 
@@ -1907,6 +1911,8 @@ def _is_count_variable_choice(tpl: dict) -> bool:
     level table / casting modifier (see _spell_choice_templates), so a
     stored over-count is staleness rather than a malformed Draft. Mirrors
     `isSpellChoice` in frontend/src/pages/ClassPage.tsx."""
+    if tpl.get("count_by_level"):
+        return True  # level-scaled feat spell picks (Ritual Caster): over-count is staleness
     return tpl["source"]["kind"] == "class" and tpl["id"].endswith((":spells-cantrips", ":spells-known"))
 
 
@@ -2513,6 +2519,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 choice_templates += _feat_choice_templates([asi_feat], origin=asi_feat["_asi_origin"])
                 choice_templates += _feat_spell_choice_templates(
                     [asi_feat], catalog, origin=asi_feat["_asi_origin"], raw_selections=rc_class_choices,
+                    total_level=total_level,
                 )
                 choice_templates += [
                     tpl for tpl, _ in _feat_ability_bonus_choice_templates([asi_feat], origin=asi_feat["_asi_origin"])
@@ -2594,6 +2601,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         background_feats, catalog,
         raw_selections=background_dict.get("choices") if isinstance(background_dict.get("choices"), dict) else {},
         variant_hints=(bg.get("feat_variant_hints") if bg else None) or {},
+        total_level=total_level,
     )
     choice_templates += _feat_choice_templates(background_feats)  # ASI-selected feats' templates: built origin-scoped in the per-class loop
     # Phase 4c-ii Task 2: `feat_ability_choice_tpls` was already built (and

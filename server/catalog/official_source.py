@@ -2121,6 +2121,7 @@ def _feat_spells_from_5etools(raw: dict, index: str) -> tuple[list[dict], list[d
             entries = entries[:1]
     results: list[dict] = []
     choices: list[dict] = []
+    folded: dict[tuple, dict] = {}
     for entry in entries:
         variant = entry["name"] if variants else None
         ability = "inherit" if entry.get("ability") == "inherit" else _innate_spell_ability(entry.get("ability"))
@@ -2142,7 +2143,22 @@ def _feat_spells_from_5etools(raw: dict, index: str) -> tuple[list[dict], list[d
                             base = {"variant": variant, "level": level, "uses": uses, "ability": ability}
                             if isinstance(spec, str):
                                 parsed = _parse_spell_filter(spec)
-                                if parsed is not None:
+                                if parsed is None:
+                                    pass
+                                elif mechanism == "prepared" and key.isdigit():
+                                    # Level-scaled picks (Ritual Caster XPHB: keys 1/5/9/13/17)
+                                    # fold into ONE choice whose count grows with level.
+                                    fold_key = (variant, uses, repr(parsed))
+                                    if fold_key in folded:
+                                        folded[fold_key]["count_by_level"][key] = item.get("count", 1)
+                                    else:
+                                        folded[fold_key] = {
+                                            **base, "level": None, "count": item.get("count", 1),
+                                            "filter": parsed, "from": None,
+                                            "count_by_level": {key: item.get("count", 1)},
+                                        }
+                                        choices.append(folded[fold_key])
+                                else:
                                     choices.append({**base, "count": item.get("count", 1), "filter": parsed, "from": None})
                             elif isinstance(spec, dict) and isinstance(spec.get("from"), list):
                                 names = [slug(_clean_innate_spell_name(n)) for n in spec["from"] if isinstance(n, str)]

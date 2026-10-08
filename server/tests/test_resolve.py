@@ -4715,3 +4715,36 @@ def test_restricted_magic_initiate_background_offers_only_its_hinted_variant(cat
     r = resolve(draft, catalog)
     variant = next(c for c in r["choices"] if c["id"] == "feat:magic-initiate-xphb:spell-variant")
     assert [o["id"] for o in variant["options"]] == ["cleric-spells"]
+
+
+# --- feats' additionalSpells: level-scaled Ritual Caster (slice 5) ---
+
+_RC_CID = "class:fighter:4:asi:feat:ritual-caster-xphb:spell-choice-0"
+
+
+def _ritual_caster_draft(fighter_level, selection=None):
+    fc = {"class:fighter:4:asi": ["feat:ritual-caster-xphb"]}
+    if selection is not None:
+        fc[_RC_CID] = selection
+    return _fighter_acolyte_human_draft(sources=_SRD_AND_XPHB, classes=[{"classId": "fighter", "level": fighter_level, "choices": fc}])
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_ritual_caster_count_scales_with_character_level(catalog):
+    r = resolve(_ritual_caster_draft(4), catalog)
+    c = next(c for c in r["choices"] if c["id"] == _RC_CID)
+    assert c["count"] == 2 and len(c["options"]) == 11
+    assert "find-familiar" in [o["id"] for o in c["options"]]
+    r5 = resolve(_ritual_caster_draft(5, ["find-familiar", "alarm", "identify"]), catalog)
+    c5 = next(c for c in r5["choices"] if c["id"] == _RC_CID)
+    assert c5["count"] == 3 and c5["selected"] == ["find-familiar", "alarm", "identify"]
+    assert r5["pruned"] == []
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_ritual_caster_over_count_after_level_down_is_pruned_not_a_problem(catalog):
+    r = resolve(_ritual_caster_draft(4, ["find-familiar", "alarm", "identify"]), catalog)
+    c = next(c for c in r["choices"] if c["id"] == _RC_CID)
+    assert c["selected"] == ["find-familiar", "alarm"]
+    assert _RC_CID in [p["choiceId"] for p in r["pruned"]]
+    assert not [p for p in r["problems"] if _RC_CID in p.get("message", "") or _RC_CID in p.get("id", "")]
