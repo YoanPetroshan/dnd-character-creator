@@ -1286,7 +1286,7 @@ _STRUCTURED_FEAT_PREREQUISITE_KEYS = {"level", "ability"}
 # Keys the ASI-level gate (the walk + option reasons) can verify. A superset
 # of _STRUCTURED_FEAT_PREREQUISITE_KEYS, which the background second pass
 # (_feat_prerequisite_problems) keeps using — never widen that one.
-_ASI_GATE_PREREQUISITE_KEYS = {"level", "ability", "feat", "spellcasting2020", "feature", "proficiency"}
+_ASI_GATE_PREREQUISITE_KEYS = {"level", "ability", "feat", "spellcasting2020", "feature", "proficiency", "featCategory"}
 
 # Which held app proficiency ids satisfy a 5etools prerequisite proficiency
 # entry. Real data has exactly these five shapes.
@@ -1316,6 +1316,8 @@ def _alt_value_is_valid(key: str, value) -> bool:
         return isinstance(value, int)
     if key == "feat":
         return isinstance(value, list) and bool(value) and all(isinstance(r, str) and "|" in r for r in value)
+    if key == "featCategory":
+        return isinstance(value, list) and bool(value) and all(isinstance(c, str) for c in value)
     if key == "proficiency":
         return isinstance(value, list) and bool(value) and all(
             _proficiency_entry_key(e) in _PROFICIENCY_PREREQ_SATISFIERS for e in value
@@ -1406,6 +1408,8 @@ def _feat_prerequisite_alt_met(
     if "feat" in alt and not any(_feat_ref_index(r) in held.feat_indices for r in alt["feat"]):
         return False
     if (alt.get("spellcasting2020") or "feature" in alt) and not held.has_spellcasting_feature:
+        return False
+    if "featCategory" in alt and not any(c in held.feat_categories for c in alt["featCategory"]):
         return False
     if not all(
         held.proficiency_ids & _PROFICIENCY_PREREQ_SATISFIERS[_proficiency_entry_key(e)]
@@ -1601,6 +1605,8 @@ def _feat_prerequisite_failing_parts(
         ))
     if (alt.get("spellcasting2020") or "feature" in alt) and not (held and held.has_spellcasting_feature):
         parts.append("the Spellcasting or Pact Magic feature")
+    if "featCategory" in alt and not any(c in (held.feat_categories if held else ()) for c in alt["featCategory"]):
+        parts.append("a Dragonmark feat" if alt["featCategory"] == ["D"] else "a feat of a required category")
     for entry in alt.get("proficiency", []):
         satisfiers = _PROFICIENCY_PREREQ_SATISFIERS[_proficiency_entry_key(entry)]
         if not (held and held.proficiency_ids & satisfiers):

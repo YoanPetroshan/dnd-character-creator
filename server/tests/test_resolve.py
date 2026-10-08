@@ -4527,3 +4527,22 @@ def test_purple_dragon_commandant_or_alternatives(catalog):
         [_asi_picks("wizard", {4: "martial-weapon-training-xphb", 8: "purple-dragon-commandant-frhof"})], sources), catalog)
     assert _unmet_ids(res) == []
     assert not _opt_disabled(res, "purple-dragon-commandant-frhof", "wizard", 8).get("disabled")
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_potent_dragonmark_needs_a_dragonmark_feat_from_the_background(catalog):
+    sources = ["srd", "xphb", "efa"]
+    for bg, enabled in (("house-lyrandar-heir-efa", True), ("aberrant-heir-efa", True), ("acolyte-xphb", False)):
+        res = resolve(_multiclass_feat_draft([_fighter4_asi()], sources, bg), catalog)
+        opt = _opt_disabled(res, "potent-dragonmark-efa")
+        assert bool(opt.get("disabled")) is (not enabled), bg
+        if not enabled:
+            assert "Dragonmark" in opt["disabledReason"]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_potent_dragonmark_cannot_satisfy_itself(catalog):
+    res = resolve(_multiclass_feat_draft(
+        [_fighter4_asi("potent-dragonmark-efa")], ["srd", "xphb", "efa"], "acolyte-xphb"), catalog)
+    assert "feat-prerequisite-unmet-potent-dragonmark-efa" in [p["id"] for p in res["problems"]]
+    assert "potent-dragonmark-efa" not in res["sheet"]["grantedFeats"]
