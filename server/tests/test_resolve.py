@@ -4107,3 +4107,85 @@ def test_asi_selected_resilient_offers_and_applies_a_saving_throw_proficiency(ca
     fighter_choices["class:fighter:4:asi:feat:resilient-xphb:ability-bonus"] = ["wis"]
     resolution2 = resolve(draft, catalog)
     assert "WIS" in resolution2["sheet"]["proficiencies"]["savingThrows"]
+
+
+# --- Spell-count shrink pruning (follow-up to Phase 3c) ---
+#
+# A spellcaster's cantrip/known-spell count shrinks on level-down (or when
+# the casting modifier drops) while the choice id stays the same; spells
+# above the highest slot level also stop being offered. Both are reported
+# as non-blocking `pruned` entries instead of an `over-selected` problem.
+
+_W4_CANTRIPS = ["fire-bolt", "light", "mage-hand", "acid-splash"]
+_W4_KNOWN = ["magic-missile", "shield", "sleep", "alarm", "burning-hands", "misty-step", "blur"]
+
+
+def _wizard_at(level, int_score, choices):
+    return _wizard_draft(int_score=int_score, classes=[{"classId": "wizard", "level": level, "choices": choices}])
+
+
+def _choice(resolution, cid):
+    return next(c for c in resolution["choices"] if c["id"] == cid)
+
+
+def test_leveling_a_wizard_down_prunes_excess_spells_instead_of_a_problem(catalog):
+    choices = {"class:wizard:spells-cantrips": _W4_CANTRIPS, "class:wizard:spells-known": _W4_KNOWN}
+    at4 = resolve(_wizard_at(4, 16, choices), catalog)
+    assert at4["pruned"] == [] and at4["problems"] == []
+    assert _choice(at4, "class:wizard:spells-known")["count"] == 7
+
+    at1 = resolve(_wizard_at(1, 16, choices), catalog)
+    assert not [p for p in at1["problems"] if p["id"].startswith("over-selected-")]
+    assert [p["choiceId"] for p in at1["pruned"]] == ["class:wizard:spells-cantrips", "class:wizard:spells-known"]
+    cantrips = _choice(at1, "class:wizard:spells-cantrips")
+    known = _choice(at1, "class:wizard:spells-known")
+    assert (cantrips["count"], cantrips["selected"], cantrips["status"]) == (3, _W4_CANTRIPS[:3], "resolved")
+    assert (known["count"], known["selected"], known["status"]) == (4, _W4_KNOWN[:4], "resolved")
+    known_reason = at1["pruned"][1]["reason"]
+    assert "class:wizard:spells-known" in known_reason
+    assert all(name in known_reason for name in ("Burning Hands", "Misty Step", "Blur"))
+    assert "Acid Splash" in at1["pruned"][0]["reason"]
+
+
+def test_leveling_down_drops_a_now_out_of_range_spell_level_as_pruned(catalog):
+    known = ["magic-missile", "shield", "sleep", "alarm", "burning-hands", "misty-step"]
+    ok = resolve(_wizard_at(3, 16, {"class:wizard:spells-known": known}), catalog)
+    assert ok["pruned"] == [] and ok["problems"] == []
+    down = resolve(_wizard_at(2, 16, {"class:wizard:spells-known": known}), catalog)
+    assert [p["choiceId"] for p in down["pruned"]] == ["class:wizard:spells-known"]
+    assert "Misty Step" in down["pruned"][0]["reason"]
+    assert _choice(down, "class:wizard:spells-known")["selected"] == known[:5]
+    assert down["problems"] == []
+
+
+def test_lowering_the_spellcasting_ability_prunes_excess_prepared_spells(catalog):
+    known = ["magic-missile", "shield", "sleep", "alarm", "burning-hands", "detect-magic", "feather-fall"]
+    res = resolve(_wizard_at(4, 14, {"class:wizard:spells-known": known}), catalog)
+    assert [p["choiceId"] for p in res["pruned"]] == ["class:wizard:spells-known"]
+    assert "Feather Fall" in res["pruned"][0]["reason"]
+    assert _choice(res, "class:wizard:spells-known")["selected"] == known[:6]
+    assert not [p for p in res["problems"] if p["id"].startswith("over-selected-")]
+
+
+def test_over_selecting_a_spell_choice_is_pruned_not_a_problem(catalog):
+    res = resolve(_wizard_at(1, 16, {"class:wizard:spells-cantrips": _W4_CANTRIPS}), catalog)
+    assert [p["choiceId"] for p in res["pruned"]] == ["class:wizard:spells-cantrips"]
+    assert res["problems"] == []
+
+
+def test_exact_count_spell_selection_is_not_pruned(catalog):
+    res = resolve(_wizard_at(1, 16, {"class:wizard:spells-cantrips": _W4_CANTRIPS[:3]}), catalog)
+    assert res["pruned"] == []
+
+
+def test_spell_count_shrink_is_per_class_in_a_multiclass_character(catalog):
+    draft = _wizard_draft(int_score=16, classes=[
+        {"classId": "wizard", "level": 4, "choices": {"class:wizard:spells-cantrips": _W4_CANTRIPS}},
+        {"classId": "bard", "level": 2, "choices": {
+            "class:bard:spells-known": ["cure-wounds", "healing-word", "charm-person", "sleep", "thunderwave", "feather-fall"],
+        }},
+    ])
+    res = resolve(draft, catalog)
+    assert [p["choiceId"] for p in res["pruned"]] == ["class:bard:spells-known"]
+    assert "Feather Fall" in res["pruned"][0]["reason"]
+    assert _choice(res, "class:wizard:spells-cantrips")["selected"] == _W4_CANTRIPS

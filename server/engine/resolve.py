@@ -1545,6 +1545,14 @@ def _highest_spell_slot_level(spellcasting: dict) -> int:
     return highest
 
 
+def _is_count_variable_choice(tpl: dict) -> bool:
+    """True for the spell choices whose allowed count follows the class
+    level table / casting modifier (see _spell_choice_templates), so a
+    stored over-count is staleness rather than a malformed Draft. Mirrors
+    `isSpellChoice` in frontend/src/pages/ClassPage.tsx."""
+    return tpl["source"]["kind"] == "class" and tpl["id"].endswith((":spells-cantrips", ":spells-known"))
+
+
 def _spell_choice_templates(
     catalog: Catalog, cls: dict, cls_id: str, level_row: dict | None, ability_modifier: int, class_level: int,
 ) -> list[dict]:
@@ -2274,7 +2282,25 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         # dedupes the same underlying selection before applying bonuses.
         raw_selected = list(dict.fromkeys(s for s in raw_selected if isinstance(s, str)))
         selected = [s for s in raw_selected if s in valid_ids]
-        if len(selected) > tpl["count"]:
+        if _is_count_variable_choice(tpl):
+            # A spellcaster's allowed count shrinks on level-down (or when
+            # the casting modifier drops) while the choice id stays the
+            # same, and spells above the class's highest slot level stop
+            # being offered — both leave stale selections in the Draft.
+            # Report them as non-blocking `pruned` entries (keep the first
+            # `count` valid selections), not an over-selected problem.
+            selected = selected[: tpl["count"]]
+            dropped = [s for s in raw_selected if s not in selected]
+            if dropped:
+                names = ", ".join(catalog.spells[d]["name"] if d in catalog.spells else d for d in dropped)
+                pruned.append({
+                    "choiceId": tpl["id"],
+                    "reason": (
+                        f"'{tpl['id']}' now allows {tpl['count']} selection(s); "
+                        f"{len(dropped)} stored selection(s) no longer fit and were ignored: {names}."
+                    ),
+                })
+        elif len(selected) > tpl["count"]:
             problems.append({
                 "id": f"over-selected-{tpl['id']}",
                 "message": f"'{tpl['label']}' allows {tpl['count']} selection(s) but {len(selected)} were submitted.",
