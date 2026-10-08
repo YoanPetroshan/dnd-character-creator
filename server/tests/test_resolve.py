@@ -10,6 +10,7 @@ from engine.resolve import (
     _DETAIL_FIELDS, _asi_choice_templates, _feat_ability_bonus_choice_templates, _feat_ability_bonuses,
     _feat_choice_templates, _feat_expertise_skills, _feat_languages,
     _feat_prerequisite_problems, _feat_proficiency_ids, _feat_saving_throw_proficiencies,
+    _HeldFeatState, _feat_prerequisite_unmet_reason,
     _feat_senses, _gate_expertise_choices, _resolve_granted_feats, resolve,
 )
 
@@ -4266,3 +4267,26 @@ def test_spell_count_shrink_is_per_class_in_a_multiclass_character(catalog):
     assert [p["choiceId"] for p in res["pruned"]] == ["class:bard:spells-known"]
     assert "Feather Fall" in res["pruned"][0]["reason"]
     assert _choice(res, "class:wizard:spells-cantrips")["selected"] == _W4_CANTRIPS
+
+
+# --- Feat prerequisites beyond level/ability (plan 2026-10-08) ---
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_held_feat_state_copy_is_independent_and_add_feat_collects_grants(catalog):
+    state = _HeldFeatState()
+    clone = state.copy()
+    clone.feat_indices.add("x")
+    clone.proficiency_ids.add("y")
+    assert state.feat_indices == set() and state.proficiency_ids == set()
+    state.add_feat(catalog.feats["lightly-armored-xphb"])
+    assert {"light-armor", "shields"} <= state.proficiency_ids
+    assert state.feat_categories == {"G"}
+    assert "lightly-armored-xphb" in state.feat_indices
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_feat_prerequisite_unmet_reason_names_the_failing_ability(catalog):
+    reason = _feat_prerequisite_unmet_reason(catalog.feats["actor-xphb"], 4, {"CHA": 9}, True, _HeldFeatState(), catalog)
+    assert "prerequisite not met" in reason and "CHA 13" in reason
+    assert _feat_prerequisite_unmet_reason(catalog.feats["actor-xphb"], 4, {"CHA": 9}, False, _HeldFeatState(), catalog) is None

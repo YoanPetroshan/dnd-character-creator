@@ -51,6 +51,8 @@ warnings (Phase 3c).
 """
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+
 from catalog.choices import build_choice_template
 from catalog.loader import Catalog
 from catalog.official_source import slug
@@ -627,11 +629,37 @@ def _asi_granting_levels(catalog: Catalog, cls_id: str, max_level: int) -> list[
     return levels
 
 
+@dataclass
+class _HeldFeatState:
+    """What the character already holds when an ASI-level feat pick is
+    checked: feats (by catalog index), their categories, proficiency ids and
+    whether any class has the Spellcasting/Pact Magic feature. One shared
+    instance is accumulated through the ASI walk; per-level copies are the
+    snapshots option templates read."""
+    feat_indices: set[str] = field(default_factory=set)
+    feat_categories: set[str] = field(default_factory=set)
+    proficiency_ids: set[str] = field(default_factory=set)
+    has_spellcasting_feature: bool = False
+
+    def copy(self) -> "_HeldFeatState":
+        return _HeldFeatState(
+            set(self.feat_indices), set(self.feat_categories), set(self.proficiency_ids),
+            self.has_spellcasting_feature,
+        )
+
+    def add_feat(self, feat: dict) -> None:
+        self.feat_indices.add(feat["index"])
+        if feat.get("category"):
+            self.feat_categories.add(feat["category"])
+        self.proficiency_ids.update(_feat_proficiency_ids([feat]))
+
+
 def _apply_asi_progression(
     base_scores: dict[str, int], asi_levels: list[int], class_choices: dict, cls_id: str | None,
     asi_feats_by_cid: dict[str, dict] | None = None,
     feat_deltas_by_cid: dict[str, list[tuple[str, int]]] | None = None,
     total_level: int = 0, use_feat_prerequisites: bool = False,
+    held: "_HeldFeatState | None" = None, held_by_level: dict[int, "_HeldFeatState"] | None = None,
 ) -> tuple[dict[int, dict[str, int]], dict[str, int], set[str]]:
     """Walks ASI-granting levels in ascending order, applying each
     level's stored selection (if present and valid) to a running
@@ -685,6 +713,8 @@ def _apply_asi_progression(
     running = dict(base_scores)
     for lvl in asi_levels:
         scores_by_level[lvl] = dict(running)
+        if held_by_level is not None:
+            held_by_level[lvl] = held.copy() if held else _HeldFeatState()
         cid = f"class:{cls_id}:{lvl}:asi"
         raw_selected = class_choices.get(cid) or []
         selected = list(dict.fromkeys(s for s in raw_selected if isinstance(s, str))) if isinstance(raw_selected, list) else []
@@ -693,9 +723,11 @@ def _apply_asi_progression(
             if not asi_mod.asi_exceeds_cap(deltas, running):
                 running = asi_mod.apply_asi(deltas, running)
         elif cid in asi_feats_by_cid:
-            if not _feat_option_prerequisite_met(asi_feats_by_cid[cid], total_level, running, use_feat_prerequisites):
+            if not _feat_option_prerequisite_met(asi_feats_by_cid[cid], total_level, running, use_feat_prerequisites, held):
                 blocked_feat_cids.add(cid)
                 continue
+            if held is not None:
+                held.add_feat(asi_feats_by_cid[cid])
             deltas = feat_deltas_by_cid.get(cid, [])
             if deltas and not asi_mod.asi_exceeds_cap(deltas, running):
                 running = asi_mod.apply_asi(deltas, running)
@@ -1251,9 +1283,17 @@ def _multiclass_prerequisite_problems(resolved_classes: list[dict], final_scores
 # spellcasting2020/spellcastingFeature, featCategory/
 # exclusiveFeatCategory — is left unmodeled and never enforced).
 _STRUCTURED_FEAT_PREREQUISITE_KEYS = {"level", "ability"}
+# Keys the ASI-level gate (the walk + option reasons) can verify. A superset
+# of _STRUCTURED_FEAT_PREREQUISITE_KEYS, which the background second pass
+# (_feat_prerequisite_problems) keeps using — never widen that one.
+_ASI_GATE_PREREQUISITE_KEYS = {"level", "ability"}
 
 
-def _feat_structured_prerequisite(feat: dict) -> list[dict] | None:
+def _alt_is_verifiable(alt, supported_keys) -> bool:
+    return isinstance(alt, dict) and set(alt.keys()) <= supported_keys
+
+
+def _feat_structured_prerequisite(feat: dict, supported_keys=None) -> list[dict] | None:
     """Returns feat["prerequisite"] (a 5etools-shaped list of alternative
     requirement objects — met if ANY ONE alternative is fully met, exactly
     like multi_classing.prerequisite_options' own "choose N of these"
@@ -1286,15 +1326,16 @@ def _feat_structured_prerequisite(feat: dict) -> list[dict] | None:
     prereq = feat.get("prerequisite") or []
     if not prereq:
         return None
-    if not all(
-        isinstance(alt, dict) and set(alt.keys()) <= _STRUCTURED_FEAT_PREREQUISITE_KEYS
-        for alt in prereq
-    ):
+    if supported_keys is None:
+        supported_keys = _STRUCTURED_FEAT_PREREQUISITE_KEYS
+    if not all(_alt_is_verifiable(alt, supported_keys) for alt in prereq):
         return None
     return prereq
 
 
-def _feat_prerequisite_alt_met(alt: dict, total_level: int, final_scores: dict[str, int]) -> bool:
+def _feat_prerequisite_alt_met(
+    alt: dict, total_level: int, final_scores: dict[str, int], held: "_HeldFeatState | None" = None,
+) -> bool:
     """Checks ONE alternative requirement object (both its "level" and
     "ability" keys must be satisfied together — AND within an
     alternative, exactly like _multiclass_prerequisite_problems' own
@@ -1466,27 +1507,62 @@ def _is_asi_eligible_feat(feat: dict) -> bool:
     return feat.get("category") == "G" and feat["name"] != "Ability Score Improvement"
 
 
+def _feat_prerequisite_unmet_reason(
+    feat: dict, total_level: int, scores: dict[str, int], use_prerequisites: bool,
+    held: "_HeldFeatState | None" = None, catalog: Catalog | None = None,
+) -> str | None:
+    """None when the ASI-level gate lets the feat through (prerequisites
+    off, no structured prerequisite verifiable under
+    _ASI_GATE_PREREQUISITE_KEYS, or any alternative met); otherwise
+    "prerequisite not met", with ": requires ..." appended when there is
+    exactly one alternative. Shared by the ASI walk and the option
+    templates so the two always agree."""
+    if not use_prerequisites:
+        return None
+    prereq = _feat_structured_prerequisite(feat, _ASI_GATE_PREREQUISITE_KEYS)
+    if prereq is None:
+        return None
+    if any(_feat_prerequisite_alt_met(alt, total_level, scores, held) for alt in prereq):
+        return None
+    reason = "prerequisite not met"
+    if len(prereq) == 1:
+        parts = _feat_prerequisite_failing_parts(prereq[0], total_level, scores, held, catalog)
+        if parts:
+            reason += ": requires " + "; ".join(parts)
+    return reason
+
+
+def _feat_prerequisite_failing_parts(
+    alt: dict, total_level: int, scores: dict[str, int], held: "_HeldFeatState | None", catalog: Catalog | None,
+) -> list[str]:
+    parts: list[str] = []
+    level_req = alt.get("level")
+    if isinstance(level_req, int) and total_level < level_req:
+        parts.append(f"character level {level_req}")
+    ability_req = alt.get("ability")
+    if ability_req and not _feat_prerequisite_alt_met({"ability": ability_req}, total_level, scores, held):
+        parts.append(" or ".join(
+            f"{ab.upper()} {minimum}"
+            for entry in ability_req if isinstance(entry, dict) for ab, minimum in entry.items()
+        ))
+    return parts
+
+
 def _feat_option_prerequisite_met(
     feat: dict, total_level: int, scores: dict[str, int], use_prerequisites: bool,
+    held: "_HeldFeatState | None" = None,
 ) -> bool:
     """Whether an ASI-level feat option is ENABLED as far as its
-    prerequisite goes, against a given level's running scores. Shared by
-    _asi_choice_templates (the option's `disabled` flag) and
-    _apply_asi_progression (whether a feat picked there applies), so the
-    option shown and the effect applied always agree. Off-toggle, or no
-    structured prerequisite this app can verify, means met."""
-    if not use_prerequisites:
-        return True
-    prereq = _feat_structured_prerequisite(feat)
-    if prereq is None:
-        return True
-    return any(_feat_prerequisite_alt_met(alt, total_level, scores) for alt in prereq)
+    prerequisite goes, against a given level's running scores and held
+    state. See _feat_prerequisite_unmet_reason."""
+    return _feat_prerequisite_unmet_reason(feat, total_level, scores, use_prerequisites, held) is None
 
 
 def _asi_choice_templates(
     cls_id: str, cls_name: str, asi_levels: list[int], scores_by_level: dict[int, dict[str, int]],
     catalog: Catalog, total_level: int, use_prerequisites: bool, sources=None,
     taken_by_level: dict[int, set[str]] | None = None,
+    held_by_level: dict[int, "_HeldFeatState"] | None = None,
 ) -> list[dict]:
     # `taken_by_level`: per ASI level, the feat indices already held from a
     # background grant or an earlier ASI pick — offered disabled unless the
@@ -1510,9 +1586,13 @@ def _asi_choice_templates(
             options.append(option)
         for feat in general_feats:
             option = {"id": f"feat:{feat['index']}", "label": feat["name"]}
-            if not _feat_option_prerequisite_met(feat, total_level, current_scores, use_prerequisites):
+            reason = _feat_prerequisite_unmet_reason(
+                feat, total_level, current_scores, use_prerequisites,
+                (held_by_level or {}).get(lvl) or _HeldFeatState(), catalog,
+            )
+            if reason:
                 option["disabled"] = True
-                option["disabledReason"] = "prerequisite not met"
+                option["disabledReason"] = reason
             elif feat["index"] in (taken_by_level or {}).get(lvl, ()) and not feat.get("repeatable"):
                 option["disabled"] = True
                 option["disabledReason"] = "already taken"
@@ -2090,8 +2170,13 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     use_prerequisites_prefs = (draft.get("preferences") or {}).get("usePrerequisites", {})
     use_feat_prereqs = bool(use_prerequisites_prefs.get("feats"))
 
+    held = _HeldFeatState()
+    for bg_feat in background_feats:
+        held.add_feat(bg_feat)
+
     choice_templates: list[dict] = []
     for rc in resolved_classes:
+        rc_held_by_level: dict[int, _HeldFeatState] = {}
         rc_cls, rc_cls_id, rc_level, rc_subclass_id = rc["cls"], rc["cls_id"], rc["level"], rc["subclass_id"]
         rc_class_choices = rc["class_choices"]
         if not (rc_cls and rc_cls_id):
@@ -2100,6 +2185,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc_asi_scores_by_level, final_scores, rc_blocked_feat_cids = _apply_asi_progression(
             final_scores, rc_asi_levels, rc_class_choices, rc_cls_id,
             asi_feats_by_cid, asi_feat_deltas_by_cid, total_level, use_feat_prereqs,
+            held=held, held_by_level=rc_held_by_level,
         )
         prerequisite_blocked_asi_feat_cids |= rc_blocked_feat_cids
         # A feat picked at an ASI level whose option is disabled there
@@ -2135,6 +2221,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 | {f["index"] for f in asi_feat_picks if asi_feat_order.get(f["_asi_cid"], 1 << 30) < asi_feat_order.get(f"class:{rc_cls_id}:{lvl}:asi", -1)}
                 for lvl in rc_asi_levels
             },
+            held_by_level=rc_held_by_level,
         )
         # ASI-or-feat Task 3: a feat THIS class took at one of its own ASI
         # levels cascades its own choice-shaped content right here, scoped
