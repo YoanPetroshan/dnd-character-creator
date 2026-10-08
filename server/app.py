@@ -5,7 +5,10 @@ pdf_export.
 """
 from __future__ import annotations
 
-from flask import Flask, Response, jsonify, request
+import os
+import pathlib
+
+from flask import Flask, Response, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 from catalog.loader import load as load_catalog
@@ -15,7 +18,9 @@ from export import to_yaml
 from markdown_export import to_markdown
 from pdf_export import to_pdf
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder=None)
+DIST = pathlib.Path(__file__).resolve().parent.parent / "frontend" / "dist"
+app.config["FRONTEND_DIST"] = DIST
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
 
 _catalog = load_catalog()
@@ -178,5 +183,24 @@ def api_export(fmt: str):
     return Response(renderer(resolution), mimetype=mimetype)
 
 
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def serve_frontend(path: str):
+    """Serve the built SPA (single origin, no CORS). Registered after all
+    /api routes; unknown /api/* paths stay JSON 404s."""
+    if path.startswith("api/"):
+        return jsonify({"error": "not found"}), 404
+    dist = pathlib.Path(app.config["FRONTEND_DIST"])
+    if path and (dist / path).is_file():
+        return send_from_directory(dist, path)
+    if (dist / "index.html").is_file():
+        return send_from_directory(dist, "index.html")
+    return jsonify({"error": "frontend not built"}), 404
+
+
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=8000, debug=True)
+    app.run(
+        host=os.environ.get("HOST", "127.0.0.1"),
+        port=int(os.environ.get("PORT", 8000)),
+        debug=os.environ.get("FLASK_DEBUG") == "1",
+    )
