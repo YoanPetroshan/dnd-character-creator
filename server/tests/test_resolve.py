@@ -4801,16 +4801,19 @@ def test_magic_connoisseur_selecting_variant_reveals_level_1_and_2_choices(catal
 def test_magic_connoisseur_selected_spells_become_daily_innate_spells_with_inherited_ability(catalog):
     picks = {_MC + "spell-variant": ["wizard-spells"], _MC + "spell-choice-4": ["shield"],
              _MC + "spell-choice-5": ["invisibility"]}
-    # ability not yet chosen: the entries carry the open INT/WIS/CHA choice
-    res = resolve(_asi_feat_spell_draft("magic-connoisseur-au", picks), catalog)
+    # Magic Initiate's ability not yet chosen: the entries carry the open INT/WIS/CHA choice,
+    # even with this feat's own ability bonus picked (it does not decide the spell ability)
+    res = resolve(_asi_feat_spell_draft("magic-connoisseur-au", {**picks, _MC + "ability-bonus": ["wis"]}), catalog)
     spells = _feat_spells(res, "magic-connoisseur-au")
     assert [(e["name"], e["uses"]) for e in spells] == [("Shield", "1/day"), ("Invisibility", "1/day")]
     assert all(e["ability"] == {"choose": ["INT", "WIS", "CHA"]} for e in spells)
-    # choosing the feat's ability increase resolves "inherit" to that ability
-    res = resolve(_asi_feat_spell_draft("magic-connoisseur-au", {**picks, _MC + "ability-bonus": ["wis"]}), catalog)
+    # the ability picked for the background's Magic Initiate decides it
+    draft = _asi_feat_spell_draft("magic-connoisseur-au", {**picks, _MC + "ability-bonus": ["wis"]})
+    draft["background"]["choices"]["feat:magic-initiate-xphb:spell-ability"] = ["cha"]
+    res = resolve(draft, catalog)
     spells = _feat_spells(res, "magic-connoisseur-au")
     assert [(e["spellId"], e["ability"], e["variant"]) for e in spells] == [
-        ("shield", "WIS", None), ("invisibility", "WIS", None)]
+        ("shield", "CHA", None), ("invisibility", "CHA", None)]
     assert not [p for p in res["problems"] if "magic-connoisseur" in p["id"]]
 
 
@@ -4879,3 +4882,99 @@ def test_light_bringer_spell_ability_follows_its_ability_bonus_pick(catalog):
     assert [e["ability"] for e in _feat_spells(res, "light-bringer-abh") if e["name"] == "Light"] == ["CHA"]
     res = resolve(_asi_feat_spell_draft("light-bringer-abh", {_LB + "spell-variant": ["light"]}), catalog)
     assert [e["ability"] for e in _feat_spells(res, "light-bringer-abh") if e["name"] == "Light"] == [{"choose": ["INT", "WIS", "CHA"]}]
+
+
+# --- feat spell-ability Choice (feat-spell-ability plan, slice 2) ---
+
+_ABIL_OPTS = ["int", "wis", "cha"]
+_MI = "feat:magic-initiate-xphb:"
+
+
+def _acolyte_mi_draft(extra=None):
+    return _fighter_acolyte_human_draft(
+        sources=["srd", "xphb"], background={"id": "acolyte-xphb", "choices": dict(extra or {})})
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_background_magic_initiate_offers_a_pending_spell_ability_choice(catalog):
+    res = resolve(_acolyte_mi_draft(), catalog)
+    ab = _choice(res, _MI + "spell-ability")
+    assert [o["id"] for o in ab["options"]] == _ABIL_OPTS
+    assert ab["status"] == "pending"
+    assert ab["source"]["kind"] == "feat"
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_magic_initiate_spell_ability_pick_sets_every_feat_spell_ability(catalog):
+    base = {_MI + "spell-variant": ["cleric-spells"]}
+    res = resolve(_acolyte_mi_draft(base), catalog)
+    cantrip_cid = next(c["id"] for c in res["choices"] if ":spell-choice-" in c["id"] and c["id"].startswith(_MI)
+                       and c["count"] == 2)
+    picks = {**base, cantrip_cid: ["guidance", "sacred-flame"]}
+    res = resolve(_acolyte_mi_draft(picks), catalog)
+    spells = _feat_spells(res, "magic-initiate-xphb")
+    assert spells and all(e["ability"] == {"choose": ["INT", "WIS", "CHA"]} for e in spells)
+    res = resolve(_acolyte_mi_draft({**picks, _MI + "spell-ability": ["wis"]}), catalog)
+    spells = _feat_spells(res, "magic-initiate-xphb")
+    assert spells and all(e["ability"] == "WIS" for e in spells)
+    assert _choice(res, _MI + "spell-ability")["status"] == "resolved"
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_invalid_spell_ability_pick_is_dropped_and_stays_pending(catalog):
+    res = resolve(_acolyte_mi_draft({_MI + "spell-ability": ["str"]}), catalog)
+    ab = _choice(res, _MI + "spell-ability")
+    assert ab["selected"] == [] and ab["status"] == "pending"
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_house_cannith_heir_mark_of_making_spell_ability(catalog):
+    def draft(extra):
+        return _fighter_acolyte_human_draft(
+            sources=["srd", "efa"], background={"id": "house-cannith-heir-efa", "choices": extra})
+    res = resolve(draft({}), catalog)
+    assert _choice(res, "feat:mark-of-making-efa:spell-ability")["status"] == "pending"
+    res = resolve(draft({"feat:mark-of-making-efa:spell-ability": ["int"]}), catalog)
+    spells = {e["name"]: e for e in _feat_spells(res, "mark-of-making-efa")}
+    assert spells["Mending"]["ability"] == "INT" and spells["Magic Weapon"]["ability"] == "INT"
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_fixed_and_inherit_feats_have_no_spell_ability_choice(catalog):
+    res = resolve(_fighter_acolyte_human_draft(
+        sources=["srd", "aag"], background={"id": "astral-drifter-aag", "choices": {}}), catalog)
+    assert not [c for c in res["choices"] if c["id"].endswith(":spell-ability")]
+    # (Acolyte's own Magic Initiate keeps its choice; the ASI-picked Telepathic adds none)
+    res = resolve(_asi_feat_spell_draft("telepathic-xphb", {}), catalog)
+    assert [c["id"] for c in res["choices"] if c["id"].endswith(":spell-ability")] == ["feat:magic-initiate-xphb:spell-ability"]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_stale_spell_ability_selection_under_a_feat_without_it_is_pruned(catalog):
+    res = resolve(_fighter_acolyte_human_draft(
+        sources=["srd", "efa"],
+        background={"id": "house-cannith-heir-efa", "choices": {_MI + "spell-ability": ["wis"]}}), catalog)
+    assert _MI + "spell-ability" in [p["choiceId"] for p in res["pruned"]]
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_synthetic_asi_feat_has_independent_ability_bonus_and_spell_ability(catalog, monkeypatch):
+    chef = catalog.feats["chef-xphb"]
+    feat = _synthetic_feat(
+        index="synthetic-asi-spell-test", name="Synthetic Asi Spell", source="XPHB", category=chef["category"],
+        ability_bonus_options=chef["ability_bonus_options"],
+        innate_spells=[{"name": "Light", "spell_id": "light", "level": None, "uses": "at-will",
+                        "ability": {"choose": ["INT", "WIS"]}, "variant": None}],
+    )
+    monkeypatch.setitem(catalog.feats, feat["index"], feat)
+    origin = "class:fighter:4:asi:feat:synthetic-asi-spell-test:"
+
+    def run(extra):
+        return resolve(_fighter_acolyte_human_draft(sources=_SRD_AND_XPHB, classes=[{
+            "classId": "fighter", "level": 4,
+            "choices": {"class:fighter:4:asi": ["feat:synthetic-asi-spell-test"], **extra}}]), catalog)
+    res = run({})
+    assert _choice(res, origin + "ability-bonus") and _choice(res, origin + "spell-ability")
+    assert [o["id"] for o in _choice(res, origin + "spell-ability")["options"]] == ["int", "wis"]
+    res = run({origin + "ability-bonus": ["con"], origin + "spell-ability": ["wis"]})
+    assert [e["ability"] for e in _feat_spells(res, "synthetic-asi-spell-test")] == ["WIS"]

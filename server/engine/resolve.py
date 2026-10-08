@@ -55,7 +55,7 @@ from dataclasses import dataclass, field
 
 from catalog.choices import build_choice_template
 from catalog.loader import Catalog
-from catalog.official_source import slug
+from catalog.official_source import slug, SAVE_ABILITY_NAMES
 from . import asi as asi_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
@@ -434,10 +434,32 @@ def _feat_cid_prefix(feat: dict) -> str:
     return feat.get("_asi_origin") or f"feat:{feat['index']}"
 
 
-def _feat_spell_ability(feat: dict, ability, choices: list[dict]):
-    """Resolves the literal "inherit" ability to the ability the feat
-    increased (its :ability-bonus choice): the picked ability, the
-    candidate list while pending, or None if the feat has no such choice."""
+def _feat_spell_ability(feat: dict, ability, choices: list[dict], feats=(), _follow: bool = True):
+    """Resolves a feat's spellcasting ability for the sheet.
+    - "inherit": the ability the feat increased (its :ability-bonus choice):
+      the picked ability, the candidate list while pending, or None if the
+      feat has no such choice.
+    - {"choose": [...]}: the ability picked in its `{prefix}:spell-ability`
+      choice, else the dict unchanged (pending).
+    - {"sameAsFeat": ref}: the ability of the OTHER held feat `ref` (e.g.
+      Magic Connoisseur follows Magic Initiate); None if that feat isn't held.
+    Anything else (a fixed "CHA", None) passes through."""
+    if isinstance(ability, dict) and ability.get("choose"):
+        choice = next((c for c in choices if c["id"] == f"{_feat_cid_prefix(feat)}:spell-ability"), None)
+        if choice and choice.get("selected"):
+            return choice["selected"][0].upper()
+        return ability
+    if isinstance(ability, dict) and "sameAsFeat" in ability:
+        if not _follow:
+            return ability
+        other = next((f for f in feats if f["index"] == ability["sameAsFeat"]), None)
+        if other is None:
+            return None
+        first = next((e["ability"] for e in (other.get("innate_spells") or []) + (other.get("spell_choices") or [])
+                      if e.get("ability") is not None), None)
+        if first is None:
+            return None
+        return _feat_spell_ability(other, first, choices, feats, _follow=False)
     if ability != "inherit":
         return ability
     cid = f"{_feat_cid_prefix(feat)}:ability-bonus"
@@ -468,7 +490,7 @@ def _feat_innate_spells(feats: list[dict], catalog: Catalog, choices: list[dict]
                 continue
             sheet_entry = _innate_entry_to_sheet(entry, catalog)
             sheet_entry["variant"] = None
-            sheet_entry["ability"] = _feat_spell_ability(feat, entry["ability"], choices)
+            sheet_entry["ability"] = _feat_spell_ability(feat, entry["ability"], choices, feats)
             sheet_entry["featId"] = feat["index"]
             out.append(sheet_entry)
         for i, sc in enumerate(feat.get("spell_choices", []) or []):
@@ -483,7 +505,7 @@ def _feat_innate_spells(feats: list[dict], catalog: Catalog, choices: list[dict]
                     continue
                 out.append({
                     "spellId": sid, "name": spell["name"], "level": sc["level"], "uses": sc["uses"],
-                    "ability": _feat_spell_ability(feat, sc["ability"], choices),
+                    "ability": _feat_spell_ability(feat, sc["ability"], choices, feats),
                     "variant": None, "featId": feat["index"],
                 })
     return out
@@ -543,6 +565,15 @@ def _feat_spell_choice_templates(
         source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
         if origin is not None and feat.get("_asi_level") is not None:
             source["level"] = feat["_asi_level"]
+        abil = next((e["ability"] for e in (feat.get("innate_spells") or []) + (feat.get("spell_choices") or [])
+                     if isinstance(e.get("ability"), dict) and e["ability"].get("choose")), None)
+        if abil:
+            templates.append({
+                "id": f"{prefix}:spell-ability", "source": source,
+                "label": f"{feat['name']}: Spellcasting Ability",
+                "description": "Choose this feat's spellcasting ability.", "count": 1,
+                "options": [{"id": a.lower(), "label": SAVE_ABILITY_NAMES[a.lower()]} for a in abil["choose"]],
+            })
         chosen = None
         variants = feat.get("spell_variants") or []
         if variants:
