@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import os
 import pathlib
+import re
+import urllib.parse
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 from flask_cors import CORS
@@ -163,9 +165,9 @@ def _pending_export_problems(resolution: dict) -> list[dict]:
 
 
 _EXPORT_RENDERERS = {
-    "yaml": (to_yaml, "application/x-yaml"),
-    "markdown": (to_markdown, "text/markdown"),
-    "pdf": (to_pdf, "application/pdf"),
+    "yaml": (to_yaml, "application/x-yaml", "yaml"),
+    "markdown": (to_markdown, "text/markdown", "md"),
+    "pdf": (to_pdf, "application/pdf", "pdf"),
 }
 
 
@@ -174,13 +176,19 @@ def api_export(fmt: str):
     entry = _EXPORT_RENDERERS.get(fmt)
     if entry is None:
         return jsonify({"error": f"unknown export format '{fmt}'"}), 404
-    renderer, mimetype = entry
+    renderer, mimetype, extension = entry
     draft = request.get_json(silent=True) or {}
     resolution = resolve(draft, _catalog)
     all_problems = resolution["problems"] + _pending_export_problems(resolution)
     if all_problems:
         return jsonify({"problems": all_problems}), 400
-    return Response(renderer(resolution), mimetype=mimetype)
+    name = re.sub(r'[\\/:*?"<>|]', "_", str(draft.get("name") or "character"))
+    filename = urllib.parse.quote(f"{name}.{extension}", safe="")
+    return Response(
+        renderer(resolution),
+        mimetype=mimetype,
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
+    )
 
 
 @app.route("/", defaults={"path": ""})

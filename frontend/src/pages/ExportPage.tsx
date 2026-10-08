@@ -45,14 +45,33 @@ export function ExportPage() {
         throw new Error(body.problems?.map((p) => p.message).join("; ") ?? `export failed: ${resp.status}`);
       }
       const blob = await resp.blob();
+      const filename = `${(draft.name || "character").replace(/[\\/:*?"<>|]/g, "_")}.${config.extension}`;
+
+      // Touch devices: prefer the native share sheet (iOS Safari often
+      // ignores a.download for PDF/text and would navigate away instead).
+      if (typeof File !== "undefined" && navigator.canShare && window.matchMedia("(pointer: coarse)").matches) {
+        const file = new File([blob], filename, { type: blob.type });
+        if (navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file] });
+            return;
+          } catch (shareErr) {
+            if (shareErr instanceof DOMException && shareErr.name === "AbortError") return;
+            // Any other share failure: fall through to the download link.
+          }
+        }
+      }
+
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${draft.name || "character"}.${config.extension}`;
+      a.download = filename;
+      a.rel = "noopener";
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
+      // Revoking immediately can cancel the download in iOS/Android WebViews.
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err) {
       setExportError(err instanceof Error ? err.message : String(err));
     } finally {

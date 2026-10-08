@@ -367,3 +367,38 @@ def test_equipment_choice_appears_in_resolve_response(client):
     body = resp.get_json()
     equipment_choices = [c for c in body["choices"] if c["source"]["kind"] == "equipment"]
     assert len(equipment_choices) == 3
+
+
+def _complete_exportable_draft():
+    draft = _fighter_acolyte_human_draft()
+    draft["classes"][0]["choices"] = {
+        "class:fighter:1:prof-choice-0": ["skill-acrobatics", "skill-athletics"],
+        "class:fighter:1:feature:fighter-fighting-style": ["fighter-fighting-style-archery"],
+    }
+    draft["equipment"]["choices"] = {
+        "class:fighter:1:equipment-choice-0": ["chain-mail"],
+        "class:fighter:1:equipment-choice-2": ["handaxe"],
+        "class:fighter:1:equipment-choice-3": ["explorers-pack"],
+    }
+    draft["background"]["choices"] = {"background:acolyte:languages": ["dwarvish", "elvish"]}
+    draft["species"]["choices"] = {"species:human:languages": ["giant"]}
+    return draft
+
+
+@pytest.mark.parametrize("fmt,ext", [("yaml", "yaml"), ("markdown", "md"), ("pdf", "pdf")])
+def test_export_sets_content_disposition_filename(client, fmt, ext):
+    draft = _complete_exportable_draft()
+    draft["name"] = "Ана/Борис"
+    resp = client.post(f"/api/export/{fmt}", json=draft)
+    assert resp.status_code == 200
+    cd = resp.headers["Content-Disposition"]
+    assert cd.startswith("attachment; filename*=UTF-8''")
+    assert cd.endswith(f"_%D0%91%D0%BE%D1%80%D0%B8%D1%81.{ext}")
+    assert "/" not in cd.split("''", 1)[1]
+
+
+def test_export_content_disposition_defaults_to_character(client):
+    draft = _complete_exportable_draft()
+    draft.pop("name", None)
+    resp = client.post("/api/export/yaml", json=draft)
+    assert resp.headers["Content-Disposition"].endswith("''character.yaml")
