@@ -716,6 +716,7 @@ def _feat_source_allowed(feat: dict, sources) -> bool:
 
 def _resolve_asi_selected_feats(
     resolved_classes: list[dict], catalog: Catalog, sources=None,
+    taken_indices: set[str] | None = None, skipped_duplicates: list[dict] | None = None,
 ) -> tuple[list[dict], dict[str, list[tuple[str, int]]]]:
     """ASI-or-feat Task 3: the ASI-level counterpart to
     _resolve_granted_feats (background grants). Reads each resolved
@@ -770,8 +771,15 @@ def _resolve_asi_selected_feats(
     (_is_asi_eligible_feat, and allowed by draft.sources via
     _feat_source_allowed) is resolved; a hand-edited draft naming some
     other catalog feat is ignored here just as the generic choice pass
-    ignores it (it isn't a valid option id)."""
+    ignores it (it isn't a valid option id).
+
+    Duplicate prevention: a non-`repeatable` feat already in
+    `taken_indices` (the background's granted feats) or picked at an
+    EARLIER ASI level is skipped — the first pick wins, a later duplicate
+    isn't applied — and appended to `skipped_duplicates` (when given) so
+    resolve() can report it."""
     asi_feat_picks: list[dict] = []
+    seen: set[str] = set(taken_indices or ())
     feat_deltas_by_cid: dict[str, list[tuple[str, int]]] = {}
     for rc in resolved_classes:
         cls_id, cls, level, class_choices = rc["cls_id"], rc["cls"], rc["level"], rc["class_choices"]
@@ -788,6 +796,11 @@ def _resolve_asi_selected_feats(
             catalog_feat = catalog.feats.get(selected[0][len("feat:"):])
             if not (catalog_feat and _is_asi_eligible_feat(catalog_feat) and _feat_source_allowed(catalog_feat, sources)):
                 continue
+            if catalog_feat["index"] in seen and not catalog_feat.get("repeatable"):
+                if skipped_duplicates is not None:
+                    skipped_duplicates.append({"feat": catalog_feat, "cid": cid, "level": lvl, "cls": cls})
+                continue
+            seen.add(catalog_feat["index"])
             origin = f"{cid}:feat:{catalog_feat['index']}"
             feat = {**catalog_feat, "_asi_cid": cid, "_asi_level": lvl, "_asi_origin": origin}
             asi_feat_picks.append(feat)
@@ -1445,7 +1458,11 @@ def _feat_option_prerequisite_met(
 def _asi_choice_templates(
     cls_id: str, cls_name: str, asi_levels: list[int], scores_by_level: dict[int, dict[str, int]],
     catalog: Catalog, total_level: int, use_prerequisites: bool, sources=None,
+    taken_by_level: dict[int, set[str]] | None = None,
 ) -> list[dict]:
+    # `taken_by_level`: per ASI level, the feat indices already held from a
+    # background grant or an earlier ASI pick — offered disabled unless the
+    # feat is `repeatable`.
     # `sources` is draft.sources: feat options are filtered exactly like a
     # race/background record (see _feat_source_allowed). SRD-only drafts
     # therefore get zero feat options — the 2014 SRD has no feats.
@@ -1468,6 +1485,9 @@ def _asi_choice_templates(
             if not _feat_option_prerequisite_met(feat, total_level, current_scores, use_prerequisites):
                 option["disabled"] = True
                 option["disabledReason"] = "prerequisite not met"
+            elif feat["index"] in (taken_by_level or {}).get(lvl, ()) and not feat.get("repeatable"):
+                option["disabled"] = True
+                option["disabledReason"] = "already taken"
             options.append(option)
         cid = f"class:{cls_id}:{lvl}:asi"
         source = {"kind": "class", "id": cls_id, "label": cls_name, "level": lvl}
@@ -1858,8 +1878,26 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # and put it before earlier levels' cap checks); and its own choice
     # templates are built origin-scoped in the per-class loop, not with the
     # default un-scoped `feat:{index}:...` cids (which would duplicate them).
-    asi_feat_picks, asi_feat_deltas_by_cid = _resolve_asi_selected_feats(resolved_classes, catalog, draft.get("sources"))
+    skipped_duplicate_asi_feats: list[dict] = []
+    asi_feat_picks, asi_feat_deltas_by_cid = _resolve_asi_selected_feats(
+        resolved_classes, catalog, draft.get("sources"),
+        taken_indices={f["index"] for f in background_feats}, skipped_duplicates=skipped_duplicate_asi_feats,
+    )
+    for dup in skipped_duplicate_asi_feats:
+        problems.append({
+            "id": f"feat-duplicate-{dup['feat']['index']}-{dup['cid']}",
+            "message": f"{dup['feat']['name']} was already taken, so the pick at {dup['cls']['name']} level {dup['level']} isn't applied.",
+        })
     asi_feats_by_cid = {f["_asi_cid"]: f for f in asi_feat_picks}
+    # Walk order of every ASI cid (class order, then level) — the "first
+    # pick wins" order _resolve_asi_selected_feats applies duplicates in.
+    asi_feat_order = {
+        f"class:{rc['cls_id']}:{lvl}:asi": n
+        for n, (rc, lvl) in enumerate(
+            (rc, lvl) for rc in resolved_classes if rc["cls_id"] and rc["cls"]
+            for lvl in _asi_granting_levels(catalog, rc["cls_id"], rc["level"])
+        )
+    }
     prerequisite_blocked_asi_feat_cids: set[str] = set()
 
     species_raw = draft.get("species")
@@ -2056,6 +2094,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choice_templates += _asi_choice_templates(
             rc_cls_id, rc_cls["name"], rc_asi_levels, rc_asi_scores_by_level, catalog, total_level, use_feat_prereqs,
             draft.get("sources"),
+            taken_by_level={
+                lvl: {f["index"] for f in background_feats}
+                | {f["index"] for f in asi_feat_picks if asi_feat_order.get(f["_asi_cid"], 1 << 30) < asi_feat_order.get(f"class:{rc_cls_id}:{lvl}:asi", -1)}
+                for lvl in rc_asi_levels
+            },
         )
         # ASI-or-feat Task 3: a feat THIS class took at one of its own ASI
         # levels cascades its own choice-shaped content right here, scoped

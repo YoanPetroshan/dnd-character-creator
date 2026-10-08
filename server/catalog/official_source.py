@@ -1975,6 +1975,7 @@ def _feat_from_5etools(raw: dict) -> dict | None:
         "name": raw["name"],
         "source": raw.get("source", ""),
         "category": raw.get("category", ""),
+        "repeatable": bool(raw.get("repeatable")),
         "entries": raw.get("entries", []),
         "prerequisite": raw.get("prerequisite", []),  # Task 6 (prerequisite checking)
         "ability_bonuses": _ability_bonuses_from_5etools(raw.get("ability", [])),

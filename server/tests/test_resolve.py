@@ -3866,15 +3866,16 @@ def test_the_ability_score_improvement_catalog_feat_is_never_offered(catalog):
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+# Elemental Adept/XPHB is `repeatable`, so taking it twice is allowed.
 def test_two_classes_selecting_the_same_feat_at_different_asi_levels_do_not_collide(catalog):
     draft = _fighter_acolyte_human_draft(sources=_SRD_AND_XPHB, classes=[
         {"classId": "fighter", "level": 4, "choices": {
-            "class:fighter:4:asi": ["feat:skill-expert-xphb"],
-            "class:fighter:4:asi:feat:skill-expert-xphb:ability-bonus": ["str"],
+            "class:fighter:4:asi": ["feat:elemental-adept-xphb"],
+            "class:fighter:4:asi:feat:elemental-adept-xphb:ability-bonus": ["int"],
         }},
         {"classId": "ranger", "level": 4, "choices": {
-            "class:ranger:4:asi": ["feat:skill-expert-xphb"],
-            "class:ranger:4:asi:feat:skill-expert-xphb:ability-bonus": ["dex"],
+            "class:ranger:4:asi": ["feat:elemental-adept-xphb"],
+            "class:ranger:4:asi:feat:elemental-adept-xphb:ability-bonus": ["wis"],
         }},
     ])
     resolution = resolve(draft, catalog)
@@ -3885,8 +3886,30 @@ def test_two_classes_selecting_the_same_feat_at_different_asi_levels_do_not_coll
     assert fighter_cids and ranger_cids and fighter_cids.isdisjoint(ranger_cids)
     assert fighter_cids | ranger_cids == cascaded_cids
     # Each instance's own ability-bonus sub-choice applies independently.
-    assert resolution["sheet"]["abilities"]["STR"] == 16 + 1 + 1
-    assert resolution["sheet"]["abilities"]["DEX"] == 14 + 1 + 1
+    base = resolve(_fighter_acolyte_human_draft(sources=_SRD_AND_XPHB), catalog)["sheet"]["abilities"]
+    assert resolution["sheet"]["abilities"]["INT"] == base["INT"] + 1
+    assert resolution["sheet"]["abilities"]["WIS"] == base["WIS"] + 1
+
+
+@pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
+def test_non_repeatable_feat_picked_at_two_asi_levels_is_applied_once_and_reported(catalog):
+    draft = _fighter_acolyte_human_draft(sources=_SRD_AND_XPHB, classes=[
+        {"classId": "fighter", "level": 8, "choices": {
+            "class:fighter:4:asi": ["feat:actor-xphb"],
+            "class:fighter:6:asi": ["feat:actor-xphb"],
+        }},
+    ])
+    resolution = resolve(draft, catalog)
+    assert [p["id"] for p in resolution["problems"] if p["id"].startswith("feat-duplicate-")] == [
+        "feat-duplicate-actor-xphb-class:fighter:6:asi"
+    ]
+    assert resolution["sheet"]["abilities"]["CHA"] == resolve(
+        _fighter_acolyte_human_draft(sources=_SRD_AND_XPHB), catalog
+    )["sheet"]["abilities"]["CHA"] + 1  # Actor's +1 CHA applied once, not twice
+    level_6 = next(c for c in resolution["choices"] if c["id"] == "class:fighter:6:asi")
+    assert next(o for o in level_6["options"] if o["id"] == "feat:actor-xphb")["disabledReason"] == "already taken"
+    level_4 = next(c for c in resolution["choices"] if c["id"] == "class:fighter:4:asi")
+    assert not next(o for o in level_4["options"] if o["id"] == "feat:actor-xphb").get("disabled")
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
