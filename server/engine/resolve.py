@@ -1703,6 +1703,35 @@ def _selected_species_variant(race: dict | None, species_choices: dict, race_id:
     return next((by_id[s] for s in raw if isinstance(s, str) and s in by_id), None)
 
 
+def _species_size_template(race: dict | None, race_id: str | None) -> dict | None:
+    """The size pick for a race that lists more than one size (Small or Medium)."""
+    if not (race and race_id and race.get("size_options")):
+        return None
+    return {
+        "id": f"species:{race_id}:size",
+        "source": {"kind": "species", "id": race_id, "label": race["name"]},
+        "label": "Size",
+        "description": "Choose your size.",
+        "count": 1,
+        "options": [{"id": s.lower(), "label": s} for s in race["size_options"]],
+    }
+
+
+def _species_size(race: dict | None, species_choices: dict, race_id: str | None) -> str | None:
+    """The sheet's species size: the selected one for a race with size
+    options (None while unpicked), otherwise the race's own size."""
+    if not race:
+        return None
+    options = race.get("size_options") or []
+    if not options:
+        return race.get("size") or "Medium"
+    raw = species_choices.get(f"species:{race_id}:size")
+    if isinstance(raw, list):
+        by_id = {s.lower(): s for s in options}
+        return next((by_id[s] for s in raw if isinstance(s, str) and s in by_id), None)
+    return None
+
+
 def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrace: dict | None) -> list[dict]:
     templates = []
     trait_refs = list(race.get("traits", [])) + (list(subrace.get("racial_traits", [])) if subrace else [])
@@ -2865,6 +2894,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     species_choices_raw = species.get("choices") if isinstance(species.get("choices"), dict) else {}
     # Slice 8b: the selected lineage / ancestry / legacy of a race with `variants`.
     species_variant = _selected_species_variant(race, species_choices_raw, race_id)
+    species_size = _species_size(race, species_choices_raw, race_id)
     use_prerequisites_prefs = (draft.get("preferences") or {}).get("usePrerequisites", {})
     use_feat_prereqs = bool(use_prerequisites_prefs.get("feats"))
 
@@ -3275,6 +3305,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         species_variant_tpl = _species_variant_template(race, race_id)
         if species_variant_tpl:
             choice_templates.append(species_variant_tpl)
+        species_size_tpl = _species_size_template(race, race_id)
+        if species_size_tpl:
+            choice_templates.append(species_size_tpl)
         choice_templates += _species_choice_templates(catalog, race, race_id, subrace)
         if species_ability_choice_tpl:
             choice_templates.append(species_ability_choice_tpl)
@@ -3740,7 +3773,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         speeds = {mode: value + speed_bonus for mode, value in speeds.items()}
     base_speed = speeds.get("walk")
     # Attacks, carrying capacity and armor warnings (Slice 9). Size is the
-    # species' size (Slice 8d's size choice will override it); no species = Medium.
+    # selected species size (Slice 8d), else the race's own, else Medium.
     weapon_proficiencies = proficient_armor | proficient_weapons
     attacks = attacks_mod.attacks_from_gear(
         equipped_items, modifiers, prof_bonus, proficient_weapons, features_mod.attack_styles(effects),
@@ -3748,7 +3781,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     armor_problems, stealth_disadvantage = equipment_mod.armor_warnings(equipped_items, final_scores, weapon_proficiencies)
     warnings += armor_problems
     carrying = derived_mod.carrying_summary(
-        final_scores.get("STR", 10), (race or {}).get("size") or "Medium",
+        final_scores.get("STR", 10), species_size or (race or {}).get("size") or "Medium",
         granted_equipment + chosen_equipment + added_resolved, catalog.items,
     )
     derived = {
@@ -3842,6 +3875,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             "id": race_id, "name": race["name"],
             "subspecies": {"id": subrace_id, "name": subrace["name"]} if subrace else None,
             "variant": {"id": species_variant["id"], "name": species_variant["name"]} if species_variant else None,
+            "size": species_size,
         } if race else None,
         "abilities": final_scores,
         "proficiencies": {

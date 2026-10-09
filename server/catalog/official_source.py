@@ -1267,6 +1267,8 @@ def _race_from_5etools(raw: dict, traits_by_index: dict[str, dict]) -> dict | No
     size_map = {"S": "Small", "M": "Medium", "L": "Large"}
     sizes = raw.get("size") or ["M"]
     size = size_map.get(sizes[0], "Medium")
+    # More than one listed size (30 races, always ["S","M"]): the player picks.
+    size_options = list(dict.fromkeys(size_map[s] for s in sizes if s in size_map)) if len(sizes) > 1 else []
 
     race_ref = [{"index": index, "name": raw["name"], "url": ""}]
     trait_refs = _trait_refs_from_entries(raw.get("entries", []), index, race_ref, [], traits_by_index)
@@ -1286,7 +1288,7 @@ def _race_from_5etools(raw: dict, traits_by_index: dict[str, dict]) -> dict | No
         "variants": _race_variants_from_5etools(raw),
         "ability_bonuses": _ability_bonuses_from_5etools(raw.get("ability", [])),
         "ability_bonus_options": _ability_bonus_options_from_5etools(raw.get("ability", []), raw.get("lineage")),
-        "alignment": "", "age": "", "size": size, "size_description": "",
+        "alignment": "", "age": "", "size": size, "size_options": size_options, "size_description": "",
         "languages": [], "language_desc": "",
         "traits": trait_refs,
         "source": raw.get("source", ""),  # NEW field, SRD races don't have it (implicitly "SRD") — Task 6 uses this for filtering/labeling
