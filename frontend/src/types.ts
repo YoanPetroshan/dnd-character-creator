@@ -278,10 +278,14 @@ export interface Preferences {
   usePrerequisites: { feats: boolean; multiclass: boolean };
 }
 
+export type Ruleset = "2014" | "2024" | "mixed";
+
 export interface Draft {
   draftVersion?: number;
   name: string;
   sources: string[];
+  /** Which ability-score rules apply (species vs background); "mixed" = house rules. */
+  ruleset: Ruleset;
   preferences: Preferences;
   classes: ClassSelection[];
   background: { id?: string; choices: Record<string, string[]> };

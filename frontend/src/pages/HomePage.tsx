@@ -1,10 +1,19 @@
 import { useRef, useState } from "react";
 import { mergeDraft, useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
+import { useCatalogContext } from "../CatalogContext";
+import type { Ruleset } from "../types";
+
+const RULESET_HELP: Record<Ruleset, string> = {
+  "2014": "2014: увеличенията на характеристики идват от вида (species); увеличенията на произхода (background) се игнорират. Съдържанието от 2024 е скрито.",
+  "2024": "2024: увеличенията идват от произхода (background); тези на вида се игнорират. Скрити са само стари (2014) произходи.",
+  mixed: "Смесени: всичко е достъпно. Ако произходът дава собствено увеличение, това на вида не се прилага (без двойно броене).",
+};
 
 export function HomePage() {
   const { draft, dispatch } = useDraft();
   const { resolution, loading, error, retry } = useResolutionContext();
+  const catalog = useCatalogContext();
   const fileInput = useRef<HTMLInputElement>(null);
   const [draftMessage, setDraftMessage] = useState<string | null>(null);
 
@@ -56,6 +65,18 @@ export function HomePage() {
     }
   }
 
+  const allSourceIds = catalog.sources.map((src) => src.id);
+  const sourceOn = (id: string) =>
+    draft.sources.length === 0 || draft.sources.some((x) => x.toLowerCase() === id.toLowerCase());
+  function toggleSource(id: string, on: boolean) {
+    const current = draft.sources.length === 0 ? allSourceIds : draft.sources;
+    const next = on
+      ? [...current.filter((x) => x.toLowerCase() !== id.toLowerCase()), id]
+      : current.filter((x) => x.toLowerCase() !== id.toLowerCase());
+    // [] means "everything", so all-on collapses to [] and none-on becomes SRD only.
+    const all = allSourceIds.every((x) => next.some((n) => n.toLowerCase() === x.toLowerCase()));
+    dispatch({ type: "SET_SOURCES", sources: all ? [] : next.length === 0 ? ["srd"] : next });
+  }
   return (
     <div className="page">
       <h1>Home</h1>
@@ -88,6 +109,37 @@ export function HomePage() {
         />
         {draftMessage && <p role="status">{draftMessage}</p>}
       </div>
+
+      <h2>Правила и източници</h2>
+      <label>
+        Правила (ruleset)
+        <select value={draft.ruleset} onChange={(e) => dispatch({ type: "SET_RULESET", ruleset: e.target.value as Ruleset })}>
+          <option value="2014">2014</option>
+          <option value="2024">2024</option>
+          <option value="mixed">Смесени</option>
+        </select>
+      </label>
+      <p>{RULESET_HELP[draft.ruleset] ?? RULESET_HELP.mixed}</p>
+      <details className="details-section">
+        <summary>
+          Източници (Sources){" "}
+          {draft.sources.length === 0 ? "— всички" : `— ${draft.sources.filter((x) => x.toLowerCase() !== "srd").length} избрани`}
+        </summary>
+        <div>
+          <button type="button" onClick={() => dispatch({ type: "SET_SOURCES", sources: [] })}>
+            Всички
+          </button>{" "}
+          <button type="button" onClick={() => dispatch({ type: "SET_SOURCES", sources: ["srd"] })}>
+            Само SRD
+          </button>
+        </div>
+        {catalog.sources.map((src) => (
+          <label key={src.id}>
+            <input type="checkbox" checked={sourceOn(src.id)} onChange={(e) => toggleSource(src.id, e.target.checked)} />
+            {src.name} ({src.count})
+          </label>
+        ))}
+      </details>
 
       <h2>Preferences</h2>
       <fieldset>

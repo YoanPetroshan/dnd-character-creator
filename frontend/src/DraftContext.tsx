@@ -1,11 +1,14 @@
 import { createContext, useContext, useReducer, useEffect, type Dispatch, type ReactNode } from "react";
-import type { Ability, ChoiceSourceKind, Draft } from "./types";
+import type { Ability, ChoiceSourceKind, Draft, Ruleset } from "./types";
 
 const STORAGE_KEY = "dnd-builder-draft-v2";
 
 /** Bump when the draft shape changes incompatibly. Stored/imported drafts
- *  with a NEWER version than this build are rejected rather than guessed at. */
-export const DRAFT_VERSION = 1;
+ *  with a NEWER version than this build are rejected rather than guessed at.
+ *  v2: `ruleset` added. Older drafts need no migration step: mergeDraft
+ *  fills the missing key with the default ("mixed", the behaviour they had)
+ *  and stamps the current version. */
+export const DRAFT_VERSION = 2;
 
 export const emptyDraft: Draft = {
   draftVersion: DRAFT_VERSION,
@@ -16,9 +19,11 @@ export const emptyDraft: Draft = {
   // from the unfiltered /api/catalog list, and this draft is the base
   // template for every new/persisted draft, so a non-empty default here
   // silently breaks every sourcebook race pick with a spurious
-  // "unknown species" resolve() problem. No source-picker UI exists yet
-  // (future task) to let a player narrow this back down.
+  // "unknown species" resolve() problem. The Sources picker on the Home
+  // page narrows this down (and "None except SRD" stores ["srd"], since
+  // an empty list means "everything").
   sources: [],
+  ruleset: "mixed",
   preferences: {
     hitPointType: "fixed",
     usePrerequisites: { feats: true, multiclass: true },
@@ -36,6 +41,8 @@ export const emptyDraft: Draft = {
 
 type Action =
   | { type: "SET_NAME"; name: string }
+  | { type: "SET_RULESET"; ruleset: Ruleset }
+  | { type: "SET_SOURCES"; sources: string[] }
   | { type: "SET_DRAFT"; draft: Draft }
   | { type: "RESET" }
   | { type: "SET_CLASS"; classId: string }
@@ -62,6 +69,10 @@ function reducer(state: Draft, action: Action): Draft {
   switch (action.type) {
     case "SET_NAME":
       return { ...state, name: action.name };
+    case "SET_RULESET":
+      return { ...state, ruleset: action.ruleset };
+    case "SET_SOURCES":
+      return { ...state, sources: action.sources };
     case "SET_DRAFT":
       return action.draft;
     case "RESET":

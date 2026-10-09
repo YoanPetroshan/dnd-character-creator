@@ -19,7 +19,24 @@ export function SpeciesPage() {
     );
 
   const selectedSpeciesId = draft.species.id;
-  const selectedSpecies = catalog.species.find((s) => s.id === selectedSpeciesId);
+  // A selected species/subspecies the current ruleset/sources hide stays
+  // listed (from the unfiltered catalog) so the player sees what is picked.
+  const selectedSpecies =
+    catalog.species.find((s) => s.id === selectedSpeciesId) ?? catalog.allSpecies.find((s) => s.id === selectedSpeciesId);
+  const speciesHidden = !!selectedSpecies && !catalog.species.some((s) => s.id === selectedSpecies.id);
+  const speciesList = speciesHidden && selectedSpecies ? [selectedSpecies, ...catalog.species] : catalog.species;
+  const fullSpecies = catalog.allSpecies.find((s) => s.id === selectedSpeciesId);
+  const subspeciesList = selectedSpecies
+    ? [
+        ...selectedSpecies.subspecies,
+        ...(fullSpecies?.subspecies ?? []).filter(
+          (sub) => sub.id === draft.species.subspeciesId && !selectedSpecies.subspecies.some((x) => x.id === sub.id),
+        ),
+      ]
+    : [];
+  const rulesetWarnings = resolution
+    ? resolution.warnings.filter((w) => w.id.startsWith("ruleset-") || w.id.startsWith("asi-double-dip"))
+    : [];
 
   function handleChange(choiceId: string, selected: string[]) {
     dispatch({ type: "SET_CHOICE_SELECTION", source: "species", choiceId, selected });
@@ -43,8 +60,15 @@ export function SpeciesPage() {
           </button>
         </p>
       )}
+      {rulesetWarnings.length > 0 && (
+        <ul role="status">
+          {rulesetWarnings.map((w) => (
+            <li key={w.id}>{w.message}</li>
+          ))}
+        </ul>
+      )}
       <ul className="picker-list">
-        {catalog.species.map((s) => (
+        {speciesList.map((s) => (
           <li key={s.id}>
             <label>
               <input
@@ -54,11 +78,12 @@ export function SpeciesPage() {
                 onChange={() => dispatch({ type: "SET_SPECIES", speciesId: s.id })}
               />
               {s.name}
+              {speciesHidden && s.id === selectedSpeciesId ? " (скрит от текущите филтри)" : ""}
             </label>
           </li>
         ))}
       </ul>
-      {selectedSpecies && selectedSpecies.subspecies.length > 0 && (
+      {selectedSpecies && subspeciesList.length > 0 && (
         <>
           <h2>Subspecies</h2>
           <select
@@ -66,7 +91,7 @@ export function SpeciesPage() {
             onChange={(e) => dispatch({ type: "SET_SUBSPECIES", subspeciesId: e.target.value || undefined })}
           >
             <option value="">— none —</option>
-            {selectedSpecies.subspecies.map((sub) => (
+            {subspeciesList.map((sub) => (
               <option key={sub.id} value={sub.id}>
                 {sub.name}
               </option>

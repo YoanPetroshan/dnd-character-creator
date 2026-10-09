@@ -19,6 +19,15 @@ export function BackgroundPage() {
     );
 
   const selectedBackgroundId = draft.background.id;
+  // A selected background the current ruleset/sources hide stays listed.
+  const hiddenBackground =
+    selectedBackgroundId && !catalog.backgrounds.some((b) => b.id === selectedBackgroundId)
+      ? catalog.allBackgrounds.find((b) => b.id === selectedBackgroundId)
+      : undefined;
+  const backgroundList = hiddenBackground ? [hiddenBackground, ...catalog.backgrounds] : catalog.backgrounds;
+  const rulesetWarnings = resolution
+    ? resolution.warnings.filter((w) => w.id.startsWith("ruleset-") || w.id.startsWith("asi-double-dip"))
+    : [];
 
   function handleChange(choiceId: string, selected: string[]) {
     dispatch({ type: "SET_CHOICE_SELECTION", source: "background", choiceId, selected });
@@ -46,6 +55,13 @@ export function BackgroundPage() {
           </button>
         </p>
       )}
+      {rulesetWarnings.length > 0 && (
+        <ul role="status">
+          {rulesetWarnings.map((w) => (
+            <li key={w.id}>{w.message}</li>
+          ))}
+        </ul>
+      )}
       <select
         value={selectedBackgroundId ?? ""}
         onChange={(e) => {
@@ -53,9 +69,10 @@ export function BackgroundPage() {
         }}
       >
         <option value="">— избери background —</option>
-        {catalog.backgrounds.map((b) => (
+        {backgroundList.map((b) => (
           <option key={b.id} value={b.id}>
             {b.name}
+            {hiddenBackground && b.id === hiddenBackground.id ? " (скрит от текущите филтри)" : ""}
           </option>
         ))}
       </select>
