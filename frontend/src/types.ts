@@ -129,6 +129,7 @@ export interface SheetSpecies {
   id: string;
   name: string;
   subspecies: SheetSubspecies | null;
+  variant?: { id: string; name: string } | null;
 }
 
 export interface SheetProficiencies {

@@ -43,6 +43,8 @@ def _species_label(species: dict | None) -> str:
     label = species["name"]
     if species.get("subspecies"):
         label += f" ({species['subspecies']['name']})"
+    if species.get("variant"):
+        label += f" - {species['variant']['name']}"
     return label
 
 

@@ -422,7 +422,7 @@ def _feat_senses(feats: list[dict]) -> dict[str, int]:
     return senses
 
 
-def _species_senses(race: dict | None, subrace: dict | None, catalog: Catalog) -> dict[str, int]:
+def _species_senses(race: dict | None, subrace: dict | None, catalog: Catalog, variant: dict | None = None) -> dict[str, int]:
     """Senses from the race and subrace: official records carry a numeric
     `darkvision`; bundled SRD races only have the descriptive "Darkvision"
     trait, mapped via reference_data.SRD_TRAIT_EFFECTS. Higher range wins."""
@@ -432,7 +432,7 @@ def _species_senses(race: dict | None, subrace: dict | None, catalog: Catalog) -
         if isinstance(value, int) and value > senses.get(kind, 0):
             senses[kind] = value
 
-    for src in (race, subrace):
+    for src in (race, subrace, variant):
         if not src:
             continue
         add("darkvision", src.get("darkvision"))
@@ -455,13 +455,16 @@ def _srd_trait_effects(race: dict | None, subrace: dict | None) -> list[dict]:
     return effects
 
 
-def _species_speeds(race: dict | None, subrace: dict | None) -> dict[str, int]:
-    """{walk, fly?, swim?, climb?}: the subrace's walk speed overrides the
-    race's; non-walk modes merge (subrace wins per mode); a `true` mode means
+def _species_speeds(race: dict | None, subrace: dict | None, variant: dict | None = None) -> dict[str, int]:
+    """{walk, fly?, swim?, climb?}: a selected variant's walk speed (Wood Elf
+    lineage: 35) overrides the race's, the subrace's overrides both;
+    non-walk modes merge (subrace wins per mode); a `true` mode means
     "equal to your walking speed"."""
     if not race:
         return {}
     walk = race.get("speed") if isinstance(race.get("speed"), int) else None
+    if variant and isinstance(variant.get("speed"), int):
+        walk = variant["speed"]
     if subrace and isinstance(subrace.get("speed"), int):
         walk = subrace["speed"]
     if walk is None:
@@ -473,7 +476,8 @@ def _species_speeds(race: dict | None, subrace: dict | None) -> dict[str, int]:
     return speeds
 
 
-def _species_innate_spells(race: dict | None, subrace: dict | None, catalog: Catalog) -> list[dict]:
+def _species_innate_spells(race: dict | None, subrace: dict | None, catalog: Catalog,
+                           variant: dict | None = None) -> list[dict]:
     """Merges innate_spells from BOTH race and subrace — same race-then-
     subrace-additions relationship _species_damage_modifiers already
     merges (subraces carry their OWN additionalSpells independently, e.g.
@@ -511,7 +515,14 @@ def _species_innate_spells(race: dict | None, subrace: dict | None, catalog: Cat
         if not src:
             continue
         for entry in src.get("innate_spells", []):
+            # A race with lineage variants (Elf/Tiefling XPHB) lists every
+            # lineage's spells tagged with its name; only the selected
+            # variant's own grants (below) apply.
+            if src is race and race.get("variants") and entry.get("variant") is not None:
+                continue
             innate.append(_innate_entry_to_sheet(entry, catalog))
+    for entry in (variant or {}).get("innate_spells", []):
+        innate.append(_innate_entry_to_sheet(entry, catalog))
     for effect in _srd_trait_effects(race, subrace):
         for entry in effect.get("innate_spells", []):
             innate.append(_innate_entry_to_sheet(entry, catalog))
@@ -1665,6 +1676,33 @@ def _subclass_spell_ids(catalog: Catalog, cls_id: str, subclass_id: str | None, 
     return out
 
 
+def _species_variant_template(race: dict | None, race_id: str | None) -> dict | None:
+    """The lineage / ancestry pick for a race with `variants` (2024 Elf,
+    Tiefling, Gnome, Goliath, Dragonborn colours, Shifter, ...)."""
+    if not (race and race_id and race.get("variants")):
+        return None
+    return {
+        "id": f"species:{race_id}:variant",
+        "source": {"kind": "species", "id": race_id, "label": race["name"]},
+        "label": "Lineage / Ancestry",
+        "description": "Choose which lineage, ancestry or legacy this species has.",
+        "count": 1,
+        "options": [{"id": v["id"], "label": v["name"]} for v in race["variants"]],
+    }
+
+
+def _selected_species_variant(race: dict | None, species_choices: dict, race_id: str | None) -> dict | None:
+    """The race variant named by the stored selection (the first valid id),
+    or None when unpicked / unknown."""
+    if not (race and race_id and race.get("variants")):
+        return None
+    raw = species_choices.get(f"species:{race_id}:variant")
+    if not isinstance(raw, list):
+        return None
+    by_id = {v["id"]: v for v in race["variants"]}
+    return next((by_id[s] for s in raw if isinstance(s, str) and s in by_id), None)
+
+
 def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrace: dict | None) -> list[dict]:
     templates = []
     trait_refs = list(race.get("traits", [])) + (list(subrace.get("racial_traits", [])) if subrace else [])
@@ -1755,9 +1793,12 @@ def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrac
             templates.append(tpl)
 
     # Damage-resistance choices (Dragonborn ancestry, 2024 Tiefling legacy).
+    # A race whose variants fix the resistance (Dragonborn colour, Tiefling
+    # legacy) is decided by the variant pick instead of a separate choice.
+    variant_decides_resistance = any(v.get("resist") for v in race.get("variants") or [])
     for src, src_id in ((race, race_id), (subrace, subrace.get("index") if subrace else None)):
         envelope = src.get("resist_options") if src else None
-        if not envelope:
+        if not envelope or (src is race and variant_decides_resistance):
             continue
         cid = f"species:{race_id}:resistance" if src is race else f"species:{race_id}:subspecies:{src_id}:resistance"
         source = {"kind": "species", "id": race_id, "label": race["name"]}
@@ -2821,6 +2862,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # Read here (before the per-class loop) so _asi_choice_templates can use
     # it below; `use_prereqs` (multiclass) is derived from the SAME dict
     # further down, near _multiclass_prerequisite_problems.
+    species_choices_raw = species.get("choices") if isinstance(species.get("choices"), dict) else {}
+    # Slice 8b: the selected lineage / ancestry / legacy of a race with `variants`.
+    species_variant = _selected_species_variant(race, species_choices_raw, race_id)
     use_prerequisites_prefs = (draft.get("preferences") or {}).get("usePrerequisites", {})
     use_feat_prereqs = bool(use_prerequisites_prefs.get("feats"))
 
@@ -2869,7 +2913,6 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     species_bonuses = _species_ability_bonuses(race, subrace)
     species_ability_choice_tpl = _species_ability_bonus_choice_template(race, subrace, race_id)
     if species_ability_choice_tpl:
-        species_choices_raw = species.get("choices") if isinstance(species.get("choices"), dict) else {}
         valid_ability_ids = {o["id"] for o in species_ability_choice_tpl["options"] if not o.get("disabled")}
         raw_selected = species_choices_raw.get(species_ability_choice_tpl["id"]) or []
         # Dedupe BEFORE capping to `count` and applying bonuses — otherwise a
@@ -2908,7 +2951,6 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # (precedence: background -> species -> ASI levels, first pick wins).
     # Checked against the scores before any feat bonus and a snapshot of what
     # the character holds from the background alone.
-    species_choices_raw = species.get("choices") if isinstance(species.get("choices"), dict) else {}
     species_feat_templates: list[dict] = []
     species_feats: list[dict] = []
     if race:
@@ -3230,6 +3272,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         )
     choice_templates += species_feat_ability_tpls
     if race and race_id:
+        species_variant_tpl = _species_variant_template(race, race_id)
+        if species_variant_tpl:
+            choice_templates.append(species_variant_tpl)
         choice_templates += _species_choice_templates(catalog, race, race_id, subrace)
         if species_ability_choice_tpl:
             choice_templates.append(species_ability_choice_tpl)
@@ -3688,7 +3733,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     skills = derived_mod.skill_scores(
         modifiers, list(proficient_skills), prof_bonus, expertise_all, jack, remarkable,
     )
-    speeds = _species_speeds(race, subrace)
+    speeds = _species_speeds(race, subrace, species_variant)
     worn_armor = any(i.get("equipment_category", {}).get("index") == "armor" for i in equipped_items)  # body armor or shield
     if speeds and not worn_armor:
         speed_bonus = features_mod.speed_bonus(effects, class_levels)
@@ -3756,6 +3801,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     ]
     # SRD trait effects (Dwarven Resilience, Hellish Resistance) and the
     # damage type of a selected Draconic Ancestry subtrait.
+    chosen_resistances += (species_variant or {}).get("resist") or []
     for effect in _srd_trait_effects(race, subrace):
         chosen_resistances += effect.get("resist", [])
     for c in choices:
@@ -3767,11 +3813,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 chosen_resistances.append(damage["index"])
     damage_modifiers = _species_damage_modifiers(race, subrace, resolved_feats, chosen_resistances)
     condition_immunities = _species_condition_immunities(race, subrace, resolved_feats)
-    senses = _species_senses(race, subrace, catalog)
+    senses = _species_senses(race, subrace, catalog, species_variant)
     for sense_kind, sense_range in _feat_senses(resolved_feats).items():
         if sense_range > senses.get(sense_kind, 0):
             senses[sense_kind] = sense_range
-    innate_spells = (_species_innate_spells(race, subrace, catalog)
+    innate_spells = (_species_innate_spells(race, subrace, catalog, species_variant)
                      + _species_trait_spell_choices(race, subrace, catalog, choices)
                      + _feat_innate_spells(resolved_feats, catalog, choices))
 
@@ -3795,6 +3841,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "species": {
             "id": race_id, "name": race["name"],
             "subspecies": {"id": subrace_id, "name": subrace["name"]} if subrace else None,
+            "variant": {"id": species_variant["id"], "name": species_variant["name"]} if species_variant else None,
         } if race else None,
         "abilities": final_scores,
         "proficiencies": {

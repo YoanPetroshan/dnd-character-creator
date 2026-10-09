@@ -177,6 +177,11 @@ def test_dragonborn_resist_choice_is_offered_and_applied(catalog):
     assert r["sheet"]["damageModifiers"]["resistances"] == ["cold"]
 
 
-def test_xphb_tiefling_resist_choice(catalog):
-    ch = _choice(_run(catalog, "tiefling-xphb"), "species:tiefling-xphb:resistance")
-    assert {o["id"] for o in ch["options"]} == {"poison", "necrotic", "fire"}
+def test_xphb_tiefling_resistance_is_decided_by_the_legacy_variant(catalog):
+    # Slice 8b: the three legacies fix the resistance, so the converted
+    # `resist_options` (poison/necrotic/fire) no longer becomes its own choice.
+    assert catalog.races["tiefling-xphb"]["resist_options"] is not None
+    r = _run(catalog, "tiefling-xphb")
+    assert _choice(r, "species:tiefling-xphb:resistance") is None
+    assert {o["id"] for o in _choice(r, "species:tiefling-xphb:variant")["options"]} == {
+        "abyssal-legacy", "chthonic-legacy", "infernal-legacy"}

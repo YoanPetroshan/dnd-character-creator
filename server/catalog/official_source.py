@@ -921,6 +921,62 @@ def _species_feat_grants_from_5etools(raw: dict) -> list[dict]:
     return grants
 
 
+def _variant_slug(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+
+
+def _mod_replaces_entry(version: dict) -> bool:
+    """True when an explicit `_versions` item swaps out a base trait
+    (`_mod.entries` mode replaceArr), i.e. it is one alternative among
+    several rather than an optional addition (appendArr)."""
+    mods = (version.get("_mod") or {}).get("entries")
+    mods = mods if isinstance(mods, list) else [mods]
+    return any(isinstance(m, dict) and m.get("mode") == "replaceArr" for m in mods)
+
+
+def _variant_from_source(vid: str, name: str, src: dict, resist: list[str]) -> dict:
+    """One variant: only the structured data keys a version can change.
+    A key explicitly set to null is recorded in `removes`."""
+    removes = [k for k in ("skillProficiencies", "darkvision", "additionalSpells", "speed") if k in src and src[k] is None]
+    walk, _ = _speed_from_5etools(src.get("speed"))
+    return {
+        "id": vid, "name": name,
+        "speed": walk,
+        "darkvision": _darkvision_from_5etools(src),
+        "resist": resist,
+        "innate_spells": _innate_spells_from_5etools({"additionalSpells": src.get("additionalSpells") or []}),
+        "skill_proficiencies": src.get("skillProficiencies") if isinstance(src.get("skillProficiencies"), list) else None,
+        "removes": removes,
+    }
+
+
+def _race_variants_from_5etools(raw: dict) -> list[dict]:
+    """Mutually exclusive alternatives of a race from its `_versions`:
+    explicit versions that REPLACE a base trait (name = the text after "; ",
+    e.g. "Drow Lineage") and abstract versions with `_implementations`
+    (Dragonborn colours; name = the abstract name with `{{var}}` filled in,
+    resist from the implementation or its `_variables`). Races without
+    `_versions` (almost all) get []."""
+    variants: list[dict] = []
+    for version in raw.get("_versions") or []:
+        if not isinstance(version, dict):
+            continue
+        if isinstance(version.get("_abstract"), dict):
+            template = str(version["_abstract"].get("name") or raw["name"])
+            for impl in version.get("_implementations") or []:
+                if not isinstance(impl, dict):
+                    continue
+                variables = impl.get("_variables") or {}
+                name = re.sub(r"\{\{(\w+)\}\}", lambda m: str(variables.get(m.group(1), m.group(0))), template)
+                resist = [r for r in (impl.get("resist") or variables.get("resist") or []) if isinstance(r, str)]
+                variants.append(_variant_from_source(_variant_slug(name), name, impl, resist))
+        elif isinstance(version.get("name"), str) and _mod_replaces_entry(version):
+            name = version["name"].split("; ", 1)[-1]
+            resist = [r for r in (version.get("resist") or []) if isinstance(r, str)]
+            variants.append(_variant_from_source(_variant_slug(name), name, version, resist))
+    return variants
+
+
 def _resist_options_from_5etools(raw: dict) -> dict | None:
     """The `resist: [{"choose": {"from": [...]}}]` shape (Dragonborn
     ancestry, 2024 Tiefling legacy, Reborn) as a Choice envelope of
@@ -1227,6 +1283,7 @@ def _race_from_5etools(raw: dict, traits_by_index: dict[str, dict]) -> dict | No
         "darkvision": _darkvision_from_5etools(raw),
         "resist_options": _resist_options_from_5etools(raw),
         "feat_grants": _species_feat_grants_from_5etools(raw),
+        "variants": _race_variants_from_5etools(raw),
         "ability_bonuses": _ability_bonuses_from_5etools(raw.get("ability", [])),
         "ability_bonus_options": _ability_bonus_options_from_5etools(raw.get("ability", []), raw.get("lineage")),
         "alignment": "", "age": "", "size": size, "size_description": "",
