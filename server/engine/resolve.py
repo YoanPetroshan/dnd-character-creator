@@ -60,6 +60,7 @@ from catalog.reference_data import (
     ABILITIES, SPECIFIC_WEAPON_PROFICIENCY_IDS, SRD_TRAIT_EFFECTS, SUBCLASS_PROFICIENCIES, SUBCLASS_EXTRA_FEATURES,
 )
 from . import asi as asi_mod
+from . import attacks as attacks_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
 from . import features as features_mod
@@ -3537,6 +3538,18 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         speed_bonus = features_mod.speed_bonus(effects, class_levels)
         speeds = {mode: value + speed_bonus for mode, value in speeds.items()}
     base_speed = speeds.get("walk")
+    # Attacks, carrying capacity and armor warnings (Slice 9). Size is the
+    # species' size (Slice 8d's size choice will override it); no species = Medium.
+    weapon_proficiencies = proficient_armor | proficient_weapons
+    attacks = attacks_mod.attacks_from_gear(
+        equipped_items, modifiers, prof_bonus, proficient_weapons, features_mod.attack_styles(effects),
+    )
+    armor_problems, stealth_disadvantage = equipment_mod.armor_warnings(equipped_items, final_scores, weapon_proficiencies)
+    warnings += armor_problems
+    carrying = derived_mod.carrying_summary(
+        final_scores.get("STR", 10), (race or {}).get("size") or "Medium",
+        granted_equipment + chosen_equipment + added_resolved, catalog.items,
+    )
     derived = {
         "abilityModifiers": modifiers,
         "proficiencyBonus": prof_bonus,
@@ -3558,6 +3571,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "passiveInvestigation": derived_mod.passive_skill(skills, "skill-investigation"),
         "spellSlots": spell_slots,
         "warlockSpellSlots": warlock_slots,
+        "attacks": attacks,
+        "carryingCapacity": carrying,
+        "stealthDisadvantage": stealth_disadvantage,
     }
 
     fixed_languages = [lang["index"] for lang in (bg.get("languages", []) if bg else [])] + \

@@ -1,6 +1,9 @@
 """Slice 7: the three exporters cover every sheet/derived key."""
+import io
+
 import yaml
 import pytest
+from pypdf import PdfReader
 
 import export_fields
 from catalog.loader import load
@@ -95,3 +98,49 @@ def test_markdown_and_pdf_share_the_same_blocks(catalog):
     md = to_markdown(res)
     for kind, text in blocks:
         assert text in md, text
+
+
+# ---- Slice 9: attacks and carrying capacity in every export ----------------
+
+
+def _rogue_1(catalog):
+    return resolve({
+        "name": "R", "sources": ["srd"], "classes": [{"classId": "rogue", "level": 1, "choices": {}}],
+        "background": {"id": "acolyte", "choices": {}}, "species": {"id": "human", "choices": {}},
+        "abilities": {"method": "manual", "base": {"STR": 10, "DEX": 16, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10}},
+        "equipment": {"choices": {}, "added": [{"itemId": "longsword", "qty": 1, "equipped": True}], "skipped": False}, "details": {},
+    }, catalog)
+
+
+def test_yaml_carries_attacks_and_capacity(catalog):
+    res = _rogue_1(catalog)
+    doc = yaml.safe_load(to_yaml(res))
+    assert doc["attacks"] == res["derived"]["attacks"]
+    assert doc["carryingCapacity"] == res["derived"]["carryingCapacity"]
+    assert doc["stealthDisadvantage"] is False
+    dagger = next(a for a in doc["attacks"] if a["itemId"] == "dagger")
+    assert dagger["attackBonus"] == 5 and dagger["damage"] == "1d4+3"
+
+
+def test_markdown_and_pdf_list_attacks_and_capacity(catalog):
+    res = _rogue_1(catalog)
+    carried, capacity = res["derived"]["carryingCapacity"]["carried"], res["derived"]["carryingCapacity"]["capacity"]
+    assert capacity == 165  # STR 10 + 1 (human) = 11, x 15
+    md = to_markdown(res)
+    assert "## Атаки" in md
+    assert "- Dagger: +5, 1d4+3 piercing" in md
+    # STR 11 (+0), rogue is proficient with longswords: +2, bare dice
+    assert "- Longsword: +2, 1d8 slashing (versatile 1d10)" in md
+    assert "## Носимост" in md and f"{carried}/{capacity} lb" in md
+    assert "## Броня" not in md  # leather armor: no stealth disadvantage
+    text = "".join(p.extract_text() for p in PdfReader(io.BytesIO(to_pdf(res))).pages)
+    assert "Атаки" in text and "Dagger: +5, 1d4+3 piercing" in text and f"{carried}/{capacity} lb" in text
+
+
+def test_over_capacity_and_stealth_armor_are_flagged(catalog):
+    res = _rogue_1(catalog)
+    res["derived"]["carryingCapacity"] = {"capacity": 100, "pushDragLift": 200, "carried": 130, "overCapacity": True}
+    res["derived"]["stealthDisadvantage"] = True
+    md = to_markdown(res)
+    assert "130/100 lb (претоварен)" in md
+    assert "## Броня" in md and "Недостатък при Скритост" in md

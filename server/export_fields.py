@@ -28,6 +28,7 @@ DERIVED_FIELDS: list[tuple[str, object]] = [
     ("armorClass", None), ("speed", None), ("speeds", {}), ("savingThrows", {}), ("skills", {}),
     ("initiative", None), ("passivePerception", None), ("passiveInsight", None), ("passiveInvestigation", None),
     ("spellSlots", {}), ("warlockSpellSlots", {}),
+    ("attacks", []), ("carryingCapacity", None), ("stealthDisadvantage", False),
 ]
 SHEET_TAIL_FIELDS: list[tuple[str, object]] = [
     ("proficiencies", {}), ("expertiseSkills", []), ("senses", {}), ("damageModifiers", {}),
@@ -94,6 +95,32 @@ def extra_blocks(resolution: dict) -> list[tuple[str, str]]:
                 blocks.append(("bullet", f"{label} към щета: " + ", ".join(_title(d) for d in damage[key])))
         if conditions:
             blocks.append(("bullet", "Имунитет към състояния: " + ", ".join(_title(c) for c in conditions)))
+
+    attacks = derived.get("attacks") or []
+    if attacks:
+        blocks.append(("h2", "Атаки"))
+        for a in attacks:
+            line = f"{a['name']}: {a['attackBonus']:+d}"
+            if a.get("damage"):
+                line += f", {a['damage']} {a['damageType']}"
+                if a.get("versatileDamage"):
+                    line += f" (versatile {a['versatileDamage']})"
+            if a.get("offhandDamage"):
+                line += f", off hand {a['offhandDamage']}"
+            if a.get("range"):
+                line += f", range {a['range']}"
+            if a.get("notes"):
+                line += "; " + ", ".join(a["notes"])
+            blocks.append(("bullet", line))
+
+    carrying = derived.get("carryingCapacity")
+    if carrying:
+        blocks.append(("h2", "Носимост"))
+        over = " (претоварен)" if carrying.get("overCapacity") else ""
+        blocks.append(("body", f"{carrying['carried']}/{carrying['capacity']} lb{over}"))
+    if derived.get("stealthDisadvantage"):
+        blocks.append(("h2", "Броня"))
+        blocks.append(("body", "Недостатък при Скритост (носена броня)."))
 
     gold = sheet.get("startingGold") or 0
     narrative = (sheet.get("equipment") or {}).get("narrativeItems") or []
