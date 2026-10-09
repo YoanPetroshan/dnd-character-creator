@@ -22,6 +22,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable
 
+from catalog import reference_data
+
 UNLIMITED_ROW_VALUE = 9999  # SRD level rows store "unlimited" as 9999 (Barbarian 20 rages)
 
 
@@ -157,11 +159,80 @@ def _monk(ctx: Ctx, rc: dict) -> list[dict]:
     return out
 
 
+# ---- Cleric / Paladin / Druid (R3) ----------------------------------------
+
+def _cr_text(value) -> str:
+    return reference_data.CR_TEXT.get(value) or str(int(value))
+
+
+def _channel_divinity(ctx: Ctx, rc: dict, srd_uses: int | None) -> dict | None:
+    """One class's Channel Divinity entry; resources_for merges several into one
+    (PHB 164). 2024: regain one use on a short rest, all on a long rest."""
+    uses = ctx.table(rc["cls_id"], "channel-divinity", rc["level"])
+    if uses is not None:
+        if not uses:
+            return None
+        return _resource(rc, "Channel Divinity", uses=uses, recharge="long", details={"shortRestRegains": 1})
+    if not srd_uses:
+        return None
+    return _resource(rc, "Channel Divinity", uses=srd_uses, recharge="short-or-long")
+
+
+def _cleric(ctx: Ctx, rc: dict) -> list[dict]:
+    cs = _class_specific(rc)
+    out = []
+    cd = _channel_divinity(ctx, rc, cs.get("channel_divinity_charges"))
+    if cd:
+        out.append(cd)
+    # Destroy Undead is 2014 only; the 2024 Cleric has Sear Undead (no CR column).
+    if ctx.ruleset != "2024" and cs.get("destroy_undead_cr"):
+        out.append(_resource(rc, "Destroy Undead", details={"maxCr": _cr_text(cs["destroy_undead_cr"])}))
+    return out
+
+
+def _paladin(ctx: Ctx, rc: dict) -> list[dict]:
+    level = rc["level"]
+    out = [_resource(rc, "Lay on Hands", pool=5 * level, recharge="long")]
+    if ctx.ruleset != "2024":  # 2024 Divine Sense is a Channel Divinity effect
+        out.append(_resource(rc, "Divine Sense", uses=max(1, 1 + ctx.modifiers.get("CHA", 0)), recharge="long"))
+    pcd = reference_data.PALADIN_2014_CHANNEL_DIVINITY
+    cd = _channel_divinity(ctx, rc, pcd["uses"] if level >= pcd["minLevel"] else None)
+    if cd:
+        out.append(cd)
+    return out
+
+
+def _druid(ctx: Ctx, rc: dict) -> list[dict]:
+    level = rc["level"]
+    uses = ctx.table("druid", "wild-shape", level)
+    if uses is not None:
+        if not uses:
+            return []
+        shape = next((s for s in reversed(reference_data.WILD_SHAPE_2024_BEAST_SHAPES) if level >= s[0]), None)
+        details = {"shortRestRegains": 1}
+        if shape:
+            details.update(maxCr=shape[2], fly=shape[3], knownForms=shape[1])
+        return [_resource(rc, "Wild Shape", uses=uses, recharge="long", details=details)]
+    cs = _class_specific(rc)
+    if not cs.get("wild_shape_max_cr"):
+        return []
+    # SRD feature `archdruid` (level 20): unlimited Wild Shape.
+    unlimited = level >= 20
+    return [_resource(
+        rc, "Wild Shape", uses=reference_data.WILD_SHAPE_2014_USES, unlimited=unlimited, recharge="short-or-long",
+        details={"maxCr": _cr_text(cs["wild_shape_max_cr"]), "swim": bool(cs.get("wild_shape_swim")),
+                 "fly": bool(cs.get("wild_shape_fly"))},
+    )]
+
+
 _BUILDERS: dict[str, Callable[[Ctx, dict], list[dict]]] = {
     "barbarian": _barbarian,
     "rogue": _rogue,
     "fighter": _fighter,
     "monk": _monk,
+    "cleric": _cleric,
+    "paladin": _paladin,
+    "druid": _druid,
 }
 _SUBCLASS_BUILDERS: dict[str, Callable[[Ctx, dict], list[dict]]] = {}
 
@@ -213,4 +284,20 @@ def resources_for(catalog, resolved_classes: list[dict], modifiers: dict, prof_b
         sub_builder = _SUBCLASS_BUILDERS.get(rc.get("subclass_id") or "")
         if sub_builder:
             out += sub_builder(ctx, rc)
-    return out
+    return _merge_channel_divinity(out)
+
+
+def _merge_channel_divinity(resources: list[dict]) -> list[dict]:
+    """PHB 164: Channel Divinity from several classes is one feature; the extra
+    class adds effect options, not uses. Keep one entry, uses = max over the
+    classes (first class on a tie), at the position of the winning class."""
+    cds = [r for r in resources if r["name"] == "Channel Divinity"]
+    if len(cds) < 2:
+        return resources
+    best = cds[0]
+    for r in cds[1:]:
+        if (r["uses"] or 0) > (best["uses"] or 0):
+            best = r
+    best = {**best, "details": {**(best.get("details") or {}), "classes": [r["classId"] for r in cds]}}
+    return [best if r["name"] == "Channel Divinity" and r["classId"] == best["classId"] else r
+            for r in resources if r["name"] != "Channel Divinity" or r["classId"] == best["classId"]]

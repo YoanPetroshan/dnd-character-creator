@@ -420,3 +420,26 @@ SOURCE_NAMES: dict[str, str] = {
     "XGE": "Xanathar's Guide to Everything",
     "XPHB": "Player's Handbook (2024)",
 }
+
+
+# --- Class resources (R3): prose-only numbers, verified against the texts below ---
+
+# Paladin 2014 Channel Divinity (PHB p.85 / SRD feature `channel-divinity`, level 3): the
+# SRD level rows have no column and the feature text is empty (the oath adds the effects);
+# the PHB gives one use per short or long rest at every level.
+PALADIN_2014_CHANNEL_DIVINITY = {"minLevel": 3, "uses": 1}
+
+# Wild Shape 2014 (SRD feature `wild-shape-cr-1-4-or-below-no-flying-or-swim-speed`): "You can
+# use this feature twice. You regain expended uses when you finish a short or long rest."
+WILD_SHAPE_2014_USES = 2
+
+# Wild Shape 2024, "Beast Shapes" table in the XPHB Wild Shape feature text (not a class table
+# column): (druid level, known forms, max CR, fly speed allowed), ascending by level.
+WILD_SHAPE_2024_BEAST_SHAPES: list[tuple[int, int, str, bool]] = [
+    (2, 4, "1/4", False),
+    (4, 6, "1/2", False),
+    (8, 8, "1", True),
+]
+
+# Challenge ratings the SRD level rows store as numbers, as the text form used in the sheet.
+CR_TEXT: dict[float, str] = {0: "0", 0.125: "1/8", 0.25: "1/4", 0.5: "1/2"}

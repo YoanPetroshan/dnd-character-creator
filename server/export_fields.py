@@ -89,6 +89,9 @@ def resource_line(r: dict) -> str:
     heal = (r.get("details") or {}).get("heal")
     if heal:
         core += f", лекуване {heal}"
+    max_cr = (r.get("details") or {}).get("maxCr")
+    if max_cr:
+        core = f"{core}, макс. CR {max_cr}" if core else f"макс. CR {max_cr}"
     return f"{r['name']}: {core}" if core else r["name"]
 
 

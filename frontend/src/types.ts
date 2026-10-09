@@ -252,7 +252,7 @@ export interface ClassResource {
   pool?: number;
   bonus?: number;
   dc?: number;
-  details?: Record<string, unknown> & { damageBonus?: number; heal?: string };
+  details?: Record<string, unknown> & { damageBonus?: number; heal?: string; maxCr?: string };
 }
 
 export interface Derived {

@@ -23,6 +23,8 @@ export function describeResource(r: ClassResource): string {
   if (typeof damage === "number") core += `, щета +${damage}`;
   const heal = r.details?.heal;
   if (typeof heal === "string") core += `, лекуване ${heal}`;
+  const maxCr = r.details?.maxCr;
+  if (typeof maxCr === "string") core = core ? `${core}, макс. CR ${maxCr}` : `макс. CR ${maxCr}`;
   return core ? `${r.name}: ${core}` : r.name;
 }
 
