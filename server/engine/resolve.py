@@ -56,7 +56,9 @@ from dataclasses import dataclass, field
 from catalog.choices import build_choice_template, build_equipment_choice
 from catalog.loader import Catalog
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
-from catalog.reference_data import ABILITIES, SRD_TRAIT_EFFECTS, SUBCLASS_PROFICIENCIES, SUBCLASS_EXTRA_FEATURES
+from catalog.reference_data import (
+    ABILITIES, SPECIFIC_WEAPON_PROFICIENCY_IDS, SRD_TRAIT_EFFECTS, SUBCLASS_PROFICIENCIES, SUBCLASS_EXTRA_FEATURES,
+)
 from . import asi as asi_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
@@ -3354,12 +3356,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # Combat Training's battleaxes/handaxes/light-hammers/warhammers, and
     # Elf Weapon Training's shortbows/longbows. Without these, real bundled
     # SRD trait grants would be silently miscategorized into `tools`.
-    _SPECIFIC_WEAPON_PROFICIENCY_IDS = {
-        "shortswords", "clubs", "crossbows-light", "daggers", "darts", "hand-crossbows",
-        "javelins", "longswords", "maces", "quarterstaffs", "rapiers", "scimitars",
-        "sickles", "slings", "spears",
-        "battleaxes", "handaxes", "light-hammers", "warhammers", "shortbows", "longbows",
-    }
+    _SPECIFIC_WEAPON_PROFICIENCY_IDS = SPECIFIC_WEAPON_PROFICIENCY_IDS
 
     def _categorize_proficiency(prof_id: str) -> None:
         if prof_id.startswith("skill-") or prof_id.startswith("saving-throw-"):

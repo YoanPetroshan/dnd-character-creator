@@ -179,7 +179,9 @@ def proficiency_label(prof_id: str) -> str:
 #   half_proficiency    "floor" (Jack of All Trades, every non-proficient
 #                       check) or "ceil" (Remarkable Athlete, STR/DEX/CON).
 #   ability_bonus / ability_cap  Primal Champion (+4 STR/CON, cap 24).
-#   attack_bonus        stored for the attacks slice; no consumer yet.
+#   attack_bonus / damage_bonus  Archery (+2 ranged attack) and Dueling (+2
+#                       one-handed melee damage); read by engine/features.attack_styles.
+#   two_weapon_fighting / great_weapon_fighting  flags, same reader.
 CLASS_FEATURE_EFFECTS: dict[str, dict] = {
     "barbarian-unarmored-defense": {"ac_formula": {"base": 10, "abilities": ["DEX", "CON"], "allows_shield": True}},
     "monk-unarmored-defense": {"ac_formula": {"base": 10, "abilities": ["DEX", "WIS"], "allows_shield": False}},
@@ -196,10 +198,35 @@ CLASS_FEATURE_EFFECTS: dict[str, dict] = {
     "fighter-fighting-style-dueling": {"damage_bonus": {"one_handed_melee": 2}},
     "fighting-style-dueling": {"damage_bonus": {"one_handed_melee": 2}},
     "ranger-fighting-style-dueling": {"damage_bonus": {"one_handed_melee": 2}},
+    "fighter-fighting-style-two-weapon-fighting": {"two_weapon_fighting": True},
+    "ranger-fighting-style-two-weapon-fighting": {"two_weapon_fighting": True},
+    "fighter-fighting-style-great-weapon-fighting": {"great_weapon_fighting": True},
+    "fighting-style-great-weapon-fighting": {"great_weapon_fighting": True},
     "jack-of-all-trades": {"half_proficiency": "floor"},
     "remarkable-athlete": {"half_proficiency": "ceil"},
     "primal-champion": {"ability_bonus": {"STR": 4, "CON": 4}, "ability_cap": 24},
 }
+
+
+# Specific-weapon proficiency ids (class/race grants such as "rapiers") and the
+# mapping from an Equipment.json weapon index to its proficiency id. The rule is
+# index + "s"; the exceptions are listed. The set is every specific-weapon id the
+# SRD classes, races and traits grant (verified by scanning their `proficiencies`).
+SPECIFIC_WEAPON_PROFICIENCY_IDS = {
+    "shortswords", "clubs", "crossbows-light", "daggers", "darts", "hand-crossbows",
+    "javelins", "longswords", "maces", "quarterstaffs", "rapiers", "scimitars",
+    "sickles", "slings", "spears",
+    "battleaxes", "handaxes", "light-hammers", "warhammers", "shortbows", "longbows",
+}
+WEAPON_PROFICIENCY_ID_OVERRIDES = {
+    "crossbow-light": "crossbows-light",
+    "crossbow-hand": "hand-crossbows",
+    "crossbow-heavy": "crossbows-heavy",
+}
+
+
+def weapon_proficiency_id(item_index: str) -> str:
+    return WEAPON_PROFICIENCY_ID_OVERRIDES.get(item_index, item_index + "s")
 
 
 # SRD racial trait index -> mechanical effect. The bundled SRD JSON describes

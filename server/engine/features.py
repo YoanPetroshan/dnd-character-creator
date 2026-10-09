@@ -50,3 +50,15 @@ def apply_ability_bonuses(scores: dict[str, int], effects) -> dict[str, int]:
             cur = out.get(ab, 10)
             out[ab] = max(cur, min(cur + bonus, cap)) if cap else cur + bonus
     return out
+
+
+def attack_styles(effects) -> dict:
+    """Fighting-style effects the attack math reads: Archery's ranged attack
+    bonus, Dueling's one-handed melee damage bonus, and the Two-Weapon / Great
+    Weapon Fighting flags."""
+    return {
+        "ranged_attack": max([e["attack_bonus"].get("ranged", 0) for _, _, e in effects if "attack_bonus" in e], default=0),
+        "one_handed_melee_damage": max([e["damage_bonus"].get("one_handed_melee", 0) for _, _, e in effects if "damage_bonus" in e], default=0),
+        "two_weapon_fighting": any(e.get("two_weapon_fighting") for _, _, e in effects),
+        "great_weapon_fighting": any(e.get("great_weapon_fighting") for _, _, e in effects),
+    }
