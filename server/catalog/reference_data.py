@@ -200,3 +200,11 @@ CLASS_FEATURE_EFFECTS: dict[str, dict] = {
     "remarkable-athlete": {"half_proficiency": "ceil"},
     "primal-champion": {"ability_bonus": {"STR": 4, "CON": 4}, "ability_cap": 24},
 }
+
+
+# SRD trait index -> senses it grants. The bundled SRD JSON only describes
+# these in prose; official (5etools) races carry a numeric `darkvision`
+# field instead. Keyed by trait index, same convention as other trait effects.
+SRD_TRAIT_SENSES: dict[str, dict[str, int]] = {
+    "darkvision": {"darkvision": 60},
+}

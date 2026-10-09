@@ -73,6 +73,7 @@ null but the spell's name is still shown, never silently dropped.
 from __future__ import annotations
 
 from pathlib import Path
+import itertools
 import json
 import re
 import sys
@@ -701,7 +702,7 @@ def _ability_bonuses_from_5etools(ability_list: list[dict]) -> list[dict]:
     return bonuses
 
 
-def _ability_bonus_options_from_5etools(ability_list: list[dict]) -> dict | None:
+def _ability_bonus_options_from_5etools(ability_list: list[dict], lineage=None) -> dict | None:
     """Converts the CHOOSE portion of 5etools' `ability` field into the
     SAME ability_bonus_options envelope shape SRD's Half-Elf record
     already uses ({"choose": N, "type": "ability_bonuses", "from": {...}})
@@ -730,16 +731,43 @@ def _ability_bonus_options_from_5etools(ability_list: list[dict]) -> dict | None
     backgrounds (Phase 4b), not races, which this also doesn't handle."""
     for entry in ability_list or []:
         choose = entry.get("choose")
-        if not choose or "count" not in choose:
-            continue
+        if not isinstance(choose, dict) or "from" not in choose:
+            continue  # e.g. the 2024-style "weighted" shape — handled by the weighted-pair function
         from_list = choose.get("from", [])
-        count = choose["count"]
+        count = choose.get("count", 1)  # 5etools' own default when "count" is omitted
+        bonus = choose.get("amount", 1)  # likewise: "amount" is the per-ability bonus, default +1
         options = [
-            {"option_type": "ability_bonus", "ability_score": {"index": ab, "name": ab.upper(), "url": ""}, "bonus": 1}
+            {"option_type": "ability_bonus", "ability_score": {"index": ab, "name": ab.upper(), "url": ""}, "bonus": bonus}
             for ab in from_list
         ]
         return {"choose": count, "type": "ability_bonuses", "from": {"option_set_type": "options_array", "options": options}}
+    if lineage == "VRGR" and not ability_list:
+        # Variant/flexible lineage (MPMM and friends): +2/+1 to two different
+        # abilities OR +1 to three different abilities. Same flattened
+        # bundle envelope as the 2024 background rule, over all six scores.
+        return _weighted_asi_envelope(["str", "dex", "con", "int", "wis", "cha"])
     return None
+
+
+def _weighted_asi_envelope(pool: list[str]) -> dict:
+    """Flattened "+2 to one / +1 to a different one, or +1 to three" ASI
+    envelope over `pool` (ordered +2/+1 pairs, then every 3-subset at +1)."""
+    def ability_ref(ab: str) -> dict:
+        return {"index": ab, "name": ab.upper(), "url": ""}
+
+    def bonus_item(ab: str, bonus: int) -> dict:
+        return {"option_type": "ability_bonus", "ability_score": ability_ref(ab), "bonus": bonus}
+
+    options = []
+    for high in pool:
+        for low in pool:
+            if low == high:
+                continue
+            options.append({"option_type": "multiple", "items": [bonus_item(high, 2), bonus_item(low, 1)]})
+    for triple in itertools.combinations(pool, 3):
+        options.append({"option_type": "multiple", "items": [bonus_item(ab, 1) for ab in triple]})
+
+    return {"choose": 1, "type": "ability_bonuses", "from": {"option_set_type": "options_array", "options": options}}
 
 
 def _ability_bonus_options_from_5etools_weighted_pair(ability_list: list[dict]) -> dict | None:
@@ -806,21 +834,7 @@ def _ability_bonus_options_from_5etools_weighted_pair(ability_list: list[dict]) 
     if len(pool) != 3 or flat.get("from", []) != pool:
         return None
 
-    def ability_ref(ab: str) -> dict:
-        return {"index": ab, "name": ab.upper(), "url": ""}
-
-    def bonus_item(ab: str, bonus: int) -> dict:
-        return {"option_type": "ability_bonus", "ability_score": ability_ref(ab), "bonus": bonus}
-
-    options = []
-    for high in pool:
-        for low in pool:
-            if low == high:
-                continue
-            options.append({"option_type": "multiple", "items": [bonus_item(high, 2), bonus_item(low, 1)]})
-    options.append({"option_type": "multiple", "items": [bonus_item(ab, 1) for ab in pool]})
-
-    return {"choose": 1, "type": "ability_bonuses", "from": {"option_set_type": "options_array", "options": options}}
+    return _weighted_asi_envelope(pool)
 
 
 def _damage_modifiers_from_5etools(raw: dict) -> tuple[list[str], list[str], list[str]]:
@@ -855,6 +869,91 @@ def _damage_modifiers_from_5etools(raw: dict) -> tuple[list[str], list[str], lis
         return [entry for entry in (raw.get(key) or []) if isinstance(entry, str)]
 
     return _strings_only("resist"), _strings_only("immune"), _strings_only("vulnerable")
+
+
+def _speed_from_5etools(raw_speed) -> tuple[int | None, dict]:
+    """5etools `speed`: an int (walk) or {walk, fly, swim, climb}, where a
+    non-walk value may be `true` ("equal to your walking speed"). Returns
+    (walk or None, {mode: int | True} for the non-walk modes)."""
+    if isinstance(raw_speed, bool):
+        return None, {}
+    if isinstance(raw_speed, int):
+        return raw_speed, {}
+    if not isinstance(raw_speed, dict):
+        return None, {}
+    walk = raw_speed.get("walk")
+    walk = walk if isinstance(walk, int) and not isinstance(walk, bool) else None
+    movement = {}
+    for mode, value in raw_speed.items():
+        if mode == "walk":
+            continue
+        if value is True or (isinstance(value, int) and not isinstance(value, bool) and value > 0):
+            movement[mode] = value
+    return walk, movement
+
+
+def _darkvision_from_5etools(raw: dict) -> int | None:
+    value = raw.get("darkvision")
+    return value if isinstance(value, int) and not isinstance(value, bool) and value > 0 else None
+
+
+def _resist_options_from_5etools(raw: dict) -> dict | None:
+    """The `resist: [{"choose": {"from": [...]}}]` shape (Dragonborn
+    ancestry, 2024 Tiefling legacy, Reborn) as a Choice envelope of
+    damage-type strings; fixed string entries stay in `resist`."""
+    for entry in raw.get("resist") or []:
+        if not isinstance(entry, dict):
+            continue
+        choose = entry.get("choose")
+        if not isinstance(choose, dict) or not choose.get("from"):
+            continue
+        options = [{"option_type": "string", "string": str(t).capitalize()} for t in choose["from"] if isinstance(t, str)]
+        if options:
+            return {"choose": choose.get("count", 1), "type": "damage_resistances",
+                    "from": {"option_set_type": "options_array", "options": options}}
+    return None
+
+
+_NAMELESS_SKIP_KEYS = frozenset({
+    "source", "raceName", "raceSource", "page", "srd", "basicRules", "reprintedAs", "hasFluff",
+    "hasFluffImages", "_versions", "_copy", "otherSources", "alias", "soundClip", "name", "overwrite",
+})
+
+
+def _merge_nameless_subraces(data: dict) -> tuple[list[dict], list[dict]]:
+    """5etools models a race's default form as a nameless subrace (PHB
+    Human: the +1-to-everything lives there; Dragonborn/Half-Elf/
+    Half-Orc/Tiefling carry only reprint metadata). Fold each into its
+    parent race and return (races, named subraces). Because the nameless
+    form is the ALTERNATIVE to any named subrace, a parent that gained
+    ability scores this way has them replaced (overwrite.ability) by every
+    named subrace, as in 5etools."""
+    races = [dict(r) for r in data.get("race", [])]
+    by_key = {(r.get("name"), r.get("source")): r for r in races}
+    named = []
+    ability_merged_parents = set()
+    for sub in data.get("subrace", []):
+        if sub.get("name"):
+            named.append(sub)
+            continue
+        parent = by_key.get((sub.get("raceName"), sub.get("raceSource")))
+        if parent is None or "_copy" in parent:
+            continue
+        for key, value in sub.items():
+            if key in _NAMELESS_SKIP_KEYS:
+                continue
+            if key not in parent:
+                parent[key] = value
+            elif isinstance(parent[key], list) and isinstance(value, list):
+                parent[key] = parent[key] + value
+            elif key == "darkvision" and isinstance(value, int) and isinstance(parent[key], int):
+                parent[key] = max(parent[key], value)
+            if key == "ability":
+                ability_merged_parents.add((parent.get("name"), parent.get("source")))
+    for i, sub in enumerate(named):
+        if (sub.get("raceName"), sub.get("raceSource")) in ability_merged_parents:
+            named[i] = {**sub, "overwrite": {**(sub.get("overwrite") or {}), "ability": True}}
+    return races, named
 
 
 def _condition_immunities_from_5etools(raw: dict) -> list[str]:
@@ -1095,12 +1194,16 @@ def _race_from_5etools(raw: dict, traits_by_index: dict[str, dict]) -> dict | No
     _attach_choice_proficiencies(raw, trait_refs, index, race_ref, [], traits_by_index)
 
     resist, immune, vulnerable = _damage_modifiers_from_5etools(raw)
+    walk, movement = _speed_from_5etools(raw.get("speed"))
 
     return {
         "index": index, "name": raw["name"],
-        "speed": raw.get("speed") if isinstance(raw.get("speed"), int) else 30,
+        "speed": walk if walk is not None else 30,
+        "movement": movement,  # non-walk modes: {fly|swim|climb: int | True (= walking speed)}
+        "darkvision": _darkvision_from_5etools(raw),
+        "resist_options": _resist_options_from_5etools(raw),
         "ability_bonuses": _ability_bonuses_from_5etools(raw.get("ability", [])),
-        "ability_bonus_options": _ability_bonus_options_from_5etools(raw.get("ability", [])),
+        "ability_bonus_options": _ability_bonus_options_from_5etools(raw.get("ability", []), raw.get("lineage")),
         "alignment": "", "age": "", "size": size, "size_description": "",
         "languages": [], "language_desc": "",
         "traits": trait_refs,
@@ -1140,12 +1243,20 @@ def _subrace_from_5etools(raw: dict, race_ids: set[str], traits_by_index: dict[s
     _attach_choice_proficiencies(raw, trait_refs, index, [], subrace_ref, traits_by_index)
 
     resist, immune, vulnerable = _damage_modifiers_from_5etools(raw)
+    walk, movement = _speed_from_5etools(raw.get("speed"))
 
     return {
         "index": index, "name": raw["name"],
         "race": {"index": race_index, "name": race_name, "url": ""},
         "desc": "",
+        "speed": walk,  # walk-speed override of the parent race, None = inherit
+        "movement": movement,
+        "darkvision": _darkvision_from_5etools(raw),
+        "resist_options": _resist_options_from_5etools(raw),
+        # 5etools `overwrite.ability`: this subrace's scores REPLACE the race's.
+        "overwrite_ability": bool((raw.get("overwrite") or {}).get("ability")),
         "ability_bonuses": _ability_bonuses_from_5etools(raw.get("ability", [])),
+        "ability_bonus_options": _ability_bonus_options_from_5etools(raw.get("ability", [])),
         "racial_traits": trait_refs,
         "url": "",
         # NEW fields (Task 5) — subraces carry resist/immune/vulnerable/
@@ -1905,14 +2016,15 @@ def load_official_races(official_dir: Path) -> tuple[list[dict], list[dict], dic
 
     traits_by_index: dict[str, dict] = {}
     races = []
-    for raw in data.get("race", []):
+    raw_races, raw_subraces = _merge_nameless_subraces(data)
+    for raw in raw_races:
         converted = _race_from_5etools(raw, traits_by_index)
         if converted is not None:
             races.append(converted)
 
     race_ids = {r["index"] for r in races}
     subraces = []
-    for raw in data.get("subrace", []):
+    for raw in raw_subraces:
         converted = _subrace_from_5etools(raw, race_ids, traits_by_index)
         if converted is not None:
             subraces.append(converted)

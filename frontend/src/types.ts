@@ -152,6 +152,8 @@ export interface Sheet {
   equipment: SheetEquipment;
   spells: SheetClassSpells[];
   details: CharacterDetails | null;
+  /** Sense ranges in feet, e.g. {darkvision: 60}. */
+  senses?: Record<string, number>;
 }
 
 export interface Derived {
@@ -161,6 +163,8 @@ export interface Derived {
   hitDice: string | null;
   armorClass: number;
   speed: number | null;
+  /** Every movement mode, e.g. {walk: 30, swim: 30}; `speed` is the walk entry. */
+  speeds: Record<string, number>;
   savingThrows: Record<Ability, number>;
   skills: Record<string, number>;
   initiative: number;

@@ -122,16 +122,16 @@ def test_race_with_no_ability_choice_gets_no_options_envelope():
     assert aasimar["ability_bonus_options"] is None
 
 
-def test_custom_lineage_amount_shape_is_not_silently_mishandled():
-    # TCE's "Custom Lineage" uses {"from": [...], "amount": 2} instead of a
-    # "count" key — a fundamentally different, more flexible ASI split (+2
-    # to one ability OR +1 to two) that this task's simple choose-N-for-+1-
-    # each envelope cannot represent. Confirmed empirically (2026-09-23)
-    # this is the ONLY race-level entry with "choose" but no "count". Must
-    # be skipped (None), not guessed at via a wrong default count.
+def test_custom_lineage_amount_shape_is_plus_two_to_one_ability():
+    # TCE's "Custom Lineage" uses {"from": [...], "amount": 2} with no
+    # "count": 5etools' defaults make that ONE ability at +2 (Slice 3
+    # superseded the earlier "skip it" cut).
     races, _, _ = load_official_races(official_dir())
     custom_lineage = next(r for r in races if r["name"] == "Custom Lineage")
-    assert custom_lineage["ability_bonus_options"] is None
+    env = custom_lineage["ability_bonus_options"]
+    assert env["choose"] == 1
+    assert {o["bonus"] for o in env["from"]["options"]} == {2}
+    assert len(env["from"]["options"]) == 6
 
 
 # --- Task 3: fixed skill/tool/weapon/armor proficiency grants -------------
@@ -426,15 +426,15 @@ def test_race_damage_modifiers_and_condition_immunities_are_plain_string_lists()
     assert autognome["condition_immune"] == ["disease"]
 
 
-def test_choice_shaped_resistance_is_filtered_out_not_mis_modeled():
-    # Dragonborn/PHB's `resist` entry is {"choose": {"from": [...]}} — a
-    # choice tied to draconic ancestry, not a fixed damage type.
-    # Resolving that choice is out of scope for this pass-through
-    # conversion (see _damage_modifiers_from_5etools' docstring); the
-    # entry must be dropped, not coerced into a string or left to crash.
+def test_choice_shaped_resistance_becomes_a_resist_options_envelope():
+    # Dragonborn/PHB's `resist` entry is {"choose": {"from": [...]}}: it is
+    # not a fixed damage type (stays out of `resist`) but a Choice envelope.
     races, _, _ = load_official_races(official_dir())
     dragonborn_phb = next(r for r in races if r["index"] == "dragonborn-phb")
     assert dragonborn_phb["resist"] == []
+    env = dragonborn_phb["resist_options"]
+    assert env["choose"] == 1
+    assert {o["string"].lower() for o in env["from"]["options"]} == {"acid", "cold", "fire", "lightning", "poison"}
 
 
 def test_subrace_damage_modifiers_are_independent_of_the_parent_race():

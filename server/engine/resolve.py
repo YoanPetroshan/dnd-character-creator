@@ -56,6 +56,7 @@ from dataclasses import dataclass, field
 from catalog.choices import build_choice_template
 from catalog.loader import Catalog
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
+from catalog.reference_data import SRD_TRAIT_SENSES
 from . import asi as asi_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
@@ -71,18 +72,28 @@ _DETAIL_FIELDS = (
 )
 
 
+def _ability_sources(race: dict | None, subrace: dict | None) -> list[dict]:
+    """Race and subrace as ability-score sources. A subrace flagged
+    `overwrite_ability` (5etools `overwrite.ability`) REPLACES the race's
+    scores — Draconblood/Ravenite Dragonborn, the MTF Tiefling bloodlines,
+    the Half-Elf variants, and any named subrace of a race whose default
+    form (nameless subrace) carried the scores, e.g. Human."""
+    if subrace and subrace.get("overwrite_ability"):
+        return [subrace]
+    return [src for src in (race, subrace) if src]
+
+
 def _species_ability_bonuses(race: dict | None, subrace: dict | None) -> dict[str, int]:
     bonuses: dict[str, int] = {}
-    for src in (race, subrace):
-        if not src:
-            continue
+    for src in _ability_sources(race, subrace):
         for entry in src.get("ability_bonuses", []):
             ab = entry["ability_score"]["index"].upper()
             bonuses[ab] = bonuses.get(ab, 0) + entry["bonus"]
     return bonuses
 
 
-def _species_damage_modifiers(race: dict | None, subrace: dict | None, feats: list[dict] | None = None) -> dict[str, list[str]]:
+def _species_damage_modifiers(race: dict | None, subrace: dict | None, feats: list[dict] | None = None,
+                              chosen_resistances: list[str] | None = None) -> dict[str, list[str]]:
     """Merges resist/immune/vulnerable from race, subrace, AND (Phase 4c-i
     Task 5) every resolved granted feat, the same race-then-subrace-
     additions relationship _species_ability_bonuses already merges for
@@ -126,6 +137,9 @@ def _species_damage_modifiers(race: dict | None, subrace: dict | None, feats: li
         for entry in src.get("vulnerable", []):
             if entry not in vulnerabilities:
                 vulnerabilities.append(entry)
+    for entry in chosen_resistances or []:
+        if entry not in resistances:
+            resistances.append(entry)
     return {"resistances": resistances, "immunities": immunities, "vulnerabilities": vulnerabilities}
 
 
@@ -373,6 +387,44 @@ def _feat_senses(feats: list[dict]) -> dict[str, int]:
             if sense_type not in senses or value > senses[sense_type]:
                 senses[sense_type] = value
     return senses
+
+
+def _species_senses(race: dict | None, subrace: dict | None, catalog: Catalog) -> dict[str, int]:
+    """Senses from the race and subrace: official records carry a numeric
+    `darkvision`; bundled SRD races only have the descriptive "Darkvision"
+    trait, mapped via reference_data.SRD_TRAIT_SENSES. Higher range wins."""
+    senses: dict[str, int] = {}
+
+    def add(kind: str, value) -> None:
+        if isinstance(value, int) and value > senses.get(kind, 0):
+            senses[kind] = value
+
+    for src in (race, subrace):
+        if not src:
+            continue
+        add("darkvision", src.get("darkvision"))
+        for ref in list(src.get("traits", [])) + list(src.get("racial_traits", [])):
+            for kind, value in SRD_TRAIT_SENSES.get(ref["index"], {}).items():
+                add(kind, value)
+    return senses
+
+
+def _species_speeds(race: dict | None, subrace: dict | None) -> dict[str, int]:
+    """{walk, fly?, swim?, climb?}: the subrace's walk speed overrides the
+    race's; non-walk modes merge (subrace wins per mode); a `true` mode means
+    "equal to your walking speed"."""
+    if not race:
+        return {}
+    walk = race.get("speed") if isinstance(race.get("speed"), int) else None
+    if subrace and isinstance(subrace.get("speed"), int):
+        walk = subrace["speed"]
+    if walk is None:
+        return {}
+    modes = {**(race.get("movement") or {}), **((subrace or {}).get("movement") or {})}
+    speeds = {"walk": walk}
+    for mode, value in modes.items():
+        speeds[mode] = walk if value is True else value
+    return speeds
 
 
 def _species_innate_spells(race: dict | None, subrace: dict | None, catalog: Catalog) -> list[dict]:
@@ -637,14 +689,19 @@ def _species_ability_bonus_choice_template(race: dict | None, subrace: dict | No
     template. Race is checked before subrace since ability_bonus_options
     could in principle appear on either (only race does in the bundled
     data, but this stays generic rather than hardcoding "half-elf")."""
-    for src in (race, subrace):
-        if not src or not src.get("ability_bonus_options"):
+    for src in _ability_sources(race, subrace):
+        if not src.get("ability_bonus_options"):
             continue
         envelope = src["ability_bonus_options"]
         cid = f"species:{race_id}:ability-bonus"
         source = {"kind": "species", "id": race_id, "label": race["name"] if race else ""}
         choose = envelope.get("choose", 1)
-        description = f"Choose {choose} ability score{'s' if choose != 1 else ''} to increase by 1."
+        options = envelope.get("from", {}).get("options", [])
+        if options and all(o.get("option_type") == "multiple" for o in options):
+            description = "Choose one ability score improvement option."
+        else:
+            bonus = options[0].get("bonus", 1) if options else 1
+            description = f"Choose {choose} ability score{'s' if choose != 1 else ''} to increase by {bonus}."
         return build_choice_template(envelope, cid, source, "Ability Score Increase", description=description)
     return None
 
@@ -705,9 +762,10 @@ def _background_ability_bonus_deltas(envelope: dict, built_options: list[dict]) 
     raw_options = envelope.get("from", {}).get("options", [])
     deltas_by_id: dict[str, list[tuple[str, int]]] = {}
     for raw_opt, built_opt in zip(raw_options, built_options):
+        items = raw_opt.get("items") if raw_opt.get("option_type") == "multiple" else [raw_opt]
         deltas_by_id[built_opt["id"]] = [
-            (item["ability_score"]["index"].upper(), item["bonus"])
-            for item in raw_opt.get("items", [])
+            (item["ability_score"]["index"].upper(), item.get("bonus", 1))
+            for item in items or []
         ]
     return deltas_by_id
 
@@ -1428,6 +1486,17 @@ def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrac
         choose = envelope.get("choose", 1)
         description = f"Choose {choose} additional language{'s' if choose != 1 else ''} of your choice."
         tpl = build_choice_template(envelope, cid, source, "Bonus Language", description=description)
+        if tpl:
+            templates.append(tpl)
+
+    # Damage-resistance choices (Dragonborn ancestry, 2024 Tiefling legacy).
+    for src, src_id in ((race, race_id), (subrace, subrace.get("index") if subrace else None)):
+        envelope = src.get("resist_options") if src else None
+        if not envelope:
+            continue
+        cid = f"species:{race_id}:resistance" if src is race else f"species:{race_id}:subspecies:{src_id}:resistance"
+        source = {"kind": "species", "id": race_id, "label": race["name"]}
+        tpl = build_choice_template(envelope, cid, source, "Damage Resistance", description="Choose the damage type you resist.")
         if tpl:
             templates.append(tpl)
 
@@ -2390,9 +2459,15 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         # ability's bonus twice with no problem reported.
         deduped_selected = list(dict.fromkeys(s for s in raw_selected if isinstance(s, str)))
         selected_abilities = [s for s in deduped_selected if s in valid_ability_ids][: species_ability_choice_tpl["count"]]
+        # Deltas come from the option itself: +1 for the SRD Half-Elf and
+        # `count` choices, +2 for `amount: 2` choices, and +2/+1 or +1/+1/+1
+        # bundles for VRGR lineages. Env is the race's or subrace's, whichever
+        # supplied the template.
+        env_src = next(src for src in _ability_sources(race, subrace) if src.get("ability_bonus_options"))
+        species_deltas = _background_ability_bonus_deltas(env_src["ability_bonus_options"], species_ability_choice_tpl["options"])
         for ab_id in selected_abilities:
-            ab_key = ab_id.upper()
-            species_bonuses[ab_key] = species_bonuses.get(ab_key, 0) + 1  # bundled data's `bonus` is always 1; if a future data source varies this, look it up from the option instead of hardcoding 1 here
+            for ab_key, delta in species_deltas.get(ab_id, []):
+                species_bonuses[ab_key] = species_bonuses.get(ab_key, 0) + delta
 
     background_bonuses = _background_ability_bonuses(bg)
     background_ability_choice_tpl = _background_ability_bonus_choice_template(bg, bg_id)
@@ -3144,10 +3219,12 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     skills = derived_mod.skill_scores(
         modifiers, list(proficient_skills), prof_bonus, expertise_all, jack, remarkable,
     )
-    base_speed = race.get("speed") if race else None
+    speeds = _species_speeds(race, subrace)
     worn_armor = any(i.get("equipment_category", {}).get("index") == "armor" for i in equipped_items)  # body armor or shield
-    if base_speed is not None and not worn_armor:
-        base_speed += features_mod.speed_bonus(effects, class_levels)
+    if speeds and not worn_armor:
+        speed_bonus = features_mod.speed_bonus(effects, class_levels)
+        speeds = {mode: value + speed_bonus for mode, value in speeds.items()}
+    base_speed = speeds.get("walk")
     derived = {
         "abilityModifiers": modifiers,
         "proficiencyBonus": prof_bonus,
@@ -3158,7 +3235,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             equipped_items, modifiers["DEX"], features_mod.ac_formulas(effects), modifiers,
             features_mod.armored_ac_bonus(effects),
         ),
-        "speed": base_speed,
+        "speed": base_speed,  # walking speed; `speeds` carries every mode
+        "speeds": speeds,
         "initiative": derived_mod.initiative(modifiers, prof_bonus, jack, remarkable),
         "savingThrows": saves,
         "skills": skills,
@@ -3186,9 +3264,17 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # feed. damage_modifiers/condition_immunities/senses (Task 5) still
     # read `resolved_feats` here, unchanged — only WHERE it's computed
     # moved, not what these three lines do.
-    damage_modifiers = _species_damage_modifiers(race, subrace, resolved_feats)
+    chosen_resistances = [
+        v for c in choices
+        if c["source"]["kind"] == "species" and c["id"].endswith(":resistance")
+        for v in c["selected"]
+    ]
+    damage_modifiers = _species_damage_modifiers(race, subrace, resolved_feats, chosen_resistances)
     condition_immunities = _species_condition_immunities(race, subrace, resolved_feats)
-    senses = _feat_senses(resolved_feats)
+    senses = _species_senses(race, subrace, catalog)
+    for sense_kind, sense_range in _feat_senses(resolved_feats).items():
+        if sense_range > senses.get(sense_kind, 0):
+            senses[sense_kind] = sense_range
     innate_spells = _species_innate_spells(race, subrace, catalog) + _feat_innate_spells(resolved_feats, catalog, choices)
 
     sheet = {
