@@ -1,11 +1,13 @@
+import { useState } from "react";
 import { StepProblems } from "../components/StepProblems";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
 import { useCatalogContext } from "../CatalogContext";
-import { ChoiceCard } from "../components/ChoiceCard";
+import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
 
 export function SpeciesPage() {
   const { draft, dispatch } = useDraft();
+  const [speciesFilter, setSpeciesFilter] = useState("");
   const { resolution, loading, error, retry } = useResolutionContext();
   const catalog = useCatalogContext();
 
@@ -26,6 +28,10 @@ export function SpeciesPage() {
     catalog.species.find((s) => s.id === selectedSpeciesId) ?? catalog.allSpecies.find((s) => s.id === selectedSpeciesId);
   const speciesHidden = !!selectedSpecies && !catalog.species.some((s) => s.id === selectedSpecies.id);
   const speciesList = speciesHidden && selectedSpecies ? [selectedSpecies, ...catalog.species] : catalog.species;
+  const needle = speciesFilter.trim().toLowerCase();
+  const shownSpecies = needle
+    ? speciesList.filter((s) => s.id === selectedSpeciesId || s.name.toLowerCase().includes(needle))
+    : speciesList;
   const fullSpecies = catalog.allSpecies.find((s) => s.id === selectedSpeciesId);
   const subspeciesList = selectedSpecies
     ? [
@@ -69,8 +75,17 @@ export function SpeciesPage() {
           ))}
         </ul>
       )}
+      <input
+        type="search"
+        className="picker-filter"
+        aria-label="Търсене на species"
+        placeholder="Търсене на species…"
+        value={speciesFilter}
+        onChange={(e) => setSpeciesFilter(e.target.value)}
+      />
+      {needle && shownSpecies.length === 0 && <p>Няма съвпадения.</p>}
       <ul className="picker-list">
-        {speciesList.map((s) => (
+        {shownSpecies.map((s) => (
           <li key={s.id}>
             <label>
               <input
@@ -103,7 +118,7 @@ export function SpeciesPage() {
       )}
       {selectedSpeciesId && !loading && choices.length === 0 && <p>Няма избори за този species.</p>}
       {choices.map((choice) => (
-        <ChoiceCard key={choice.id} choice={choice} onToggle={handleChange} />
+        <ChoiceCard key={choice.id} choice={choice} onToggle={handleChange} defaultExpanded={choice.id === firstPendingId(choices)} />
       ))}
     </div>
   );

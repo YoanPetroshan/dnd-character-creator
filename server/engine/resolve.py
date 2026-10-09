@@ -2637,6 +2637,15 @@ def _is_count_variable_choice(tpl: dict) -> bool:
     return tpl["source"]["kind"] == "class" and tpl["id"].endswith((":spells-cantrips", ":spells-known"))
 
 
+def _tag_spell_level_groups(catalog: Catalog, tpl: dict) -> None:
+    """Set `group` = "spell-level-N" on each spell option (catalog spell
+    level) so the picker can render level headings."""
+    for opt in tpl["options"]:
+        spell = catalog.spells.get(opt["id"])
+        if spell is not None:
+            opt["group"] = f"spell-level-{spell['level']}"
+
+
 def _spell_choice_templates(
     catalog: Catalog, cls: dict, cls_id: str, level_row: dict | None, ability_modifier: int, class_level: int,
     expanded_spell_ids: list[str] = (), always_prepared: dict[str, str] | None = None,
@@ -2668,6 +2677,7 @@ def _spell_choice_templates(
         description = f"Choose {cantrips_known} cantrip{'s' if cantrips_known != 1 else ''} from the {cls['name']} spell list."
         tpl = build_choice_template(envelope, cid, source, "Cantrips Known", description=description)
         if tpl:
+            _tag_spell_level_groups(catalog, tpl)
             templates.append(tpl)
 
     known_count = spells_mod.known_spell_count(level_row, ability_modifier, class_level=class_level, cls_id=cls_id)
@@ -2692,6 +2702,7 @@ def _spell_choice_templates(
         description = f"Choose {known_count} {level_word}{'s' if known_count != 1 else ''} to {verb} from the {cls['name']} spell list."
         tpl = build_choice_template(envelope, cid, source, label, description=description)
         if tpl:
+            _tag_spell_level_groups(catalog, tpl)
             for opt in tpl["options"]:
                 if opt["id"] in (always_prepared or {}):
                     opt["disabled"] = True

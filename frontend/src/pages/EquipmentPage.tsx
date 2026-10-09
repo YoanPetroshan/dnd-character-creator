@@ -3,7 +3,7 @@ import { StepProblems } from "../components/StepProblems";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
 import { useItems } from "../useItems";
-import { ChoiceCard } from "../components/ChoiceCard";
+import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
 
 const CATEGORIES = [
   { value: "", label: "Всички" },
@@ -47,7 +47,7 @@ export function EquipmentPage() {
 
       {equipmentChoices.length === 0 && <p>Няма избори за стартова екипировка.</p>}
       {equipmentChoices.map((choice) => (
-        <ChoiceCard key={choice.id} choice={choice} onToggle={handleChoiceChange} />
+        <ChoiceCard key={choice.id} choice={choice} onToggle={handleChoiceChange} defaultExpanded={choice.id === firstPendingId(equipmentChoices)} />
       ))}
 
       {sheetEquipment.granted.length > 0 && (

@@ -5,10 +5,17 @@ import { ChoicePicker } from "./ChoicePicker";
 interface ChoiceCardProps {
   choice: Choice;
   onToggle: (choiceId: string, optionId: string, count: number) => void;
+  /** Start expanded (pages pass true for the first pending card only). */
+  defaultExpanded?: boolean;
 }
 
-export function ChoiceCard({ choice, onToggle }: ChoiceCardProps) {
-  const [expanded, setExpanded] = useState(choice.status === "pending");
+/** Id of the first pending choice in a page's list, if any. */
+export function firstPendingId(choices: Choice[]): string | undefined {
+  return choices.find((c) => c.status === "pending")?.id;
+}
+
+export function ChoiceCard({ choice, onToggle, defaultExpanded = false }: ChoiceCardProps) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
 
   return (
     <div className="choice-card" data-status={choice.status}>
@@ -28,7 +35,7 @@ export function ChoiceCard({ choice, onToggle }: ChoiceCardProps) {
           <span className="choice-card__level">{choice.source.level} level</span>
         )}
         <span className="choice-card__count">
-          {choice.count} {choice.count === 1 ? "Choice" : "Choices"}
+          избрани {choice.selected.length}/{choice.count}
         </span>
       </button>
       {expanded && (

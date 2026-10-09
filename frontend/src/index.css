@@ -436,3 +436,28 @@ fieldset label {
 main {
   padding-bottom: max(16px, env(safe-area-inset-bottom));
 }
+
+/* Big-option-list usability (structural only). */
+.picker-filter {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-height: 44px;
+  margin: 0 0 8px;
+}
+
+.choice-picker__group {
+  display: block;
+  width: 100%;
+  font-weight: 600;
+  padding: 8px 0 2px;
+}
+
+.choice-picker li.choice-picker__item--group-start {
+  flex-wrap: wrap;
+}
+
+.choice-picker__toggle-unavailable {
+  margin-top: 8px;
+}

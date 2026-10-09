@@ -6,6 +6,10 @@ export interface ChoiceOption {
   description?: string;
   disabled?: boolean;
   disabledReason?: string;
+  /** Optional grouping key; consecutive options sharing it render under one heading. */
+  group?: string;
+  /** Option is hidden by the current ruleset/source filters (treated like an unavailable option). */
+  hiddenByFilters?: boolean;
 }
 
 export type ChoiceSourceKind =

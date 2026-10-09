@@ -3,7 +3,7 @@ import { StepProblems } from "../components/StepProblems";
 import { MAX_TOTAL_LEVEL, totalLevel, useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
 import { useCatalogContext } from "../CatalogContext";
-import { ChoiceCard } from "../components/ChoiceCard";
+import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
 import { CommitNumberInput } from "../components/CommitNumberInput";
 import { SpellLibrary } from "../components/SpellLibrary";
 
@@ -184,7 +184,7 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
           {!loading && featureChoices.length === 0 && <p>Няма избори за този клас.</p>}
           {featureChoices.map((choice) => (
             <div key={choice.id}>
-              <ChoiceCard choice={choice} onToggle={handleChange} />
+              <ChoiceCard choice={choice} onToggle={handleChange} defaultExpanded={choice.id === firstPendingId(featureChoices)} />
               {prunedReasons.has(choice.id) && (
                 <p className="choice-pruned" role="note">
                   {prunedReasons.get(choice.id)}
@@ -199,7 +199,7 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
         <div id={panelSpellsId} role="tabpanel" aria-labelledby={tabSpellsId}>
           {spellChoices.map((choice) => (
             <div key={choice.id}>
-              <ChoiceCard choice={choice} onToggle={handleChange} />
+              <ChoiceCard choice={choice} onToggle={handleChange} defaultExpanded={choice.id === firstPendingId(spellChoices)} />
               {prunedReasons.has(choice.id) && (
                 <p className="choice-pruned" role="note">
                   {prunedReasons.get(choice.id)}

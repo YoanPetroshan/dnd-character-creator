@@ -2,7 +2,7 @@ import { StepProblems } from "../components/StepProblems";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
 import { useCatalogContext } from "../CatalogContext";
-import { ChoiceCard } from "../components/ChoiceCard";
+import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
 
 export function BackgroundPage() {
   const { draft, dispatch } = useDraft();
@@ -86,7 +86,7 @@ export function BackgroundPage() {
       </select>
       {selectedBackgroundId && !loading && choices.length === 0 && <p>Няма избори за този background.</p>}
       {choices.map((choice) => (
-        <ChoiceCard key={choice.id} choice={choice} onToggle={handleChange} />
+        <ChoiceCard key={choice.id} choice={choice} onToggle={handleChange} defaultExpanded={choice.id === firstPendingId(choices)} />
       ))}
 
       <details className="details-section">
