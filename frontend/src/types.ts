@@ -97,6 +97,8 @@ export interface SheetClassSpells {
   classId: string;
   cantrips: SheetSpellSummary[];
   known: SheetSpellSummary[];
+  /** Subclass spells (domain/oath/circle): always prepared, outside the limits. */
+  alwaysPrepared: SheetSpellSummary[];
   spellSaveDC: number | null;
   spellAttackBonus: number | null;
 }

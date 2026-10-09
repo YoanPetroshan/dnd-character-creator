@@ -56,7 +56,7 @@ from dataclasses import dataclass, field
 from catalog.choices import build_choice_template, build_equipment_choice
 from catalog.loader import Catalog
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
-from catalog.reference_data import SRD_TRAIT_EFFECTS
+from catalog.reference_data import SRD_TRAIT_EFFECTS, SUBCLASS_PROFICIENCIES, SUBCLASS_EXTRA_FEATURES
 from . import asi as asi_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
@@ -1241,13 +1241,74 @@ def _cumulative_feature_refs(
             srow = catalog.subclass_level_row(subclass_id, lvl)
             if srow:
                 refs.extend((lvl, ref) for ref in srow.get("features", []))
+        for lvl, idx in SUBCLASS_EXTRA_FEATURES.get(subclass_id, []):
+            if lvl <= max_level:
+                refs.append((lvl, {"index": idx}))
     return refs
+
+
+def _expertise_envelope(raw: dict) -> dict | None:
+    """Flattens a feature's `expertise_options` into a plain
+    {"choose", "from"} envelope. Bard's is already flat; Rogue's nests
+    "two skills" and "one skill + thieves' tools" as alternatives, which all
+    come down to the same rule: choose 2 proficient skills/tools. The
+    proficiency restriction is applied afterwards (_gate_expertise_choices)."""
+    options = (raw.get("from") or {}).get("options") or []
+    nested = next((o for o in options if o.get("option_type") == "choice"), None)
+    count = nested["choice"].get("choose", 2) if nested else raw.get("choose", 1)
+    flat: list[dict] = []
+    seen: set[str] = set()
+
+    def collect(opts):
+        for o in opts:
+            if o.get("option_type") == "reference" and o["item"]["index"] not in seen:
+                seen.add(o["item"]["index"])
+                flat.append({"option_type": "reference", "item": {
+                    "index": o["item"]["index"], "name": o["item"]["name"].replace("Skill: ", "")}})
+            elif o.get("option_type") == "choice":
+                collect((o["choice"].get("from") or {}).get("options") or [])
+            elif o.get("option_type") == "multiple":
+                collect(o.get("items") or [])
+
+    collect(options)
+    if not flat:
+        return None
+    return {"choose": count, "from": {"option_set_type": "options_array", "options": flat}}
+
+
+def _string_options_envelope(raw: dict) -> dict:
+    """enemy_type_options / terrain_type_options list bare strings."""
+    opts = [{"option_type": "string", "string": str(o).capitalize()} for o in (raw.get("from") or {}).get("options") or []]
+    return {"choose": raw.get("choose", 1), "from": {"option_set_type": "options_array", "options": opts}}
+
+
+def _invocation_templates(catalog: Catalog, feature: dict, cid: str, source: dict, class_level: int) -> dict | None:
+    row = catalog.class_level_row(source["id"], class_level) or {}
+    count = (row.get("class_specific") or {}).get("invocations_known", 0)
+    if not count:
+        return None
+    options = []
+    for ref in feature["feature_specific"]["invocations"]:
+        inv = catalog.features.get(ref["index"]) or {}
+        label = ref["name"].replace("Eldritch Invocation: ", "")
+        option = {"id": ref["index"], "label": label}
+        desc = _join_desc(inv.get("desc"))
+        if desc:
+            option["description"] = desc
+        options.append(option)
+    return {
+        "id": cid, "source": source, "label": feature["name"],
+        "description": _join_desc(feature.get("desc")) or "", "count": count, "options": options,
+    }
 
 
 def _feature_choice_templates(
     catalog: Catalog, cls_id: str, cls_name: str, feature_refs: list[tuple[int, dict]], subclass_id: str | None,
+    class_level: int | None = None,
 ) -> list[dict]:
     templates = []
+    if class_level is None:
+        class_level = max((lvl for lvl, _ in feature_refs), default=1)
     for lvl, ref in feature_refs:
         feature = catalog.features.get(ref["index"])
         if not feature:
@@ -1255,15 +1316,33 @@ def _feature_choice_templates(
         feature_subclass = feature.get("subclass")
         if feature_subclass and feature_subclass.get("index") != subclass_id:
             continue  # subclass-gated to a different subclass than the one selected (or none selected)
-        envelope = (feature.get("feature_specific") or {}).get("subfeature_options")
-        if not envelope:
-            continue
-        cid = f"class:{cls_id}:{lvl}:feature:{feature['index']}"
+        specific = feature.get("feature_specific") or {}
         source = {"kind": "class", "id": cls_id, "label": cls_name, "level": lvl}
-        # The subfeature_options envelope itself has no 'desc' key — the
-        # description text lives on the parent feature (verified directly
-        # against 5e-SRD-Features.json), so it must be passed explicitly.
-        tpl = build_choice_template(envelope, cid, source, feature["name"], description=_join_desc(feature.get("desc")))
+        description = _join_desc(feature.get("desc"))
+        # The envelopes themselves have no 'desc' key (except the string
+        # lists') — the description text lives on the parent feature
+        # (verified directly against 5e-SRD-Features.json), so it must be
+        # passed explicitly.
+        if specific.get("subfeature_options"):
+            cid = f"class:{cls_id}:{lvl}:feature:{feature['index']}"
+            tpl = build_choice_template(specific["subfeature_options"], cid, source, feature["name"], description=description)
+        elif specific.get("expertise_options"):
+            # "expertise-choice" in the cid is what the expertise gate and the
+            # proficiency scans key off (the same marker feat expertise uses).
+            envelope = _expertise_envelope(specific["expertise_options"])
+            cid = f"class:{cls_id}:{lvl}:expertise-choice:{feature['index']}"
+            tpl = build_choice_template(envelope, cid, source, feature["name"], description=description) if envelope else None
+        elif specific.get("enemy_type_options"):
+            cid = f"class:{cls_id}:{lvl}:enemy-type:{feature['index']}"
+            tpl = build_choice_template(_string_options_envelope(specific["enemy_type_options"]), cid, source, feature["name"], description=description)
+        elif specific.get("terrain_type_options"):
+            cid = f"class:{cls_id}:{lvl}:terrain-type:{feature['index']}"
+            tpl = build_choice_template(_string_options_envelope(specific["terrain_type_options"]), cid, source, feature["name"], description=description)
+        elif specific.get("invocations"):
+            cid = f"class:{cls_id}:{lvl}:invocations:{feature['index']}"
+            tpl = _invocation_templates(catalog, feature, cid, source, class_level)
+        else:
+            continue
         if tpl:
             templates.append(tpl)
     return templates
@@ -1439,13 +1518,29 @@ def _feat_selected_choice_values(choices: list[dict], marker: str) -> list[str]:
     return out
 
 
+def _is_expertise_choice(choice: dict) -> bool:
+    """Feat expertise picks (`...:expertise-choice-N`) and class-feature ones
+    (Rogue/Bard, `class:...:expertise-choice:{feature}`)."""
+    return choice["source"]["kind"] in ("feat", "class") and "expertise-choice" in choice["id"]
+
+
+def _expertise_selected_values(choices: list[dict]) -> list[str]:
+    out: list[str] = []
+    for c in choices:
+        if _is_expertise_choice(c):
+            for sel in c.get("selected", []):
+                if sel not in out:
+                    out.append(sel)
+    return out
+
+
 def _gate_expertise_choices(choices: list[dict], proficient_skills: set[str]) -> list[dict]:
-    """Restrict every feat-sourced Expertise Choice to skills the character
-    is proficient in. Mutates `choices` in place (entries replaced by index);
+    """Restrict every feat- or class-sourced Expertise Choice to skills (and,
+    for the Rogue, tools) the character is proficient in. Mutates `choices` in place (entries replaced by index);
     returns non-blocking pruned entries for selections that were dropped."""
     pruned: list[dict] = []
     for i, c in enumerate(choices):
-        if c["source"]["kind"] != "feat" or ":expertise-choice-" not in c["id"]:
+        if not _is_expertise_choice(c):
             continue
         options = [
             o if (o["id"] in proficient_skills or o.get("disabled"))
@@ -1465,6 +1560,76 @@ def _gate_expertise_choices(choices: list[dict], proficient_skills: set[str]) ->
         choices[i] = {**c, "options": options, "selected": kept,
                       "status": "resolved" if len(kept) == c["count"] else "pending"}
     return pruned
+
+
+def _invocation_unmet(inv: dict, warlock_level: int, pacts: set[str], cantrips: set[str]) -> str | None:
+    """Why an Eldritch Invocation's prerequisites are not met, or None."""
+    for req in inv.get("prerequisites") or []:
+        kind = req.get("type")
+        if kind == "level" and warlock_level < req.get("level", 0):
+            return f"requires warlock level {req['level']}"
+        if kind == "feature" and req.get("feature", "").rsplit("/", 1)[-1] not in pacts:
+            return "requires " + req["feature"].rsplit("/", 1)[-1].replace("-", " ").title().replace(" Of ", " of ").replace(" The ", " the ")
+        if kind == "spell" and req.get("spell", "").rsplit("/", 1)[-1] not in cantrips:
+            return "requires the " + req["spell"].rsplit("/", 1)[-1].replace("-", " ") + " cantrip"
+    return None
+
+
+def _gate_invocation_choices(choices: list[dict], resolved_classes: list[dict], catalog: Catalog) -> list[dict]:
+    """Disable Eldritch Invocation options whose prerequisites (warlock
+    level, Pact Boon, Eldritch Blast) are unmet and drop stale selections of
+    them. Mutates `choices` in place; returns non-blocking pruned entries."""
+    pruned: list[dict] = []
+    for i, c in enumerate(choices):
+        if c["source"]["kind"] != "class" or ":invocations:" not in c["id"]:
+            continue
+        cls_id = c["source"]["id"]
+        level = next((rc["level"] for rc in resolved_classes if rc["cls_id"] == cls_id), 0)
+        pacts = {sel for o in choices if o["source"].get("id") == cls_id and ":feature:" in o["id"] for sel in o["selected"]}
+        cantrips = {sel for o in choices if o["id"] == f"class:{cls_id}:spells-cantrips" for sel in o["selected"]}
+        options, unmet_ids = [], {}
+        for o in c["options"]:
+            reason = _invocation_unmet(catalog.features.get(o["id"]) or {}, level, pacts, cantrips)
+            if reason:
+                unmet_ids[o["id"]] = o["label"]
+                o = {**o, "disabled": True, "disabledReason": reason}
+            options.append(o)
+        selected = [s for s in c["selected"] if s not in unmet_ids]
+        dropped = [unmet_ids[s] for s in c["selected"] if s in unmet_ids]
+        if dropped:
+            pruned.append({
+                "choiceId": c["id"],
+                "reason": f"'{c['label']}': {', '.join(dropped)} no longer meets its prerequisites and was ignored.",
+            })
+        choices[i] = {**c, "options": options, "selected": selected,
+                      "status": "resolved" if len(selected) == c["count"] else "pending"}
+    return pruned
+
+
+def _subclass_spell_ids(catalog: Catalog, cls_id: str, subclass_id: str | None, class_level: int,
+                        feature_ids: set[str], mode: str) -> list[str]:
+    """Spells from the subclass's `spells` list whose prerequisites (class
+    level, and for Circle of the Land the chosen terrain feature) are met,
+    for subclasses behaving as `mode` ("always" prepared / "expanded" list)."""
+    from catalog import reference_data
+    if not subclass_id or reference_data.SUBCLASS_SPELL_MODE.get(subclass_id, "always") != mode:
+        return []
+    out: list[str] = []
+    for entry in (catalog.subclasses.get(subclass_id) or {}).get("spells") or []:
+        spell_id = (entry.get("spell") or {}).get("index")
+        if spell_id not in catalog.spells or spell_id in out:
+            continue
+        ok = True
+        for req in entry.get("prerequisites") or []:
+            if req.get("type") == "level":
+                prefix, _, num = req["index"].rpartition("-")
+                if prefix != cls_id or not num.isdigit() or class_level < int(num):
+                    ok = False
+            elif req.get("type") == "feature" and req["index"] not in feature_ids:
+                ok = False
+        if ok:
+            out.append(spell_id)
+    return out
 
 
 def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrace: dict | None) -> list[dict]:
@@ -2112,11 +2277,14 @@ def _is_count_variable_choice(tpl: dict) -> bool:
     `isSpellChoice` in frontend/src/pages/ClassPage.tsx."""
     if tpl.get("count_by_level"):
         return True  # level-scaled feat spell picks (Ritual Caster): over-count is staleness
+    if tpl["source"]["kind"] == "class" and ":invocations:" in tpl["id"]:
+        return True  # Eldritch Invocations known follow the warlock level table
     return tpl["source"]["kind"] == "class" and tpl["id"].endswith((":spells-cantrips", ":spells-known"))
 
 
 def _spell_choice_templates(
     catalog: Catalog, cls: dict, cls_id: str, level_row: dict | None, ability_modifier: int, class_level: int,
+    expanded_spell_ids: list[str] = (), always_prepared: dict[str, str] | None = None,
 ) -> list[dict]:
     if not level_row:
         return []
@@ -2142,9 +2310,16 @@ def _spell_choice_templates(
     known_count = spells_mod.known_spell_count(level_row, ability_modifier, class_level=class_level, cls_id=cls_id)
     if known_count > 0:
         max_spell_level = _highest_spell_slot_level(spellcasting)
+        option_list = _spell_options_up_to(catalog, cls_id, max_spell_level)
+        present = {o["item"]["index"] for o in option_list}
+        for sid in expanded_spell_ids:  # e.g. Fiend Expanded Spell List
+            spell = catalog.spells[sid]
+            if sid not in present and 1 <= spell["level"] <= max_spell_level:
+                option_list.append({"option_type": "reference", "item": {"index": sid, "name": spell["name"]}})
+        option_list.sort(key=lambda o: (catalog.spells[o["item"]["index"]]["level"], o["item"]["name"]))
         envelope = {"choose": known_count, "from": {
             "option_set_type": "options_array",
-            "options": _spell_options_up_to(catalog, cls_id, max_spell_level),
+            "options": option_list,
         }}
         cid = f"class:{cls_id}:spells-known"
         is_known_caster = spellcasting.get("spells_known") is not None
@@ -2154,6 +2329,10 @@ def _spell_choice_templates(
         description = f"Choose {known_count} {level_word}{'s' if known_count != 1 else ''} to {verb} from the {cls['name']} spell list."
         tpl = build_choice_template(envelope, cid, source, label, description=description)
         if tpl:
+            for opt in tpl["options"]:
+                if opt["id"] in (always_prepared or {}):
+                    opt["disabled"] = True
+                    opt["disabledReason"] = f"always prepared ({always_prepared[opt['id']]})"
             templates.append(tpl)
 
     return templates
@@ -2255,6 +2434,8 @@ def _apply_background_overlap(class_templates: list[dict], bg: dict | None) -> N
     if not granted:
         return
     for tpl in class_templates:
+        if "expertise-choice" in tpl["id"]:
+            continue  # expertise needs skills the character already has
         for opt in tpl["options"]:
             if opt["id"] in granted:
                 opt["disabled"] = True
@@ -2281,6 +2462,8 @@ def _apply_species_overlap(class_templates: list[dict], race: dict | None, subra
     if not granted:
         return
     for tpl in class_templates:
+        if "expertise-choice" in tpl["id"]:
+            continue
         for opt in tpl["options"]:
             if opt["id"] in granted:
                 opt["disabled"] = True
@@ -2718,7 +2901,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc_level_row = catalog.class_level_row(rc_cls_id, rc_level)
         rc["level_row"] = rc_level_row
         feature_refs = _cumulative_feature_refs(catalog, rc_cls_id, rc_subclass_id, rc_level)
-        choice_templates += _feature_choice_templates(catalog, rc_cls_id, rc_cls["name"], feature_refs, rc_subclass_id)
+        choice_templates += _feature_choice_templates(catalog, rc_cls_id, rc_cls["name"], feature_refs, rc_subclass_id, class_level=rc_level)
         choice_templates += _asi_choice_templates(
             rc_cls_id, rc_cls["name"], rc_asi_levels, rc_asi_scores_by_level, catalog, total_level, use_feat_prereqs,
             draft.get("sources"),
@@ -2817,7 +3000,19 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             continue
         spell_ability = spells_mod.spellcasting_ability(rc_cls)
         if spell_ability and rc_level_row:
-            choice_templates += _spell_choice_templates(catalog, rc_cls, rc_cls_id, rc_level_row, modifiers[spell_ability], class_level=rc_level)
+            raw_feature_ids = {
+                sel for cid, sels in rc["class_choices"].items() if ":feature:" in cid and isinstance(sels, list)
+                for sel in sels if isinstance(sel, str)
+            }
+            sub_name = rc["subclass"]["name"] if rc["subclass"] else ""
+            choice_templates += _spell_choice_templates(
+                catalog, rc_cls, rc_cls_id, rc_level_row, modifiers[spell_ability], class_level=rc_level,
+                expanded_spell_ids=_subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc_level, raw_feature_ids, "expanded"),
+                always_prepared={
+                    sid: f"{sub_name}" for sid in
+                    _subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc_level, raw_feature_ids, "always")
+                },
+            )
 
     asi_levels = primary.get("asi_levels", []) if primary else []
     level_row = primary.get("level_row") if primary else None
@@ -3035,7 +3230,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             continue
         rc_cantrip_choice = next((c for c in choices if c["id"] == f"class:{rc_cls_id}:spells-cantrips"), None)
         rc_known_spells_choice = next((c for c in choices if c["id"] == f"class:{rc_cls_id}:spells-known"), None)
-        if not (rc_cantrip_choice or rc_known_spells_choice):
+        feature_ids = {idx for cid_, lvl_, idx in _class_feature_list(catalog, [rc], choices)}
+        always_ids = _subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc["level"], feature_ids, "always")
+        if not (rc_cantrip_choice or rc_known_spells_choice or always_ids):
             continue
         rc_spell_ability = spells_mod.spellcasting_ability(rc_cls)
         rc_save_dc = spells_mod.spell_save_dc(prof_bonus, modifiers[rc_spell_ability]) if rc_spell_ability else None
@@ -3044,6 +3241,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             "classId": rc_cls_id,
             "cantrips": _spell_summaries(rc_cantrip_choice),
             "known": _spell_summaries(rc_known_spells_choice),
+            # Subclass spells (Life domain, oath spells, ...): always
+            # prepared, outside the known/prepared limits.
+            "alwaysPrepared": [
+                {"id": sid, "name": catalog.spells[sid]["name"], "level": catalog.spells[sid]["level"]} for sid in always_ids
+            ],
             "spellSaveDC": rc_save_dc,
             "spellAttackBonus": rc_attack_bonus,
         })
@@ -3114,7 +3316,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         # "skill-"-prefixed, so this filter still excludes them.
         # Expertise picks are not proficiency grants (they must already be
         # proficient), so they never feed this set.
-        if c["source"]["kind"] in ("class", "species", "background", "feat") and ":expertise-choice-" not in c["id"]:
+        if c["source"]["kind"] in ("class", "species", "background", "feat") and "expertise-choice" not in c["id"]:
             proficient_skills.update(s for s in c["selected"] if s.startswith("skill-"))
     if bg:
         proficient_skills.update(p["index"] for p in bg.get("starting_proficiencies", []) if p["index"].startswith("skill-"))
@@ -3132,7 +3334,6 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # a feat's own proficiency_choices) are read.
     feat_proficiency_ids = _feat_proficiency_ids(resolved_feats)
     proficient_skills.update(p for p in feat_proficiency_ids if p.startswith("skill-"))
-    pruned += _gate_expertise_choices(choices, proficient_skills)
 
     proficient_armor: set[str] = set()
     proficient_weapons: set[str] = set()
@@ -3288,12 +3489,19 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     for rc in resolved_classes:
         if not rc["cls"]:
             continue
+        for prof_id in SUBCLASS_PROFICIENCIES.get(rc["subclass_id"], []):
+            _categorize_proficiency(prof_id)
         if rc["index"] == 0:
             for p in rc["cls"].get("proficiencies", []):
                 _categorize_proficiency(p["index"])
         else:
             for p in rc["cls"].get("multi_classing", {}).get("proficiencies", []):
                 _categorize_proficiency(p["index"])
+
+    # Expertise needs the full proficiency picture (skills, plus the Rogue's
+    # thieves' tools), so it is gated only after every grant above is in.
+    pruned += _gate_expertise_choices(choices, proficient_skills | proficient_tools)
+    pruned += _gate_invocation_choices(choices, resolved_classes, catalog)
 
     # Phase 4c-i Task 6: was class-only (primary class's saving_throws
     # field) — a granted feat's own FIXED saving-throw-proficiency grant
@@ -3326,10 +3534,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     effects = features_mod.active_effects(_class_feature_list(catalog, resolved_classes, choices))
     class_levels = {rc["cls_id"]: rc["level"] for rc in resolved_classes if rc["cls"]}
     jack, remarkable = features_mod.half_proficiency(effects)
-    expertise_all = _feat_expertise_skills(resolved_feats) + [
-        s for s in _feat_selected_choice_values(choices, ":expertise-choice-")
-        if s not in _feat_expertise_skills(resolved_feats)
-    ]
+    expertise_all = list(dict.fromkeys(_feat_expertise_skills(resolved_feats) + _expertise_selected_values(choices)))
     skills = derived_mod.skill_scores(
         modifiers, list(proficient_skills), prof_bonus, expertise_all, jack, remarkable,
     )

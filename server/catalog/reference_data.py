@@ -224,3 +224,29 @@ SRD_TRAIT_EFFECTS: dict[str, dict] = {
     ]},
     "high-elf-cantrip": {"spell_ability": "INT"},
 }
+
+
+# Fixed proficiency grants of a subclass (the SRD feature text is prose only).
+# Only subclasses whose grant is a fixed list belong here; Lore Bard's three
+# free skills are a choice and are not modelled.
+SUBCLASS_PROFICIENCIES: dict[str, list[str]] = {
+    "life": ["heavy-armor"],  # Life Domain: Bonus Proficiency
+}
+
+# How a subclass's `spells` list (5e-SRD-Subclasses.json) behaves. Default is
+# "always": the spells are always prepared / known and do not count against the
+# class's prepared or known limits (Life domain, Devotion oath, Land circle).
+# "expanded": the spells are only added to the class's pick list (Fiend
+# Expanded Spell List).
+SUBCLASS_SPELL_MODE: dict[str, str] = {
+    "fiend": "expanded",
+}
+
+# Subclass features the SRD level tables never reference but that carry data
+# the engine needs: (class level, feature index). Circle of the Land's terrain
+# pick (`circle-of-the-land`, 7 terrain subfeatures) is not listed in any level
+# row, so without this the terrain choice, and the circle spells that depend on
+# it, would be unreachable.
+SUBCLASS_EXTRA_FEATURES: dict[str, list[tuple[int, str]]] = {
+    "land": [(2, "circle-of-the-land")],
+}
