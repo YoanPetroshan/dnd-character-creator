@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useDraft } from "../DraftContext";
+import { StepProblems } from "../components/StepProblems";
+import { MAX_TOTAL_LEVEL, totalLevel, useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
 import { useCatalogContext } from "../CatalogContext";
 import { ChoiceCard } from "../components/ChoiceCard";
@@ -90,7 +91,7 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
         Ниво
         <CommitNumberInput
           min={1}
-          max={20}
+          max={Math.min(20, MAX_TOTAL_LEVEL - (totalLevel(draft) - classLevel))}
           value={classLevel}
           onCommit={(level) => dispatch({ type: "SET_CLASS_LEVEL", classId, level })}
         />
@@ -226,6 +227,7 @@ export function ClassPage() {
   return (
     <div className="page">
       <h1>Клас {loading && "…"}</h1>
+      <StepProblems step="class" />
       {catalog.error && (
         <p>
           Грешка при зареждане на класовете: {catalog.error}{" "}
@@ -266,12 +268,19 @@ export function ClassPage() {
       {primaryClassId && (
         <div className="add-class">
           <h3>+ Добави клас</h3>
+          {totalLevel(draft) >= MAX_TOTAL_LEVEL && (
+            <p role="note">Общото ниво е {MAX_TOTAL_LEVEL} — намали ниво на клас, за да добавиш друг.</p>
+          )}
           <ul className="picker-list">
             {catalog.classes
               .filter((c) => !takenClassIds.has(c.id))
               .map((c) => (
                 <li key={c.id}>
-                  <button type="button" onClick={() => dispatch({ type: "ADD_CLASS", classId: c.id })}>
+                  <button
+                    type="button"
+                    disabled={totalLevel(draft) >= MAX_TOTAL_LEVEL}
+                    onClick={() => dispatch({ type: "ADD_CLASS", classId: c.id })}
+                  >
                     {c.name} (d{c.hitDie})
                   </button>
                 </li>

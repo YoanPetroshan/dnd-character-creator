@@ -488,3 +488,25 @@ def test_all_export_formats_carry_features_through_the_api(client):
     assert "Second Wind" in md.data.decode("utf-8") and "Archery" in md.data.decode("utf-8")
     pdf = client.post("/api/export/pdf", json=draft)
     assert pdf.status_code == 200 and pdf.data.startswith(b"%PDF")
+
+
+# --- Round-2 audit F9: the export gate needs a class, species and background ---
+
+def test_export_rejects_an_empty_draft(client):
+    resp = client.post("/api/export/yaml", json={})
+    assert resp.status_code == 400
+    ids = {p["id"] for p in resp.get_json()["problems"]}
+    assert {"export-missing-class", "export-missing-species", "export-missing-background"} <= ids
+
+
+@pytest.mark.parametrize("drop,expected", [
+    ("classes", "export-missing-class"),
+    ("species", "export-missing-species"),
+    ("background", "export-missing-background"),
+])
+def test_export_rejects_a_draft_missing_one_part(client, drop, expected):
+    draft = _complete_exportable_draft()
+    draft[drop] = [] if drop == "classes" else {"choices": {}}
+    resp = client.post("/api/export/yaml", json=draft)
+    assert resp.status_code == 400
+    assert expected in {p["id"] for p in resp.get_json()["problems"]}

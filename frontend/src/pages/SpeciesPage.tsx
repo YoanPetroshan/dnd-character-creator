@@ -1,3 +1,4 @@
+import { StepProblems } from "../components/StepProblems";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
 import { useCatalogContext } from "../CatalogContext";
@@ -52,6 +53,7 @@ export function SpeciesPage() {
   return (
     <div className="page">
       <h1>Species {loading && "…"}</h1>
+      <StepProblems step="species" />
       {catalog.error && (
         <p>
           Грешка при зареждане: {catalog.error}{" "}

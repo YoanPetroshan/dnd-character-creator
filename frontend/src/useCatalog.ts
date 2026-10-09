@@ -39,6 +39,9 @@ interface CatalogData {
   backgrounds: CatalogBackground[];
   species: CatalogSpecies[];
   sources: CatalogSource[];
+  /** True when ruleset 2024 + restricted sources left no 2024 backgrounds and
+   *  the list shows the SRD (2014) background instead. */
+  backgroundsFallback?: boolean;
 }
 
 interface CatalogState extends CatalogData {

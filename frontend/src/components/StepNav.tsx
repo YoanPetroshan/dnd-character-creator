@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useResolutionContext } from "../ResolutionContext";
 import type { ChoiceSourceKind } from "../types";
+import { problemsForStep, type ProblemStep } from "../problems";
 
 interface Step {
   path: string;
@@ -24,15 +25,17 @@ interface Step {
   // scoping ClassPage.tsx / BackgroundPage.tsx apply to their own choice
   // lists. Omit it for steps that don't include "feat" in `kind`.
   cidFilter?: (id: string) => boolean;
+  // Blocking resolve() problems that belong to this step also count.
+  problemStep?: ProblemStep;
 }
 
 const STEPS: Step[] = [
   { path: "/home", label: "Home", kind: null },
-  { path: "/class", label: "Клас", kind: ["class", "feat"], cidFilter: (id) => id.startsWith("class:") },
-  { path: "/background", label: "Background", kind: ["background", "feat"], cidFilter: (id) => !id.startsWith("class:") && !id.startsWith("species:") },
-  { path: "/species", label: "Species", kind: ["species", "feat"], cidFilter: (id) => id.startsWith("species:") },
-  { path: "/abilities", label: "Abilities", kind: null },
-  { path: "/equipment", label: "Equipment", kind: ["equipment"] },
+  { path: "/class", problemStep: "class", label: "Клас", kind: ["class", "feat"], cidFilter: (id) => id.startsWith("class:") },
+  { path: "/background", problemStep: "background", label: "Background", kind: ["background", "feat"], cidFilter: (id) => !id.startsWith("class:") && !id.startsWith("species:") },
+  { path: "/species", problemStep: "species", label: "Species", kind: ["species", "feat"], cidFilter: (id) => id.startsWith("species:") },
+  { path: "/abilities", problemStep: "abilities", label: "Abilities", kind: null },
+  { path: "/equipment", problemStep: "equipment", label: "Equipment", kind: ["equipment"] },
   { path: "/export", label: "Export", kind: null },
 ];
 
@@ -47,11 +50,16 @@ export function StepNav() {
   }, [pathname]);
 
   function pendingCount(step: Step): number {
-    if (!step.kind || !resolution) return 0;
+    if (!resolution) return 0;
+    const problems = step.problemStep ? problemsForStep(resolution.problems, step.problemStep).length : 0;
+    if (!step.kind) return problems;
     const kinds = step.kind;
-    return resolution.choices.filter(
-      (c) => kinds.includes(c.source.kind) && (!step.cidFilter || step.cidFilter(c.id)) && c.status === "pending"
-    ).length;
+    return (
+      problems +
+      resolution.choices.filter(
+        (c) => kinds.includes(c.source.kind) && (!step.cidFilter || step.cidFilter(c.id)) && c.status === "pending"
+      ).length
+    );
   }
 
   return (

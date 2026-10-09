@@ -66,6 +66,12 @@ type Action =
   | { type: "REMOVE_ITEM"; itemId: string }
   | { type: "TOGGLE_EQUIPPED"; itemId: string };
 
+export const MAX_TOTAL_LEVEL = 20;
+
+export function totalLevel(d: Draft): number {
+  return d.classes.reduce((sum, c) => sum + (typeof c.level === "number" ? c.level : 0), 0);
+}
+
 /** The selection currently stored in the draft for a choice (not the last
  *  server resolution, which lags by the debounce + network round trip). */
 function storedSelection(state: Draft, source: ChoiceSourceKind, choiceId: string): string[] {
@@ -113,6 +119,7 @@ function reducer(state: Draft, action: Action): Draft {
       };
     case "ADD_CLASS": {
       if (state.classes.some((c) => c.classId === action.classId)) return state; // already present — no-op
+      if (totalLevel(state) >= MAX_TOTAL_LEVEL) return state; // a new class starts at level 1
       return {
         ...state,
         classes: [...state.classes, { classId: action.classId, level: 1, choices: {} }],
@@ -148,7 +155,9 @@ function reducer(state: Draft, action: Action): Draft {
         species: { ...state.species, subspeciesId: action.subspeciesId, choices: {} },
       };
     case "SET_CLASS_LEVEL": {
-      const level = Math.min(20, Math.max(1, action.level));
+      // Per-class 1..20 AND the whole character capped at 20 levels.
+      const others = totalLevel(state) - (state.classes.find((c) => c.classId === action.classId)?.level ?? 0);
+      const level = Math.max(1, Math.min(20, MAX_TOTAL_LEVEL - others, action.level));
       return {
         ...state,
         classes: state.classes.map((c) => (c.classId === action.classId ? { ...c, level } : c)),

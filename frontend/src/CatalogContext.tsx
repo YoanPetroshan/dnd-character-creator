@@ -10,6 +10,7 @@ interface CatalogContextValue {
   species: CatalogSpecies[];
   sources: CatalogSource[];
   allBackgrounds: CatalogBackground[];
+  backgroundsFallback?: boolean;
   allSpecies: CatalogSpecies[];
   loading: boolean;
   error: string | null;

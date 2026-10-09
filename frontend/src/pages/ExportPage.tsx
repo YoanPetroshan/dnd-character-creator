@@ -38,7 +38,13 @@ export function ExportPage() {
   const allPending = resolution.choices.filter((c) => c.status === "pending");
   const pendingChoices = allPending.filter((c) => c.source.kind !== "equipment");
   const pendingEquipment = allPending.filter((c) => c.source.kind === "equipment");
-  const canExport = resolution.problems.length === 0 && pendingChoices.length === 0;
+  // Also mirrors the server gate: a character needs a class, species and background.
+  const missingParts = [
+    resolution.sheet.classes.length === 0 && "Избери клас.",
+    !resolution.sheet.species && "Избери species.",
+    !resolution.sheet.background && "Избери background.",
+  ].filter((m): m is string => typeof m === "string");
+  const canExport = resolution.problems.length === 0 && pendingChoices.length === 0 && missingParts.length === 0;
 
   async function handleExport(format: ExportFormat) {
     const config = EXPORT_FORMATS[format];
@@ -108,6 +114,13 @@ export function ExportPage() {
             ))}
           </ul>
         </div>
+      )}
+      {missingParts.length > 0 && (
+        <ul role="alert">
+          {missingParts.map((m) => (
+            <li key={m}>{m}</li>
+          ))}
+        </ul>
       )}
       {pendingChoices.length > 0 && (
         <div>

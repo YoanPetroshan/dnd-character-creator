@@ -1,3 +1,4 @@
+import { StepProblems } from "../components/StepProblems";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
 import type { Ability, Draft } from "../types";
@@ -56,6 +57,7 @@ export function AbilitiesPage() {
   return (
     <div className="page">
       <h1>Abilities {loading && "…"}</h1>
+      <StepProblems step="abilities" />
       <div className="ability-method-selector">
         <label>
           <input type="radio" name="ability-method" checked={method === "standard"} onChange={() => setMethod("standard")} />

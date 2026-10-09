@@ -78,12 +78,27 @@ def api_catalog():
     def visible(record: dict, kind: str) -> bool:
         return _source_allowed(record, sources) and ruleset_allows(record, kind, ruleset)
 
+    backgrounds = [
+        {"id": b["index"], "name": b["name"], "source": b.get("source", ""), "ruleset": b.get("ruleset", "2014")}
+        for b in _catalog.backgrounds.values() if visible(b, "background")
+    ]
+    # Ruleset 2024 hides 2014 backgrounds, and the 2024 ones all live in books
+    # the Sources filter may exclude ("Only SRD", phb+xge+tce): the picker would
+    # be empty. Fall back to the source-allowed 2014 backgrounds (the SRD one);
+    # resolve() already warns that a 2014 background grants no 2024 ASI/feat.
+    backgrounds_fallback = False
+    if not backgrounds and ruleset == "2024":
+        backgrounds = [
+            {"id": b["index"], "name": b["name"], "source": b.get("source", ""), "ruleset": b.get("ruleset", "2014")}
+            for b in _catalog.backgrounds.values()
+            if _source_allowed(b, sources) and not b.get("source")
+        ]
+        backgrounds_fallback = bool(backgrounds)
+
     return jsonify({
         "classes": [{"id": c["index"], "name": c["name"], "hitDie": c["hit_die"]} for c in _catalog.classes.values()],
-        "backgrounds": [
-            {"id": b["index"], "name": b["name"], "source": b.get("source", ""), "ruleset": b.get("ruleset", "2014")}
-            for b in _catalog.backgrounds.values() if visible(b, "background")
-        ],
+        "backgrounds": backgrounds,
+        "backgroundsFallback": backgrounds_fallback,
         "species": [
             {
                 "id": r["index"], "name": r["name"], "source": r.get("source", ""), "ruleset": r.get("ruleset", "2014"),
@@ -250,7 +265,17 @@ def api_spell_detail(spell_id: str):
 
 
 def _pending_export_problems(resolution: dict) -> list[dict]:
-    return [
+    sheet = resolution.get("sheet") or {}
+    missing = [
+        {"id": pid, "message": msg}
+        for pid, msg, present in (
+            ("export-missing-class", "Choose a class first.", sheet.get("classes")),
+            ("export-missing-species", "Choose a species first.", sheet.get("species")),
+            ("export-missing-background", "Choose a background first.", sheet.get("background")),
+        )
+        if not present
+    ]
+    return missing + [
         {"id": f"unresolved-choice-{c['id']}", "message": f"'{c['label']}' isn't fully chosen yet."}
         for c in resolution["choices"]
         if c["status"] == "pending" and c["source"]["kind"] != "equipment"

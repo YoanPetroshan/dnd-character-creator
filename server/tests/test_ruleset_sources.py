@@ -140,3 +140,17 @@ def test_catalog_selected_hidden_species_still_resolvable(client, catalog):
     draft = _draft("dwarf-xphb", None, [])
     draft["ruleset"] = "2014"
     assert "unknown-species" not in _ids(resolve(draft, catalog))
+
+
+# --- Round-2 audit F10: 2024 + restricted sources must not leave 0 backgrounds ---
+
+@pytest.mark.parametrize("sources", ["srd", "phb,xge,tce"])
+def test_catalog_2024_with_restricted_sources_falls_back_to_srd_background(client, sources):
+    data = _cat(client, f"?ruleset=2024&sources={sources}")
+    assert [b["id"] for b in data["backgrounds"]] == ["acolyte"]
+    assert data["backgroundsFallback"] is True
+
+
+def test_catalog_2024_unrestricted_has_no_background_fallback(client):
+    data = _cat(client, "?ruleset=2024")
+    assert len(data["backgrounds"]) == 60 and data["backgroundsFallback"] is False

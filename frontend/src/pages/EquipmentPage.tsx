@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { StepProblems } from "../components/StepProblems";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
 import { useItems } from "../useItems";
@@ -42,6 +43,7 @@ export function EquipmentPage() {
   return (
     <div className="page">
       <h1>Equipment {loading && "…"}</h1>
+      <StepProblems step="equipment" />
 
       {equipmentChoices.length === 0 && <p>Няма избори за стартова екипировка.</p>}
       {equipmentChoices.map((choice) => (

@@ -1,3 +1,4 @@
+import { StepProblems } from "../components/StepProblems";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
 import { useCatalogContext } from "../CatalogContext";
@@ -47,6 +48,7 @@ export function BackgroundPage() {
   return (
     <div className="page">
       <h1>Background {loading && "…"}</h1>
+      <StepProblems step="background" />
       {catalog.error && (
         <p>
           Грешка при зареждане: {catalog.error}{" "}
@@ -61,6 +63,12 @@ export function BackgroundPage() {
             <li key={w.id}>{w.message}</li>
           ))}
         </ul>
+      )}
+      {catalog.backgroundsFallback && (
+        <p role="note">
+          Няма 2024 backgrounds в избраните източници — показан е само SRD background (от 2014, без бонус към
+          характеристики и Origin feat по правилата от 2024).
+        </p>
       )}
       <select
         value={selectedBackgroundId ?? ""}
