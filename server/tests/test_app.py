@@ -1,7 +1,7 @@
 import yaml
 
 from app import app
-from catalog.official_source import has_official, has_official_spells
+from catalog.official_source import has_official, has_official_spells, items_base_file
 
 
 import pytest
@@ -235,7 +235,7 @@ def test_items_endpoint_lists_every_bundled_item(client):
     resp = client.get("/api/items")
     assert resp.status_code == 200
     body = resp.get_json()
-    assert len(body["items"]) == 237
+    assert len(body["items"]) == 237 + (5 if items_base_file() else 0)  # Slice 11c: 5 sourcebook items
     chain_mail = next(i for i in body["items"] if i["id"] == "chain-mail")
     assert chain_mail["name"] == "Chain Mail"
     assert chain_mail["category"] == "armor"

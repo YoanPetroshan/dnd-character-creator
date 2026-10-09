@@ -1,5 +1,5 @@
 from catalog.loader import load
-from catalog.official_source import has_official, has_official_classes, has_official_spells
+from catalog.official_source import items_base_file, has_official, has_official_classes, has_official_spells
 
 
 def test_load_returns_expected_counts():
@@ -100,7 +100,7 @@ def test_backgrounds_contains_the_bundled_srd_acolyte():
 
 def test_items_indexed_by_srd_index_covers_all_categories():
     catalog = load()
-    assert len(catalog.items) == 237
+    assert len(catalog.items) == 237 + (5 if items_base_file() else 0)  # Slice 11c: 5 sourcebook items
     assert catalog.items["chain-mail"]["armor_category"] == "Heavy"
     assert catalog.items["longbow"]["weapon_category"] == "Martial"
     assert catalog.items["dungeoneers-pack"]["equipment_category"]["index"] == "adventuring-gear"

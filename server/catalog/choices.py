@@ -201,6 +201,8 @@ def equipment_category_options(category: str, items: dict[str, dict]) -> list[di
     category is not recognised or matches nothing."""
     options = []
     for item in items.values():
+        if item.get("source", "SRD") != "SRD":
+            continue  # imported sourcebook items never change a starting-equipment option set
         member = _item_in_category(item, category)
         if member is None:
             return None

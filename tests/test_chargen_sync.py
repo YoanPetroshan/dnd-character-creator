@@ -367,6 +367,7 @@ def _spell_fixture_files():
         "spells/spells-phb.json": b'{"spell": []}',
         "spells/spells-xge.json": b'{"spell": []}',
         "optionalfeatures.json": b'{"optionalfeature": []}',
+        "items-base.json": b'{"baseitem": []}',
         "class/index.json": json.dumps({"fighter": "class-fighter.json", "wizard": "class-wizard.json"}).encode(),
         "class/class-fighter.json": b'{"class": [], "subclass": [], "subclassFeature": []}',
         "class/class-wizard.json": b'{"class": [], "subclass": [], "subclassFeature": []}',

@@ -69,6 +69,8 @@ OFFICIAL_TARGETS = [
      "desc": "Feats — the full official arsenal (Phase 4c grounding)"},
     {"key": "optionalfeatures", "filename": "optionalfeatures.json",
      "desc": "Optional features - maneuvers, arcane shots, runes, elemental disciplines (Slice 11b)"},
+    {"key": "items-base", "filename": "items-base.json",
+     "desc": "Base items - mundane weapons and armor (Slice 11c)"},
 ]
 
 # Slice 11a.1: subdirectories of the 5etools data tree. Each lists its own

@@ -14,11 +14,11 @@ const CATEGORIES = [
 ];
 
 export function EquipmentPage() {
-  const { dispatch } = useDraft();
+  const { draft, dispatch } = useDraft();
   const { resolution, loading, error, retry } = useResolutionContext();
   const [category, setCategory] = useState("");
   const [query, setQuery] = useState("");
-  const items = useItems(category, query);
+  const items = useItems(category, query, draft.ruleset, draft.sources);
 
   if (error)
     return (

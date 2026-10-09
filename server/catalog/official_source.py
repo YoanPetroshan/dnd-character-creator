@@ -86,6 +86,7 @@ from .official.paths import (  # noqa: F401
     class_dir,
     has_official_classes,
     has_official_spells,
+    items_base_file,
     official_dir,
     optionalfeatures_file,
     spells_dir,
@@ -190,6 +191,7 @@ from .official.spells import (  # noqa: F401
     load_raw_spells,
     load_spell_class_lookup,
 )
+from .official.items import convert_items, load_raw_base_items  # noqa: F401
 from .official.subclasses import (  # noqa: F401
     convert_subclasses,
     subclass_twins_from,

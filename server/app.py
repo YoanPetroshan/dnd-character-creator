@@ -153,6 +153,8 @@ def api_catalog_species(species_id: str):
 def api_items():
     category = request.args.get("category")
     query = (request.args.get("q") or "").lower()
+    ruleset = request.args.get("ruleset", "mixed")
+    sources = [s for s in (request.args.get("sources") or "").split(",") if s]
     results = []
     for item in _catalog.items.values():
         item_category = item.get("equipment_category", {}).get("index")
@@ -160,7 +162,10 @@ def api_items():
             continue
         if query and query not in item["name"].lower():
             continue
-        results.append({"id": item["index"], "name": item["name"], "category": item_category})
+        if not (_source_allowed(item, sources) and ruleset_allows(item, "item", ruleset)):
+            continue
+        results.append({"id": item["index"], "name": item["name"], "category": item_category,
+                        "source": item.get("source", "SRD"), "ruleset": item.get("ruleset", "2014")})
     return jsonify({"items": results})
 
 

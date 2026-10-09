@@ -71,3 +71,17 @@ def optionalfeatures_file() -> Path | None:
         if candidate.is_file():
             return candidate
     return None
+
+
+def items_base_file() -> Path | None:
+    """`items-base.json` (mundane weapons and armor): the `DND_5ETOOLS_DATA`
+    override first, then `official_dir()`, else None."""
+    override = os.environ.get("DND_5ETOOLS_DATA", "").strip()
+    candidates = []
+    if override:
+        candidates.append(Path(override).expanduser() / "items-base.json")
+    candidates.append(Path(official_dir()) / "items-base.json")
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return None

@@ -140,6 +140,18 @@ def _merge_official_subclasses(catalog: Catalog) -> None:
     catalog.subclass_twins = subclass_twins_from(raw_subs, set(catalog.subclasses))
 
 
+def _merge_official_items(catalog: Catalog) -> None:
+    """Tags the SRD items and merges the mundane non-SRD weapons and armor of
+    `items-base.json`. SRD records win a key clash."""
+    from .official_source import convert_items, items_base_file, load_raw_base_items
+
+    for item in catalog.items.values():
+        item.setdefault("source", "SRD")
+        item.setdefault("ruleset", "2014")
+    for index, item in convert_items(load_raw_base_items(items_base_file()), set(catalog.items)).items():
+        catalog.items.setdefault(index, item)
+
+
 def load() -> Catalog:
     from .official_source import (
         load_official_races, load_official_backgrounds, load_official_feats, official_dir,
@@ -172,4 +184,5 @@ def load() -> Catalog:
         spell_twins=spell_twins,
     )
     _merge_official_subclasses(catalog)
+    _merge_official_items(catalog)
     return catalog
