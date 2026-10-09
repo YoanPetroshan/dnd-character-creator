@@ -6,6 +6,7 @@ import { useCatalogContext } from "../CatalogContext";
 import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
 import { CommitNumberInput } from "../components/CommitNumberInput";
 import { SpellLibrary } from "../components/SpellLibrary";
+import { SpellSlotsSummary } from "../components/SpellSlotsSummary";
 
 type ClassTab = "features" | "spells";
 
@@ -197,6 +198,7 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
 
       {effectiveTab === "spells" && (
         <div id={panelSpellsId} role="tabpanel" aria-labelledby={tabSpellsId}>
+          {resolution && <SpellSlotsSummary resolution={resolution} classId={classId} />}
           {spellChoices.map((choice) => (
             <div key={choice.id}>
               <ChoiceCard choice={choice} onToggle={handleChange} defaultExpanded={choice.id === firstPendingId(spellChoices)} />

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
+import { SpellSlotsSummary } from "../components/SpellSlotsSummary";
 
 const EXPORT_FORMATS = {
   yaml: { endpoint: "/api/export/yaml", extension: "yaml", label: "YAML" },
@@ -150,6 +151,7 @@ export function ExportPage() {
           </ul>
         </div>
       )}
+      <SpellSlotsSummary resolution={resolution} />
       {resolution.derived.carryingCapacity && (
         <p>
           Carrying: {resolution.derived.carryingCapacity.carried}/{resolution.derived.carryingCapacity.capacity} lb
