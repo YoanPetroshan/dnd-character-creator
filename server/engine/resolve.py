@@ -51,6 +51,8 @@ warnings (Phase 3c).
 """
 from __future__ import annotations
 
+import re
+
 from dataclasses import dataclass, field
 
 from catalog.choices import build_choice_template, build_equipment_choice
@@ -1287,7 +1289,7 @@ def _resolve_asi_selected_feats(
             if not (len(selected) == 1 and selected[0].startswith("feat:")):
                 continue
             catalog_feat = catalog.feats.get(selected[0][len("feat:"):])
-            if not (catalog_feat and _is_asi_eligible_feat(catalog_feat, ruleset, lvl) and _feat_offered(catalog_feat, sources, ruleset)):
+            if not (catalog_feat and _asi_pick_honored(catalog_feat, sources, ruleset, lvl)):
                 continue
             if catalog_feat["index"] in seen and not catalog_feat.get("repeatable"):
                 if skipped_duplicates is not None:
@@ -1990,7 +1992,7 @@ def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrac
     return templates
 
 
-def _species_feat_pool(catalog: Catalog, category: str | None, sources, ruleset: str = "mixed") -> list[dict]:
+def _species_feat_pool(catalog: Catalog, category: str | None, sources, ruleset: str = "mixed", keep=()) -> list[dict]:
     """Feats a species feat grant may be spent on. An explicit category
     ("O": Human/XPHB's Origin feat) offers exactly that category; `None`
     (the "any" grant of Variant Human and Custom Lineage) offers feats with
@@ -1999,12 +2001,16 @@ def _species_feat_pool(catalog: Catalog, category: str | None, sources, ruleset:
     Style and Dragon-gift categories stay out. Filtered by draft.sources
     like every feat, sorted by name. (Unlike _asi_feat_pool this ignores the
     ruleset's category rules beyond _feat_offered: a 2024 "any" grant still
-    lists the 2014 category-less feats that ruleset_allows lets through.)"""
+    lists the 2014 category-less feats that ruleset_allows lets through.)
+    `keep`: stored option ids (`feat:<index>`); one whose category fits the
+    grant stays in the pool even when ruleset/sources hide it (the caller
+    flags it `hiddenByFilters`)."""
     allowed = {category} if category is not None else {"", "G", "O"}
+    kept = {k[len("feat:"):] for k in keep if isinstance(k, str) and k.startswith("feat:")}
     pool = [
         f for f in catalog.feats.values()
         if (f.get("category") or "") in allowed and f["name"] != "Ability Score Improvement"
-        and _feat_offered(f, sources, ruleset)
+        and (_feat_offered(f, sources, ruleset) or f["index"] in kept)
     ]
     pool.sort(key=lambda f: f["name"])
     return pool
@@ -2027,14 +2033,17 @@ def _species_feat_grant_slots(race: dict | None, subrace: dict | None, race_id: 
 def _species_feat_choice_template(
     race: dict, race_id: str, cid: str, grant: dict, catalog: Catalog, sources, scores: dict[str, int],
     total_level: int, use_prereqs: bool, held: "_HeldFeatState", taken: set[str], ruleset: str = "mixed",
+    keep=(),
 ) -> dict:
     """One Choice for a species feat grant. A failed prerequisite wins over
     "already taken" as the disabled reason; the check uses the character's
     scores before any feat bonus and the total level (permissive, like the
     ASI pre-walk)."""
     options = []
-    for feat in _species_feat_pool(catalog, grant["category"], sources, ruleset):
+    for feat in _species_feat_pool(catalog, grant["category"], sources, ruleset, keep):
         option = {"id": f"feat:{feat['index']}", "label": feat["name"]}
+        if not _feat_offered(feat, sources, ruleset):
+            option["hiddenByFilters"] = True
         reason = _feat_prerequisite_unmet_reason(feat, total_level, scores, use_prereqs, held, catalog)
         if reason:
             option["disabled"] = True
@@ -2431,6 +2440,7 @@ def _asi_option_label(deltas: list[tuple[str, int]]) -> str:
 _ASI_FEAT_CATEGORIES = {"2014": {"", "G"}, "2024": {"G", "O"}}
 _ASI_FEAT_CATEGORIES_DEFAULT = {"", "G", "O"}
 _ASI_EPIC_BOON_LEVEL = 19
+_ASI_CID_RE = re.compile(r"^class:[^:]+:\d+:asi$")
 _ASI_EXCLUDED_FEAT_INDICES = {"ability-score-improvement-xphb"}
 
 
@@ -2450,13 +2460,41 @@ def _is_asi_eligible_feat(feat: dict, ruleset: str = "mixed", slot_level: int = 
     return category in _ASI_FEAT_CATEGORIES.get(ruleset, _ASI_FEAT_CATEGORIES_DEFAULT)
 
 
-def _asi_feat_pool(catalog: Catalog, sources, ruleset: str, slot_level: int) -> list[dict]:
+def _asi_feat_in_pool(feat: dict, sources, ruleset: str, slot_level: int) -> bool:
+    return _is_asi_eligible_feat(feat, ruleset, slot_level) and _feat_offered(feat, sources, ruleset)
+
+
+def _asi_pick_honored(feat: dict, sources, ruleset: str, slot_level: int) -> bool:
+    """Whether a stored feat pick at an ASI slot is applied: it is in the
+    filtered pool, OR it is structurally eligible at that slot under the
+    permissive "mixed" rules (so switching ruleset/sources never silently
+    drops an already-chosen feat; the pick is kept and warned about, F2).
+    Used by both the option template and the resolver."""
+    return _asi_feat_in_pool(feat, sources, ruleset, slot_level) or _is_asi_eligible_feat(feat, "mixed", slot_level)
+
+
+def _asi_feat_pool(catalog: Catalog, sources, ruleset: str, slot_level: int, keep_index: str | None = None) -> list[dict]:
     """The feats offered at an ASI slot: structurally eligible AND allowed by
-    draft.sources / the ruleset."""
-    return [
-        f for f in catalog.feats.values()
-        if _is_asi_eligible_feat(f, ruleset, slot_level) and _feat_offered(f, sources, ruleset)
-    ]
+    draft.sources / the ruleset. `keep_index` (the already-selected feat) is
+    appended, as a COPY tagged `_hidden_by_filters`, when it is honored
+    (_asi_pick_honored) but not in the pool."""
+    pool = [f for f in catalog.feats.values() if _asi_feat_in_pool(f, sources, ruleset, slot_level)]
+    kept = catalog.feats.get(keep_index) if keep_index else None
+    if kept and all(f['index'] != kept['index'] for f in pool) and _asi_pick_honored(kept, sources, ruleset, slot_level):
+        pool.append({**kept, "_hidden_by_filters": True})
+    return pool
+
+
+def _stored_asi_feat_pick(class_choices: dict | None, cid: str) -> str | None:
+    """The single stored `feat:<index>` pick at an ASI cid, deduped exactly
+    like _apply_asi_progression and _resolve_asi_selected_feats read it."""
+    raw = (class_choices or {}).get(cid) or []
+    if not isinstance(raw, list):
+        return None
+    selected = list(dict.fromkeys(s for s in raw if isinstance(s, str)))
+    if len(selected) == 1 and selected[0].startswith("feat:"):
+        return selected[0][len("feat:"):]
+    return None
 
 
 def _feat_prerequisite_unmet_reason(
@@ -2533,8 +2571,10 @@ def _asi_choice_templates(
     catalog: Catalog, total_level: int, use_prerequisites: bool, sources=None,
     taken_by_level: dict[int, set[str]] | None = None,
     held_by_level: dict[int, "_HeldFeatState"] | None = None,
-    ruleset: str = "mixed",
+    ruleset: str = "mixed", class_choices: dict | None = None,
 ) -> list[dict]:
+    # `class_choices`: this class's stored selections; an already-picked feat
+    # stays offered (flagged `hiddenByFilters`) when ruleset/sources hide it.
     # `taken_by_level`: per ASI level, the feat indices already held from a
     # background grant or an earlier ASI pick — offered disabled unless the
     # feat is `repeatable`.
@@ -2544,12 +2584,15 @@ def _asi_choice_templates(
     pools: dict[bool, list[dict]] = {}
     templates = []
     for lvl in asi_levels:
+        cid = f"class:{cls_id}:{lvl}:asi"
         epic = lvl >= _ASI_EPIC_BOON_LEVEL
         if epic not in pools:
-            general_feats = _asi_feat_pool(catalog, sources, ruleset, lvl)
-            general_feats.sort(key=lambda f: f["name"])
-            pools[epic] = general_feats
+            pools[epic] = sorted(_asi_feat_pool(catalog, sources, ruleset, lvl), key=lambda f: f["name"])
         general_feats = pools[epic]
+        keep_index = _stored_asi_feat_pick(class_choices, cid)
+        if keep_index and not any(f["index"] == keep_index for f in general_feats):
+            kept_pool = _asi_feat_pool(catalog, sources, ruleset, lvl, keep_index)
+            general_feats = general_feats + [f for f in kept_pool if f.get("_hidden_by_filters")]
         current_scores = scores_by_level.get(lvl, {})
         options = []
         for option_id, deltas in asi_mod.asi_combinations():
@@ -2560,6 +2603,8 @@ def _asi_choice_templates(
             options.append(option)
         for feat in general_feats:
             option = {"id": f"feat:{feat['index']}", "label": feat["name"]}
+            if feat.get("_hidden_by_filters"):
+                option["hiddenByFilters"] = True
             reason = _feat_prerequisite_unmet_reason(
                 feat, total_level, current_scores, use_prerequisites,
                 (held_by_level or {}).get(lvl) or _HeldFeatState(), catalog,
@@ -2571,7 +2616,6 @@ def _asi_choice_templates(
                 option["disabled"] = True
                 option["disabledReason"] = "already taken"
             options.append(option)
-        cid = f"class:{cls_id}:{lvl}:asi"
         source = {"kind": "class", "id": cls_id, "label": cls_name, "level": lvl}
         templates.append({
             "id": cid, "source": source, "label": "Ability Score Improvement",
@@ -3222,9 +3266,16 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             tpl = _species_feat_choice_template(
                 race, race_id, slot_cid, grant, catalog, draft.get("sources"), pre_feat_scores, total_level,
                 use_feat_prereqs, species_held_snapshot, taken_feat_indices, ruleset,
+                keep=species_choices_raw.get(slot_cid) if isinstance(species_choices_raw.get(slot_cid), list) else (),
             )
             species_feat_templates.append(tpl)
             picked = _resolve_species_selected_feats(tpl, species_choices_raw, catalog, problems)
+            for feat in picked:
+                if not _feat_offered(feat, draft.get("sources"), ruleset):
+                    warnings.append({
+                        "id": f"feat-hidden-by-filters-{slot_cid}",
+                        "message": f"{feat['name']} is outside the current ruleset/sources but stays selected.",
+                    })
             species_feats += picked
             taken_feat_indices |= {f["index"] for f in picked}
     for species_feat in species_feats:
@@ -3241,6 +3292,12 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             "id": f"feat-duplicate-{dup['feat']['index']}-{dup['cid']}",
             "message": f"{dup['feat']['name']} was already taken, so the pick at {dup['cls']['name']} level {dup['level']} isn't applied.",
         })
+    for pick in asi_feat_picks:
+        if not _asi_feat_in_pool(pick, draft.get("sources"), ruleset, pick["_asi_level"]):
+            warnings.append({
+                "id": f"feat-hidden-by-filters-{pick['_asi_cid']}",
+                "message": f"{pick['name']} is outside the current ruleset/sources but stays selected.",
+            })
     asi_feats_by_cid = {f["_asi_cid"]: f for f in asi_feat_picks}
     # Walk order of every ASI cid (class order, then level) — the "first
     # pick wins" order _resolve_asi_selected_feats applies duplicates in.
@@ -3389,7 +3446,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 | {f["index"] for f in asi_feat_picks if asi_feat_order.get(f["_asi_cid"], 1 << 30) < asi_feat_order.get(f"class:{rc_cls_id}:{lvl}:asi", -1)}
                 for lvl in rc_asi_levels
             },
-            held_by_level=rc_held_by_level, ruleset=ruleset,
+            held_by_level=rc_held_by_level, ruleset=ruleset, class_choices=rc_class_choices,
         )
         # ASI-or-feat Task 3: a feat THIS class took at one of its own ASI
         # levels cascades its own choice-shaped content right here, scoped
@@ -3619,6 +3676,22 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         for choice_id, selected in all_selections.items()
         if selected and choice_id not in current_template_ids
     ]
+    # A stored feat pick at an ASI slot that is not among that slot's options
+    # (structurally ineligible there, e.g. an Epic Boon below level 19) is
+    # ignored; say so instead of leaving the card silently pending.
+    template_option_ids = {tpl["id"]: {o["id"] for o in tpl["options"]} for tpl in choice_templates if _ASI_CID_RE.match(tpl["id"])}
+    for choice_id, option_ids in template_option_ids.items():
+        stored = all_selections.get(choice_id)
+        if not isinstance(stored, list):
+            continue
+        for item in dict.fromkeys(s for s in stored if isinstance(s, str) and s.startswith("feat:")):
+            if item not in option_ids:
+                feat_record = catalog.feats.get(item[len("feat:"):])
+                name = feat_record["name"] if feat_record else item
+                pruned.append({
+                    "choiceId": choice_id,
+                    "reason": f"'{name}' can't be taken at this Ability Score Improvement and was ignored.",
+                })
     if len(pruned) > MAX_PRUNED_REPORTED:
         extra = len(pruned) - MAX_PRUNED_REPORTED
         pruned = pruned[:MAX_PRUNED_REPORTED] + [{

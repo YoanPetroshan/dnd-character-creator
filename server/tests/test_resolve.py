@@ -4147,19 +4147,24 @@ def test_a_duplicated_single_asi_pick_is_deduped_and_applies(catalog):
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 def test_asi_feat_options_honor_draft_sources(catalog):
-    def feat_option_ids(sources):
+    def feat_option_ids(sources, pick="feat:actor-xphb"):
         draft = _fighter_acolyte_human_draft(
             sources=sources,
-            classes=[{"classId": "fighter", "level": 4, "choices": {"class:fighter:4:asi": ["feat:actor-xphb"]}}],
+            classes=[{"classId": "fighter", "level": 4, "choices": {"class:fighter:4:asi": [pick] if pick else []}}],
         )
         resolution = resolve(draft, catalog)
         asi_choice = next(c for c in resolution["choices"] if c["id"] == "class:fighter:4:asi")
         return resolution, {o["id"] for o in asi_choice["options"] if o["id"].startswith("feat:")}
 
-    srd_only, srd_ids = feat_option_ids(["srd"])
+    _, srd_ids = feat_option_ids(["srd"], pick=None)
     assert srd_ids == set()  # the 2014 SRD has no feats
-    assert srd_only["sheet"]["abilities"]["CHA"] == 9  # an un-offered feat pick is never applied
-    assert srd_only["sheet"]["grantedFeats"] == []
+    # A feat that is already selected stays offered and applied when the
+    # sources hide it (F2), with a warning.
+    srd_only, srd_pick_ids = feat_option_ids(["srd"])
+    assert srd_pick_ids == {"feat:actor-xphb"}
+    assert srd_only["sheet"]["abilities"]["CHA"] == 10  # Actor's +1 CHA applies
+    assert "actor-xphb" in str(srd_only["sheet"]["feats"])
+    assert "feat-hidden-by-filters-class:fighter:4:asi" in [w["id"] for w in srd_only["warnings"]]
     _, xphb_ids = feat_option_ids(["srd", "xphb"])
     assert "feat:actor-xphb" in xphb_ids
     assert all(catalog.feats[i[len("feat:"):]]["source"] == "XPHB" for i in xphb_ids)

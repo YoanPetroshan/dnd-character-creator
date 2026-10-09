@@ -130,14 +130,22 @@ def test_invalid_ruleset_falls_back_to_mixed(catalog):
     assert r["problems"] == []
 
 
-def test_2014_does_not_offer_or_apply_2024_asi_feat(catalog):
+def test_2014_keeps_selected_2024_asi_feat(catalog):
     cid = "class:fighter:4:asi"
     classes = [{"classId": "fighter", "level": 4, "choices": {cid: ["feat:athlete-xphb"]}}]
-    for ruleset, offered in (("2014", False), ("mixed", True), ("2024", True)):
+    for ruleset in ("2014", "mixed", "2024"):
         r = resolve(_draft(species="human", sub=None, bg="acolyte", choices={}, ruleset=ruleset, classes=classes), catalog)
         tpl = next(c for c in r["choices"] if c["id"] == cid)
-        assert ("feat:athlete-xphb" in [o["id"] for o in tpl["options"]]) is offered
-        assert ("feat:athlete-xphb" in tpl["selected"]) is offered
+        # An already-selected feat stays offered and applied (F2); 2014 flags it hidden.
+        assert "feat:athlete-xphb" in [o["id"] for o in tpl["options"]]
+        assert "feat:athlete-xphb" in tpl["selected"]
+        hidden = next(o for o in tpl["options"] if o["id"] == "feat:athlete-xphb").get("hiddenByFilters")
+        assert bool(hidden) is (ruleset == "2014")
+        assert (f"feat-hidden-by-filters-{cid}" in _wids(r)) is (ruleset == "2014")
+    # Unselected, the 2024 General feat is not offered under 2014.
+    no_pick = [{"classId": "fighter", "level": 4, "choices": {}}]
+    r = resolve(_draft(species="human", sub=None, bg="acolyte", choices={}, ruleset="2014", classes=no_pick), catalog)
+    assert "feat:actor-xphb" not in [o["id"] for o in next(c for c in r["choices"] if c["id"] == cid)["options"]]
     r = resolve(_draft(species="human", sub=None, bg="acolyte", choices={}, ruleset="2014", classes=classes), catalog)
     # (2014 pool = the category-less PHB/XGE/TCE... feats plus the General
     # Unearthed Arcana ones.)
