@@ -15,7 +15,7 @@ from flask_cors import CORS
 
 from catalog.loader import load as load_catalog
 from catalog.reference_data import SOURCE_NAMES, SUBCLASS_UNLOCK_LEVEL, ruleset_allows
-from engine.resolve import _source_allowed, resolve
+from engine.resolve import _source_allowed, _spell_visible, resolve
 from export import to_yaml
 from markdown_export import to_markdown
 from pdf_export import to_pdf
@@ -145,11 +145,50 @@ def api_items():
     return jsonify({"items": results})
 
 
+def _spell_list_item(spell: dict) -> dict:
+    """The slim list row; the description, material text and class names live
+    in GET /api/spells/<id> (a wizard list with descriptions was 233 KB)."""
+    return {
+        "id": spell["index"],
+        "name": spell["name"],
+        "level": spell["level"],
+        "school": spell.get("school", {}).get("name"),
+        "castingTime": spell.get("casting_time"),
+        "range": spell.get("range"),
+        "components": spell.get("components", []),
+        "duration": spell.get("duration"),
+        "concentration": spell.get("concentration", False),
+        "ritual": spell.get("ritual", False),
+        "source": spell.get("source", "SRD"),
+        "ruleset": spell.get("ruleset", "2014"),
+    }
+
+
+def _build_spell_indexes() -> tuple[dict[str, list[dict]], dict[str, dict]]:
+    """Built once at import: class id -> spells of that class sorted by name
+    (the "" key holds every spell), and spell id -> its pre-built list row."""
+    items = {sid: _spell_list_item(spell) for sid, spell in _catalog.spells.items()}
+    by_class: dict[str, list[dict]] = {"": []}
+    for spell in sorted(_catalog.spells.values(), key=lambda sp: sp["name"]):
+        by_class[""].append(spell)
+        for cls in spell.get("classes", []):
+            by_class.setdefault(cls["index"], []).append(spell)
+    return by_class, items
+
+
+_spells_by_class, _spell_items = _build_spell_indexes()
+
+
 @app.route("/api/spells")
 def api_spells():
-    class_id = request.args.get("class")
+    """`?class=&level=&q=` plus `?ruleset=2014|2024|mixed&sources=phb,xge`
+    (the draft's, default mixed and every book): the spells the draft could
+    pick, one record per spell (see resolve._spell_visible)."""
+    class_id = request.args.get("class") or ""
     level_param = request.args.get("level")
     query = (request.args.get("q") or "").lower()
+    ruleset = request.args.get("ruleset", "mixed")
+    sources = [s for s in (request.args.get("sources") or "").split(",") if s]
     level_filter = None
     if level_param:
         try:
@@ -157,29 +196,33 @@ def api_spells():
         except ValueError:
             return jsonify({"error": "'level' must be an integer"}), 400
     results = []
-    for spell in _catalog.spells.values():
-        if class_id and not any(c["index"] == class_id for c in spell.get("classes", [])):
-            continue
+    for spell in _spells_by_class.get(class_id, ()):
         if level_filter is not None and spell["level"] != level_filter:
             continue
         if query and query not in spell["name"].lower():
             continue
-        results.append({
-            "id": spell["index"],
-            "name": spell["name"],
-            "level": spell["level"],
-            "school": spell.get("school", {}).get("name"),
-            "castingTime": spell.get("casting_time"),
-            "range": spell.get("range"),
-            "components": spell.get("components", []),
-            "duration": spell.get("duration"),
-            "concentration": spell.get("concentration", False),
-            "ritual": spell.get("ritual", False),
-            "material": spell.get("material"),
-            "desc": " ".join(spell.get("desc", [])),
-        })
-    results.sort(key=lambda s: s["name"])
+        if not _spell_visible(_catalog, spell, sources, ruleset):
+            continue
+        results.append(_spell_items[spell["index"]])
     return jsonify({"spells": results})
+
+
+@app.route("/api/spells/<spell_id>")
+def api_spell_detail(spell_id: str):
+    sid = _catalog.resolve_spell_id(spell_id)
+    if sid is None:
+        return jsonify({"error": "not found"}), 404
+    spell = _catalog.spells[sid]
+    source = spell.get("source", "SRD")
+    return jsonify({
+        **_spell_items[sid],
+        "material": spell.get("material"),
+        "desc": spell.get("desc", []),
+        "higherLevel": spell.get("higher_level", []),
+        "castingCondition": spell.get("casting_condition"),
+        "classes": [{"id": c["index"], "name": c["name"]} for c in spell.get("classes", [])],
+        "sourceName": SOURCE_NAMES.get(source, source),
+    })
 
 
 def _pending_export_problems(resolution: dict) -> list[dict]:

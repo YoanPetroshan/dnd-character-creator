@@ -262,7 +262,8 @@ def test_spells_endpoint_lists_all_spells_by_default(client):
     resp = client.get("/api/spells")
     assert resp.status_code == 200
     body = resp.get_json()
-    assert len(body["spells"]) == (936 if has_official_spells() else 319)
+    # default ruleset "mixed": one record per spell (557 of the 936 with the sourcebook files, else the 319 SRD)
+    assert len(body["spells"]) == (557 if has_official_spells() else 319)
     fireball = next(s for s in body["spells"] if s["id"] == "fireball")
     assert fireball["name"] == "Fireball"
 
@@ -307,16 +308,13 @@ def test_spells_endpoint_rejects_invalid_level_parameter(client):
     assert "integer" in body["error"].lower()
 
 
-def test_spells_endpoint_returns_full_spell_details(client):
+def test_spells_endpoint_list_items_are_slim(client):
     resp = client.get("/api/spells?q=fireball")
     assert resp.status_code == 200
-    body = resp.get_json()
-    fireball = next(s for s in body["spells"] if s["id"] == "fireball")
-    # Check all expected keys are present
-    expected_keys = {"id", "name", "level", "school", "castingTime", "range",
-                     "components", "duration", "concentration", "ritual", "material", "desc"}
-    assert set(fireball.keys()) == expected_keys
-    # Check concrete values for Fireball
+    fireball = next(s for s in resp.get_json()["spells"] if s["id"] == "fireball")
+    # The list carries no description or material text (GET /api/spells/<id> has them).
+    assert set(fireball.keys()) == {"id", "name", "level", "school", "castingTime", "range", "components",
+                                    "duration", "concentration", "ritual", "source", "ruleset"}
     assert fireball["name"] == "Fireball"
     assert fireball["level"] == 3
     assert fireball["school"] == "Evocation"
@@ -324,21 +322,83 @@ def test_spells_endpoint_returns_full_spell_details(client):
     assert "V" in fireball["components"]
     assert fireball["concentration"] is False
     assert fireball["ritual"] is False
+    assert (fireball["source"], fireball["ruleset"]) == ("SRD", "2014")
 
 
-def test_spells_endpoint_includes_material_field(client):
-    resp = client.get("/api/spells?q=fireball")
+def test_spell_detail_returns_description_material_and_higher_levels(client):
+    resp = client.get("/api/spells/fireball")
     assert resp.status_code == 200
-    body = resp.get_json()
-    fireball = next(s for s in body["spells"] if s["id"] == "fireball")
+    fireball = resp.get_json()
+    assert fireball["id"] == "fireball" and fireball["name"] == "Fireball" and fireball["level"] == 3
     assert fireball["material"] == "A tiny ball of bat guano and sulfur."
+    assert isinstance(fireball["desc"], list) and fireball["desc"][0].startswith("A bright streak")
+    assert fireball["higherLevel"] and "4th level or higher" in fireball["higherLevel"][0]
+    assert fireball["range"] == "150 feet" and fireball["castingTime"] == "1 action"
+    assert {c["id"] for c in fireball["classes"]} >= {"wizard", "sorcerer"}
+    assert (fireball["source"], fireball["ruleset"]) == ("SRD", "2014")
+
+
+def test_spell_detail_unknown_id_is_404_json(client):
+    resp = client.get("/api/spells/no-such-spell")
+    assert resp.status_code == 404
+    assert "error" in resp.get_json()
+
+
+def test_spells_list_is_not_rebuilt_per_request(client):
+    import app as app_module
+    first = app_module._spells_by_class
+    client.get("/api/spells?class=wizard")
+    client.get("/api/spells?class=cleric&level=1")
+    assert app_module._spells_by_class is first and "wizard" in first and "fireball" in {s["index"] for s in first["wizard"]}
 
 
 def test_spells_endpoint_tolerates_empty_level_parameter(client):
     resp = client.get("/api/spells?level=")
     assert resp.status_code == 200
     body = resp.get_json()
-    assert len(body["spells"]) == (936 if has_official_spells() else 319)
+    assert len(body["spells"]) == (557 if has_official_spells() else 319)
+
+
+needs_spells = pytest.mark.skipif(not has_official_spells(), reason="5etools spell files not available")
+
+
+@needs_spells
+def test_spells_endpoint_ruleset_and_sources_parameters(client):
+    def count(query):
+        return len(client.get(f"/api/spells?{query}").get_json()["spells"])
+
+    assert (count("ruleset=mixed"), count("ruleset=2014"), count("ruleset=2024")) == (557, 525, 557)
+    assert count("sources=phb") == 361 and count("sources=srd") == 319
+    assert count("sources=xphb&ruleset=2014") == 319 and count("sources=xphb") == 393
+
+
+@needs_spells
+def test_spells_endpoint_warlock_hex_and_2024_variants(client):
+    body = client.get("/api/spells?class=warlock&q=hex").get_json()
+    assert [s["id"] for s in body["spells"]] == ["hex"]
+    assert body["spells"][0]["source"] == "PHB"
+    twin = client.get("/api/spells?class=warlock&q=hex&ruleset=2024").get_json()
+    assert [s["id"] for s in twin["spells"]] == ["hex-xphb"] and twin["spells"][0]["ruleset"] == "2024"
+
+
+@needs_spells
+def test_spells_wizard_response_stays_small(client):
+    resp = client.get("/api/spells?class=wizard")
+    assert resp.status_code == 200
+    assert len(resp.data) < 120_000, len(resp.data)  # was 233 KB with the SRD spells alone
+    assert len(resp.get_json()["spells"]) == 369
+
+
+@needs_spells
+def test_spell_detail_for_a_sourcebook_spell_and_an_alias(client):
+    hex_ = client.get("/api/spells/hex").get_json()
+    assert hex_["school"] == "Enchantment" and hex_["castingTime"] == "1 bonus action" and hex_["concentration"] is True
+    assert [c["id"] for c in hex_["classes"]] == ["warlock"] and hex_["source"] == "PHB"
+    assert hex_["sourceName"] == "Player's Handbook (2014)"
+    assert "{@" not in " ".join(hex_["desc"])
+    via_alias = client.get("/api/spells/tensers-floating-disk")
+    assert via_alias.status_code == 200 and via_alias.get_json()["id"] == "floating-disk"
+    assert client.get("/api/spells/divine-smite").get_json()["id"] == "divine-smite-xphb"
 
 
 def test_export_yaml_does_not_block_on_pending_equipment_choices(client):
