@@ -237,7 +237,18 @@ CLASS_FEATURE_EFFECTS: dict[str, dict] = {
     "jack-of-all-trades": {"half_proficiency": "floor"},
     "remarkable-athlete": {"half_proficiency": "ceil"},
     "primal-champion": {"ability_bonus": {"STR": 4, "CON": 4}, "ability_cap": 24},
+    # R5: always-on numbers folded into derived. Slippery Mind is NOT here: it
+    # differs by ruleset (WIS in 2014, WIS + CHA in 2024), see engine/features.py.
+    "aura-of-protection": {"save_bonus_ability": "CHA", "save_bonus_min": 1},
+    "diamond-soul": {"save_proficiency": "all"},
+    "fast-movement": {"speed_bonus_unless_heavy_armor": 10},
 }
+
+# The 13 PHB/XPHB damage types, alphabetical (Rage resistance lists).
+DAMAGE_TYPES = ["acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing",
+                "poison", "psychic", "radiant", "slashing", "thunder"]
+# Totem Warrior, Totem Spirit, Bear (PHB p.50): while raging, resistance to all damage except psychic.
+TOTEM_BEAR_OPTION_ID = "totem-warrior-phb-3-totem-spirit--bear"
 
 
 # Specific-weapon proficiency ids (class/race grants such as "rapiers") and the

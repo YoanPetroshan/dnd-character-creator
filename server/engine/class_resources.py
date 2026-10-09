@@ -90,6 +90,15 @@ def _resource(rc: dict, name: str, *, kind: str = "class", recharge: str | None 
     return out
 
 
+def _picked_option_ids(ctx: Ctx, class_id: str) -> set[str]:
+    """Selected ids of the class's feature-text choices (cid class:<cls>:<lvl>:feature:<id>).
+    `ctx.choices` is the resolved choice list from resolve() (a dict or None in unit tests)."""
+    if not isinstance(ctx.choices, list):
+        return set()
+    return {sel for c in ctx.choices if (c.get("source") or {}).get("id") == class_id and ":feature:" in c.get("id", "")
+            for sel in c.get("selected") or []}
+
+
 def _barbarian(ctx: Ctx, rc: dict) -> list[dict]:
     level = rc["level"]
     cs = _class_specific(rc)
@@ -102,9 +111,14 @@ def _barbarian(ctx: Ctx, rc: dict) -> list[dict]:
     if uses is None:
         return []
     unlimited = uses >= UNLIMITED_ROW_VALUE
+    resistances = ["bludgeoning", "piercing", "slashing"]
+    if reference_data.TOTEM_BEAR_OPTION_ID in _picked_option_ids(ctx, "barbarian"):
+        # 2014 Totem Warrior Bear: every damage type except psychic. The 2024
+        # Wild Heart per-rage choice is not modelled.
+        resistances = [t for t in reference_data.DAMAGE_TYPES if t != "psychic"]
     return [_resource(
         rc, "Rage", uses=uses, unlimited=unlimited, recharge="long",
-        details={"damageBonus": bonus, "resistances": ["bludgeoning", "piercing", "slashing"]},
+        details={"damageBonus": bonus, "resistances": resistances},
     )]
 
 
@@ -355,3 +369,30 @@ def _merge_channel_divinity(resources: list[dict]) -> list[dict]:
     best = {**best, "details": {**(best.get("details") or {}), "classes": [r["classId"] for r in cds]}}
     return [best if r["name"] == "Channel Divinity" and r["classId"] == best["classId"] else r
             for r in resources if r["name"] != "Channel Divinity" or r["classId"] == best["classId"]]
+
+
+def annotate_attacks(attacks: list[dict], resources: list[dict], items: list[dict]) -> list[dict]:
+    """D5: attack-row notes from class resources. A Barbarian's Rage adds
+    "Rage: +N damage" to melee rows that use Strength (PHB: melee weapon attack
+    using Strength); a Rogue's Sneak Attack adds "Sneak Attack Xd6" to finesse
+    and ranged weapon rows. Rows with no catalog weapon (the Monk's unarmed
+    strike) get neither. The notes are information; the damage number is unchanged."""
+    by_id = {r["id"]: r for r in resources}
+    rage = (by_id.get("barbarian:rage") or {}).get("details", {}).get("damageBonus")
+    sneak = (by_id.get("rogue:sneak-attack") or {}).get("dice")
+    if not rage and not sneak:
+        return attacks
+    weapons = {i["index"]: i for i in items}
+    out = []
+    for a in attacks:
+        item = weapons.get(a["itemId"])
+        notes = list(a["notes"])
+        if item:
+            ranged = item.get("weapon_range") == "Ranged"
+            finesse = any(p["index"] == "finesse" for p in item.get("properties", []))
+            if rage and a["ability"] == "STR" and not ranged:
+                notes.append(f"Rage: +{rage} damage")
+            if sneak and (finesse or ranged):
+                notes.append(f"Sneak Attack {sneak}")
+        out.append({**a, "notes": notes})
+    return out

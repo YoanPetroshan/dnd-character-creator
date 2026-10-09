@@ -4,6 +4,15 @@ from __future__ import annotations
 
 from catalog import reference_data
 
+ABILITIES = ("STR", "DEX", "CON", "INT", "WIS", "CHA")
+
+# Feature index -> ruleset -> save proficiencies, for features whose grant
+# differs by edition. PHB Slippery Mind: Wisdom. XPHB Slippery Mind: Wisdom and
+# Charisma. "mixed" uses the 2014/SRD numbers (decision D2).
+RULESET_SAVE_PROFICIENCIES: dict[str, dict[str, list[str]]] = {
+    "slippery-mind": {"2014": ["WIS"], "mixed": ["WIS"], "2024": ["WIS", "CHA"]},
+}
+
 
 def active_effects(class_features: list[tuple[str, int, str]]) -> list[tuple[str, int, dict]]:
     """class_features: (class_id, class_level, feature_index) for every
@@ -62,3 +71,33 @@ def attack_styles(effects) -> dict:
         "two_weapon_fighting": any(e.get("two_weapon_fighting") for _, _, e in effects),
         "great_weapon_fighting": any(e.get("great_weapon_fighting") for _, _, e in effects),
     }
+
+
+def save_proficiencies(effects, feature_indexes, ruleset: str) -> list[str]:
+    """Extra saving-throw proficiencies from class features: Diamond Soul /
+    Disciplined Survivor ("all" in the effects table) and the ruleset-dependent
+    grants (Slippery Mind). `feature_indexes` is every feature id the character has."""
+    out: list[str] = []
+    for _, _, e in effects:
+        grant = e.get("save_proficiency")
+        out += list(ABILITIES) if grant == "all" else list(grant or [])
+    for idx in feature_indexes:
+        by_ruleset = RULESET_SAVE_PROFICIENCIES.get(idx)
+        if by_ruleset:
+            out += by_ruleset.get(ruleset) or by_ruleset["mixed"]
+    return list(dict.fromkeys(out))
+
+
+def save_bonus(effects, modifiers: dict[str, int]) -> int:
+    """Aura of Protection: the ability modifier (minimum +1) added to every
+    saving throw. Several auras do not add up (a creature benefits from one)."""
+    return max([max(e.get("save_bonus_min", 0), modifiers.get(e["save_bonus_ability"], 0))
+                for _, _, e in effects if "save_bonus_ability" in e], default=0)
+
+
+def speed_bonus_unless_heavy(effects, equipped_items) -> int:
+    """Fast Movement: +10 unless an equipped armor is Heavy. A different feature
+    from Unarmored Movement, so the two add up."""
+    if any(i.get("armor_category") == "Heavy" for i in equipped_items):
+        return 0
+    return sum(e["speed_bonus_unless_heavy_armor"] for _, _, e in effects if "speed_bonus_unless_heavy_armor" in e)

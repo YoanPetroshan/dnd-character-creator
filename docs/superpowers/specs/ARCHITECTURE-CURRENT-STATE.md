@@ -485,3 +485,17 @@ Plan: `docs/superpowers/plans/2026-10-09-feat-eligibility-third-casters-2024-ove
 - **Exports/UI.** No change: `describeResource`/`resource_line` already print die, uses, pool and recharge; `slotCosts` and the other new details are not printed. Frontend untouched (no build needed).
 - **Timing** (`resolve()`, level 20, CHA 16, mean of 20): Bard mixed 2.77 ms, 2024 2.03 ms; Sorcerer mixed 2.75 ms, 2024 2.06 ms (limit 50 ms).
 - Tests: `tests/test_class_resources_bard_sorcerer_wizard_ranger.py` (138, rule matrix in the docstring). Server suite 1652 passed (1514 + 138), root suite 405 passed / 8 skipped.
+
+## Class resources - R5 Saves, speed and rage effects folded into derived (2026-10-10)
+
+Decision D5: always-on numbers change `derived` itself.
+- **Aura of Protection** (Paladin 6): `CLASS_FEATURE_EFFECTS["aura-of-protection"] = {save_bonus_ability: CHA, save_bonus_min: 1}`; `features.save_bonus` adds max(CHA mod, 1) to every save (proficient or not). PHB and XPHB text checked by script: same number, "minimum bonus of +1". Several auras never add up (one bonus). Not modelled: must be conscious / not Incapacitated, range.
+- **Diamond Soul** (Monk 14, XPHB name Disciplined Survivor): `{save_proficiency: "all"}`; the six abilities are appended to `sheet.proficiencies.savingThrows` without duplicates.
+- **Slippery Mind** (Rogue 15) is ruleset-dependent, so it is NOT in the static table: `features.RULESET_SAVE_PROFICIENCIES`. PHB: Wisdom. XPHB (verified in the imported data): Wisdom and Charisma. 2014 and mixed = WIS, 2024 = WIS + CHA.
+- **Fast Movement** (Barbarian 5): `{speed_bonus_unless_heavy_armor: 10}`; +10 to every speed mode unless an equipped armor has category Heavy (shield, Light, Medium do not turn it off). It is a different feature from Unarmored Movement, so a Barbarian 5 / Monk 2 gets both when unarmored (50), only Fast Movement in Medium armor (40), neither in Heavy (30).
+- **Rage resistances**: `resources_for` now receives the resolved choices; with the S4 option `totem-warrior-phb-3-totem-spirit--bear` the Rage resource lists every damage type except psychic (`reference_data.DAMAGE_TYPES`). Other totems and no pick keep bludgeoning/piercing/slashing. **Not modelled:** the 2024 Path of the Wild Heart per-rage choices (Rage of the Wilds etc.); under 2024 only the base resistances are shown.
+- **Attack notes** (`class_resources.annotate_attacks`): "Rage: +N damage" on non-ranged rows whose ability is STR of a Barbarian with Rage (the Monk unarmed row has no item and gets none); "Sneak Attack Xd6" on finesse or ranged rows of a Rogue. Information only; damage numbers are unchanged.
+- No new sheet/derived keys, so `types.ts` and the export-coverage test are unchanged; frontend untouched.
+- **Existing tests:** none needed changing (no existing draft sat at Paladin 6+/Monk 14+/Barbarian 5+ with asserted saves or speed).
+- **Timing** (`resolve()`, mean of 20): Paladin 6 1.09 ms, Barbarian 5 (greataxe, hide armor) 0.77 ms, Barbarian 3 Bear 0.43 ms (limit 50 ms).
+- Tests: `tests/test_save_speed_rage_effects.py` (32, rule matrix in the docstring; 26 fail without the implementation). Server suite 1684 passed (1652 + 32), root suite 405 passed / 8 skipped.

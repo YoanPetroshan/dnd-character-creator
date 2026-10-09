@@ -4344,8 +4344,16 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                         "message": f"The HP roll for {rc['cls_id']} level {lvl} must be between 1 and {rc_hit_die}; the average was used instead.",
                     })
         hp_class_entries.append({"hit_die": rc_hit_die, "level": rc["level"], "hp_rolls": rc_hp_rolls})
+    class_feature_list = _class_feature_list(catalog, resolved_classes, choices)
+    effects = features_mod.active_effects(class_feature_list)
+    # R5: Diamond Soul / Slippery Mind grants (the latter depends on the ruleset).
+    for ab in features_mod.save_proficiencies(effects, [idx for _, _, idx in class_feature_list], ruleset):
+        if ab not in proficient_save_abilities:
+            proficient_save_abilities.append(ab)
     saves = derived_mod.saving_throws(modifiers, proficient_save_abilities, prof_bonus)
-    effects = features_mod.active_effects(_class_feature_list(catalog, resolved_classes, choices))
+    aura = features_mod.save_bonus(effects, modifiers)  # R5: Aura of Protection
+    if aura:
+        saves = {ab: value + aura for ab, value in saves.items()}
     class_levels = {rc["cls_id"]: rc["level"] for rc in resolved_classes if rc["cls"]}
     jack, remarkable = features_mod.half_proficiency(effects)
     expertise_all = list(dict.fromkeys(_feat_expertise_skills(resolved_feats) + _expertise_selected_values(choices)))
@@ -4357,6 +4365,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     if speeds and not worn_armor:
         speed_bonus = features_mod.speed_bonus(effects, class_levels)
         speeds = {mode: value + speed_bonus for mode, value in speeds.items()}
+    fast = features_mod.speed_bonus_unless_heavy(effects, equipped_items)  # R5: Fast Movement
+    if speeds and fast:
+        speeds = {mode: value + fast for mode, value in speeds.items()}
     base_speed = speeds.get("walk")
     # Attacks, carrying capacity and armor warnings (Slice 9). Size is the
     # selected species size (Slice 8d), else the race's own, else Medium.
@@ -4365,10 +4376,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         equipped_items, modifiers, prof_bonus, proficient_weapons, features_mod.attack_styles(effects),
     )
     class_resources = class_resources_mod.resources_for(
-        catalog, resolved_classes, modifiers, prof_bonus, ruleset, warnings_out=warnings)
+        catalog, resolved_classes, modifiers, prof_bonus, ruleset, choices=choices, warnings_out=warnings)
     if class_levels.get("monk", 0) >= 1:  # R2: the Monk's unarmed strike, never deduped against gear
         martial_arts = next((r for r in class_resources if r["id"] == "monk:martial-arts"), None)
         attacks = attacks + [attacks_mod.unarmed_strike(modifiers, prof_bonus, martial_arts and martial_arts.get("die"))]
+    attacks = class_resources_mod.annotate_attacks(attacks, class_resources, equipped_items)
     armor_problems, stealth_disadvantage = equipment_mod.armor_warnings(equipped_items, final_scores, weapon_proficiencies)
     warnings += armor_problems
     carrying = derived_mod.carrying_summary(
