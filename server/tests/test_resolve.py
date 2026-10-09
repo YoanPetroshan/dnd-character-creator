@@ -4,7 +4,9 @@ from catalog.loader import load
 # has_official is imported FROM official_source (a re-export), not from
 # chargen.sources directly — see official_source.py's own docstring for
 # why every caller in this plan does it this way.
-from catalog.official_source import has_official
+import dataclasses
+
+from catalog.official_source import has_official, has_official_spells
 from engine.derived import hit_point_max_multiclass
 from engine.resolve import (
     _DETAIL_FIELDS, _asi_choice_templates, _feat_ability_bonus_choice_templates, _feat_ability_bonuses,
@@ -18,6 +20,10 @@ from engine.resolve import (
 @pytest.fixture(scope="module")
 def catalog():
     return load()
+
+
+def _catalog_without_spells(catalog, *spell_ids):
+    return dataclasses.replace(catalog, spells={k: v for k, v in catalog.spells.items() if k not in spell_ids})
 
 
 def _fighter_acolyte_human_draft(**overrides):
@@ -930,6 +936,8 @@ def test_unresolvable_innate_spell_still_shows_its_name_with_a_null_spell_id(cat
     # Must degrade gracefully: spellId null, but name still shown, not
     # silently dropped from the sheet and not a crash.
     draft = _fighter_acolyte_human_draft(sources=["vgm"], species={"id": "triton-vgm", "choices": {}})
+    # Slice 11a imports Wall of Water, so the gap is recreated by dropping it from a catalog copy.
+    catalog = _catalog_without_spells(catalog, "wall-of-water")
     resolution = resolve(draft, catalog)
     assert resolution["problems"] == []
     grants = {g["name"]: g for g in resolution["sheet"]["innateSpells"]}
@@ -4581,7 +4589,7 @@ def test_background_granted_feat_innate_spells_on_sheet(catalog):
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 def test_unresolvable_feat_spell_keeps_name_with_null_spell_id(catalog):
     draft = _fighter_acolyte_human_draft(sources=["srd", "lfl"], background={"id": "shadowmoor-expert-lfl", "choices": {}})
-    r = resolve(draft, catalog)
+    r = resolve(draft, _catalog_without_spells(catalog, "hex"))  # Hex is imported by Slice 11a
     hex_entries = [e for e in r["sheet"]["innateSpells"] if e["name"] == "Hex"]
     assert hex_entries and hex_entries[0]["spellId"] is None
 
@@ -4603,7 +4611,8 @@ def test_parse_spell_filter():
 def test_spell_filter_options_by_level_and_school(catalog):
     opts = _spell_filter_options(catalog, {"level": [1], "school": ["illusion", "necromancy"]})
     ids = [o["item"]["index"] for o in opts]
-    assert len(opts) == 6 and "color-spray" in ids and "inflict-wounds" in ids
+    # 6 SRD spells + 3 sourcebook ones (script-verified from the raw 5etools files, Slice 11a)
+    assert len(opts) == (9 if has_official_spells() else 6) and "color-spray" in ids and "inflict-wounds" in ids
 
 
 _FEY_CID = "class:fighter:4:asi:feat:fey-touched-xphb:spell-choice-0"
@@ -4620,7 +4629,7 @@ def _fey_draft(selection=None, feat_pick=True):
 def test_fey_touched_spell_choice_pending_then_adds_innate_spell(catalog):
     r = resolve(_fey_draft(), catalog)
     choice = next(c for c in r["choices"] if c["id"] == _FEY_CID)
-    assert len(choice["options"]) == 15 and choice["status"] == "pending"
+    assert len(choice["options"]) == (18 if has_official_spells() else 15) and choice["status"] == "pending"  # 15 SRD + 3 (Slice 11a; script-verified)
     r2 = resolve(_fey_draft(["bless"]), catalog)
     assert next(c for c in r2["choices"] if c["id"] == _FEY_CID)["status"] == "resolved"
     by_name = {e["name"]: e for e in r2["sheet"]["innateSpells"]}
@@ -4650,7 +4659,7 @@ def test_aberrant_dragonmark_cantrip_and_level_one_choices(catalog):
     r = resolve(draft, catalog)
     c0 = next(c for c in r["choices"] if c["id"] == base + "0")
     c1 = next(c for c in r["choices"] if c["id"] == base + "1")
-    assert c0["count"] == 1 and len(c0["options"]) == 14 and len(c1["options"]) == 17
+    assert c0["count"] == 1 and len(c0["options"]) == 14 and len(c1["options"]) == (18 if has_official_spells() else 17)  # level 1: 17 SRD + 1 (Slice 11a)
     draft["background"]["choices"] = {base + "0": ["acid-splash"], base + "1": ["burning-hands"]}
     r2 = resolve(draft, catalog)
     by_name = {e["name"]: e for e in r2["sheet"]["innateSpells"] if e.get("featId") == "aberrant-dragonmark-efa"}
@@ -4680,7 +4689,7 @@ def test_magic_initiate_variant_selection_reveals_spell_choices(catalog):
     r = resolve(_astral_draft({_MI_VARIANT: ["wizard-spells"]}), catalog)
     spell_choices = [c for c in r["choices"] if ":spell-choice-" in c["id"]]
     by_count = sorted((c["count"], len(c["options"])) for c in spell_choices)
-    assert by_count == [(1, 27), (2, 14)]
+    assert by_count == ([(1, 30), (2, 16)] if has_official_spells() else [(1, 27), (2, 14)])  # Slice 11a; script-verified
     cid = next(c["id"] for c in spell_choices if c["count"] == 2)
     lvl1 = next(c["id"] for c in spell_choices if c["count"] == 1)
     r2 = resolve(_astral_draft({_MI_VARIANT: ["wizard-spells"], cid: ["fire-bolt", "light"], lvl1: ["magic-missile"]}), catalog)
@@ -4794,8 +4803,8 @@ def test_magic_connoisseur_selecting_variant_reveals_level_1_and_2_choices(catal
     spell_cids = sorted(c["id"] for c in res["choices"] if ":spell-choice-" in c["id"])
     assert spell_cids == [_MC + "spell-choice-4", _MC + "spell-choice-5"]
     lvl1, lvl2 = _choice(res, _MC + "spell-choice-4"), _choice(res, _MC + "spell-choice-5")
-    assert (lvl1["count"], len(lvl1["options"]), lvl1["status"]) == (1, 27, "pending")
-    assert (lvl2["count"], len(lvl2["options"]), lvl2["status"]) == (1, 31, "pending")
+    assert (lvl1["count"], len(lvl1["options"]), lvl1["status"]) == (1, 31 if has_official_spells() else 27, "pending")
+    assert (lvl2["count"], len(lvl2["options"]), lvl2["status"]) == (1, 39 if has_official_spells() else 31, "pending")  # level 2: 31 SRD + 8 (Slice 11a)
     assert "shield" in [o["id"] for o in lvl1["options"]]
     assert "invisibility" in [o["id"] for o in lvl2["options"]]
     assert "shield" not in [o["id"] for o in lvl2["options"]]
@@ -4865,7 +4874,9 @@ def test_light_bringer_cleric_cantrip_variant_offers_cleric_cantrips_and_grants_
     pick = _choice(res, _LB + "spell-choice-0")
     assert (pick["count"], pick["status"]) == (1, "pending")
     ids = [o["id"] for o in pick["options"]]
-    assert len(ids) == 7 and {"guidance", "sacred-flame", "light"} <= set(ids)
+    # 7 SRD cleric cantrips + the two XPHB-only ones (their PHB/XGE twins are outside the draft's sources)
+    assert len(ids) == (9 if has_official_spells() else 7) and {"guidance", "sacred-flame", "light"} <= set(ids)
+    assert not has_official_spells() or "toll-the-dead-xphb" in ids
     assert _feat_spells(res, "light-bringer-abh") == []
     res = resolve(_asi_feat_spell_draft("light-bringer-abh", {
         _LB + "spell-variant": ["cleric-cantrip"], _LB + "spell-choice-0": ["guidance"]}), catalog)

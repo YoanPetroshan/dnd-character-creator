@@ -296,7 +296,7 @@ def ruleset_for_feat(raw: dict) -> str:
 
 def ruleset_allows(record: dict, kind: str, ruleset: str) -> bool:
     """Visibility of a species/subspecies/background/feat record under a
-    draft ruleset. "2014" hides 2024 records of every kind; "2024" hides
+    draft ruleset (kind is "species", "background", "feat" or "spell"). "2014" hides 2024 records of every kind; "2024" hides
     only 2014 backgrounds (2014 species and feats stay usable, since the
     2024 books reuse them); "mixed" (and anything unknown) hides nothing.
     Purely a picker filter - resolve() never rejects on ruleset alone."""

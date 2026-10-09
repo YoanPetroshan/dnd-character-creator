@@ -1,5 +1,5 @@
 from catalog.loader import load
-from catalog.official_source import has_official
+from catalog.official_source import has_official, has_official_spells
 
 
 def test_load_returns_expected_counts():
@@ -103,7 +103,8 @@ def test_items_indexed_by_srd_index_covers_all_categories():
 
 def test_spells_indexed_by_index():
     catalog = load()
-    assert len(catalog.spells) == 319
+    # 319 SRD spells; with the sourcebook spell files present, 936 in total (Slice 11a)
+    assert len(catalog.spells) == (936 if has_official_spells() else 319)
     assert catalog.spells["fireball"]["name"] == "Fireball"
     assert catalog.spells["fireball"]["level"] == 3
 

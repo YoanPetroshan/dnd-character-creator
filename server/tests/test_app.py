@@ -1,7 +1,7 @@
 import yaml
 
 from app import app
-from catalog.official_source import has_official
+from catalog.official_source import has_official, has_official_spells
 
 
 import pytest
@@ -262,7 +262,7 @@ def test_spells_endpoint_lists_all_spells_by_default(client):
     resp = client.get("/api/spells")
     assert resp.status_code == 200
     body = resp.get_json()
-    assert len(body["spells"]) == 319
+    assert len(body["spells"]) == (936 if has_official_spells() else 319)
     fireball = next(s for s in body["spells"] if s["id"] == "fireball")
     assert fireball["name"] == "Fireball"
 
@@ -338,7 +338,7 @@ def test_spells_endpoint_tolerates_empty_level_parameter(client):
     resp = client.get("/api/spells?level=")
     assert resp.status_code == 200
     body = resp.get_json()
-    assert len(body["spells"]) == 319
+    assert len(body["spells"]) == (936 if has_official_spells() else 319)
 
 
 def test_export_yaml_does_not_block_on_pending_equipment_choices(client):

@@ -613,9 +613,10 @@ def _species_trait_spell_cid(race: dict | None, trait_index: str) -> str:
 def _innate_entry_to_sheet(entry: dict, catalog: Catalog) -> dict:
     """One catalog innate-spell entry -> sheet shape, resolving spell_id
     against catalog.spells (spellId None + fallback name when absent)."""
-    spell = catalog.spells.get(entry["spell_id"])
+    spell_id = catalog.resolve_spell_id(entry["spell_id"])
+    spell = catalog.spells.get(spell_id)
     return {
-        "spellId": entry["spell_id"] if spell else None,
+        "spellId": spell_id if spell else None,
         "name": spell["name"] if spell else entry["name"],
         "level": entry["level"],
         "uses": entry["uses"],
@@ -706,12 +707,31 @@ def _feat_innate_spells(feats: list[dict], catalog: Catalog, choices: list[dict]
     return out
 
 
-def _spell_filter_options(catalog: Catalog, flt: dict) -> list[dict]:
+def _spell_visible(catalog: Catalog, spell: dict, sources=None, ruleset: str = "mixed") -> bool:
+    """Whether a spell may be offered under the draft's sources and ruleset.
+    Sources: the shared `_source_allowed`. "2014" hides 2024-book spells;
+    when a spell exists in both versions (`catalog.spell_twins`) "2024" keeps
+    only the 2024 one and "mixed" (and anything unknown) only the 2014 one,
+    unless the other version's book is itself excluded by `sources`. Purely
+    an offer filter - resolve() still honours any catalog spell id."""
+    if not _source_allowed(spell, sources) or not ruleset_allows(spell, "spell", ruleset):
+        return False
+    twin = catalog.spells.get(catalog.spell_twins.get(spell["index"]))
+    if twin is None or ruleset == "2014" or not _source_allowed(twin, sources):
+        return True
+    is_2024 = (spell.get("ruleset") or "2014") == "2024"
+    return is_2024 if ruleset == "2024" else not is_2024
+
+
+def _spell_filter_options(catalog: Catalog, flt: dict, sources=None, ruleset: str = "mixed", keep=()) -> list[dict]:
     """Catalog spells matching a parsed feat spell filter (see
     official_source._parse_spell_filter), sorted by (level, name), as
-    reference options."""
+    reference options. Spells in `keep` (already-selected ids) stay offered
+    even when the ruleset/sources would hide them."""
     matches = []
     for sp in catalog.spells.values():
+        if sp["index"] not in keep and not _spell_visible(catalog, sp, sources, ruleset):
+            continue
         if "level" in flt and sp["level"] not in flt["level"]:
             continue
         if "class" in flt and not any(c["index"] in flt["class"] for c in sp.get("classes", [])):
@@ -746,6 +766,7 @@ def _spell_filter_description(count: int, flt: dict) -> str:
 def _feat_spell_choice_templates(
     feats: list[dict], catalog: Catalog, origin: str | None = None,
     raw_selections: dict | None = None, variant_hints: dict | None = None, total_level: int = 0,
+    sources=None, ruleset: str = "mixed",
 ) -> list[dict]:
     """Spell Choices for feats' `spell_choices` plus, for feats with
     mutually exclusive `spell_variants`, the variant picker
@@ -800,13 +821,18 @@ def _feat_spell_choice_templates(
             if sc.get("count_by_level"):
                 count = sum(n for lvl, n in sc["count_by_level"].items() if int(lvl) <= total_level)
             if sc.get("filter"):
-                options = _spell_filter_options(catalog, sc["filter"])
+                picked = raw_selections.get(f"{prefix}:spell-choice-{i}")
+                options = _spell_filter_options(
+                    catalog, sc["filter"], sources, ruleset,
+                    keep={x for x in picked if isinstance(x, str)} if isinstance(picked, list) else (),
+                )
                 description = _spell_filter_description(count, sc["filter"])
                 kind = "Cantrip" if sc["filter"].get("level") == [0] else "Spell"
             else:
+                listed = dict.fromkeys(catalog.resolve_spell_id(sid) for sid in (sc.get("from") or []))
                 options = [
                     {"option_type": "reference", "item": {"index": sid, "name": catalog.spells[sid]["name"]}}
-                    for sid in (sc.get("from") or []) if sid in catalog.spells
+                    for sid in listed if sid
                 ]
                 count = min(count, len(options))
                 description = f"Choose {count} spell{'s' if count != 1 else ''} from the listed options."
@@ -2516,19 +2542,21 @@ def _equipment_choice_templates(
     return templates, dropped_envelopes, dependents_by_choice
 
 
-def _spell_options(catalog: Catalog, cls_id: str, spell_level: int) -> list[dict]:
+def _spell_options(catalog: Catalog, cls_id: str, spell_level: int, sources=None, ruleset: str = "mixed", keep=()) -> list[dict]:
     matches = [
         s for s in catalog.spells.values()
         if s["level"] == spell_level and any(c["index"] == cls_id for c in s.get("classes", []))
+        and (s["index"] in keep or _spell_visible(catalog, s, sources, ruleset))
     ]
     matches.sort(key=lambda s: s["name"])
     return [{"option_type": "reference", "item": {"index": s["index"], "name": s["name"]}} for s in matches]
 
 
-def _spell_options_up_to(catalog: Catalog, cls_id: str, max_level: int) -> list[dict]:
+def _spell_options_up_to(catalog: Catalog, cls_id: str, max_level: int, sources=None, ruleset: str = "mixed", keep=()) -> list[dict]:
     matches = [
         s for s in catalog.spells.values()
         if 1 <= s["level"] <= max_level and any(c["index"] == cls_id for c in s.get("classes", []))
+        and (s["index"] in keep or _spell_visible(catalog, s, sources, ruleset))
     ]
     matches.sort(key=lambda s: (s["level"], s["name"]))
     return [{"option_type": "reference", "item": {"index": s["index"], "name": s["name"]}} for s in matches]
@@ -2557,7 +2585,11 @@ def _is_count_variable_choice(tpl: dict) -> bool:
 def _spell_choice_templates(
     catalog: Catalog, cls: dict, cls_id: str, level_row: dict | None, ability_modifier: int, class_level: int,
     expanded_spell_ids: list[str] = (), always_prepared: dict[str, str] | None = None,
+    sources=None, ruleset: str = "mixed", class_choices: dict | None = None,
 ) -> list[dict]:
+    """`sources`/`ruleset` (the draft's) decide which catalog spells are
+    offered; spells already selected in `class_choices` stay offered either
+    way, so changing the ruleset never silently drops a pick."""
     if not level_row:
         return []
     spellcasting = level_row.get("spellcasting") or {}
@@ -2567,11 +2599,15 @@ def _spell_choice_templates(
     # to one specific level the way a feature/ASI choice is.
     source = {"kind": "class", "id": cls_id, "label": cls["name"]}
 
+    def _kept(cid: str) -> set[str]:
+        picked = (class_choices or {}).get(cid)
+        return {x for x in picked if isinstance(x, str)} if isinstance(picked, list) else set()
+
     cantrips_known = spellcasting.get("cantrips_known", 0)
     if cantrips_known > 0:
         envelope = {"choose": cantrips_known, "from": {
             "option_set_type": "options_array",
-            "options": _spell_options(catalog, cls_id, spell_level=0),
+            "options": _spell_options(catalog, cls_id, 0, sources, ruleset, _kept(f"class:{cls_id}:spells-cantrips")),
         }}
         cid = f"class:{cls_id}:spells-cantrips"
         description = f"Choose {cantrips_known} cantrip{'s' if cantrips_known != 1 else ''} from the {cls['name']} spell list."
@@ -2582,7 +2618,7 @@ def _spell_choice_templates(
     known_count = spells_mod.known_spell_count(level_row, ability_modifier, class_level=class_level, cls_id=cls_id)
     if known_count > 0:
         max_spell_level = _highest_spell_slot_level(spellcasting)
-        option_list = _spell_options_up_to(catalog, cls_id, max_spell_level)
+        option_list = _spell_options_up_to(catalog, cls_id, max_spell_level, sources, ruleset, _kept(f"class:{cls_id}:spells-known"))
         present = {o["item"]["index"] for o in option_list}
         for sid in expanded_spell_ids:  # e.g. Fiend Expanded Spell List
             spell = catalog.spells[sid]
@@ -3255,7 +3291,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 choice_templates += _feat_choice_templates([asi_feat], origin=asi_feat["_asi_origin"])
                 choice_templates += _feat_spell_choice_templates(
                     [asi_feat], catalog, origin=asi_feat["_asi_origin"], raw_selections=rc_class_choices,
-                    total_level=total_level,
+                    total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
                 )
                 choice_templates += [
                     tpl for tpl, _ in _feat_ability_bonus_choice_templates([asi_feat], origin=asi_feat["_asi_origin"])
@@ -3337,6 +3373,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                     sid: f"{sub_name}" for sid in
                     _subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc_level, raw_feature_ids, "always")
                 },
+                sources=draft.get("sources"), ruleset=ruleset, class_choices=rc["class_choices"],
             )
 
     asi_levels = primary.get("asi_levels", []) if primary else []
@@ -3354,7 +3391,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         background_feats, catalog,
         raw_selections=background_dict.get("choices") if isinstance(background_dict.get("choices"), dict) else {},
         variant_hints=(bg.get("feat_variant_hints") if bg else None) or {},
-        total_level=total_level,
+        total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
     )
     choice_templates += _feat_choice_templates(background_feats)  # ASI-selected feats' templates: built origin-scoped in the per-class loop
     # Phase 4c-ii Task 2: `feat_ability_choice_tpls` was already built (and
@@ -3371,6 +3408,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choice_templates += _feat_choice_templates([species_feat], origin=origin)
         choice_templates += _feat_spell_choice_templates(
             [species_feat], catalog, origin=origin, raw_selections=species_choices_raw, total_level=total_level,
+            sources=draft.get("sources"), ruleset=ruleset,
         )
     choice_templates += species_feat_ability_tpls
     if race and race_id:

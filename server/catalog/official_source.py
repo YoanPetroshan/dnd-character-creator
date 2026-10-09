@@ -180,6 +180,10 @@ from .official.feats import (  # noqa: F401
     load_official_feats,
 )
 from .official.spells import (  # noqa: F401
+    SRD_SPELL_ALIASES,
+    build_spell_aliases,
+    link_spell_versions,
+    load_official_spells,
     load_raw_spells,
     load_spell_class_lookup,
 )
