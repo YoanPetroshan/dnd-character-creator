@@ -402,3 +402,28 @@ def test_export_content_disposition_defaults_to_character(client):
     draft.pop("name", None)
     resp = client.post("/api/export/yaml", json=draft)
     assert resp.headers["Content-Disposition"].endswith("''character.yaml")
+
+
+def test_all_export_formats_carry_features_through_the_api(client):
+    """The phone download path posts the draft to /api/export/<fmt>; the new
+    sheet.features must reach every format from there."""
+    draft = _fighter_acolyte_human_draft()
+    draft["classes"][0]["choices"] = {
+        "class:fighter:1:prof-choice-0": ["skill-acrobatics", "skill-athletics"],
+        "class:fighter:1:feature:fighter-fighting-style": ["fighter-fighting-style-archery"],
+    }
+    draft["equipment"]["choices"] = {
+        "class:fighter:1:equipment-choice-0": ["chain-mail"],
+        "class:fighter:1:equipment-choice-2": ["handaxe"],
+        "class:fighter:1:equipment-choice-3": ["explorers-pack"],
+    }
+    draft["background"]["choices"] = {"background:acolyte:languages": ["dwarvish", "elvish"]}
+    draft["species"]["choices"] = {"species:human:languages": ["giant"]}
+    resolved = client.post("/api/resolve", json=draft).get_json()
+    assert any(f["name"] == "Second Wind" for f in resolved["sheet"]["features"])
+    doc = yaml.safe_load(client.post("/api/export/yaml", json=draft).data.decode("utf-8"))
+    assert any(f["name"] == "Fighting Style" and f["choice"] == ["Archery"] for f in doc["features"])
+    md = client.post("/api/export/markdown", json=draft)
+    assert "Second Wind" in md.data.decode("utf-8") and "Archery" in md.data.decode("utf-8")
+    pdf = client.post("/api/export/pdf", json=draft)
+    assert pdf.status_code == 200 and pdf.data.startswith(b"%PDF")

@@ -9,6 +9,7 @@ already produces them — no new engine computation happens here.
 from __future__ import annotations
 
 from catalog.reference_data import ABILITIES, LANGUAGES, SKILL_NAMES, proficiency_label
+from export_fields import extra_blocks
 
 _LANGUAGE_NAMES = {lang["index"]: lang["name"] for lang in LANGUAGES}
 _PROFICIENCY_SECTIONS = (("armor", "Брони"), ("weapons", "Оръжия"), ("tools", "Инструменти"))
@@ -85,14 +86,15 @@ def _fmt_spell_slots(slots: dict) -> str:
     return ", ".join(f"ниво {lvl}: {slots[lvl]}" for lvl in ordered)
 
 
-def _skill_lines(derived: dict, proficient: list[str]) -> list[str]:
+def _skill_lines(derived: dict, proficient: list[str], expertise: list[str] = ()) -> list[str]:
     skills = derived["skills"]
     ordered = sorted(skills, key=lambda sid: SKILL_NAMES.get(sid, sid))
     lines = []
     for skill_id in ordered:
         name = SKILL_NAMES.get(skill_id, skill_id)
         marker = "●" if skill_id in proficient else "○"
-        lines.append(f"- {marker} {name}: {_fmt_mod(skills[skill_id])}")
+        tag = " (експертиза)" if skill_id in expertise else ""
+        lines.append(f"- {marker} {name}: {_fmt_mod(skills[skill_id])}{tag}")
     return lines
 
 
@@ -139,7 +141,7 @@ def to_markdown(resolution: dict) -> str:
     lines.append("")
 
     lines.append("## Умения")
-    lines.extend(_skill_lines(derived, sheet["proficiencies"]["skills"]))
+    lines.extend(_skill_lines(derived, sheet["proficiencies"]["skills"], sheet.get("expertiseSkills") or []))
     lines.append("")
 
     languages = sheet["proficiencies"]["languages"]
@@ -232,6 +234,12 @@ def to_markdown(resolution: dict) -> str:
             level = f", от ниво {e['level']}" if e.get("level") else ""
             lines.append(f"- {e['name']} ({e.get('uses', '')}{level})")
         lines.append("")
+
+    for kind, text in extra_blocks(resolution):
+        if kind == "h2" and lines and lines[-1] != "":
+            lines.append("")
+        lines.append({"h2": f"## {text}", "h3": f"### {text}", "bullet": f"- {text}", "body": text}[kind])
+    lines.append("")
 
     details = sheet["details"]
     if details:

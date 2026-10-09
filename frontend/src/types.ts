@@ -135,12 +135,50 @@ export interface SheetProficiencies {
   skills: string[];
   savingThrows: string[];
   languages: string[];
+  armor?: string[];
+  weapons?: string[];
+  tools?: string[];
+}
+
+export interface SheetDamageModifiers {
+  resistances: string[];
+  immunities: string[];
+  vulnerabilities: string[];
+}
+
+export interface SheetInnateSpell {
+  spellId: string | null;
+  name: string;
+  level: number;
+  uses: string;
+  ability: Ability | null;
+  variant: string | null;
+}
+
+export type SheetFeatureSourceKind = "class" | "subclass" | "species" | "background" | "feat";
+
+export interface SheetFeature {
+  source: { kind: SheetFeatureSourceKind; id: string; label: string };
+  name: string;
+  /** Class level that grants it; null for species, background and feats. */
+  level: number | null;
+  /** Labels of what the player picked for this feature (fighting style, metamagic, ...). */
+  choice?: string[];
+}
+
+export interface SheetFeat {
+  id: string;
+  name: string;
+  origin: "background" | "asi";
+  level: number | null;
+  choice?: string[];
 }
 
 export interface SheetEquipment {
   granted: SheetEquipmentEntry[];
   chosen: SheetEquipmentEntry[];
   added: SheetAddedEquipmentEntry[];
+  narrativeItems?: string[];
 }
 
 export interface Sheet {
@@ -156,6 +194,18 @@ export interface Sheet {
   details: CharacterDetails | null;
   /** Sense ranges in feet, e.g. {darkvision: 60}. */
   senses?: Record<string, number>;
+  /** Skill ids (and the Rogue's "thieves-tools") with doubled proficiency. */
+  expertiseSkills?: string[];
+  damageModifiers?: SheetDamageModifiers;
+  conditionImmunities?: string[];
+  innateSpells?: SheetInnateSpell[];
+  startingGold?: number;
+  /** Feat catalog ids granted by the background or taken at an ASI level. */
+  grantedFeats?: string[];
+  featOptions?: unknown[];
+  /** Class/subclass/species/background/feat features with the player's picks. */
+  features?: SheetFeature[];
+  feats?: SheetFeat[];
 }
 
 export interface Derived {

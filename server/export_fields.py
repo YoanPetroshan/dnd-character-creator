@@ -1,0 +1,143 @@
+"""The single field list and Bulgarian text blocks shared by the YAML,
+Markdown and PDF exporters, so a field added to resolve()'s `sheet`/`derived`
+shows up in all three (tests/test_export_fields.py fails when a key is in
+neither list below).
+
+* ``SHEET_FIELDS`` / ``DERIVED_FIELDS``: (key, default) in YAML order. The YAML
+  document is these keys flattened to the top level; the default stands in
+  when a hand-built resolution lacks the key.
+* ``EXCLUDED``: ("sheet"|"derived", key) -> why the key is deliberately not
+  exported. Empty today.
+* ``extra_blocks``: the sections Markdown and PDF print for the fields their
+  older, fixed layout does not cover. A block is (kind, text) with kind in
+  "h2" / "h3" / "body" / "bullet"; each renderer only maps kinds to its own
+  formatting.
+"""
+from __future__ import annotations
+
+from catalog.reference_data import SKILL_NAMES, proficiency_label
+
+SHEET_FIELDS: list[tuple[str, object]] = [
+    ("name", ""), ("level", 0), ("classes", []), ("background", None), ("species", None),
+    ("details", None), ("abilities", {}),
+]
+# derived keys sit between the sheet's identity block and its tail lists in the
+# YAML (historic order); the tail of the sheet follows.
+DERIVED_FIELDS: list[tuple[str, object]] = [
+    ("abilityModifiers", {}), ("proficiencyBonus", None), ("hitPointMax", None), ("hitDice", None),
+    ("armorClass", None), ("speed", None), ("speeds", {}), ("savingThrows", {}), ("skills", {}),
+    ("initiative", None), ("passivePerception", None), ("passiveInsight", None), ("passiveInvestigation", None),
+    ("spellSlots", {}), ("warlockSpellSlots", {}),
+]
+SHEET_TAIL_FIELDS: list[tuple[str, object]] = [
+    ("proficiencies", {}), ("expertiseSkills", []), ("senses", {}), ("damageModifiers", {}),
+    ("conditionImmunities", []), ("startingGold", 0), ("equipment", {}), ("spells", []),
+    ("innateSpells", []), ("features", []), ("feats", []), ("grantedFeats", []), ("featOptions", []),
+]
+EXCLUDED: dict[tuple[str, str], str] = {}
+
+
+def yaml_document(resolution: dict) -> dict:
+    sheet, derived = resolution["sheet"], resolution["derived"]
+    doc: dict = {}
+    for key, default in SHEET_FIELDS:
+        doc[key] = sheet.get(key, default)
+    for key, default in DERIVED_FIELDS:
+        doc[key] = derived.get(key, default)
+    for key, default in SHEET_TAIL_FIELDS:
+        doc[key] = sheet.get(key, default)
+    return doc
+
+
+_MODE_NAMES = {"walk": "ходене", "fly": "летене", "swim": "плуване", "climb": "катерене", "burrow": "ровене"}
+_SENSE_NAMES = {
+    "darkvision": "тъмно зрение", "blindsight": "сляпо зрение",
+    "tremorsense": "усещане за вибрации", "truesight": "истинско зрение",
+}
+_DAMAGE_SECTIONS = (("resistances", "Устойчивост"), ("immunities", "Имунитет"), ("vulnerabilities", "Уязвимост"))
+
+
+def _title(slug: str) -> str:
+    return slug.replace("-", " ").capitalize()
+
+
+def expertise_label(entry: str) -> str:
+    return SKILL_NAMES.get(entry) or proficiency_label(entry)
+
+
+def extra_blocks(resolution: dict) -> list[tuple[str, str]]:
+    """Sections for the fields the fixed Markdown/PDF layout lacks."""
+    sheet, derived = resolution["sheet"], resolution["derived"]
+    blocks: list[tuple[str, str]] = []
+
+    speeds = derived.get("speeds") or {}
+    if len(speeds) > 1 or (speeds and "walk" not in speeds):
+        blocks.append(("h2", "Движение"))
+        blocks.append(("body", ", ".join(f"{_MODE_NAMES.get(m, m)} {v} фута" for m, v in speeds.items())))
+
+    senses = sheet.get("senses") or {}
+    if senses:
+        blocks.append(("h2", "Сетива"))
+        blocks.append(("body", ", ".join(f"{_SENSE_NAMES.get(k, k)} {v} фута" for k, v in senses.items())))
+
+    expertise = sheet.get("expertiseSkills") or []
+    if expertise:
+        blocks.append(("h2", "Експертиза"))
+        blocks.append(("body", ", ".join(expertise_label(e) for e in expertise)))
+
+    damage = sheet.get("damageModifiers") or {}
+    conditions = sheet.get("conditionImmunities") or []
+    if any(damage.get(k) for k, _ in _DAMAGE_SECTIONS) or conditions:
+        blocks.append(("h2", "Съпротиви и имунитети"))
+        for key, label in _DAMAGE_SECTIONS:
+            if damage.get(key):
+                blocks.append(("bullet", f"{label} към щета: " + ", ".join(_title(d) for d in damage[key])))
+        if conditions:
+            blocks.append(("bullet", "Имунитет към състояния: " + ", ".join(_title(c) for c in conditions)))
+
+    gold = sheet.get("startingGold") or 0
+    narrative = (sheet.get("equipment") or {}).get("narrativeItems") or []
+    if gold or narrative:
+        blocks.append(("h2", "Начално злато и други предмети"))
+        if gold:
+            blocks.append(("bullet", f"Начално злато: {gold} зл."))
+        for item in narrative:
+            blocks.append(("bullet", str(item)))
+
+    always = [(e["classId"], e["alwaysPrepared"]) for e in sheet.get("spells") or [] if e.get("alwaysPrepared")]
+    if always:
+        names = {c["id"]: c["name"] for c in sheet.get("classes") or []}
+        blocks.append(("h2", "Винаги подготвени заклинания"))
+        for class_id, spells in always:
+            blocks.append(("h3", names.get(class_id, class_id)))
+            for s in spells:
+                blocks.append(("bullet", f"{s['name']} (ниво {s['level']})"))
+
+    # Feats have their own section below.
+    features = [f for f in sheet.get("features") or [] if f["source"]["kind"] != "feat"]
+    if features:
+        blocks.append(("h2", "Черти и способности"))
+        current = None
+        for f in features:
+            label = f["source"]["label"]
+            if label != current:
+                current = label
+                blocks.append(("h3", label))
+            line = f["name"]
+            if f.get("level"):
+                line += f" (ниво {f['level']})"
+            if f.get("choice"):
+                line += ": " + ", ".join(f["choice"])
+            blocks.append(("bullet", line))
+
+    feats = sheet.get("feats") or []
+    if feats:
+        blocks.append(("h2", "Таланти"))
+        for f in feats:
+            line = f["name"]
+            if f.get("level"):
+                line += f" (ниво {f['level']})"
+            if f.get("choice"):
+                line += ": " + ", ".join(f["choice"])
+            blocks.append(("bullet", line))
+    return blocks

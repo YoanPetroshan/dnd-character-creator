@@ -14,6 +14,7 @@ from pathlib import Path
 from fpdf import FPDF
 
 from catalog.reference_data import ABILITIES, LANGUAGES, SKILL_NAMES, proficiency_label
+from export_fields import extra_blocks
 
 _FONT_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
 _LANGUAGE_NAMES = {lang["index"]: lang["name"] for lang in LANGUAGES}
@@ -154,9 +155,11 @@ def to_pdf(resolution: dict) -> bytes:
     pdf.h2("Умения")
     skills = derived["skills"]
     proficient_skills = sheet["proficiencies"]["skills"]
+    expertise = sheet.get("expertiseSkills") or []
     for skill_id in sorted(skills, key=lambda sid: SKILL_NAMES.get(sid, sid)):
         marker = "●" if skill_id in proficient_skills else "○"
-        pdf.bullet(f"{marker} {SKILL_NAMES.get(skill_id, skill_id)}: {_fmt_mod(skills[skill_id])}")
+        tag = " (експертиза)" if skill_id in expertise else ""
+        pdf.bullet(f"{marker} {SKILL_NAMES.get(skill_id, skill_id)}: {_fmt_mod(skills[skill_id])}{tag}")
 
     pdf.h2("Езици")
     languages = sheet["proficiencies"]["languages"]
@@ -235,6 +238,9 @@ def to_pdf(resolution: dict) -> bytes:
         for e in innate:
             level = f", от ниво {e['level']}" if e.get("level") else ""
             pdf.bullet(f"{e['name']} ({e.get('uses', '')}{level})")
+
+    for kind, text in extra_blocks(resolution):
+        {"h2": pdf.h2, "h3": pdf.h3, "bullet": pdf.bullet, "body": pdf.body}[kind](text)
 
     details = sheet["details"]
     if details:

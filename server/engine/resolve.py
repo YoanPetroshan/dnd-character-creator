@@ -61,6 +61,7 @@ from . import asi as asi_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
 from . import features as features_mod
+from . import sheet_features as sheet_features_mod
 from . import spells as spells_mod
 from .normalize import normalize_draft
 
@@ -3610,6 +3611,12 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                      + _species_trait_spell_choices(race, subrace, catalog, choices)
                      + _feat_innate_spells(resolved_feats, catalog, choices))
 
+    refs_by_class = {
+        rc["cls_id"]: _cumulative_feature_refs(catalog, rc["cls_id"], rc["subclass_id"], rc["level"])
+        for rc in resolved_classes if rc["cls"] and rc["cls_id"]
+    }
+    sheet_feats = sheet_features_mod.feats_summary(resolved_feats, choices)
+
     sheet = {
         "name": draft.get("name") or "",
         "level": total_level if resolved_classes else 0,
@@ -3651,6 +3658,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "featOptions": feat_options,
         "senses": senses,
         "expertiseSkills": expertise_all,
+        "features": sheet_features_mod.build_features(
+            catalog, resolved_classes, refs_by_class, race, race_id, subrace, bg, bg_id, resolved_feats, choices,
+        ),
+        "feats": sheet_feats,
     }
 
     return {
