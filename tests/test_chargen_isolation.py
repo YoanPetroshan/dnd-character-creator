@@ -38,7 +38,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 # requirements.txt (v2's Flask backend) — there is no single combined
 # manifest, so this set is the closest thing to one. Everything else must
 # be stdlib or `chargen`.
-ALLOWED_THIRD_PARTY = {"flask", "flask_cors", "yaml", "pypdf", "fpdf", "pytest"}
+ALLOWED_THIRD_PARTY = {"flask", "flask_cors", "werkzeug", "yaml", "pypdf", "fpdf", "pytest"}
 
 STDLIB_MODULES = set(sys.stdlib_module_names)
 
@@ -58,7 +58,7 @@ LOCAL_MODULES = {p.stem for p in ROOT.glob("*.py")} | {"chargen", "tests"}
 # the module docstring), so this exemption only applies to imports from
 # inside server/ itself — an `import engine` anywhere else in the repo is
 # still exactly the violation this test is designed to flag.
-SERVER_LOCAL_MODULES = {"catalog", "engine", "export", "markdown_export", "pdf_export"}
+SERVER_LOCAL_MODULES = {"catalog", "engine", "export", "export_fields", "markdown_export", "pdf_export", "test_export"}
 
 # The one lazy import chargen/cli.py is allowed to keep — see module
 # docstring above and final-review.md's I6/Minor 7.

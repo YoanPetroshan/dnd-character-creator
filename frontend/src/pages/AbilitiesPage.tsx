@@ -7,6 +7,15 @@ const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
 const POINT_BUY_COST: Record<number, number> = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
 const POINT_BUY_BUDGET = 27;
 
+/** 4d6, drop the lowest die. Uses crypto randomness where available. */
+function rollAbilityScore(): number {
+  const buf = new Uint32Array(4);
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) crypto.getRandomValues(buf);
+  else for (let i = 0; i < 4; i++) buf[i] = Math.floor(Math.random() * 0xffffffff);
+  const dice = Array.from(buf, (n) => (n % 6) + 1).sort((a, b) => a - b);
+  return dice[1] + dice[2] + dice[3];
+}
+
 export function AbilitiesPage() {
   const { draft, dispatch } = useDraft();
   const { resolution, loading, error, retry } = useResolutionContext();
@@ -49,11 +58,31 @@ export function AbilitiesPage() {
           Point Buy
         </label>
         <label>
+          <input type="radio" name="ability-method" checked={method === "roll"} onChange={() => setMethod("roll")} />
+          Roll (4d6, drop lowest)
+        </label>
+        <label>
           <input type="radio" name="ability-method" checked={method === "manual"} onChange={() => setMethod("manual")} />
           Manual
         </label>
       </div>
 
+      {method === "roll" && (
+        <p>
+          <button
+            type="button"
+            onClick={() =>
+              dispatch({
+                type: "SET_ABILITY_SCORES",
+                base: Object.fromEntries(ABILITIES.map((a) => [a, rollAbilityScore()])) as Record<Ability, number>,
+              })
+            }
+          >
+            Roll all six scores
+          </button>{" "}
+          Re-rolling replaces the current scores.
+        </p>
+      )}
       {method === "pointbuy" && <p>Points Remaining: {POINT_BUY_BUDGET - pointBuySpent}</p>}
 
       <table className="ability-table">
@@ -96,6 +125,7 @@ export function AbilitiesPage() {
                       </button>
                     </span>
                   )}
+                  {method === "roll" && <span>{score}</span>}
                   {method === "manual" && (
                     <input
                       type="number"

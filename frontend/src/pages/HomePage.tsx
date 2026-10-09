@@ -113,28 +113,6 @@ export function HomePage() {
       </fieldset>
 
       <fieldset>
-        <legend>Тип напредък</legend>
-        <label>
-          <input
-            type="radio"
-            name="advancementType"
-            checked={draft.preferences.advancementType === "milestone"}
-            onChange={() => dispatch({ type: "SET_ADVANCEMENT_TYPE", advancementType: "milestone" })}
-          />
-          Ключови моменти
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="advancementType"
-            checked={draft.preferences.advancementType === "xp"}
-            onChange={() => dispatch({ type: "SET_ADVANCEMENT_TYPE", advancementType: "xp" })}
-          />
-          Опит (XP)
-        </label>
-      </fieldset>
-
-      <fieldset>
         <legend>Изисквания</legend>
         <label>
           <input

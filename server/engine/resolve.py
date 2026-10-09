@@ -56,7 +56,7 @@ from dataclasses import dataclass, field
 from catalog.choices import build_choice_template, build_equipment_choice
 from catalog.loader import Catalog
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
-from catalog.reference_data import SRD_TRAIT_EFFECTS, SUBCLASS_PROFICIENCIES, SUBCLASS_EXTRA_FEATURES
+from catalog.reference_data import ABILITIES, SRD_TRAIT_EFFECTS, SUBCLASS_PROFICIENCIES, SUBCLASS_EXTRA_FEATURES
 from . import asi as asi_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
@@ -71,6 +71,35 @@ _DETAIL_FIELDS = (
     "personalityTraits", "ideals", "bonds", "flaws",
     "backstory", "organizations", "allies", "enemies", "notes",
 )
+
+
+_POINT_BUY_COST = {8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9}
+_STANDARD_ARRAY = [15, 14, 13, 12, 10, 8]
+
+
+def _ability_method_problems(abilities: dict) -> list[dict]:
+    """Blocking problems for a base-score set that cannot have come from the
+    chosen generation method (frontend/src/pages/AbilitiesPage.tsx enforces the
+    same limits in its controls). 'manual' is unchecked; a standard array whose
+    six scores are all still 10 is the untouched default, not an error."""
+    method = abilities.get("method")
+    base = abilities.get("base") or {}
+    scores = [base.get(ab, 10) for ab in ABILITIES]
+    out: list[dict] = []
+    if method == "pointbuy":
+        if any(not 8 <= v <= 15 for v in scores):
+            out.append({"id": "point-buy-out-of-range", "message": "Point buy scores must be between 8 and 15."})
+        else:
+            spent = sum(_POINT_BUY_COST[v] for v in scores)
+            if spent > 27:
+                out.append({"id": "point-buy-over-budget", "message": f"Point buy allows 27 points but these scores cost {spent}."})
+    elif method == "standard":
+        if scores != [10] * 6 and sorted(scores, reverse=True) != _STANDARD_ARRAY:
+            out.append({"id": "standard-array-mismatch", "message": "The standard array is 15, 14, 13, 12, 10, 8, each used once."})
+    elif method == "roll":
+        if any(not 3 <= v <= 18 for v in scores):
+            out.append({"id": "roll-out-of-range", "message": "Rolled scores (4d6, drop the lowest) must be between 3 and 18."})
+    return out
 
 
 def _ability_sources(race: dict | None, subrace: dict | None) -> list[dict]:
@@ -2726,6 +2755,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # (Phase 4c-ii Task 2).
     feat_bonuses = _feat_ability_bonuses(background_feats)  # ASI-selected feats' bonuses: see _apply_asi_progression
     base_scores = (draft.get("abilities") or {}).get("base") or {}
+    problems += _ability_method_problems(draft.get("abilities") or {})
     species_bonuses = _species_ability_bonuses(race, subrace)
     species_ability_choice_tpl = _species_ability_bonus_choice_template(race, subrace, race_id)
     if species_ability_choice_tpl:
@@ -3251,46 +3281,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             "spellAttackBonus": rc_attack_bonus,
         })
 
-    # Spell-slot pool (Phase 3b-ii, fixed post-review): per PHB 164, the
-    # COMBINED multiclass table (full casters contribute their own level,
-    # half casters level // 2, looked up in a full caster's own table) is
-    # only the correct rule when MORE THAN ONE class actually grants spell
-    # slots. A character with exactly one slot-granting class — even
-    # alongside other non-caster classes (e.g. Fighter/Paladin) — uses
-    # that ONE class's own single-class progression directly; rounding a
-    # lone half caster's level down and looking it up in the shared table
-    # silently undercounts its slots at every odd level. Warlock's Pact
-    # Magic is always looked up separately at Warlock's OWN class level,
-    # never folded into either path above, per RAW (see engine/spells.py's
-    # PACT_MAGIC_CLASSES/warlock_pact_magic_slots docstrings).
-    caster_level_entries = [(rc["cls_id"], rc["level"]) for rc in resolved_classes if rc["cls"]]
-    # Classification by class-id set membership alone (cls_id in
-    # FULL_CASTER_CLASSES | HALF_CASTER_CLASSES) is wrong: a half caster
-    # (Paladin/Ranger) has no Spellcasting feature at all until level 2, so
-    # a level-1 Paladin/Ranger grants ZERO slots despite being in
-    # HALF_CASTER_CLASSES. The real test is whether the class ACTUALLY
-    # grants a nonzero slot table at its own current level —
-    # single_class_spell_slots returns {} (falsy) when it doesn't, so this
-    # list comprehension counts only classes with a genuine, current slot
-    # grant (fixed post-final-review; see docstring above). Warlock (and
-    # any other PACT_MAGIC_CLASSES) is excluded here too: its own class-
-    # level row DOES carry nonzero spell_slots_level_N entries (that's its
-    # Pact Magic progression), but those must never be folded into this
-    # shared pool — Warlock is handled entirely separately below.
-    slot_granting_entries = [
-        (cls_id, level) for cls_id, level in caster_level_entries
-        if cls_id not in spells_mod.PACT_MAGIC_CLASSES
-        and spells_mod.single_class_spell_slots(catalog, cls_id, level)
-    ]
-    if len(slot_granting_entries) == 1:
-        only_cls_id, only_level = slot_granting_entries[0]
-        spell_slots = spells_mod.single_class_spell_slots(catalog, only_cls_id, only_level)
-    else:
-        shared_combined_level = spells_mod.combined_caster_level(caster_level_entries)
-        spell_slots = spells_mod.multiclass_spell_slots(catalog, shared_combined_level)
-    warlock_entry = next((rc for rc in resolved_classes if rc["cls_id"] in spells_mod.PACT_MAGIC_CLASSES and rc["cls"]), None)
-    warlock_level_row = catalog.class_level_row(warlock_entry["cls_id"], warlock_entry["level"])["spellcasting"] if warlock_entry else None
-    warlock_slots = spells_mod.warlock_pact_magic_slots(warlock_level_row)
+    # Spell-slot pools: see spells.spell_slots_for for the single-class vs
+    # combined multiclass rule and the separate Warlock Pact Magic pool.
+    spell_slots, warlock_slots = spells_mod.spell_slots_for(
+        catalog, [(rc["cls_id"], rc["level"]) for rc in resolved_classes if rc["cls"]],
+    )
 
     granted_equipment = []
     if cls:

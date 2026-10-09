@@ -124,3 +124,27 @@ def warlock_pact_magic_slots(level_row: dict | None) -> dict[str, int]:
     ("warlock", <warlock's own class level>)["spellcasting"] as the level
     argument's dict, or None if no Warlock is present."""
     return _nonzero_spell_slots(level_row)
+
+
+def spell_slots_for(catalog: Catalog, class_entries: list[tuple[str, int]]) -> tuple[dict[str, int], dict[str, int]]:
+    """(shared slot pool, Warlock Pact Magic pool) for [(class_id, class_level)].
+
+    Per PHB 164 the COMBINED multiclass table is only correct when MORE THAN
+    ONE class actually grants spell slots; exactly one slot-granting class
+    (even next to non-casters, e.g. Fighter/Paladin) uses its own single-class
+    progression, so a lone half caster is not rounded down on odd levels.
+    "Grants slots" is tested against the class's real table at its current
+    level (a level-1 Paladin/Ranger has none), not by class-id membership.
+    Pact Magic classes never join the shared pool; the Warlock is looked up at
+    its own class level."""
+    slot_granting = [
+        (cls_id, level) for cls_id, level in class_entries
+        if cls_id not in PACT_MAGIC_CLASSES and single_class_spell_slots(catalog, cls_id, level)
+    ]
+    if len(slot_granting) == 1:
+        shared = single_class_spell_slots(catalog, *slot_granting[0])
+    else:
+        shared = multiclass_spell_slots(catalog, combined_caster_level(class_entries))
+    warlock = next(((c, lvl) for c, lvl in class_entries if c in PACT_MAGIC_CLASSES), None)
+    row = catalog.class_level_row(*warlock) if warlock else None
+    return shared, warlock_pact_magic_slots(row["spellcasting"] if row else None)

@@ -80,7 +80,9 @@ import sys
 
 _repo_root = Path(__file__).resolve().parents[2]  # server/catalog/official_source.py -> catalog -> server -> repo root
 if str(_repo_root) not in sys.path:
-    sys.path.insert(0, str(_repo_root))
+    # Appended, not prepended: the root also holds the v1 app.py/storage.py,
+    # which must never shadow the server's own modules (only `chargen` is needed).
+    sys.path.append(str(_repo_root))
 
 from chargen.sources import official_dir, has_official  # noqa: E402  (must follow the sys.path fix above)
 from catalog.reference_data import SKILL_NAMES, TOOLS, LANGUAGES  # noqa: E402  (same reason)

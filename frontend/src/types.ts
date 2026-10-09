@@ -245,7 +245,6 @@ export interface ClassSelection {
 }
 
 export interface Preferences {
-  advancementType: "milestone" | "xp";
   hitPointType: "fixed" | "manual";
   usePrerequisites: { feats: boolean; multiclass: boolean };
 }

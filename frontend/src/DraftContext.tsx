@@ -20,7 +20,6 @@ export const emptyDraft: Draft = {
   // (future task) to let a player narrow this back down.
   sources: [],
   preferences: {
-    advancementType: "milestone",
     hitPointType: "fixed",
     usePrerequisites: { feats: true, multiclass: true },
   },
@@ -50,9 +49,9 @@ type Action =
   | { type: "SET_HP_ROLL"; classId: string; level: number; value: number }
   | { type: "SET_ABILITY_METHOD"; method: Draft["abilities"]["method"] }
   | { type: "SET_HIT_POINT_TYPE"; hitPointType: Draft["preferences"]["hitPointType"] }
-  | { type: "SET_ADVANCEMENT_TYPE"; advancementType: Draft["preferences"]["advancementType"] }
   | { type: "SET_USE_PREREQUISITE"; field: keyof Draft["preferences"]["usePrerequisites"]; value: boolean }
   | { type: "SET_ABILITY_SCORE"; ability: Ability; value: number }
+  | { type: "SET_ABILITY_SCORES"; base: Record<Ability, number> }
   | { type: "SET_DETAIL"; field: keyof Draft["details"]; value: string }
   | { type: "SET_CHOICE_SELECTION"; source: ChoiceSourceKind; choiceId: string; selected: string[] }
   | { type: "ADD_ITEM"; itemId: string }
@@ -139,8 +138,6 @@ function reducer(state: Draft, action: Action): Draft {
       return { ...state, abilities: { ...state.abilities, method: action.method } };
     case "SET_HIT_POINT_TYPE":
       return { ...state, preferences: { ...state.preferences, hitPointType: action.hitPointType } };
-    case "SET_ADVANCEMENT_TYPE":
-      return { ...state, preferences: { ...state.preferences, advancementType: action.advancementType } };
     case "SET_USE_PREREQUISITE":
       return {
         ...state,
@@ -149,6 +146,8 @@ function reducer(state: Draft, action: Action): Draft {
           usePrerequisites: { ...state.preferences.usePrerequisites, [action.field]: action.value },
         },
       };
+    case "SET_ABILITY_SCORES":
+      return { ...state, abilities: { ...state.abilities, base: { ...action.base } } };
     case "SET_ABILITY_SCORE":
       return {
         ...state,

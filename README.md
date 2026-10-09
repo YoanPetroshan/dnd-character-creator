@@ -1,64 +1,75 @@
 # D&D Character Creator
 
-A standalone character-creation app for D&D 5e (SRD content), split out of
-the `dnd-app-bg` play app's builder. Produces three exports per character:
+A web app that builds D&D 5e (2014 SRD) characters and exports them as YAML,
+Markdown or PDF. The UI and the Markdown/PDF exports are in Bulgarian.
 
-- `current.yaml` — the canonical sheet (same shape/location convention the
-  play app's character library already uses, at
-  `~/.claude/dnd/characters/<Name>/current.yaml` — override the root with
-  `DND_CAMPAIGN_ROOT`)
-- `character.md` — a human-readable Markdown sheet
-- `character.pdf` — the official Wizards of the Coast fillable sheet, filled in
+There are two generations of code in this repo:
+
+- **v2 builder (current)**: `server/` (Flask JSON API + engine) and
+  `frontend/` (React/TypeScript, Vite). The character being built is a
+  *Draft* kept in the browser (`localStorage` key `dnd-builder-draft-v2`);
+  every change is sent to `POST /api/resolve`, which returns the finished sheet,
+  the open choices and any problems. Nothing is stored on the server.
+- **v1 (legacy)**: the repo-root `app.py`, `storage.py`, `sheet_derive.py`,
+  `markdown_render.py`, `pdf_fill.py`, `templates/`, `static/`. Not used by v2;
+  kept for reference (it serves on port 5300). `chargen/` holds the bundled SRD
+  JSON (`chargen/data/srd/`) and the official-data helpers that v2 reads too.
+
+For how the v2 engine works, read
+`docs/superpowers/specs/ARCHITECTURE-CURRENT-STATE.md`.
 
 ## Setup
 
     python3 -m venv .venv
-    .venv/bin/pip install -r requirements.txt
+    .venv/bin/pip install -r server/requirements.txt
+    cd frontend && npm install
+
+Optional, for the ~150 official (non-SRD) races, backgrounds and feats:
+
+    .venv/bin/python -m chargen.sync --official
+
+That downloads into `~/.claude/dnd/.data/official` (override the root with
+`DND_CAMPAIGN_ROOT`); without it the app runs on the bundled SRD only.
 
 ## Run
 
-    .venv/bin/python3 app.py
+Development, two terminals (the Vite dev server proxies `/api` to the backend):
 
-Then open http://127.0.0.1:5300/
+    # backend, http://127.0.0.1:8000
+    cd server && ../.venv/bin/python app.py
+    # frontend, http://localhost:5173
+    cd frontend && npm run dev
+
+Single origin, as it would be deployed (Flask serves the built frontend and the API):
+
+    cd frontend && npm run build
+    cd ../server && ../.venv/bin/python app.py     # http://127.0.0.1:8000
+
+Backend settings: `HOST` (default `127.0.0.1`), `PORT` (default `8000`),
+`FLASK_DEBUG=1` for the debugger.
 
 ## Testing on a phone
 
 Phone and computer must be on the same Wi-Fi. Find the computer's LAN IP with
 `ipconfig getifaddr en0` (macOS may show a firewall prompt).
 
-- Option A (one origin, closest to production): from `frontend/` run
-  `npm run build`, then from `server/` run
-  `HOST=0.0.0.0 ../.venv/bin/python app.py` and open `http://<LAN-IP>:8000`.
-  Flask serves the built app and the API. The default host is `127.0.0.1`
-  (LAN access is opt-in); set `FLASK_DEBUG=1` for the debugger.
-- Option B (hot reload): run the backend as above, then `npm run dev:lan`
-  in `frontend/` and open `http://<LAN-IP>:5173`.
+- One origin (closest to production): build the frontend, then
+  `cd server && HOST=0.0.0.0 ../.venv/bin/python app.py` and open
+  `http://<LAN-IP>:8000`.
+- Hot reload: run the backend with `HOST=0.0.0.0` as above, then
+  `cd frontend && npm run dev:lan` and open `http://<LAN-IP>:5173`.
+
+The draft lives in the phone browser's `localStorage`, which iOS Safari may evict
+after about a week of inactivity: use "Download draft" on the home page to keep a
+copy, and "Upload draft" to restore it. Exports download through the browser.
 
 ## Test
 
-    .venv/bin/pytest tests/ -v
+    # v2 server (the main suite)
+    cd server && ../.venv/bin/python -m pytest -q
+    # repo-root tests (v1 engine + the import-isolation guard that covers server/ too)
+    .venv/bin/python -m pytest -q tests
+    # frontend: type-check and build (there is no frontend test runner)
+    cd frontend && npm run build
 
-## Architecture
-
-See `docs/superpowers/specs/2026-09-13-character-creator-app-design.md` for
-the full design rationale. In short: `chargen/` (ported verbatim from
-`dnd-app-bg-local`) is the rules/content engine and has zero dependencies
-outside the standard library; everything else in this repo (`storage.py`,
-`sheet_derive.py`, `markdown_render.py`, `pdf_fill.py`, `app.py`) is new,
-and none of it imports from `dnd-app-bg-local`'s play engine.
-
-**Storage root is shared with the `dnd-app-bg-local` play app.** The
-default storage root (`~/.claude/dnd`) is the same directory that app's own
-character library uses — deliberate, so a character built here needs no
-migration to be usable there later. Building a character with a name that
-already exists no longer silently overwrites it: `POST /api/chargen/build`
-returns `409` unless the request includes `?overwrite=1` (see
-`storage.character_exists()`).
-
-`python -m chargen build --save` is not supported in this standalone repo —
-it raises `ModuleNotFoundError: No module named 'library'`, since
-`library.py` is intentionally not ported here.
-
-Not yet done: linking this app's output back into the play app as a
-campaign-recruitable character. The storage path is chosen so that step
-needs no data migration when it happens.
+Some server tests only run when the official data has been synced (see Setup).

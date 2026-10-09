@@ -157,3 +157,26 @@ def test_warlock_pact_magic_slots_reads_directly_from_its_own_level_row(catalog)
 
 def test_warlock_pact_magic_slots_none_row_is_empty():
     assert warlock_pact_magic_slots(None) == {}
+
+
+def test_spell_slots_for_single_half_caster_uses_its_own_table(catalog):
+    from engine.spells import spell_slots_for
+    shared, pact = spell_slots_for(catalog, [("paladin", 5)])
+    assert shared == {"1": 4, "2": 2} and pact == {}
+
+
+def test_spell_slots_for_multiclass_uses_combined_table_and_keeps_pact_separate(catalog):
+    from engine.spells import spell_slots_for
+    shared, pact = spell_slots_for(catalog, [("cleric", 3), ("wizard", 2), ("warlock", 2)])
+    assert shared == {"1": 4, "2": 3, "3": 2}  # combined caster level 3+2=5
+    assert pact == {"1": 2}
+
+
+def test_spell_slots_for_non_casters_is_empty(catalog):
+    from engine.spells import spell_slots_for
+    assert spell_slots_for(catalog, [("fighter", 5), ("rogue", 1)]) == ({}, {})
+
+
+def test_spell_slots_for_level_one_paladin_has_none(catalog):
+    from engine.spells import spell_slots_for
+    assert spell_slots_for(catalog, [("paladin", 1), ("fighter", 1)]) == ({}, {})
