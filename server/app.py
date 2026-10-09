@@ -14,7 +14,7 @@ from flask import Flask, Response, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 from catalog.loader import load as load_catalog
-from catalog.reference_data import SOURCE_NAMES, SUBCLASS_UNLOCK_LEVEL, ruleset_allows
+from catalog.reference_data import SOURCE_NAMES, ruleset_allows, subclass_unlock_level
 from engine.resolve import _source_allowed, _spell_visible, _subclass_visible, resolve
 from export import to_yaml
 from markdown_export import to_markdown
@@ -146,7 +146,7 @@ def api_catalog_class(class_id: str):
         **cls,
         "subclasses": rows,
         "levelFeatureCounts": level_feature_counts,
-        "subclassUnlockLevel": SUBCLASS_UNLOCK_LEVEL.get(class_id),
+        "subclassUnlockLevel": subclass_unlock_level(class_id, ruleset),
     })
 
 

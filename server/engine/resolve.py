@@ -60,7 +60,7 @@ from catalog.loader import Catalog
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
 from catalog.reference_data import (
     ABILITIES, SPECIFIC_WEAPON_PROFICIENCY_IDS, SRD_TRAIT_EFFECTS, SUBCLASS_PROFICIENCIES, SUBCLASS_EXTRA_FEATURES,
-    SUBCLASS_SPELLCASTING_ABILITY, SUBCLASS_SPELL_SCHOOL_LIMITS, SUBCLASS_UNLOCK_LEVEL, ruleset_allows,
+    SUBCLASS_SPELLCASTING_ABILITY, SUBCLASS_SPELL_SCHOOL_LIMITS, ruleset_allows, subclass_unlock_level,
 )
 from . import asi as asi_mod
 from . import attacks as attacks_mod
@@ -3179,7 +3179,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             })
             entry_subclass_id = None
 
-        unlock_level = SUBCLASS_UNLOCK_LEVEL.get(entry_cls_id)
+        unlock_level = subclass_unlock_level(entry_cls_id, draft.get("ruleset"))  # ruleset is validated further down; only "2024" matters here
         if entry_subclass and unlock_level and entry_level < unlock_level:
             # Round-2 F4: level-down leaves `subclassId` in the draft (the UI only
             # hides the select). Below the unlock level it must not apply.

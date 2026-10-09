@@ -144,6 +144,17 @@ SUBCLASS_UNLOCK_LEVEL: dict[str, int] = {
     "paladin": 3, "ranger": 3, "rogue": 3,
 }
 
+def subclass_unlock_level(class_id: str, ruleset: str = "mixed") -> int | None:
+    """The class level at which the subclass can be picked. Under ruleset
+    "2024" every class unlocks it at level 3 (all 12 XPHB class records place
+    their Subclass feature at 3); "2014", "mixed" and unknown rulesets keep the
+    per-class SUBCLASS_UNLOCK_LEVEL (mixed stays on the SRD chassis)."""
+    base = SUBCLASS_UNLOCK_LEVEL.get(class_id)
+    if base is not None and ruleset == "2024":
+        return 3
+    return base
+
+
 # Spellcasting ability of subclasses whose CLASS has none (the class has no
 # `spellcasting` block, so spells.spellcasting_ability() is None): the 1/3
 # casters and the monk subclasses that grant always-prepared cantrips.
