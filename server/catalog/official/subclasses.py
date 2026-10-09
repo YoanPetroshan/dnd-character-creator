@@ -40,6 +40,36 @@ def load_raw_class_data(class_dir) -> tuple[list[dict], list[dict]]:
     return subclasses, features
 
 
+def load_class_2024_progressions(class_dir) -> dict[str, dict]:
+    """XPHB class records -> {class id: {"caster": casterProgression,
+    "cantrips": [20 ints] or [], "prepared": [20 ints]}} for the 2024 spell
+    counts (cantripProgression / preparedSpellsProgression), read from the
+    same class files as the subclasses. Only SRD-class XPHB records that carry
+    a `casterProgression` and a 20-entry prepared table; {} when the directory
+    or index is missing."""
+    if not class_dir:
+        return {}
+    class_dir = Path(class_dir)
+    index = _read_json(class_dir / "index.json")
+    if not isinstance(index, dict):
+        return {}
+    out: dict[str, dict] = {}
+    for filename in index.values():
+        data = _read_json(class_dir / filename) if isinstance(filename, str) else None
+        for raw in (data.get("class", []) if isinstance(data, dict) else []):
+            if not isinstance(raw, dict) or raw.get("source") != "XPHB":
+                continue
+            cls_id = str(raw.get("name", "")).lower()
+            prepared, cantrips = raw.get("preparedSpellsProgression"), raw.get("cantripProgression") or []
+            if (cls_id in SRD_CLASS_IDS and raw.get("casterProgression")
+                    and isinstance(prepared, list) and len(prepared) == 20
+                    and all(isinstance(n, int) for n in prepared)):
+                out[cls_id] = {"caster": raw["casterProgression"],
+                               "cantrips": list(cantrips) if len(cantrips) == 20 else [],
+                               "prepared": list(prepared)}
+    return out
+
+
 def load_raw_optional_features(path) -> list[dict]:
     """Every record of `optionalfeatures.json`; [] when missing or broken."""
     if not path:

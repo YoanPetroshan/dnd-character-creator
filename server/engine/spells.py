@@ -71,21 +71,23 @@ def _entry_parts(entry: tuple) -> tuple[str, int, str | None]:
     return entry[0], entry[1], (entry[2] if len(entry) > 2 else None)
 
 
-def combined_caster_level(class_entries: list[tuple], catalog: Catalog | None = None) -> int:
+def combined_caster_level(class_entries: list[tuple], catalog: Catalog | None = None, ruleset: str = "mixed") -> int:
     """Sum each class's contribution to 5e's combined multiclass caster
     level: full casters contribute their own level, half casters
     (HALF_CASTER_CLASSES) contribute level // 2, third casters (an Eldritch
     Knight / Arcane Trickster subclass on a class without spellcasting of its
     own; entries `(cls, level, subclass_id)` plus the `catalog` to look the
     subclass up) contribute level // 3, Warlock (and any other
-    PACT_MAGIC_CLASSES) and any non-caster class contribute 0."""
+    PACT_MAGIC_CLASSES) and any non-caster class contribute 0. Under ruleset
+    "2024" the half casters (the XPHB `artificer` progression) round UP:
+    (level + 1) // 2."""
     total = 0
     for entry in class_entries:
         cls_id, level, subclass_id = _entry_parts(entry)
         if cls_id in PACT_MAGIC_CLASSES:
             continue
         if cls_id in HALF_CASTER_CLASSES:
-            total += level // 2
+            total += (level + 1) // 2 if ruleset == "2024" else level // 2
         elif cls_id in FULL_CASTER_CLASSES:
             total += level
         elif _third_caster_block(catalog, subclass_id):
@@ -125,7 +127,9 @@ def multiclass_spell_slots(catalog: Catalog, combined_level: int) -> dict[str, i
     return _nonzero_spell_slots(row.get("spellcasting"))
 
 
-def single_class_spell_slots(catalog: Catalog, cls_id: str, class_level: int, subclass_id: str | None = None) -> dict[str, int]:
+def single_class_spell_slots(
+    catalog: Catalog, cls_id: str, class_level: int, subclass_id: str | None = None, ruleset: str = "mixed",
+) -> dict[str, int]:
     """A single class's OWN spell-slot progression at its own class
     level, read directly from its class-level row — the correct lookup
     (per PHB 164) whenever exactly one class grants spell slots, even
@@ -134,7 +138,10 @@ def single_class_spell_slots(catalog: Catalog, cls_id: str, class_level: int, su
     half caster (Paladin/Ranger) gets its real, non-halved progression
     at every level, including odd ones. A class row without spell slots
     falls back to the subclass's own third-caster slot table (Eldritch
-    Knight, Arcane Trickster)."""
+    Knight, Arcane Trickster). Under ruleset "2024" a Paladin/Ranger uses the
+    full-caster row at caster level ceil(level / 2) (slots from level 1)."""
+    if ruleset == "2024" and cls_id in HALF_CASTER_CLASSES and 1 <= class_level <= 20:
+        return multiclass_spell_slots(catalog, (class_level + 1) // 2)
     row = catalog.class_level_row(cls_id, class_level)
     own = _nonzero_spell_slots(row.get("spellcasting")) if row else {}
     if own:
@@ -154,7 +161,7 @@ def warlock_pact_magic_slots(level_row: dict | None) -> dict[str, int]:
     return _nonzero_spell_slots(level_row)
 
 
-def spell_slots_for(catalog: Catalog, class_entries: list[tuple]) -> tuple[dict[str, int], dict[str, int]]:
+def spell_slots_for(catalog: Catalog, class_entries: list[tuple], ruleset: str = "mixed") -> tuple[dict[str, int], dict[str, int]]:
     """(shared slot pool, Warlock Pact Magic pool) for [(class_id, class_level)]
     or [(class_id, class_level, subclass_id)].
 
@@ -170,12 +177,12 @@ def spell_slots_for(catalog: Catalog, class_entries: list[tuple]) -> tuple[dict[
     parts = [_entry_parts(e) for e in class_entries]
     slot_granting = [
         (cls_id, level, sub) for cls_id, level, sub in parts
-        if cls_id not in PACT_MAGIC_CLASSES and single_class_spell_slots(catalog, cls_id, level, sub)
+        if cls_id not in PACT_MAGIC_CLASSES and single_class_spell_slots(catalog, cls_id, level, sub, ruleset)
     ]
     if len(slot_granting) == 1:
-        shared = single_class_spell_slots(catalog, *slot_granting[0])
+        shared = single_class_spell_slots(catalog, *slot_granting[0], ruleset)
     else:
-        shared = multiclass_spell_slots(catalog, combined_caster_level(parts, catalog))
+        shared = multiclass_spell_slots(catalog, combined_caster_level(parts, catalog, ruleset))
     warlock = next(((c, lvl) for c, lvl, _ in parts if c in PACT_MAGIC_CLASSES), None)
     row = catalog.class_level_row(*warlock) if warlock else None
     return shared, warlock_pact_magic_slots(row["spellcasting"] if row else None)

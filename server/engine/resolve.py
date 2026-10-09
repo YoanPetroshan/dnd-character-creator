@@ -2847,7 +2847,7 @@ def _apply_school_limit(
         })
 
 
-def _effective_caster(catalog: Catalog, rc: dict) -> tuple[str, dict, str] | None:
+def _effective_caster(catalog: Catalog, rc: dict, ruleset: str = "mixed") -> tuple[str, dict, str] | None:
     """(spellcasting ability, spellcasting dict, spell-list class id) of a
     resolved class entry, or None. A class with its own spellcasting uses its
     level row; otherwise a subclass with a third-caster `spellcasting` block
@@ -2855,12 +2855,28 @@ def _effective_caster(catalog: Catalog, rc: dict) -> tuple[str, dict, str] | Non
     and a SYNTHETIC dict (`cantrips_known`, `spells_known`, `spell_slots_level_N`,
     `spells_kind`) shaped like a class level row's `spellcasting`. The
     synthetic dict is only handed to _spell_choice_templates; it never lands
-    in `rc["level_row"]`."""
+    in `rc["level_row"]`. Under ruleset "2024" a class with an XPHB progression
+    (`catalog.class_2024_progressions`) gets a COPY of its spellcasting dict
+    with the cantrip count, the fixed prepared-spell count (`spells_known`,
+    `spells_kind: "prepared"`) from those tables and, for a Paladin/Ranger,
+    the round-up slots (caster level ceil(level / 2), slots from level 1)."""
     cls, cls_id, level = rc["cls"], rc["cls_id"], rc["level"]
     ability = spells_mod.spellcasting_ability(cls) if cls else None
     if ability:
         row = rc.get("level_row")
-        return (ability, row.get("spellcasting") or {}, cls_id) if row else None
+        if not row:
+            return None
+        sc = row.get("spellcasting") or {}
+        prog = catalog.class_2024_progressions.get(cls_id) if ruleset == "2024" else None
+        if prog and 1 <= level <= 20:
+            sc = dict(sc)
+            if prog["cantrips"]:
+                sc["cantrips_known"] = prog["cantrips"][level - 1]
+            sc["spells_known"] = prog["prepared"][level - 1]
+            sc["spells_kind"] = "prepared"
+            for n, count in spells_mod.single_class_spell_slots(catalog, cls_id, level, None, ruleset).items():
+                sc[f"spell_slots_level_{n}"] = count
+        return ability, sc, cls_id
     block = (rc.get("subclass") or {}).get("spellcasting")
     if not (isinstance(block, dict) and block.get("progression") == "1/3") or level < 3:
         return None
@@ -3339,7 +3355,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # Pre-walk inputs use the FINAL character (same simplification as
     # total_level): permissive, never a false disable.
     held.has_spellcasting_feature = any(
-        rc["cls"] and spells_mod.single_class_spell_slots(catalog, rc["cls_id"], rc["level"], rc["subclass_id"])
+        rc["cls"] and spells_mod.single_class_spell_slots(catalog, rc["cls_id"], rc["level"], rc["subclass_id"], draft.get("ruleset"))
         for rc in resolved_classes
     )
     held.race_names, held.subrace_names, held.size = _held_race_state(race, subrace, species_size)
@@ -3714,7 +3730,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc_cls, rc_cls_id, rc_level, rc_level_row = rc["cls"], rc["cls_id"], rc["level"], rc.get("level_row")
         if not (rc_cls and rc_cls_id):
             continue
-        caster = _effective_caster(catalog, rc)
+        caster = _effective_caster(catalog, rc, ruleset)
         if caster:
             spell_ability, spell_dict, list_class_id = caster
             raw_feature_ids = {
@@ -3993,7 +4009,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         always_ids = _subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc["level"], feature_ids, "always")
         if not (rc_cantrip_choice or rc_known_spells_choice or always_ids):
             continue
-        rc_caster = _effective_caster(catalog, rc)
+        rc_caster = _effective_caster(catalog, rc, ruleset)
         rc_spell_ability = (rc_caster[0] if rc_caster else None) or spells_mod.spellcasting_ability(rc_cls) or SUBCLASS_SPELLCASTING_ABILITY.get(rc["subclass_id"] or "")
         rc_save_dc = spells_mod.spell_save_dc(prof_bonus, modifiers[rc_spell_ability]) if rc_spell_ability else None
         rc_attack_bonus = spells_mod.spell_attack_bonus(prof_bonus, modifiers[rc_spell_ability]) if rc_spell_ability else None
@@ -4013,7 +4029,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # Spell-slot pools: see spells.spell_slots_for for the single-class vs
     # combined multiclass rule and the separate Warlock Pact Magic pool.
     spell_slots, warlock_slots = spells_mod.spell_slots_for(
-        catalog, [(rc["cls_id"], rc["level"], rc["subclass_id"]) for rc in resolved_classes if rc["cls"]],
+        catalog, [(rc["cls_id"], rc["level"], rc["subclass_id"]) for rc in resolved_classes if rc["cls"]], ruleset,
     )
 
     granted_equipment = []
