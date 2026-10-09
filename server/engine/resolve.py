@@ -435,6 +435,8 @@ def _species_senses(race: dict | None, subrace: dict | None, catalog: Catalog, v
     for src in (race, subrace, variant):
         if not src:
             continue
+        if src is race and "darkvision" in (variant or {}).get("removes", []):
+            continue  # e.g. Custom Lineage's Skill Proficiency variant
         add("darkvision", src.get("darkvision"))
     for effect in _srd_trait_effects(race, subrace):
         for kind, value in effect.get("senses", {}).items():
@@ -520,6 +522,8 @@ def _species_innate_spells(race: dict | None, subrace: dict | None, catalog: Cat
             # variant's own grants (below) apply.
             if src is race and race.get("variants") and entry.get("variant") is not None:
                 continue
+            if src is race and "additionalSpells" in (variant or {}).get("removes", []):
+                continue  # e.g. Kobold's Craftiness / Defiance legacies
             innate.append(_innate_entry_to_sheet(entry, catalog))
     for entry in (variant or {}).get("innate_spells", []):
         innate.append(_innate_entry_to_sheet(entry, catalog))
@@ -1732,7 +1736,8 @@ def _species_size(race: dict | None, species_choices: dict, race_id: str | None)
     return None
 
 
-def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrace: dict | None) -> list[dict]:
+def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrace: dict | None,
+                              variant: dict | None = None) -> list[dict]:
     templates = []
     trait_refs = list(race.get("traits", [])) + (list(subrace.get("racial_traits", [])) if subrace else [])
     for ref in trait_refs:
@@ -1756,6 +1761,12 @@ def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrac
         # subtrait_options selection (e.g. Dragonborn's Draconic Ancestry
         # damage-type pick, which is NOT a proficiency).
         prof_envelope = trait.get("proficiency_choices")
+        # A variant that nulls `skillProficiencies` (Custom Lineage's
+        # Darkvision, Kobold's Defiance / Draconic Sorcery) drops the race's
+        # skill choice, which official_source mints as this dedicated trait.
+        if prof_envelope and "skillProficiencies" in (variant or {}).get("removes", []) \
+                and ref["index"].endswith("-trait-choice-skill-proficiency"):
+            prof_envelope = None
         if prof_envelope:
             prof_cid = f"species:{race_id}:trait:{trait['index']}:proficiency-choice"
             prof_source = {"kind": "species", "id": race_id, "label": race["name"]}
@@ -3308,7 +3319,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         species_size_tpl = _species_size_template(race, race_id)
         if species_size_tpl:
             choice_templates.append(species_size_tpl)
-        choice_templates += _species_choice_templates(catalog, race, race_id, subrace)
+        choice_templates += _species_choice_templates(catalog, race, race_id, subrace, species_variant)
         if species_ability_choice_tpl:
             choice_templates.append(species_ability_choice_tpl)
     equipment_dependents: dict[str, dict[str, list[dict]]] = {}

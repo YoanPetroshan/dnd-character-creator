@@ -163,3 +163,42 @@ def test_exports_name_the_lineage(catalog):
     assert md_label(res["sheet"]["species"]) == "Elf - Drow Lineage"
     assert pdf_label(res["sheet"]["species"]) == "Elf - Drow Lineage"
     assert md_label(_run(catalog, "elf-xphb")["sheet"]["species"]) == "Elf"
+
+
+# --- 8e: a version that nulls a data key removes that part of the base race -----------
+
+def _skill_choice(res):
+    return next((c for c in res["choices"] if c["source"]["kind"] == "species" and "trait-choice-skill-proficiency" in c["id"]), None)
+
+
+def test_custom_lineage_variants_split_darkvision_from_the_skill(catalog):
+    ids = [v["id"] for v in catalog.races["custom-lineage-tce"]["variants"]]
+    assert ids == ["darkvision", "skill-proficiency"]
+    unpicked = _run(catalog, "custom-lineage-tce")
+    assert _skill_choice(unpicked) is not None and unpicked["sheet"]["senses"].get("darkvision") == 60
+
+    dark = _run(catalog, "custom-lineage-tce", {"species:custom-lineage-tce:variant": ["darkvision"]})
+    assert _skill_choice(dark) is None
+    assert dark["sheet"]["senses"]["darkvision"] == 60
+
+    skill = _run(catalog, "custom-lineage-tce", {"species:custom-lineage-tce:variant": ["skill-proficiency"]})
+    assert _skill_choice(skill) is not None
+    assert "darkvision" not in skill["sheet"]["senses"]
+
+
+def test_kobold_legacies_remove_the_skill_choice_where_the_data_says_so(catalog):
+    base = "species:kobold-mpmm:variant"
+    assert [v["id"] for v in catalog.races["kobold-mpmm"]["variants"]] == ["craftiness", "defiance", "draconic-sorcery"]
+    assert _skill_choice(_run(catalog, "kobold-mpmm", {base: ["craftiness"]})) is not None
+    assert _skill_choice(_run(catalog, "kobold-mpmm", {base: ["defiance"]})) is None
+    assert _skill_choice(_run(catalog, "kobold-mpmm", {base: ["draconic-sorcery"]})) is None
+    assert _run(catalog, "kobold-mpmm", {base: ["defiance"]})["sheet"]["senses"]["darkvision"] == 60
+
+
+def test_a_removed_skill_choice_selection_is_pruned(catalog):
+    first = _run(catalog, "kobold-mpmm", {"species:kobold-mpmm:variant": ["craftiness"]})
+    cid = _skill_choice(first)["id"]
+    sel = {"species:kobold-mpmm:variant": ["defiance"], cid: ["skill-arcana"]}
+    res = _run(catalog, "kobold-mpmm", sel)
+    assert cid in [p["choiceId"] for p in res["pruned"]]
+    assert "skill-arcana" not in res["sheet"]["proficiencies"]["skills"]
