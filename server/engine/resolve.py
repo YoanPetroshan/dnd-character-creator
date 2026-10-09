@@ -1092,11 +1092,20 @@ class _HeldFeatState:
     feat_categories: set[str] = field(default_factory=set)
     proficiency_ids: set[str] = field(default_factory=set)
     has_spellcasting_feature: bool = False
+    # Race gate (5etools `race` prerequisite): lowercased species name with a
+    # trailing " (...)" stripped, lowercased subspecies name plus each token
+    # of its index, the species size, and whether the character can cast at
+    # least one spell (a Spellcasting feature or an innate species spell).
+    race_names: set[str] = field(default_factory=set)
+    subrace_names: set[str] = field(default_factory=set)
+    size: str | None = None
+    can_cast_spell: bool = False
 
     def copy(self) -> "_HeldFeatState":
         return _HeldFeatState(
             set(self.feat_indices), set(self.feat_categories), set(self.proficiency_ids),
-            self.has_spellcasting_feature,
+            self.has_spellcasting_feature, set(self.race_names), set(self.subrace_names),
+            self.size, self.can_cast_spell,
         )
 
     def add_feat(self, feat: dict) -> None:
@@ -2157,7 +2166,25 @@ _STRUCTURED_FEAT_PREREQUISITE_KEYS = {"level", "ability"}
 # Keys the ASI-level gate (the walk + option reasons) can verify. A superset
 # of _STRUCTURED_FEAT_PREREQUISITE_KEYS, which the background second pass
 # (_feat_prerequisite_problems) keeps using — never widen that one.
-_ASI_GATE_PREREQUISITE_KEYS = {"level", "ability", "feat", "spellcasting2020", "feature", "proficiency", "featCategory"}
+_ASI_GATE_PREREQUISITE_KEYS = {
+    "level", "ability", "feat", "spellcasting2020", "feature", "proficiency", "featCategory",
+    "race", "spellcasting", "spellcastingFeature",
+}
+
+
+def _race_name_key(name: str) -> str:
+    """Lowercased, trailing " (...)" stripped: "Vampire (Ixalan)" -> "vampire"."""
+    return re.sub(r"\s*\([^)]*\)\s*$", "", name).strip().lower()
+
+
+def _held_race_state(race: dict | None, subrace: dict | None, size: str | None) -> tuple[set[str], set[str], str | None]:
+    race_names = {_race_name_key(race["name"])} if race and race.get("name") else set()
+    subrace_names: set[str] = set()
+    if subrace:
+        if subrace.get("name"):
+            subrace_names.add(subrace["name"].strip().lower())
+        subrace_names.update(t for t in (subrace.get("index") or "").lower().split("-") if t)
+    return race_names, subrace_names, size
 
 # Which held app proficiency ids satisfy a 5etools prerequisite proficiency
 # entry. Real data has exactly these five shapes.
@@ -2193,8 +2220,12 @@ def _alt_value_is_valid(key: str, value) -> bool:
         return isinstance(value, list) and bool(value) and all(
             _proficiency_entry_key(e) in _PROFICIENCY_PREREQ_SATISFIERS for e in value
         )
-    if key == "spellcasting2020":
+    if key in ("spellcasting2020", "spellcasting", "spellcastingFeature"):
         return isinstance(value, bool)
+    if key == "race":
+        return isinstance(value, list) and bool(value) and all(
+            isinstance(e, dict) and isinstance(e.get("name"), str) and e["name"] for e in value
+        )
     if key == "feature":
         return (
             isinstance(value, list) and bool(value)
@@ -2219,7 +2250,9 @@ def _feat_structured_prerequisite(feat: dict, supported_keys=None) -> list[dict]
     problem ever raised) when the feat has no prerequisite data at all,
     OR when ANY alternative carries a key this app can't check (campaign,
     feature, proficiency, feat, race, background, spellcasting*,
-    featCategory/exclusiveFeatCategory, other, otherSummary).
+    featCategory/exclusiveFeatCategory, other, otherSummary; the ASI gate
+    passes _ASI_GATE_PREREQUISITE_KEYS, which since A4 also covers race,
+    spellcasting and spellcastingFeature).
 
     Deliberately an ALL-or-nothing gate per feat, not a per-alternative
     partial check: an OR-of-alternatives prerequisite where one
@@ -2254,6 +2287,26 @@ def _feat_structured_prerequisite(feat: dict, supported_keys=None) -> list[dict]
     return prereq
 
 
+def _race_entry_met(entry: dict, held: "_HeldFeatState") -> bool:
+    name = _race_name_key(entry["name"])
+    if name == "small race":
+        return held.size == "Small"
+    if name not in held.race_names:
+        return False
+    subrace = entry.get("subrace")
+    return not subrace or (isinstance(subrace, str) and _race_name_key(subrace) in held.subrace_names)
+
+
+def _race_entry_phrase(entry: dict) -> str:
+    if entry.get("displayEntry") and isinstance(entry["displayEntry"], str):
+        return entry["displayEntry"]
+    name = entry["name"].title()
+    subrace = entry.get("subrace")
+    if isinstance(subrace, str) and subrace:
+        name = f"{subrace.title()} {name}"
+    return f"a {name} character"
+
+
 def _feat_prerequisite_alt_met(
     alt: dict, total_level: int, final_scores: dict[str, int], held: "_HeldFeatState | None" = None,
 ) -> bool:
@@ -2283,6 +2336,12 @@ def _feat_prerequisite_alt_met(
     if "feat" in alt and not any(_feat_ref_index(r) in held.feat_indices for r in alt["feat"]):
         return False
     if (alt.get("spellcasting2020") or "feature" in alt) and not held.has_spellcasting_feature:
+        return False
+    if alt.get("spellcastingFeature") and not held.has_spellcasting_feature:
+        return False
+    if alt.get("spellcasting") and not held.can_cast_spell:
+        return False
+    if "race" in alt and not any(_race_entry_met(e, held) for e in alt["race"]):
         return False
     if "featCategory" in alt and not any(c in held.feat_categories for c in alt["featCategory"]):
         return False
@@ -2568,6 +2627,12 @@ def _feat_prerequisite_failing_parts(
         ))
     if (alt.get("spellcasting2020") or "feature" in alt) and not (held and held.has_spellcasting_feature):
         parts.append("the Spellcasting or Pact Magic feature")
+    if alt.get("spellcastingFeature") and not (held and held.has_spellcasting_feature):
+        parts.append("the Spellcasting feature")
+    if alt.get("spellcasting") and not (held and held.can_cast_spell):
+        parts.append("the ability to cast at least one spell")
+    if "race" in alt and not (held and any(_race_entry_met(e, held) for e in alt["race"])):
+        parts.append(" or ".join(_race_entry_phrase(e) for e in alt["race"]))
     if "featCategory" in alt and not any(c in (held.feat_categories if held else ()) for c in alt["featCategory"]):
         parts.append("a Dragonmark feat" if alt["featCategory"] == ["D"] else "a feat of a required category")
     for entry in alt.get("proficiency", []):
@@ -3195,6 +3260,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     held.has_spellcasting_feature = any(
         rc["cls"] and spells_mod.single_class_spell_slots(catalog, rc["cls_id"], rc["level"])
         for rc in resolved_classes
+    )
+    held.race_names, held.subrace_names, held.size = _held_race_state(race, subrace, species_size)
+    held.can_cast_spell = held.has_spellcasting_feature or bool(
+        _species_innate_spells(race, subrace, catalog, species_variant)
     )
     # FIXED proficiency grants only (class, race/subrace traits, background);
     # proficiency CHOICE selections aren't available before the ASI walk.
