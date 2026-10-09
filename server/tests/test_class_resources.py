@@ -192,8 +192,8 @@ def test_multiclass_barbarian_rogue_gets_one_entry_per_class_in_class_order(cata
 
 
 def test_class_without_a_builder_has_no_entries(catalog):
-    assert _res(catalog, [("wizard", 1)])["derived"]["classResources"] == []
-    assert _res(catalog, [("ranger", 5)])["derived"]["classResources"] == []  # until R4
+    assert _res(catalog, [("warlock", 1)])["derived"]["classResources"] == []
+    assert _res(catalog, [("warlock", 5)])["derived"]["classResources"] == []  # until R7/R8
 
 
 def test_unknown_class_does_not_crash(catalog):
@@ -260,4 +260,4 @@ def test_unlimited_rage_is_printed_as_unlimited(catalog):
 
 
 def test_no_resources_block_for_a_non_resource_class(catalog):
-    assert "Ресурси на класа" not in to_markdown(_res(catalog, [("wizard", 1)]))
+    assert "Ресурси на класа" not in to_markdown(_res(catalog, [("warlock", 1)]))

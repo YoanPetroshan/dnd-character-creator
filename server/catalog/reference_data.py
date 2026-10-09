@@ -443,3 +443,24 @@ WILD_SHAPE_2024_BEAST_SHAPES: list[tuple[int, int, str, bool]] = [
 
 # Challenge ratings the SRD level rows store as numbers, as the text form used in the sheet.
 CR_TEXT: dict[float, str] = {0: "0", 0.125: "1/8", 0.25: "1/4", 0.5: "1/2"}
+
+
+# --- Class resources (R4): prose-only numbers ---
+
+# Sorcerer 2024 "Creating Spell Slots" table (XPHB Font of Magic feature text, not a class
+# table column): (slot level, sorcery point cost, minimum sorcerer level). The 2014 SRD costs
+# come from the level rows (`creating_spell_slots`: 2/3/5/6/7) and have no minimum level.
+SORCERER_2024_CREATING_SLOTS: list[tuple[int, int, int]] = [
+    (1, 2, 2),
+    (2, 3, 3),
+    (3, 5, 5),
+    (4, 6, 7),
+    (5, 7, 9),
+]
+
+# Arcane Recovery (SRD `arcane-recovery`, XPHB Arcane Recovery): "combined level ... no more
+# than half your Wizard level (round up), and none of the slots can be level 6 or higher".
+ARCANE_RECOVERY_MAX_SLOT_LEVEL = 5
+
+# Bard Font of Inspiration (SRD `font-of-inspiration`, XPHB): short rest recharge from level 5.
+FONT_OF_INSPIRATION_LEVEL = 5

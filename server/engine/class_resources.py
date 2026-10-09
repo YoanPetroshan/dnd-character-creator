@@ -225,6 +225,56 @@ def _druid(ctx: Ctx, rc: dict) -> list[dict]:
     )]
 
 
+# ---- Bard / Sorcerer / Wizard / Ranger (R4) --------------------------------
+
+def _bard(ctx: Ctx, rc: dict) -> list[dict]:
+    level = rc["level"]
+    die = ctx.table("bard", "bardic-die", level)  # "1d8"
+    if die:
+        die = "d" + str(die).split("d", 1)[1]
+    else:
+        value = _class_specific(rc).get("bardic_inspiration_die")
+        die = f"d{value}" if value else None
+    if die is None:
+        return []
+    # Uses = CHA modifier (minimum 1), both editions; Font of Inspiration (level 5) adds the short rest.
+    recharge = "short-or-long" if level >= reference_data.FONT_OF_INSPIRATION_LEVEL else "long"
+    details = {"spellSlotRegainsUse": True} if ctx.ruleset == "2024" and recharge == "short-or-long" else None
+    return [_resource(rc, "Bardic Inspiration", uses=max(1, ctx.modifiers.get("CHA", 0)), recharge=recharge,
+                      die=die, details=details)]
+
+
+def _sorcerer(ctx: Ctx, rc: dict) -> list[dict]:
+    level = rc["level"]
+    cs = _class_specific(rc)
+    points = ctx.table("sorcerer", "sorcery-points", level)
+    if points is None:
+        points = cs.get("sorcery_points")
+    if not points:  # none at level 1
+        return []
+    if ctx.table("sorcerer", "sorcery-points", level) is not None:
+        costs = {lvl: cost for lvl, cost, min_level in reference_data.SORCERER_2024_CREATING_SLOTS if level >= min_level}
+    else:
+        costs = {s["spell_slot_level"]: s["sorcery_point_cost"] for s in cs.get("creating_spell_slots") or []}
+    return [_resource(rc, "Sorcery Points", uses=points, recharge="long", details={"slotCosts": costs} if costs else None)]
+
+
+def _wizard(ctx: Ctx, rc: dict) -> list[dict]:
+    # Same number in both editions: half the wizard level, rounded up (SRD row equals it at all 20 levels).
+    level = rc["level"]
+    pool = _class_specific(rc).get("arcane_recovery_levels") if ctx.ruleset != "2024" else None
+    return [_resource(rc, "Arcane Recovery", pool=pool or -(-level // 2), recharge="long",
+                      details={"maxSlotLevel": reference_data.ARCANE_RECOVERY_MAX_SLOT_LEVEL, "onShortRest": True})]
+
+
+def _ranger(ctx: Ctx, rc: dict) -> list[dict]:
+    # 2024 only: Favored Enemy is Hunter's Mark with free casts. The 2014 one is a choice, not a resource.
+    uses = ctx.table("ranger", "favored-enemy", rc["level"])
+    if uses is None:
+        return []
+    return [_resource(rc, "Favored Enemy (Hunter's Mark)", uses=uses, recharge="long")]
+
+
 _BUILDERS: dict[str, Callable[[Ctx, dict], list[dict]]] = {
     "barbarian": _barbarian,
     "rogue": _rogue,
@@ -233,6 +283,10 @@ _BUILDERS: dict[str, Callable[[Ctx, dict], list[dict]]] = {
     "cleric": _cleric,
     "paladin": _paladin,
     "druid": _druid,
+    "bard": _bard,
+    "sorcerer": _sorcerer,
+    "wizard": _wizard,
+    "ranger": _ranger,
 }
 _SUBCLASS_BUILDERS: dict[str, Callable[[Ctx, dict], list[dict]]] = {}
 
