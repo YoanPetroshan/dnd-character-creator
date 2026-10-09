@@ -1332,6 +1332,7 @@ def _subrace_from_5etools(raw: dict, race_ids: set[str], traits_by_index: dict[s
     return {
         "index": index, "name": raw["name"],
         "race": {"index": race_index, "name": race_name, "url": ""},
+        "source": raw.get("source", ""),
         "desc": "",
         "speed": walk,  # walk-speed override of the parent race, None = inherit
         "movement": movement,

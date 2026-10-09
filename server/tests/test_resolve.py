@@ -950,7 +950,7 @@ def test_rest_wrapped_innate_spell_resolves_on_the_sheet_not_silently_dropped(ca
     # spell and must show up with a resolved spellId like any other
     # "daily"-wrapped grant.
     draft = _fighter_acolyte_human_draft(
-        sources=["phb"], species={"id": "gnome-phb", "subspeciesId": "gnome-phb-mark-of-scribing-erlw", "choices": {}}
+        sources=["phb", "erlw"], species={"id": "gnome-phb", "subspeciesId": "gnome-phb-mark-of-scribing-erlw", "choices": {}}
     )
     resolution = resolve(draft, catalog)
     assert resolution["problems"] == []
@@ -968,7 +968,7 @@ def test_subrace_innate_spells_merge_with_the_parent_race_on_the_sheet(catalog):
     # _species_innate_spells' race+subrace merge, mirroring the
     # damage-modifiers race+subrace merge test above.
     draft = _fighter_acolyte_human_draft(
-        sources=["phb"], species={"id": "dwarf-phb", "subspeciesId": "dwarf-phb-duergar-mtf", "choices": {}}
+        sources=["phb", "mtf"], species={"id": "dwarf-phb", "subspeciesId": "dwarf-phb-duergar-mtf", "choices": {}}
     )
     resolution = resolve(draft, catalog)
     assert resolution["problems"] == []

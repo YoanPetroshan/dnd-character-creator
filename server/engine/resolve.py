@@ -1092,16 +1092,20 @@ def _apply_asi_progression(
     return scores_by_level, running, blocked_feat_cids
 
 
-def _feat_source_allowed(feat: dict, sources) -> bool:
-    """The SAME draft.sources filter resolve() applies to a race or
-    background record, for a feat: no filtering when `sources` is empty or
-    absent; a record with no source, or an "SRD" one, is always allowed;
-    otherwise its source must be in the allowed list (case-insensitive)."""
+def _source_allowed(record: dict, sources) -> bool:
+    """The ONE draft.sources filter, shared by species, subspecies,
+    backgrounds and feats: no filtering when `sources` is empty or absent; a
+    record with no source, or an "SRD" one, is always allowed; otherwise its
+    source must be in the allowed list (case-insensitive)."""
     if not sources:
         return True
     allowed_sources = {s.lower() for s in sources if isinstance(s, str)}
-    feat_source = feat.get("source") or ""
-    return not (feat_source and feat_source.upper() != "SRD" and feat_source.lower() not in allowed_sources)
+    source = record.get("source") or ""
+    return not (source and source.upper() != "SRD" and source.lower() not in allowed_sources)
+
+
+def _feat_source_allowed(feat: dict, sources) -> bool:
+    return _source_allowed(feat, sources)
 
 
 def _resolve_asi_selected_feats(
@@ -2795,18 +2799,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     if bg_id and not bg:
         problems.append({"id": "unknown-background", "message": f"Unknown background '{bg_id}'."})
     elif bg and draft.get("sources"):
-        # Mirrors the race-side source filter immediately below, exactly
-        # (Phase 4a Task 7): a filtered-out record and a genuinely-
-        # nonexistent one are indistinguishable from the player's point of
-        # view ("not a valid choice right now") — reuse the same
-        # "unknown-background" problem id rather than introduce a new one.
-        # Bundled SRD backgrounds have no 'source' field at all (implicitly
-        # SRD), so they're always allowed regardless of draft.sources; only
-        # an official background whose book isn't in the allowed list gets
-        # rejected.
-        bg_source = bg.get("source") or ""
-        allowed_sources = {s.lower() for s in draft["sources"] if isinstance(s, str)}
-        if bg_source and bg_source.upper() != "SRD" and bg_source.lower() not in allowed_sources:
+        # A filtered-out record and a genuinely-nonexistent one are
+        # indistinguishable from the player's point of view, so reuse the
+        # same "unknown-background" problem id.
+        if not _source_allowed(bg, draft["sources"]):
             problems.append({"id": "unknown-background", "message": f"Unknown background '{bg_id}'."})
             bg = None
 
@@ -2875,16 +2871,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     if race_id and not race:
         problems.append({"id": "unknown-species", "message": f"Unknown species '{race_id}'."})
     elif race and draft.get("sources"):
-        # A filtered-out record and a genuinely-nonexistent one are
-        # indistinguishable from the player's point of view ("not a valid
-        # choice right now") — reuse the same problem id rather than
-        # introduce a new one. Bundled SRD races have no 'source' field at
-        # all (implicitly SRD), so they're always allowed regardless of
-        # draft.sources; only an official race whose book isn't in the
-        # allowed list gets rejected.
-        race_source = race.get("source") or ""
-        allowed_sources = {s.lower() for s in draft["sources"] if isinstance(s, str)}
-        if race_source and race_source.upper() != "SRD" and race_source.lower() not in allowed_sources:
+        # Same reasoning as the background filter above: "unknown-species".
+        if not _source_allowed(race, draft["sources"]):
             problems.append({"id": "unknown-species", "message": f"Unknown species '{race_id}'."})
             race = None
 
@@ -2897,6 +2885,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             "id": "subspecies-mismatch",
             "message": f"'{subrace['name']}' isn't a subspecies of the selected species.",
         })
+        subrace = None
+    elif subrace and not _source_allowed(subrace, draft.get("sources")):
+        # Subspecies carry their own book (Duergar is MTF under PHB Dwarf),
+        # so a source-filtered subspecies is dropped like a filtered species.
+        problems.append({"id": "unknown-subspecies", "message": f"Unknown subspecies '{subrace_id}'."})
         subrace = None
 
     # Read here (before the per-class loop) so _asi_choice_templates can use
