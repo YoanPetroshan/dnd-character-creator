@@ -475,3 +475,28 @@ ARCANE_RECOVERY_MAX_SLOT_LEVEL = 5
 
 # Bard Font of Inspiration (SRD `font-of-inspiration`, XPHB): short rest recharge from level 5.
 FONT_OF_INSPIRATION_LEVEL = 5
+
+
+# ---- Subclass resources (R6) -------------------------------------------------
+# All first features of these subclasses are at fighter/rogue level 3.
+SUBCLASS_RESOURCE_MIN_LEVEL = 3
+
+# Psi Warrior / Soulknife, TCE (2014) `*-tce-3-psionic-power`: "a number of these dice equal
+# to twice your proficiency bonus"; the die is d6 and "increases: at 5th level (d8), 11th
+# level (d10), and 17th level (d12)". (class level, die), ascending. The XPHB version is a
+# class-level table (catalog.subclass_2024_tables), not this formula.
+PSIONIC_DICE_PB_MULTIPLIER_2014 = 2
+PSIONIC_DIE_BY_LEVEL_2014 = [(3, "d6"), (5, "d8"), (11, "d10"), (17, "d12")]
+
+# Battle Master superiority dice (PHB `combat-superiority`, `improved-combat-superiority`;
+# XPHB identical): four d8, "another superiority die at 7th level and one more at 15th";
+# d10 at 10, d12 at 18 (XPHB "Improved"/"Ultimate Combat Superiority"). Ascending by level.
+SUPERIORITY_DICE_COUNT = [(3, 4), (7, 5), (15, 6)]
+SUPERIORITY_DIE_BY_LEVEL = [(3, "d8"), (10, "d10"), (18, "d12")]
+# Maneuver save DC = 8 + proficiency bonus + STR or DEX modifier (PHB abilityDc str/dex,
+# XPHB "your choice"): the better one is used.
+MANEUVER_DC_BASE = 8
+
+# Arcane Archer (XGE `arcane-shot`): "You have two uses of this ability, and you regain all
+# expended uses of it when you finish a short or long rest."
+ARCANE_SHOT_USES = 2

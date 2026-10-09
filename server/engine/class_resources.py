@@ -36,6 +36,7 @@ class Ctx:
     choices: dict
     warnings_out: list | None = None
     _warned: bool = field(default=False, repr=False)
+    _warned_sub: bool = field(default=False, repr=False)
 
     def table(self, cls_id: str, column: str, level: int):
         """The 2024 table value for a class column at a class level, or None
@@ -57,9 +58,21 @@ class Ctx:
         return values[level - 1] if values and 0 < level <= len(values) else None
 
     def subclass_table(self, sub_id: str, column: str, level: int):
+        """The 2024 subclass table value, or None when the ruleset is not "2024"
+        or the table is missing (the caller then uses the formula). Warns once
+        when the whole subclass table set is missing."""
         if self.ruleset != "2024":
             return None
-        values = ((getattr(self.catalog, "subclass_2024_tables", None) or {}).get(sub_id) or {}).get(column)
+        tables = getattr(self.catalog, "subclass_2024_tables", None)
+        if not tables:
+            if not self._warned_sub and self.warnings_out is not None:
+                self.warnings_out.append({
+                    "id": "subclass-2024-tables-missing",
+                    "message": "The 2024 subclass tables are not available; subclass resources use the 2014 formulas.",
+                })
+            self._warned_sub = True
+            return None
+        values = (tables.get(sub_id) or {}).get(column)
         return values[level - 1] if values and 0 < level <= len(values) else None
 
 
@@ -302,7 +315,69 @@ _BUILDERS: dict[str, Callable[[Ctx, dict], list[dict]]] = {
     "wizard": _wizard,
     "ranger": _ranger,
 }
-_SUBCLASS_BUILDERS: dict[str, Callable[[Ctx, dict], list[dict]]] = {}
+
+# ---- Subclass resources (R6) -----------------------------------------------
+# Ruleset choice: a 2024 table is read only under ruleset "2024" (`ctx.subclass_table`
+# returns None otherwise), exactly like the class tables. A subclass record from
+# either edition can sit in a draft under any ruleset, so the record's own edition
+# picks the data when it can: the XPHB record uses its table under "2024" and the
+# 2014 formula otherwise; the TCE record always uses the formula.
+
+def _by_level(table: list[tuple[int, object]], level: int):
+    value = None
+    for min_level, v in table:
+        if level >= min_level:
+            value = v
+    return value
+
+
+def _psionic_dice(ctx: Ctx, rc: dict) -> list[dict]:
+    level = rc["level"]
+    if level < reference_data.SUBCLASS_RESOURCE_MIN_LEVEL:
+        return []
+    sub_id = rc.get("subclass_id")
+    count = ctx.subclass_table(sub_id, "number", level) if sub_id.endswith("-xphb") else None
+    die = ctx.subclass_table(sub_id, "die-size", level) if sub_id.endswith("-xphb") else None
+    if count and die:
+        # 2024: one die back on a short rest, all on a long rest.
+        return [_resource(rc, "Psionic Energy Dice", kind="subclass", uses=count, die=die, recharge="long",
+                          details={"shortRestRegains": 1})]
+    # 2014 formula (TCE): twice the proficiency bonus; all on a long rest, plus a
+    # bonus action to regain one (once per short or long rest).
+    return [_resource(rc, "Psionic Energy Dice", kind="subclass",
+                      uses=reference_data.PSIONIC_DICE_PB_MULTIPLIER_2014 * ctx.prof_bonus,
+                      die=_by_level(reference_data.PSIONIC_DIE_BY_LEVEL_2014, level), recharge="long",
+                      details={"bonusActionRegainsOne": True})]
+
+
+def _battle_master(ctx: Ctx, rc: dict) -> list[dict]:
+    level = rc["level"]
+    if level < reference_data.SUBCLASS_RESOURCE_MIN_LEVEL:
+        return []
+    mods = ctx.modifiers
+    dc = reference_data.MANEUVER_DC_BASE + ctx.prof_bonus + max(mods.get("STR", 0), mods.get("DEX", 0))
+    return [_resource(rc, "Superiority Dice", kind="subclass",
+                      uses=_by_level(reference_data.SUPERIORITY_DICE_COUNT, level),
+                      die=_by_level(reference_data.SUPERIORITY_DIE_BY_LEVEL, level),
+                      recharge="short-or-long", dc=dc)]
+
+
+def _arcane_archer(ctx: Ctx, rc: dict) -> list[dict]:
+    if rc["level"] < reference_data.SUBCLASS_RESOURCE_MIN_LEVEL:
+        return []
+    return [_resource(rc, "Arcane Shot", kind="subclass", uses=reference_data.ARCANE_SHOT_USES,
+                      recharge="short-or-long")]
+
+
+_SUBCLASS_BUILDERS: dict[str, Callable[[Ctx, dict], list[dict]]] = {
+    "psi-warrior-tce": _psionic_dice,
+    "psi-warrior-xphb": _psionic_dice,
+    "soulknife-tce": _psionic_dice,
+    "soulknife-xphb": _psionic_dice,
+    "battle-master-phb": _battle_master,
+    "battle-master-xphb": _battle_master,
+    "arcane-archer-xge": _arcane_archer,
+}
 
 # Extra Attack features that are not in the Fighter's `extra_attacks` level
 # column: feature id -> (class id, subclass id or None, level). Verified against
