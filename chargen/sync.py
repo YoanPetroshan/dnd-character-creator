@@ -41,7 +41,8 @@ Spells (Slice 11a.1): --official also fetches spells/index.json,
 spells/sources.json and every book file the index lists into
 official_dir()/spells/ (OFFICIAL_SUBDIR_TARGETS). The server's
 catalog/official/spells.py converts them; chargen itself does not read them.
-Still NOT fetched: class/*.json and items (later Slice 11 steps).
+Slice 11b.1 adds class/ (index + every class file) and optionalfeatures.json.
+Still NOT fetched: items (11c).
 """
 
 import json
@@ -66,6 +67,8 @@ OFFICIAL_TARGETS = [
      "desc": "Backgrounds — the full official arsenal"},
     {"key": "feats", "filename": "feats.json",
      "desc": "Feats — the full official arsenal (Phase 4c grounding)"},
+    {"key": "optionalfeatures", "filename": "optionalfeatures.json",
+     "desc": "Optional features - maneuvers, arcane shots, runes, elemental disciplines (Slice 11b)"},
 ]
 
 # Slice 11a.1: subdirectories of the 5etools data tree. Each lists its own
@@ -74,6 +77,8 @@ OFFICIAL_TARGETS = [
 OFFICIAL_SUBDIR_TARGETS = [
     {"subdir": "spells", "files": ["index.json", "sources.json"],
      "desc": "Spells - every book listed in spells/index.json plus the class-list map"},
+    {"subdir": "class", "files": ["index.json"],
+     "desc": "Classes and subclasses - every file in class/index.json"},
 ]
 _SAFE_SUBDIR_FILE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.json$")
 

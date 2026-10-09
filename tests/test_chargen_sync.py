@@ -366,6 +366,10 @@ def _spell_fixture_files():
         "spells/sources.json": b'{"PHB": {}}',
         "spells/spells-phb.json": b'{"spell": []}',
         "spells/spells-xge.json": b'{"spell": []}',
+        "optionalfeatures.json": b'{"optionalfeature": []}',
+        "class/index.json": json.dumps({"fighter": "class-fighter.json", "wizard": "class-wizard.json"}).encode(),
+        "class/class-fighter.json": b'{"class": [], "subclass": [], "subclassFeature": []}',
+        "class/class-wizard.json": b'{"class": [], "subclass": [], "subclassFeature": []}',
     }
 
 
@@ -423,3 +427,50 @@ def test_official_status_lists_the_spell_files(official_dir_fixture, capsys):
     out = capsys.readouterr().out
     assert "spells/index.json" in out
     assert "spells/sources.json" in out  # missing one is reported too
+
+
+# ---------------------------------------------------------------------------
+# --official: the class/ subdirectory and optionalfeatures.json (Slice 11b.1)
+# ---------------------------------------------------------------------------
+
+
+def test_official_pull_fetches_the_class_index_and_every_listed_class_file(official_dir_fixture, monkeypatch):
+    requested = []
+    monkeypatch.setattr(sync.urllib.request, "urlopen", _routing_urlopen(_spell_fixture_files(), requested))
+
+    assert sync.cmd_official_pull(force=False) is True
+
+    classes = official_dir_fixture / "class"
+    assert sorted(p.name for p in classes.iterdir()) == ["class-fighter.json", "class-wizard.json", "index.json"]
+    meta = json.loads((official_dir_fixture / "meta.json").read_text())
+    assert "class/class-fighter.json" in meta and "class/index.json" in meta
+
+
+def test_official_pull_fetches_optionalfeatures(official_dir_fixture, monkeypatch):
+    requested = []
+    monkeypatch.setattr(sync.urllib.request, "urlopen", _routing_urlopen(_spell_fixture_files(), requested))
+    assert sync.cmd_official_pull(force=False) is True
+    assert (official_dir_fixture / "optionalfeatures.json").read_bytes() == b'{"optionalfeature": []}'
+    assert any(t["filename"] == "optionalfeatures.json" for t in sync.OFFICIAL_TARGETS)
+
+
+def test_official_pull_ignores_unsafe_names_in_the_class_index(official_dir_fixture, monkeypatch):
+    files = _spell_fixture_files()
+    files["class/index.json"] = json.dumps(
+        {"fighter": "class-fighter.json", "BAD": "../../evil.json", "WORSE": "/etc/passwd"}
+    ).encode()
+    requested = []
+    monkeypatch.setattr(sync.urllib.request, "urlopen", _routing_urlopen(files, requested))
+    assert sync.cmd_official_pull(force=False) is True
+    assert not any("evil" in u or "passwd" in u for u in requested)
+    assert (official_dir_fixture / "class" / "class-fighter.json").exists()
+
+
+def test_official_status_lists_the_class_files(official_dir_fixture, capsys):
+    (official_dir_fixture / "class").mkdir(parents=True)
+    (official_dir_fixture / "class" / "index.json").write_text('{"fighter": "class-fighter.json"}')
+    sync.cmd_official_status()
+    out = capsys.readouterr().out
+    assert "class/index.json" in out
+    assert "class/class-fighter.json" in out
+    assert "optionalfeatures" in out

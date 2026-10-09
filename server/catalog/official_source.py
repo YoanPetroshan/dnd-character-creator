@@ -83,8 +83,11 @@ from __future__ import annotations
 from .official.paths import (  # noqa: F401
     _repo_root,
     has_official,
+    class_dir,
+    has_official_classes,
     has_official_spells,
     official_dir,
+    optionalfeatures_file,
     spells_dir,
 )
 from .official.common import (  # noqa: F401
@@ -186,4 +189,8 @@ from .official.spells import (  # noqa: F401
     load_official_spells,
     load_raw_spells,
     load_spell_class_lookup,
+)
+from .official.subclasses import (  # noqa: F401
+    load_raw_class_data,
+    load_raw_optional_features,
 )

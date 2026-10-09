@@ -38,3 +38,36 @@ def spells_dir() -> Path | None:
 
 def has_official_spells() -> bool:
     return spells_dir() is not None
+
+
+def class_dir() -> Path | None:
+    """Where the 5etools class files live (class/index.json), or None.
+    Same lookup as `spells_dir()`: `DND_5ETOOLS_DATA` first, then
+    `official_dir()/class`."""
+    override = os.environ.get("DND_5ETOOLS_DATA", "").strip()
+    candidates = []
+    if override:
+        candidates.append(Path(override).expanduser() / "class")
+    candidates.append(Path(official_dir()) / "class")
+    for candidate in candidates:
+        if (candidate / "index.json").is_file():
+            return candidate
+    return None
+
+
+def has_official_classes() -> bool:
+    return class_dir() is not None
+
+
+def optionalfeatures_file() -> Path | None:
+    """`optionalfeatures.json` (maneuvers, arcane shots, runes...): the
+    `DND_5ETOOLS_DATA` override first, then `official_dir()`, else None."""
+    override = os.environ.get("DND_5ETOOLS_DATA", "").strip()
+    candidates = []
+    if override:
+        candidates.append(Path(override).expanduser() / "optionalfeatures.json")
+    candidates.append(Path(official_dir()) / "optionalfeatures.json")
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return None
