@@ -58,7 +58,7 @@ from catalog.loader import Catalog
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
 from catalog.reference_data import (
     ABILITIES, SPECIFIC_WEAPON_PROFICIENCY_IDS, SRD_TRAIT_EFFECTS, SUBCLASS_PROFICIENCIES, SUBCLASS_EXTRA_FEATURES,
-    ruleset_allows,
+    SUBCLASS_UNLOCK_LEVEL, ruleset_allows,
 )
 from . import asi as asi_mod
 from . import attacks as attacks_mod
@@ -2883,6 +2883,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     classes = deduped_classes
 
     resolved_classes: list[dict] = []
+    subclass_pruned: list[dict] = []
     for idx, entry in enumerate(classes):
         entry_cls_id = entry.get("classId")
         entry_subclass_id = entry.get("subclassId")
@@ -2910,6 +2911,17 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 "id": "subclass-mismatch",
                 "message": f"'{entry_subclass['name']}' isn't a subclass of '{entry_cls_id}'.",
             })
+            entry_subclass_id = None
+
+        unlock_level = SUBCLASS_UNLOCK_LEVEL.get(entry_cls_id)
+        if entry_subclass and unlock_level and entry_level < unlock_level:
+            # Round-2 F4: level-down leaves `subclassId` in the draft (the UI only
+            # hides the select). Below the unlock level it must not apply.
+            subclass_pruned.append({
+                "choiceId": f"class:{entry_cls_id}:subclass",
+                "reason": f"'{entry_subclass['name']}' unlocks at {entry_cls_id} level {unlock_level} and was ignored.",
+            })
+            entry_subclass = None
             entry_subclass_id = None
 
         entry_choices_raw = entry.get("choices")
@@ -2946,13 +2958,14 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     bg = catalog.backgrounds.get(bg_id) if bg_id else None
     if bg_id and not bg:
         problems.append({"id": "unknown-background", "message": f"Unknown background '{bg_id}'."})
-    elif bg and draft.get("sources"):
-        # A filtered-out record and a genuinely-nonexistent one are
-        # indistinguishable from the player's point of view, so reuse the
-        # same "unknown-background" problem id.
-        if not _source_allowed(bg, draft["sources"]):
-            problems.append({"id": "unknown-background", "message": f"Unknown background '{bg_id}'."})
-            bg = None
+    elif bg and not _source_allowed(bg, draft.get("sources")):
+        # Round-2 F3: hidden by the Sources filter is a picker filter only
+        # (like ruleset); the record still resolves, with a warning. Only ids
+        # absent from the full catalog are `unknown-background` problems.
+        warnings.append({
+            "id": "source-hidden-background",
+            "message": f"'{bg['name']}' comes from a book that is switched off in Sources; it is still applied.",
+        })
 
     # Phase 4b Task 6: a background's `feats` field lands on the sheet as a
     # list of bare ids unchanged — no prerequisite checking here. Always a
@@ -3018,16 +3031,18 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     race = catalog.races.get(race_id) if race_id else None
     if race_id and not race:
         problems.append({"id": "unknown-species", "message": f"Unknown species '{race_id}'."})
-    elif race and draft.get("sources"):
-        # Same reasoning as the background filter above: "unknown-species".
-        if not _source_allowed(race, draft["sources"]):
-            problems.append({"id": "unknown-species", "message": f"Unknown species '{race_id}'."})
-            race = None
+    elif race and not _source_allowed(race, draft.get("sources")):
+        warnings.append({
+            "id": "source-hidden-species",
+            "message": f"'{race['name']}' comes from a book that is switched off in Sources; it is still applied.",
+        })
 
     subrace_id = species.get("subspeciesId")
     subrace = catalog.subraces.get(subrace_id) if subrace_id else None
     if subrace_id and not subrace:
         problems.append({"id": "unknown-subspecies", "message": f"Unknown subspecies '{subrace_id}'."})
+    elif subrace and race_id and not race:
+        subrace = None  # the species itself is unknown (reported above): no cascading mismatch
     elif subrace and (not race or subrace.get("race", {}).get("index") != race_id):
         problems.append({
             "id": "subspecies-mismatch",
@@ -3035,10 +3050,12 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         })
         subrace = None
     elif subrace and not _source_allowed(subrace, draft.get("sources")):
-        # Subspecies carry their own book (Duergar is MTF under PHB Dwarf),
-        # so a source-filtered subspecies is dropped like a filtered species.
-        problems.append({"id": "unknown-subspecies", "message": f"Unknown subspecies '{subrace_id}'."})
-        subrace = None
+        # Subspecies carry their own book (Duergar is MTF under PHB Dwarf);
+        # like a source-hidden species it still resolves, with a warning.
+        warnings.append({
+            "id": "source-hidden-subspecies",
+            "message": f"'{subrace['name']}' comes from a book that is switched off in Sources; it is still applied.",
+        })
 
     # Read here (before the per-class loop) so _asi_choice_templates can use
     # it below; `use_prereqs` (multiclass) is derived from the SAME dict
@@ -3555,7 +3572,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         {"choiceId": choice_id, "reason": f"'{choice_id}' no longer applies to the current character and was ignored."}
         for choice_id, selected in all_selections.items()
         if selected and choice_id not in current_template_ids
-    ]
+    ] + subclass_pruned
 
     choices: list[dict] = []
     for tpl in choice_templates:

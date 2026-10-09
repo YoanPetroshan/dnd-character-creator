@@ -27,7 +27,7 @@ export function BackgroundPage() {
       : undefined;
   const backgroundList = hiddenBackground ? [hiddenBackground, ...catalog.backgrounds] : catalog.backgrounds;
   const rulesetWarnings = resolution
-    ? resolution.warnings.filter((w) => w.id.startsWith("ruleset-") || w.id.startsWith("asi-double-dip"))
+    ? resolution.warnings.filter((w) => w.id.startsWith("ruleset-") || w.id.startsWith("source-hidden") || w.id.startsWith("asi-double-dip"))
     : [];
 
   function handleChange(choiceId: string, optionId: string, count: number) {

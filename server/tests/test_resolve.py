@@ -1006,16 +1006,16 @@ def test_choice_shaped_innate_ability_is_a_disclosed_candidate_list_not_a_crash(
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
-def test_draft_sources_rejects_a_race_from_an_unlisted_sourcebook(catalog):
-    # aasimar-vgm's 'source' field is "VGM" (raw 5etools casing) — a
-    # draft.sources of just ["phb"] must reject it exactly like an
-    # unrecognized id: same problem id, race treated as absent (no
-    # damage modifiers/ability bonuses/etc. applied for it).
+def test_draft_sources_warns_but_keeps_a_race_from_an_unlisted_sourcebook(catalog):
+    # Round-2 F3 (supersedes the old "reject like unknown" behavior): a race
+    # hidden only by Sources still resolves, with a `source-hidden-species`
+    # warning, like a ruleset-hidden one. aasimar-vgm's source is "VGM".
     draft = _fighter_acolyte_human_draft(sources=["phb"], species={"id": "aasimar-vgm", "choices": {}})
     resolution = resolve(draft, catalog)
-    assert resolution["problems"] == [{"id": "unknown-species", "message": "Unknown species 'aasimar-vgm'."}]
-    assert resolution["sheet"]["species"] is None
-    assert resolution["sheet"]["damageModifiers"] == {"resistances": [], "immunities": [], "vulnerabilities": []}
+    assert resolution["problems"] == []
+    assert [w["id"] for w in resolution["warnings"] if w["id"].startswith("source-hidden")] == ["source-hidden-species"]
+    assert resolution["sheet"]["species"]["id"] == "aasimar-vgm"
+    assert resolution["sheet"]["damageModifiers"]["resistances"] == ["necrotic", "radiant"]
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
@@ -1028,32 +1028,18 @@ def test_draft_sources_allows_a_race_whose_book_is_listed(catalog):
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
-def test_source_filtered_race_does_not_leak_its_orphaned_subrace_grants(catalog):
-    # Whole-branch review finding: Dwarf/PHB ("dwarf-phb") filtered out by
-    # draft.sources (here, ["mtf"] — PHB isn't listed) sets `race` to None
-    # and adds "unknown-species", exactly like an unresolvable race should.
-    # But the draft still names Duergar/MTF ("dwarf-phb-duergar-mtf") as
-    # its subspeciesId, and that subrace's OWN "race.index" field still
-    # says "dwarf-phb" (the string id, untouched by the source filter) —
-    # so the subspecies-mismatch guard right after the source filter
-    # (which only compared subrace.race.index against race_id) let the
-    # orphaned subrace survive even though its parent race resolved to
-    # None. _species_damage_modifiers/_species_condition_immunities/
-    # _species_innate_spells then merged from that orphaned subrace
-    # regardless, leaking Duergar's innate spells (Enlarge/Reduce,
-    # Invisibility) onto a sheet that simultaneously reports "no species
-    # selected" via problems. Confirmed against the SAME dwarf-phb /
-    # dwarf-phb-duergar-mtf pairing test_subrace_innate_spells_merge_with_
-    # the_parent_race_on_the_sheet already uses with an allowed source.
+def test_source_hidden_race_and_subrace_both_resolve_with_warnings(catalog):
+    # Round-2 F3: Dwarf/PHB and Duergar/MTF are both outside sources=["mtf"] /
+    # ["phb"]; nothing is dropped, so no orphaned-subrace leak is possible
+    # (the old test guarded the drop path). Duergar's grants stay with its race.
     draft = _fighter_acolyte_human_draft(
         sources=["mtf"], species={"id": "dwarf-phb", "subspeciesId": "dwarf-phb-duergar-mtf", "choices": {}}
     )
     resolution = resolve(draft, catalog)
-    assert any(p["id"] == "unknown-species" for p in resolution["problems"])
-    assert resolution["sheet"]["species"] is None
-    assert resolution["sheet"]["innateSpells"] == []
-    assert resolution["sheet"]["damageModifiers"] == {"resistances": [], "immunities": [], "vulnerabilities": []}
-    assert resolution["sheet"]["conditionImmunities"] == []
+    assert resolution["problems"] == []
+    assert resolution["sheet"]["species"]["id"] == "dwarf-phb"
+    assert "source-hidden-species" in [w["id"] for w in resolution["warnings"]]
+    assert resolution["sheet"]["innateSpells"] != []
 
 
 def test_empty_draft_sources_allows_every_race_unaffected(catalog):
@@ -1076,17 +1062,14 @@ def test_bundled_srd_race_is_always_allowed_regardless_of_draft_sources(catalog)
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
-def test_draft_sources_rejects_a_background_from_an_unlisted_sourcebook(catalog):
-    # aberrant-heir-efa's 'source' field is "EFA" (raw 5etools casing) — a
-    # draft.sources of just ["phb"] must reject it exactly like an
-    # unrecognized id: same problem id (mirrors Phase 4a Task 7's race-side
-    # test), background treated as absent (no ability bonuses/feats/etc.
-    # applied for it).
+def test_draft_sources_warns_but_keeps_a_background_from_an_unlisted_sourcebook(catalog):
+    # Round-2 F3: source-hidden backgrounds still resolve, with a warning.
     draft = _fighter_acolyte_human_draft(sources=["phb"], background={"id": "aberrant-heir-efa", "choices": {}})
     resolution = resolve(draft, catalog)
-    assert resolution["problems"] == [{"id": "unknown-background", "message": "Unknown background 'aberrant-heir-efa'."}]
-    assert resolution["sheet"]["background"] is None
-    assert resolution["sheet"]["grantedFeats"] == []
+    assert resolution["problems"] == []
+    assert "source-hidden-background" in [w["id"] for w in resolution["warnings"]]
+    assert resolution["sheet"]["background"]["id"] == "aberrant-heir-efa"
+    assert resolution["sheet"]["grantedFeats"] == ["aberrant-dragonmark"]
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")

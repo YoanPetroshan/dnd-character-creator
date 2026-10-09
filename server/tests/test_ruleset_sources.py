@@ -32,11 +32,12 @@ def test_subrace_carries_source(catalog):
     assert catalog.subraces["dwarf-phb-duergar-mtf"]["source"] == "MTF"
 
 
-def test_other_book_subspecies_filtered(catalog):
-    base = resolve(_draft("dwarf-phb", None, ["phb"]), catalog)["sheet"]["abilities"]["STR"]
+def test_other_book_subspecies_warns_but_still_applies(catalog):
+    # Round-2 F3: a source-hidden subspecies resolves with a warning.
     r = resolve(_draft("dwarf-phb", "dwarf-phb-duergar-mtf", ["phb"]), catalog)
-    assert "unknown-subspecies" in _ids(r)
-    assert r["sheet"]["abilities"]["STR"] == base
+    assert "unknown-subspecies" not in _ids(r)
+    assert "source-hidden-subspecies" in [w["id"] for w in r["warnings"]]
+    assert r["sheet"]["abilities"]["STR"] == 11
 
 
 def test_subspecies_allowed_when_book_enabled(catalog):
