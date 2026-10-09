@@ -95,7 +95,7 @@ def _feat_from_5etools(raw: dict) -> dict | None:
         # unconverted, not guessed at; see test_official_source.py's
         # Task 3 section docstring for the full reasoning.
         "proficiencies": _proficiencies_from_5etools(raw),
-        "proficiency_choices": _proficiency_choices_from_5etools(raw),
+        "proficiency_choices": _proficiency_choices_from_5etools(raw) + _skill_tool_choices_from_5etools(raw),
         # Task 4: language grants — reuses the SAME background-side
         # _language_grants_from_5etools conversion machinery directly (see
         # that function's own docstring for the "any"/"anyStandard" key
@@ -347,6 +347,38 @@ def _expertise_skills_from_5etools(raw: dict) -> list[str]:
             if val is True:
                 skills.append(f"skill-{slug(key)}")
     return skills
+
+
+def _skill_tool_choices_from_5etools(raw: dict) -> list[dict]:
+    """feats.json's `skillToolLanguageProficiencies` — Skilled/PHB and
+    Skilled/XPHB are the only real carriers, both
+    `[{"choose": [{"count": 3, "from": ["anySkill", "anyTool"]}]}]` — as
+    `proficiency_choices`-style envelopes appended after the ordinary skill/
+    tool ones (so their cids are `...:proficiency-choice-<i>` and the existing
+    merge sites route picked skills to skills and tools to tools). `from`
+    lists with both anySkill and anyTool use the any_skill_or_tool option
+    set; a lone one reuses any_skill / any_tool. A `from` naming
+    anyLanguage (no real feat does) is not converted."""
+    envelopes = []
+    for entry in raw.get("skillToolLanguageProficiencies") or []:
+        groups = entry.get("choose")
+        if isinstance(groups, dict):
+            groups = [groups]
+        for group in groups or []:
+            n = group.get("count", 1)
+            kinds = set(group.get("from") or [])
+            if not isinstance(n, int) or isinstance(n, bool) or n < 1 or "anyLanguage" in kinds:
+                continue
+            if kinds == {"anySkill", "anyTool"}:
+                set_type = "any_skill_or_tool"
+            elif kinds == {"anySkill"}:
+                set_type = "any_skill"
+            elif kinds == {"anyTool"}:
+                set_type = "any_tool"
+            else:
+                continue
+            envelopes.append({"choose": n, "type": "proficiencies", "from": {"option_set_type": set_type}})
+    return envelopes
 
 
 def _expertise_choices_from_5etools(raw: dict) -> list[dict]:

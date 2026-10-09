@@ -1496,6 +1496,8 @@ def _background_proficiency_choice_label(envelope: dict) -> str:
     set_type = from_field.get("option_set_type")
     if set_type == "any_skill":
         return "Skill Proficiency"
+    if set_type == "any_skill_or_tool":
+        return "Skill or Tool Proficiency"
     if set_type == "any_tool":
         category = from_field.get("tool_category")
         return f"Tool Proficiency ({category})" if category else "Tool Proficiency"

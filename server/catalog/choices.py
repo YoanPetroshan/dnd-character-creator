@@ -128,6 +128,12 @@ def build_choice_options(from_field: dict) -> list[dict] | None:
     if set_type == "any_skill":
         return [{"id": s_id, "label": name} for s_id, name in reference_data.SKILL_NAMES.items()]
 
+    if set_type == "any_skill_or_tool":
+        # Skilled-style "any N from skills or tools": every skill, then every tool.
+        return [{"id": s_id, "label": name} for s_id, name in reference_data.SKILL_NAMES.items()] + [
+            {"id": t["index"], "label": t["name"]} for t in reference_data.TOOLS
+        ]
+
     if set_type == "any_tool":
         category = from_field.get("tool_category")
         return [
