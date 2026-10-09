@@ -233,6 +233,9 @@ def to_pdf(resolution: dict) -> bytes:
                 pdf.h3(f"Известни/Подготвени заклинания{suffix}")
                 for s in class_spells["known"]:
                     pdf.bullet(f"{s['name']} (ниво {s['level']})")
+            if class_spells.get("mysticArcanum"):
+                arcanum = ", ".join(f"{m['name']} (ниво {m['level']})" for m in class_spells["mysticArcanum"])
+                pdf.body(f"Мистичен арканум{suffix}: {arcanum}")
 
     innate = sheet.get("innateSpells") or []
     if innate:

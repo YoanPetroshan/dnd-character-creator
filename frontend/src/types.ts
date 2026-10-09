@@ -103,6 +103,8 @@ export interface SheetClassSpells {
   known: SheetSpellSummary[];
   /** Subclass spells (domain/oath/circle): always prepared, outside the limits. */
   alwaysPrepared: SheetSpellSummary[];
+  /** Warlock only: the Mystic Arcanum picks (level 6-9 spells, one per gained level). */
+  mysticArcanum?: { level: number; id: string; name: string }[];
   spellSaveDC: number | null;
   spellAttackBonus: number | null;
 }

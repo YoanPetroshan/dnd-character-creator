@@ -333,3 +333,26 @@ def test_pdf_renders_innate_spells_section_and_tolerates_missing_key():
     base["sheet"]["innateSpells"] = [{"name": "Lesser Restoration", "uses": "1/day", "level": 3}]
     text = "".join(p.extract_text() for p in PdfReader(io.BytesIO(to_pdf(base))).pages)
     assert "Lesser Restoration" in text
+
+
+def _warlock_with_arcanum():
+    resolution = _sample_resolution()
+    resolution["sheet"]["classes"] = [{"id": "warlock", "name": "Warlock", "level": 13, "subclass": None}]
+    resolution["sheet"]["spells"] = [{
+        "classId": "warlock", "cantrips": [], "known": [],
+        "mysticArcanum": [{"level": 6, "id": "true-seeing", "name": "True Seeing"},
+                          {"level": 7, "id": "forcecage", "name": "Forcecage"}],
+        "spellSaveDC": 14, "spellAttackBonus": 6,
+    }]
+    return resolution
+
+
+def test_pdf_prints_the_mystic_arcanum_line():
+    text = _extract_text(to_pdf(_warlock_with_arcanum()))
+    assert "Мистичен арканум: True Seeing (ниво 6), Forcecage (ниво 7)" in text
+
+
+def test_pdf_omits_the_arcanum_line_without_picks():
+    resolution = _warlock_with_arcanum()
+    resolution["sheet"]["spells"][0]["mysticArcanum"] = []
+    assert "арканум" not in _extract_text(to_pdf(resolution))

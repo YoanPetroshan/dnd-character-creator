@@ -372,3 +372,26 @@ def test_markdown_renders_innate_spells_section():
 def test_markdown_without_innate_spells_key_renders_no_section():
     text = to_markdown(_sample_resolution())
     assert "Вродени заклинания" not in text
+
+
+def _warlock_with_arcanum():
+    resolution = _sample_resolution()
+    resolution["sheet"]["classes"] = [{"id": "warlock", "name": "Warlock", "level": 13, "subclass": None}]
+    resolution["sheet"]["spells"] = [{
+        "classId": "warlock", "cantrips": [], "known": [],
+        "mysticArcanum": [{"level": 6, "id": "true-seeing", "name": "True Seeing"},
+                          {"level": 7, "id": "forcecage", "name": "Forcecage"}],
+        "spellSaveDC": 14, "spellAttackBonus": 6,
+    }]
+    return resolution
+
+
+def test_markdown_prints_the_mystic_arcanum_line():
+    text = to_markdown(_warlock_with_arcanum())
+    assert "**Мистичен арканум:** True Seeing (ниво 6), Forcecage (ниво 7)" in text
+
+
+def test_markdown_omits_the_arcanum_line_without_picks():
+    resolution = _warlock_with_arcanum()
+    resolution["sheet"]["spells"][0]["mysticArcanum"] = []
+    assert "арканум" not in to_markdown(resolution)

@@ -3037,6 +3037,44 @@ def _spell_choice_templates(
     return templates
 
 
+# Warlock level at which each Mystic Arcanum spell level is gained (identical
+# in the 2014 and 2024 books); the SRD `mystic_arcanum_level_N` column is the
+# gate, this table only names the level used in the cid.
+_ARCANUM_LEVELS = {6: 11, 7: 13, 8: 15, 9: 17}
+
+
+def _mystic_arcanum_templates(catalog: Catalog, rc: dict, sources=None, ruleset: str = "mixed", class_choices: dict | None = None) -> list[dict]:
+    """Warlock Mystic Arcanum (D11): one ordinary single-pick choice per
+    arcanum spell level whose `class_specific.mystic_arcanum_level_N` is >= 1
+    at the current Warlock level, always from the Warlock list (also in a
+    multiclass). A spell already stored stays offered, as for other spell
+    options."""
+    if rc.get("cls_id") != "warlock" or not rc.get("cls"):
+        return []
+    specific = ((rc.get("level_row") or {}).get("class_specific")) or {}
+    templates = []
+    for spell_level, gained_at in _ARCANUM_LEVELS.items():
+        if (specific.get(f"mystic_arcanum_level_{spell_level}") or 0) < 1:
+            continue
+        cid = f"class:warlock:{gained_at}:mystic-arcanum-{spell_level}"
+        stored = (class_choices or {}).get(cid)
+        keep = {x for x in stored if isinstance(x, str)} if isinstance(stored, list) else set()
+        envelope = {"choose": 1, "from": {
+            "option_set_type": "options_array",
+            "options": _spell_options(catalog, "warlock", spell_level, sources, ruleset, keep),
+        }}
+        source = {"kind": "class", "id": "warlock", "label": rc["cls"]["name"], "level": gained_at}
+        tpl = build_choice_template(
+            envelope, cid, source, f"Mystic Arcanum (level {spell_level})",
+            description=f"Choose one level-{spell_level} spell from the Warlock spell list as your Mystic Arcanum. "
+                        "You can cast it once per long rest without a spell slot.",
+        )
+        if tpl:
+            _tag_spell_level_groups(catalog, tpl)
+            templates.append(tpl)
+    return templates
+
+
 def _fixed_equipment(entries: list[dict], item_lookup: dict) -> list[dict]:
     result = []
     for entry in entries:
@@ -3790,6 +3828,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc_cls, rc_cls_id, rc_level, rc_level_row = rc["cls"], rc["cls_id"], rc["level"], rc.get("level_row")
         if not (rc_cls and rc_cls_id):
             continue
+        choice_templates += _mystic_arcanum_templates(catalog, rc, draft.get("sources"), ruleset, rc["class_choices"])
         caster = _effective_caster(catalog, rc, ruleset)
         if caster:
             spell_ability, spell_dict, list_class_id = caster
@@ -4078,8 +4117,16 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc_spell_ability = (rc_caster[0] if rc_caster else None) or spells_mod.spellcasting_ability(rc_cls) or SUBCLASS_SPELLCASTING_ABILITY.get(rc["subclass_id"] or "")
         rc_save_dc = spells_mod.spell_save_dc(prof_bonus, modifiers[rc_spell_ability]) if rc_spell_ability else None
         rc_attack_bonus = spells_mod.spell_attack_bonus(prof_bonus, modifiers[rc_spell_ability]) if rc_spell_ability else None
+        arcanum = []
+        if rc_cls_id == "warlock":
+            for ch in choices:
+                if ":mystic-arcanum-" in ch["id"] and ch["id"].startswith("class:warlock:") and ch["selected"]:
+                    spell = catalog.spells.get(ch["selected"][0])
+                    if spell:
+                        arcanum.append({"level": spell["level"], "id": spell["index"], "name": spell["name"]})
         spells_summary.append({
             "classId": rc_cls_id,
+            **({"mysticArcanum": arcanum} if rc_cls_id == "warlock" else {}),
             "cantrips": _spell_summaries(rc_cantrip_choice),
             "known": _spell_summaries(rc_known_spells_choice),
             # Subclass spells (Life domain, oath spells, ...): always

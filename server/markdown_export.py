@@ -227,6 +227,10 @@ def to_markdown(resolution: dict) -> str:
                 for s in class_spells["known"]:
                     lines.append(f"- {s['name']} (ниво {s['level']})")
                 lines.append("")
+            if class_spells.get("mysticArcanum"):
+                arcanum = ", ".join(f"{m['name']} (ниво {m['level']})" for m in class_spells["mysticArcanum"])
+                lines.append(f"- **Мистичен арканум{suffix}:** {arcanum}")
+                lines.append("")
         lines.append("")
 
     innate = sheet.get("innateSpells") or []
