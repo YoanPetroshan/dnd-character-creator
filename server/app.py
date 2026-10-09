@@ -23,6 +23,8 @@ from pdf_export import to_pdf
 app = Flask(__name__, static_folder=None)
 DIST = pathlib.Path(__file__).resolve().parent.parent / "frontend" / "dist"
 app.config["FRONTEND_DIST"] = DIST
+# A character draft is a few KB; 1 MB is generous and stops multi-MB junk bodies.
+app.config["MAX_CONTENT_LENGTH"] = 1_000_000
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
 
 _catalog = load_catalog()

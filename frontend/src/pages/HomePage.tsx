@@ -208,10 +208,25 @@ export function HomePage() {
         <>
           <h3>Отпаднали избори</h3>
           <ul>
-            {resolution.pruned.map((p) => (
-              <li key={p.choiceId}>{p.reason}</li>
+            {resolution.pruned.map((p, i) => (
+              <li key={`${i}-${p.choiceId}`}>{p.reason}</li>
             ))}
           </ul>
+          <button
+            type="button"
+            onClick={() =>
+              dispatch({
+                type: "CLEAR_STALE_SELECTIONS",
+                keepIds: resolution.choices.map((c) => c.id),
+                // "class:<id>:subclass" = a subclass kept below its unlock level
+                clearSubclassFor: resolution.pruned
+                  .map((p) => /^class:(.+):subclass$/.exec(p.choiceId)?.[1])
+                  .filter((id): id is string => !!id),
+              })
+            }
+          >
+            Изчисти отпаднали избори
+          </button>
         </>
       )}
     </div>

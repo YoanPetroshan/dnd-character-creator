@@ -62,6 +62,7 @@ type Action =
   | { type: "SET_DETAIL"; field: keyof Draft["details"]; value: string }
   | { type: "SET_CHOICE_SELECTION"; source: ChoiceSourceKind; choiceId: string; selected: string[] }
   | { type: "TOGGLE_CHOICE_OPTION"; source: ChoiceSourceKind; choiceId: string; optionId: string; count: number }
+  | { type: "CLEAR_STALE_SELECTIONS"; keepIds: string[]; clearSubclassFor?: string[] }
   | { type: "ADD_ITEM"; itemId: string }
   | { type: "REMOVE_ITEM"; itemId: string }
   | { type: "TOGGLE_EQUIPPED"; itemId: string };
@@ -88,6 +89,24 @@ function storedSelection(state: Draft, source: ChoiceSourceKind, choiceId: strin
 
 function reducer(state: Draft, action: Action): Draft {
   switch (action.type) {
+    case "CLEAR_STALE_SELECTIONS": {
+      // Drop stored selections whose choice no longer exists in the resolution
+      // (what the server reports as `pruned`).
+      const keep = new Set(action.keepIds);
+      const prune = (m: Record<string, string[]>) =>
+        Object.fromEntries(Object.entries(m ?? {}).filter(([id]) => keep.has(id)));
+      return {
+        ...state,
+        classes: state.classes.map((c) => ({
+          ...c,
+          choices: prune(c.choices),
+          ...(action.clearSubclassFor?.includes(c.classId) ? { subclassId: undefined } : {}),
+        })),
+        background: { ...state.background, choices: prune(state.background.choices) },
+        species: { ...state.species, choices: prune(state.species.choices) },
+        equipment: { ...state.equipment, choices: prune(state.equipment.choices) },
+      };
+    }
     case "TOGGLE_CHOICE_OPTION": {
       const current = storedSelection(state, action.source, action.choiceId);
       let next: string[];

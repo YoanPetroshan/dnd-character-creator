@@ -510,3 +510,19 @@ def test_export_rejects_a_draft_missing_one_part(client, drop, expected):
     resp = client.post("/api/export/yaml", json=draft)
     assert resp.status_code == 400
     assert expected in {p["id"] for p in resp.get_json()["problems"]}
+
+
+# --- Round-2 audit F15: request size cap and bounded `pruned` ---
+
+def test_oversized_request_is_rejected_with_json_413(client):
+    resp = client.post("/api/resolve", json={"name": "x" * 1_200_000})
+    assert resp.status_code == 413
+    assert "error" in resp.get_json()
+
+
+def test_pruned_list_is_capped_with_a_count_line(client):
+    stale = {f"class:fighter:1:junk-{i}": ["x"] for i in range(5000)}
+    body = client.post("/api/resolve", json={"classes": [{"classId": "fighter", "level": 1, "choices": stale}]}).get_json()
+    assert len(body["pruned"]) == 201
+    assert body["pruned"][-1]["choiceId"] == "pruned-more"
+    assert "4800" in body["pruned"][-1]["reason"]

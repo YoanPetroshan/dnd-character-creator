@@ -2856,6 +2856,10 @@ def _class_feature_list(catalog: Catalog, resolved_classes: list[dict], choices:
     return out
 
 
+# Cap on `pruned` entries returned (a draft with 50k stale keys must not echo all of them).
+MAX_PRUNED_REPORTED = 200
+
+
 def resolve(draft: dict, catalog: Catalog) -> dict:
     draft, problems = normalize_draft(draft)
     warnings: list[dict] = []
@@ -3568,11 +3572,17 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                     expanded_templates.extend(option_deps.get(option_id, []))
         choice_templates = expanded_templates
     current_template_ids = {tpl["id"] for tpl in choice_templates}
-    pruned = [
+    pruned = subclass_pruned + [
         {"choiceId": choice_id, "reason": f"'{choice_id}' no longer applies to the current character and was ignored."}
         for choice_id, selected in all_selections.items()
         if selected and choice_id not in current_template_ids
-    ] + subclass_pruned
+    ]
+    if len(pruned) > MAX_PRUNED_REPORTED:
+        extra = len(pruned) - MAX_PRUNED_REPORTED
+        pruned = pruned[:MAX_PRUNED_REPORTED] + [{
+            "choiceId": "pruned-more",
+            "reason": f"...and {extra} more stale selections were ignored.",
+        }]
 
     choices: list[dict] = []
     for tpl in choice_templates:
