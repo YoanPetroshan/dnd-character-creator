@@ -250,3 +250,10 @@ Functional (not visual) phone support; CSS changes are structural only so a late
 - `resist: [{choose}]` (Dragonborn PHB/FTD, XPHB Tiefling, Reborn) becomes `resist_options` and a pending species choice `species:<race>:resistance`; the pick lands in `sheet.damageModifiers.resistances`.
 - Tests: 801 server tests passing (`tests/test_species_conversion.py` is new).
 - Not done: 2024-style races without any `ability` or `lineage` field (XPHB, EFA, RHW) get no species ASI by design (background ASI); size choices and species feats are Slice 8.
+
+## SRD racial trait mechanics (Slice 4, 2026-10-09)
+- `catalog/reference_data.SRD_TRAIT_EFFECTS` encodes the effects of bundled SRD race traits (the SRD JSON only has prose), keyed by trait index: `senses` (Darkvision 60), `resist` (Dwarven Resilience: poison; Hellish Resistance: fire), `hp_per_level` (Dwarven Toughness, applied as +1 x total character level in `derived.hitPointMax`), `innate_spells` (Infernal Legacy: Thaumaturgy at-will, Hellish Rebuke 3rd, Darkness 5th, CHA) and `spell_ability`. Official races use synthetic trait ids, so this table never touches them; they carry real fields instead.
+- Draconic Ancestry: the damage type of the selected subtrait (`trait_specific.damage_type`) is added to `sheet.damageModifiers.resistances`.
+- New species choices built from SRD trait data: High Elf Cantrip (`species:elf:trait:high-elf-cantrip:cantrip`, lands in `sheet.innateSpells` at-will with INT) and trait-level `language_options` (High Elf Extra Language, `species:<race>:trait:<trait>:languages`). Both render through the generic species choice cards.
+- Tests: 809 server tests passing (`tests/test_srd_trait_effects.py`).
+- Not done: official High Elf/Tiefling `additionalSpells.known` cantrips (Thaumaturgy etc., 5etools `known` is not converted); Dwarven Resilience's advantage on poison saves is prose only.

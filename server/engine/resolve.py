@@ -56,7 +56,7 @@ from dataclasses import dataclass, field
 from catalog.choices import build_choice_template
 from catalog.loader import Catalog
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
-from catalog.reference_data import SRD_TRAIT_SENSES
+from catalog.reference_data import SRD_TRAIT_EFFECTS
 from . import asi as asi_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
@@ -392,7 +392,7 @@ def _feat_senses(feats: list[dict]) -> dict[str, int]:
 def _species_senses(race: dict | None, subrace: dict | None, catalog: Catalog) -> dict[str, int]:
     """Senses from the race and subrace: official records carry a numeric
     `darkvision`; bundled SRD races only have the descriptive "Darkvision"
-    trait, mapped via reference_data.SRD_TRAIT_SENSES. Higher range wins."""
+    trait, mapped via reference_data.SRD_TRAIT_EFFECTS. Higher range wins."""
     senses: dict[str, int] = {}
 
     def add(kind: str, value) -> None:
@@ -403,10 +403,23 @@ def _species_senses(race: dict | None, subrace: dict | None, catalog: Catalog) -
         if not src:
             continue
         add("darkvision", src.get("darkvision"))
-        for ref in list(src.get("traits", [])) + list(src.get("racial_traits", [])):
-            for kind, value in SRD_TRAIT_SENSES.get(ref["index"], {}).items():
-                add(kind, value)
+    for effect in _srd_trait_effects(race, subrace):
+        for kind, value in effect.get("senses", {}).items():
+            add(kind, value)
     return senses
+
+
+def _srd_trait_effects(race: dict | None, subrace: dict | None) -> list[dict]:
+    """reference_data.SRD_TRAIT_EFFECTS entries for every trait of the race
+    and subrace (bundled SRD only; official trait ids never match)."""
+    effects = []
+    for src in (race, subrace):
+        if not src:
+            continue
+        for ref in list(src.get("traits", [])) + list(src.get("racial_traits", [])):
+            if ref["index"] in SRD_TRAIT_EFFECTS:
+                effects.append(SRD_TRAIT_EFFECTS[ref["index"]])
+    return effects
 
 
 def _species_speeds(race: dict | None, subrace: dict | None) -> dict[str, int]:
@@ -466,7 +479,38 @@ def _species_innate_spells(race: dict | None, subrace: dict | None, catalog: Cat
             continue
         for entry in src.get("innate_spells", []):
             innate.append(_innate_entry_to_sheet(entry, catalog))
+    for effect in _srd_trait_effects(race, subrace):
+        for entry in effect.get("innate_spells", []):
+            innate.append(_innate_entry_to_sheet(entry, catalog))
     return innate
+
+
+def _species_trait_spell_choices(race: dict | None, subrace: dict | None, catalog: Catalog,
+                                 choices: list[dict]) -> list[dict]:
+    """Sheet innate-spell entries for SRD race traits whose
+    `trait_specific.spell_options` Choice was answered (High Elf Cantrip):
+    an at-will spell, cast with the ability in SRD_TRAIT_EFFECTS."""
+    by_id = {c["id"]: c for c in choices}
+    out = []
+    for src in (race, subrace):
+        if not src:
+            continue
+        for ref in list(src.get("traits", [])) + list(src.get("racial_traits", [])):
+            trait = catalog.traits.get(ref["index"]) or {}
+            if not (trait.get("trait_specific") or {}).get("spell_options"):
+                continue
+            choice = by_id.get(_species_trait_spell_cid(race, ref["index"]))
+            ability = SRD_TRAIT_EFFECTS.get(ref["index"], {}).get("spell_ability")
+            for sid in (choice or {}).get("selected", []):
+                spell = catalog.spells.get(sid)
+                if spell:
+                    out.append({"spellId": sid, "name": spell["name"], "level": 1, "uses": "at-will",
+                                "ability": ability, "variant": None})
+    return out
+
+
+def _species_trait_spell_cid(race: dict | None, trait_index: str) -> str:
+    return f"species:{race['index'] if race else ''}:trait:{trait_index}:cantrip"
 
 
 def _innate_entry_to_sheet(entry: dict, catalog: Catalog) -> dict:
@@ -1457,6 +1501,29 @@ def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrac
             )
             if prof_tpl:
                 templates.append(prof_tpl)
+
+        # Trait-level bonus language (SRD High Elf's Extra Language).
+        lang_envelope = trait.get("language_options")
+        if lang_envelope:
+            lang_choose = lang_envelope.get("choose", 1)
+            lang_tpl = build_choice_template(
+                lang_envelope, f"species:{race_id}:trait:{trait['index']}:languages",
+                {"kind": "species", "id": race_id, "label": race["name"]}, trait["name"],
+                description=f"Choose {lang_choose} additional language{'s' if lang_choose != 1 else ''} of your choice.",
+            )
+            if lang_tpl:
+                templates.append(lang_tpl)
+
+        # Trait-level spell pick (SRD High Elf Cantrip).
+        spell_envelope = (trait.get("trait_specific") or {}).get("spell_options")
+        if spell_envelope:
+            spell_tpl = build_choice_template(
+                spell_envelope, _species_trait_spell_cid(race, trait["index"]),
+                {"kind": "species", "id": race_id, "label": race["name"]}, trait["name"],
+                description=_join_desc(trait.get("desc")),
+            )
+            if spell_tpl:
+                templates.append(spell_tpl)
 
         envelope = (trait.get("trait_specific") or {}).get("subtrait_options")
         if not envelope:
@@ -3229,7 +3296,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "abilityModifiers": modifiers,
         "proficiencyBonus": prof_bonus,
         "hitPointMax": derived_mod.hit_point_max_multiclass(hp_class_entries, modifiers["CON"], hp_type)
-        + features_mod.hp_bonus(effects, class_levels),
+        + features_mod.hp_bonus(effects, class_levels)
+        + sum(e.get("hp_per_level", 0) for e in _srd_trait_effects(race, subrace)) * sum(class_levels.values()),
         "hitDice": " + ".join(f"{rc['level']}d{rc['cls']['hit_die']}" for rc in resolved_classes if rc["cls"] and rc["cls"].get("hit_die")) or None,
         "armorClass": equipment_mod.armor_class_from_gear(
             equipped_items, modifiers["DEX"], features_mod.ac_formulas(effects), modifiers,
@@ -3269,13 +3337,26 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         if c["source"]["kind"] == "species" and c["id"].endswith(":resistance")
         for v in c["selected"]
     ]
+    # SRD trait effects (Dwarven Resilience, Hellish Resistance) and the
+    # damage type of a selected Draconic Ancestry subtrait.
+    for effect in _srd_trait_effects(race, subrace):
+        chosen_resistances += effect.get("resist", [])
+    for c in choices:
+        if c["source"]["kind"] != "species" or ":trait:" not in c["id"]:
+            continue
+        for sel in c["selected"]:
+            damage = ((catalog.traits.get(sel) or {}).get("trait_specific") or {}).get("damage_type")
+            if damage:
+                chosen_resistances.append(damage["index"])
     damage_modifiers = _species_damage_modifiers(race, subrace, resolved_feats, chosen_resistances)
     condition_immunities = _species_condition_immunities(race, subrace, resolved_feats)
     senses = _species_senses(race, subrace, catalog)
     for sense_kind, sense_range in _feat_senses(resolved_feats).items():
         if sense_range > senses.get(sense_kind, 0):
             senses[sense_kind] = sense_range
-    innate_spells = _species_innate_spells(race, subrace, catalog) + _feat_innate_spells(resolved_feats, catalog, choices)
+    innate_spells = (_species_innate_spells(race, subrace, catalog)
+                     + _species_trait_spell_choices(race, subrace, catalog, choices)
+                     + _feat_innate_spells(resolved_feats, catalog, choices))
 
     sheet = {
         "name": draft.get("name") or "",

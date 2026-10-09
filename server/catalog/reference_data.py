@@ -202,9 +202,25 @@ CLASS_FEATURE_EFFECTS: dict[str, dict] = {
 }
 
 
-# SRD trait index -> senses it grants. The bundled SRD JSON only describes
-# these in prose; official (5etools) races carry a numeric `darkvision`
-# field instead. Keyed by trait index, same convention as other trait effects.
-SRD_TRAIT_SENSES: dict[str, dict[str, int]] = {
-    "darkvision": {"darkvision": 60},
+# SRD racial trait index -> mechanical effect. The bundled SRD JSON describes
+# these traits in prose only (official 5etools races carry real fields
+# instead, and use synthetic trait ids, so they never match here). Keys:
+#   senses          {sense: range in feet}
+#   resist          [damage types]
+#   hp_per_level    flat HP added per character level (Dwarven Toughness)
+#   innate_spells   catalog-innate-shaped entries; `level` is the character
+#                   level the spell is gained at
+#   spell_ability   spellcasting ability for the trait's own chosen spell
+#                   (High Elf Cantrip's `trait_specific.spell_options` pick)
+SRD_TRAIT_EFFECTS: dict[str, dict] = {
+    "darkvision": {"senses": {"darkvision": 60}},
+    "dwarven-resilience": {"resist": ["poison"]},
+    "dwarven-toughness": {"hp_per_level": 1},
+    "hellish-resistance": {"resist": ["fire"]},
+    "infernal-legacy": {"innate_spells": [
+        {"name": "Thaumaturgy", "spell_id": "thaumaturgy", "level": 1, "uses": "at-will", "ability": "CHA", "variant": None},
+        {"name": "Hellish Rebuke", "spell_id": "hellish-rebuke", "level": 3, "uses": "1/day", "ability": "CHA", "variant": None},
+        {"name": "Darkness", "spell_id": "darkness", "level": 5, "uses": "1/day", "ability": "CHA", "variant": None},
+    ]},
+    "high-elf-cantrip": {"spell_ability": "INT"},
 }
