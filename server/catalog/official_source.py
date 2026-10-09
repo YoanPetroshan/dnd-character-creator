@@ -85,7 +85,7 @@ if str(_repo_root) not in sys.path:
     sys.path.append(str(_repo_root))
 
 from chargen.sources import official_dir, has_official  # noqa: E402  (must follow the sys.path fix above)
-from catalog.reference_data import SKILL_NAMES, TOOLS, LANGUAGES  # noqa: E402  (same reason)
+from catalog.reference_data import SKILL_NAMES, TOOLS, LANGUAGES, ruleset_for_edition, ruleset_for_feat  # noqa: E402  (same reason)
 
 _LANGUAGES_BY_INDEX = {lang["index"]: lang for lang in LANGUAGES}
 
@@ -1292,6 +1292,7 @@ def _race_from_5etools(raw: dict, traits_by_index: dict[str, dict]) -> dict | No
         "languages": [], "language_desc": "",
         "traits": trait_refs,
         "source": raw.get("source", ""),  # NEW field, SRD races don't have it (implicitly "SRD") — Task 6 uses this for filtering/labeling
+        "ruleset": ruleset_for_edition(raw),
         # NEW fields (Task 5), 5etools' own field names — see
         # _damage_modifiers_from_5etools/_condition_immunities_from_5etools
         # docstrings for the shape confirmed against real data.
@@ -2064,6 +2065,7 @@ def _background_from_5etools(raw: dict) -> dict | None:
         "feature": {"name": "", "desc": []},  # not read mechanically by resolve.py today, see docstring above
         "ability_bonus_options": _ability_bonus_options_from_5etools_weighted_pair(raw.get("ability", [])),
         "source": raw.get("source", ""),
+        "ruleset": ruleset_for_edition(raw),
         "feats": feats,
         "feat_options": feat_options,
         # Finding 1 of the final whole-branch review (2026-09-28): a
@@ -2109,10 +2111,12 @@ def load_official_races(official_dir: Path) -> tuple[list[dict], list[dict], dic
             races.append(converted)
 
     race_ids = {r["index"] for r in races}
+    race_rulesets = {r["index"]: r["ruleset"] for r in races}
     subraces = []
     for raw in raw_subraces:
         converted = _subrace_from_5etools(raw, race_ids, traits_by_index)
         if converted is not None:
+            converted["ruleset"] = race_rulesets[converted["race"]["index"]]  # subspecies inherit the species' ruleset
             subraces.append(converted)
 
     return races, subraces, traits_by_index
@@ -2176,6 +2180,7 @@ def _feat_from_5etools(raw: dict) -> dict | None:
         "index": index,
         "name": raw["name"],
         "source": raw.get("source", ""),
+        "ruleset": ruleset_for_feat(raw),
         "category": raw.get("category", ""),
         "repeatable": bool(raw.get("repeatable")),
         "entries": raw.get("entries", []),

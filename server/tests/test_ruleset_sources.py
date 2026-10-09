@@ -48,3 +48,37 @@ def test_subspecies_allowed_when_book_enabled(catalog):
 def test_srd_subrace_always_allowed(catalog):
     r = resolve(_draft("dwarf", "hill-dwarf", ["phb"]), catalog)
     assert "unknown-subspecies" not in _ids(r)
+
+
+# --- 10.2 ruleset tagging ---
+
+def test_race_and_subrace_tags(catalog):
+    assert catalog.races["dwarf-xphb"]["ruleset"] == "2024"
+    assert catalog.races["dwarf-phb"]["ruleset"] == "2014"
+    assert catalog.races["dwarf"]["ruleset"] == "2014"  # SRD
+    assert catalog.subraces["hill-dwarf"]["ruleset"] == "2014"
+    assert catalog.subraces["dwarf-phb-hill-phb"]["ruleset"] == "2014"
+    for sub in catalog.subraces.values():
+        parent = catalog.races[sub["race"]["index"]]
+        assert sub["ruleset"] == parent["ruleset"]
+
+
+def test_exactly_sixty_2024_backgrounds(catalog):
+    bgs = [b for b in catalog.backgrounds.values() if b["ruleset"] == "2024"]
+    assert len(bgs) == 60
+    assert all(b["ability_bonus_options"] for b in bgs)
+    assert catalog.backgrounds["acolyte"]["ruleset"] == "2014"
+    assert all(b["ruleset"] in ("2014", "2024") for b in catalog.backgrounds.values())
+
+
+def test_feat_tags(catalog):
+    assert catalog.feats["alert-xphb"]["ruleset"] == "2024"
+    assert catalog.feats["alert-phb"]["ruleset"] == "2014"
+    assert all(f["ruleset"] == "2024" for f in catalog.feats.values() if f["source"] in {"XPHB", "FRHoF", "EFA", "ABH", "LFL"})
+    assert all(f["ruleset"] == "2014" for f in catalog.feats.values() if f["source"] in {"PHB", "XGE", "TCE", "RHW"})
+
+
+def test_2024_race_count(catalog):
+    from collections import Counter
+    c = Counter(r["ruleset"] for r in catalog.races.values())
+    assert c["2024"] == 18  # XPHB 10 + EFA 5 + RHW 3

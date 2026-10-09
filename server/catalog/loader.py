@@ -19,6 +19,14 @@ def _load(filename: str) -> list[dict]:
         return json.load(f)
 
 
+def _load_srd(filename: str) -> list[dict]:
+    """SRD 5.1 records are 2014 content; tag them so ruleset filtering sees them."""
+    records = _load(filename)
+    for r in records:
+        r.setdefault("ruleset", "2014")
+    return records
+
+
 def _index_by(items: list[dict], key: str = "index") -> dict[str, dict]:
     return {item[key]: item for item in items}
 
@@ -63,10 +71,10 @@ def load() -> Catalog:
     official_races, official_subraces, official_traits = load_official_races(official_dir())
     official_backgrounds = load_official_backgrounds(official_dir())
     official_feats = load_official_feats(official_dir())
-    races = {**_index_by(_load("5e-SRD-Races.json")), **_index_by(official_races)}
-    subraces = {**_index_by(_load("5e-SRD-Subraces.json")), **_index_by(official_subraces)}
+    races = {**_index_by(_load_srd("5e-SRD-Races.json")), **_index_by(official_races)}
+    subraces = {**_index_by(_load_srd("5e-SRD-Subraces.json")), **_index_by(official_subraces)}
     traits = {**_index_by(_load("5e-SRD-Traits.json")), **official_traits}  # official_traits is already a dict — see load_official_races' own return type
-    backgrounds = {**_index_by(_load("5e-SRD-Backgrounds.json")), **_index_by(official_backgrounds)}
+    backgrounds = {**_index_by(_load_srd("5e-SRD-Backgrounds.json")), **_index_by(official_backgrounds)}
     feats = _index_by(official_feats)  # NO SRD merge — 2014 SRD has no feats at all (Phase 4c-i Task 1)
 
     return Catalog(

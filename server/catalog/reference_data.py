@@ -277,3 +277,18 @@ SUBCLASS_SPELL_MODE: dict[str, str] = {
 SUBCLASS_EXTRA_FEATURES: dict[str, list[tuple[int, str]]] = {
     "land": [(2, "circle-of-the-land")],
 }
+
+
+# Slice 10: books printed under the 2024 rules. Races and backgrounds are
+# tagged from 5etools' own `edition: "one"` marker (RHW species/backgrounds
+# are 2024, RHW feats are not); feats carry no edition field, so they are
+# tagged by source.
+RULESET_2024_SOURCES = {"XPHB", "XDMG", "XMM", "FRHoF", "EFA", "ABH", "LFL"}
+
+
+def ruleset_for_edition(raw: dict) -> str:
+    return "2024" if raw.get("edition") == "one" else "2014"
+
+
+def ruleset_for_feat(raw: dict) -> str:
+    return "2024" if raw.get("source") in RULESET_2024_SOURCES else "2014"
