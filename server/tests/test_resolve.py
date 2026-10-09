@@ -700,7 +700,9 @@ def test_aberrant_heir_efa_resolves_its_exact_source_and_grants_no_bonus_it_shou
     # No ability bonus at all — the EFA variant grants none; if the
     # ambiguous-source guard had instead silently picked the OTHER (ERLW)
     # source-variant, CON would be 1 higher than base+species here.
-    assert resolution["sheet"]["abilities"]["CON"] == 15  # 14 base + 1 bundled-SRD Human, no feat bonus
+    # (Human's +1 is suppressed by the mixed-ruleset double-dip guard because
+    # this 2024 background has its own ability score increase.)
+    assert resolution["sheet"]["abilities"]["CON"] == 14  # 14 base, no feat bonus
     assert resolution["sheet"]["damageModifiers"] == {"resistances": [], "immunities": [], "vulnerabilities": []}
     assert resolution["sheet"]["senses"] == {}
 
@@ -1971,7 +1973,7 @@ def test_sourcebook_background_ability_bonus_choice_is_offered_with_7_options(ca
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 def test_sourcebook_background_ability_bonus_split_bundle_applies_plus_2_plus_1(catalog):
     draft = _fighter_acolyte_human_draft(
-        sources=["efa"],
+        sources=["efa"], ruleset="2024",
         background={
             "id": "aberrant-heir-efa",
             "choices": {"background:aberrant-heir-efa:ability-bonus": ["str-2+con-1"]},
@@ -1981,12 +1983,11 @@ def test_sourcebook_background_ability_bonus_split_bundle_applies_plus_2_plus_1(
     resolution = resolve(draft, catalog)
     assert resolution["problems"] == []
     scores = resolution["sheet"]["abilities"]
-    # _fighter_acolyte_human_draft's default species is Human (+1 to every
-    # ability), unrelated to this background choice — accounted for below.
-    assert scores["STR"] == 17  # 14 base + 1 (Human) + 2 (background split)
-    assert scores["CON"] == 16  # 14 base + 1 (Human) + 1 (background split)
-    assert scores["DEX"] == 13  # 12 base + 1 (Human only) — unaffected by the background choice
-    assert scores["CHA"] == 9  # 8 base + 1 (Human only) — not part of this bundle
+    # ruleset "2024": the default Human species' +1 to everything is ignored.
+    assert scores["STR"] == 16  # 14 base + 2 (background split)
+    assert scores["CON"] == 15  # 14 base + 1 (background split)
+    assert scores["DEX"] == 12  # unaffected by the background choice
+    assert scores["CHA"] == 8  # not part of this bundle
 
     choice = next(c for c in resolution["choices"] if c["id"] == "background:aberrant-heir-efa:ability-bonus")
     assert choice["status"] == "resolved"
@@ -1996,7 +1997,7 @@ def test_sourcebook_background_ability_bonus_split_bundle_applies_plus_2_plus_1(
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 def test_sourcebook_background_ability_bonus_flat_bundle_applies_plus_1_to_all_three(catalog):
     draft = _fighter_acolyte_human_draft(
-        sources=["efa"],
+        sources=["efa"], ruleset="2024",
         background={
             "id": "aberrant-heir-efa",
             "choices": {"background:aberrant-heir-efa:ability-bonus": ["str-1+con-1+cha-1"]},
@@ -2006,18 +2007,17 @@ def test_sourcebook_background_ability_bonus_flat_bundle_applies_plus_1_to_all_t
     resolution = resolve(draft, catalog)
     assert resolution["problems"] == []
     scores = resolution["sheet"]["abilities"]
-    # Default species is Human (+1 to every ability) — accounted for below.
-    assert scores["STR"] == 16  # 14 base + 1 (Human) + 1 (background flat)
-    assert scores["CON"] == 16  # 14 base + 1 (Human) + 1 (background flat)
-    assert scores["CHA"] == 10  # 8 base + 1 (Human) + 1 (background flat)
-    assert scores["DEX"] == 13  # 12 base + 1 (Human only) — unaffected by the background choice
+    # ruleset "2024": the default Human species' +1 to everything is ignored.
+    assert scores["STR"] == 15  # 14 base + 1 (background flat)
+    assert scores["CON"] == 15  # 14 base + 1 (background flat)
+    assert scores["CHA"] == 9  # 8 base + 1 (background flat)
+    assert scores["DEX"] == 12  # unaffected by the background choice
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
-def test_sourcebook_background_ability_bonus_choice_combines_with_species_bonus(catalog):
-    # Species and background ability bonuses both flow into the SAME early
-    # ability-score pass — this exercises them stacking on the same
-    # ability rather than one silently overwriting the other.
+def test_sourcebook_background_ability_bonus_choice_replaces_species_bonus_in_mixed(catalog):
+    # Under the default "mixed" ruleset a background with its own ability
+    # score increase suppresses the species' one (no double-dip).
     draft = _fighter_acolyte_human_draft(
         sources=["efa"],
         species={"id": "human", "choices": {}},  # Human: +1 to every ability
@@ -2029,15 +2029,16 @@ def test_sourcebook_background_ability_bonus_choice_combines_with_species_bonus(
     )
     resolution = resolve(draft, catalog)
     scores = resolution["sheet"]["abilities"]
-    assert scores["STR"] == 17  # 14 base + 1 (Human) + 2 (background split)
-    assert scores["CON"] == 16  # 14 base + 1 (Human) + 1 (background split)
-    assert scores["DEX"] == 13  # 12 base + 1 (Human only)
+    assert scores["STR"] == 16  # 14 base + 2 (background split), Human +1 suppressed
+    assert scores["CON"] == 15  # 14 base + 1 (background split)
+    assert scores["DEX"] == 12  # Human's +1 suppressed
+    assert "asi-double-dip-prevented" in [w["id"] for w in resolution["warnings"]]
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 def test_sourcebook_background_ability_bonus_duplicate_selection_does_not_double_apply(catalog):
     draft = _fighter_acolyte_human_draft(
-        sources=["efa"],
+        sources=["efa"], ruleset="2024",
         background={
             "id": "aberrant-heir-efa",
             "choices": {"background:aberrant-heir-efa:ability-bonus": ["str-2+con-1", "str-2+con-1"]},
@@ -2046,9 +2047,9 @@ def test_sourcebook_background_ability_bonus_duplicate_selection_does_not_double
     )
     resolution = resolve(draft, catalog)
     scores = resolution["sheet"]["abilities"]
-    # 14 base + 1 (Human) + 2 (background split) = 17, NOT 19 — duplicate
-    # selection must not double the background bonus.
-    assert scores["STR"] == 17
+    # 14 base + 2 (background split) = 16, NOT 18 — duplicate selection must
+    # not double the background bonus.
+    assert scores["STR"] == 16
     choice = next(c for c in resolution["choices"] if c["id"] == "background:aberrant-heir-efa:ability-bonus")
     assert choice["selected"] == ["str-2+con-1"]
 

@@ -58,6 +58,7 @@ from catalog.loader import Catalog
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
 from catalog.reference_data import (
     ABILITIES, SPECIFIC_WEAPON_PROFICIENCY_IDS, SRD_TRAIT_EFFECTS, SUBCLASS_PROFICIENCIES, SUBCLASS_EXTRA_FEATURES,
+    ruleset_allows,
 )
 from . import asi as asi_mod
 from . import attacks as attacks_mod
@@ -123,6 +124,54 @@ def _species_ability_bonuses(race: dict | None, subrace: dict | None) -> dict[st
             ab = entry["ability_score"]["index"].upper()
             bonuses[ab] = bonuses.get(ab, 0) + entry["bonus"]
     return bonuses
+
+
+RULESETS = ("2014", "2024", "mixed")
+
+
+def _asi_policy(ruleset: str, race: dict | None, subrace: dict | None, bg: dict | None) -> tuple[bool, bool, list[dict]]:
+    """Which ability-score-increase sources apply under a ruleset:
+    (species_on, background_on, warnings). Every conflict is a WARNING, never
+    a problem - a house-rule mix must still export. "Species ASI" means ALL of
+    it: fixed bonuses and choice templates on the species and subspecies
+    (Half-Elf, VRGR lineages, Variant Human, subrace options)."""
+    species_has = bool(_species_ability_bonuses(race, subrace)) or any(
+        src.get("ability_bonus_options") for src in _ability_sources(race, subrace)
+    )
+    bg_has = bool(bg and bg.get("ability_bonus_options"))
+    warnings: list[dict] = []
+    if ruleset == "2014":
+        if bg_has:
+            warnings.append({
+                "id": "ruleset-2014-background-asi-ignored",
+                "message": f"{bg['name']} is a 2024 background; under the 2014 rules its ability score increase is ignored.",
+            })
+        return True, False, warnings
+    if ruleset == "2024":
+        if species_has:
+            warnings.append({
+                "id": "ruleset-2024-species-asi-ignored",
+                "message": "Under the 2024 rules ability scores come from the background; the species' ability score increase is ignored.",
+            })
+        if bg:
+            if not bg_has:
+                warnings.append({
+                    "id": "ruleset-2024-background-no-asi",
+                    "message": f"{bg['name']} is a 2014 background and grants no ability score increase under the 2024 rules.",
+                })
+            if not (bg.get("feats") or bg.get("feat_options")):
+                warnings.append({
+                    "id": "ruleset-2024-background-no-origin-feat",
+                    "message": f"{bg['name']} grants no Origin feat, which the 2024 rules expect from a background.",
+                })
+        return False, True, warnings
+    if bg_has and species_has:
+        warnings.append({
+            "id": "asi-double-dip-prevented",
+            "message": "The background's ability score increase replaces the species' (both would double-count under the 2024 rules).",
+        })
+        return False, True, warnings
+    return True, True, warnings
 
 
 def _species_damage_modifiers(race: dict | None, subrace: dict | None, feats: list[dict] | None = None,
@@ -1108,9 +1157,16 @@ def _feat_source_allowed(feat: dict, sources) -> bool:
     return _source_allowed(feat, sources)
 
 
+def _feat_offered(feat: dict, sources, ruleset: str = "mixed") -> bool:
+    """A feat that may be offered (and honored) as an option: allowed by
+    draft.sources and visible under the draft's ruleset."""
+    return _source_allowed(feat, sources) and ruleset_allows(feat, "feat", ruleset)
+
+
 def _resolve_asi_selected_feats(
     resolved_classes: list[dict], catalog: Catalog, sources=None,
     taken_indices: set[str] | None = None, skipped_duplicates: list[dict] | None = None,
+    ruleset: str = "mixed",
 ) -> tuple[list[dict], dict[str, list[tuple[str, int]]]]:
     """ASI-or-feat Task 3: the ASI-level counterpart to
     _resolve_granted_feats (background grants). Reads each resolved
@@ -1188,7 +1244,7 @@ def _resolve_asi_selected_feats(
             if not (len(selected) == 1 and selected[0].startswith("feat:")):
                 continue
             catalog_feat = catalog.feats.get(selected[0][len("feat:"):])
-            if not (catalog_feat and _is_asi_eligible_feat(catalog_feat) and _feat_source_allowed(catalog_feat, sources)):
+            if not (catalog_feat and _is_asi_eligible_feat(catalog_feat) and _feat_offered(catalog_feat, sources, ruleset)):
                 continue
             if catalog_feat["index"] in seen and not catalog_feat.get("repeatable"):
                 if skipped_duplicates is not None:
@@ -1853,7 +1909,7 @@ def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrac
     return templates
 
 
-def _species_feat_pool(catalog: Catalog, category: str | None, sources) -> list[dict]:
+def _species_feat_pool(catalog: Catalog, category: str | None, sources, ruleset: str = "mixed") -> list[dict]:
     """Feats a species feat grant may be spent on. An explicit category
     ("O": Human/XPHB's Origin feat) offers exactly that category; `None`
     (the "any" grant of Variant Human and Custom Lineage) offers feats with
@@ -1865,7 +1921,7 @@ def _species_feat_pool(catalog: Catalog, category: str | None, sources) -> list[
     pool = [
         f for f in catalog.feats.values()
         if (f.get("category") or "") in allowed and f["name"] != "Ability Score Improvement"
-        and _feat_source_allowed(f, sources)
+        and _feat_offered(f, sources, ruleset)
     ]
     pool.sort(key=lambda f: f["name"])
     return pool
@@ -1887,14 +1943,14 @@ def _species_feat_grant_slots(race: dict | None, subrace: dict | None, race_id: 
 
 def _species_feat_choice_template(
     race: dict, race_id: str, cid: str, grant: dict, catalog: Catalog, sources, scores: dict[str, int],
-    total_level: int, use_prereqs: bool, held: "_HeldFeatState", taken: set[str],
+    total_level: int, use_prereqs: bool, held: "_HeldFeatState", taken: set[str], ruleset: str = "mixed",
 ) -> dict:
     """One Choice for a species feat grant. A failed prerequisite wins over
     "already taken" as the disabled reason; the check uses the character's
     scores before any feat bonus and the total level (permissive, like the
     ASI pre-walk)."""
     options = []
-    for feat in _species_feat_pool(catalog, grant["category"], sources):
+    for feat in _species_feat_pool(catalog, grant["category"], sources, ruleset):
         option = {"id": f"feat:{feat['index']}", "label": feat["name"]}
         reason = _feat_prerequisite_unmet_reason(feat, total_level, scores, use_prereqs, held, catalog)
         if reason:
@@ -2368,6 +2424,7 @@ def _asi_choice_templates(
     catalog: Catalog, total_level: int, use_prerequisites: bool, sources=None,
     taken_by_level: dict[int, set[str]] | None = None,
     held_by_level: dict[int, "_HeldFeatState"] | None = None,
+    ruleset: str = "mixed",
 ) -> list[dict]:
     # `taken_by_level`: per ASI level, the feat indices already held from a
     # background grant or an earlier ASI pick — offered disabled unless the
@@ -2376,7 +2433,7 @@ def _asi_choice_templates(
     # race/background record (see _feat_source_allowed). SRD-only drafts
     # therefore get zero feat options — the 2014 SRD has no feats.
     general_feats = [
-        f for f in catalog.feats.values() if _is_asi_eligible_feat(f) and _feat_source_allowed(f, sources)
+        f for f in catalog.feats.values() if _is_asi_eligible_feat(f) and _feat_offered(f, sources, ruleset)
     ]
     general_feats.sort(key=lambda f: f["name"])
     templates = []
@@ -2944,8 +3001,18 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # (Phase 4c-ii Task 2).
     base_scores = (draft.get("abilities") or {}).get("base") or {}
     problems += _ability_method_problems(draft.get("abilities") or {})
-    species_bonuses = _species_ability_bonuses(race, subrace)
-    species_ability_choice_tpl = _species_ability_bonus_choice_template(race, subrace, race_id)
+    ruleset = draft.get("ruleset")
+    if ruleset is None:
+        ruleset = "mixed"
+    elif ruleset not in RULESETS:
+        warnings.append({"id": "ruleset-invalid", "message": f"Unknown ruleset '{ruleset}'; using mixed."})
+        ruleset = "mixed"
+    species_asi_on, background_asi_on, asi_warnings = _asi_policy(ruleset, race, subrace, bg)
+    warnings += asi_warnings
+    species_bonuses = _species_ability_bonuses(race, subrace) if species_asi_on else {}
+    species_ability_choice_tpl = (
+        _species_ability_bonus_choice_template(race, subrace, race_id) if species_asi_on else None
+    )
     if species_ability_choice_tpl:
         valid_ability_ids = {o["id"] for o in species_ability_choice_tpl["options"] if not o.get("disabled")}
         raw_selected = species_choices_raw.get(species_ability_choice_tpl["id"]) or []
@@ -2965,7 +3032,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 species_bonuses[ab_key] = species_bonuses.get(ab_key, 0) + delta
 
     background_bonuses = _background_ability_bonuses(bg)
-    background_ability_choice_tpl = _background_ability_bonus_choice_template(bg, bg_id)
+    background_ability_choice_tpl = _background_ability_bonus_choice_template(bg, bg_id) if background_asi_on else None
     if background_ability_choice_tpl:
         background_choices_raw = background_dict.get("choices") if isinstance(background_dict.get("choices"), dict) else {}
         valid_bundle_ids = {o["id"] for o in background_ability_choice_tpl["options"] if not o.get("disabled")}
@@ -3000,7 +3067,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         for slot_cid, grant in _species_feat_grant_slots(race, subrace, race_id):
             tpl = _species_feat_choice_template(
                 race, race_id, slot_cid, grant, catalog, draft.get("sources"), pre_feat_scores, total_level,
-                use_feat_prereqs, species_held_snapshot, taken_feat_indices,
+                use_feat_prereqs, species_held_snapshot, taken_feat_indices, ruleset,
             )
             species_feat_templates.append(tpl)
             picked = _resolve_species_selected_feats(tpl, species_choices_raw, catalog, problems)
@@ -3013,6 +3080,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     asi_feat_picks, asi_feat_deltas_by_cid = _resolve_asi_selected_feats(
         resolved_classes, catalog, draft.get("sources"),
         taken_indices={f["index"] for f in background_feats + species_feats}, skipped_duplicates=skipped_duplicate_asi_feats,
+        ruleset=ruleset,
     )
     for dup in skipped_duplicate_asi_feats:
         problems.append({
@@ -3167,7 +3235,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 | {f["index"] for f in asi_feat_picks if asi_feat_order.get(f["_asi_cid"], 1 << 30) < asi_feat_order.get(f"class:{rc_cls_id}:{lvl}:asi", -1)}
                 for lvl in rc_asi_levels
             },
-            held_by_level=rc_held_by_level,
+            held_by_level=rc_held_by_level, ruleset=ruleset,
         )
         # ASI-or-feat Task 3: a feat THIS class took at one of its own ASI
         # levels cascades its own choice-shaped content right here, scoped

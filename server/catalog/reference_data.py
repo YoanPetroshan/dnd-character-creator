@@ -292,3 +292,17 @@ def ruleset_for_edition(raw: dict) -> str:
 
 def ruleset_for_feat(raw: dict) -> str:
     return "2024" if raw.get("source") in RULESET_2024_SOURCES else "2014"
+
+
+def ruleset_allows(record: dict, kind: str, ruleset: str) -> bool:
+    """Visibility of a species/subspecies/background/feat record under a
+    draft ruleset. "2014" hides 2024 records of every kind; "2024" hides
+    only 2014 backgrounds (2014 species and feats stay usable, since the
+    2024 books reuse them); "mixed" (and anything unknown) hides nothing.
+    Purely a picker filter - resolve() never rejects on ruleset alone."""
+    tag = record.get("ruleset") or "2014"
+    if ruleset == "2014":
+        return tag != "2024"
+    if ruleset == "2024":
+        return not (kind == "background" and tag == "2014")
+    return True
