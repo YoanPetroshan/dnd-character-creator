@@ -1532,6 +1532,20 @@ def _optional_progression_template(catalog: Catalog, feature: dict, cid: str, so
     return tpl
 
 
+def _text_options_template(spec: dict, cid: str, source: dict, name: str, description) -> dict:
+    """Build-time pick among options that the feature text lists (Totem
+    Spirit, Storm Aura...). Option ids are `<featureId>--<slug>`."""
+    options = []
+    for opt in spec["options"]:
+        option = {"id": opt["id"], "label": opt["name"]}
+        desc = _join_desc(opt.get("desc"))
+        if desc:
+            option["description"] = desc
+        options.append(option)
+    return {"id": cid, "source": source, "label": name, "description": description or "",
+            "count": spec.get("count", 1), "options": options}
+
+
 def _feature_choice_templates(
     catalog: Catalog, cls_id: str, cls_name: str, feature_refs: list[tuple[int, dict]], subclass_id: str | None,
     class_level: int | None = None,
@@ -1574,6 +1588,9 @@ def _feature_choice_templates(
         elif specific.get("optional_progression"):
             cid = f"class:{cls_id}:{lvl}:feature:{feature['index']}"
             tpl = _optional_progression_template(catalog, feature, cid, source, class_level)
+        elif specific.get("text_options"):
+            cid = f"class:{cls_id}:{lvl}:feature:{feature['index']}"
+            tpl = _text_options_template(specific["text_options"], cid, source, feature["name"], description)
         else:
             continue
         if tpl:

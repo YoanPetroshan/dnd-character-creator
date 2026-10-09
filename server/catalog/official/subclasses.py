@@ -84,7 +84,7 @@ def load_raw_optional_features(path) -> list[dict]:
 
 import re  # noqa: E402
 
-from catalog.reference_data import RULESET_2024_SOURCES, ruleset_for_edition  # noqa: E402
+from catalog.reference_data import FEATURE_TEXT_CHOICES, RULESET_2024_SOURCES, ruleset_for_edition  # noqa: E402
 
 from .common import slug  # noqa: E402
 from .spells import _flatten_entries  # noqa: E402
@@ -360,6 +360,28 @@ def convert_subclasses(raw_subs, raw_feats, srd_subclass_ids, resolve_spell, raw
             features[fid] = slot  # claim the id (and the document order) before the children
             by_level.setdefault(feat["level"], []).append({"index": fid, "name": feat["name"]})
             slot["desc"] = _flatten_entries(prepare(feat.get("entries") or [], False))
+            if fid in FEATURE_TEXT_CHOICES:
+                text_options = _text_options(fid, feat.get("entries") or [])
+                if text_options:
+                    slot["feature_specific"] = {"text_options": text_options}
+
+        def _text_options(fid: str, entries) -> dict | None:
+            """The first top-level `options` block of an allowlisted feature as
+            {"count", "options": [{id, name, desc}]}; ids are stable
+            `<featureId>--<slug(name)>` (slice R5 keys effects off them)."""
+            for entry in entries:
+                if not (isinstance(entry, dict) and entry.get("type") == "options"):
+                    continue
+                found = []
+                for ref in entry.get("entries") or []:
+                    child = index.get(_parse_feature_ref(ref.get("subclassFeature", ""))) if isinstance(ref, dict) else None
+                    if child is None:
+                        continue
+                    desc = _flatten_entries(prepare(child.get("entries") or [], True))
+                    found.append({"id": f"{fid}--{slug(child['name'])}", "name": child["name"], "desc": desc})
+                if found:
+                    return {"count": entry.get("count") or 1, "options": found}
+            return None
 
         def prepare(entries, in_options: bool):
             out = []

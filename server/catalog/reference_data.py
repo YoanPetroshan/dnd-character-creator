@@ -323,6 +323,19 @@ SUBCLASS_SPELL_MODE: dict[str, str] = {
     "fiend": "expanded",
 }
 
+# Build-time option choices that live in feature TEXT (an `options` block of
+# `refSubclassFeature` children in the 5etools class files), keyed by imported
+# feature id -> number of picks. The converter turns the block into
+# `feature_specific.text_options`. Per-rest choices (The Third Eye, Master
+# Transmuter) and grant-all blocks (Psionic Power, Soul Blades) are
+# deliberately absent. Storm Soul / Raging Storm follow the Storm Aura pick.
+FEATURE_TEXT_CHOICES: dict[str, int] = {
+    "totem-warrior-phb-3-totem-spirit": 1,
+    "totem-warrior-phb-6-aspect-of-the-beast": 1,
+    "totem-warrior-phb-14-totemic-attunement": 1,
+    "storm-herald-xge-3-storm-aura": 1,
+}
+
 # Subclass features the SRD level tables never reference but that carry data
 # the engine needs: (class level, feature index). Circle of the Land's terrain
 # pick (`circle-of-the-land`, 7 terrain subfeatures) is not listed in any level
