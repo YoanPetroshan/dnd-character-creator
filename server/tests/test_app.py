@@ -74,7 +74,8 @@ def test_catalog_endpoint_lists_all_classes_backgrounds_species(client):
     fighter = next(c for c in body["classes"] if c["id"] == "fighter")
     assert fighter["hitDie"] == 10
     dwarf = next(s for s in body["species"] if s["id"] == "dwarf")
-    assert dwarf["subspecies"] == [{"id": "hill-dwarf", "name": "Hill Dwarf"}]
+    assert dwarf["subspecies"] == [{"id": "hill-dwarf", "name": "Hill Dwarf", "source": "", "ruleset": "2014"}]
+    assert dwarf["ruleset"] == "2014" and isinstance(body["sources"], list)
     # Bundled SRD species/backgrounds have no 'source' field of their own
     # (implicitly SRD) — the catalog endpoint still exposes the key, just
     # empty, so the frontend can group consistently either way.
