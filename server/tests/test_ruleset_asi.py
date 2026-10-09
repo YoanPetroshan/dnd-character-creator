@@ -139,6 +139,8 @@ def test_2014_does_not_offer_or_apply_2024_asi_feat(catalog):
         assert ("feat:athlete-xphb" in [o["id"] for o in tpl["options"]]) is offered
         assert ("feat:athlete-xphb" in tpl["selected"]) is offered
     r = resolve(_draft(species="human", sub=None, bg="acolyte", choices={}, ruleset="2014", classes=classes), catalog)
-    # (Only General-category feats are ASI-eligible, so the 2014 side of the
-    # pool is the Unearthed Arcana feats; PHB feats carry no category.)
-    assert "feat:abjuration-adept-au" in [o["id"] for o in next(c for c in r["choices"] if c["id"] == cid)["options"]]
+    # (2014 pool = the category-less PHB/XGE/TCE... feats plus the General
+    # Unearthed Arcana ones.)
+    ids = [o["id"] for o in next(c for c in r["choices"] if c["id"] == cid)["options"]]
+    assert "feat:abjuration-adept-au" in ids
+    assert "feat:great-weapon-master-phb" in ids

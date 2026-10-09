@@ -1261,8 +1261,8 @@ def _resolve_asi_selected_feats(
     template — never reconstructed by hand here (Finding 3, 2026-09-28).
 
     Only a feat that _asi_choice_templates would actually offer
-    (_is_asi_eligible_feat, and allowed by draft.sources via
-    _feat_source_allowed) is resolved; a hand-edited draft naming some
+    (_is_asi_eligible_feat for the ruleset and ASI slot level, and allowed
+    by draft.sources via _feat_offered) is resolved; a hand-edited draft naming some
     other catalog feat is ignored here just as the generic choice pass
     ignores it (it isn't a valid option id).
 
@@ -1287,7 +1287,7 @@ def _resolve_asi_selected_feats(
             if not (len(selected) == 1 and selected[0].startswith("feat:")):
                 continue
             catalog_feat = catalog.feats.get(selected[0][len("feat:"):])
-            if not (catalog_feat and _is_asi_eligible_feat(catalog_feat) and _feat_offered(catalog_feat, sources, ruleset)):
+            if not (catalog_feat and _is_asi_eligible_feat(catalog_feat, ruleset, lvl) and _feat_offered(catalog_feat, sources, ruleset)):
                 continue
             if catalog_feat["index"] in seen and not catalog_feat.get("repeatable"):
                 if skipped_duplicates is not None:
@@ -1997,7 +1997,9 @@ def _species_feat_pool(catalog: Catalog, category: str | None, sources, ruleset:
     no category (the 2014 books), General and Origin ones, minus the literal
     "Ability Score Improvement" entry. Epic Boon, Dragonmark, Fighting
     Style and Dragon-gift categories stay out. Filtered by draft.sources
-    like every feat, sorted by name."""
+    like every feat, sorted by name. (Unlike _asi_feat_pool this ignores the
+    ruleset's category rules beyond _feat_offered: a 2024 "any" grant still
+    lists the 2014 category-less feats that ruleset_allows lets through.)"""
     allowed = {category} if category is not None else {"", "G", "O"}
     pool = [
         f for f in catalog.feats.values()
@@ -2420,15 +2422,41 @@ def _asi_option_label(deltas: list[tuple[str, int]]) -> str:
     return " and ".join(f"{ab} +{delta}" for ab, delta in deltas)
 
 
-def _is_asi_eligible_feat(feat: dict) -> bool:
-    # "General"-category feats (category == "G") double as the "take a feat
-    # instead" branch of an ASI choice. The literal "Ability Score
-    # Improvement" catalog entry is excluded because it duplicates this
-    # app's own hardcoded ASI-combo mechanic, not a distinct choice. Shared
-    # by _asi_choice_templates (which options to offer) and
-    # _resolve_asi_selected_feats (which selections to honor) so the two
-    # can't drift apart.
-    return feat.get("category") == "G" and feat["name"] != "Ability Score Improvement"
+# Feat categories offered at an ASI level, by ruleset (5etools codes: ""
+# = the category-less 2014 books, G General, O Origin, EB Epic Boon).
+# "2014" -> 2014 books + General (after ruleset_allows that is the Unearthed
+# Arcana G feats); "2024" -> General + Origin; "mixed"/unknown -> all three.
+# Epic Boons are added separately, only at slot level 19 and never under
+# 2014. Fighting Style, Dragonmark and Dragon-gift categories stay out.
+_ASI_FEAT_CATEGORIES = {"2014": {"", "G"}, "2024": {"G", "O"}}
+_ASI_FEAT_CATEGORIES_DEFAULT = {"", "G", "O"}
+_ASI_EPIC_BOON_LEVEL = 19
+_ASI_EXCLUDED_FEAT_INDICES = {"ability-score-improvement-xphb"}
+
+
+def _is_asi_eligible_feat(feat: dict, ruleset: str = "mixed", slot_level: int = 4) -> bool:
+    """Whether `feat` may be taken in place of an Ability Score Improvement
+    at class level `slot_level` under `ruleset` (structural eligibility; the
+    draft.sources / ruleset-visibility filter is _feat_offered, prerequisites
+    are checked separately). The literal "Ability Score Improvement" entry is
+    excluded because it duplicates this app's own ASI-combo mechanic. Shared
+    by _asi_feat_pool (which options to offer) and _resolve_asi_selected_feats
+    (which selections to honor) so the two can't drift apart."""
+    if feat["index"] in _ASI_EXCLUDED_FEAT_INDICES or feat["name"] == "Ability Score Improvement":
+        return False
+    category = feat.get("category") or ""
+    if category == "EB":
+        return ruleset != "2014" and slot_level >= _ASI_EPIC_BOON_LEVEL
+    return category in _ASI_FEAT_CATEGORIES.get(ruleset, _ASI_FEAT_CATEGORIES_DEFAULT)
+
+
+def _asi_feat_pool(catalog: Catalog, sources, ruleset: str, slot_level: int) -> list[dict]:
+    """The feats offered at an ASI slot: structurally eligible AND allowed by
+    draft.sources / the ruleset."""
+    return [
+        f for f in catalog.feats.values()
+        if _is_asi_eligible_feat(f, ruleset, slot_level) and _feat_offered(f, sources, ruleset)
+    ]
 
 
 def _feat_prerequisite_unmet_reason(
@@ -2513,12 +2541,15 @@ def _asi_choice_templates(
     # `sources` is draft.sources: feat options are filtered exactly like a
     # race/background record (see _feat_source_allowed). SRD-only drafts
     # therefore get zero feat options — the 2014 SRD has no feats.
-    general_feats = [
-        f for f in catalog.feats.values() if _is_asi_eligible_feat(f) and _feat_offered(f, sources, ruleset)
-    ]
-    general_feats.sort(key=lambda f: f["name"])
+    pools: dict[bool, list[dict]] = {}
     templates = []
     for lvl in asi_levels:
+        epic = lvl >= _ASI_EPIC_BOON_LEVEL
+        if epic not in pools:
+            general_feats = _asi_feat_pool(catalog, sources, ruleset, lvl)
+            general_feats.sort(key=lambda f: f["name"])
+            pools[epic] = general_feats
+        general_feats = pools[epic]
         current_scores = scores_by_level.get(lvl, {})
         options = []
         for option_id, deltas in asi_mod.asi_combinations():

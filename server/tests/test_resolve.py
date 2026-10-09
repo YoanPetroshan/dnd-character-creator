@@ -3711,7 +3711,7 @@ def test_feat_ability_bonus_choice_templates_origin_param_scopes_the_cid(catalog
     assert scoped_pairs[0][1] is skill_expert  # the paired feat itself is unaffected by origin
 
 
-def test_asi_choice_templates_includes_eligible_general_feats(catalog):
+def test_asi_choice_templates_includes_eligible_feats(catalog):
     templates = _asi_choice_templates(
         "fighter", "Fighter", [4], {4: {"STR": 15, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10}},
         catalog, total_level=4, use_prerequisites=False,
@@ -3725,8 +3725,11 @@ def test_asi_choice_templates_includes_eligible_general_feats(catalog):
     # ability" options + C(6,2)=15 "+1 to two abilities" options — grounded
     # 2026-09-28 against engine/asi.py's own docstring; the brief's "7" was
     # a stale shorthand) + 94 General feats (95 minus the ASI-feat
-    # exclusion, grounded 2026-09-28: Counter(category) gives 'G': 95).
-    assert len(option_ids) == 21 + 94
+    # exclusion) under the default "mixed" ruleset: 108 category-less 2014
+    # feats + 94 General + 35 Origin = 237 (script-verified 2026-10-09;
+    # Epic Boons only join at slot level 19, Fighting Style etc. never).
+    assert "feat:great-weapon-master-phb" in option_ids
+    assert len(option_ids) == 21 + 237
 
 
 def test_asi_choice_templates_disables_a_feat_option_with_unmet_prerequisite(catalog):
@@ -4161,7 +4164,7 @@ def test_asi_feat_options_honor_draft_sources(catalog):
     assert "feat:actor-xphb" in xphb_ids
     assert all(catalog.feats[i[len("feat:"):]]["source"] == "XPHB" for i in xphb_ids)
     _, unrestricted_ids = feat_option_ids([])  # empty sources = no filtering, same as races/backgrounds
-    assert len(unrestricted_ids) == 94
+    assert len(unrestricted_ids) == 237
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
