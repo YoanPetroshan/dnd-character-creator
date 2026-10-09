@@ -1763,12 +1763,17 @@ def _subclass_spell_ids(catalog: Catalog, cls_id: str, subclass_id: str | None, 
                         feature_ids: set[str], mode: str) -> list[str]:
     """Spells from the subclass's `spells` list whose prerequisites (class
     level, and for Circle of the Land the chosen terrain feature) are met,
-    for subclasses behaving as `mode` ("always" prepared / "expanded" list)."""
+    for entries behaving as `mode` ("always" prepared / "expanded" list). An
+    entry's own `mode` (imported subclasses, one of which can carry both)
+    wins over `SUBCLASS_SPELL_MODE` (SRD records), default "always"."""
     from catalog import reference_data
-    if not subclass_id or reference_data.SUBCLASS_SPELL_MODE.get(subclass_id, "always") != mode:
+    if not subclass_id:
         return []
+    subclass_mode = reference_data.SUBCLASS_SPELL_MODE.get(subclass_id, "always")
     out: list[str] = []
     for entry in (catalog.subclasses.get(subclass_id) or {}).get("spells") or []:
+        if (entry.get("mode") or subclass_mode) != mode:
+            continue
         spell_id = (entry.get("spell") or {}).get("index")
         if spell_id not in catalog.spells or spell_id in out:
             continue

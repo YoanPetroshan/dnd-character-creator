@@ -361,3 +361,124 @@ def test_resolve_stays_as_fast_as_with_the_srd_only_catalog(catalog):
 
     # Measured 2026-10-09: 0.157 s for 50 resolves before the import (linear row scans), the dict index must not be slower.
     assert best(catalog, "battle-master-phb") <= best(srd, "champion") * 1.10 + 0.05
+
+
+# ------------------------------------------------------ 11b.4 subclass spells
+
+# Script-verified over the raw files: 109 additionalSpells records among the
+# in-scope subclasses (6 SRD or multi-block ones skipped), string refs
+# prepared 527 + expanded 114 + known 95 = 736, all of which resolve; the 98
+# single-block imported subclasses (81 of them with string lists) emit 661 entries (no spell is
+# listed twice in one subclass).
+STRING_REFS = {"prepared": 527, "expanded": 114, "known": 95}
+SPELL_ENTRIES = 661
+SUBCLASSES_WITH_SPELLS = 81  # of the 98 single-block ones; the rest hold only innate or object-valued lists
+MULTI_BLOCK = {"giant-bgg", "land-xphb", "arcane-archer-xge", "divine-soul-xge", "genie-tce"}
+
+
+def _raw_spell_sub(extra, short="Alpha", source="XGE", edition="classic", cls="Warlock"):
+    return {"name": short, "shortName": short, "source": source, "className": cls, "classSource": "PHB",
+            "edition": edition, "subclassFeatures": [], "additionalSpells": extra}
+
+
+def test_converter_spell_entries_modes_levels_and_cleaning():
+    known = {"shield": "shield", "toll the dead": "toll-the-dead"}
+    raw = _raw_spell_sub([{
+        "expanded": {"s1": ["shield|phb", "toll the dead|xge"], "s3": ["blink"]},
+        "prepared": {"3": ["guidance#c", {"choose": "level=1"}]},
+        "known": {"1": ["unknown spell"], "5": {"_": ["shield"]}},
+        "innate": {"1": ["shield"]},
+    }])
+    subs, _, _ = sub_mod.convert_subclasses([raw], [], set(), lambda s: s if s in ("shield", "toll-the-dead", "blink", "guidance") else None)
+    entries = subs["alpha-xge"]["spells"]
+    assert [(e["spell"]["index"], e["mode"], e["prerequisites"][0]["index"]) for e in entries] == [
+        ("guidance", "always", "warlock-3"),     # prepared first, class level key
+        ("shield", "expanded", "warlock-1"),     # sN -> warlock level 2N-1
+        ("toll-the-dead", "expanded", "warlock-1"),
+        ("blink", "expanded", "warlock-5"),
+    ]
+    assert all(e["prerequisites"][0]["type"] == "level" for e in entries)
+    assert sub_mod.unresolved_spell_refs([raw], lambda s: s if s in ("shield", "toll-the-dead", "blink", "guidance") else None) == ["unknown spell"]
+
+
+def test_converter_2024_subclass_prefers_the_xphb_spell_id():
+    raw = _raw_spell_sub([{"prepared": {"3": ["fireball", "shield"]}}], source="XPHB", edition="one")
+    ids = {"fireball-xphb", "fireball", "shield"}
+    subs, _, _ = sub_mod.convert_subclasses([raw], [], set(), lambda s: s if s in ids else None)
+    assert [e["spell"]["index"] for e in subs["alpha-xphb"]["spells"]] == ["fireball-xphb", "shield"]
+    raw14 = _raw_spell_sub([{"prepared": {"3": ["fireball"]}}])
+    subs, _, _ = sub_mod.convert_subclasses([raw14], [], set(), lambda s: s if s in ids else None)
+    assert [e["spell"]["index"] for e in subs["alpha-xge"]["spells"]] == ["fireball"]
+
+
+def test_converter_skips_subclasses_with_several_named_blocks():
+    raw = _raw_spell_sub([{"name": "Fire", "prepared": {"3": ["shield"]}}, {"name": "Ice", "prepared": {"3": ["blink"]}}])
+    subs, _, _ = sub_mod.convert_subclasses([raw], [], set(), lambda s: s)
+    assert subs["alpha-xge"]["spells"] == []
+
+
+@needs_classes
+def test_real_spell_refs_all_resolve_and_counts_match(catalog):
+    raw_subs, _ = sub_mod.load_raw_class_data(paths.class_dir())
+    in_scope = [s for s in raw_subs if sub_mod._in_scope(s) and not s.get("srd")]
+    counts = {"prepared": 0, "expanded": 0, "known": 0}
+    for s in in_scope:
+        for block in s.get("additionalSpells") or []:
+            for mode in counts:
+                for lv in (block.get(mode) or {}).values():
+                    counts[mode] += sum(isinstance(x, str) for x in lv) if isinstance(lv, list) else 0
+    assert counts == STRING_REFS
+    assert sub_mod.unresolved_spell_refs(in_scope, catalog.resolve_spell_id) == []
+    withspells = {i: s for i, s in catalog.subclasses.items() if s["source"] != "SRD" and s["spells"]}
+    assert len(withspells) == SUBCLASSES_WITH_SPELLS
+    assert sum(len(s["spells"]) for s in withspells.values()) == SPELL_ENTRIES
+    assert not MULTI_BLOCK & set(withspells)
+    assert all(e["spell"]["index"] in catalog.spells for s in withspells.values() for e in s["spells"])
+
+
+def _pairs(catalog, sub_id):
+    return [(e["spell"]["index"], e["mode"], e["prerequisites"][0]["index"]) for e in catalog.subclasses[sub_id]["spells"]]
+
+
+@needs_classes
+def test_real_hexblade_expanded_list(catalog):
+    assert _pairs(catalog, "hexblade-xge") == [
+        ("shield", "expanded", "warlock-1"), ("wrathful-smite", "expanded", "warlock-1"),
+        ("blur", "expanded", "warlock-3"), ("branding-smite", "expanded", "warlock-3"),
+        ("blink", "expanded", "warlock-5"), ("elemental-weapon", "expanded", "warlock-5"),
+        ("phantasmal-killer", "expanded", "warlock-7"), ("staggering-smite", "expanded", "warlock-7"),
+        ("banishing-smite", "expanded", "warlock-9"), ("cone-of-cold", "expanded", "warlock-9"),
+    ]
+
+
+def _spell_choice(res, cid):
+    return next(c for c in res["choices"] if c["id"] == cid)
+
+
+@needs_classes
+def test_warlock_hexblade_offers_expanded_spells_that_fiend_does_not(catalog):
+    hex_opts = {o["id"] for o in _spell_choice(resolve(_draft("warlock", 1, "hexblade-xge"), catalog), "class:warlock:spells-known")["options"]}
+    fiend_opts = {o["id"] for o in _spell_choice(resolve(_draft("warlock", 1, "fiend"), catalog), "class:warlock:spells-known")["options"]}
+    assert {"shield", "wrathful-smite"} <= hex_opts
+    assert not {"shield", "wrathful-smite"} <= fiend_opts
+
+
+@needs_classes
+def test_cleric_light_domain_always_prepared_grows_with_level(catalog):
+    def always(level):
+        sheet = resolve(_draft("cleric", level, "light-phb"), catalog)["sheet"]
+        return {sp["id"] for entry in sheet["spells"] for sp in entry.get("alwaysPrepared", [])}
+    one = always(1)
+    assert {"burning-hands", "faerie-fire"} <= one and "flaming-sphere" not in one
+    three = always(3)
+    assert {"burning-hands", "faerie-fire", "flaming-sphere", "scorching-ray"} <= three
+
+
+@needs_classes
+def test_a_2024_subclass_resolves_spells_to_xphb_ids_when_they_exist(catalog):
+    ids = [i for i, _, _ in _pairs(catalog, "light-xphb")]
+    assert ids
+    for spell_id in ids:
+        base = spell_id[:-5] if spell_id.endswith("-xphb") else spell_id
+        if base + "-xphb" in catalog.spells:
+            assert spell_id.endswith("-xphb"), spell_id

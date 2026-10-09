@@ -109,6 +109,79 @@ def _option_name(ref: dict) -> str:
     return ref.get("name") or str(ref.get("optionalfeature", "")).split("|")[0]
 
 
+_SPELL_BLOCK_MODES = (("prepared", "always"), ("known", "always"), ("expanded", "expanded"))
+_SN_KEY = re.compile(r"^s(\d)$")
+
+
+def _clean_spell_name(text: str) -> str:
+    """"toll the dead|xge" / "guidance#c" -> the bare spell name."""
+    return text.split("|")[0].split("#")[0].strip()
+
+
+def _spell_level_key(key: str, class_id: str):
+    """Class level a spell-block key stands for: "3" -> 3; "sN" (an expanded
+    list keyed by SPELL level, Warlock patrons only) -> 2N-1, the warlock
+    level that first casts spells of level N. None for anything else."""
+    if key.isdigit():
+        return int(key)
+    m = _SN_KEY.match(key)
+    if m:
+        if class_id != "warlock":
+            raise ValueError(f"spell-level key {key!r} on a {class_id} subclass")
+        return 2 * int(m.group(1)) - 1
+    return None
+
+
+def _subclass_spell_entries(raw: dict, class_id: str, is_2024: bool, resolve_spell, unresolved=None) -> list[dict]:
+    """SRD-shaped `spells` entries of a subclass: the string spell lists of
+    `prepared`/`known` (mode "always") and `expanded` (mode "expanded"), keyed
+    by class level. Skipped: object values ({all}, {choose}, {"_": ...}),
+    innate/daily/ritual blocks, and every block of a subclass with several
+    named blocks (Land, Divine Soul, Genie, Giant, Arcane Archer)."""
+    blocks = raw.get("additionalSpells") or []
+    if len(blocks) != 1 or not isinstance(blocks[0], dict):
+        return []
+    entries: list[dict] = []
+    seen: set[str] = set()
+    for key, mode in _SPELL_BLOCK_MODES:
+        by_level = blocks[0].get(key)
+        if not isinstance(by_level, dict):
+            continue
+        rows = []
+        for level_key, names in by_level.items():
+            level = _spell_level_key(str(level_key), class_id)
+            if level is not None and isinstance(names, list):
+                rows.append((level, names))
+        for level, names in sorted(rows, key=lambda r: r[0]):
+            for name in names:
+                if not isinstance(name, str):
+                    continue
+                clean = _clean_spell_name(name)
+                base = slug(clean)
+                spell_id = (resolve_spell(base + "-xphb") if is_2024 else None) or resolve_spell(base)
+                if not spell_id:
+                    if unresolved is not None:
+                        unresolved.append(clean)
+                    continue
+                if spell_id in seen:
+                    continue
+                seen.add(spell_id)
+                entries.append({"prerequisites": [{"type": "level", "index": f"{class_id}-{level}"}],
+                                "spell": {"index": spell_id}, "mode": mode})
+    return entries
+
+
+def unresolved_spell_refs(raw_subs, resolve_spell) -> list[str]:
+    """Spell names the converter would drop because the catalog has no such
+    spell, over every in-scope non-SRD subclass (empty on real data)."""
+    missing: list[str] = []
+    for raw in raw_subs:
+        if _in_scope(raw) and not raw.get("srd"):
+            _subclass_spell_entries(raw, raw["className"].lower(), ruleset_for_edition(raw) == "2024",
+                                    resolve_spell, missing)
+    return missing
+
+
 def convert_subclasses(raw_subs, raw_feats, srd_subclass_ids, resolve_spell):
     """5etools subclasses + subclass features -> (subclasses, features,
     level_rows) in the SRD shapes. Skips `_copy` records (2014 subclasses
@@ -117,8 +190,8 @@ def convert_subclasses(raw_subs, raw_feats, srd_subclass_ids, resolve_spell):
     record stays). A subclass's features are its `subclassFeatures` refs, each
     expanded depth-first into its `refSubclassFeature` children (the real
     features); children inside an `options` block are inlined as text.
-    `resolve_spell` maps a spell slug to a catalog spell id or None (used for
-    subclass spells, 11b.4)."""
+    `resolve_spell` maps a spell slug to a catalog spell id or None (subclass
+    spells: a 2024 subclass tries `slug-xphb` first)."""
     index: dict[tuple, dict] = {}
     for raw in raw_feats:
         if "_copy" in raw:
@@ -142,7 +215,8 @@ def convert_subclasses(raw_subs, raw_feats, srd_subclass_ids, resolve_spell):
         record = {
             "index": sub_id, "name": raw["name"], "short_name": raw.get("shortName") or raw["name"],
             "class": cls_ref, "source": raw.get("source", "PHB"),
-            "ruleset": ruleset_for_edition(raw), "desc": [], "spells": [],
+            "ruleset": ruleset_for_edition(raw), "desc": [],
+            "spells": _subclass_spell_entries(raw, cls_ref["index"], ruleset_for_edition(raw) == "2024", resolve_spell),
         }
         subclasses[sub_id] = record
 
