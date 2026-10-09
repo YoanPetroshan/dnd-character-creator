@@ -105,6 +105,8 @@ def extra_blocks(resolution: dict) -> list[tuple[str, str]]:
                 line += f", {a['damage']} {a['damageType']}"
                 if a.get("versatileDamage"):
                     line += f" (versatile {a['versatileDamage']})"
+            if a.get("duelingDamage"):
+                line += f", с Дуел {a['duelingDamage']}"
             if a.get("offhandDamage"):
                 line += f", off hand {a['offhandDamage']}"
             if a.get("range"):

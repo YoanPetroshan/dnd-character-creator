@@ -143,6 +143,7 @@ export function ExportPage() {
                 {a.attackBonus}
                 {a.damage && `, ${a.damage} ${a.damageType}`}
                 {a.versatileDamage && ` (versatile ${a.versatileDamage})`}
+                {a.duelingDamage && `, with Dueling ${a.duelingDamage}`}
                 {a.offhandDamage && `, off hand ${a.offhandDamage}`}
                 {a.range && `, range ${a.range}`}
                 {a.notes.length > 0 && `; ${a.notes.join(", ")}`}

@@ -144,3 +144,14 @@ def test_over_capacity_and_stealth_armor_are_flagged(catalog):
     md = to_markdown(res)
     assert "130/100 lb (претоварен)" in md
     assert "## Броня" in md and "Недостатък при Скритост" in md
+
+
+def test_markdown_and_pdf_show_dueling_damage(catalog):
+    res = _rogue_1(catalog)
+    for a in res["derived"]["attacks"]:
+        if a["itemId"] == "longsword":
+            a["duelingDamage"] = "1d8+2"
+    md = to_markdown(res)
+    assert "- Longsword: +2, 1d8 slashing (versatile 1d10), с Дуел 1d8+2" in md
+    text = "".join(p.extract_text() for p in PdfReader(io.BytesIO(to_pdf(res))).pages)
+    assert "с Дуел 1d8+2" in text

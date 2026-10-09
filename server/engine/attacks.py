@@ -3,8 +3,15 @@ no catalog access; callers pass ability modifiers, the proficiency bonus, the
 set of proficiency ids and the fighting-style flags
 (`engine.features.attack_styles`).
 
-Out of scope: the Dueling "no other weapon" hand check, Weapon Mastery, magic
-items, Monk martial arts, feat attacks, unarmed strikes.
+Dueling (S5, decision D3 = b): `damage` never includes the Dueling +2. A
+separate `duelingDamage` (one-handed dice + mod + 2) is present only for
+one-handed melee weapons when the character has Dueling; versatile weapons
+get it too (Dueling applies to the one-handed grip, `versatileDamage` is the
+two-handed grip and never gets it). Two-handed and ranged weapons get none.
+
+Out of scope: the Dueling "no other weapon" hand check (there is no hands
+model; the note tells the player), Weapon Mastery, magic items, Monk martial
+arts, feat attacks, unarmed strikes.
 """
 from __future__ import annotations
 
@@ -54,9 +61,9 @@ def weapon_attack(item: dict, modifiers: dict, prof_bonus: int, proficiency_ids,
     two_handed = "two-handed" in props
     dueling = 0 if ranged or two_handed else styles.get("one_handed_melee_damage", 0)
 
-    damage = damage_type = versatile = offhand = None
+    damage = damage_type = versatile = offhand = dueling_damage = None
     if dmg:
-        damage = _dice(dmg["damage_dice"], mod + dueling)
+        damage = _dice(dmg["damage_dice"], mod)
         damage_type = dmg["damage_type"]["index"]
         if "versatile" in props and item.get("two_handed_damage"):
             versatile = _dice(item["two_handed_damage"]["damage_dice"], mod)  # never Dueling
@@ -65,12 +72,13 @@ def weapon_attack(item: dict, modifiers: dict, prof_bonus: int, proficiency_ids,
         if styles.get("great_weapon_fighting") and not ranged and (two_handed or "versatile" in props):
             notes.append(GWF_NOTE)
         if dueling:
+            dueling_damage = _dice(dmg["damage_dice"], mod + dueling)
             notes.append(DUELING_NOTE)
 
     return {
         "itemId": item["index"], "name": item["name"], "ability": ability, "proficient": proficient,
         "attackBonus": attack_bonus, "damage": damage, "damageType": damage_type,
-        "versatileDamage": versatile, "offhandDamage": offhand, "range": _range_text(item), "notes": notes,
+        "duelingDamage": dueling_damage, "versatileDamage": versatile, "offhandDamage": offhand, "range": _range_text(item), "notes": notes,
     }
 
 

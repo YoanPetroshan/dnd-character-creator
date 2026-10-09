@@ -224,6 +224,8 @@ export interface Attack {
   damage: string | null;
   damageType: string | null;
   versatileDamage: string | null;
+  /** One-handed melee with Dueling only: damage including the +2 (S5). */
+  duelingDamage: string | null;
   offhandDamage: string | null;
   range: string | null;
   notes: string[];

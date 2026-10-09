@@ -678,10 +678,14 @@ def test_swords_bard_dueling_adds_two_to_longsword_damage(catalog):
     base = resolve(_with_gear(_draft("bard", 3, "swords-xge"), "longsword"), catalog)
     ch = _spell_choice(base, cid)
     assert [o["id"] for o in ch["options"]] == ["opt-dueling-phb", "opt-two-weapon-fighting-phb"] and ch["count"] == 1
-    plain = _attack(base, "longsword")["damage"]
+    plain = _attack(base, "longsword")
+    assert plain["duelingDamage"] is None
     dueling = resolve(_with_gear(_draft("bard", 3, "swords-xge", {cid: ["opt-dueling-phb"]}), "longsword"), catalog)
     bonus = lambda d: int(d.split("+")[1]) if "+" in d else 0  # noqa: E731
-    assert bonus(_attack(dueling, "longsword")["damage"]) == bonus(plain) + 2
+    atk = _attack(dueling, "longsword")
+    # S5: base damage is unchanged; the +2 is in duelingDamage.
+    assert atk["damage"] == plain["damage"]
+    assert bonus(atk["duelingDamage"]) == bonus(plain["damage"]) + 2
 
 
 # ----------------------------------------- B1: third-caster `spellcasting` blocks

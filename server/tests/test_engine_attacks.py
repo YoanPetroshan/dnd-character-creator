@@ -40,19 +40,36 @@ def test_longsword_plain(items):
     assert a["notes"] == []
 
 
-def test_dueling_adds_to_one_handed_melee_not_versatile(items):
+def test_dueling_is_a_separate_field_not_baked_into_damage(items):
+    # S5 (decision D3 = b): base damage never includes Dueling; the +2 lives in
+    # duelingDamage = one-handed dice + mod + 2. Longsword is versatile, and
+    # Dueling applies to the one-handed grip, so it still gets duelingDamage;
+    # versatileDamage (two-handed grip) is unaffected.
     a = attack(items, "longsword", _mods(STR=3, DEX=2), styles=_styles("fighter-fighting-style-dueling"))
-    assert a["damage"] == "1d8+5"
+    assert a["damage"] == "1d8+3"
+    assert a["duelingDamage"] == "1d8+5"
     assert a["versatileDamage"] == "1d10+3"
     assert "Dueling: only with no other weapon" in a["notes"]
+
+
+def test_no_dueling_field_without_the_style(items):
+    a = attack(items, "longsword", _mods(STR=3, DEX=2))
+    assert a["duelingDamage"] is None and a["damage"] == "1d8+3"
+
+
+def test_dueling_with_zero_modifier_and_one_handed_non_versatile(items):
+    a = attack(items, "rapier", _mods(STR=0, DEX=0), styles=_styles("fighter-fighting-style-dueling"))
+    assert (a["damage"], a["duelingDamage"]) == ("1d8", "1d8+2")
 
 
 def test_dueling_does_not_apply_to_two_handed_or_ranged(items):
     d = _styles("fighting-style-dueling")
     g = attack(items, "greatsword", _mods(STR=3), styles=d)
-    assert g["damage"] == "2d6+3" and not any("Dueling" in n for n in g["notes"])
+    assert g["damage"] == "2d6+3" and g["duelingDamage"] is None and not any("Dueling" in n for n in g["notes"])
     b = attack(items, "longbow", _mods(DEX=2), styles=d)
-    assert b["damage"] == "1d8+2"
+    assert b["damage"] == "1d8+2" and b["duelingDamage"] is None
+    c = attack(items, "crossbow-light", _mods(DEX=2), styles=d)
+    assert c["duelingDamage"] is None
 
 
 def test_longbow_with_archery(items):
