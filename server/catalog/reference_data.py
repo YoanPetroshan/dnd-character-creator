@@ -258,6 +258,28 @@ SRD_TRAIT_EFFECTS: dict[str, dict] = {
 # free skills are a choice and are not modelled.
 SUBCLASS_PROFICIENCIES: dict[str, list[str]] = {
     "life": ["heavy-armor"],  # Life Domain: Bonus Proficiency
+    # Slice 11b.5, read off the imported feature text (fixed lists only; skill
+    # and tool CHOICES, Mastermind's/Mercy's skills and Bladesinging's weapon
+    # pick are not modelled). Applied whenever the subclass is selected, even
+    # below the level that grants it (a 2024 subclass picked at class level 1).
+    "valor-phb": ["medium-armor", "shields", "martial-weapons"],
+    "valor-xphb": ["medium-armor", "shields", "martial-weapons"],
+    "swords-xge": ["medium-armor", "scimitars"],
+    "death-dmg": ["martial-weapons"],
+    "nature-phb": ["heavy-armor"],
+    "tempest-phb": ["martial-weapons", "heavy-armor"],
+    "war-phb": ["martial-weapons", "heavy-armor"],
+    "solidarity-psa": ["heavy-armor"],
+    "strength-psa": ["heavy-armor"],
+    "zeal-psa": ["martial-weapons", "heavy-armor"],
+    "order-tce": ["heavy-armor"],
+    "twilight-tce": ["martial-weapons", "heavy-armor"],
+    "forge-xge": ["heavy-armor", "smiths-tools"],
+    "rune-knight-tce": ["smiths-tools"],
+    "assassin-phb": ["disguise-kit", "poisoners-kit"],
+    "assassin-xphb": ["disguise-kit", "poisoners-kit"],
+    "hexblade-xge": ["medium-armor", "shields", "martial-weapons"],
+    "bladesinging-tce": ["light-armor"],
 }
 
 # How a subclass's `spells` list (5e-SRD-Subclasses.json) behaves. Default is

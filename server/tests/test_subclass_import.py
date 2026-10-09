@@ -482,3 +482,77 @@ def test_a_2024_subclass_resolves_spells_to_xphb_ids_when_they_exist(catalog):
         base = spell_id[:-5] if spell_id.endswith("-xphb") else spell_id
         if base + "-xphb" in catalog.spells:
             assert spell_id.endswith("-xphb"), spell_id
+
+
+# --------------------------------------------------- 11b.5 fixed proficiencies
+
+from catalog import reference_data  # noqa: E402
+
+# Fixed grants read from the imported feature text (checked by script on
+# 2026-10-09): every imported feature that says "you gain proficiency with ...".
+EXPECTED_GRANTS = {
+    "valor-phb": {"medium-armor", "shields", "martial-weapons"},
+    "valor-xphb": {"medium-armor", "shields", "martial-weapons"},
+    "swords-xge": {"medium-armor", "scimitars"},
+    "death-dmg": {"martial-weapons"},
+    "nature-phb": {"heavy-armor"},
+    "tempest-phb": {"martial-weapons", "heavy-armor"},
+    "war-phb": {"martial-weapons", "heavy-armor"},
+    "solidarity-psa": {"heavy-armor"},
+    "strength-psa": {"heavy-armor"},
+    "zeal-psa": {"martial-weapons", "heavy-armor"},
+    "order-tce": {"heavy-armor"},
+    "twilight-tce": {"martial-weapons", "heavy-armor"},
+    "forge-xge": {"heavy-armor", "smiths-tools"},
+    "rune-knight-tce": {"smiths-tools"},
+    "assassin-phb": {"disguise-kit", "poisoners-kit"},
+    "assassin-xphb": {"disguise-kit", "poisoners-kit"},
+    "hexblade-xge": {"medium-armor", "shields", "martial-weapons"},
+    "bladesinging-tce": {"light-armor"},
+    "life": {"heavy-armor"},
+}
+
+
+def test_subclass_proficiency_table_matches_the_verified_grants():
+    assert {k: set(v) for k, v in reference_data.SUBCLASS_PROFICIENCIES.items()} == EXPECTED_GRANTS
+
+
+@needs_classes
+def test_every_granting_subclass_exists_in_the_catalog(catalog):
+    assert set(EXPECTED_GRANTS) <= set(catalog.subclasses)
+
+
+def _attack(res, item_id):
+    return next(a for a in res["derived"]["attacks"] if a["itemId"] == item_id)
+
+
+def _with_gear(draft, *items):
+    draft["equipment"] = {"choices": {}, "skipped": False,
+                          "added": [{"itemId": i, "qty": 1, "equipped": True} for i in items]}
+    return draft
+
+
+@needs_classes
+def test_hexblade_warlock_is_proficient_with_a_longsword(catalog):
+    hexblade = resolve(_with_gear(_draft("warlock", 1, "hexblade-xge"), "longsword"), catalog)
+    assert _attack(hexblade, "longsword")["proficient"] is True
+    fiend = resolve(_with_gear(_draft("warlock", 1, "fiend"), "longsword"), catalog)
+    assert _attack(fiend, "longsword")["proficient"] is False
+    assert {"medium-armor", "shields", "martial-weapons"} <= set(hexblade["sheet"]["proficiencies"]["armor"]) | set(hexblade["sheet"]["proficiencies"]["weapons"])
+
+
+@needs_classes
+def test_tempest_cleric_wears_chain_mail_without_a_warning(catalog):
+    def warnings(sub):
+        res = resolve(_with_gear(_draft("cleric", 1, sub), "chain-mail"), catalog)
+        return [w["id"] for w in res["warnings"]]
+    assert "armor-not-proficient-chain-mail" in warnings("light-phb")
+    assert "armor-not-proficient-chain-mail" not in warnings("tempest-phb")
+
+
+@needs_classes
+def test_swords_bard_is_proficient_with_the_scimitar_and_forge_cleric_with_smiths_tools(catalog):
+    res = resolve(_with_gear(_draft("bard", 3, "swords-xge"), "scimitar"), catalog)
+    assert _attack(res, "scimitar")["proficient"] is True
+    forge = resolve(_draft("cleric", 1, "forge-xge"), catalog)
+    assert "smiths-tools" in forge["sheet"]["proficiencies"]["tools"]
