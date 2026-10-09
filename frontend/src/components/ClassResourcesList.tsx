@@ -21,6 +21,8 @@ export function describeResource(r: ClassResource): string {
   if (word) core = core ? `${core} (${word})` : `(${word})`;
   const damage = r.details?.damageBonus;
   if (typeof damage === "number") core += `, щета +${damage}`;
+  const heal = r.details?.heal;
+  if (typeof heal === "string") core += `, лекуване ${heal}`;
   return core ? `${r.name}: ${core}` : r.name;
 }
 

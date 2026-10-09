@@ -252,7 +252,7 @@ export interface ClassResource {
   pool?: number;
   bonus?: number;
   dc?: number;
-  details?: Record<string, unknown> & { damageBonus?: number };
+  details?: Record<string, unknown> & { damageBonus?: number; heal?: string };
 }
 
 export interface Derived {
@@ -276,6 +276,8 @@ export interface Derived {
   attacks?: Attack[];
   /** Class resources in class order (R1). Optional: older stored resolutions lack it. */
   classResources?: ClassResource[];
+  /** Attacks per Attack action (R2): 1 + the largest Extra Attack, never stacked. Optional: older stored resolutions lack it. */
+  attacksPerAction?: number;
   carryingCapacity?: CarryingCapacity;
   /** True when any equipped armor imposes disadvantage on Stealth. */
   stealthDisadvantage?: boolean;

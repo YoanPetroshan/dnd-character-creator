@@ -9,9 +9,11 @@ one-handed melee weapons when the character has Dueling; versatile weapons
 get it too (Dueling applies to the one-handed grip, `versatileDamage` is the
 two-handed grip and never gets it). Two-handed and ranged weapons get none.
 
+Monk unarmed strike (R2): `unarmed_strike`, see below.
+
 Out of scope: the Dueling "no other weapon" hand check (there is no hands
 model; the note tells the player), Weapon Mastery, magic items, Monk martial
-arts, feat attacks, unarmed strikes.
+arts for non-Monks, feat attacks, other unarmed strikes (R2 adds the Monk's row).
 """
 from __future__ import annotations
 
@@ -92,3 +94,20 @@ def attacks_from_gear(items: list[dict], modifiers: dict, prof_bonus: int, profi
             seen.add(item["index"])
             out.append(a)
     return out
+
+
+UNARMED_STRIKE_ID = "unarmed-strike"  # no catalog item uses this id (verified by test)
+
+
+def unarmed_strike(modifiers: dict, prof_bonus: int, martial_arts_die: str | None) -> dict:
+    """The Monk's Martial Arts unarmed strike (SRD): the better of STR/DEX
+    (tie STR), always proficient, damage = martial arts die + modifier ("1"
+    when no die is given). Callers add the row only for Monk level >= 1."""
+    ability = "DEX" if modifiers.get("DEX", 0) > modifiers.get("STR", 0) else "STR"
+    mod = modifiers.get(ability, 0)
+    die = martial_arts_die and (f"1{martial_arts_die}" if martial_arts_die.startswith("d") else martial_arts_die)
+    return {
+        "itemId": UNARMED_STRIKE_ID, "name": "Unarmed Strike", "ability": ability, "proficient": True,
+        "attackBonus": mod + prof_bonus, "damage": _dice(die or "1", mod), "damageType": "bludgeoning",
+        "duelingDamage": None, "versatileDamage": None, "offhandDamage": None, "range": "5", "notes": ["Martial Arts"],
+    }

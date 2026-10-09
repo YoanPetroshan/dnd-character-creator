@@ -4364,6 +4364,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     attacks = attacks_mod.attacks_from_gear(
         equipped_items, modifiers, prof_bonus, proficient_weapons, features_mod.attack_styles(effects),
     )
+    class_resources = class_resources_mod.resources_for(
+        catalog, resolved_classes, modifiers, prof_bonus, ruleset, warnings_out=warnings)
+    if class_levels.get("monk", 0) >= 1:  # R2: the Monk's unarmed strike, never deduped against gear
+        martial_arts = next((r for r in class_resources if r["id"] == "monk:martial-arts"), None)
+        attacks = attacks + [attacks_mod.unarmed_strike(modifiers, prof_bonus, martial_arts and martial_arts.get("die"))]
     armor_problems, stealth_disadvantage = equipment_mod.armor_warnings(equipped_items, final_scores, weapon_proficiencies)
     warnings += armor_problems
     carrying = derived_mod.carrying_summary(
@@ -4392,8 +4397,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "spellSlots": spell_slots,
         "warlockSpellSlots": warlock_slots,
         "attacks": attacks,
-        "classResources": class_resources_mod.resources_for(
-            catalog, resolved_classes, modifiers, prof_bonus, ruleset, warnings_out=warnings),
+        "attacksPerAction": class_resources_mod.attacks_per_action(resolved_classes),
+        "classResources": class_resources,
         "carryingCapacity": carrying,
         "stealthDisadvantage": stealth_disadvantage,
     }

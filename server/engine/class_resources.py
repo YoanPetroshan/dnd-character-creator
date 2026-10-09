@@ -116,11 +116,86 @@ def _rogue(ctx: Ctx, rc: dict) -> list[dict]:
     return [_resource(rc, "Sneak Attack", dice=dice)]
 
 
+def _fighter(ctx: Ctx, rc: dict) -> list[dict]:
+    # Second Wind: 2014 = 1 use; 2024 = XPHB table (2/3/4). Heal 1d10 + fighter level in both.
+    level = rc["level"]
+    cs = _class_specific(rc)
+    out = []
+    wind = ctx.table("fighter", "second-wind", level)
+    out.append(_resource(rc, "Second Wind", uses=1 if wind is None else wind, recharge="short-or-long",
+                         details={"heal": f"1d10+{level}"}))
+    if cs.get("action_surges"):
+        out.append(_resource(rc, "Action Surge", uses=cs["action_surges"], recharge="short-or-long"))
+    if cs.get("indomitable_uses"):
+        out.append(_resource(rc, "Indomitable", uses=cs["indomitable_uses"], recharge="long"))
+    return out
+
+
+def _martial_arts_die(ctx: Ctx, rc: dict) -> str | None:
+    """"d6" etc. for a Monk class entry: the XPHB table under 2024, else the SRD row."""
+    value = ctx.table("monk", "martial-arts", rc["level"])
+    if value:
+        return "d" + str(value).split("d", 1)[1]
+    ma = _class_specific(rc).get("martial_arts") or {}
+    return f"d{ma['dice_value']}" if ma.get("dice_value") else None
+
+
+def _monk(ctx: Ctx, rc: dict) -> list[dict]:
+    level = rc["level"]
+    out = []
+    die = _martial_arts_die(ctx, rc)
+    if die:
+        out.append(_resource(rc, "Martial Arts", die=die))
+    focus = ctx.table("monk", "focus-points", level)
+    if focus is not None:
+        name = "Focus Points"
+    else:
+        name, focus = "Ki", _class_specific(rc).get("ki_points")
+    if focus:  # none at level 1
+        out.append(_resource(rc, name, uses=focus, recharge="short",
+                             dc=8 + ctx.prof_bonus + ctx.modifiers.get("WIS", 0)))
+    return out
+
+
 _BUILDERS: dict[str, Callable[[Ctx, dict], list[dict]]] = {
     "barbarian": _barbarian,
     "rogue": _rogue,
+    "fighter": _fighter,
+    "monk": _monk,
 }
 _SUBCLASS_BUILDERS: dict[str, Callable[[Ctx, dict], list[dict]]] = {}
+
+# Extra Attack features that are not in the Fighter's `extra_attacks` level
+# column: feature id -> (class id, subclass id or None, level). Verified against
+# the catalog by script (R2): every feature named "Extra Attack" is listed here.
+EXTRA_ATTACK_FEATURES: dict[str, tuple[str, str | None, int]] = {
+    "barbarian-extra-attack": ("barbarian", None, 5),
+    "monk-extra-attack": ("monk", None, 5),
+    "paladin-extra-attack": ("paladin", None, 5),
+    "ranger-extra-attack": ("ranger", None, 5),
+    "valor-phb-6-extra-attack": ("bard", "valor-phb", 6),
+    "swords-xge-6-extra-attack": ("bard", "swords-xge", 6),
+    "valor-xphb-6-extra-attack": ("bard", "valor-xphb", 6),
+    "bladesinging-tce-6-extra-attack": ("wizard", "bladesinging-tce", 6),
+    "bladesinger-frhof-6-extra-attack": ("wizard", "bladesinger-frhof", 6),
+}
+
+
+def attacks_per_action(resolved_classes: list[dict]) -> int:
+    """1 + the largest number of extra attacks any one source gives. PHB 164:
+    Extra Attack from more than one class does not add together. The Fighter
+    reads `extra_attacks` from its level row (1/2/3 at 5/11/20); every other
+    source gives one extra attack."""
+    best = 0
+    for rc in resolved_classes:
+        if not rc.get("cls"):
+            continue
+        if rc["cls_id"] == "fighter":
+            best = max(best, _class_specific(rc).get("extra_attacks") or 0)
+        for cls_id, sub_id, level in EXTRA_ATTACK_FEATURES.values():
+            if cls_id == rc["cls_id"] and rc["level"] >= level and (sub_id is None or sub_id == rc.get("subclass_id")):
+                best = max(best, 1)
+    return 1 + best
 
 
 def resources_for(catalog, resolved_classes: list[dict], modifiers: dict, prof_bonus: int, ruleset: str,

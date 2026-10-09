@@ -134,11 +134,12 @@ export function ExportPage() {
           </ul>
         </div>
       )}
-      {(resolution.derived.attacks?.length ?? 0) > 0 && (
+      {((resolution.derived.attacks?.length ?? 0) > 0 || (resolution.derived.attacksPerAction ?? 1) > 1) && (
         <div>
           <h2>Attacks</h2>
           <ul>
-            {resolution.derived.attacks!.map((a) => (
+            <li>Attacks per action: {resolution.derived.attacksPerAction ?? 1}</li>
+            {(resolution.derived.attacks ?? []).map((a) => (
               <li key={a.itemId}>
                 {a.name}: {a.attackBonus >= 0 ? "+" : ""}
                 {a.attackBonus}

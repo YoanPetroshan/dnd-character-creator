@@ -28,7 +28,7 @@ DERIVED_FIELDS: list[tuple[str, object]] = [
     ("armorClass", None), ("speed", None), ("speeds", {}), ("savingThrows", {}), ("skills", {}),
     ("initiative", None), ("passivePerception", None), ("passiveInsight", None), ("passiveInvestigation", None),
     ("spellSlots", {}), ("warlockSpellSlots", {}),
-    ("attacks", []), ("classResources", []), ("carryingCapacity", None), ("stealthDisadvantage", False),
+    ("attacks", []), ("attacksPerAction", 1), ("classResources", []), ("carryingCapacity", None), ("stealthDisadvantage", False),
 ]
 SHEET_TAIL_FIELDS: list[tuple[str, object]] = [
     ("proficiencies", {}), ("expertiseSkills", []), ("senses", {}), ("damageModifiers", {}),
@@ -86,6 +86,9 @@ def resource_line(r: dict) -> str:
     damage = (r.get("details") or {}).get("damageBonus")
     if damage is not None:
         core += f", щета +{damage}"
+    heal = (r.get("details") or {}).get("heal")
+    if heal:
+        core += f", лекуване {heal}"
     return f"{r['name']}: {core}" if core else r["name"]
 
 
@@ -120,8 +123,10 @@ def extra_blocks(resolution: dict) -> list[tuple[str, str]]:
             blocks.append(("bullet", "Имунитет към състояния: " + ", ".join(_title(c) for c in conditions)))
 
     attacks = derived.get("attacks") or []
-    if attacks:
+    per_action = derived.get("attacksPerAction") or 1
+    if attacks or per_action > 1:
         blocks.append(("h2", "Атаки"))
+        blocks.append(("bullet", f"Атаки на действие: {per_action}"))
         for a in attacks:
             line = f"{a['name']}: {a['attackBonus']:+d}"
             if a.get("damage"):

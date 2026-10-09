@@ -193,7 +193,7 @@ def test_multiclass_barbarian_rogue_gets_one_entry_per_class_in_class_order(cata
 
 def test_class_without_a_builder_has_no_entries(catalog):
     assert _res(catalog, [("wizard", 1)])["derived"]["classResources"] == []
-    assert _res(catalog, [("fighter", 5)])["derived"]["classResources"] == []  # until R2
+    assert _res(catalog, [("paladin", 5)])["derived"]["classResources"] == []  # until R3
 
 
 def test_unknown_class_does_not_crash(catalog):
