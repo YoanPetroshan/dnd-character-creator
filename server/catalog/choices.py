@@ -8,12 +8,12 @@ language_options references "/api/2014/languages", which isn't bundled as
 its own SRD file — resolved from reference_data.LANGUAGES instead, since
 that's pure open-content SRD data, not sourcebook material).
 `equipment_category`-based option sets (used by starting_equipment_options)
-are still NOT resolved here — every case that would need it in the bundled
-data is also nested inside an unrepresentable option_type "choice" (see
-build_choice_options' "multiple" handling below), so there's nothing to
-gain by solving only half of that problem in Phase 2a. A "multiple" bundle
+are NOT resolved by build_choice_options (it has no item catalog); Slice 6's
+build_equipment_choice (bottom of this module) expands them, and nested
+option_type "choice" picks inside bundles, using the Equipment catalog.
+A "multiple" bundle
 (e.g. "leather armor, a longbow, and 20 arrows") IS resolved, as one
-combined option, but only when every item inside it is uniformly a plain
+combined option by build_choice_options, but only when every item inside it is uniformly a plain
 counted_reference OR uniformly an ability_bonus (Phase 4b Task 4 — see
 below) — a bundle containing its own nested sub-choice, or a mix of item
 types, returns None for that one option, same "skip rather than fake it"
@@ -164,3 +164,137 @@ def build_choice_template(
         "count": envelope.get("choose", 1),
         "options": options,
     }
+
+
+# --- Starting equipment: equipment_category sets and nested sub-choices ----
+#
+# The SRD references item sets by category index ("holy-symbols",
+# "martial-melee-weapons", ...) but bundles no category file, so membership is
+# derived from each Equipment.json item's own fields.
+
+def _item_in_category(item: dict, category: str) -> bool | None:
+    """True/False for a recognised category index, None for an unknown one."""
+    if category in ("holy-symbols", "arcane-foci", "druidic-foci"):
+        return (item.get("gear_category") or {}).get("index") == category
+    if category == "musical-instruments":
+        return item.get("tool_category") == "Musical Instrument"
+    weapon_sets = {
+        "simple-weapons": ("Simple", None), "martial-weapons": ("Martial", None),
+        "simple-melee-weapons": ("Simple", "Melee"), "martial-melee-weapons": ("Martial", "Melee"),
+        "simple-ranged-weapons": ("Simple", "Ranged"), "martial-ranged-weapons": ("Martial", "Ranged"),
+    }
+    if category in weapon_sets:
+        weapon_category, weapon_range = weapon_sets[category]
+        return (item.get("weapon_category") == weapon_category
+                and (weapon_range is None or item.get("weapon_range") == weapon_range))
+    return None
+
+
+def equipment_category_options(category: str, items: dict[str, dict]) -> list[dict] | None:
+    """[{id, label}] for every catalog item in the category, or None when the
+    category is not recognised or matches nothing."""
+    options = []
+    for item in items.values():
+        member = _item_in_category(item, category)
+        if member is None:
+            return None
+        if member:
+            options.append({"id": item["index"], "label": item["name"]})
+    return options or None
+
+
+def _equipment_category_index(from_field: dict) -> str | None:
+    if from_field.get("option_set_type") != "equipment_category":
+        return None
+    return (from_field.get("equipment_category") or {}).get("index")
+
+
+def _capitalise(text: str) -> str:
+    return text[:1].upper() + text[1:]
+
+
+def build_equipment_choice(
+    envelope: dict, choice_id: str, source: dict, label: str, items: dict[str, dict],
+) -> tuple[dict | None, dict[str, list[dict]]]:
+    """Starting-equipment envelope -> (template, dependents).
+
+    - A top-level `equipment_category` set becomes a flat list of its items.
+    - An option_type "choice" option (e.g. "any simple weapon"), alone or as
+      a member of a "multiple" bundle (e.g. "a martial weapon and a shield"),
+      becomes a placeholder option whose id lists its fixed members and
+      `any-<category>` for each nested pick. Choosing it makes the nested
+      picks real follow-up Choices, returned in `dependents` as
+      {option_id: [sub-template, ...]} with ids `{choice_id}:{j}` (j counts
+      nested picks across the whole envelope, so it is stable whichever
+      option is selected). The caller adds them once that option is selected.
+    Options that can't be resolved are left out (same discipline as
+    build_choice_template); template is None when nothing survives."""
+    from_field = envelope.get("from", {})
+    category = _equipment_category_index(from_field)
+    desc = envelope.get("desc") or ""
+    if category is not None:
+        options = equipment_category_options(category, items)
+        if options is None:
+            return None, {}
+        return {
+            "id": choice_id, "source": source, "label": label, "description": desc,
+            "count": envelope.get("choose", 1), "options": options,
+        }, {}
+    if from_field.get("option_set_type") != "options_array":
+        return None, {}
+
+    options: list[dict] = []
+    dependents: dict[str, list[dict]] = {}
+    seen: set[str] = set()
+    slot_index = 0
+    for opt in from_field.get("options", []):
+        members = opt.get("items") if opt.get("option_type") == "multiple" else [opt]
+        id_parts: list[str] = []
+        label_parts: list[str] = []
+        subs: list[dict] = []
+        resolvable = bool(members)
+        for member in members or []:
+            mtype = member.get("option_type")
+            if mtype == "counted_reference":
+                count = member.get("count", 1)
+                name = member["of"]["name"]
+                id_parts.append(member["of"]["index"])
+                label_parts.append(f"{count}x {name}" if count != 1 else name)
+            elif mtype == "reference":
+                id_parts.append(member["item"]["index"])
+                label_parts.append(member["item"]["name"])
+            elif mtype == "choice":
+                nested = member.get("choice") or {}
+                this_slot = slot_index  # counted even when unresolvable, so ids stay stable
+                slot_index += 1
+                nested_category = _equipment_category_index(nested.get("from", {}))
+                nested_options = equipment_category_options(nested_category, items) if nested_category else None
+                if nested_options is None:
+                    resolvable = False
+                    continue
+                nested_desc = nested.get("desc") or "an item"
+                id_parts.append(f"any-{nested_category}")
+                label_parts.append(_capitalise(nested_desc))
+                subs.append({
+                    "id": f"{choice_id}:{this_slot}", "source": source,
+                    "label": f"{label}: {_capitalise(nested_desc)}",
+                    "description": f"Choose {nested.get('choose', 1)}: {nested_desc}.",
+                    "count": nested.get("choose", 1), "options": nested_options,
+                })
+            else:
+                resolvable = False
+        if not resolvable:
+            continue
+        option_id = "+".join(id_parts)
+        if option_id in seen:
+            continue
+        seen.add(option_id)
+        options.append({"id": option_id, "label": " + ".join(label_parts)})
+        if subs:
+            dependents[option_id] = subs
+    if not options:
+        return None, {}
+    return {
+        "id": choice_id, "source": source, "label": label, "description": desc,
+        "count": envelope.get("choose", 1), "options": options,
+    }, dependents

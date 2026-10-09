@@ -1144,10 +1144,11 @@ def test_fighter_equipment_choices_are_offered(catalog):
     resolution = resolve(_fighter_acolyte_human_draft(), catalog)
     equipment_choices = [c for c in resolution["choices"] if c["source"]["kind"] == "equipment"]
     labels = {c["label"] for c in equipment_choices}
-    # 3 of Fighter's 4 starting_equipment_options entries are resolvable in
-    # this phase (see Task 1) — the "martial weapon and a shield or two
-    # martial weapons" one is not, and must not appear at all.
-    assert len(equipment_choices) == 3
+    # All 4 of Fighter's starting_equipment_options entries resolve since
+    # Slice 6 (the "martial weapon and a shield or two martial weapons" one
+    # became a placeholder bundle with a nested follow-up pick), plus
+    # Acolyte's holy symbol choice.
+    assert len(equipment_choices) == 5
     armor_choice = next(c for c in equipment_choices if any(o["id"] == "chain-mail" for o in c["options"]))
     ids = {o["id"] for o in armor_choice["options"]}
     assert ids == {"chain-mail", "leather-armor+longbow+arrow"}
@@ -1274,21 +1275,20 @@ def test_dict_added_item_id_is_not_a_crash(catalog):
 
 
 def test_truncated_equipment_choice_notes_the_limitation_in_its_description(catalog):
-    draft = {
-        "name": "Test Cleric", "sources": ["srd"],
-        "classes": [{"classId": "cleric", "level": 1, "choices": {}}],
-        "background": {"choices": {}}, "species": {"choices": {}},
-        "abilities": {"method": "manual", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10}},
-        "equipment": {"choices": {}, "added": [], "skipped": False}, "details": {},
-    }
-    resolution = resolve(draft, catalog)
-    equipment_choices = [c for c in resolution["choices"] if c["source"]["kind"] == "equipment"]
-    # Find the one with only 1 real option resolved (the "a light crossbow
-    # and 20 bolts OR any simple weapon" envelope, per the final review's
-    # own finding) — verify it live first rather than assuming which index.
-    truncated = [c for c in equipment_choices if len(c["options"]) == 1]
-    assert truncated, "expected at least one truncated equipment choice for Cleric"
-    assert "not available yet" in truncated[0]["description"] or "aren't available yet" in truncated[0]["description"]
+    # Slice 6 resolved every SRD envelope, so exercise the still-possible
+    # partial drop with a synthetic one: an unknown equipment category.
+    from engine.resolve import _equipment_choice_templates
+    entity = {"starting_equipment_options": [{
+        "choose": 1, "type": "equipment",
+        "from": {"option_set_type": "options_array", "options": [
+            {"option_type": "counted_reference", "count": 1, "of": {"index": "club", "name": "Club"}},
+            {"option_type": "choice", "choice": {"desc": "any widget", "choose": 1, "type": "equipment", "from": {
+                "option_set_type": "equipment_category", "equipment_category": {"index": "widgets", "name": "Widgets"}}}},
+        ]},
+    }]}
+    templates, dropped, _ = _equipment_choice_templates(entity, "class", "x", "X", catalog.items)
+    assert dropped == 0 and len(templates[0]["options"]) == 1
+    assert "aren't available yet" in templates[0]["description"]
 
 
 def test_chosen_equipment_appears_on_the_sheet(catalog):
@@ -2116,13 +2116,16 @@ def test_fighter_duplicate_skill_selection_is_deduplicated(catalog):
     assert not any(p["id"].startswith("over-selected-") for p in resolution["problems"])
 
 
-def test_a_fully_dropped_equipment_envelope_produces_a_warning(catalog):
-    # Paladin has 4 starting-equipment envelopes in the bundled SRD data,
-    # of which only 2 survive build_choice_template (confirmed empirically
-    # while writing this plan) — the other 2 are genuinely dropped.
-    draft = _fighter_acolyte_human_draft(classes=[{"classId": "paladin", "level": 1, "choices": {}}])
-    resolution = resolve(draft, catalog)
-    assert any("equipment" in w["id"] for w in resolution["warnings"])
+def test_a_fully_dropped_equipment_envelope_is_counted(catalog):
+    # Slice 6 resolved every SRD envelope (see test_equipment_envelopes.py);
+    # an unknown equipment category is what still gets dropped.
+    from engine.resolve import _equipment_choice_templates
+    entity = {"starting_equipment_options": [{
+        "choose": 1, "type": "equipment",
+        "from": {"option_set_type": "equipment_category", "equipment_category": {"index": "widgets", "name": "Widgets"}},
+    }]}
+    templates, dropped, _ = _equipment_choice_templates(entity, "class", "x", "X", catalog.items)
+    assert templates == [] and dropped == 1
 
 
 def test_a_class_with_no_dropped_envelopes_has_no_such_warning(catalog):

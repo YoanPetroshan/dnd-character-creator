@@ -366,7 +366,7 @@ def test_equipment_choice_appears_in_resolve_response(client):
     assert resp.status_code == 200
     body = resp.get_json()
     equipment_choices = [c for c in body["choices"] if c["source"]["kind"] == "equipment"]
-    assert len(equipment_choices) == 3
+    assert len(equipment_choices) == 4  # Slice 6: the martial weapon + shield envelope is now offered too
 
 
 def _complete_exportable_draft():

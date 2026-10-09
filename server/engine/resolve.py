@@ -53,7 +53,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from catalog.choices import build_choice_template
+from catalog.choices import build_choice_template, build_equipment_choice
 from catalog.loader import Catalog
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
 from catalog.reference_data import SRD_TRAIT_EFFECTS
@@ -2033,15 +2033,42 @@ def _asi_choice_templates(
     return templates
 
 
-def _equipment_choice_templates(entity: dict, source_kind: str, source_id: str, source_label: str) -> tuple[list[dict], int]:
+def _envelope_needs_expansion(envelope: dict) -> bool:
+    """True for starting-equipment envelopes that reference an
+    equipment_category set, directly or through a nested option_type
+    "choice" (alone or inside a "multiple" bundle)."""
+    from_field = envelope.get("from") or {}
+    if from_field.get("option_set_type") == "equipment_category":
+        return True
+    for opt in from_field.get("options", []):
+        members = opt.get("items", []) if opt.get("option_type") == "multiple" else [opt]
+        if any(m.get("option_type") == "choice" for m in members):
+            return True
+    return False
+
+
+def _equipment_choice_templates(
+    entity: dict, source_kind: str, source_id: str, source_label: str, items: dict | None = None,
+) -> tuple[list[dict], int, dict[str, dict[str, list[dict]]]]:
+    """Returns (templates, dropped envelope count, dependents) where
+    dependents is {choice id: {option id: [follow-up templates]}} for
+    options that contain a nested pick (see catalog.choices.
+    build_equipment_choice); resolve() adds them once that option is
+    selected."""
     templates = []
+    dependents_by_choice: dict[str, dict[str, list[dict]]] = {}
     dropped_envelopes = 0
     for i, envelope in enumerate(entity.get("starting_equipment_options", [])):
         cid = f"{source_kind}:{source_id}:1:equipment-choice-{i}" if source_kind == "class" else f"{source_kind}:{source_id}:equipment-choice-{i}"
         source = {"kind": "equipment", "id": source_id, "label": source_label}
         if source_kind == "class":
             source["level"] = 1
-        tpl = build_choice_template(envelope, cid, source, "Starting Equipment")
+        if items is not None and _envelope_needs_expansion(envelope):
+            tpl, dependents = build_equipment_choice(envelope, cid, source, "Starting Equipment", items)
+            if tpl and dependents:
+                dependents_by_choice[cid] = dependents
+        else:
+            tpl = build_choice_template(envelope, cid, source, "Starting Equipment")
         if not tpl:
             dropped_envelopes += 1
             continue
@@ -2049,7 +2076,7 @@ def _equipment_choice_templates(entity: dict, source_kind: str, source_id: str, 
         if original_option_count and len(tpl["options"]) < original_option_count:
             tpl["description"] = (tpl["description"] + " (Note: one or more of the original options for this choice aren't available yet and have been left out.)").strip()
         templates.append(tpl)
-    return templates, dropped_envelopes
+    return templates, dropped_envelopes, dependents_by_choice
 
 
 def _spell_options(catalog: Catalog, cls_id: str, spell_level: int) -> list[dict]:
@@ -2821,8 +2848,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choice_templates += _species_choice_templates(catalog, race, race_id, subrace)
         if species_ability_choice_tpl:
             choice_templates.append(species_ability_choice_tpl)
+    equipment_dependents: dict[str, dict[str, list[dict]]] = {}
     if cls and cls_id:
-        cls_equipment_templates, cls_dropped = _equipment_choice_templates(cls, "class", cls_id, cls["name"])
+        cls_equipment_templates, cls_dropped, cls_dependents = _equipment_choice_templates(
+            cls, "class", cls_id, cls["name"], catalog.items)
+        equipment_dependents.update(cls_dependents)
         choice_templates += cls_equipment_templates
         if cls_dropped:
             warnings.append({
@@ -2830,7 +2860,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 "message": f"{cls['name']}'s starting equipment has {cls_dropped} choice(s) that can't be shown yet and were left out.",
             })
     if bg and bg_id:
-        bg_equipment_templates, bg_dropped = _equipment_choice_templates(bg, "background", bg_id, bg["name"])
+        bg_equipment_templates, bg_dropped, bg_dependents = _equipment_choice_templates(
+            bg, "background", bg_id, bg["name"], catalog.items)
+        equipment_dependents.update(bg_dependents)
         choice_templates += bg_equipment_templates
         if bg_dropped:
             warnings.append({
@@ -2875,6 +2907,21 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # `choices: {}` in the frontend reducer, so a species/background/
     # primary-class change can never itself leave a stale selection
     # behind — those paths never reach here.)
+    # Nested starting-equipment picks (e.g. the martial weapon in "a martial
+    # weapon and a shield") only exist once their parent option is selected.
+    if equipment_dependents:
+        expanded_templates = []
+        for tpl in choice_templates:
+            expanded_templates.append(tpl)
+            option_deps = equipment_dependents.get(tpl["id"])
+            if option_deps:
+                parent_valid = {o["id"] for o in tpl["options"]}
+                raw_parent = all_selections.get(tpl["id"])
+                raw_parent = raw_parent if isinstance(raw_parent, list) else []
+                parent_selected = [s for s in dict.fromkeys(raw_parent) if isinstance(s, str) and s in parent_valid]
+                for option_id in parent_selected[: tpl["count"]]:
+                    expanded_templates.extend(option_deps.get(option_id, []))
+        choice_templates = expanded_templates
     current_template_ids = {tpl["id"] for tpl in choice_templates}
     pruned = [
         {"choiceId": choice_id, "reason": f"'{choice_id}' no longer applies to the current character and was ignored."}
