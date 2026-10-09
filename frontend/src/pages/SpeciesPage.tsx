@@ -38,8 +38,8 @@ export function SpeciesPage() {
     ? resolution.warnings.filter((w) => w.id.startsWith("ruleset-") || w.id.startsWith("asi-double-dip"))
     : [];
 
-  function handleChange(choiceId: string, selected: string[]) {
-    dispatch({ type: "SET_CHOICE_SELECTION", source: "species", choiceId, selected });
+  function handleChange(choiceId: string, optionId: string, count: number) {
+    dispatch({ type: "TOGGLE_CHOICE_OPTION", source: "species", choiceId, optionId, count });
   }
 
   // A species-granted feat (Human/XPHB's Origin feat, Variant Human) is a
@@ -101,7 +101,7 @@ export function SpeciesPage() {
       )}
       {selectedSpeciesId && !loading && choices.length === 0 && <p>Няма избори за този species.</p>}
       {choices.map((choice) => (
-        <ChoiceCard key={choice.id} choice={choice} onChange={handleChange} />
+        <ChoiceCard key={choice.id} choice={choice} onToggle={handleChange} />
       ))}
     </div>
   );

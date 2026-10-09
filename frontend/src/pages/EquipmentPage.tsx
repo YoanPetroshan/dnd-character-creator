@@ -33,8 +33,8 @@ export function EquipmentPage() {
 
   const equipmentChoices = resolution.choices.filter((c) => c.source.kind === "equipment");
 
-  function handleChoiceChange(choiceId: string, selected: string[]) {
-    dispatch({ type: "SET_CHOICE_SELECTION", source: "equipment", choiceId, selected });
+  function handleChoiceChange(choiceId: string, optionId: string, count: number) {
+    dispatch({ type: "TOGGLE_CHOICE_OPTION", source: "equipment", choiceId, optionId, count });
   }
 
   const sheetEquipment = resolution.sheet.equipment;
@@ -45,7 +45,7 @@ export function EquipmentPage() {
 
       {equipmentChoices.length === 0 && <p>Няма избори за стартова екипировка.</p>}
       {equipmentChoices.map((choice) => (
-        <ChoiceCard key={choice.id} choice={choice} onChange={handleChoiceChange} />
+        <ChoiceCard key={choice.id} choice={choice} onToggle={handleChoiceChange} />
       ))}
 
       {sheetEquipment.granted.length > 0 && (

@@ -29,8 +29,8 @@ export function BackgroundPage() {
     ? resolution.warnings.filter((w) => w.id.startsWith("ruleset-") || w.id.startsWith("asi-double-dip"))
     : [];
 
-  function handleChange(choiceId: string, selected: string[]) {
-    dispatch({ type: "SET_CHOICE_SELECTION", source: "background", choiceId, selected });
+  function handleChange(choiceId: string, optionId: string, count: number) {
+    dispatch({ type: "TOGGLE_CHOICE_OPTION", source: "background", choiceId, optionId, count });
   }
 
   // The "feat" branch here is for a background-granted feat's own cascaded
@@ -78,7 +78,7 @@ export function BackgroundPage() {
       </select>
       {selectedBackgroundId && !loading && choices.length === 0 && <p>Няма избори за този background.</p>}
       {choices.map((choice) => (
-        <ChoiceCard key={choice.id} choice={choice} onChange={handleChange} />
+        <ChoiceCard key={choice.id} choice={choice} onToggle={handleChange} />
       ))}
 
       <details className="details-section">

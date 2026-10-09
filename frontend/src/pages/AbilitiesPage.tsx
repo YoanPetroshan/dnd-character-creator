@@ -42,7 +42,15 @@ export function AbilitiesPage() {
     dispatch({ type: "SET_ABILITY_METHOD", method: next });
   }
 
-  const usedInStandardArray = ABILITIES.map((a) => base[a]);
+  // Standard array: every select lists all six values; picking one that
+  // another ability holds swaps the two, so the selects never lock.
+  function setStandard(ability: Ability, value: number) {
+    const holder = ABILITIES.find((a) => a !== ability && base[a] === value);
+    const next = { ...base, [ability]: value };
+    if (holder) next[holder] = base[ability];
+    dispatch({ type: "SET_ABILITY_SCORES", base: next });
+  }
+
   const pointBuySpent = ABILITIES.reduce((sum, a) => sum + (POINT_BUY_COST[base[a]] ?? 0), 0);
 
   return (
@@ -105,9 +113,9 @@ export function AbilitiesPage() {
                 <td>{ability}</td>
                 <td>
                   {method === "standard" && (
-                    <select value={score} onChange={(e) => setAbility(ability, Number(e.target.value))}>
-                      <option value={score}>{score}</option>
-                      {STANDARD_ARRAY.filter((v) => !usedInStandardArray.includes(v)).map((v) => (
+                    <select value={score} onChange={(e) => setStandard(ability, Number(e.target.value))}>
+                      {!STANDARD_ARRAY.includes(score) && <option value={score}>{score}</option>}
+                      {STANDARD_ARRAY.map((v) => (
                         <option key={v} value={v}>
                           {v}
                         </option>

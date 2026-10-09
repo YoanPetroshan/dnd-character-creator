@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { DraftProvider } from "./DraftContext";
 import "./index.css";
 
@@ -11,9 +12,11 @@ if (!rootElement) throw new Error("#root element not found");
 createRoot(rootElement).render(
   <StrictMode>
     <BrowserRouter>
-      <DraftProvider>
-        <App />
-      </DraftProvider>
+      <ErrorBoundary>
+        <DraftProvider>
+          <App />
+        </DraftProvider>
+      </ErrorBoundary>
     </BrowserRouter>
   </StrictMode>,
 );

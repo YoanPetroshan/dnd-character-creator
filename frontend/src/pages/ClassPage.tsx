@@ -3,6 +3,7 @@ import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
 import { useCatalogContext } from "../CatalogContext";
 import { ChoiceCard } from "../components/ChoiceCard";
+import { CommitNumberInput } from "../components/CommitNumberInput";
 import { SpellLibrary } from "../components/SpellLibrary";
 
 type ClassTab = "features" | "spells";
@@ -39,9 +40,12 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
     if (selectedSubclassId) params.set("include", selectedSubclassId);
     const query = params.toString();
     fetch(`/api/catalog/class/${classId}${query ? `?${query}` : ""}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((data: ClassDetail) => {
-        if (!cancelled) setClassDetail(data);
+        if (!cancelled) setClassDetail(data && data.levelFeatureCounts ? data : null);
       })
       .catch(() => {
         if (!cancelled) setClassDetail(null);
@@ -67,8 +71,8 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
   const tabSpellsId = `tab-spells-${classId}`;
   const panelSpellsId = `panel-spells-${classId}`;
 
-  function handleChange(choiceId: string, selected: string[]) {
-    dispatch({ type: "SET_CHOICE_SELECTION", source: "class", choiceId, selected });
+  function handleChange(choiceId: string, optionId: string, count: number) {
+    dispatch({ type: "TOGGLE_CHOICE_OPTION", source: "class", choiceId, optionId, count });
   }
 
   return (
@@ -84,15 +88,11 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
 
       <label>
         Ниво
-        <input
-          type="number"
+        <CommitNumberInput
           min={1}
           max={20}
           value={classLevel}
-          onChange={(e) => {
-            const parsed = parseInt(e.target.value, 10);
-            if (!Number.isNaN(parsed)) dispatch({ type: "SET_CLASS_LEVEL", classId, level: parsed });
-          }}
+          onCommit={(level) => dispatch({ type: "SET_CLASS_LEVEL", classId, level })}
         />
       </label>
 
@@ -130,17 +130,14 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
           {Array.from({ length: classLevel - 1 }, (_, i) => i + 2).map((lvl) => (
             <label key={lvl}>
               Ниво {lvl}
-              <input
-                type="number"
+              <CommitNumberInput
                 min={1}
+                max={classDetail?.hit_die}
                 placeholder={
                   classDetail?.hit_die !== undefined ? String(Math.floor(classDetail.hit_die / 2) + 1) : undefined
                 }
-                value={classEntry?.hpRolls?.[String(lvl)] ?? ""}
-                onChange={(e) => {
-                  const parsed = parseInt(e.target.value, 10);
-                  if (!Number.isNaN(parsed)) dispatch({ type: "SET_HP_ROLL", classId, level: lvl, value: parsed });
-                }}
+                value={classEntry?.hpRolls?.[String(lvl)]}
+                onCommit={(value) => dispatch({ type: "SET_HP_ROLL", classId, level: lvl, value })}
               />
             </label>
           ))}
@@ -177,7 +174,7 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
           {!loading && featureChoices.length === 0 && <p>Няма избори за този клас.</p>}
           {featureChoices.map((choice) => (
             <div key={choice.id}>
-              <ChoiceCard choice={choice} onChange={handleChange} />
+              <ChoiceCard choice={choice} onToggle={handleChange} />
               {prunedReasons.has(choice.id) && (
                 <p className="choice-pruned" role="note">
                   {prunedReasons.get(choice.id)}
@@ -192,7 +189,7 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
         <div id={panelSpellsId} role="tabpanel" aria-labelledby={tabSpellsId}>
           {spellChoices.map((choice) => (
             <div key={choice.id}>
-              <ChoiceCard choice={choice} onChange={handleChange} />
+              <ChoiceCard choice={choice} onToggle={handleChange} />
               {prunedReasons.has(choice.id) && (
                 <p className="choice-pruned" role="note">
                   {prunedReasons.get(choice.id)}

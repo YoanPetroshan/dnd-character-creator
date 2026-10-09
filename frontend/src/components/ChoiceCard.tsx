@@ -4,10 +4,10 @@ import { ChoicePicker } from "./ChoicePicker";
 
 interface ChoiceCardProps {
   choice: Choice;
-  onChange: (choiceId: string, selected: string[]) => void;
+  onToggle: (choiceId: string, optionId: string, count: number) => void;
 }
 
-export function ChoiceCard({ choice, onChange }: ChoiceCardProps) {
+export function ChoiceCard({ choice, onToggle }: ChoiceCardProps) {
   const [expanded, setExpanded] = useState(choice.status === "pending");
 
   return (
@@ -34,7 +34,7 @@ export function ChoiceCard({ choice, onChange }: ChoiceCardProps) {
       {expanded && (
         <div className="choice-card__body">
           <p>{choice.description}</p>
-          <ChoicePicker choice={choice} onChange={onChange} />
+          <ChoicePicker choice={choice} onToggle={onToggle} />
         </div>
       )}
     </div>

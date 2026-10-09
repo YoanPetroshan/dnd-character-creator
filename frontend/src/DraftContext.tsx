@@ -61,12 +61,35 @@ type Action =
   | { type: "SET_ABILITY_SCORES"; base: Record<Ability, number> }
   | { type: "SET_DETAIL"; field: keyof Draft["details"]; value: string }
   | { type: "SET_CHOICE_SELECTION"; source: ChoiceSourceKind; choiceId: string; selected: string[] }
+  | { type: "TOGGLE_CHOICE_OPTION"; source: ChoiceSourceKind; choiceId: string; optionId: string; count: number }
   | { type: "ADD_ITEM"; itemId: string }
   | { type: "REMOVE_ITEM"; itemId: string }
   | { type: "TOGGLE_EQUIPPED"; itemId: string };
 
+/** The selection currently stored in the draft for a choice (not the last
+ *  server resolution, which lags by the debounce + network round trip). */
+function storedSelection(state: Draft, source: ChoiceSourceKind, choiceId: string): string[] {
+  let bucket: Record<string, string[]> | undefined;
+  if (source === "class") {
+    const targetClassId = choiceId.split(":")[1];
+    bucket = state.classes.find((c) => c.classId === targetClassId)?.choices;
+  } else if (source === "background") bucket = state.background.choices;
+  else if (source === "species") bucket = state.species.choices;
+  else if (source === "equipment") bucket = state.equipment.choices;
+  const v = bucket?.[choiceId];
+  return Array.isArray(v) ? v : [];
+}
+
 function reducer(state: Draft, action: Action): Draft {
   switch (action.type) {
+    case "TOGGLE_CHOICE_OPTION": {
+      const current = storedSelection(state, action.source, action.choiceId);
+      let next: string[];
+      if (current.includes(action.optionId)) next = current.filter((id) => id !== action.optionId);
+      else if (current.length >= action.count) next = [...current.slice(current.length - action.count + 1), action.optionId];
+      else next = [...current, action.optionId];
+      return reducer(state, { type: "SET_CHOICE_SELECTION", source: action.source, choiceId: action.choiceId, selected: next });
+    }
     case "SET_NAME":
       return { ...state, name: action.name };
     case "SET_RULESET":
@@ -251,6 +274,25 @@ function mergeInto(defaults: unknown, stored: unknown): unknown {
   return typeof stored === typeof defaults ? stored : defaults;
 }
 
+/** Drop malformed list entries (null, non-objects, missing ids) that a
+ *  hand-edited or corrupt stored/uploaded draft can carry; they would
+ *  otherwise crash the pages that iterate them. */
+function sanitizeDraft(d: Draft): Draft {
+  const classes = (Array.isArray(d.classes) ? d.classes : [])
+    .filter((c): c is Draft["classes"][number] => isPlainObject(c) && typeof c.classId === "string" && c.classId !== "")
+    .map((c) => ({
+      ...c,
+      level: typeof c.level === "number" && Number.isFinite(c.level) ? Math.min(20, Math.max(1, Math.trunc(c.level))) : 1,
+      choices: isPlainObject(c.choices) ? c.choices : {},
+    }));
+  const seen = new Set<string>();
+  const uniqueClasses = classes.filter((c) => (seen.has(c.classId) ? false : (seen.add(c.classId), true)));
+  const added = (Array.isArray(d.equipment?.added) ? d.equipment.added : []).filter(
+    (e) => isPlainObject(e) && typeof e.itemId === "string" && typeof e.qty === "number" && Number.isFinite(e.qty)
+  );
+  return { ...d, classes: uniqueClasses, equipment: { ...d.equipment, added } };
+}
+
 /** Deep-merge a stored/imported draft over the defaults so keys added by a
  *  newer build never come back undefined. Throws on non-objects or on a
  *  draft written by a newer app version. */
@@ -261,7 +303,7 @@ export function mergeDraft(stored: unknown): Draft {
     throw new Error("This draft was saved by a newer version of the app.");
   }
   const merged = mergeInto(emptyDraft, stored) as Draft;
-  return { ...merged, draftVersion: DRAFT_VERSION };
+  return sanitizeDraft({ ...merged, draftVersion: DRAFT_VERSION });
 }
 
 function loadInitial(): Draft {
