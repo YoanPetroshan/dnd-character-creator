@@ -119,6 +119,32 @@ export function ExportPage() {
           </ul>
         </div>
       )}
+      {(resolution.derived.attacks?.length ?? 0) > 0 && (
+        <div>
+          <h2>Attacks</h2>
+          <ul>
+            {resolution.derived.attacks!.map((a) => (
+              <li key={a.itemId}>
+                {a.name}: {a.attackBonus >= 0 ? "+" : ""}
+                {a.attackBonus}
+                {a.damage && `, ${a.damage} ${a.damageType}`}
+                {a.versatileDamage && ` (versatile ${a.versatileDamage})`}
+                {a.offhandDamage && `, off hand ${a.offhandDamage}`}
+                {a.range && `, range ${a.range}`}
+                {a.notes.length > 0 && `; ${a.notes.join(", ")}`}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {resolution.derived.carryingCapacity && (
+        <p>
+          Carrying: {resolution.derived.carryingCapacity.carried}/{resolution.derived.carryingCapacity.capacity} lb
+          (push/drag/lift {resolution.derived.carryingCapacity.pushDragLift} lb)
+          {resolution.derived.carryingCapacity.overCapacity && " - over capacity"}
+          {resolution.derived.stealthDisadvantage && "; armor: disadvantage on Stealth"}
+        </p>
+      )}
       {pendingEquipment.length > 0 && (
         <p>Не всички избори за екипировка са направени ({pendingEquipment.length}) — това не блокира експорта.</p>
       )}

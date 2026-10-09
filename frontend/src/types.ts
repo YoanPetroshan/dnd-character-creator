@@ -208,6 +208,28 @@ export interface Sheet {
   feats?: SheetFeat[];
 }
 
+export interface Attack {
+  itemId: string;
+  name: string;
+  ability: "STR" | "DEX";
+  proficient: boolean;
+  attackBonus: number;
+  /** null for a weapon without damage (net). */
+  damage: string | null;
+  damageType: string | null;
+  versatileDamage: string | null;
+  offhandDamage: string | null;
+  range: string | null;
+  notes: string[];
+}
+
+export interface CarryingCapacity {
+  capacity: number;
+  pushDragLift: number;
+  carried: number;
+  overCapacity: boolean;
+}
+
 export interface Derived {
   abilityModifiers: Record<Ability, number>;
   proficiencyBonus: number;
@@ -225,6 +247,11 @@ export interface Derived {
   passiveInvestigation: number;
   spellSlots: Record<string, number>;
   warlockSpellSlots: Record<string, number>;
+  /** Equipped weapons, one entry per distinct weapon. Optional: older stored resolutions lack it. */
+  attacks?: Attack[];
+  carryingCapacity?: CarryingCapacity;
+  /** True when any equipped armor imposes disadvantage on Stealth. */
+  stealthDisadvantage?: boolean;
 }
 
 export interface Resolution {
