@@ -64,6 +64,7 @@ from catalog.reference_data import (
 )
 from . import asi as asi_mod
 from . import attacks as attacks_mod
+from . import class_resources as class_resources_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
 from . import features as features_mod
@@ -4391,6 +4392,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "spellSlots": spell_slots,
         "warlockSpellSlots": warlock_slots,
         "attacks": attacks,
+        "classResources": class_resources_mod.resources_for(
+            catalog, resolved_classes, modifiers, prof_bonus, ruleset, warnings_out=warnings),
         "carryingCapacity": carrying,
         "stealthDisadvantage": stealth_disadvantage,
     }

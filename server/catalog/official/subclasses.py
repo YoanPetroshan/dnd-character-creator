@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 
@@ -68,6 +69,103 @@ def load_class_2024_progressions(class_dir) -> dict[str, dict]:
                                "cantrips": list(cantrips) if len(cantrips) == 20 else [],
                                "prepared": list(prepared)}
     return out
+
+
+_TAG = re.compile(r"\{@(?:filter|tip) ([^|}]*)[^}]*\}")
+_DICE_TAG = re.compile(r"\{@dice ([^|}]*)[^}]*\}")
+
+
+def _column_slug(label) -> str | None:
+    """A table column label -> slug ('{@filter Invocations|optionalfeatures|...}'
+    -> 'invocations'); None for the spell columns (`|spells|` filters, 'Spell
+    Slots', 'Slot Level') that the spell machinery already reads."""
+    if not isinstance(label, str) or "|spells|" in label:
+        return None
+    text = _TAG.sub(r"\1", label).strip()
+    if text.lower() in ("spell slots", "slot level", ""):
+        return None
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-") or None
+
+
+def _table_value(value):
+    """One table cell -> int / 'NdF' / 'dF' / the text itself."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        text = _DICE_TAG.sub(lambda m: m.group(1).strip().lower(), value).strip()
+        return int(text) if re.fullmatch(r"-?\d+", text) else text
+    if isinstance(value, dict):
+        if value.get("type") in ("bonus", "bonusSpeed"):
+            return value.get("value", 0)
+        if value.get("type") == "dice":
+            rolls = value.get("toRoll") or []
+            if rolls:
+                return "+".join(f"{r.get('number', 1)}d{r['faces']}" for r in rolls)
+    return None
+
+
+def _table_columns(groups) -> dict[str, list]:
+    """classTableGroups / subclassTableGroups -> {column slug: [20 values]};
+    spell-progression groups and spell columns are skipped, the first column
+    with a given slug wins."""
+    out: dict[str, list] = {}
+    for group in groups or []:
+        rows = group.get("rows") if isinstance(group, dict) else None
+        if not isinstance(rows, list) or len(rows) != 20:
+            continue
+        for i, label in enumerate(group.get("colLabels") or []):
+            slug_ = _column_slug(label)
+            if slug_ is None or slug_ in out:
+                continue
+            values = [_table_value(r[i]) if isinstance(r, list) and i < len(r) else None for r in rows]
+            if all(v is not None for v in values):
+                out[slug_] = values
+    return out
+
+
+def load_class_2024_tables(class_dir) -> dict[str, dict[str, list]]:
+    """XPHB class records -> {class id: {column slug: [20 values]}} for the
+    non-spell columns of the class table (Rages, Rage Damage, Sneak Attack,
+    Weapon Mastery, Channel Divinity, ...). Values are ints, 'NdF' dice
+    strings or text; {} when the directory or index is missing."""
+    out: dict[str, dict[str, list]] = {}
+    for raw in _raw_class_records(class_dir, "class"):
+        if raw.get("source") == "XPHB":
+            cols = _table_columns(raw.get("classTableGroups"))
+            if cols:
+                out[str(raw.get("name", "")).lower()] = cols
+    return out
+
+
+def load_subclass_2024_tables(class_dir) -> dict[str, dict[str, list]]:
+    """Subclass records with their own `subclassTableGroups` (Psi Warrior,
+    Soulknife XPHB) -> {subclass id: {column slug: [20 values]}}; the spell
+    tables of the third casters are skipped."""
+    out: dict[str, dict[str, list]] = {}
+    for raw in _raw_class_records(class_dir, "subclass"):
+        if "_copy" in raw or raw.get("source") != "XPHB" or not raw.get("name"):
+            continue
+        cols = _table_columns(raw.get("subclassTableGroups"))
+        if cols:
+            out[_sub_id(raw)] = cols
+    return out
+
+
+def _raw_class_records(class_dir, key: str) -> list[dict]:
+    if not class_dir:
+        return []
+    class_dir = Path(class_dir)
+    index = _read_json(class_dir / "index.json")
+    if not isinstance(index, dict):
+        return []
+    records: list[dict] = []
+    for filename in index.values():
+        data = _read_json(class_dir / filename) if isinstance(filename, str) else None
+        if isinstance(data, dict):
+            records.extend(r for r in data.get(key, []) if isinstance(r, dict))
+    return records
 
 
 def load_raw_optional_features(path) -> list[dict]:

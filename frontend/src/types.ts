@@ -238,6 +238,23 @@ export interface CarryingCapacity {
   overCapacity: boolean;
 }
 
+/** A class feature with a number to track (R1): rages, sneak attack dice, ... */
+export interface ClassResource {
+  id: string;
+  classId: string;
+  source: { kind: "class" | "subclass"; id: string | null; label: string };
+  name: string;
+  uses: number | null;
+  unlimited?: boolean;
+  recharge: "long" | "short" | "short-or-long" | null;
+  die?: string;
+  dice?: string;
+  pool?: number;
+  bonus?: number;
+  dc?: number;
+  details?: Record<string, unknown> & { damageBonus?: number };
+}
+
 export interface Derived {
   abilityModifiers: Record<Ability, number>;
   proficiencyBonus: number;
@@ -257,6 +274,8 @@ export interface Derived {
   warlockSpellSlots: Record<string, number>;
   /** Equipped weapons, one entry per distinct weapon. Optional: older stored resolutions lack it. */
   attacks?: Attack[];
+  /** Class resources in class order (R1). Optional: older stored resolutions lack it. */
+  classResources?: ClassResource[];
   carryingCapacity?: CarryingCapacity;
   /** True when any equipped armor imposes disadvantage on Stealth. */
   stealthDisadvantage?: boolean;

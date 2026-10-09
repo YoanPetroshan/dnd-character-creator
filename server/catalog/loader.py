@@ -55,6 +55,8 @@ class Catalog:
     # O3: XPHB spell progressions per caster class id ({"caster", "cantrips"[20],
     # "prepared"[20]}), used only under ruleset "2024".
     class_2024_progressions: dict[str, dict] = field(default_factory=dict)
+    class_2024_tables: dict[str, dict[str, list]] = field(default_factory=dict)  # R1: non-spell XPHB class table columns
+    subclass_2024_tables: dict[str, dict[str, list]] = field(default_factory=dict)  # R1: XPHB subclass table columns
     # Level-row indexes (class_id, level) / (subclass_id, level) -> row, built
     # lazily and rebuilt when the number of rows changes.
     _row_index: tuple | None = field(default=None, repr=False, compare=False)
@@ -121,7 +123,7 @@ def _merge_official_subclasses(catalog: Catalog) -> None:
     disk (subclass records, their features, their level rows, the 2014/2024
     twin map). SRD records win a key clash."""
     from .official_source import (
-        class_dir, convert_subclasses, load_class_2024_progressions, load_raw_class_data, load_raw_optional_features, optionalfeatures_file,
+        class_dir, convert_subclasses, load_class_2024_progressions, load_class_2024_tables, load_subclass_2024_tables, load_raw_class_data, load_raw_optional_features, optionalfeatures_file,
         subclass_twins_from,
     )
 
@@ -130,6 +132,8 @@ def _merge_official_subclasses(catalog: Catalog) -> None:
         sub.setdefault("source", "SRD")
         sub.setdefault("ruleset", "2014")
     catalog.class_2024_progressions = load_class_2024_progressions(class_dir())
+    catalog.class_2024_tables = load_class_2024_tables(class_dir())
+    catalog.subclass_2024_tables = load_subclass_2024_tables(class_dir())
     raw_subs, raw_feats = load_raw_class_data(class_dir())
     if not raw_subs:
         return

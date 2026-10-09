@@ -197,6 +197,8 @@ from .official.subclasses import (  # noqa: F401
     subclass_twins_from,
     unresolved_spell_refs,
     load_class_2024_progressions,
+    load_class_2024_tables,
+    load_subclass_2024_tables,
     load_raw_class_data,
     load_raw_optional_features,
 )

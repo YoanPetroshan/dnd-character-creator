@@ -6,6 +6,7 @@ import { useCatalogContext } from "../CatalogContext";
 import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
 import { CommitNumberInput } from "../components/CommitNumberInput";
 import { SpellLibrary } from "../components/SpellLibrary";
+import { ClassResourcesList } from "../components/ClassResourcesList";
 import { SpellSlotsSummary } from "../components/SpellSlotsSummary";
 
 type ClassTab = "features" | "spells";
@@ -124,6 +125,13 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
             .filter(([lvl]) => Number(lvl) > classLevel)
             .reduce((sum, [, count]) => sum + count, 0)}
         </p>
+      )}
+
+      {(resolution?.derived.classResources ?? []).some((r) => r.classId === classId) && (
+        <div className="class-resources">
+          <h3>Ресурси на класа</h3>
+          <ClassResourcesList resources={(resolution?.derived.classResources ?? []).filter((r) => r.classId === classId)} />
+        </div>
       )}
 
       {/* The primary class's level 1 is always the maximum die; a class taken

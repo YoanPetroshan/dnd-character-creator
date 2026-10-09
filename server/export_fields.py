@@ -28,7 +28,7 @@ DERIVED_FIELDS: list[tuple[str, object]] = [
     ("armorClass", None), ("speed", None), ("speeds", {}), ("savingThrows", {}), ("skills", {}),
     ("initiative", None), ("passivePerception", None), ("passiveInsight", None), ("passiveInvestigation", None),
     ("spellSlots", {}), ("warlockSpellSlots", {}),
-    ("attacks", []), ("carryingCapacity", None), ("stealthDisadvantage", False),
+    ("attacks", []), ("classResources", []), ("carryingCapacity", None), ("stealthDisadvantage", False),
 ]
 SHEET_TAIL_FIELDS: list[tuple[str, object]] = [
     ("proficiencies", {}), ("expertiseSkills", []), ("senses", {}), ("damageModifiers", {}),
@@ -64,6 +64,29 @@ def _title(slug: str) -> str:
 
 def expertise_label(entry: str) -> str:
     return SKILL_NAMES.get(entry) or proficiency_label(entry)
+
+
+_RECHARGE_WORDS = {"long": "дълга почивка", "short": "кратка почивка", "short-or-long": "кратка или дълга почивка"}
+
+
+def resource_line(r: dict) -> str:
+    """One class resource as a bullet: `Rage: 3 (дълга почивка), щета +2`."""
+    parts = []
+    if r.get("unlimited"):
+        parts.append("без ограничение")
+    elif r.get("uses") is not None:
+        parts.append(str(r["uses"]))
+    for key, label in (("die", ""), ("dice", ""), ("pool", "пул "), ("bonus", "бонус +"), ("dc", "ТС ")):
+        if r.get(key) is not None:
+            parts.append(f"{label}{r[key]}")
+    core = ", ".join(parts)
+    word = _RECHARGE_WORDS.get(r.get("recharge"))
+    if word:
+        core = f"{core} ({word})" if core else f"({word})"
+    damage = (r.get("details") or {}).get("damageBonus")
+    if damage is not None:
+        core += f", щета +{damage}"
+    return f"{r['name']}: {core}" if core else r["name"]
 
 
 def extra_blocks(resolution: dict) -> list[tuple[str, str]]:
@@ -114,6 +137,12 @@ def extra_blocks(resolution: dict) -> list[tuple[str, str]]:
             if a.get("notes"):
                 line += "; " + ", ".join(a["notes"])
             blocks.append(("bullet", line))
+
+    resources = derived.get("classResources") or []
+    if resources:
+        blocks.append(("h2", "Ресурси на класа"))
+        for r in resources:
+            blocks.append(("bullet", resource_line(r)))
 
     carrying = derived.get("carryingCapacity")
     if carrying:

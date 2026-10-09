@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
+import { ClassResourcesList } from "../components/ClassResourcesList";
 import { SpellSlotsSummary } from "../components/SpellSlotsSummary";
 
 const EXPORT_FORMATS = {
@@ -150,6 +151,12 @@ export function ExportPage() {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+      {(resolution.derived.classResources?.length ?? 0) > 0 && (
+        <div>
+          <h2>Ресурси на класа</h2>
+          <ClassResourcesList resources={resolution.derived.classResources!} />
         </div>
       )}
       <SpellSlotsSummary resolution={resolution} />
