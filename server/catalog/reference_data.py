@@ -144,6 +144,15 @@ SUBCLASS_UNLOCK_LEVEL: dict[str, int] = {
     "paladin": 3, "ranger": 3, "rogue": 3,
 }
 
+# Spellcasting ability of subclasses whose CLASS has none (the class has no
+# `spellcasting` block, so spells.spellcasting_ability() is None): the 1/3
+# casters and the monk subclasses that grant always-prepared cantrips.
+SUBCLASS_SPELLCASTING_ABILITY: dict[str, str] = {
+    "arcane-trickster-phb": "INT", "arcane-trickster-xphb": "INT",
+    "eldritch-knight-phb": "INT", "eldritch-knight-xphb": "INT",
+    "shadow-phb": "WIS", "shadow-xphb": "WIS", "elements-xphb": "WIS",
+}
+
 # Full-caster classes (contribute their own level to multiclass caster
 # level per 5e RAW). Real 5e distinction not present as a flag anywhere
 # in the bundled SRD data, so hardcoded from the standard SRD class list.

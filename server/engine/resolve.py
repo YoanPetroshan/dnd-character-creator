@@ -58,7 +58,7 @@ from catalog.loader import Catalog
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
 from catalog.reference_data import (
     ABILITIES, SPECIFIC_WEAPON_PROFICIENCY_IDS, SRD_TRAIT_EFFECTS, SUBCLASS_PROFICIENCIES, SUBCLASS_EXTRA_FEATURES,
-    SUBCLASS_UNLOCK_LEVEL, ruleset_allows,
+    SUBCLASS_SPELLCASTING_ABILITY, SUBCLASS_UNLOCK_LEVEL, ruleset_allows,
 )
 from . import asi as asi_mod
 from . import attacks as attacks_mod
@@ -3684,7 +3684,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         always_ids = _subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc["level"], feature_ids, "always")
         if not (rc_cantrip_choice or rc_known_spells_choice or always_ids):
             continue
-        rc_spell_ability = spells_mod.spellcasting_ability(rc_cls)
+        rc_spell_ability = spells_mod.spellcasting_ability(rc_cls) or SUBCLASS_SPELLCASTING_ABILITY.get(rc["subclass_id"] or "")
         rc_save_dc = spells_mod.spell_save_dc(prof_bonus, modifiers[rc_spell_ability]) if rc_spell_ability else None
         rc_attack_bonus = spells_mod.spell_attack_bonus(prof_bonus, modifiers[rc_spell_ability]) if rc_spell_ability else None
         spells_summary.append({
@@ -3939,6 +3939,19 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             continue
         rc_hp_rolls_raw = classes[rc["index"]].get("hpRolls") if rc["index"] < len(classes) else None
         rc_hp_rolls = {k: v for k, v in rc_hp_rolls_raw.items() if isinstance(v, int)} if isinstance(rc_hp_rolls_raw, dict) else {}
+        if hp_type == "manual" and isinstance(rc_hp_rolls_raw, dict):
+            # Round-2 F11: a roll outside 1..hit die is replaced by the average
+            # (derived.hit_point_gain_per_level) - say so instead of staying silent.
+            first_rolled_level = 2 if not hp_class_entries else 1
+            for lvl in range(first_rolled_level, rc["level"] + 1):
+                if str(lvl) not in rc_hp_rolls_raw:
+                    continue
+                roll = rc_hp_rolls_raw[str(lvl)]
+                if not (isinstance(roll, int) and not isinstance(roll, bool) and 1 <= roll <= rc_hit_die):
+                    warnings.append({
+                        "id": f"hp-roll-invalid-{rc['cls_id']}-{lvl}",
+                        "message": f"The HP roll for {rc['cls_id']} level {lvl} must be between 1 and {rc_hit_die}; the average was used instead.",
+                    })
         hp_class_entries.append({"hit_die": rc_hit_die, "level": rc["level"], "hp_rolls": rc_hp_rolls})
     saves = derived_mod.saving_throws(modifiers, proficient_save_abilities, prof_bonus)
     effects = features_mod.active_effects(_class_feature_list(catalog, resolved_classes, choices))

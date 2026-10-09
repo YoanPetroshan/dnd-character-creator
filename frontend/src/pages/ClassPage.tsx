@@ -125,10 +125,19 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
         </p>
       )}
 
-      {draft.preferences.hitPointType === "manual" && classLevel >= 2 && (
+      {/* The primary class's level 1 is always the maximum die; a class taken
+          later rolls (or averages) its own level 1 as well. */}
+      {draft.preferences.hitPointType === "manual" && classLevel >= (isPrimary ? 2 : 1) && (
         <div className="hp-rolls">
           <h3>Хвърляния за точки живот</h3>
-          {Array.from({ length: classLevel - 1 }, (_, i) => i + 2).map((lvl) => (
+          {(resolution?.warnings ?? [])
+            .filter((w) => w.id.startsWith(`hp-roll-invalid-${classId}-`))
+            .map((w) => (
+              <p key={w.id} role="status">
+                {w.message}
+              </p>
+            ))}
+          {Array.from({ length: classLevel - (isPrimary ? 1 : 0) }, (_, i) => i + (isPrimary ? 2 : 1)).map((lvl) => (
             <label key={lvl}>
               Ниво {lvl}
               <CommitNumberInput
