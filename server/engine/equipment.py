@@ -37,3 +37,39 @@ def armor_class_from_gear(
         value = f["base"] + sum(mods.get(ab, 0) for ab in f["abilities"]) + shield_ac
         best = max(best, value)
     return best
+
+
+_ARMOR_PROFICIENCY = {"Light": "light-armor", "Medium": "medium-armor", "Heavy": "heavy-armor"}
+
+
+def armor_warnings(equipped_items: list[dict], scores: dict, proficiency_ids) -> tuple[list[dict], bool]:
+    """Non-blocking warnings for worn armor and whether any of it imposes
+    disadvantage on Stealth. Shields need `shields`; body armor needs its
+    category proficiency or `all-armor`. Only the warning is raised for a
+    Strength shortfall; speed (-10 ft) is not applied to derived stats."""
+    armor, seen = [], set()
+    for item in equipped_items:
+        if item.get("equipment_category", {}).get("index") == "armor" and item.get("index") not in seen:
+            seen.add(item.get("index"))
+            armor.append(item)
+    warnings: list[dict] = []
+    for item in armor:
+        index, name, category = item["index"], item.get("name", item["index"]), item.get("armor_category")
+        if category == "Shield":
+            proficient = "shields" in proficiency_ids
+        else:
+            proficient = "all-armor" in proficiency_ids or _ARMOR_PROFICIENCY.get(category) in proficiency_ids
+        if not proficient:
+            warnings.append({
+                "id": f"armor-not-proficient-{index}",
+                "message": f"Not proficient with {name}: disadvantage on STR/DEX ability checks, saves and attack rolls, and no spellcasting while it is worn.",
+            })
+        minimum = item.get("str_minimum") or 0
+        if minimum > scores.get("STR", 10):
+            warnings.append({
+                "id": f"armor-strength-{index}",
+                "message": f"{name} needs Strength {minimum}; below that, speed is reduced by 10 ft (not applied to the sheet).",
+            })
+    if sum(1 for i in armor if i.get("armor_category") != "Shield") > 1:
+        warnings.append({"id": "armor-multiple-body", "message": "More than one suit of body armor is equipped; only one can be worn."})
+    return warnings, any(i.get("stealth_disadvantage") for i in armor)

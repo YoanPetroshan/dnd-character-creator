@@ -118,3 +118,33 @@ def passive_perception(skills: dict[str, int]) -> int:
 
 def passive_skill(skills: dict[str, int], skill_id: str) -> int:
     return 10 + skills.get(skill_id, 0)
+
+
+_SIZE_CAPACITY_MULTIPLIER = {"Tiny": 0.5, "Small": 1, "Medium": 1, "Large": 2}
+
+
+def carrying_capacity(str_score: int, size: str | None) -> int | float:
+    """Carrying capacity in pounds: STR x 15, halved for Tiny, doubled for
+    Large; every other (or unknown) size counts as x1."""
+    value = str_score * 15 * _SIZE_CAPACITY_MULTIPLIER.get(size or "Medium", 1)
+    return int(value) if value == int(value) else value
+
+
+def equipment_weight(entries: list[dict], items: dict) -> int | float:
+    """Sum of quantity x weight (pounds) over {itemId, qty} entries. Unknown
+    items, missing weights and non-numeric quantities count as 0."""
+    total = 0.0
+    for entry in entries:
+        item = items.get(entry.get("itemId"))
+        qty = entry.get("qty", 1)
+        if not item or isinstance(qty, bool) or not isinstance(qty, (int, float)) or qty < 0:
+            continue
+        total += qty * (item.get("weight") or 0)
+    total = round(total, 2)
+    return int(total) if total == int(total) else total
+
+
+def carrying_summary(str_score: int, size: str | None, entries: list[dict], items: dict) -> dict:
+    capacity = carrying_capacity(str_score, size)
+    carried = equipment_weight(entries, items)
+    return {"capacity": capacity, "pushDragLift": capacity * 2, "carried": carried, "overCapacity": carried > capacity}

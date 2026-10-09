@@ -38,3 +38,75 @@ def test_multiple_body_armor_items_use_only_the_first_found():
     # deterministically rather than summing nonsensically.
     result = armor_class_from_gear([_LEATHER, _CHAIN_MAIL], dex_modifier=2)
     assert result in (13, 16)  # whichever is "first" per the function's own iteration order — just must not crash or double-stack
+
+
+# ---- Slice 9d: armor warnings ---------------------------------------------
+
+from engine.equipment import armor_warnings
+
+_ARMOR = {  # real Equipment.json fields (index, category, str_minimum, stealth)
+    "padded-armor": ("Light", 0, True), "leather-armor": ("Light", 0, False),
+    "scale-mail": ("Medium", 0, True), "breastplate": ("Medium", 0, False),
+    "chain-mail": ("Heavy", 13, True), "plate-armor": ("Heavy", 15, True), "shield": ("Shield", 0, False),
+}
+
+
+def _item(index):
+    cat, str_min, stealth = _ARMOR[index]
+    return {"index": index, "name": index, "equipment_category": {"index": "armor"}, "armor_category": cat,
+            "str_minimum": str_min, "stealth_disadvantage": stealth}
+
+
+def _ids(warnings):
+    return [w["id"] for w in warnings]
+
+
+def test_proficient_armor_raises_nothing():
+    w, stealth = armor_warnings([_item("chain-mail"), _item("shield")], {"STR": 15}, {"all-armor", "shields"})
+    assert w == [] and stealth is True
+
+
+def test_not_proficient_per_category():
+    w, _ = armor_warnings([_item("leather-armor")], {"STR": 10}, {"medium-armor"})
+    assert _ids(w) == ["armor-not-proficient-leather-armor"]
+    w, _ = armor_warnings([_item("breastplate")], {"STR": 10}, {"light-armor", "heavy-armor"})
+    assert _ids(w) == ["armor-not-proficient-breastplate"]
+    w, _ = armor_warnings([_item("breastplate")], {"STR": 10}, {"medium-armor"})
+    assert w == []
+    w, _ = armor_warnings([_item("plate-armor")], {"STR": 15}, {"heavy-armor"})
+    assert w == []
+    w, _ = armor_warnings([_item("shield")], {"STR": 10}, {"all-armor", "heavy-armor"})
+    assert _ids(w) == ["armor-not-proficient-shield"]  # all-armor does not cover shields here
+    w, _ = armor_warnings([_item("shield")], {"STR": 10}, {"shields"})
+    assert w == []
+
+
+def test_strength_minimum_warns_below_and_not_at_the_threshold():
+    w, _ = armor_warnings([_item("chain-mail")], {"STR": 12}, {"heavy-armor"})
+    assert _ids(w) == ["armor-strength-chain-mail"] and "10" in w[0]["message"]
+    w, _ = armor_warnings([_item("chain-mail")], {"STR": 13}, {"heavy-armor"})
+    assert w == []
+    w, _ = armor_warnings([_item("plate-armor")], {"STR": 14}, {"heavy-armor"})
+    assert _ids(w) == ["armor-strength-plate-armor"]
+    w, _ = armor_warnings([_item("leather-armor")], {"STR": 3}, {"light-armor"})
+    assert w == []  # str_minimum 0
+
+
+def test_multiple_body_armor_but_shield_is_not_body_armor():
+    w, _ = armor_warnings([_item("leather-armor"), _item("breastplate")], {"STR": 10}, {"all-armor"})
+    assert _ids(w) == ["armor-multiple-body"]
+    w, _ = armor_warnings([_item("leather-armor"), _item("shield")], {"STR": 10}, {"all-armor", "shields"})
+    assert w == []
+
+
+def test_stealth_disadvantage_only_from_armor_that_has_it():
+    assert armor_warnings([_item("leather-armor")], {"STR": 10}, {"all-armor"})[1] is False
+    assert armor_warnings([_item("padded-armor")], {"STR": 10}, {"all-armor"})[1] is True
+    assert armor_warnings([_item("scale-mail"), _item("shield")], {"STR": 10}, {"all-armor"})[1] is True
+    assert armor_warnings([], {"STR": 10}, set()) == ([], False)
+
+
+def test_weapons_are_ignored_and_duplicates_dedupe():
+    sword = {"index": "longsword", "equipment_category": {"index": "weapon"}}
+    w, stealth = armor_warnings([sword, _item("chain-mail"), _item("chain-mail")], {"STR": 12}, {"heavy-armor"})
+    assert _ids(w) == ["armor-strength-chain-mail"] and stealth is True

@@ -143,3 +143,35 @@ def test_hit_point_max_multiclass_manual_mode_uses_per_class_rolls():
 
 def test_hit_point_max_multiclass_empty_list_is_zero():
     assert derived.hit_point_max_multiclass([], con_modifier=0, hp_type="fixed") == 0
+
+
+# ---- Slice 9b: carrying capacity (STR x 15, size multiplier) ---------------
+
+
+def test_carrying_capacity_by_size():
+    assert derived.carrying_capacity(15, "Medium") == 225
+    assert derived.carrying_capacity(15, "Small") == 225
+    assert derived.carrying_capacity(16, "Large") == 480  # 16 x 15 x 2
+    assert derived.carrying_capacity(16, "Tiny") == 120  # 16 x 15 x 0.5
+    assert derived.carrying_capacity(7, "Tiny") == 52.5
+    assert derived.carrying_capacity(10, "Gargantuan") == 150  # unlisted sizes use x1
+    assert derived.carrying_capacity(30, "Medium") == 450
+
+
+def test_equipment_weight_sums_quantity_times_weight():
+    items = {"chain-mail": {"weight": 55}, "longsword": {"weight": 3}, "dart": {"weight": 0.25}, "sling": {"weight": None}}
+    entries = [
+        {"itemId": "chain-mail", "qty": 1}, {"itemId": "longsword", "qty": 1},
+        {"itemId": "dart", "qty": 10}, {"itemId": "sling", "qty": 3}, {"itemId": "ghost", "qty": 9},
+    ]
+    assert derived.equipment_weight(entries, items) == 60.5
+    assert derived.equipment_weight([], items) == 0
+    assert derived.equipment_weight([{"itemId": "dart", "qty": 3}], items) == 0.75
+    assert derived.equipment_weight([{"itemId": "dart", "qty": "x"}], items) == 0  # junk quantity ignored
+
+
+def test_carrying_capacity_block():
+    items = {"anvil": {"weight": 100}}
+    out = derived.carrying_summary(15, "Medium", [{"itemId": "anvil", "qty": 2}], items)
+    assert out == {"capacity": 225, "pushDragLift": 450, "carried": 200, "overCapacity": False}
+    assert derived.carrying_summary(15, "Medium", [{"itemId": "anvil", "qty": 3}], items)["overCapacity"] is True
