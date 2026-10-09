@@ -1999,7 +1999,7 @@ def _species_feat_pool(catalog: Catalog, category: str | None, sources, ruleset:
     no category (the 2014 books), General and Origin ones, minus the literal
     "Ability Score Improvement" entry. Epic Boon, Dragonmark, Fighting
     Style and Dragon-gift categories stay out. Filtered by draft.sources
-    like every feat, sorted by name. (Unlike _asi_feat_pool this ignores the
+    like every feat (display order: see _feat_options). (Unlike _asi_feat_pool this ignores the
     ruleset's category rules beyond _feat_offered: a 2024 "any" grant still
     lists the 2014 category-less feats that ruleset_allows lets through.)
     `keep`: stored option ids (`feat:<index>`); one whose category fits the
@@ -2012,7 +2012,6 @@ def _species_feat_pool(catalog: Catalog, category: str | None, sources, ruleset:
         if (f.get("category") or "") in allowed and f["name"] != "Ability Score Improvement"
         and (_feat_offered(f, sources, ruleset) or f["index"] in kept)
     ]
-    pool.sort(key=lambda f: f["name"])
     return pool
 
 
@@ -2040,8 +2039,7 @@ def _species_feat_choice_template(
     scores before any feat bonus and the total level (permissive, like the
     ASI pre-walk)."""
     options = []
-    for feat in _species_feat_pool(catalog, grant["category"], sources, ruleset, keep):
-        option = {"id": f"feat:{feat['index']}", "label": feat["name"]}
+    for feat, option in _feat_options(_species_feat_pool(catalog, grant["category"], sources, ruleset, keep), ruleset):
         if not _feat_offered(feat, sources, ruleset):
             option["hiddenByFilters"] = True
         reason = _feat_prerequisite_unmet_reason(feat, total_level, scores, use_prereqs, held, catalog)
@@ -2460,6 +2458,39 @@ def _is_asi_eligible_feat(feat: dict, ruleset: str = "mixed", slot_level: int = 
     return category in _ASI_FEAT_CATEGORIES.get(ruleset, _ASI_FEAT_CATEGORIES_DEFAULT)
 
 
+_FEAT_GROUP_BY_CATEGORY = {"EB": "epic-boon", "G": "general", "O": "origin", "": "feat-2014"}
+
+
+def _feat_group(feat: dict) -> str:
+    return _FEAT_GROUP_BY_CATEGORY.get(feat.get("category") or "", "general")
+
+
+def _feat_group_order(ruleset: str) -> list[str]:
+    """Display order of feat groups: 2014 shows its own books first, the
+    other rulesets lead with the newest content."""
+    if ruleset == "2014":
+        return ["feat-2014", "general"]
+    return ["epic-boon", "general", "origin", "feat-2014"]
+
+
+def _feat_options(feats: list[dict], ruleset: str) -> list[tuple[dict, dict]]:
+    """[(feat, option)] for a picker: grouped (`group`), ordered by group
+    then (name, source), labelled "Name (SOURCE)" only when the name occurs
+    twice in `feats`. Disabled state is added by the caller; options keep
+    their position either way."""
+    order = _feat_group_order(ruleset)
+    rank = {g: i for i, g in enumerate(order)}
+    ordered = sorted(feats, key=lambda f: (rank.get(_feat_group(f), len(rank)), f["name"], f.get("source") or ""))
+    counts: dict[str, int] = {}
+    for f in ordered:
+        counts[f["name"]] = counts.get(f["name"], 0) + 1
+    out = []
+    for f in ordered:
+        label = f["name"] if counts[f["name"]] == 1 else f"{f['name']} ({f.get('source') or '?'})"
+        out.append((f, {"id": f"feat:{f['index']}", "label": label, "group": _feat_group(f)}))
+    return out
+
+
 def _asi_feat_in_pool(feat: dict, sources, ruleset: str, slot_level: int) -> bool:
     return _is_asi_eligible_feat(feat, ruleset, slot_level) and _feat_offered(feat, sources, ruleset)
 
@@ -2587,7 +2618,7 @@ def _asi_choice_templates(
         cid = f"class:{cls_id}:{lvl}:asi"
         epic = lvl >= _ASI_EPIC_BOON_LEVEL
         if epic not in pools:
-            pools[epic] = sorted(_asi_feat_pool(catalog, sources, ruleset, lvl), key=lambda f: f["name"])
+            pools[epic] = _asi_feat_pool(catalog, sources, ruleset, lvl)
         general_feats = pools[epic]
         keep_index = _stored_asi_feat_pick(class_choices, cid)
         if keep_index and not any(f["index"] == keep_index for f in general_feats):
@@ -2596,13 +2627,12 @@ def _asi_choice_templates(
         current_scores = scores_by_level.get(lvl, {})
         options = []
         for option_id, deltas in asi_mod.asi_combinations():
-            option = {"id": option_id, "label": _asi_option_label(deltas)}
+            option = {"id": option_id, "label": _asi_option_label(deltas), "group": "asi"}
             if asi_mod.asi_exceeds_cap(deltas, current_scores):
                 option["disabled"] = True
                 option["disabledReason"] = "would exceed the ability score cap of 20"
             options.append(option)
-        for feat in general_feats:
-            option = {"id": f"feat:{feat['index']}", "label": feat["name"]}
+        for feat, option in _feat_options(general_feats, ruleset):
             if feat.get("_hidden_by_filters"):
                 option["hiddenByFilters"] = True
             reason = _feat_prerequisite_unmet_reason(

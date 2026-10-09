@@ -30,5 +30,8 @@ def test_spell_options_have_level_groups(catalog):
 
 def test_non_spell_options_have_no_group(catalog):
     ch = _choices(catalog, "fighter", 4)
+    # ASI combos carry the "asi" group (A3); only spell choices use spell-level-N.
     asi = ch["class:fighter:4:asi"]["options"]
-    assert all("group" not in o for o in asi)
+    assert not any(o.get("group", "").startswith("spell-level-") for o in asi)
+    skills = next(c for cid, c in ch.items() if cid == "class:fighter:1:prof-choice-0")["options"]
+    assert all("group" not in o for o in skills)

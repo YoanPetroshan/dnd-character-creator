@@ -62,6 +62,9 @@ export function ChoicePicker({ choice, onToggle }: ChoicePickerProps) {
             onChange={() => onToggle(choice.id, option.id, choice.count)}
           />
           {option.label}
+          {option.hiddenByFilters && (
+            <span className="choice-picker__reason"> — скрит от текущите филтри</span>
+          )}
           {option.disabled && option.disabledReason && (
             <span className="choice-picker__reason"> — {option.disabledReason}</span>
           )}

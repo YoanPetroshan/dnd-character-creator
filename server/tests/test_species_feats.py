@@ -159,8 +159,12 @@ def test_any_pool_excludes_expanded_categories(catalog):
                if f["category"] in ("", "G", "O") and f["name"] != "Ability Score Improvement"
                and f["source"].lower() in SOURCES}
     assert ids == {f"feat:{k}" for k in allowed}
-    labels = [o["label"] for o in ch["options"]]
-    assert labels == sorted(labels)
+    # Grouped (display order per ruleset), then name/source inside a group.
+    keys = [(o["group"], catalog.feats[o["id"][5:]]["name"], catalog.feats[o["id"][5:]]["source"]) for o in ch["options"]]
+    assert [o["group"] for o in ch["options"]][0] == "general"
+    for g in {k[0] for k in keys}:
+        in_group = [k[1:] for k in keys if k[0] == g]
+        assert in_group == sorted(in_group)
 
 
 def test_prerequisites_disable_species_feat_options(catalog):
