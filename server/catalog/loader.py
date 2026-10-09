@@ -118,7 +118,8 @@ def _merge_official_subclasses(catalog: Catalog) -> None:
     disk (subclass records, their features, their level rows, the 2014/2024
     twin map). SRD records win a key clash."""
     from .official_source import (
-        class_dir, convert_subclasses, load_raw_class_data, subclass_twins_from,
+        class_dir, convert_subclasses, load_raw_class_data, load_raw_optional_features, optionalfeatures_file,
+        subclass_twins_from,
     )
 
     srd_ids = set(catalog.subclasses)
@@ -128,7 +129,8 @@ def _merge_official_subclasses(catalog: Catalog) -> None:
     raw_subs, raw_feats = load_raw_class_data(class_dir())
     if not raw_subs:
         return
-    subs, feats, rows = convert_subclasses(raw_subs, raw_feats, srd_ids, catalog.resolve_spell_id)
+    subs, feats, rows = convert_subclasses(raw_subs, raw_feats, srd_ids, catalog.resolve_spell_id,
+                                           load_raw_optional_features(optionalfeatures_file()))
     clash = (set(subs) & set(catalog.subclasses)) | (set(feats) & set(catalog.features))
     if clash:
         raise ValueError(f"imported subclass ids clash with the SRD: {sorted(clash)[:5]}")

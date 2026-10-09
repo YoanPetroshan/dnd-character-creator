@@ -1453,6 +1453,34 @@ def _invocation_templates(catalog: Catalog, feature: dict, cid: str, source: dic
     }
 
 
+def _optional_progression_template(catalog: Catalog, feature: dict, cid: str, source: dict, class_level: int) -> dict | None:
+    """Subclass picks from optionalfeatureProgression (maneuvers, runes, ...):
+    the count is the progression value of the highest level reached; options
+    with a level prerequisite above the class level are shown disabled."""
+    spec = feature["feature_specific"]["optional_progression"]
+    reached = [int(k) for k in spec["progression"] if int(k) <= class_level]
+    if not reached:
+        return None
+    options = []
+    for opt_id in spec["options"]:
+        opt = catalog.features.get(opt_id)
+        if not opt:
+            continue
+        option = {"id": opt_id, "label": opt["name"]}
+        desc = _join_desc(opt.get("desc"))
+        if desc:
+            option["description"] = desc
+        need = opt.get("prerequisite_level")
+        if need and need > class_level:
+            option["disabled"] = True
+            option["disabledReason"] = f"requires level {need}"
+        options.append(option)
+    return {
+        "id": cid, "source": source, "label": feature["name"], "description": _join_desc(feature.get("desc")) or "",
+        "count": spec["progression"][str(max(reached))], "count_by_level": True, "options": options,
+    }
+
+
 def _feature_choice_templates(
     catalog: Catalog, cls_id: str, cls_name: str, feature_refs: list[tuple[int, dict]], subclass_id: str | None,
     class_level: int | None = None,
@@ -1492,6 +1520,9 @@ def _feature_choice_templates(
         elif specific.get("invocations"):
             cid = f"class:{cls_id}:{lvl}:invocations:{feature['index']}"
             tpl = _invocation_templates(catalog, feature, cid, source, class_level)
+        elif specific.get("optional_progression"):
+            cid = f"class:{cls_id}:{lvl}:feature:{feature['index']}"
+            tpl = _optional_progression_template(catalog, feature, cid, source, class_level)
         else:
             continue
         if tpl:

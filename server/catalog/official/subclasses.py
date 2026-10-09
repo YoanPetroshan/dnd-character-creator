@@ -54,7 +54,7 @@ def load_raw_optional_features(path) -> list[dict]:
 
 import re  # noqa: E402
 
-from catalog.reference_data import ruleset_for_edition  # noqa: E402
+from catalog.reference_data import RULESET_2024_SOURCES, ruleset_for_edition  # noqa: E402
 
 from .common import slug  # noqa: E402
 from .spells import _flatten_entries  # noqa: E402
@@ -182,7 +182,41 @@ def unresolved_spell_refs(raw_subs, resolve_spell) -> list[str]:
     return missing
 
 
-def convert_subclasses(raw_subs, raw_feats, srd_subclass_ids, resolve_spell):
+OPTION_FEATURE_TYPES = frozenset({"MV:B", "FS:B", "AS", "RN", "ED"})
+
+
+def _option_prereq_level(raw: dict):
+    """Class level an optional feature requires (Rune Knight runes, Four
+    Elements disciplines), or None."""
+    for pre in raw.get("prerequisite") or []:
+        level = pre.get("level") if isinstance(pre, dict) else None
+        if isinstance(level, dict):
+            level = level.get("level")
+        if isinstance(level, int):
+            return level
+    return None
+
+
+def convert_optional_features(raw_options) -> dict[str, dict]:
+    """`opt-{name}-{source}` records for the optional features subclasses
+    grant picks of (maneuvers, arcane shots, runes, elemental disciplines,
+    bard fighting styles)."""
+    out: dict[str, dict] = {}
+    for raw in raw_options or []:
+        if not OPTION_FEATURE_TYPES & set(raw.get("featureType") or []):
+            continue
+        source = raw.get("source", "PHB")
+        fid = f"opt-{slug(raw['name'])}-{source.lower()}"
+        out.setdefault(fid, {
+            "index": fid, "name": raw["name"], "desc": _flatten_entries(raw.get("entries") or []),
+            "source": source, "ruleset": "2024" if source in RULESET_2024_SOURCES else "2014",
+            "prerequisite_level": _option_prereq_level(raw),
+            "feature_types": list(raw.get("featureType") or []),
+        })
+    return out
+
+
+def convert_subclasses(raw_subs, raw_feats, srd_subclass_ids, resolve_spell, raw_options=()):
     """5etools subclasses + subclass features -> (subclasses, features,
     level_rows) in the SRD shapes. Skips `_copy` records (2014 subclasses
     re-attached to the XPHB class: pure duplicates), classes outside the 12
@@ -203,6 +237,7 @@ def convert_subclasses(raw_subs, raw_feats, srd_subclass_ids, resolve_spell):
     subclasses: dict[str, dict] = {}
     features: dict[str, dict] = {}
     rows: list[dict] = []
+    options = convert_optional_features(raw_options)
     for raw in raw_subs:
         if not _in_scope(raw) or raw.get("srd"):
             continue
@@ -265,9 +300,23 @@ def convert_subclasses(raw_subs, raw_feats, srd_subclass_ids, resolve_spell):
             top = index.get(_parse_feature_ref(ref))
             if top is not None:
                 register(top)
+        for prog in raw.get("optionalfeatureProgression") or []:
+            progression = {str(k): v for k, v in (prog.get("progression") or {}).items()
+                           if str(k).isdigit() and isinstance(v, int)}
+            types = set(prog.get("featureType") or [])
+            first = min((int(k) for k in progression), default=None)
+            if first is None or not by_level.get(first):
+                continue
+            pool = [o["index"] for o in options.values()
+                    if types & set(o["feature_types"]) and o["ruleset"] == record["ruleset"]]
+            if pool:
+                features[by_level[first][0]["index"]].setdefault("feature_specific", {})["optional_progression"] = {
+                    "progression": progression, "options": pool}
         for level in sorted(by_level):
             rows.append({"index": f"{sub_id}-{level}", "level": level, "class": cls_ref,
                          "subclass": sub_ref, "features": by_level[level]})
+    for fid, opt in options.items():
+        features[fid] = {k: v for k, v in opt.items() if k != "feature_types"}
     return subclasses, features, rows
 
 

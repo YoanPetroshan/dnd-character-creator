@@ -200,6 +200,8 @@ CLASS_FEATURE_EFFECTS: dict[str, dict] = {
     "ranger-fighting-style-dueling": {"damage_bonus": {"one_handed_melee": 2}},
     "fighter-fighting-style-two-weapon-fighting": {"two_weapon_fighting": True},
     "ranger-fighting-style-two-weapon-fighting": {"two_weapon_fighting": True},
+    "opt-dueling-phb": {"damage_bonus": {"one_handed_melee": 2}},
+    "opt-two-weapon-fighting-phb": {"two_weapon_fighting": True},
     "fighter-fighting-style-great-weapon-fighting": {"great_weapon_fighting": True},
     "fighting-style-great-weapon-fighting": {"great_weapon_fighting": True},
     "jack-of-all-trades": {"half_proficiency": "floor"},

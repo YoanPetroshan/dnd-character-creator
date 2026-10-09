@@ -556,3 +556,128 @@ def test_swords_bard_is_proficient_with_the_scimitar_and_forge_cleric_with_smith
     assert _attack(res, "scimitar")["proficient"] is True
     forge = resolve(_draft("cleric", 1, "forge-xge"), catalog)
     assert "smiths-tools" in forge["sheet"]["proficiencies"]["tools"]
+
+
+# ------------------------------------- 11b.6 optionalfeatureProgression picks
+
+# Script-verified over optionalfeatures.json + the class files: the 5
+# featureTypes used by non-SRD subclasses (MV:B, FS:B, AS, RN, ED) cover 76
+# records; 11 carry a level prerequisite (Rune Knight 2 at 7, Four Elements 9
+# at 6/11/17).
+OPTION_RECORDS = 76
+OPTIONS_BY_TYPE = {"MV:B": 43, "FS:B": 2, "AS": 8, "RN": 6, "ED": 17}
+BM_PHB_FEATURE = "battle-master-phb-3-battle-master"
+
+
+def _opt_raw(name, source="PHB", types=("MV:B",), prereq_level=None):
+    raw = {"name": name, "source": source, "featureType": list(types), "entries": [f"{name} text."]}
+    if prereq_level:
+        raw["prerequisite"] = [{"level": {"level": prereq_level, "class": {"name": "Monk"}}}]
+    return raw
+
+
+def test_converter_option_records_pools_and_attachment():
+    subs = [
+        _sub("Master", "Master", source="PHB", cls="Fighter", features=["Core|Fighter||Master||3"],
+             optionalfeatureProgression=[{"name": "Maneuvers", "featureType": ["MV:B"], "progression": {"3": 3, "7": 5}}]),
+        _sub("Master", "Master", source="XPHB", cls="Fighter", edition="one", features=["Core|Fighter|XPHB|Master|XPHB|3"],
+             optionalfeatureProgression=[{"name": "Maneuvers", "featureType": ["MV:B"], "progression": {"3": 3}}]),
+    ]
+    subs[1]["classSource"] = "XPHB"
+    feats = [_feat("Core", 3, short="Master", source="PHB", cls="Fighter"),
+             {**_feat("Core", 3, short="Master", source="XPHB", cls="Fighter"), "classSource": "XPHB"}]
+    opts = [_opt_raw("Riposte"), _opt_raw("Ambush", "TCE"), _opt_raw("Riposte", "XPHB"), _opt_raw("Other", "PHB", ("ED",), 6)]
+    _, out_feats, _ = sub_mod.convert_subclasses(subs, feats, set(), lambda s: None, opts)
+    assert out_feats["opt-riposte-phb"] == {
+        "index": "opt-riposte-phb", "name": "Riposte", "desc": ["Riposte text."], "source": "PHB", "ruleset": "2014",
+        "prerequisite_level": None}
+    assert out_feats["opt-other-phb"]["prerequisite_level"] == 6
+    old = out_feats["master-phb-3-core"]["feature_specific"]["optional_progression"]
+    assert old == {"progression": {"3": 3, "7": 5}, "options": ["opt-riposte-phb", "opt-ambush-tce"]}
+    new = out_feats["master-xphb-3-core"]["feature_specific"]["optional_progression"]
+    assert new["options"] == ["opt-riposte-xphb"]
+
+
+@needs_classes
+def test_real_option_records(catalog):
+    opts = {i: f for i, f in catalog.features.items() if i.startswith("opt-")}
+    assert len(opts) == OPTION_RECORDS
+    assert sum(1 for f in opts.values() if f["prerequisite_level"]) == 11
+    attached = {i: f["feature_specific"]["optional_progression"] for i, f in catalog.features.items()
+                if f.get("feature_specific", {}).get("optional_progression")}
+    assert set(attached) == {
+        "battle-master-phb-3-battle-master", "battle-master-xphb-3-battle-master", "arcane-archer-xge-3-arcane-archer",
+        "rune-knight-tce-3-rune-knight", "four-elements-phb-3-way-of-the-four-elements", "swords-xge-3-college-of-swords"}
+    assert len(attached) == 6
+    sizes = sorted(len(a["options"]) for a in attached.values())
+    assert sizes == sorted([23, 20, 8, 6, 17, 2])
+    assert all(o in opts for a in attached.values() for o in a["options"])
+    assert attached[BM_PHB_FEATURE]["progression"] == {"3": 3, "7": 5, "10": 7, "15": 9}
+
+
+def _bm(level, sub="battle-master-phb", picks=()):
+    cid = f"class:fighter:3:feature:{sub}-3-battle-master"
+    return _draft("fighter", level, sub, {cid: list(picks)} if picks else {}), cid
+
+
+@needs_classes
+def test_battle_master_counts_and_option_pools(catalog):
+    draft, cid = _bm(3)
+    ch = _spell_choice(resolve(draft, catalog), cid)
+    assert ch["count"] == 3 and len(ch["options"]) == 23 and not any(o.get("disabled") for o in ch["options"])
+    assert ch["label"] == "Battle Master" and ch["status"] == "pending"
+    assert _spell_choice(resolve(_bm(7)[0], catalog), cid)["count"] == 5
+    assert _spell_choice(resolve(_bm(20)[0], catalog), cid)["count"] == 9
+    draft, cid24 = _bm(3, "battle-master-xphb")
+    assert len(_spell_choice(resolve(draft, catalog), cid24)["options"]) == 20
+
+
+@needs_classes
+def test_battle_master_picks_reach_the_sheet_and_level_down_prunes(catalog):
+    maneuvers = [o["id"] for o in _spell_choice(resolve(_bm(3)[0], catalog), _bm(3)[1])["options"]]
+    draft, cid = _bm(7, picks=maneuvers[:5])
+    res = resolve(draft, catalog)
+    ch = _spell_choice(res, cid)
+    assert ch["status"] == "resolved" and len(ch["selected"]) == 5
+    feature = next(f for f in res["sheet"]["features"] if f["name"] == "Battle Master")
+    assert len(feature["choice"]) == 5
+    assert next(f for f in res["sheet"]["features"] if f["name"] == "Combat Superiority")["source"]["kind"] == "subclass"
+    draft, cid = _bm(3, picks=maneuvers[:5])
+    res = resolve(draft, catalog)
+    assert len(_spell_choice(res, cid)["selected"]) == 3
+    assert any(p["choiceId"] == cid for p in res["pruned"])
+    assert not [p for p in res["problems"] if cid in p["message"] or p["id"].startswith("over-selected")]
+
+
+@needs_classes
+def test_rune_knight_and_four_elements_disable_options_above_the_class_level(catalog):
+    cid = "class:fighter:3:feature:rune-knight-tce-3-rune-knight"
+    runes = _spell_choice(resolve(_draft("fighter", 3, "rune-knight-tce"), catalog), cid)
+    assert len(runes["options"]) == 6 and sum(1 for o in runes["options"] if o.get("disabled")) == 2
+    assert all(o["disabledReason"] for o in runes["options"] if o.get("disabled"))
+    assert runes["count"] == 2
+    seven = _spell_choice(resolve(_draft("fighter", 7, "rune-knight-tce"), catalog), cid)
+    assert not any(o.get("disabled") for o in seven["options"]) and seven["count"] == 3
+    cid = "class:monk:3:feature:four-elements-phb-3-way-of-the-four-elements"
+    disc = _spell_choice(resolve(_draft("monk", 3, "four-elements-phb"), catalog), cid)
+    assert len(disc["options"]) == 17 and sum(1 for o in disc["options"] if o.get("disabled")) == 9 and disc["count"] == 2
+
+
+@needs_classes
+def test_arcane_archer_counts(catalog):
+    cid = "class:fighter:3:feature:arcane-archer-xge-3-arcane-archer"
+    assert _spell_choice(resolve(_draft("fighter", 3, "arcane-archer-xge"), catalog), cid)["count"] == 2
+    assert len(_spell_choice(resolve(_draft("fighter", 18, "arcane-archer-xge"), catalog), cid)["options"]) == 8
+    assert _spell_choice(resolve(_draft("fighter", 18, "arcane-archer-xge"), catalog), cid)["count"] == 6
+
+
+@needs_classes
+def test_swords_bard_dueling_adds_two_to_longsword_damage(catalog):
+    cid = "class:bard:3:feature:swords-xge-3-college-of-swords"
+    base = resolve(_with_gear(_draft("bard", 3, "swords-xge"), "longsword"), catalog)
+    ch = _spell_choice(base, cid)
+    assert [o["id"] for o in ch["options"]] == ["opt-dueling-phb", "opt-two-weapon-fighting-phb"] and ch["count"] == 1
+    plain = _attack(base, "longsword")["damage"]
+    dueling = resolve(_with_gear(_draft("bard", 3, "swords-xge", {cid: ["opt-dueling-phb"]}), "longsword"), catalog)
+    bonus = lambda d: int(d.split("+")[1]) if "+" in d else 0  # noqa: E731
+    assert bonus(_attack(dueling, "longsword")["damage"]) == bonus(plain) + 2
