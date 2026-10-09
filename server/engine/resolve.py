@@ -242,6 +242,36 @@ def _species_condition_immunities(race: dict | None, subrace: dict | None, feats
     return immunities
 
 
+def _feat_name_key(feat: dict) -> str:
+    """Edition-independent identity of a feat (S2, decision D4): the
+    lowercased name with a trailing " (...)" stripped, so Alert (PHB) and
+    Alert (XPHB) share the key "alert"."""
+    return re.sub(r"\s*\([^)]*\)\s*$", "", feat.get("name") or "").strip().lower()
+
+
+def _taken_add(taken: dict, feats) -> dict:
+    """Records feats as held in a `taken` map: `{catalog index: ""}` and
+    `{"name:<name key>": "<Name>, <SOURCE>"}` (the label feeds the
+    cross-edition disabled reason). First holder wins the label."""
+    for f in feats:
+        taken.setdefault(f["index"], "")
+        taken.setdefault("name:" + _feat_name_key(f), f"{f.get('name')}, {f.get('source')}")
+    return taken
+
+
+def _taken_reason(feat: dict, taken) -> str | None:
+    """None when `feat` may still be picked; otherwise the disabled reason.
+    A `repeatable` feat is always allowed. The same catalog feat reads
+    plain "already taken"; a same-name feat of another edition reads
+    "already taken (Alert, XPHB)"."""
+    if feat.get("repeatable") or not taken:
+        return None
+    if feat["index"] in taken:
+        return "already taken"
+    label = taken.get("name:" + _feat_name_key(feat))
+    return f"already taken ({label})" if label is not None else None
+
+
 def _resolve_granted_feats(
     granted_feat_ids: list[str], catalog: Catalog, granted_feat_refs: list[str] | None = None,
 ) -> list[dict]:
@@ -1219,7 +1249,7 @@ def _feat_offered(feat: dict, sources, ruleset: str = "mixed") -> bool:
 
 def _resolve_asi_selected_feats(
     resolved_classes: list[dict], catalog: Catalog, sources=None,
-    taken_indices: set[str] | None = None, skipped_duplicates: list[dict] | None = None,
+    taken_indices: dict[str, str] | None = None, skipped_duplicates: list[dict] | None = None,
     ruleset: str = "mixed",
 ) -> tuple[list[dict], dict[str, list[tuple[str, int]]]]:
     """ASI-or-feat Task 3: the ASI-level counterpart to
@@ -1283,7 +1313,7 @@ def _resolve_asi_selected_feats(
     isn't applied — and appended to `skipped_duplicates` (when given) so
     resolve() can report it."""
     asi_feat_picks: list[dict] = []
-    seen: set[str] = set(taken_indices or ())
+    seen: dict[str, str] = dict(taken_indices or {})
     feat_deltas_by_cid: dict[str, list[tuple[str, int]]] = {}
     for rc in resolved_classes:
         cls_id, cls, level, class_choices = rc["cls_id"], rc["cls"], rc["level"], rc["class_choices"]
@@ -1300,11 +1330,11 @@ def _resolve_asi_selected_feats(
             catalog_feat = catalog.feats.get(selected[0][len("feat:"):])
             if not (catalog_feat and _asi_pick_honored(catalog_feat, sources, ruleset, lvl)):
                 continue
-            if catalog_feat["index"] in seen and not catalog_feat.get("repeatable"):
+            if _taken_reason(catalog_feat, seen):
                 if skipped_duplicates is not None:
                     skipped_duplicates.append({"feat": catalog_feat, "cid": cid, "level": lvl, "cls": cls})
                 continue
-            seen.add(catalog_feat["index"])
+            _taken_add(seen, [catalog_feat])
             origin = f"{cid}:feat:{catalog_feat['index']}"
             feat = {**catalog_feat, "_asi_cid": cid, "_asi_level": lvl, "_asi_origin": origin}
             asi_feat_picks.append(feat)
@@ -2040,7 +2070,7 @@ def _species_feat_grant_slots(race: dict | None, subrace: dict | None, race_id: 
 
 def _species_feat_choice_template(
     race: dict, race_id: str, cid: str, grant: dict, catalog: Catalog, sources, scores: dict[str, int],
-    total_level: int, use_prereqs: bool, held: "_HeldFeatState", taken: set[str], ruleset: str = "mixed",
+    total_level: int, use_prereqs: bool, held: "_HeldFeatState", taken: dict[str, str], ruleset: str = "mixed",
     keep=(),
 ) -> dict:
     """One Choice for a species feat grant. A failed prerequisite wins over
@@ -2055,9 +2085,9 @@ def _species_feat_choice_template(
         if reason:
             option["disabled"] = True
             option["disabledReason"] = reason
-        elif feat["index"] in taken and not feat.get("repeatable"):
+        elif _taken_reason(feat, taken):
             option["disabled"] = True
-            option["disabledReason"] = "already taken"
+            option["disabledReason"] = _taken_reason(feat, taken)
         options.append(option)
     count = grant["count"]
     noun = "an Origin feat" if grant["category"] == "O" else "a feat"
@@ -2087,7 +2117,7 @@ def _resolve_species_selected_feats(template: dict, species_choices: dict, catal
         if not feat:
             continue
         if option.get("disabled"):
-            if option.get("disabledReason") == "already taken":
+            if str(option.get("disabledReason")).startswith("already taken"):
                 problems.append({
                     "id": f"feat-duplicate-{feat['index']}-{template['id']}",
                     "message": f"{feat['name']} was already taken, so the pick at {template['source']['label']} isn't applied.",
@@ -2665,7 +2695,7 @@ def _feat_option_prerequisite_met(
 def _asi_choice_templates(
     cls_id: str, cls_name: str, asi_levels: list[int], scores_by_level: dict[int, dict[str, int]],
     catalog: Catalog, total_level: int, use_prerequisites: bool, sources=None,
-    taken_by_level: dict[int, set[str]] | None = None,
+    taken_by_level: dict[int, dict[str, str]] | None = None,
     held_by_level: dict[int, "_HeldFeatState"] | None = None,
     ruleset: str = "mixed", class_choices: dict | None = None,
 ) -> list[dict]:
@@ -2707,9 +2737,9 @@ def _asi_choice_templates(
             if reason:
                 option["disabled"] = True
                 option["disabledReason"] = reason
-            elif feat["index"] in (taken_by_level or {}).get(lvl, ()) and not feat.get("repeatable"):
+            elif _taken_reason(feat, (taken_by_level or {}).get(lvl)):
                 option["disabled"] = True
-                option["disabledReason"] = "already taken"
+                option["disabledReason"] = _taken_reason(feat, (taken_by_level or {}).get(lvl))
             options.append(option)
         source = {"kind": "class", "id": cls_id, "label": cls_name, "level": lvl}
         templates.append({
@@ -3457,7 +3487,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 raw_base = 10
             pre_feat_scores[ab] = raw_base + species_bonuses.get(ab, 0) + background_bonuses.get(ab, 0)
         species_held_snapshot = held.copy()
-        taken_feat_indices = {f["index"] for f in background_feats}
+        taken_feat_indices = _taken_add({}, background_feats)
         for slot_cid, grant in _species_feat_grant_slots(race, subrace, race_id):
             tpl = _species_feat_choice_template(
                 race, race_id, slot_cid, grant, catalog, draft.get("sources"), pre_feat_scores, total_level,
@@ -3473,14 +3503,14 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                         "message": f"{feat['name']} is outside the current ruleset/sources but stays selected.",
                     })
             species_feats += picked
-            taken_feat_indices |= {f["index"] for f in picked}
+            _taken_add(taken_feat_indices, picked)
     for species_feat in species_feats:
         held.add_feat(species_feat)
 
     skipped_duplicate_asi_feats: list[dict] = []
     asi_feat_picks, asi_feat_deltas_by_cid = _resolve_asi_selected_feats(
         resolved_classes, catalog, draft.get("sources"),
-        taken_indices={f["index"] for f in background_feats + species_feats}, skipped_duplicates=skipped_duplicate_asi_feats,
+        taken_indices=_taken_add({}, background_feats + species_feats), skipped_duplicates=skipped_duplicate_asi_feats,
         ruleset=ruleset,
     )
     for dup in skipped_duplicate_asi_feats:
@@ -3638,8 +3668,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             rc_cls_id, rc_cls["name"], rc_asi_levels, rc_asi_scores_by_level, catalog, total_level, use_feat_prereqs,
             draft.get("sources"),
             taken_by_level={
-                lvl: {f["index"] for f in background_feats + species_feats}
-                | {f["index"] for f in asi_feat_picks if asi_feat_order.get(f["_asi_cid"], 1 << 30) < asi_feat_order.get(f"class:{rc_cls_id}:{lvl}:asi", -1)}
+                lvl: _taken_add(
+                    _taken_add({}, background_feats + species_feats),
+                    [f for f in asi_feat_picks if asi_feat_order.get(f["_asi_cid"], 1 << 30) < asi_feat_order.get(f"class:{rc_cls_id}:{lvl}:asi", -1)],
+                )
                 for lvl in rc_asi_levels
             },
             held_by_level=rc_held_by_level, ruleset=ruleset, class_choices=rc_class_choices,
