@@ -191,6 +191,8 @@ from .official.spells import (  # noqa: F401
     load_spell_class_lookup,
 )
 from .official.subclasses import (  # noqa: F401
+    convert_subclasses,
+    subclass_twins_from,
     load_raw_class_data,
     load_raw_optional_features,
 )

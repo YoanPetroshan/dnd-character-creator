@@ -102,3 +102,262 @@ def test_real_raw_optional_features_count():
     path = paths.optionalfeatures_file()
     assert path is not None
     assert len(sub_mod.load_raw_optional_features(path)) == RAW_OPTIONAL_FEATURES
+
+
+# ------------------------------------------------- 11b.2 converter and merge
+
+from catalog.loader import Catalog, load  # noqa: E402
+from catalog.official_source import slug  # noqa: E402
+from engine.resolve import resolve  # noqa: E402
+
+SRD_SUBCLASS_IDS = {"berserker", "lore", "life", "land", "champion", "open-hand", "devotion", "hunter",
+                    "thief", "draconic", "fiend", "evocation"}
+# Script-verified (project slug, 2026-10-09).
+IMPORTED_SUBCLASSES = 164
+CATALOG_SUBCLASSES = 176
+TWIN_PAIRS = 48
+IMPORTED_FEATURES = 1089
+IMPORTED_LEVEL_ROWS = 671
+TOTAL_LEVEL_ROWS = 961
+SRD_LEVEL_ROWS = 290
+
+
+@pytest.fixture(scope="module")
+def catalog():
+    return load()
+
+
+def _sub(name="Alpha", short=None, source="XGE", cls="Warlock", features=None, **extra):
+    raw = {"name": name, "shortName": short or name, "source": source, "className": cls, "classSource": "PHB",
+           "edition": "classic", "subclassFeatures": features if features is not None else []}
+    raw.update(extra)
+    return raw
+
+
+def _feat(name, level, short="Alpha", source="XGE", cls="Warlock", entries=None, **extra):
+    raw = {"name": name, "source": source, "className": cls, "classSource": "PHB",
+           "subclassShortName": short, "subclassSource": source, "level": level, "entries": entries or [f"{name} text."]}
+    raw.update(extra)
+    return raw
+
+
+def _convert(subs, feats, srd=frozenset()):
+    return sub_mod.convert_subclasses(subs, feats, set(srd), lambda s: None)
+
+
+def test_converter_record_shape_ids_and_rulesets():
+    subs = [_sub("The Alpha", "Alpha", features=["Gift|Warlock||Alpha|XGE|1"]),
+            _sub("Wild Heart", "Wild Heart", source="XPHB", cls="Barbarian", classSource="XPHB", edition="one"),
+            _sub("Fort (Banneret)", "Purple Dragon Knight (Banneret)", source="SCAG", cls="Fighter")]
+    subs[1]["classSource"] = "XPHB"
+    out_subs, out_feats, rows = _convert(subs, [_feat("Gift", 1)])
+    rec = out_subs["alpha-xge"]
+    assert rec["name"] == "The Alpha" and rec["short_name"] == "Alpha" and rec["source"] == "XGE"
+    assert rec["class"] == {"index": "warlock", "name": "Warlock"} and rec["ruleset"] == "2014"
+    assert out_subs["wild-heart-xphb"]["ruleset"] == "2024"
+    assert "purple-dragon-knight-scag" in out_subs
+    feat = out_feats["alpha-xge-1-gift"]
+    assert feat["class"] == {"index": "warlock", "name": "Warlock"}
+    assert feat["subclass"] == {"index": "alpha-xge", "name": "The Alpha"} and feat["level"] == 1
+    assert rows[0]["index"] == "alpha-xge-1" and rows[0]["features"] == [{"index": "alpha-xge-1-gift", "name": "Gift"}]
+
+
+def test_converter_filters():
+    subs = [
+        _sub("Copy", _copy={"name": "X"}),
+        _sub("Srd one", "Srd one", srd=True),
+        _sub("Mystic path", cls="Mystic"),
+        _sub("Other book", classSource="UA2020"),
+        _sub("Keep"),
+    ]
+    out, _, _ = _convert(subs, [])
+    assert list(out) == ["keep-xge"]
+
+
+def test_converter_expands_child_refs_in_document_order_and_inlines_options():
+    top = _feat("Intro", 1, entries=[
+        "Intro text.",
+        {"type": "refSubclassFeature", "subclassFeature": "Child A|Warlock||Alpha|XGE|1"},
+        {"type": "refSubclassFeature", "subclassFeature": "Child B|Warlock||Alpha|XGE|1"},
+    ])
+    child_a = _feat("Child A", 1, entries=["A text."])
+    child_b = _feat("Child B", 1, entries=[
+        "B text.",
+        {"type": "options", "count": 1, "entries": [
+            {"type": "refSubclassFeature", "subclassFeature": "Opt X|Warlock||Alpha|XGE|1"},
+            {"type": "refOptionalfeature", "optionalfeature": "Riposte|XGE"},
+        ]},
+    ])
+    opt_x = _feat("Opt X", 1, entries=["X text."])
+    _, feats, rows = _convert([_sub("Alpha", features=["Intro|Warlock||Alpha|XGE|1"])], [top, child_a, child_b, opt_x])
+    assert [f["index"] for f in feats.values()] == ["alpha-xge-1-intro", "alpha-xge-1-child-a", "alpha-xge-1-child-b"]
+    assert [f["index"] for f in rows[0]["features"]] == list(feats)
+    assert feats["alpha-xge-1-child-b"]["desc"] == ["B text.", "Opt X. X text.", "Riposte"]
+    assert feats["alpha-xge-1-intro"]["desc"] == ["Intro text."]
+
+
+def test_converter_blank_sources_mean_phb_and_missing_feature_is_skipped():
+    subs = [_sub("Beta", "Beta", source="PHB", features=["Real|Warlock||Beta||3", "Ghost|Warlock||Beta||3"])]
+    feats = [_feat("Real", 3, short="Beta", source="PHB")]
+    _, out_feats, rows = _convert(subs, feats)
+    assert list(out_feats) == ["beta-phb-3-real"] and len(rows) == 1
+
+
+def test_converter_twins_are_symmetric_and_use_the_srd_id_for_srd_records():
+    subs = [
+        _sub("Fiend", "Fiend", source="PHB", srd=True, reprintedAs=["Fiend|Warlock|XPHB|XPHB"]),
+        _sub("Fiend", "Fiend", source="XPHB", classSource="XPHB", edition="one"),
+        _sub("Totem", "Totem Warrior", source="PHB", cls="Barbarian", reprintedAs=["Wild Heart|Barbarian|XPHB|XPHB"]),
+        _sub("Wild Heart", "Wild Heart", source="XPHB", cls="Barbarian", classSource="XPHB", edition="one"),
+    ]
+    subs[1]["className"] = "Warlock"
+    twins = sub_mod.subclass_twins_from(subs, {"fiend"} | {"totem-warrior-phb", "wild-heart-xphb", "fiend-xphb"})
+    assert twins == {"fiend": "fiend-xphb", "fiend-xphb": "fiend",
+                     "totem-warrior-phb": "wild-heart-xphb", "wild-heart-xphb": "totem-warrior-phb"}
+
+
+def test_a_catalog_built_by_hand_still_finds_level_rows():
+    cat = Catalog(levels=[
+        {"index": "w-1", "level": 1, "class": {"index": "wizard"}},
+        {"index": "e-3", "level": 3, "class": {"index": "wizard"}, "subclass": {"index": "evo"}},
+    ])
+    assert cat.class_level_row("wizard", 1)["index"] == "w-1"
+    assert cat.class_level_row("wizard", 3) is None
+    assert cat.subclass_level_row("evo", 3)["index"] == "e-3"
+    cat.levels.append({"index": "w-2", "level": 2, "class": {"index": "wizard"}})  # grows after first use
+    assert cat.class_level_row("wizard", 2)["index"] == "w-2"
+
+
+@needs_classes
+def test_real_import_totals(catalog):
+    assert len(catalog.subclasses) == CATALOG_SUBCLASSES
+    imported = [s for s in catalog.subclasses.values() if s.get("source") != "SRD"]
+    assert len(imported) == IMPORTED_SUBCLASSES
+    assert SRD_SUBCLASS_IDS <= set(catalog.subclasses)
+    assert len(catalog.levels) == TOTAL_LEVEL_ROWS
+    imported_features = [f for f in catalog.features.values() if f.get("subclass", {}).get("index") not in (None, *SRD_SUBCLASS_IDS)]
+    assert len(imported_features) == IMPORTED_FEATURES
+    assert sum(1 for r in catalog.levels if r.get("subclass", {}).get("index") not in SRD_SUBCLASS_IDS
+               and "subclass" in r) == IMPORTED_LEVEL_ROWS
+
+
+@needs_classes
+def test_real_subclass_records(catalog):
+    hb = catalog.subclasses["hexblade-xge"]
+    assert hb["class"]["index"] == "warlock" and hb["ruleset"] == "2014" and hb["source"] == "XGE"
+    assert hb["name"] == "The Hexblade"
+    assert catalog.subclasses["berserker-xphb"]["ruleset"] == "2024"
+    assert all(s["ruleset"] == "2014" and s["source"] == "SRD" for i, s in catalog.subclasses.items() if i in SRD_SUBCLASS_IDS)
+    assert not any("artificer" in i or "mystic" in i for i in catalog.subclasses)
+    assert {s["class"]["index"] for s in catalog.subclasses.values()} == {
+        "barbarian", "bard", "cleric", "druid", "fighter", "monk", "paladin", "ranger", "rogue", "sorcerer", "warlock", "wizard"}
+
+
+@needs_classes
+def test_real_twins(catalog):
+    t = catalog.subclass_twins
+    assert len(t) == 2 * TWIN_PAIRS
+    assert t["berserker-xphb"] == "berserker" and t["berserker"] == "berserker-xphb"
+    assert t["totem-warrior-phb"] == "wild-heart-xphb" and t["wild-heart-xphb"] == "totem-warrior-phb"
+    assert all(t[t[a]] == a for a in t)
+
+
+@needs_classes
+def test_real_hexblade_level_one_features_in_document_order(catalog):
+    row = catalog.subclass_level_row("hexblade-xge", 1)
+    assert [f["index"] for f in row["features"]] == [
+        "hexblade-xge-1-the-hexblade", "hexblade-xge-1-hexblades-curse", "hexblade-xge-1-hex-warrior"]
+    assert catalog.subclass_level_row("hexblade-xge", 6)["features"][0]["name"] == "Accursed Specter"
+
+
+@needs_classes
+def test_real_totem_spirit_text_and_no_dangling_references(catalog):
+    assert "Bear" in " ".join(catalog.features["totem-warrior-phb-3-totem-spirit"]["desc"])
+    for row in catalog.levels:
+        for ref in row.get("features", []):
+            assert ref["index"] in catalog.features, ref
+    ids = [f["index"] for f in catalog.features.values()]
+    assert len(ids) == len(set(ids))
+
+
+@needs_classes
+def test_srd_rows_are_untouched(catalog):
+    assert catalog.subclasses["fiend"]["name"] == "Fiend"
+    assert catalog.subclass_level_row("fiend", 1)["features"][0]["index"] == "dark-ones-blessing"
+    assert sum(1 for r in catalog.levels if r.get("url", "").startswith("/api/2014")) == SRD_LEVEL_ROWS
+
+
+def _draft(cls, level, sub, choices=None):
+    return {
+        "name": "T", "sources": [], "classes": [{"classId": cls, "level": level, "subclassId": sub, "choices": choices or {}}],
+        "background": {"id": "acolyte", "choices": {}}, "species": {"id": "human", "choices": {}},
+        "abilities": {"method": "manual", "base": {"STR": 10, "DEX": 14, "CON": 14, "INT": 10, "WIS": 12, "CHA": 16}},
+    }
+
+
+@needs_classes
+def test_warlock_with_hexblade_resolves_clean_and_lists_its_features(catalog):
+    res = resolve(_draft("warlock", 1, "hexblade-xge"), catalog)
+    assert not [p for p in res["problems"] if p["id"] in ("unknown-subclass", "subclass-mismatch")]
+    feats = {f["name"]: f for f in res["sheet"]["features"]}
+    assert "Hexblade's Curse" in feats and "Hex Warrior" in feats
+    assert feats["Hex Warrior"]["source"]["kind"] == "subclass"
+    assert not resolve(_draft("warlock", 3, "hexblade-xge"), catalog)["problems"]
+
+
+@needs_classes
+def test_subclass_of_another_class_is_still_a_mismatch(catalog):
+    res = resolve(_draft("fighter", 3, "hexblade-xge"), catalog)
+    assert any(p["id"] == "subclass-mismatch" for p in res["problems"])
+
+
+_SRD_SUB_FOR_CLASS = {
+    "warlock": "fiend", "barbarian": "berserker", "bard": "lore", "cleric": "life", "druid": "land",
+    "fighter": "champion", "monk": "open-hand", "paladin": "devotion", "ranger": "hunter",
+    "rogue": "thief", "sorcerer": "draconic", "wizard": "evocation",
+}
+
+
+def _srd_only(catalog):
+    """The same catalog with every imported subclass, feature and level row removed."""
+    import dataclasses
+    keep = lambda sid: sid in SRD_SUBCLASS_IDS  # noqa: E731
+    return dataclasses.replace(
+        catalog,
+        subclasses={i: s for i, s in catalog.subclasses.items() if keep(i)},
+        features={i: f for i, f in catalog.features.items() if not f.get("subclass") or keep(f["subclass"]["index"])},
+        levels=[r for r in catalog.levels if "subclass" not in r or keep(r["subclass"]["index"])],
+        subclass_twins={}, _row_index=None,
+    )
+
+
+@needs_classes
+def test_existing_srd_drafts_resolve_byte_for_byte_the_same_as_without_the_import(catalog):
+    srd = _srd_only(catalog)
+    assert len(srd.levels) == SRD_LEVEL_ROWS and len(srd.subclasses) == 12
+    for cls, sub in _SRD_SUB_FOR_CLASS.items():
+        for lvl in (1, 3, 9, 20):
+            draft = _draft(cls, lvl, sub)
+            a = json.dumps(resolve(draft, catalog), sort_keys=True, default=str)
+            b = json.dumps(resolve(draft, srd), sort_keys=True, default=str)
+            assert a == b, (cls, lvl)
+
+
+@needs_classes
+def test_resolve_stays_as_fast_as_with_the_srd_only_catalog(catalog):
+    import time
+    srd = _srd_only(catalog)
+
+    def best(cat, sub):
+        draft = _draft("fighter", 20, sub)
+        resolve(draft, cat)
+        t = []
+        for _ in range(4):
+            start = time.perf_counter()
+            for _ in range(50):
+                resolve(draft, cat)
+            t.append(time.perf_counter() - start)
+        return min(t)
+
+    # Measured 2026-10-09: 0.157 s for 50 resolves before the import (linear row scans), the dict index must not be slower.
+    assert best(catalog, "battle-master-phb") <= best(srd, "champion") * 1.10 + 0.05

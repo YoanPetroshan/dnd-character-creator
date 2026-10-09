@@ -1,13 +1,18 @@
 from catalog.loader import load
-from catalog.official_source import has_official, has_official_spells
+from catalog.official_source import has_official, has_official_classes, has_official_spells
 
 
 def test_load_returns_expected_counts():
     catalog = load()
     assert len(catalog.classes) == 12
-    assert len(catalog.features) == 407
-    assert len(catalog.levels) == 290
-    assert len(catalog.subclasses) == 12
+    if has_official_classes():  # Slice 11b: +164 subclasses, +1089 features, +671 rows (script-verified)
+        assert len(catalog.features) == 407 + 1089
+        assert len(catalog.levels) == 290 + 671
+        assert len(catalog.subclasses) == 12 + 164
+    else:
+        assert len(catalog.features) == 407
+        assert len(catalog.levels) == 290
+        assert len(catalog.subclasses) == 12
     # Bundled SRD counts for races/subraces/traits/backgrounds are exact —
     # byte-identical when official sourcebook data hasn't been fetched on
     # this machine. When it has (as on this dev machine), load() merges in

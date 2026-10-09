@@ -50,6 +50,11 @@ class Catalog:
     # of the same spell (symmetric id -> id), used for ruleset visibility.
     spell_aliases: dict[str, str] = field(default_factory=dict)
     spell_twins: dict[str, str] = field(default_factory=dict)
+    # Slice 11b: 2014 <-> 2024 pairs of the same subclass (symmetric id -> id).
+    subclass_twins: dict[str, str] = field(default_factory=dict)
+    # Level-row indexes (class_id, level) / (subclass_id, level) -> row, built
+    # lazily and rebuilt when the number of rows changes.
+    _row_index: tuple | None = field(default=None, repr=False, compare=False)
 
     def resolve_spell_id(self, spell_id: str | None) -> str | None:
         """The catalog id for a spell reference: the id itself, else its alias, else None."""
@@ -58,19 +63,26 @@ class Catalog:
         alias = self.spell_aliases.get(spell_id)
         return alias if alias in self.spells else None
 
+    def _rows(self) -> tuple[dict, dict]:
+        cached = self._row_index
+        if cached is None or cached[0] != len(self.levels):
+            class_rows: dict[tuple, dict] = {}
+            sub_rows: dict[tuple, dict] = {}
+            for row in self.levels:
+                level = row.get("level")
+                sub = row.get("subclass")
+                if sub is not None:
+                    sub_rows.setdefault((sub.get("index"), level), row)
+                else:
+                    class_rows.setdefault((row.get("class", {}).get("index"), level), row)
+            cached = self._row_index = (len(self.levels), class_rows, sub_rows)
+        return cached[1], cached[2]
+
     def class_level_row(self, class_id: str, level: int) -> dict | None:
-        for row in self.levels:
-            if (row.get("class", {}).get("index") == class_id
-                    and row.get("level") == level
-                    and "subclass" not in row):
-                return row
-        return None
+        return self._rows()[0].get((class_id, level))
 
     def subclass_level_row(self, subclass_id: str, level: int) -> dict | None:
-        for row in self.levels:
-            if row.get("subclass", {}).get("index") == subclass_id and row.get("level") == level:
-                return row
-        return None
+        return self._rows()[1].get((subclass_id, level))
 
     def subraces_of(self, race_id: str) -> list[dict]:
         return [s for s in self.subraces.values() if s.get("race", {}).get("index") == race_id]
@@ -101,6 +113,31 @@ def _load_spells() -> tuple[dict[str, dict], dict[str, str], dict[str, str]]:
     return spells, build_spell_aliases(spells), link_spell_versions(spells)
 
 
+def _merge_official_subclasses(catalog: Catalog) -> None:
+    """Tags the SRD subclasses and merges every sourcebook subclass found on
+    disk (subclass records, their features, their level rows, the 2014/2024
+    twin map). SRD records win a key clash."""
+    from .official_source import (
+        class_dir, convert_subclasses, load_raw_class_data, subclass_twins_from,
+    )
+
+    srd_ids = set(catalog.subclasses)
+    for sub in catalog.subclasses.values():
+        sub.setdefault("source", "SRD")
+        sub.setdefault("ruleset", "2014")
+    raw_subs, raw_feats = load_raw_class_data(class_dir())
+    if not raw_subs:
+        return
+    subs, feats, rows = convert_subclasses(raw_subs, raw_feats, srd_ids, catalog.resolve_spell_id)
+    clash = (set(subs) & set(catalog.subclasses)) | (set(feats) & set(catalog.features))
+    if clash:
+        raise ValueError(f"imported subclass ids clash with the SRD: {sorted(clash)[:5]}")
+    catalog.subclasses.update(subs)
+    catalog.features.update(feats)
+    catalog.levels.extend(rows)
+    catalog.subclass_twins = subclass_twins_from(raw_subs, set(catalog.subclasses))
+
+
 def load() -> Catalog:
     from .official_source import (
         load_official_races, load_official_backgrounds, load_official_feats, official_dir,
@@ -117,7 +154,7 @@ def load() -> Catalog:
 
     spells, spell_aliases, spell_twins = _load_spells()
 
-    return Catalog(
+    catalog = Catalog(
         classes=_index_by(_load("5e-SRD-Classes.json")),
         levels=_load("5e-SRD-Levels.json"),
         features=_index_by(_load("5e-SRD-Features.json")),
@@ -132,3 +169,5 @@ def load() -> Catalog:
         spell_aliases=spell_aliases,
         spell_twins=spell_twins,
     )
+    _merge_official_subclasses(catalog)
+    return catalog
