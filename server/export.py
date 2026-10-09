@@ -26,7 +26,10 @@ def to_yaml(resolution: dict) -> str:
         "speed": derived["speed"],
         "savingThrows": derived["savingThrows"],
         "skills": derived["skills"],
+        "initiative": derived["initiative"],
         "passivePerception": derived["passivePerception"],
+        "passiveInsight": derived["passiveInsight"],
+        "passiveInvestigation": derived["passiveInvestigation"],
         # spellSaveDC/spellAttackBonus moved off `derived` and into each
         # sheet["spells"][i] entry as of Phase 3b-ii (see engine/resolve.py) —
         # a multiclass character's casters each use their own spellcasting

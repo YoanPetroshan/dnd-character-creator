@@ -123,8 +123,10 @@ def to_markdown(resolution: dict) -> str:
         else f"- **Точки живот:** {derived['hitPointMax']} (—)"
     )
     lines.append(f"- **Скорост:** {derived['speed']} фута" if derived["speed"] is not None else "- **Скорост:** —")
-    lines.append(f"- **Инициатива:** {_fmt_mod(derived['abilityModifiers']['DEX'])}")
+    lines.append(f"- **Инициатива:** {_fmt_mod(derived['initiative'])}")
     lines.append(f"- **Пасивно възприятие:** {derived['passivePerception']}")
+    lines.append(f"- **Пасивна проницателност:** {derived['passiveInsight']}")
+    lines.append(f"- **Пасивно разследване:** {derived['passiveInvestigation']}")
     lines.append(f"- **Бонус за умение:** {_fmt_mod(derived['proficiencyBonus'])}")
     lines.append("")
 

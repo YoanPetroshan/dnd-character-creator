@@ -132,8 +132,10 @@ def to_pdf(resolution: dict) -> bytes:
         f"Клас броня (AC): {derived['armorClass']}\n"
         f"Точки живот: {derived['hitPointMax']} ({hit_dice})\n"
         f"Скорост: {speed}\n"
-        f"Инициатива: {_fmt_mod(derived['abilityModifiers']['DEX'])}\n"
+        f"Инициатива: {_fmt_mod(derived['initiative'])}\n"
         f"Пасивно възприятие: {derived['passivePerception']}\n"
+        f"Пасивна проницателност: {derived['passiveInsight']}\n"
+        f"Пасивно разследване: {derived['passiveInvestigation']}\n"
         f"Бонус за умение: {_fmt_mod(derived['proficiencyBonus'])}"
     )
 

@@ -82,14 +82,39 @@ def saving_throws(
     }
 
 
+_PHYSICAL = ("STR", "DEX", "CON")
+
+
+def _half_bonus(prof_bonus: int, ability: str, jack: bool, remarkable: bool) -> int:
+    best = 0
+    if jack:
+        best = prof_bonus // 2
+    if remarkable and ability in _PHYSICAL:
+        best = max(best, (prof_bonus + 1) // 2)
+    return best
+
+
 def skill_scores(
     modifiers: dict[str, int], proficient_skills: list[str], prof_bonus: int,
+    expertise_skills=(), jack_of_all_trades: bool = False, remarkable_athlete: bool = False,
 ) -> dict[str, int]:
-    return {
-        skill_id: modifiers[ability] + (prof_bonus if skill_id in proficient_skills else 0)
-        for skill_id, ability in reference_data.SKILL_ABILITY.items()
-    }
+    out = {}
+    for skill_id, ability in reference_data.SKILL_ABILITY.items():
+        if skill_id in proficient_skills:
+            bonus = prof_bonus * (2 if skill_id in expertise_skills else 1)
+        else:
+            bonus = _half_bonus(prof_bonus, ability, jack_of_all_trades, remarkable_athlete)
+        out[skill_id] = modifiers[ability] + bonus
+    return out
+
+
+def initiative(modifiers: dict[str, int], prof_bonus: int, jack_of_all_trades: bool = False, remarkable_athlete: bool = False) -> int:
+    return modifiers["DEX"] + _half_bonus(prof_bonus, "DEX", jack_of_all_trades, remarkable_athlete)
 
 
 def passive_perception(skills: dict[str, int]) -> int:
     return 10 + skills.get("skill-perception", 0)
+
+
+def passive_skill(skills: dict[str, int], skill_id: str) -> int:
+    return 10 + skills.get(skill_id, 0)

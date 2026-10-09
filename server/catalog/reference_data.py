@@ -164,3 +164,39 @@ def proficiency_label(prof_id: str) -> str:
     """Human-readable form of a slug proficiency id ("light-armor" ->
     "Light armor"), used by the markdown/PDF exports."""
     return prof_id.replace("-", " ").capitalize()
+
+
+# Hand-maintained mechanical effects of SRD class features, keyed by the
+# feature `index` in 5e-SRD-Features.json (the SRD data does not encode
+# them structurally). Effect keys:
+#   ac_formula          {"base", "abilities", "allows_shield"}: alternative
+#                       unarmored AC; the best candidate wins, never summed,
+#                       and it only applies with no body armor.
+#   ac_bonus_armored    flat AC bonus only while wearing body armor.
+#   speed_bonus_by_class_level  {class level: ft}, only with no armor and
+#                       no shield; the highest reached level applies.
+#   hp_per_class_level  extra max HP per level of the granting class.
+#   half_proficiency    "floor" (Jack of All Trades, every non-proficient
+#                       check) or "ceil" (Remarkable Athlete, STR/DEX/CON).
+#   ability_bonus / ability_cap  Primal Champion (+4 STR/CON, cap 24).
+#   attack_bonus        stored for the attacks slice; no consumer yet.
+CLASS_FEATURE_EFFECTS: dict[str, dict] = {
+    "barbarian-unarmored-defense": {"ac_formula": {"base": 10, "abilities": ["DEX", "CON"], "allows_shield": True}},
+    "monk-unarmored-defense": {"ac_formula": {"base": 10, "abilities": ["DEX", "WIS"], "allows_shield": False}},
+    "draconic-resilience": {
+        "ac_formula": {"base": 13, "abilities": ["DEX"], "allows_shield": True},
+        "hp_per_class_level": 1,
+    },
+    "unarmored-movement-1": {"speed_bonus_by_class_level": {2: 10, 6: 15, 10: 20, 14: 25, 18: 30}},
+    "fighter-fighting-style-defense": {"ac_bonus_armored": 1},
+    "fighting-style-defense": {"ac_bonus_armored": 1},
+    "ranger-fighting-style-defense": {"ac_bonus_armored": 1},
+    "fighter-fighting-style-archery": {"attack_bonus": {"ranged": 2}},
+    "ranger-fighting-style-archery": {"attack_bonus": {"ranged": 2}},
+    "fighter-fighting-style-dueling": {"damage_bonus": {"one_handed_melee": 2}},
+    "fighting-style-dueling": {"damage_bonus": {"one_handed_melee": 2}},
+    "ranger-fighting-style-dueling": {"damage_bonus": {"one_handed_melee": 2}},
+    "jack-of-all-trades": {"half_proficiency": "floor"},
+    "remarkable-athlete": {"half_proficiency": "ceil"},
+    "primal-champion": {"ability_bonus": {"STR": 4, "CON": 4}, "ability_cap": 24},
+}

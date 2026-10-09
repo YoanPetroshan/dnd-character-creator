@@ -163,7 +163,10 @@ export interface Derived {
   speed: number | null;
   savingThrows: Record<Ability, number>;
   skills: Record<string, number>;
+  initiative: number;
   passivePerception: number;
+  passiveInsight: number;
+  passiveInvestigation: number;
   spellSlots: Record<string, number>;
   warlockSpellSlots: Record<string, number>;
 }

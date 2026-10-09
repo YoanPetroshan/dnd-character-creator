@@ -59,6 +59,7 @@ from catalog.official_source import slug, SAVE_ABILITY_NAMES
 from . import asi as asi_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
+from . import features as features_mod
 from . import spells as spells_mod
 from .normalize import normalize_draft
 
@@ -2123,6 +2124,29 @@ def _apply_species_overlap(class_templates: list[dict], race: dict | None, subra
                 opt["disabledReason"] = f"already granted by {race['name']}"
 
 
+def _class_feature_list(catalog: Catalog, resolved_classes: list[dict], choices: list[dict] | None = None) -> list[tuple[str, int, str]]:
+    """(class_id, class_level, feature_index) for every class/subclass
+    feature the character has, plus selected feature options (e.g. a
+    chosen Fighting Style) read from `choices` when given."""
+    out: list[tuple[str, int, str]] = []
+    for rc in resolved_classes:
+        if not rc["cls"] or not rc["cls_id"]:
+            continue
+        for _lvl, ref in _cumulative_feature_refs(catalog, rc["cls_id"], rc["subclass_id"], rc["level"]):
+            feature = catalog.features.get(ref["index"])
+            sub = (feature or {}).get("subclass")
+            if sub and sub.get("index") != rc["subclass_id"]:
+                continue
+            out.append((rc["cls_id"], rc["level"], ref["index"]))
+    for c in choices or []:
+        src = c.get("source") or {}
+        if src.get("kind") == "class" and ":feature:" in c["id"]:
+            for sel in c.get("selected") or []:
+                lvl = next((rc["level"] for rc in resolved_classes if rc["cls_id"] == src.get("id")), 0)
+                out.append((src["id"], lvl, sel))
+    return out
+
+
 def resolve(draft: dict, catalog: Catalog) -> dict:
     draft, problems = normalize_draft(draft)
     warnings: list[dict] = []
@@ -2597,6 +2621,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         resolved_feats, total_level, final_scores, use_feat_prereqs, background_chosen_ability_deltas_by_instance,
     )
 
+    # Primal Champion et al.: fixed ability-score feature bonuses, applied
+    # after ASIs and prerequisite checks (the 24 cap is theirs alone).
+    final_scores = features_mod.apply_ability_bonuses(
+        final_scores, features_mod.active_effects(_class_feature_list(catalog, resolved_classes)),
+    )
     modifiers = derived_mod.ability_modifiers(final_scores)
     # Prof bonus is confirmed class-agnostic at a given level (per the
     # design spec's empirical check), so any resolved class's level table
@@ -3105,17 +3134,37 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc_hp_rolls = {k: v for k, v in rc_hp_rolls_raw.items() if isinstance(v, int)} if isinstance(rc_hp_rolls_raw, dict) else {}
         hp_class_entries.append({"hit_die": rc_hit_die, "level": rc["level"], "hp_rolls": rc_hp_rolls})
     saves = derived_mod.saving_throws(modifiers, proficient_save_abilities, prof_bonus)
-    skills = derived_mod.skill_scores(modifiers, list(proficient_skills), prof_bonus)
+    effects = features_mod.active_effects(_class_feature_list(catalog, resolved_classes, choices))
+    class_levels = {rc["cls_id"]: rc["level"] for rc in resolved_classes if rc["cls"]}
+    jack, remarkable = features_mod.half_proficiency(effects)
+    expertise_all = _feat_expertise_skills(resolved_feats) + [
+        s for s in _feat_selected_choice_values(choices, ":expertise-choice-")
+        if s not in _feat_expertise_skills(resolved_feats)
+    ]
+    skills = derived_mod.skill_scores(
+        modifiers, list(proficient_skills), prof_bonus, expertise_all, jack, remarkable,
+    )
+    base_speed = race.get("speed") if race else None
+    worn_armor = any(i.get("equipment_category", {}).get("index") == "armor" for i in equipped_items)  # body armor or shield
+    if base_speed is not None and not worn_armor:
+        base_speed += features_mod.speed_bonus(effects, class_levels)
     derived = {
         "abilityModifiers": modifiers,
         "proficiencyBonus": prof_bonus,
-        "hitPointMax": derived_mod.hit_point_max_multiclass(hp_class_entries, modifiers["CON"], hp_type),
+        "hitPointMax": derived_mod.hit_point_max_multiclass(hp_class_entries, modifiers["CON"], hp_type)
+        + features_mod.hp_bonus(effects, class_levels),
         "hitDice": " + ".join(f"{rc['level']}d{rc['cls']['hit_die']}" for rc in resolved_classes if rc["cls"] and rc["cls"].get("hit_die")) or None,
-        "armorClass": equipment_mod.armor_class_from_gear(equipped_items, modifiers["DEX"]),
-        "speed": race.get("speed") if race else None,
+        "armorClass": equipment_mod.armor_class_from_gear(
+            equipped_items, modifiers["DEX"], features_mod.ac_formulas(effects), modifiers,
+            features_mod.armored_ac_bonus(effects),
+        ),
+        "speed": base_speed,
+        "initiative": derived_mod.initiative(modifiers, prof_bonus, jack, remarkable),
         "savingThrows": saves,
         "skills": skills,
         "passivePerception": derived_mod.passive_perception(skills),
+        "passiveInsight": derived_mod.passive_skill(skills, "skill-insight"),
+        "passiveInvestigation": derived_mod.passive_skill(skills, "skill-investigation"),
         "spellSlots": spell_slots,
         "warlockSpellSlots": warlock_slots,
     }
@@ -3182,10 +3231,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "grantedFeats": granted_feats + [f["index"] for f in asi_selected_feats],
         "featOptions": feat_options,
         "senses": senses,
-        "expertiseSkills": _feat_expertise_skills(resolved_feats) + [
-            s for s in _feat_selected_choice_values(choices, ":expertise-choice-")
-            if s not in _feat_expertise_skills(resolved_feats)
-        ],
+        "expertiseSkills": expertise_all,
     }
 
     return {
