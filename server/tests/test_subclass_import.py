@@ -681,3 +681,55 @@ def test_swords_bard_dueling_adds_two_to_longsword_damage(catalog):
     dueling = resolve(_with_gear(_draft("bard", 3, "swords-xge", {cid: ["opt-dueling-phb"]}), "longsword"), catalog)
     bonus = lambda d: int(d.split("+")[1]) if "+" in d else 0  # noqa: E731
     assert bonus(_attack(dueling, "longsword")["damage"]) == bonus(plain) + 2
+
+
+# ----------------------------------------- B1: third-caster `spellcasting` blocks
+# Numbers verified by script over class-fighter.json / class-rogue.json (2026-10-09).
+
+_EK_SLOTS = [[0, 0, 0, 0], [0, 0, 0, 0], [2, 0, 0, 0], [3, 0, 0, 0], [3, 0, 0, 0], [3, 0, 0, 0],
+             [4, 2, 0, 0], [4, 2, 0, 0], [4, 2, 0, 0], [4, 3, 0, 0], [4, 3, 0, 0], [4, 3, 0, 0],
+             [4, 3, 2, 0], [4, 3, 2, 0], [4, 3, 2, 0], [4, 3, 3, 0], [4, 3, 3, 0], [4, 3, 3, 0],
+             [4, 3, 3, 1], [4, 3, 3, 1]]
+_THIRD_SPELLS = [0, 0, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, 13]
+_THIRD_CANTRIPS = [0, 0] + [2] * 7 + [3] * 11
+
+
+@needs_classes
+def test_exactly_four_subclasses_carry_a_spellcasting_block(catalog):
+    carriers = sorted(i for i, s in catalog.subclasses.items() if "spellcasting" in s)
+    assert carriers == ["arcane-trickster-phb", "arcane-trickster-xphb",
+                        "eldritch-knight-phb", "eldritch-knight-xphb"]
+
+
+@needs_classes
+def test_third_caster_blocks_match_the_class_tables(catalog):
+    for sid in ("eldritch-knight-phb", "eldritch-knight-xphb", "arcane-trickster-phb", "arcane-trickster-xphb"):
+        sc = catalog.subclasses[sid]["spellcasting"]
+        assert sc["ability"] == "INT" and sc["progression"] == "1/3" and sc["list_class"] == "wizard"
+        assert sc["cantrips"] == _THIRD_CANTRIPS
+        assert sc["spells"] == _THIRD_SPELLS
+        assert sc["slots"] == _EK_SLOTS
+    assert catalog.subclasses["eldritch-knight-phb"]["spellcasting"]["slots"][6] == [4, 2, 0, 0]
+    assert catalog.subclasses["eldritch-knight-phb"]["spellcasting"]["kind"] == "known"
+    assert catalog.subclasses["arcane-trickster-phb"]["spellcasting"]["kind"] == "known"
+    assert catalog.subclasses["eldritch-knight-xphb"]["spellcasting"]["kind"] == "prepared"
+    assert catalog.subclasses["arcane-trickster-xphb"]["spellcasting"]["kind"] == "prepared"
+    assert catalog.subclasses["arcane-trickster-xphb"]["spellcasting"]["cantrips"][9] == 3
+
+
+def test_converter_list_class_falls_back_to_wizard_and_ignores_other_progressions():
+    raw = _sub("Third", source="PHB", cls="Fighter", casterProgression="1/3", spellsKnownProgression=[0, 0, 3],
+               cantripProgression=[0, 0, 2],
+               subclassTableGroups=[{"rowsSpellProgression": [[0], [0], [2]]}])
+    subs, _, _ = _convert([raw], [])
+    sc = subs["third-phb"]["spellcasting"]
+    assert sc["list_class"] == "wizard" and sc["kind"] == "known" and sc["slots"] == [[0], [0], [2]]
+    half = _sub("Half", source="PHB", cls="Fighter", casterProgression="1/2")
+    assert "spellcasting" not in _convert([half], [])[0]["half-phb"]
+
+
+def test_school_limits_table():
+    from catalog.reference_data import SUBCLASS_SPELL_SCHOOL_LIMITS as lim
+    assert lim["eldritch-knight-phb"] == {"schools": ["abjuration", "evocation"], "free_at": [3, 8, 14, 20]}
+    assert lim["arcane-trickster-phb"] == {"schools": ["enchantment", "illusion"], "free_at": [3, 8, 14, 20]}
+    assert set(lim) == {"eldritch-knight-phb", "arcane-trickster-phb"}

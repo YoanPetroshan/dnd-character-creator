@@ -216,6 +216,47 @@ def convert_optional_features(raw_options) -> dict[str, dict]:
     return out
 
 
+_EXPANDED_ALL_CLASS = re.compile(r"class=([A-Za-z]+)")
+
+
+def _third_caster_block(raw: dict) -> dict | None:
+    """The `spellcasting` block of a 1/3-caster subclass (Eldritch Knight,
+    Arcane Trickster): ability, spell-list class (the first `{all: "...class=X"}`
+    in `additionalSpells[*].expanded`, else wizard), known/prepared kind and the
+    per-class-level cantrip / spell counts and slot rows from the subclass's own
+    tables. None for every other subclass."""
+    if raw.get("casterProgression") != "1/3":
+        return None
+    list_class = "wizard"
+    for block in raw.get("additionalSpells") or []:
+        expanded = block.get("expanded") if isinstance(block, dict) else None
+        found = None
+        for refs in (expanded or {}).values():
+            for ref in refs if isinstance(refs, list) else []:
+                match = _EXPANDED_ALL_CLASS.search(ref.get("all", "")) if isinstance(ref, dict) else None
+                if match:
+                    found = match.group(1).lower()
+                    break
+            if found:
+                break
+        if found:
+            list_class = found
+            break
+    slots: list[list[int]] = []
+    for group in raw.get("subclassTableGroups") or []:
+        if isinstance(group, dict) and isinstance(group.get("rowsSpellProgression"), list):
+            slots = [list(row) for row in group["rowsSpellProgression"]]
+            break
+    kind = "known" if "spellsKnownProgression" in raw else "prepared"
+    return {
+        "ability": str(raw.get("spellcastingAbility") or "int").upper(),
+        "progression": "1/3", "list_class": list_class, "kind": kind,
+        "cantrips": list(raw.get("cantripProgression") or []),
+        "spells": list(raw.get("spellsKnownProgression") or raw.get("preparedSpellsProgression") or []),
+        "slots": slots,
+    }
+
+
 def convert_subclasses(raw_subs, raw_feats, srd_subclass_ids, resolve_spell, raw_options=()):
     """5etools subclasses + subclass features -> (subclasses, features,
     level_rows) in the SRD shapes. Skips `_copy` records (2014 subclasses
@@ -253,6 +294,9 @@ def convert_subclasses(raw_subs, raw_feats, srd_subclass_ids, resolve_spell, raw
             "ruleset": ruleset_for_edition(raw), "desc": [],
             "spells": _subclass_spell_entries(raw, cls_ref["index"], ruleset_for_edition(raw) == "2024", resolve_spell),
         }
+        third = _third_caster_block(raw)
+        if third:
+            record["spellcasting"] = third
         subclasses[sub_id] = record
 
         by_level: dict[int, list[dict]] = {}

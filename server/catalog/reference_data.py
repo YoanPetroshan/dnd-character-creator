@@ -153,6 +153,16 @@ SUBCLASS_SPELLCASTING_ABILITY: dict[str, str] = {
     "shadow-phb": "WIS", "shadow-xphb": "WIS", "elements-xphb": "WIS",
 }
 
+# 2014 third-caster spell-school limits: spells known must come from `schools`
+# except the spells learned at the levels in `free_at` (one of the first three
+# at level 3, then those learned at 8, 14 and 20), so the number of any-school
+# spells allowed at class level L is len([l for l in free_at if l <= L]).
+# The 2024 reprints have no school restriction.
+SUBCLASS_SPELL_SCHOOL_LIMITS: dict[str, dict] = {
+    "eldritch-knight-phb": {"schools": ["abjuration", "evocation"], "free_at": [3, 8, 14, 20]},
+    "arcane-trickster-phb": {"schools": ["enchantment", "illusion"], "free_at": [3, 8, 14, 20]},
+}
+
 # Full-caster classes (contribute their own level to multiclass caster
 # level per 5e RAW). Real 5e distinction not present as a flag anywhere
 # in the bundled SRD data, so hardcoded from the standard SRD class list.
