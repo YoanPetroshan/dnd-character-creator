@@ -1502,10 +1502,12 @@ def _optional_progression_template(catalog: Catalog, feature: dict, cid: str, so
     reached = [int(k) for k in spec["progression"] if int(k) <= class_level]
     if not reached:
         return None
+    granted_ids = [oid for lvl, ids in (spec.get("required") or {}).items() if int(lvl) <= class_level
+                   for oid in ids if oid in catalog.features]
     options = []
     for opt_id in spec["options"]:
         opt = catalog.features.get(opt_id)
-        if not opt:
+        if not opt or opt_id in granted_ids:
             continue
         option = {"id": opt_id, "label": opt["name"]}
         desc = _join_desc(opt.get("desc"))
@@ -1516,10 +1518,18 @@ def _optional_progression_template(catalog: Catalog, feature: dict, cid: str, so
             option["disabled"] = True
             option["disabledReason"] = f"requires level {need}"
         options.append(option)
-    return {
-        "id": cid, "source": source, "label": feature["name"], "description": _join_desc(feature.get("desc")) or "",
-        "count": spec["progression"][str(max(reached))], "count_by_level": True, "options": options,
+    description = _join_desc(feature.get("desc")) or ""
+    tpl = {
+        "id": cid, "source": source, "label": feature["name"], "description": description,
+        "count": max(0, spec["progression"][str(max(reached))] - len(granted_ids)), "count_by_level": True,
+        "options": options,
     }
+    if granted_ids:
+        tpl["granted"] = [{"id": oid, "label": catalog.features[oid]["name"]} for oid in granted_ids]
+        names = ", ".join(g["label"] for g in tpl["granted"])
+        verb = "is" if len(granted_ids) == 1 else "are"
+        tpl["description"] = f"{description}\n\n{names} {verb} granted automatically.".strip()
+    return tpl
 
 
 def _feature_choice_templates(
@@ -3158,8 +3168,8 @@ def _class_feature_list(catalog: Catalog, resolved_classes: list[dict], choices:
     for c in choices or []:
         src = c.get("source") or {}
         if src.get("kind") == "class" and ":feature:" in c["id"]:
-            for sel in c.get("selected") or []:
-                lvl = next((rc["level"] for rc in resolved_classes if rc["cls_id"] == src.get("id")), 0)
+            lvl = next((rc["level"] for rc in resolved_classes if rc["cls_id"] == src.get("id")), 0)
+            for sel in [g["id"] for g in c.get("granted") or []] + list(c.get("selected") or []):
                 out.append((src["id"], lvl, sel))
     return out
 
@@ -3939,6 +3949,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         # agrees with the early species-ability-bonus pass above, which
         # dedupes the same underlying selection before applying bonuses.
         raw_selected = list(dict.fromkeys(s for s in raw_selected if isinstance(s, str)))
+        if tpl.get("granted"):
+            # Granted automatically (e.g. Elemental Attunement): an old stored
+            # pick of it is redundant, not a loss, so it is dropped silently.
+            granted = {g["id"] for g in tpl["granted"]}
+            raw_selected = [s for s in raw_selected if s not in granted]
         selected = [s for s in raw_selected if s in valid_ids]
         if _is_count_variable_choice(tpl):
             # A spellcaster's allowed count shrinks on level-down (or when

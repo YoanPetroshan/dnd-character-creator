@@ -660,7 +660,8 @@ def test_rune_knight_and_four_elements_disable_options_above_the_class_level(cat
     assert not any(o.get("disabled") for o in seven["options"]) and seven["count"] == 3
     cid = "class:monk:3:feature:four-elements-phb-3-way-of-the-four-elements"
     disc = _spell_choice(resolve(_draft("monk", 3, "four-elements-phb"), catalog), cid)
-    assert len(disc["options"]) == 17 and sum(1 for o in disc["options"] if o.get("disabled")) == 9 and disc["count"] == 2
+    # S3: Elemental Attunement is granted, so 16 options and 1 pick at level 3
+    assert len(disc["options"]) == 16 and sum(1 for o in disc["options"] if o.get("disabled")) == 9 and disc["count"] == 1
 
 
 @needs_classes

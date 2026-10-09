@@ -33,8 +33,9 @@ def _class_choice_labels(choices: list[dict]) -> dict[tuple[str, str], list[str]
     out: dict[tuple[str, str], list[str]] = {}
     for c in choices:
         m = _CLASS_CHOICE_ID.match(c["id"]) if c["source"]["kind"] == "class" else None
-        if m and c["selected"]:
-            out.setdefault((m.group(1), m.group(2)), []).extend(_labels(c))
+        if m and (c["selected"] or c.get("granted")):
+            # Automatically granted options (Elemental Attunement) are listed first.
+            out.setdefault((m.group(1), m.group(2)), []).extend([g["label"] for g in c.get("granted") or []] + _labels(c))
     return out
 
 

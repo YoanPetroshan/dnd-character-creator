@@ -246,6 +246,26 @@ def convert_optional_features(raw_options) -> dict[str, dict]:
     return out
 
 
+def _required_option_ids(raw_required, options: dict) -> dict[str, list[str]]:
+    """`{"3": ["Elemental Attunement|PHB"]}` -> `{"3": ["opt-elemental-attunement-phb"]}`
+    (the id rule of convert_optional_features); unknown options are dropped."""
+    out: dict[str, list[str]] = {}
+    if not isinstance(raw_required, dict):
+        return out
+    for lvl, refs in raw_required.items():
+        if not str(lvl).isdigit() or not isinstance(refs, list):
+            continue
+        ids = []
+        for ref in refs:
+            name, _, src = str(ref).partition("|")
+            fid = f"opt-{slug(name)}-{(src or 'PHB').lower()}"
+            if fid in options:
+                ids.append(fid)
+        if ids:
+            out[str(lvl)] = ids
+    return out
+
+
 _EXPANDED_ALL_CLASS = re.compile(r"class=([A-Za-z]+)")
 
 
@@ -384,8 +404,11 @@ def convert_subclasses(raw_subs, raw_feats, srd_subclass_ids, resolve_spell, raw
             pool = [o["index"] for o in options.values()
                     if types & set(o["feature_types"]) and o["ruleset"] == record["ruleset"]]
             if pool:
-                features[by_level[first][0]["index"]].setdefault("feature_specific", {})["optional_progression"] = {
-                    "progression": progression, "options": pool}
+                spec = {"progression": progression, "options": pool}
+                required = _required_option_ids(prog.get("required"), options)
+                if required:
+                    spec["required"] = required
+                features[by_level[first][0]["index"]].setdefault("feature_specific", {})["optional_progression"] = spec
         for level in sorted(by_level):
             rows.append({"index": f"{sub_id}-{level}", "level": level, "class": cls_ref,
                          "subclass": sub_ref, "features": by_level[level]})
