@@ -723,6 +723,23 @@ def _spell_visible(catalog: Catalog, spell: dict, sources=None, ruleset: str = "
     return is_2024 if ruleset == "2024" else not is_2024
 
 
+def _subclass_visible(catalog: Catalog, sub: dict, sources=None, ruleset: str = "mixed") -> bool:
+    """Whether a subclass may be offered under the draft's sources and ruleset
+    (same twin rule as `_spell_visible`, over `catalog.subclass_twins`): a
+    2014/2024 pair shows its 2014 record under "mixed" (and unknown values),
+    its 2024 record under "2024", unless the other version's book is excluded
+    by `sources`; "2014" hides 2024 records. A subclass without a twin is
+    shown under every ruleset except 2014-hides-2024. Purely an offer filter -
+    resolve() accepts any catalog subclass of the class."""
+    if not _source_allowed(sub, sources) or not ruleset_allows(sub, "subclass", ruleset):
+        return False
+    twin = catalog.subclasses.get(catalog.subclass_twins.get(sub["index"]))
+    if twin is None or ruleset == "2014" or not _source_allowed(twin, sources):
+        return True
+    is_2024 = (sub.get("ruleset") or "2014") == "2024"
+    return is_2024 if ruleset == "2024" else not is_2024
+
+
 def _spell_filter_options(catalog: Catalog, flt: dict, sources=None, ruleset: str = "mixed", keep=()) -> list[dict]:
     """Catalog spells matching a parsed feat spell filter (see
     official_source._parse_spell_filter), sorted by (level, name), as

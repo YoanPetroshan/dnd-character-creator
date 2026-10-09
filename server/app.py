@@ -15,7 +15,7 @@ from flask_cors import CORS
 
 from catalog.loader import load as load_catalog
 from catalog.reference_data import SOURCE_NAMES, SUBCLASS_UNLOCK_LEVEL, ruleset_allows
-from engine.resolve import _source_allowed, _spell_visible, resolve
+from engine.resolve import _source_allowed, _spell_visible, _subclass_visible, resolve
 from export import to_yaml
 from markdown_export import to_markdown
 from pdf_export import to_pdf
@@ -51,12 +51,12 @@ def api_resolve():
 
 
 def _catalog_sources() -> list[dict]:
-    """Every book with at least one species, subspecies, background or feat
-    in the UNFILTERED catalog (so toggling a book off never makes it vanish
+    """Every book with at least one species, subspecies, background, feat or
+    subclass in the UNFILTERED catalog (so toggling a book off never makes it vanish
     from the picker), with that record count. SRD content has no source and
     is always available, so it is not listed."""
     counts: dict[str, int] = {}
-    for coll in (_catalog.races, _catalog.subraces, _catalog.backgrounds, _catalog.feats):
+    for coll in (_catalog.races, _catalog.subraces, _catalog.backgrounds, _catalog.feats, _catalog.subclasses):
         for record in coll.values():
             src = record.get("source") or ""
             if src and src.upper() != "SRD":
@@ -100,15 +100,34 @@ def api_catalog():
 
 @app.route("/api/catalog/class/<class_id>")
 def api_catalog_class(class_id: str):
+    """The SRD class plus `subclasses`: the class's subclasses visible under
+    `?ruleset=&sources=` as {index, name, source, ruleset}, SRD first, then by
+    name. `?include=<subclassId>` adds the draft's current selection with
+    `hidden: true` when the filters would hide it (or it is not in the list)."""
     cls = _catalog.classes.get(class_id)
     if not cls:
         return jsonify({"error": "not found"}), 404
+    ruleset = request.args.get("ruleset", "mixed")
+    sources = [s for s in (request.args.get("sources") or "").split(",") if s]
+    include = request.args.get("include") or ""
     level_feature_counts = {}
     for lvl in range(1, 21):
         row = _catalog.class_level_row(class_id, lvl)
         level_feature_counts[str(lvl)] = len(row.get("features", [])) if row else 0
+    chosen = [s for s in _catalog.subclasses.values() if s.get("class", {}).get("index") == class_id]
+    rows = []
+    for sub in chosen:
+        visible = _subclass_visible(_catalog, sub, sources, ruleset)
+        if visible or sub["index"] == include:
+            row = {"index": sub["index"], "name": sub["name"],
+                   "source": sub.get("source", "SRD"), "ruleset": sub.get("ruleset", "2014")}
+            if not visible:
+                row["hidden"] = True
+            rows.append(row)
+    rows.sort(key=lambda r: (r["source"] != "SRD", r["name"].lower()))
     return jsonify({
         **cls,
+        "subclasses": rows,
         "levelFeatureCounts": level_feature_counts,
         "subclassUnlockLevel": SUBCLASS_UNLOCK_LEVEL.get(class_id),
     })

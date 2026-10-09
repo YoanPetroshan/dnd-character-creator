@@ -12,7 +12,9 @@ function isSpellChoiceId(choiceId: string): boolean {
 }
 
 interface ClassDetail {
-  subclasses: { index: string; name: string }[]; // "index", not "id" — raw SRD class object, unmapped
+  // "index", not "id". Filtered server-side by ruleset/sources; `hidden` marks
+  // the draft's current pick when the filters would hide it.
+  subclasses: { index: string; name: string; source?: string; ruleset?: string; hidden?: boolean }[];
   levelFeatureCounts: Record<string, number>;
   subclassUnlockLevel: number | null;
   hit_die?: number; // raw SRD class object field, spread into this response as-is
@@ -26,10 +28,17 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
 
   const classEntry = draft.classes.find((c) => c.classId === classId);
   const classLevel = classEntry?.level ?? 1;
+  const selectedSubclassId = classEntry?.subclassId ?? "";
+  const sourcesKey = draft.sources.join(",");
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/catalog/class/${classId}`)
+    const params = new URLSearchParams();
+    if (draft.ruleset !== "mixed") params.set("ruleset", draft.ruleset);
+    if (sourcesKey) params.set("sources", sourcesKey);
+    if (selectedSubclassId) params.set("include", selectedSubclassId);
+    const query = params.toString();
+    fetch(`/api/catalog/class/${classId}${query ? `?${query}` : ""}`)
       .then((r) => r.json())
       .then((data: ClassDetail) => {
         if (!cancelled) setClassDetail(data);
@@ -40,7 +49,7 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
     return () => {
       cancelled = true;
     };
-  }, [classId]);
+  }, [classId, draft.ruleset, sourcesKey, selectedSubclassId]);
 
   const classChoices = resolution
     ? resolution.choices.filter(
@@ -98,6 +107,8 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
             {classDetail.subclasses.map((s) => (
               <option key={s.index} value={s.index}>
                 {s.name}
+                {s.source && s.source !== "SRD" ? ` (${s.source})` : ""}
+                {s.hidden ? " — скрит от текущите филтри" : ""}
               </option>
             ))}
           </select>
