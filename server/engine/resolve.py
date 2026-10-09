@@ -2816,17 +2816,54 @@ def _tag_spell_level_groups(catalog: Catalog, tpl: dict) -> None:
             opt["group"] = f"spell-level-{spell['level']}"
 
 
+def _effective_caster(catalog: Catalog, rc: dict) -> tuple[str, dict, str] | None:
+    """(spellcasting ability, spellcasting dict, spell-list class id) of a
+    resolved class entry, or None. A class with its own spellcasting uses its
+    level row; otherwise a subclass with a third-caster `spellcasting` block
+    (Eldritch Knight, Arcane Trickster) at class level >= 3 yields ability INT
+    and a SYNTHETIC dict (`cantrips_known`, `spells_known`, `spell_slots_level_N`,
+    `spells_kind`) shaped like a class level row's `spellcasting`. The
+    synthetic dict is only handed to _spell_choice_templates; it never lands
+    in `rc["level_row"]`."""
+    cls, cls_id, level = rc["cls"], rc["cls_id"], rc["level"]
+    ability = spells_mod.spellcasting_ability(cls) if cls else None
+    if ability:
+        row = rc.get("level_row")
+        return (ability, row.get("spellcasting") or {}, cls_id) if row else None
+    block = (rc.get("subclass") or {}).get("spellcasting")
+    if not (isinstance(block, dict) and block.get("progression") == "1/3") or level < 3:
+        return None
+    try:
+        sc = {"cantrips_known": block["cantrips"][level - 1], "spells_known": block["spells"][level - 1],
+              "spells_kind": block.get("kind", "known")}
+        for n, count in enumerate(block["slots"][level - 1], start=1):
+            sc[f"spell_slots_level_{n}"] = count
+    except (KeyError, IndexError, TypeError):
+        return None
+    return str(block.get("ability", "INT")).upper(), sc, str(block.get("list_class") or "wizard")
+
+
 def _spell_choice_templates(
     catalog: Catalog, cls: dict, cls_id: str, level_row: dict | None, ability_modifier: int, class_level: int,
     expanded_spell_ids: list[str] = (), always_prepared: dict[str, str] | None = None,
-    sources=None, ruleset: str = "mixed", class_choices: dict | None = None,
+    sources=None, ruleset: str = "mixed", class_choices: dict | None = None, list_class_id: str | None = None,
 ) -> list[dict]:
     """`sources`/`ruleset` (the draft's) decide which catalog spells are
     offered; spells already selected in `class_choices` stay offered either
-    way, so changing the ruleset never silently drops a pick."""
+    way, so changing the ruleset never silently drops a pick. `list_class_id`
+    (default: `cls_id`) is the class whose spell list is offered (a third
+    caster uses the wizard list)."""
     if not level_row:
         return []
     spellcasting = level_row.get("spellcasting") or {}
+    list_id = list_class_id or cls_id
+    list_name = (catalog.classes.get(list_id) or cls)["name"]
+    # An always-prepared spell and its 2014/2024 twin are the same spell.
+    always_ids = dict(always_prepared or {})
+    for sid, why in list(always_ids.items()):
+        twin = catalog.spell_twins.get(sid)
+        if twin:
+            always_ids.setdefault(twin, why)
     templates = []
     # No `level` in source — these choices span every level a spellcaster
     # has reached (count grows as they level up), so they're not anchored
@@ -2841,19 +2878,23 @@ def _spell_choice_templates(
     if cantrips_known > 0:
         envelope = {"choose": cantrips_known, "from": {
             "option_set_type": "options_array",
-            "options": _spell_options(catalog, cls_id, 0, sources, ruleset, _kept(f"class:{cls_id}:spells-cantrips")),
+            "options": _spell_options(catalog, list_id, 0, sources, ruleset, _kept(f"class:{cls_id}:spells-cantrips")),
         }}
         cid = f"class:{cls_id}:spells-cantrips"
-        description = f"Choose {cantrips_known} cantrip{'s' if cantrips_known != 1 else ''} from the {cls['name']} spell list."
+        description = f"Choose {cantrips_known} cantrip{'s' if cantrips_known != 1 else ''} from the {list_name} spell list."
         tpl = build_choice_template(envelope, cid, source, "Cantrips Known", description=description)
         if tpl:
             _tag_spell_level_groups(catalog, tpl)
+            for opt in tpl["options"]:
+                if opt["id"] in always_ids:
+                    opt["disabled"] = True
+                    opt["disabledReason"] = f"always prepared ({always_ids[opt['id']]})"
             templates.append(tpl)
 
     known_count = spells_mod.known_spell_count(level_row, ability_modifier, class_level=class_level, cls_id=cls_id)
     if known_count > 0:
         max_spell_level = _highest_spell_slot_level(spellcasting)
-        option_list = _spell_options_up_to(catalog, cls_id, max_spell_level, sources, ruleset, _kept(f"class:{cls_id}:spells-known"))
+        option_list = _spell_options_up_to(catalog, list_id, max_spell_level, sources, ruleset, _kept(f"class:{cls_id}:spells-known"))
         present = {o["item"]["index"] for o in option_list}
         for sid in expanded_spell_ids:  # e.g. Fiend Expanded Spell List
             spell = catalog.spells[sid]
@@ -2865,18 +2906,18 @@ def _spell_choice_templates(
             "options": option_list,
         }}
         cid = f"class:{cls_id}:spells-known"
-        is_known_caster = spellcasting.get("spells_known") is not None
+        is_known_caster = spellcasting.get("spells_known") is not None and spellcasting.get("spells_kind", "known") == "known"
         label = "Spells Known" if is_known_caster else "Prepared Spells"
         verb = "know" if is_known_caster else "prepare"
         level_word = "spell" if max_spell_level == 1 else f"level-{max_spell_level}-or-lower spell"
-        description = f"Choose {known_count} {level_word}{'s' if known_count != 1 else ''} to {verb} from the {cls['name']} spell list."
+        description = f"Choose {known_count} {level_word}{'s' if known_count != 1 else ''} to {verb} from the {list_name} spell list."
         tpl = build_choice_template(envelope, cid, source, label, description=description)
         if tpl:
             _tag_spell_level_groups(catalog, tpl)
             for opt in tpl["options"]:
-                if opt["id"] in (always_prepared or {}):
+                if opt["id"] in always_ids:
                     opt["disabled"] = True
-                    opt["disabledReason"] = f"always prepared ({always_prepared[opt['id']]})"
+                    opt["disabledReason"] = f"always prepared ({always_ids[opt['id']]})"
             templates.append(tpl)
 
     return templates
@@ -3258,7 +3299,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # Pre-walk inputs use the FINAL character (same simplification as
     # total_level): permissive, never a false disable.
     held.has_spellcasting_feature = any(
-        rc["cls"] and spells_mod.single_class_spell_slots(catalog, rc["cls_id"], rc["level"])
+        rc["cls"] and spells_mod.single_class_spell_slots(catalog, rc["cls_id"], rc["level"], rc["subclass_id"])
         for rc in resolved_classes
     )
     held.race_names, held.subrace_names, held.size = _held_race_state(race, subrace, species_size)
@@ -3633,21 +3674,23 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc_cls, rc_cls_id, rc_level, rc_level_row = rc["cls"], rc["cls_id"], rc["level"], rc.get("level_row")
         if not (rc_cls and rc_cls_id):
             continue
-        spell_ability = spells_mod.spellcasting_ability(rc_cls)
-        if spell_ability and rc_level_row:
+        caster = _effective_caster(catalog, rc)
+        if caster:
+            spell_ability, spell_dict, list_class_id = caster
             raw_feature_ids = {
                 sel for cid, sels in rc["class_choices"].items() if ":feature:" in cid and isinstance(sels, list)
                 for sel in sels if isinstance(sel, str)
             }
             sub_name = rc["subclass"]["name"] if rc["subclass"] else ""
             choice_templates += _spell_choice_templates(
-                catalog, rc_cls, rc_cls_id, rc_level_row, modifiers[spell_ability], class_level=rc_level,
+                catalog, rc_cls, rc_cls_id, {"spellcasting": spell_dict}, modifiers[spell_ability], class_level=rc_level,
                 expanded_spell_ids=_subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc_level, raw_feature_ids, "expanded"),
                 always_prepared={
                     sid: f"{sub_name}" for sid in
                     _subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc_level, raw_feature_ids, "always")
                 },
                 sources=draft.get("sources"), ruleset=ruleset, class_choices=rc["class_choices"],
+                list_class_id=list_class_id,
             )
 
     asi_levels = primary.get("asi_levels", []) if primary else []
@@ -3908,7 +3951,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         always_ids = _subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc["level"], feature_ids, "always")
         if not (rc_cantrip_choice or rc_known_spells_choice or always_ids):
             continue
-        rc_spell_ability = spells_mod.spellcasting_ability(rc_cls) or SUBCLASS_SPELLCASTING_ABILITY.get(rc["subclass_id"] or "")
+        rc_caster = _effective_caster(catalog, rc)
+        rc_spell_ability = (rc_caster[0] if rc_caster else None) or spells_mod.spellcasting_ability(rc_cls) or SUBCLASS_SPELLCASTING_ABILITY.get(rc["subclass_id"] or "")
         rc_save_dc = spells_mod.spell_save_dc(prof_bonus, modifiers[rc_spell_ability]) if rc_spell_ability else None
         rc_attack_bonus = spells_mod.spell_attack_bonus(prof_bonus, modifiers[rc_spell_ability]) if rc_spell_ability else None
         spells_summary.append({
@@ -3927,7 +3971,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # Spell-slot pools: see spells.spell_slots_for for the single-class vs
     # combined multiclass rule and the separate Warlock Pact Magic pool.
     spell_slots, warlock_slots = spells_mod.spell_slots_for(
-        catalog, [(rc["cls_id"], rc["level"]) for rc in resolved_classes if rc["cls"]],
+        catalog, [(rc["cls_id"], rc["level"], rc["subclass_id"]) for rc in resolved_classes if rc["cls"]],
     )
 
     granted_equipment = []
