@@ -306,3 +306,50 @@ def ruleset_allows(record: dict, kind: str, ruleset: str) -> bool:
     if ruleset == "2024":
         return not (kind == "background" and tag == "2014")
     return True
+
+
+# Display names for the source picker (names verified against 5etools
+# books.json; sources it does not list are filled from memory or fall back
+# to the bare source code).
+SOURCE_NAMES: dict[str, str] = {
+    "AAG": "Astral Adventurer's Guide",
+    "ABH": "Astarion's Book of Hungers",
+    "AI": "Acquisitions Incorporated",
+    "BGDIA": "Baldur's Gate: Descent into Avernus",
+    "BGG": "Bigby Presents: Glory of the Giants",
+    "BMT": "The Book of Many Things",
+    "DMG": "Dungeon Master's Guide (2014)",
+    "DSotDQ": "Dragonlance: Shadow of the Dragon Queen",
+    "EEPC": "Elemental Evil Player's Companion",
+    "EFA": "Eberron: Forge of the Artificer",
+    "EGW": "Explorer's Guide to Wildemount",
+    "ERLW": "Eberron: Rising from the Last War",
+    "FRHoF": "Forgotten Realms: Heroes of Faerun",
+    "FTD": "Fizban's Treasury of Dragons",
+    "GGR": "Guildmasters' Guide to Ravnica",
+    "GoS": "Ghosts of Saltmarsh",
+    "LFL": "Lorwyn: First Light",
+    "LR": "Locathah Rising",
+    "MOT": "Mythic Odysseys of Theros",
+    "MPMM": "Mordenkainen Presents: Monsters of the Multiverse",
+    "MTF": "Mordenkainen's Tome of Foes",
+    "OGA": "One Grung Above",
+    "PHB": "Player's Handbook (2014)",
+    "PSA": "Plane Shift: Amonkhet",
+    "PSD": "Plane Shift: Dominaria",
+    "PSI": "Plane Shift: Innistrad",
+    "PSK": "Plane Shift: Kaladesh",
+    "PSX": "Plane Shift: Ixalan",
+    "PSZ": "Plane Shift: Zendikar",
+    "SCAG": "Sword Coast Adventurer's Guide",
+    "SCC": "Strixhaven: A Curriculum of Chaos",
+    "SatO": "Sigil and the Outlands",
+    "TCE": "Tasha's Cauldron of Everything",
+    "TTP": "The Tortle Package",
+    "ToA": "Tomb of Annihilation",
+    "VGM": "Volo's Guide to Monsters",
+    "VRGR": "Van Richten's Guide to Ravenloft",
+    "WBtW": "The Wild Beyond the Witchlight",
+    "XGE": "Xanathar's Guide to Everything",
+    "XPHB": "Player's Handbook (2024)",
+}

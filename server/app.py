@@ -14,8 +14,8 @@ from flask import Flask, Response, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 from catalog.loader import load as load_catalog
-from catalog.reference_data import SUBCLASS_UNLOCK_LEVEL
-from engine.resolve import resolve
+from catalog.reference_data import SOURCE_NAMES, SUBCLASS_UNLOCK_LEVEL, ruleset_allows
+from engine.resolve import _source_allowed, resolve
 from export import to_yaml
 from markdown_export import to_markdown
 from pdf_export import to_pdf
@@ -50,20 +50,51 @@ def api_resolve():
     return jsonify(resolve(draft, _catalog))
 
 
+def _catalog_sources() -> list[dict]:
+    """Every book with at least one species, subspecies, background or feat
+    in the UNFILTERED catalog (so toggling a book off never makes it vanish
+    from the picker), with that record count. SRD content has no source and
+    is always available, so it is not listed."""
+    counts: dict[str, int] = {}
+    for coll in (_catalog.races, _catalog.subraces, _catalog.backgrounds, _catalog.feats):
+        for record in coll.values():
+            src = record.get("source") or ""
+            if src and src.upper() != "SRD":
+                counts[src] = counts.get(src, 0) + 1
+    return [
+        {"id": src, "name": SOURCE_NAMES.get(src, src), "count": n}
+        for src, n in sorted(counts.items(), key=lambda kv: SOURCE_NAMES.get(kv[0], kv[0]).lower())
+    ]
+
+
 @app.route("/api/catalog")
 def api_catalog():
+    """`?ruleset=2014|2024|mixed&sources=phb,xge` hides records the draft
+    could not pick under that ruleset / source list. Both are visibility
+    filters only (resolve() decides what is valid)."""
+    ruleset = request.args.get("ruleset", "mixed")
+    sources = [s for s in (request.args.get("sources") or "").split(",") if s]
+
+    def visible(record: dict, kind: str) -> bool:
+        return _source_allowed(record, sources) and ruleset_allows(record, kind, ruleset)
+
     return jsonify({
         "classes": [{"id": c["index"], "name": c["name"], "hitDie": c["hit_die"]} for c in _catalog.classes.values()],
         "backgrounds": [
-            {"id": b["index"], "name": b["name"], "source": b.get("source", "")} for b in _catalog.backgrounds.values()
+            {"id": b["index"], "name": b["name"], "source": b.get("source", ""), "ruleset": b.get("ruleset", "2014")}
+            for b in _catalog.backgrounds.values() if visible(b, "background")
         ],
         "species": [
             {
-                "id": r["index"], "name": r["name"], "source": r.get("source", ""),
-                "subspecies": [{"id": s["index"], "name": s["name"]} for s in _catalog.subraces_of(r["index"])],
+                "id": r["index"], "name": r["name"], "source": r.get("source", ""), "ruleset": r.get("ruleset", "2014"),
+                "subspecies": [
+                    {"id": s["index"], "name": s["name"], "source": s.get("source", ""), "ruleset": s.get("ruleset", "2014")}
+                    for s in _catalog.subraces_of(r["index"]) if visible(s, "species")
+                ],
             }
-            for r in _catalog.races.values()
+            for r in _catalog.races.values() if visible(r, "species")
         ],
+        "sources": _catalog_sources(),
     })
 
 
