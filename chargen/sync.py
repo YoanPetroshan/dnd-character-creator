@@ -37,19 +37,17 @@ runs and is committed to the repo; --official is a one-time, per-machine
 widening of the catalog that chargen/catalog.py's _merge_official() layers on
 top of the SRD baseline when present, and is never a hard dependency.
 
-Deliberately NOT fetched here, even though 5etools-src also has class/*.json
-and spells/sources.json: no *_from_5etools normalizer exists yet for those
-shapes (chargen/normalise.py only has race/subrace/background_from_5etools;
-Task 3 built class_from_5ebits/spell_from_5ebits for the 2014 SRD shape
-only). Fetching them now would just produce files nothing reads. The SRD
-already fully covers the 2014-ruleset classes/spells the active campaign
-uses. This is a disclosed, deliberate scope cut — a real candidate for its
-own future task if the official 2024 class/spell catalog is ever wanted.
+Spells (Slice 11a.1): --official also fetches spells/index.json,
+spells/sources.json and every book file the index lists into
+official_dir()/spells/ (OFFICIAL_SUBDIR_TARGETS). The server's
+catalog/official/spells.py converts them; chargen itself does not read them.
+Still NOT fetched: class/*.json and items (later Slice 11 steps).
 """
 
 import json
 import os
 import pathlib
+import re
 import sys
 import time
 import urllib.request
@@ -69,6 +67,15 @@ OFFICIAL_TARGETS = [
     {"key": "feats", "filename": "feats.json",
      "desc": "Feats — the full official arsenal (Phase 4c grounding)"},
 ]
+
+# Slice 11a.1: subdirectories of the 5etools data tree. Each lists its own
+# index.json ({"PHB": "spells-phb.json", ...}) whose every file is fetched into
+# official_dir()/<subdir>/ too, alongside the fixed `files` below.
+OFFICIAL_SUBDIR_TARGETS = [
+    {"subdir": "spells", "files": ["index.json", "sources.json"],
+     "desc": "Spells - every book listed in spells/index.json plus the class-list map"},
+]
+_SAFE_SUBDIR_FILE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.json$")
 
 TARGETS = [
     {"key": "spells", "filename": "5e-SRD-Spells.json",
@@ -210,6 +217,32 @@ def _official_dir_is_safe() -> tuple[bool, str]:
     return True, ""
 
 
+def _subdir_index_files(subdir_dir: pathlib.Path) -> list[str]:
+    """The data files listed by <subdir>/index.json: only plain `*.json` file
+    names are accepted (no path separators or leading dots), anything else in
+    the index is ignored, so a hostile index cannot make us write elsewhere."""
+    try:
+        with open(subdir_dir / "index.json", encoding="utf-8") as f:
+            index = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(index, dict):
+        return []
+    names = []
+    for value in index.values():
+        if isinstance(value, str) and _SAFE_SUBDIR_FILE.match(value) and value not in names:
+            names.append(value)
+    return names
+
+
+def _subdir_expected_files(target: dict, root: pathlib.Path) -> list[str]:
+    names = list(target["files"])
+    for name in _subdir_index_files(root / target["subdir"]):
+        if name not in names:
+            names.append(name)
+    return names
+
+
 def cmd_official_status() -> None:
     d = str(official_dir())
     meta = _load_meta(official_dir())
@@ -224,11 +257,62 @@ def cmd_official_status() -> None:
         else:
             print(f"  ✗  {t['key']:12s}  (not downloaded)")
             any_missing = True
+    for st in OFFICIAL_SUBDIR_TARGETS:
+        for rel in _subdir_expected_files(st, pathlib.Path(d)):
+            path = os.path.join(d, st["subdir"], rel)
+            key = f"{st['subdir']}/{rel}"
+            if os.path.exists(path):
+                size_kb = os.path.getsize(path) // 1024
+                pulled = meta.get(key, {}).get("pulled_at", "unknown date")
+                print(f"  ✓  {key:24s}  {size_kb:>5} KB   pulled {pulled}")
+            else:
+                print(f"  ✗  {key:24s}  (not downloaded)")
+                any_missing = True
     if any_missing:
         print("\nRun `python3 -m chargen.sync --official` to download missing files.")
     else:
         print("\nAll official files present. Run `python3 -m chargen.sync --official "
               "--force` to refresh.")
+
+
+def _pull_one(rel: str, url: str, dest_dir: pathlib.Path, meta: dict, meta_dir: pathlib.Path, force: bool) -> str:
+    """Fetches one file into dest_dir; returns "pulled" | "skipped" | "failed"."""
+    dest = dest_dir / pathlib.PurePosixPath(rel).name
+    key = f"{dest_dir.name}/{dest.name}"
+    if dest.exists() and not force:
+        print(f"  skip  {key} (already exists - use --force to refresh)")
+        return "skipped"
+    print(f"  pull  {key} … ", end="", flush=True)
+    t0 = time.time()
+    ok, fetch_msg = _fetch(url, str(dest))
+    if not ok:
+        print(f"FAILED — {fetch_msg}")
+        return "failed"
+    print(f"done ({fetch_msg}, {time.time() - t0:.1f}s)")
+    meta[key] = {
+        "filename": f"{dest_dir.name}/{dest.name}",
+        "pulled_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "url": url,
+    }
+    _save_meta(meta, meta_dir)
+    return "pulled"
+
+
+def _pull_subdir(target: dict, root: pathlib.Path, meta: dict, force: bool) -> tuple[int, int, int]:
+    """Fetches a subdirectory's fixed files, then every file its index.json
+    lists (the index is read after it has been fetched)."""
+    sub = root / target["subdir"]
+    sub.mkdir(parents=True, exist_ok=True)
+    counts = {"pulled": 0, "skipped": 0, "failed": 0}
+    done = set()
+    for name in target["files"]:
+        done.add(name)
+        counts[_pull_one(name, f"{OFFICIAL_BASE_URL}/{target['subdir']}/{name}", sub, meta, root, force)] += 1
+    for name in _subdir_index_files(sub):
+        if name in done:
+            continue
+        counts[_pull_one(name, f"{OFFICIAL_BASE_URL}/{target['subdir']}/{name}", sub, meta, root, force)] += 1
+    return counts["pulled"], counts["skipped"], counts["failed"]
 
 
 def cmd_official_pull(force: bool) -> bool:
@@ -273,6 +357,10 @@ def cmd_official_pull(force: bool) -> bool:
         else:
             print(f"FAILED — {fetch_msg}")
             failed += 1
+
+    for target in OFFICIAL_SUBDIR_TARGETS:
+        p_, s_, f_ = _pull_subdir(target, d, meta, force)
+        pulled, skipped, failed = pulled + p_, skipped + s_, failed + f_
 
     print()
     print(f"Done. Pulled: {pulled}  Skipped: {skipped}  Failed: {failed}")

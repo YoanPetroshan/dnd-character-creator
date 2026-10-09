@@ -83,7 +83,9 @@ from __future__ import annotations
 from .official.paths import (  # noqa: F401
     _repo_root,
     has_official,
+    has_official_spells,
     official_dir,
+    spells_dir,
 )
 from .official.common import (  # noqa: F401
     _ABILITY_KEYS,
@@ -176,4 +178,8 @@ from .official.feats import (  # noqa: F401
     _saving_throw_choices_from_5etools,
     _saving_throw_proficiencies_from_5etools,
     load_official_feats,
+)
+from .official.spells import (  # noqa: F401
+    load_raw_spells,
+    load_spell_class_lookup,
 )

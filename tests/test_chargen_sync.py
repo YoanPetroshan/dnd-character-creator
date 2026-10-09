@@ -336,3 +336,90 @@ def test_status_with_official_flag_reports_both_sections(
     out = capsys.readouterr().out
     assert "Data directory:" in out
     assert "Official data directory:" in out
+
+
+# ---------------------------------------------------------------------------
+# --official: the spells/ subdirectory (Slice 11a.1)
+# ---------------------------------------------------------------------------
+
+
+def _routing_urlopen(files: dict[str, bytes], requested: list):
+    """Serves `files` by the URL's trailing path (e.g. "spells/index.json");
+    anything else is a 404-shaped network error."""
+    def _urlopen(req, timeout=30):
+        url = req.full_url if hasattr(req, "full_url") else req
+        requested.append(url)
+        for suffix, payload in files.items():
+            if url.endswith("/" + suffix):
+                return _FakeResponse(payload)
+        raise urllib.error.HTTPError(url, 404, "not found", {}, None)
+    return _urlopen
+
+
+def _spell_fixture_files():
+    index = {"PHB": "spells-phb.json", "XGE": "spells-xge.json"}
+    return {
+        "races.json": b'{"race": []}',
+        "backgrounds.json": b'{"background": []}',
+        "feats.json": b'{"feat": []}',
+        "spells/index.json": json.dumps(index).encode(),
+        "spells/sources.json": b'{"PHB": {}}',
+        "spells/spells-phb.json": b'{"spell": []}',
+        "spells/spells-xge.json": b'{"spell": []}',
+    }
+
+
+def test_official_pull_fetches_the_spells_index_sources_and_every_listed_file(official_dir_fixture, monkeypatch):
+    requested = []
+    monkeypatch.setattr(sync.urllib.request, "urlopen", _routing_urlopen(_spell_fixture_files(), requested))
+
+    assert sync.cmd_official_pull(force=False) is True
+
+    spells = official_dir_fixture / "spells"
+    assert sorted(p.name for p in spells.iterdir()) == ["index.json", "sources.json", "spells-phb.json", "spells-xge.json"]
+    meta = json.loads((official_dir_fixture / "meta.json").read_text())
+    assert "spells/spells-phb.json" in meta and "spells/index.json" in meta
+
+
+def test_official_pull_spell_files_skip_existing_unless_forced(official_dir_fixture, monkeypatch):
+    requested = []
+    monkeypatch.setattr(sync.urllib.request, "urlopen", _routing_urlopen(_spell_fixture_files(), requested))
+    sync.cmd_official_pull(force=False)
+    (official_dir_fixture / "spells" / "spells-phb.json").write_bytes(b'{"spell": ["local"]}')
+
+    requested.clear()
+    sync.cmd_official_pull(force=False)
+    assert (official_dir_fixture / "spells" / "spells-phb.json").read_bytes() == b'{"spell": ["local"]}'
+    assert not any(u.endswith("spells-phb.json") for u in requested)
+
+    sync.cmd_official_pull(force=True)
+    assert (official_dir_fixture / "spells" / "spells-phb.json").read_bytes() == b'{"spell": []}'
+
+
+def test_official_pull_ignores_unsafe_names_in_the_spells_index(official_dir_fixture, monkeypatch):
+    files = _spell_fixture_files()
+    files["spells/index.json"] = json.dumps(
+        {"PHB": "spells-phb.json", "BAD": "../../evil.json", "WORSE": "/etc/passwd", "ODD": ["x"]}
+    ).encode()
+    requested = []
+    monkeypatch.setattr(sync.urllib.request, "urlopen", _routing_urlopen(files, requested))
+
+    assert sync.cmd_official_pull(force=False) is True
+    assert not any("evil" in u or "passwd" in u for u in requested)
+    assert not (official_dir_fixture.parent / "evil.json").exists()
+    assert (official_dir_fixture / "spells" / "spells-phb.json").exists()
+
+
+def test_official_pull_with_a_generic_stub_still_succeeds_without_spell_files(official_dir_fixture, monkeypatch):
+    # A stub that answers every URL with the same non-index JSON: no files to fetch, no failure.
+    monkeypatch.setattr(sync.urllib.request, "urlopen", _stub_urlopen_ok(b'{"race": []}'))
+    assert sync.cmd_official_pull(force=False) is True
+
+
+def test_official_status_lists_the_spell_files(official_dir_fixture, capsys):
+    (official_dir_fixture / "spells").mkdir(parents=True)
+    (official_dir_fixture / "spells" / "index.json").write_text('{"PHB": "spells-phb.json"}')
+    sync.cmd_official_status()
+    out = capsys.readouterr().out
+    assert "spells/index.json" in out
+    assert "spells/sources.json" in out  # missing one is reported too
