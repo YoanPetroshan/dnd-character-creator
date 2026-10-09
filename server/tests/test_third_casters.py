@@ -191,3 +191,62 @@ def test_eldritch_knight_4_can_take_war_caster_under_2014(catalog):
     assert "feat:war-caster-phb" in asi["selected"]
     champ = resolve(_draft("fighter", 4, "champion", "2014", extra={"preferences": {"usePrerequisites": {"feats": True}}}), catalog)
     assert _opt(_choice(champ, "class:fighter:4:asi"), "feat:war-caster-phb")["disabled"]
+
+
+# --------------------------------------------------- B4: 2014 school limits
+# Verified by script (2014 ruleset, wizard list, slot level 1 / 2): 41 / 101 spells,
+# of which abjuration+evocation 15 / 26 and enchantment+illusion 9 / 23.
+
+def _known(res):
+    return _choice(res, "class:fighter:spells-known")
+
+
+def test_school_limit_groups_options_and_counts(catalog):
+    res = resolve(_draft("fighter", 3, EK, "2014"), catalog)
+    known = _known(res)
+    groups = [o["group"] for o in known["options"]]
+    assert groups.count("school") == 15 and groups.count("any-school") == 41 - 15
+    assert groups == sorted(groups, key=lambda g: g != "school")  # school options first, headings stay consecutive
+    assert all(not o.get("disabled") for o in known["options"])  # nothing picked yet
+
+
+def test_one_outside_pick_is_allowed_at_level_3_then_outside_options_lock(catalog):
+    picks = {"class:fighter:spells-known": ["burning-hands", "charm-person"]}
+    known = _known(resolve(_draft("fighter", 3, EK, "2014", choices=picks), catalog))
+    catapult = _opt(known, "catapult")
+    assert catapult["disabled"] and "1 spell(s) may come from outside abjuration or evocation" in catapult["disabledReason"]
+    assert not _opt(known, "alarm").get("disabled")
+    assert not _opt(known, "charm-person").get("disabled")  # the selected outside pick stays toggle-able
+
+
+def test_level_8_allows_two_outside_picks(catalog):
+    one = {"class:fighter:spells-known": ["charm-person"]}
+    known = _known(resolve(_draft("fighter", 8, EK, "2014", choices=one), catalog))
+    assert not _opt(known, "catapult").get("disabled")
+    two = {"class:fighter:spells-known": ["charm-person", "catapult"]}
+    known = _known(resolve(_draft("fighter", 8, EK, "2014", choices=two), catalog))
+    assert _opt(known, "jump")["disabled"]
+    assert "2 spell(s)" in _opt(known, "jump")["disabledReason"]
+    assert not _opt(known, "alarm").get("disabled")
+
+
+def test_levelling_down_past_the_limit_warns(catalog):
+    two = {"class:fighter:spells-known": ["charm-person", "catapult", "burning-hands"]}
+    res = resolve(_draft("fighter", 3, EK, "2014", choices=two), catalog)
+    assert any(p["id"] == "subclass-spell-school-limit-fighter" for p in res["problems"])
+    ok = resolve(_draft("fighter", 3, EK, "2014", choices={"class:fighter:spells-known": ["charm-person", "alarm", "burning-hands"]}), catalog)
+    assert not any(p["id"] == "subclass-spell-school-limit-fighter" for p in ok["problems"])
+
+
+def test_arcane_trickster_uses_enchantment_and_illusion(catalog):
+    res = resolve(_draft("rogue", 3, AT, "2014"), catalog)
+    groups = [o["group"] for o in _choice(res, "class:rogue:spells-known")["options"]]
+    assert groups.count("school") == 9
+
+
+def test_xphb_subclass_has_no_school_limit(catalog):
+    picks = {"class:fighter:spells-known": ["charm-person", "catapult", "jump"]}
+    known = _known(resolve(_draft("fighter", 3, "eldritch-knight-xphb", "2014", choices=picks), catalog))
+    assert not any(o.get("disabled") for o in known["options"])
+    assert all(o["group"].startswith("spell-level-") for o in known["options"])
+

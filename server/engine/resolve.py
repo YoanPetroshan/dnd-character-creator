@@ -60,7 +60,7 @@ from catalog.loader import Catalog
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
 from catalog.reference_data import (
     ABILITIES, SPECIFIC_WEAPON_PROFICIENCY_IDS, SRD_TRAIT_EFFECTS, SUBCLASS_PROFICIENCIES, SUBCLASS_EXTRA_FEATURES,
-    SUBCLASS_SPELLCASTING_ABILITY, SUBCLASS_UNLOCK_LEVEL, ruleset_allows,
+    SUBCLASS_SPELLCASTING_ABILITY, SUBCLASS_SPELL_SCHOOL_LIMITS, SUBCLASS_UNLOCK_LEVEL, ruleset_allows,
 )
 from . import asi as asi_mod
 from . import attacks as attacks_mod
@@ -2816,6 +2816,37 @@ def _tag_spell_level_groups(catalog: Catalog, tpl: dict) -> None:
             opt["group"] = f"spell-level-{spell['level']}"
 
 
+def _apply_school_limit(
+    catalog: Catalog, tpl: dict, limit: dict, class_level: int, cls_id: str, stored, problems_out: list | None,
+) -> None:
+    """2014 third-caster school limit on the known-spells card (see
+    _spell_choice_templates). Mutates `tpl`."""
+    schools = set(limit["schools"])
+    free = len([lvl for lvl in limit["free_at"] if lvl <= class_level])
+
+    def inside(option_id: str) -> bool:
+        return ((catalog.spells.get(option_id) or {}).get("school") or {}).get("index") in schools
+
+    for opt in tpl["options"]:
+        opt["group"] = "school" if inside(opt["id"]) else "any-school"
+    tpl["options"].sort(key=lambda o: o["group"] != "school")  # stable: keeps (level, name) inside each group
+    valid = {o["id"] for o in tpl["options"] if not o.get("disabled")}
+    picked = [x for x in dict.fromkeys(stored if isinstance(stored, list) else []) if isinstance(x, str) and x in valid]
+    picked = picked[: tpl["count"]]
+    outside = [x for x in picked if not inside(x)]
+    names = " or ".join(limit["schools"])
+    if len(outside) >= free:
+        for opt in tpl["options"]:
+            if opt["group"] == "any-school" and not opt.get("disabled") and opt["id"] not in picked:
+                opt["disabled"] = True
+                opt["disabledReason"] = f"only {free} spell(s) may come from outside {names} at this level"
+    if len(outside) > free and problems_out is not None:
+        problems_out.append({
+            "id": f"subclass-spell-school-limit-{cls_id}",
+            "message": f"{len(outside)} known spells are outside {names} but only {free} are allowed at this level.",
+        })
+
+
 def _effective_caster(catalog: Catalog, rc: dict) -> tuple[str, dict, str] | None:
     """(spellcasting ability, spellcasting dict, spell-list class id) of a
     resolved class entry, or None. A class with its own spellcasting uses its
@@ -2847,12 +2878,18 @@ def _spell_choice_templates(
     catalog: Catalog, cls: dict, cls_id: str, level_row: dict | None, ability_modifier: int, class_level: int,
     expanded_spell_ids: list[str] = (), always_prepared: dict[str, str] | None = None,
     sources=None, ruleset: str = "mixed", class_choices: dict | None = None, list_class_id: str | None = None,
+    school_limit: dict | None = None, problems_out: list | None = None,
 ) -> list[dict]:
     """`sources`/`ruleset` (the draft's) decide which catalog spells are
     offered; spells already selected in `class_choices` stay offered either
     way, so changing the ruleset never silently drops a pick. `list_class_id`
     (default: `cls_id`) is the class whose spell list is offered (a third
-    caster uses the wizard list)."""
+    caster uses the wizard list). `school_limit` (2014 Eldritch Knight /
+    Arcane Trickster, `reference_data.SUBCLASS_SPELL_SCHOOL_LIMITS`) splits the
+    known-spells card into `school` / `any-school` groups, locks the outside
+    options once the stored picks use up the free slots, and appends a
+    `subclass-spell-school-limit-<cls>` problem to `problems_out` when the
+    stored picks exceed them."""
     if not level_row:
         return []
     spellcasting = level_row.get("spellcasting") or {}
@@ -2918,6 +2955,9 @@ def _spell_choice_templates(
                 if opt["id"] in always_ids:
                     opt["disabled"] = True
                     opt["disabledReason"] = f"always prepared ({always_ids[opt['id']]})"
+            if school_limit:
+                _apply_school_limit(catalog, tpl, school_limit, class_level, cls_id,
+                                    (class_choices or {}).get(cid), problems_out)
             templates.append(tpl)
 
     return templates
@@ -3691,6 +3731,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 },
                 sources=draft.get("sources"), ruleset=ruleset, class_choices=rc["class_choices"],
                 list_class_id=list_class_id,
+                school_limit=SUBCLASS_SPELL_SCHOOL_LIMITS.get(rc["subclass_id"] or "") if list_class_id != rc_cls_id else None,
+                problems_out=problems,
             )
 
     asi_levels = primary.get("asi_levels", []) if primary else []
