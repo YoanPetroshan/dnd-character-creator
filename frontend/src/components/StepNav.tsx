@@ -29,8 +29,8 @@ interface Step {
 const STEPS: Step[] = [
   { path: "/home", label: "Home", kind: null },
   { path: "/class", label: "Клас", kind: ["class", "feat"], cidFilter: (id) => id.startsWith("class:") },
-  { path: "/background", label: "Background", kind: ["background", "feat"], cidFilter: (id) => !id.startsWith("class:") },
-  { path: "/species", label: "Species", kind: ["species"] },
+  { path: "/background", label: "Background", kind: ["background", "feat"], cidFilter: (id) => !id.startsWith("class:") && !id.startsWith("species:") },
+  { path: "/species", label: "Species", kind: ["species", "feat"], cidFilter: (id) => id.startsWith("species:") },
   { path: "/abilities", label: "Abilities", kind: null },
   { path: "/equipment", label: "Equipment", kind: ["equipment"] },
   { path: "/export", label: "Export", kind: null },

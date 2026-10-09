@@ -899,6 +899,28 @@ def _darkvision_from_5etools(raw: dict) -> int | None:
     return value if isinstance(value, int) and not isinstance(value, bool) and value > 0 else None
 
 
+def _species_feat_grants_from_5etools(raw: dict) -> list[dict]:
+    """5etools race `feats`: `{"any": n}` (a feat of any eligible category:
+    Custom Lineage, Variant Human) -> `{"count": n, "category": None}`;
+    `{"anyFromCategory": {"category": [c], "count": n}}` (Human/XPHB's
+    Versatile: an Origin feat) -> `{"count": n, "category": c}`. Any other
+    shape is ignored. Only three real records carry the field."""
+    grants = []
+    for entry in raw.get("feats") or []:
+        if not isinstance(entry, dict):
+            continue
+        if isinstance(entry.get("any"), int) and not isinstance(entry["any"], bool):
+            grants.append({"count": entry["any"], "category": None})
+            continue
+        spec = entry.get("anyFromCategory")
+        if isinstance(spec, dict):
+            cats = [c for c in spec.get("category") or [] if isinstance(c, str)]
+            count = spec.get("count", 1)
+            if len(cats) == 1 and isinstance(count, int) and not isinstance(count, bool):
+                grants.append({"count": count, "category": cats[0]})
+    return grants
+
+
 def _resist_options_from_5etools(raw: dict) -> dict | None:
     """The `resist: [{"choose": {"from": [...]}}]` shape (Dragonborn
     ancestry, 2024 Tiefling legacy, Reborn) as a Choice envelope of
@@ -1204,6 +1226,7 @@ def _race_from_5etools(raw: dict, traits_by_index: dict[str, dict]) -> dict | No
         "movement": movement,  # non-walk modes: {fly|swim|climb: int | True (= walking speed)}
         "darkvision": _darkvision_from_5etools(raw),
         "resist_options": _resist_options_from_5etools(raw),
+        "feat_grants": _species_feat_grants_from_5etools(raw),
         "ability_bonuses": _ability_bonuses_from_5etools(raw.get("ability", [])),
         "ability_bonus_options": _ability_bonus_options_from_5etools(raw.get("ability", []), raw.get("lineage")),
         "alignment": "", "age": "", "size": size, "size_description": "",
@@ -1255,6 +1278,7 @@ def _subrace_from_5etools(raw: dict, race_ids: set[str], traits_by_index: dict[s
         "movement": movement,
         "darkvision": _darkvision_from_5etools(raw),
         "resist_options": _resist_options_from_5etools(raw),
+        "feat_grants": _species_feat_grants_from_5etools(raw),
         # 5etools `overwrite.ability`: this subrace's scores REPLACE the race's.
         "overwrite_ability": bool((raw.get("overwrite") or {}).get("ability")),
         "ability_bonuses": _ability_bonuses_from_5etools(raw.get("ability", [])),

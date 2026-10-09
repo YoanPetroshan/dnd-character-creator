@@ -562,7 +562,7 @@ def _innate_entry_to_sheet(entry: dict, catalog: Catalog) -> dict:
 
 def _feat_cid_prefix(feat: dict) -> str:
     """Same cid prefix _feat_choice_templates scopes a feat's choices under."""
-    return feat.get("_asi_origin") or f"feat:{feat['index']}"
+    return feat.get("_asi_origin") or feat.get("_species_origin") or f"feat:{feat['index']}"
 
 
 def _feat_spell_ability(feat: dict, ability, choices: list[dict], feats=(), _follow: bool = True):
@@ -1768,6 +1768,103 @@ def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrac
     return templates
 
 
+def _species_feat_pool(catalog: Catalog, category: str | None, sources) -> list[dict]:
+    """Feats a species feat grant may be spent on. An explicit category
+    ("O": Human/XPHB's Origin feat) offers exactly that category; `None`
+    (the "any" grant of Variant Human and Custom Lineage) offers feats with
+    no category (the 2014 books), General and Origin ones, minus the literal
+    "Ability Score Improvement" entry. Epic Boon, Dragonmark, Fighting
+    Style and Dragon-gift categories stay out. Filtered by draft.sources
+    like every feat, sorted by name."""
+    allowed = {category} if category is not None else {"", "G", "O"}
+    pool = [
+        f for f in catalog.feats.values()
+        if (f.get("category") or "") in allowed and f["name"] != "Ability Score Improvement"
+        and _feat_source_allowed(f, sources)
+    ]
+    pool.sort(key=lambda f: f["name"])
+    return pool
+
+
+def _species_feat_grant_slots(race: dict | None, subrace: dict | None, race_id: str | None) -> list[tuple[str, dict]]:
+    """[(choice id, {"count", "category"})] for the race's and the
+    subrace's `feat_grants`, in that order."""
+    if not (race and race_id):
+        return []
+    slots = [(f"species:{race_id}:feat-{i}", grant) for i, grant in enumerate(race.get("feat_grants") or [])]
+    if subrace:
+        slots += [
+            (f"species:{race_id}:subspecies:{subrace['index']}:feat-{i}", grant)
+            for i, grant in enumerate(subrace.get("feat_grants") or [])
+        ]
+    return slots
+
+
+def _species_feat_choice_template(
+    race: dict, race_id: str, cid: str, grant: dict, catalog: Catalog, sources, scores: dict[str, int],
+    total_level: int, use_prereqs: bool, held: "_HeldFeatState", taken: set[str],
+) -> dict:
+    """One Choice for a species feat grant. A failed prerequisite wins over
+    "already taken" as the disabled reason; the check uses the character's
+    scores before any feat bonus and the total level (permissive, like the
+    ASI pre-walk)."""
+    options = []
+    for feat in _species_feat_pool(catalog, grant["category"], sources):
+        option = {"id": f"feat:{feat['index']}", "label": feat["name"]}
+        reason = _feat_prerequisite_unmet_reason(feat, total_level, scores, use_prereqs, held, catalog)
+        if reason:
+            option["disabled"] = True
+            option["disabledReason"] = reason
+        elif feat["index"] in taken and not feat.get("repeatable"):
+            option["disabled"] = True
+            option["disabledReason"] = "already taken"
+        options.append(option)
+    count = grant["count"]
+    noun = "an Origin feat" if grant["category"] == "O" else "a feat"
+    return {
+        "id": cid, "source": {"kind": "species", "id": race_id, "label": race["name"]},
+        "label": "Origin Feat" if grant["category"] == "O" else "Feat",
+        "description": f"Choose {noun}." if count == 1 else f"Choose {count} feats.",
+        "count": count, "options": options,
+    }
+
+
+def _resolve_species_selected_feats(template: dict, species_choices: dict, catalog: Catalog,
+                                    problems: list[dict]) -> list[dict]:
+    """The feats a species template's stored selection names: deduped, only
+    enabled options, capped to the count. Each is a shallow COPY of the
+    catalog record tagged `_species_origin = "{choice id}:feat:{index}"`
+    (the cid prefix of its own cascaded choices). A stored pick of a
+    disabled option is not applied and is reported (`feat-duplicate-...`
+    for "already taken", `feat-prerequisite-unmet-...` otherwise)."""
+    raw = species_choices.get(template["id"])
+    raw = list(dict.fromkeys(s for s in raw if isinstance(s, str))) if isinstance(raw, list) else []
+    by_id = {o["id"]: o for o in template["options"]}
+    picked = []
+    for option_id in raw:
+        option = by_id.get(option_id)
+        feat = catalog.feats.get(option_id[len("feat:"):]) if option else None
+        if not feat:
+            continue
+        if option.get("disabled"):
+            if option.get("disabledReason") == "already taken":
+                problems.append({
+                    "id": f"feat-duplicate-{feat['index']}-{template['id']}",
+                    "message": f"{feat['name']} was already taken, so the pick at {template['source']['label']} isn't applied.",
+                })
+            else:
+                problems.append({
+                    "id": f"feat-prerequisite-unmet-{feat['index']}",
+                    "message": f"{feat['name']}'s prerequisite isn't met, so the {template['source']['label']} pick isn't applied.",
+                })
+            continue
+        picked.append(feat)
+    return [
+        {**feat, "_species_origin": f"{template['id']}:feat:{feat['index']}"} for feat in picked[: template["count"]]
+    ]
+
+
+
 def _multiclass_prerequisite_problems(resolved_classes: list[dict], final_scores: dict[str, int], use_prerequisites: bool) -> list[dict]:
     """Checks every resolved class's multi_classing.prerequisites (a plain
     list, ALL must be met) or multi_classing.prerequisite_options (an
@@ -1983,7 +2080,7 @@ def _feat_instance_key(feat: dict) -> str:
     falls back to its bare `feat:{index}` — the SAME default cid prefix
     _feat_ability_bonus_choice_templates itself uses for an un-scoped
     (origin=None) call."""
-    return feat.get("_asi_origin") or f"feat:{feat['index']}"
+    return feat.get("_asi_origin") or feat.get("_species_origin") or f"feat:{feat['index']}"
 
 
 def _feat_prerequisite_problems(
@@ -2687,28 +2784,6 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # and put it before earlier levels' cap checks); and its own choice
     # templates are built origin-scoped in the per-class loop, not with the
     # default un-scoped `feat:{index}:...` cids (which would duplicate them).
-    skipped_duplicate_asi_feats: list[dict] = []
-    asi_feat_picks, asi_feat_deltas_by_cid = _resolve_asi_selected_feats(
-        resolved_classes, catalog, draft.get("sources"),
-        taken_indices={f["index"] for f in background_feats}, skipped_duplicates=skipped_duplicate_asi_feats,
-    )
-    for dup in skipped_duplicate_asi_feats:
-        problems.append({
-            "id": f"feat-duplicate-{dup['feat']['index']}-{dup['cid']}",
-            "message": f"{dup['feat']['name']} was already taken, so the pick at {dup['cls']['name']} level {dup['level']} isn't applied.",
-        })
-    asi_feats_by_cid = {f["_asi_cid"]: f for f in asi_feat_picks}
-    # Walk order of every ASI cid (class order, then level) — the "first
-    # pick wins" order _resolve_asi_selected_feats applies duplicates in.
-    asi_feat_order = {
-        f"class:{rc['cls_id']}:{lvl}:asi": n
-        for n, (rc, lvl) in enumerate(
-            (rc, lvl) for rc in resolved_classes if rc["cls_id"] and rc["cls"]
-            for lvl in _asi_granting_levels(catalog, rc["cls_id"], rc["level"])
-        )
-    }
-    prerequisite_blocked_asi_feat_cids: set[str] = set()
-
     species_raw = draft.get("species")
     if species_raw is not None and not isinstance(species_raw, dict):
         problems.append({"id": "malformed-species", "message": "'species' must be an object."})
@@ -2743,6 +2818,39 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         })
         subrace = None
 
+    # Read here (before the per-class loop) so _asi_choice_templates can use
+    # it below; `use_prereqs` (multiclass) is derived from the SAME dict
+    # further down, near _multiclass_prerequisite_problems.
+    use_prerequisites_prefs = (draft.get("preferences") or {}).get("usePrerequisites", {})
+    use_feat_prereqs = bool(use_prerequisites_prefs.get("feats"))
+
+    held = _HeldFeatState()
+    for bg_feat in background_feats:
+        held.add_feat(bg_feat)
+    # Pre-walk inputs use the FINAL character (same simplification as
+    # total_level): permissive, never a false disable.
+    held.has_spellcasting_feature = any(
+        rc["cls"] and spells_mod.single_class_spell_slots(catalog, rc["cls_id"], rc["level"])
+        for rc in resolved_classes
+    )
+    # FIXED proficiency grants only (class, race/subrace traits, background);
+    # proficiency CHOICE selections aren't available before the ASI walk.
+    for rc in resolved_classes:
+        if not rc["cls"]:
+            continue
+        class_profs = (
+            rc["cls"].get("proficiencies", []) if rc["index"] == 0
+            else rc["cls"].get("multi_classing", {}).get("proficiencies", [])
+        )
+        held.proficiency_ids.update(p["index"] for p in class_profs)
+    if race:
+        for ref in list(race.get("traits", [])) + (list(subrace.get("racial_traits", [])) if subrace else []):
+            trait = catalog.traits.get(ref["index"])
+            if trait:
+                held.proficiency_ids.update(p["index"] for p in trait.get("proficiencies", []))
+    if bg:
+        held.proficiency_ids.update(p["index"] for p in bg.get("starting_proficiencies", []))
+
     # Final ability scores: base + species bonuses + background bonuses +
     # feat bonuses. Backgrounds DO grant ability bonuses as of Phase 4b
     # Task 4 — the 2024-style ability-score-improvement choice (see
@@ -2756,7 +2864,6 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # (ability_bonus_options) is no longer an unhandled gap: it's the
     # FOURTH source folded in just below via feat_ability_choice_tpls
     # (Phase 4c-ii Task 2).
-    feat_bonuses = _feat_ability_bonuses(background_feats)  # ASI-selected feats' bonuses: see _apply_asi_progression
     base_scores = (draft.get("abilities") or {}).get("base") or {}
     problems += _ability_method_problems(draft.get("abilities") or {})
     species_bonuses = _species_ability_bonuses(race, subrace)
@@ -2794,6 +2901,61 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         for bundle_id in selected_bundles:
             for ab_key, delta in bundle_deltas.get(bundle_id, []):
                 background_bonuses[ab_key] = background_bonuses.get(ab_key, 0) + delta
+
+    # Slice 8a: feats a species grants (Human/XPHB's Origin feat, Variant
+    # Human's and Custom Lineage's free feat). Resolved BEFORE the ASI walk
+    # so a species pick makes the same feat unavailable at an ASI level
+    # (precedence: background -> species -> ASI levels, first pick wins).
+    # Checked against the scores before any feat bonus and a snapshot of what
+    # the character holds from the background alone.
+    species_choices_raw = species.get("choices") if isinstance(species.get("choices"), dict) else {}
+    species_feat_templates: list[dict] = []
+    species_feats: list[dict] = []
+    if race:
+        pre_feat_scores = {}
+        for ab in derived_mod.ABILITIES:
+            try:
+                raw_base = int(base_scores.get(ab, 10))
+            except (TypeError, ValueError):
+                raw_base = 10
+            pre_feat_scores[ab] = raw_base + species_bonuses.get(ab, 0) + background_bonuses.get(ab, 0)
+        species_held_snapshot = held.copy()
+        taken_feat_indices = {f["index"] for f in background_feats}
+        for slot_cid, grant in _species_feat_grant_slots(race, subrace, race_id):
+            tpl = _species_feat_choice_template(
+                race, race_id, slot_cid, grant, catalog, draft.get("sources"), pre_feat_scores, total_level,
+                use_feat_prereqs, species_held_snapshot, taken_feat_indices,
+            )
+            species_feat_templates.append(tpl)
+            picked = _resolve_species_selected_feats(tpl, species_choices_raw, catalog, problems)
+            species_feats += picked
+            taken_feat_indices |= {f["index"] for f in picked}
+    for species_feat in species_feats:
+        held.add_feat(species_feat)
+
+    skipped_duplicate_asi_feats: list[dict] = []
+    asi_feat_picks, asi_feat_deltas_by_cid = _resolve_asi_selected_feats(
+        resolved_classes, catalog, draft.get("sources"),
+        taken_indices={f["index"] for f in background_feats + species_feats}, skipped_duplicates=skipped_duplicate_asi_feats,
+    )
+    for dup in skipped_duplicate_asi_feats:
+        problems.append({
+            "id": f"feat-duplicate-{dup['feat']['index']}-{dup['cid']}",
+            "message": f"{dup['feat']['name']} was already taken, so the pick at {dup['cls']['name']} level {dup['level']} isn't applied.",
+        })
+    asi_feats_by_cid = {f["_asi_cid"]: f for f in asi_feat_picks}
+    # Walk order of every ASI cid (class order, then level) — the "first
+    # pick wins" order _resolve_asi_selected_feats applies duplicates in.
+    asi_feat_order = {
+        f"class:{rc['cls_id']}:{lvl}:asi": n
+        for n, (rc, lvl) in enumerate(
+            (rc, lvl) for rc in resolved_classes if rc["cls_id"] and rc["cls"]
+            for lvl in _asi_granting_levels(catalog, rc["cls_id"], rc["level"])
+        )
+    }
+    prerequisite_blocked_asi_feat_cids: set[str] = set()
+
+    feat_bonuses = _feat_ability_bonuses(background_feats + species_feats)  # ASI-selected feats' bonuses: see _apply_asi_progression
 
     # Phase 4c-ii Task 2: a FOURTH source into this same early pass — a
     # background-granted feat's own ability_bonus_options CHOICE (as
@@ -2850,6 +3012,24 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                     instance_chosen_deltas.append((ab_key, delta))
             if instance_chosen_deltas:
                 background_chosen_ability_deltas_by_instance[_feat_instance_key(source_feat)] = instance_chosen_deltas
+    # Species-granted feats: the same pass, selections read from
+    # species.choices under each feat's own `_species_origin` prefix.
+    species_feat_ability_tpls: list[dict] = []
+    for species_feat in species_feats:
+        for feat_ability_tpl, source_feat in _feat_ability_bonus_choice_templates([species_feat], origin=species_feat["_species_origin"]):
+            species_feat_ability_tpls.append(feat_ability_tpl)
+            valid_feat_ability_ids = {o["id"] for o in feat_ability_tpl["options"] if not o.get("disabled")}
+            raw_selected = species_choices_raw.get(feat_ability_tpl["id"]) or []
+            deduped_selected = list(dict.fromkeys(s for s in raw_selected if isinstance(s, str)))
+            selected_feat_abilities = [s for s in deduped_selected if s in valid_feat_ability_ids][: feat_ability_tpl["count"]]
+            feat_ability_deltas = _feat_ability_bonus_deltas(source_feat["ability_bonus_options"])
+            instance_chosen_deltas = []
+            for ab_id in selected_feat_abilities:
+                for ab_key, delta in feat_ability_deltas.get(ab_id, []):
+                    feat_bonuses[ab_key] = feat_bonuses.get(ab_key, 0) + delta
+                    instance_chosen_deltas.append((ab_key, delta))
+            if instance_chosen_deltas:
+                background_chosen_ability_deltas_by_instance[_feat_instance_key(source_feat)] = instance_chosen_deltas
 
     final_scores: dict[str, int] = {}
     for ab in derived_mod.ABILITIES:
@@ -2863,39 +3043,6 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     for ab, score in final_scores.items():
         if not (1 <= score <= 30):
             problems.append({"id": f"ability-out-of-range-{ab}", "message": f"{ab} score {score} is out of the 1-30 range."})
-
-    # Read here (before the per-class loop) so _asi_choice_templates can use
-    # it below; `use_prereqs` (multiclass) is derived from the SAME dict
-    # further down, near _multiclass_prerequisite_problems.
-    use_prerequisites_prefs = (draft.get("preferences") or {}).get("usePrerequisites", {})
-    use_feat_prereqs = bool(use_prerequisites_prefs.get("feats"))
-
-    held = _HeldFeatState()
-    for bg_feat in background_feats:
-        held.add_feat(bg_feat)
-    # Pre-walk inputs use the FINAL character (same simplification as
-    # total_level): permissive, never a false disable.
-    held.has_spellcasting_feature = any(
-        rc["cls"] and spells_mod.single_class_spell_slots(catalog, rc["cls_id"], rc["level"])
-        for rc in resolved_classes
-    )
-    # FIXED proficiency grants only (class, race/subrace traits, background);
-    # proficiency CHOICE selections aren't available before the ASI walk.
-    for rc in resolved_classes:
-        if not rc["cls"]:
-            continue
-        class_profs = (
-            rc["cls"].get("proficiencies", []) if rc["index"] == 0
-            else rc["cls"].get("multi_classing", {}).get("proficiencies", [])
-        )
-        held.proficiency_ids.update(p["index"] for p in class_profs)
-    if race:
-        for ref in list(race.get("traits", [])) + (list(subrace.get("racial_traits", [])) if subrace else []):
-            trait = catalog.traits.get(ref["index"])
-            if trait:
-                held.proficiency_ids.update(p["index"] for p in trait.get("proficiencies", []))
-    if bg:
-        held.proficiency_ids.update(p["index"] for p in bg.get("starting_proficiencies", []))
 
     choice_templates: list[dict] = []
     for rc in resolved_classes:
@@ -2940,7 +3087,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             rc_cls_id, rc_cls["name"], rc_asi_levels, rc_asi_scores_by_level, catalog, total_level, use_feat_prereqs,
             draft.get("sources"),
             taken_by_level={
-                lvl: {f["index"] for f in background_feats}
+                lvl: {f["index"] for f in background_feats + species_feats}
                 | {f["index"] for f in asi_feat_picks if asi_feat_order.get(f["_asi_cid"], 1 << 30) < asi_feat_order.get(f"class:{rc_cls_id}:{lvl}:asi", -1)}
                 for lvl in rc_asi_levels
             },
@@ -2971,7 +3118,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 ]
 
     asi_selected_feats = [f for f in asi_feat_picks if f["_asi_cid"] not in prerequisite_blocked_asi_feat_cids]
-    resolved_feats = background_feats + asi_selected_feats
+    resolved_feats = background_feats + species_feats + asi_selected_feats
 
     use_prereqs = bool(use_prerequisites_prefs.get("multiclass"))
     problems += _multiclass_prerequisite_problems(resolved_classes, final_scores, use_prereqs)
@@ -3073,6 +3220,15 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # early) get appended to choice_templates at their own call sites,
     # rather than rebuilding the templates a second time here.
     choice_templates += feat_ability_choice_tpls
+    for species_tpl in species_feat_templates:
+        choice_templates.append(species_tpl)
+    for species_feat in species_feats:
+        origin = species_feat["_species_origin"]
+        choice_templates += _feat_choice_templates([species_feat], origin=origin)
+        choice_templates += _feat_spell_choice_templates(
+            [species_feat], catalog, origin=origin, raw_selections=species_choices_raw, total_level=total_level,
+        )
+    choice_templates += species_feat_ability_tpls
     if race and race_id:
         choice_templates += _species_choice_templates(catalog, race, race_id, subrace)
         if species_ability_choice_tpl:
@@ -3662,7 +3818,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         # Background grants keep their bare-slug ids (unchanged); a feat
         # taken at an ASI level is appended by its full catalog index
         # (e.g. "actor-xphb") — the exact id it was selected by.
-        "grantedFeats": granted_feats + [f["index"] for f in asi_selected_feats],
+        "grantedFeats": granted_feats + [f["index"] for f in species_feats] + [f["index"] for f in asi_selected_feats],
         "featOptions": feat_options,
         "senses": senses,
         "expertiseSkills": expertise_all,

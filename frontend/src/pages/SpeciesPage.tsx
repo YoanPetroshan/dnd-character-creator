@@ -25,7 +25,12 @@ export function SpeciesPage() {
     dispatch({ type: "SET_CHOICE_SELECTION", source: "species", choiceId, selected });
   }
 
-  const choices = resolution ? resolution.choices.filter((c) => c.source.kind === "species") : [];
+  // A species-granted feat (Human/XPHB's Origin feat, Variant Human) is a
+  // "species:" choice, and its cascaded choices (proficiencies, spells, ...)
+  // have source.kind "feat" but a "species:" cid, so they show here too.
+  const choices = resolution
+    ? resolution.choices.filter((c) => c.source.kind === "species" || (c.source.kind === "feat" && c.id.startsWith("species:")))
+    : [];
 
   return (
     <div className="page">

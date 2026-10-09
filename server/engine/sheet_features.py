@@ -103,14 +103,14 @@ def build_features(catalog, resolved_classes, refs_by_class, race, race_id, subr
 
 
 def feats_summary(feats: list[dict], choices: list[dict]) -> list[dict]:
-    """sheet.feats: [{id, name, origin: "background"|"asi", level, choice?}]."""
+    """sheet.feats: [{id, name, origin: "background"|"species"|"asi", level, choice?}]."""
     out = []
     for feat in feats:
-        prefix = feat.get("_asi_origin") or f"feat:{feat['index']}"
+        prefix = feat.get("_asi_origin") or feat.get("_species_origin") or f"feat:{feat['index']}"
         labels = _prefixed_labels(choices, "feat", prefix)
         entry = {
             "id": feat["index"], "name": feat["name"],
-            "origin": "asi" if feat.get("_asi_cid") else "background",
+            "origin": "asi" if feat.get("_asi_cid") else "species" if feat.get("_species_origin") else "background",
             "level": feat.get("_asi_level"),
         }
         if labels:

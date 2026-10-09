@@ -169,7 +169,7 @@ export interface SheetFeature {
 export interface SheetFeat {
   id: string;
   name: string;
-  origin: "background" | "asi";
+  origin: "background" | "species" | "asi";
   level: number | null;
   choice?: string[];
 }

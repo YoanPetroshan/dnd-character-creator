@@ -32,7 +32,7 @@ export function BackgroundPage() {
   // — those belong on ClassPage only, which already scopes by that same
   // "class:" cid prefix.
   const choices = resolution
-    ? resolution.choices.filter((c) => (c.source.kind === "background" || c.source.kind === "feat") && !c.id.startsWith("class:"))
+    ? resolution.choices.filter((c) => (c.source.kind === "background" || c.source.kind === "feat") && !c.id.startsWith("class:") && !c.id.startsWith("species:"))
     : [];
 
   return (
