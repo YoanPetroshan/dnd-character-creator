@@ -250,3 +250,23 @@ def test_xphb_subclass_has_no_school_limit(catalog):
     assert not any(o.get("disabled") for o in known["options"])
     assert all(o["group"].startswith("spell-level-") for o in known["options"])
 
+
+
+# ------------------------------------------------------------- B5 pruning
+
+def test_levelling_down_prunes_the_extra_known_spells(catalog):
+    six = ["shield", "magic-missile", "burning-hands", "alarm", "mage-armor", "thunderwave"]
+    ok = resolve(_draft("fighter", 8, EK, "mixed", choices={"class:fighter:spells-known": six}), catalog)
+    assert _known(ok)["count"] == 6 and _known(ok)["status"] == "resolved"
+    down = resolve(_draft("fighter", 3, EK, "mixed", choices={"class:fighter:spells-known": six}), catalog)
+    assert _known(down)["count"] == 3 and _known(down)["selected"] == six[:3]
+    assert any(p["choiceId"] == "class:fighter:spells-known" and "now allows 3" in p["reason"] for p in down["pruned"])
+
+
+def test_switching_to_champion_prunes_the_spell_picks(catalog):
+    picks = {"class:fighter:spells-known": ["shield"], "class:fighter:spells-cantrips": ["light", "fire-bolt"]}
+    res = resolve(_draft("fighter", 3, "champion", choices=picks), catalog)
+    assert _known(res) is None
+    reasons = {p["choiceId"]: p["reason"] for p in res["pruned"]}
+    assert "no longer applies" in reasons["class:fighter:spells-known"]
+    assert "no longer applies" in reasons["class:fighter:spells-cantrips"]
