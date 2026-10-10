@@ -338,11 +338,26 @@ def test_fighter_4_2024_asi_offers_fs_feats(catalog):
     archery = next(o for o in opts if o["id"] == "feat:archery-xphb")
     assert not archery.get("disabled")
     ids = {o["id"] for o in opts}
-    assert {"feat:blessed-warrior-xphb", "feat:druidic-warrior-xphb"} <= ids
+    # F1: Blessed / Druidic Warrior need the level-2 Paladin / Ranger feature: not in ASI pools.
+    assert not {"feat:blessed-warrior-xphb", "feat:druidic-warrior-xphb"} & ids
     assert "feat:arcane-warrior-au" in ids  # AU "G"-style feats are in the 2024 pool (A1)
     taken = _res(catalog, [("fighter", 4)], choices={"fighter": {"class:fighter:1:fighting-style": ["feat:archery-xphb"]}})
     state = next(o for o in _asi(taken, "fighter", 4)["options"] if o["id"] == "feat:archery-xphb")
     assert state["disabled"] and state["disabledReason"] == "already taken"
+
+
+@needs_data
+def test_blessed_and_druidic_warrior_only_from_their_class_cards(catalog):
+    """F1: FS:P / FS:R need the level-2 Paladin / Ranger Fighting Style feature, so they are
+    not ASI options for anyone (Fighter, Paladin or Ranger), only on the class cards."""
+    for cls, feat in (("paladin", "blessed-warrior-xphb"), ("ranger", "druidic-warrior-xphb")):
+        res = _res(catalog, [(cls, 4)], choices={cls: {f"class:{cls}:4:asi": [f"feat:{feat}"]}})
+        assert _opt(_asi(res, cls, 4), feat) is None
+        assert _opt(_card(res, cls, 2), feat) and not _opt(_card(res, cls, 2), feat).get("disabled")
+        assert not any(f["id"] == feat for f in res["sheet"]["feats"])
+        assert any(p["choiceId"] == f"class:{cls}:4:asi" for p in res["pruned"])
+        via_card = _res(catalog, [(cls, 4)], choices={cls: {f"class:{cls}:2:fighting-style": [f"feat:{feat}"]}})
+        assert any(f["id"] == feat for f in via_card["sheet"]["feats"])
 
 
 @needs_data

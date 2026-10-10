@@ -2591,7 +2591,11 @@ _ASI_FEAT_CATEGORIES_DEFAULT = {"", "G", "O"}
 _ASI_EPIC_BOON_LEVEL = 19
 _ASI_CID_RE = re.compile(r"^class:[^:]+:\d+:asi$")
 _ASI_EXCLUDED_FEAT_INDICES = {"ability-score-improvement-xphb"}
-_FIGHTING_STYLE_CATEGORIES = {"FS", "FS:P", "FS:R"}
+# F1: only plain FS feats are ASI-eligible. Blessed Warrior (FS:P) and Druidic Warrior
+# (FS:R) require the level-2 Paladin / Ranger Fighting Style feature itself, so they come
+# only from the Paladin / Ranger fighting-style cards.
+_FIGHTING_STYLE_CATEGORIES = {"FS"}
+_FS_FEAT_CATEGORIES = {"FS", "FS:P", "FS:R"}  # every Fighting Style feat category (cards, effects)
 
 
 def _is_asi_eligible_feat(feat: dict, ruleset: str = "mixed", slot_level: int = 4, fighting_style: bool = False) -> bool:
@@ -2603,7 +2607,7 @@ def _is_asi_eligible_feat(feat: dict, ruleset: str = "mixed", slot_level: int = 
     by _asi_feat_pool (which options to offer) and _resolve_asi_selected_feats
     (which selections to honor) so the two can't drift apart.
 
-    C3 (U3): the Fighting Style feats (FS, FS:P, FS:R) are eligible under 2024 and
+    C3 (U3): the Fighting Style feats (FS only, F1) are eligible under 2024 and
     mixed when the character has a Fighting Style feature (`fighting_style`), never
     under 2014. The 2014 chassis keeps its SRD fighting-style subfeatures instead."""
     if feat["index"] in _ASI_EXCLUDED_FEAT_INDICES or feat["name"] == "Ability Score Improvement":
@@ -3639,7 +3643,7 @@ def _class_feature_list(
                 out.append((src["id"], lvl, sel))
     first = next((rc for rc in resolved_classes if rc["cls_id"] and rc["cls"]), None)
     for feat in feats or []:
-        if feat.get("category") in _FIGHTING_STYLE_CATEGORIES and first:
+        if feat.get("category") in _FS_FEAT_CATEGORIES and first:
             origin = feat.get("_asi_origin") or ""
             rc = next((r for r in resolved_classes if origin.startswith(f"class:{r['cls_id']}:")), first)
             out.append((rc["cls_id"], rc["level"], feat["index"]))
@@ -3990,8 +3994,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     for species_feat in species_feats:
         held.add_feat(species_feat)
 
-    # C3: 2024 fighting-style feat cards (precedence: background, species, fighting
-    # style, ASI levels; first pick wins).
+    # C3: 2024 fighting-style feat cards (precedence: background, species, then
+    # fighting-style cards and ASI picks together by class level, F1; first pick wins).
     fs_slots_by_class = {
         rc["index"]: _fighting_style_slots(catalog, rc, draft.get("sources"), ruleset)
         for rc in resolved_classes if rc["cls"] and rc["cls_id"]

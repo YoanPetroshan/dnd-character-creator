@@ -107,6 +107,6 @@ def test_single_edition_rulesets_unchanged(catalog, ruleset):
     r = resolve(_draft(ruleset, background="acolyte", level=4), catalog)
     tpl = next(c for c in r["choices"] if c["id"] == "class:fighter:4:asi")
     assert not [o for o in tpl["options"] if o.get("disabledReason", "").startswith("already taken")]
-    # A1 counts for a Fighter: 123 feats + 21 ASI combos (2014); 142 + 21 (2024, 129 before C3
-    # added the 13 Fighting Style feats) are asserted in test_asi_feat_eligibility.py.
-    assert len(tpl["options"]) == {"2014": 123, "2024": 142}[ruleset] + 21
+    # A1 counts for a Fighter: 123 feats + 21 ASI combos (2014); 140 + 21 (2024, 129 before C3
+    # added the 11 plain Fighting Style feats; FS:P / FS:R excluded in F1) are asserted in test_asi_feat_eligibility.py.
+    assert len(tpl["options"]) == {"2014": 123, "2024": 140}[ruleset] + 21
