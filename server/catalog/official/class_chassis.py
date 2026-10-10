@@ -141,3 +141,55 @@ def convert_class_chassis_2024(records: dict, srd_classes: dict) -> dict[str, di
                                "proficiencies": mc_proficiencies, "proficiency_choices": mc_choices},
         }
     return out
+
+
+# ---- C6d: XPHB class `additionalSpells` ----------------------------------------------------
+
+# Spells that the XPHB data lists as always prepared but whose text does not say so.
+# Druid 2 Find Familiar (decision E9): Wild Companion only reads "As a Magic action, you can expend a
+# spell slot or a use of Wild Shape to cast the Find Familiar spell without Material components."; the
+# spell is never "always prepared", so it is not granted. (Druid 1 Speak with Animals stays: Druidic says
+# "you always have the Speak with Animals spell prepared".)
+_NOT_ALWAYS_PREPARED = {("druid", 2): {"find-familiar"}}
+
+
+def convert_class_spell_grants_2024(records: dict, resolve_spell) -> dict[str, dict]:
+    """{class id: {"always": {class level: [spell ids]}, "expanded": {level key: parsed filter}}}
+    from the raw `additional_spells` of the XPHB class records. `resolve_spell` maps a spell slug
+    to a catalog spell id or None (the `|xphb` spells resolve to `-xphb` ids). Spells that do not
+    resolve and filters that do not parse are dropped (an SRD-only catalog gives {}); classes
+    with nothing left are omitted. `expanded` keys are the XPHB ones: a class level ("10") or
+    "s<N>" for spell slot level N."""
+    from .feats import _parse_spell_filter
+
+    out: dict[str, dict] = {}
+    for cls_id, record in (records or {}).items():
+        always: dict[int, list[str]] = {}
+        expanded: dict[str, dict] = {}
+        for block in record.get("additional_spells") or []:
+            if not isinstance(block, dict):
+                continue
+            prepared = block.get("prepared") if isinstance(block.get("prepared"), dict) else {}
+            for level_key, names in prepared.items():
+                if not (str(level_key).isdigit() and isinstance(names, list)):
+                    continue
+                level = int(level_key)
+                for name in names:
+                    if not isinstance(name, str):
+                        continue
+                    base = slug(name.split("|")[0])
+                    if base in _NOT_ALWAYS_PREPARED.get((cls_id, level), ()):
+                        continue
+                    spell_id = resolve_spell(base + "-xphb") or resolve_spell(base)
+                    if spell_id and spell_id not in always.setdefault(level, []):
+                        always[level].append(spell_id)
+            for level_key, items in (block.get("expanded") or {}).items() if isinstance(block.get("expanded"), dict) else ():
+                for item in items if isinstance(items, list) else []:
+                    text = item.get("all") if isinstance(item, dict) else None
+                    parsed = _parse_spell_filter(text) if isinstance(text, str) else None
+                    if parsed:
+                        expanded[str(level_key)] = parsed
+        always = {lvl: ids for lvl, ids in always.items() if ids}
+        if always or expanded:
+            out[cls_id] = {"always": always, "expanded": expanded}
+    return out

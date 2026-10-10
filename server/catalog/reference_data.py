@@ -758,3 +758,27 @@ CLASS_LANGUAGES_2024: dict[str, dict] = {
 PRIMAL_KNOWLEDGE_2024: dict[str, object] = {
     "feature": "xphb-barbarian-3-primal-knowledge", "class": "barbarian", "level": 3,
 }
+
+
+# C6d: XPHB Wizard spell picks that are "always prepared" (ruleset 2024 only), keyed by the choice-id
+# tail. Texts (XPHB, read from catalog.features):
+#   Spell Mastery (18)   "Choose a level 1 and a level 2 spell in your spellbook that have a casting time of an
+#                        action. You always have those spells prepared, and you can cast them at their lowest
+#                        level without expending a spell slot."
+#   Signature Spells (20) "Choose two level 3 spells in your spellbook as your signature spells. You always have
+#                        these spells prepared, and you can cast each of them once at level 3 without expending a
+#                        spell slot."
+# Keys: feature (the XPHB feature record that must exist), class_level, spell_level, count, casting_time (None =
+# no condition), label (card label), grant (the always-prepared reason, also the sheet.features row name),
+# sheet_key (key on the Wizard sheet.spells entry).
+WIZARD_SPELL_PICKS_2024: dict[str, dict] = {
+    "spell-mastery-1": {"feature": "xphb-wizard-18-spell-mastery", "class_level": 18, "spell_level": 1, "count": 1,
+                        "casting_time": "1 action", "label": "Spell Mastery (level 1)", "grant": "Spell Mastery",
+                        "sheet_key": "spellMastery"},
+    "spell-mastery-2": {"feature": "xphb-wizard-18-spell-mastery", "class_level": 18, "spell_level": 2, "count": 1,
+                        "casting_time": "1 action", "label": "Spell Mastery (level 2)", "grant": "Spell Mastery",
+                        "sheet_key": "spellMastery"},
+    "signature-spells": {"feature": "xphb-wizard-20-signature-spells", "class_level": 20, "spell_level": 3, "count": 2,
+                         "casting_time": None, "label": "Signature Spells", "grant": "Signature Spells",
+                         "sheet_key": "signatureSpells"},
+}

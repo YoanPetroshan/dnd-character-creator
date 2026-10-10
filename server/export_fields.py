@@ -77,6 +77,10 @@ _DAMAGE_NAMES_BG = {
 }
 
 
+# C6d: Wizard 18 / 20 spell picks printed under the class's spells (key on the sheet.spells entry, label).
+SPELL_PICK_LINES = (("spellMastery", "Майсторство със заклинания"), ("signatureSpells", "Запазени заклинания"))
+
+
 def resource_detail_parts(details: dict | None) -> list[str]:
     """Short Bulgarian fragments for a class resource's `details` (only what is meaningful)."""
     d = details or {}

@@ -393,3 +393,107 @@ def dice_at_level(dice_by_level: dict[int, str], level: int) -> str | None:
     """The dice string of the highest reached level key, None below the first."""
     reached = [lvl for lvl in dice_by_level if lvl <= level]
     return dice_by_level[max(reached)] if reached else None
+
+
+# ---- C6d: class spell grants (always prepared, Magical Secrets, Spell Mastery, Signature Spells) ----
+
+MAGICAL_SECRETS_LABEL = "Magical Secrets"
+
+
+def class_spell_grants(catalog, cls_id: str | None, ruleset: str) -> dict:
+    """The XPHB `additionalSpells` grants of one class ({} outside 2024 or without the data)."""
+    if ruleset != "2024" or not cls_id:
+        return {}
+    return (getattr(catalog, "class_2024_spell_grants", None) or {}).get(cls_id) or {}
+
+
+def always_prepared_class_spells(catalog, cls_id: str | None, class_level: int, class_name: str, ruleset: str) -> dict[str, str]:
+    """{spell id: reason} of the spells this class always has prepared at `class_level` (Ranger 1
+    Hunter's Mark, Paladin 2 Divine Smite, ...). The reason is the class name. Only spells in the
+    catalog are returned."""
+    out: dict[str, str] = {}
+    for level, ids in sorted(class_spell_grants(catalog, cls_id, ruleset).get("always", {}).items()):
+        if level <= class_level:
+            out.update({sid: class_name for sid in ids if sid in catalog.spells})
+    return out
+
+
+def magical_secrets_filters(catalog, cls_id: str | None, class_level: int, max_slot_level: int, ruleset: str) -> list[dict]:
+    """Parsed spell filters of the class's `expanded` grants that apply now: the key is a class level
+    ("10") or "s<N>" (needs a spell slot of level N). Bard 10: Cleric, Druid and Wizard spells of
+    level 1-5, then 6-9 as the slots arrive."""
+    out = []
+    for key, flt in class_spell_grants(catalog, cls_id, ruleset).get("expanded", {}).items():
+        if key.isdigit():
+            ok = class_level >= int(key)
+        elif key[:1] == "s" and key[1:].isdigit():
+            ok = max_slot_level >= int(key[1:])
+        else:
+            ok = False
+        if ok:
+            out.append(flt)
+    return out
+
+
+def label_magical_secrets(catalog, templates: list[dict], cls_id: str | None, class_level: int, ruleset: str) -> None:
+    """Marks the options of the class's prepared-spells card that are not on its own spell list
+    ("Fireball (Magical Secrets)"). Mutates the templates; no-op without an expanded grant."""
+    if not magical_secrets_filters(catalog, cls_id, class_level, 9, ruleset):
+        return
+    for tpl in templates:
+        if tpl["id"] != f"class:{cls_id}:spells-known":
+            continue
+        for opt in tpl["options"]:
+            spell = catalog.spells.get(opt["id"])
+            if spell and not any(c["index"] == cls_id for c in spell.get("classes", [])):
+                opt["label"] = f"{opt['label']} ({MAGICAL_SECRETS_LABEL})"
+
+
+def spell_pick_cid(slug: str, spec: dict) -> str:
+    return f"class:wizard:{spec['class_level']}:{slug}"
+
+
+def effective_picks(options, stored, count: int) -> list[str]:
+    """What the generic choice pass resolves a stored selection to: deduplicated, strings only,
+    valid (offered, not disabled) options, first `count`."""
+    valid = {o["id"] for o in options if not o.get("disabled")}
+    picked = list(dict.fromkeys(x for x in stored if isinstance(x, str))) if isinstance(stored, list) else []
+    return [x for x in picked if x in valid][:count]
+
+
+def wizard_spell_pick_templates(catalog, class_level: int, book_ids: list[str], source: dict, ruleset: str,
+                                class_choices: dict | None) -> tuple[list[dict], dict[str, str]]:
+    """Spell Mastery (Wizard 18) and Signature Spells (Wizard 20), ruleset 2024 only.
+
+    Returns ([card templates], {spell id: reason}). `book_ids` is the effective spellbook (what the
+    spellbook card resolves to). Options are the book spells of the pick's spell level, with the
+    casting time condition when the rule has one. The reason map holds the picks the generic pass
+    will resolve (valid stored picks), so the prepared card can disable them. An empty book (or no
+    spell that fits) gives an option-less pending card. No card without the XPHB feature record."""
+    from catalog.reference_data import WIZARD_SPELL_PICKS_2024
+
+    if ruleset != "2024":
+        return [], {}
+    templates, always = [], {}
+    for slug, spec in WIZARD_SPELL_PICKS_2024.items():
+        if class_level < spec["class_level"] or spec["feature"] not in catalog.features:
+            continue
+        spells = sorted(
+            (catalog.spells[sid] for sid in book_ids if sid in catalog.spells
+             and catalog.spells[sid]["level"] == spec["spell_level"]
+             and (spec["casting_time"] is None or catalog.spells[sid].get("casting_time") == spec["casting_time"])),
+            key=lambda s: s["name"])
+        cid = spell_pick_cid(slug, spec)
+        condition = f" that have a casting time of {spec['casting_time'].replace('1 ', 'an ')}" if spec["casting_time"] else ""
+        description = (f"Choose {spec['count']} level {spec['spell_level']} spell{'s' if spec['count'] != 1 else ''} in your "
+                       f"spellbook{condition}. You always have them prepared.")
+        if not spells:
+            description = ("Choose spells for your spellbook first." if not book_ids
+                           else f"No spell in your spellbook is eligible (level {spec['spell_level']}{condition}).")
+        tpl = {"id": cid, "source": {**source, "level": spec["class_level"]}, "label": spec["label"],
+               "description": description, "count": spec["count"],
+               "options": [{"id": s["index"], "label": s["name"]} for s in spells]}
+        templates.append(tpl)
+        for sid in effective_picks(tpl["options"], (class_choices or {}).get(cid), spec["count"]):
+            always[sid] = spec["grant"]
+    return templates, always

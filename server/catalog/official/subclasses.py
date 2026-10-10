@@ -158,7 +158,8 @@ def load_class_2024_records(class_dir) -> dict[str, dict]:
     raw featProgression list, "features": [{"name", "level", "ref"}] (the
     `classFeatures` refs in order, placeholders included), "starting_proficiencies",
     "multiclassing", "starting_equipment": the raw 5etools values, plus C9a's "saving_throws" (the
-    raw `proficiency` list) and "primary_ability" (the raw `primaryAbility` list)}} (C1, data only).
+    raw `proficiency` list) and "primary_ability" (the raw `primaryAbility` list), C6c-1's
+    "optional_feature_progression" and C6d's "additional_spells" (raw `additionalSpells`)}} (C1, data only).
     {} when the directory or index is missing."""
     out: dict[str, dict] = {}
     for raw in _raw_class_records(class_dir, "class"):
@@ -180,6 +181,7 @@ def load_class_2024_records(class_dir) -> dict[str, dict]:
             "saving_throws": list(raw.get("proficiency") or []),  # C9a: ["str", "con"]
             "primary_ability": list(raw.get("primaryAbility") or []),  # C9a: [{"str": True}, {"dex": True}]
             "optional_feature_progression": list(raw.get("optionalfeatureProgression") or []),  # C6c-1
+            "additional_spells": list(raw.get("additionalSpells") or []),  # C6d: raw always-prepared / expanded spells
         }
     return out
 

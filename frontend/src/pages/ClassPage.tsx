@@ -12,7 +12,7 @@ import { SpellSlotsSummary } from "../components/SpellSlotsSummary";
 type ClassTab = "features" | "spells";
 
 function isSpellChoiceId(choiceId: string): boolean {
-  return choiceId.endsWith(":spells-cantrips") || choiceId.endsWith(":spells-known") || choiceId.endsWith(":spellbook") || choiceId.includes(":mystic-arcanum-");
+  return choiceId.endsWith(":spells-cantrips") || choiceId.endsWith(":spells-known") || choiceId.endsWith(":spellbook") || choiceId.includes(":mystic-arcanum-") || choiceId.includes(":spell-mastery-") || choiceId.endsWith(":signature-spells");
 }
 
 interface ClassDetail {

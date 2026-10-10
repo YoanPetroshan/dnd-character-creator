@@ -9,7 +9,7 @@ already produces them — no new engine computation happens here.
 from __future__ import annotations
 
 from catalog.reference_data import ABILITIES, LANGUAGE_NAMES, SKILL_NAMES, proficiency_label
-from export_fields import extra_blocks, worn_wielded_line
+from export_fields import SPELL_PICK_LINES as _SPELL_PICK_LINES, extra_blocks, worn_wielded_line
 
 _LANGUAGE_NAMES = LANGUAGE_NAMES
 _PROFICIENCY_SECTIONS = (("armor", "Брони"), ("weapons", "Оръжия"), ("tools", "Инструменти"))
@@ -240,6 +240,11 @@ def to_markdown(resolution: dict) -> str:
                 arcanum = ", ".join(f"{m['name']} (ниво {m['level']})" for m in class_spells["mysticArcanum"])
                 lines.append(f"- **Мистичен арканум{suffix}:** {arcanum}")
                 lines.append("")
+            for key, label in _SPELL_PICK_LINES:  # C6d: Wizard 18 / 20 picks
+                if class_spells.get(key):
+                    picked = ", ".join(f"{s['name']} (ниво {s['level']})" for s in class_spells[key])
+                    lines.append(f"- **{label}{suffix}:** {picked}")
+                    lines.append("")
         lines.append("")
 
     innate = sheet.get("innateSpells") or []

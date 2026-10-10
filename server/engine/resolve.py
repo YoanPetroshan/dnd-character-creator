@@ -61,7 +61,7 @@ from catalog.loader import Catalog
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
 from catalog.reference_data import (
     ABILITIES, SPECIFIC_WEAPON_PROFICIENCY_IDS, SRD_TRAIT_EFFECTS, SUBCLASS_PROFICIENCIES, SUBCLASS_EXTRA_FEATURES,
-    SUBCLASS_SPELLCASTING_ABILITY, SUBCLASS_SPELL_SCHOOL_LIMITS, ruleset_allows, subclass_unlock_level,
+    SUBCLASS_SPELLCASTING_ABILITY, SUBCLASS_SPELL_SCHOOL_LIMITS, WIZARD_SPELL_PICKS_2024, ruleset_allows, subclass_unlock_level,
 )
 from . import asi as asi_mod
 from . import attacks as attacks_mod
@@ -3167,7 +3167,9 @@ def _is_count_variable_choice(tpl: dict) -> bool:
         return True  # C2: Weapon Mastery count follows the class table
     if tpl["source"]["kind"] == "class" and ":invocations:" in tpl["id"]:
         return True  # Eldritch Invocations known follow the warlock level table
-    return tpl["source"]["kind"] == "class" and tpl["id"].endswith((":spells-cantrips", ":spells-known", ":spellbook"))
+    # C6d: Spell Mastery / Signature Spells picks follow the spellbook and the class level
+    return tpl["source"]["kind"] == "class" and tpl["id"].endswith(
+        (":spells-cantrips", ":spells-known", ":spellbook", ":spell-mastery-1", ":spell-mastery-2", ":signature-spells"))
 
 
 def _tag_spell_level_groups(catalog: Catalog, tpl: dict) -> None:
@@ -3346,6 +3348,15 @@ def _spell_choice_templates(
         stored_book = list(dict.fromkeys(x for x in stored_book if isinstance(x, str))) if isinstance(stored_book, list) else []
         # Same rule as the generic pass: first `count` valid picks.
         wizard_book = [x for x in stored_book if x in valid_book][: book_tpl["count"]]
+    # C6d (2024): Wizard 18 Spell Mastery / Wizard 20 Signature Spells; their picks are always prepared
+    pick_templates: list[dict] = []
+    if wizard_book is not None:
+        pick_templates, pick_always = class_choices_2024.wizard_spell_pick_templates(
+            catalog, class_level, wizard_book, source, ruleset, class_choices)
+        for sid, why in pick_always.items():
+            for key in (sid, catalog.spell_twins.get(sid)):
+                if key:
+                    always_ids.setdefault(key, why)
     if known_count > 0:
         max_spell_level = _highest_spell_slot_level(spellcasting)
         if wizard_book is not None:
@@ -3388,7 +3399,7 @@ def _spell_choice_templates(
                                     (class_choices or {}).get(cid), problems_out)
             templates.append(tpl)
 
-    return templates
+    return templates + pick_templates
 
 
 # C2: 2024 Weapon Mastery. XPHB class feature at level 1 of Barbarian, Fighter,
@@ -4371,18 +4382,31 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 for sel in sels if isinstance(sel, str)
             }
             sub_name = rc["subclass"]["name"] if rc["subclass"] else ""
-            choice_templates += _spell_choice_templates(
+            # C6d (2024): class always-prepared spells (Ranger Hunter's Mark, ...) and Bard Magical Secrets
+            class_always = class_choices_2024.always_prepared_class_spells(catalog, rc_cls_id, rc_level, rc_cls["name"], ruleset)
+            secrets_ids = [
+                o["item"]["index"] for flt in class_choices_2024.magical_secrets_filters(
+                    catalog, rc_cls_id, rc_level, _highest_spell_slot_level(spell_dict), ruleset)
+                for o in _spell_filter_options(
+                    catalog, flt, draft.get("sources"), ruleset,
+                    {x for x in (rc["class_choices"].get(f"class:{rc_cls_id}:spells-known") or []) if isinstance(x, str)})
+            ]
+            spell_templates = _spell_choice_templates(
                 catalog, rc_cls, rc_cls_id, {"spellcasting": spell_dict}, modifiers[spell_ability], class_level=rc_level,
-                expanded_spell_ids=_subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc_level, raw_feature_ids, "expanded"),
+                expanded_spell_ids=_subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc_level, raw_feature_ids, "expanded")
+                + secrets_ids,
                 always_prepared={
-                    sid: f"{sub_name}" for sid in
-                    _subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc_level, raw_feature_ids, "always")
+                    **class_always,
+                    **{sid: f"{sub_name}" for sid in
+                       _subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc_level, raw_feature_ids, "always")},
                 },
                 sources=draft.get("sources"), ruleset=ruleset, class_choices=rc["class_choices"],
                 list_class_id=list_class_id,
                 school_limit=SUBCLASS_SPELL_SCHOOL_LIMITS.get(rc["subclass_id"] or "") if list_class_id != rc_cls_id else None,
                 problems_out=problems,
             )
+            class_choices_2024.label_magical_secrets(catalog, spell_templates, rc_cls_id, rc_level, ruleset)
+            choice_templates += spell_templates
 
     asi_levels = primary.get("asi_levels", []) if primary else []
     level_row = primary.get("level_row") if primary else None
@@ -4653,6 +4677,17 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc_known_spells_choice = next((c for c in choices if c["id"] == f"class:{rc_cls_id}:spells-known"), None)
         feature_ids = {idx for cid_, lvl_, idx in _class_feature_list(catalog, [rc], choices)}
         always_ids = _subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc["level"], feature_ids, "always")
+        # C6d (2024): class grants (Hunter's Mark, ...) and the Wizard's Spell Mastery / Signature picks
+        always_ids = always_ids + [
+            sid for sid in class_choices_2024.always_prepared_class_spells(catalog, rc_cls_id, rc["level"], "", ruleset)
+            if sid not in always_ids]
+        wizard_pick_keys: dict[str, list[dict]] = {}
+        if rc_cls_id == "wizard" and ruleset == "2024":
+            for slug_, spec in WIZARD_SPELL_PICKS_2024.items():
+                card = next((c for c in choices if c["id"] == class_choices_2024.spell_pick_cid(slug_, spec)), None)
+                if card:
+                    wizard_pick_keys.setdefault(spec["sheet_key"], []).extend(_spell_summaries(card))
+            always_ids = always_ids + [s["id"] for picks in wizard_pick_keys.values() for s in picks if s["id"] not in always_ids]
         if not (rc_cantrip_choice or rc_known_spells_choice or always_ids):
             continue
         rc_caster = _effective_caster(catalog, rc, ruleset)
@@ -4673,6 +4708,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             "known": _spell_summaries(rc_known_spells_choice),
             **({"spellbook": _spell_summaries(next((c for c in choices if c["id"] == "class:wizard:spellbook"), None))}
                if rc_cls_id == "wizard" else {}),
+            **wizard_pick_keys,
             # Subclass spells (Life domain, oath spells, ...): always
             # prepared, outside the known/prepared limits.
             "alwaysPrepared": [

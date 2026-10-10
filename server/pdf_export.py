@@ -14,7 +14,7 @@ from pathlib import Path
 from fpdf import FPDF
 
 from catalog.reference_data import ABILITIES, LANGUAGE_NAMES, SKILL_NAMES, proficiency_label
-from export_fields import extra_blocks, worn_wielded_line
+from export_fields import SPELL_PICK_LINES as _SPELL_PICK_LINES, extra_blocks, worn_wielded_line
 
 _FONT_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
 _LANGUAGE_NAMES = LANGUAGE_NAMES
@@ -243,6 +243,10 @@ def to_pdf(resolution: dict) -> bytes:
             if class_spells.get("mysticArcanum"):
                 arcanum = ", ".join(f"{m['name']} (ниво {m['level']})" for m in class_spells["mysticArcanum"])
                 pdf.body(f"Мистичен арканум{suffix}: {arcanum}")
+            for key, label in _SPELL_PICK_LINES:  # C6d: Wizard 18 / 20 picks
+                if class_spells.get(key):
+                    picked = ", ".join(f"{s['name']} (ниво {s['level']})" for s in class_spells[key])
+                    pdf.body(f"{label}{suffix}: {picked}")
 
     innate = sheet.get("innateSpells") or []
     if innate:

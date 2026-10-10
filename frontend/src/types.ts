@@ -107,6 +107,10 @@ export interface SheetClassSpells {
   spellbook?: SheetSpellSummary[];
   /** Subclass spells (domain/oath/circle): always prepared, outside the limits. */
   alwaysPrepared: SheetSpellSummary[];
+  /** Wizard 18+ (2024): the Spell Mastery picks (always prepared; cast at the lowest level at will). */
+  spellMastery?: SheetSpellSummary[];
+  /** Wizard 20 (2024): the two Signature Spells (always prepared; one free cast per rest). */
+  signatureSpells?: SheetSpellSummary[];
   /** Warlock only: the Mystic Arcanum picks (level 6-9 spells, one per gained level). */
   mysticArcanum?: { level: number; id: string; name: string }[];
   spellSaveDC: number | null;

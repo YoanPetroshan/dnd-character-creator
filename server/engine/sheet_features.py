@@ -118,6 +118,17 @@ def _order_labels(choices: list[dict]) -> dict[str, tuple[str, list[str]]]:
     return out
 
 
+def _spell_pick_labels(choices: list[dict]) -> dict[tuple[str, str], list[str]]:
+    """{(class id, feature name): spell names} of the Wizard's Spell Mastery / Signature Spells cards (C6d)."""
+    from catalog.reference_data import WIZARD_SPELL_PICKS_2024
+    names = {f"class:wizard:{spec['class_level']}:{slug}": spec["grant"] for slug, spec in WIZARD_SPELL_PICKS_2024.items()}
+    out: dict[tuple[str, str], list[str]] = {}
+    for c in choices:
+        if c["source"]["kind"] == "class" and c["id"] in names and c["selected"]:
+            out.setdefault(("wizard", names[c["id"]]), []).extend(_labels(c))
+    return out
+
+
 def _xphb_class_rows(catalog, cls_id: str, class_level: int) -> list[tuple[int, str, int, str]]:
     """[(level, name, ordinal, XPHB feature id)] of the XPHB class feature list up to class_level,
     in level order; ordinal = how many features of the same name came before (Indomitable
@@ -144,6 +155,7 @@ def build_features(catalog, resolved_classes, refs_by_class, race, race_id, subr
     fs_labels = _fighting_style_labels(choices) if ruleset == "2024" else {}
     mastery_labels = _mastery_labels(choices) if ruleset == "2024" else {}
     order_labels = _order_labels(choices) if ruleset == "2024" else {}
+    spell_pick_labels = _spell_pick_labels(choices) if ruleset == "2024" else {}
 
     for rc in resolved_classes:
         if not rc["cls"] or not rc["cls_id"]:
@@ -202,6 +214,9 @@ def build_features(catalog, resolved_classes, refs_by_class, race, race_id, subr
                 by_target.setdefault(("Weapon Mastery", 0), []).extend(mastery_labels[cls_id])
             if cls_id in order_labels:
                 by_target.setdefault((order_labels[cls_id][0], 0), []).extend(order_labels[cls_id][1])
+            for (c_id, feature_name), labels in spell_pick_labels.items():  # C6d
+                if c_id == cls_id:
+                    by_target.setdefault((feature_name, 0), []).extend(labels)
             placed: set[tuple[str, int]] = set()
             for lvl, name, ordinal, fid in xphb_rows:
                 labels = by_target.get((name, ordinal), []) + by_fid.get(fid, [])

@@ -67,6 +67,9 @@ class Catalog:
     # C9a: full merged class dicts with the XPHB proficiencies / skill and tool choices /
     # multiclass proficiencies; read by resolve() only under ruleset "2024".
     classes_2024: dict[str, dict] = field(default_factory=dict)
+    # C6d: XPHB class `additionalSpells` as {class id: {"always": {class level: [spell ids]},
+    # "expanded": {XPHB level key: parsed spell filter}}}; read by resolve() only under "2024".
+    class_2024_spell_grants: dict[str, dict] = field(default_factory=dict)
     # Level-row indexes (class_id, level) / (subclass_id, level) -> row, built
     # lazily and rebuilt when the number of rows changes.
     _row_index: tuple | None = field(default=None, repr=False, compare=False)
@@ -192,9 +195,10 @@ def _merge_official_items(catalog: Catalog) -> None:
 
 def _merge_class_chassis_2024(catalog: Catalog) -> None:
     """C9a: builds `catalog.classes_2024` from the XPHB class records (empty without them)."""
-    from .official_source import convert_class_chassis_2024
+    from .official_source import convert_class_chassis_2024, convert_class_spell_grants_2024
 
     catalog.classes_2024 = convert_class_chassis_2024(catalog.class_2024_records, catalog.classes)
+    catalog.class_2024_spell_grants = convert_class_spell_grants_2024(catalog.class_2024_records, catalog.resolve_spell_id)
 
 
 def load() -> Catalog:
