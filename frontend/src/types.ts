@@ -39,6 +39,8 @@ export interface Choice {
   options: ChoiceOption[];
   selected: string[];
   status: ChoiceStatus;
+  /** Options granted automatically (e.g. Elemental Attunement); not pickable. */
+  granted?: { id: string; label: string }[];
 }
 
 export interface Problem {

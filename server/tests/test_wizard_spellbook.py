@@ -189,3 +189,12 @@ def test_prune_message_blames_the_spellbook_not_the_count(catalog):
     assert "not in your spellbook" in reason and "now allows" not in reason
     assert _choice(res, PREP)["selected"] == [] and res["problems"] == []  # D7: prune, non-blocking
 
+
+def test_pruned_cap_counts_entries_added_after_the_generic_pass(catalog):
+    """F2-D: the cap is applied last, so later gate entries are counted and the marker ends the list."""
+    junk = {f"class:wizard:1:junk-{i}": ["x"] for i in range(5000)}
+    res = resolve(_draft(3, {PREP: _book(catalog, 3, 4), **junk}), catalog)
+    assert len(res["pruned"]) == 201
+    assert res["pruned"][-1]["choiceId"] == "pruned-more"
+    assert "4801" in res["pruned"][-1]["reason"]
+    assert sum(p["choiceId"] == "pruned-more" for p in res["pruned"]) == 1

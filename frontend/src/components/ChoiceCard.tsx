@@ -41,6 +41,9 @@ export function ChoiceCard({ choice, onToggle, defaultExpanded = false }: Choice
       {expanded && (
         <div className="choice-card__body">
           <p>{choice.description}</p>
+          {choice.granted && choice.granted.length > 0 && (
+            <p>Получавате автоматично: {choice.granted.map((g) => g.label).join(", ")}</p>
+          )}
           <ChoicePicker choice={choice} onToggle={onToggle} />
         </div>
       )}

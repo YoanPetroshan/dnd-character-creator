@@ -3060,12 +3060,15 @@ def _is_mastery_choice(tpl: dict) -> bool:
 def _is_count_variable_choice(tpl: dict) -> bool:
     """True for the spell choices whose allowed count follows the class
     level table / casting modifier (see _spell_choice_templates), so a
-    stored over-count is staleness rather than a malformed Draft. Mirrors
-    `isSpellChoice` in frontend/src/pages/ClassPage.tsx."""
+    stored over-count is staleness rather than a malformed Draft. Broader than
+    the frontend `isSpellChoiceId` in frontend/src/pages/ClassPage.tsx (which
+    only sorts spell cards into the Spells tab): this also covers level-scaled
+    feat spell picks, Weapon Mastery and Eldritch Invocations, which the
+    frontend does not treat as spell cards."""
     if tpl.get("count_by_level"):
-        return True
+        return True  # level-scaled feat spell picks (Ritual Caster) and Elemental Attunement: over-count is staleness
     if tpl["source"]["kind"] == "class" and tpl["id"].endswith(":weapon-mastery"):
-        return True  # C2: Weapon Mastery count follows the class table  # level-scaled feat spell picks (Ritual Caster): over-count is staleness
+        return True  # C2: Weapon Mastery count follows the class table
     if tpl["source"]["kind"] == "class" and ":invocations:" in tpl["id"]:
         return True  # Eldritch Invocations known follow the warlock level table
     return tpl["source"]["kind"] == "class" and tpl["id"].endswith((":spells-cantrips", ":spells-known", ":spellbook"))
@@ -4469,13 +4472,6 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                     "choiceId": choice_id,
                     "reason": f"'{name}' can't be taken at this Ability Score Improvement and was ignored.",
                 })
-    if len(pruned) > MAX_PRUNED_REPORTED:
-        extra = len(pruned) - MAX_PRUNED_REPORTED
-        pruned = pruned[:MAX_PRUNED_REPORTED] + [{
-            "choiceId": "pruned-more",
-            "reason": f"...and {extra} more stale selections were ignored.",
-        }]
-
     choices: list[dict] = []
     for tpl in choice_templates:
         valid_ids = {o["id"] for o in tpl["options"] if not o.get("disabled")}
@@ -5086,9 +5082,17 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "weaponMasteries": weapon_masteries,
     }
 
+    if len(pruned) > MAX_PRUNED_REPORTED:  # F2-D: cap last, so every gate's entries count and the marker ends the list
+        extra = len(pruned) - MAX_PRUNED_REPORTED
+        pruned = pruned[:MAX_PRUNED_REPORTED] + [{
+            "choiceId": "pruned-more",
+            "reason": f"...and {extra} more stale selections were ignored.",
+        }]
+
     return {
         "sheet": sheet,
-        "choices": choices,
+        # F2-C: `count_by_level` is an internal template key (count-variable test), not API shape.
+        "choices": [{k: v for k, v in c.items() if k != "count_by_level"} for c in choices],
         "derived": derived,
         "problems": problems,
         "warnings": warnings,

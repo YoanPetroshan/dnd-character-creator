@@ -128,3 +128,11 @@ def test_battle_master_unchanged(catalog):
     d = _draft(3, cls="fighter", sub="battle-master-phb")
     ch = next(c for c in resolve(d, catalog)["choices"] if c["id"] == cid)
     assert ch["count"] == 3 and len(ch["options"]) == 23 and "granted" not in ch
+
+
+@needs_official
+def test_internal_count_by_level_key_is_not_in_the_api_choices(catalog):
+    """F2-C: the internal template key never reaches resolve()'s choices."""
+    res = resolve(_draft(3), catalog)
+    assert "count_by_level" not in _choice(res)
+    assert all("count_by_level" not in c for c in res["choices"])
