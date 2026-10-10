@@ -172,7 +172,7 @@ def _equipment_member(raw) -> dict:
         mapped = CLASS_2024_EQUIPMENT_ITEM_MAP.get(name)
         if mapped:
             index, per_unit = mapped
-            label = {"arrow": "Arrows", "robes": "Robes", "quarterstaff": "Druidic Focus (Quarterstaff)"}.get(index, index)
+            label = {"arrow": "Arrows (20)", "robes": "Robes", "quarterstaff": "Druidic Focus (Quarterstaff)"}.get(index, index)
             return _counted(index, label, per_unit * quantity)
     member = _equipment_bundle_member_from_5etools(raw)
     index = member["of"]["index"] if member.get("option_type") == "counted_reference" else ""

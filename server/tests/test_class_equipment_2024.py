@@ -24,7 +24,7 @@ pack contents, not the per-class lines). Choose A or B (Fighter A, B or C); gold
             Scholar's Pack, 15 GP | (B) 100 GP
   Wizard    (A) 2 Daggers, Arcane Focus (Quarterstaff), Robe, Spellbook, Scholar's Pack, 5 GP | (B) 55 GP
 
-Name -> catalog item map (the catalog is the SRD item list): "Arrows (20)" -> `arrow` x20, "Robe" ->
+Name -> catalog item map (the catalog is the SRD item list): "Arrows (20)" -> ONE `arrow` (the catalog item is already a 20-pack; F3a-6), "Robe" ->
 `robes`, "Spellbook" -> `spellbook`, "Druidic Focus (Quarterstaff)" -> `quarterstaff`, "Holy Symbol"
 -> a nested pick over the Holy Symbol table (Amulet / Emblem / Reliquary, PHB ch. 6), "Musical
 Instrument" -> a nested pick over the instruments, the Monk's tool -> the sentinel `monk-tool` (the
@@ -67,15 +67,15 @@ EXPECTED = {
               "B": (["gp-50"], {})},
     "fighter": {"A": (["chain-mail", "greatsword", "flail", "javelin", "dungeoneers-pack", "gp-4"], {"javelin": 8}),
                 "B": (["studded-leather-armor", "scimitar", "shortsword", "longbow", "arrow", "quiver",
-                       "dungeoneers-pack", "gp-11"], {"arrow": 20}),
+                       "dungeoneers-pack", "gp-11"], {}),
                 "C": (["gp-155"], {})},
     "monk": {"A": (["spear", "dagger", "monk-tool", "explorers-pack", "gp-11"], {"dagger": 5}), "B": (["gp-50"], {})},
     "paladin": {"A": (["chain-mail", "shield", "longsword", "javelin", "any-holy-symbols", "priests-pack", "gp-9"],
                       {"javelin": 6}), "B": (["gp-150"], {})},
     "ranger": {"A": (["studded-leather-armor", "scimitar", "shortsword", "longbow", "arrow", "quiver",
-                      "sprig-of-mistletoe", "explorers-pack", "gp-7"], {"arrow": 20}), "B": (["gp-150"], {})},
+                      "sprig-of-mistletoe", "explorers-pack", "gp-7"], {}), "B": (["gp-150"], {})},
     "rogue": {"A": (["leather-armor", "dagger", "shortsword", "shortbow", "arrow", "quiver", "thieves-tools",
-                     "burglars-pack", "gp-8"], {"dagger": 2, "arrow": 20}), "B": (["gp-100"], {})},
+                     "burglars-pack", "gp-8"], {"dagger": 2}), "B": (["gp-100"], {})},
     "sorcerer": {"A": (["spear", "dagger", "crystal", "dungeoneers-pack", "gp-28"], {"dagger": 2}), "B": (["gp-50"], {})},
     "warlock": {"A": (["leather-armor", "sickle", "dagger", "orb", "book", "scholars-pack", "gp-15"], {"dagger": 2}),
                 "B": (["gp-100"], {})},
@@ -234,7 +234,7 @@ def test_fighter_a_javelins_and_ranger_a_arrows_keep_their_quantity(catalog):
     assert _chosen(res)["javelin"] == 8 and _chosen(res)["chain-mail"] == 1
     base = resolve(_draft("ranger"), catalog)
     res = resolve(_draft("ranger", eq={_cid("ranger"): [_opt_id(base, "ranger", "A")]}), catalog)
-    assert _chosen(res)["arrow"] == 20 and _chosen(res)["quiver"] == 1 and _chosen(res)["sprig-of-mistletoe"] == 1
+    assert _chosen(res)["arrow"] == 1 and _chosen(res)["quiver"] == 1 and _chosen(res)["sprig-of-mistletoe"] == 1
 
 
 @needs_data

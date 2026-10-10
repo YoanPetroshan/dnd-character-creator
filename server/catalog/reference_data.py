@@ -304,11 +304,12 @@ MARTIAL_LIGHT_PROFICIENCY_ID = "martial-weapons-light"
 
 # C9b: XPHB class starting-equipment names that are not a plain catalog item name (the catalog is
 # the SRD item list). Keys are the lower-cased 5etools item name; values are (catalog item id,
-# count per unit). Source: the `entries` line of each XPHB class record, e.g. Druid "Druidic Focus
+# count per unit; F3a-6: the catalog `arrow` item is already a 20-pack, quantity 20, weight 1, so "Arrows (20)" is ONE
+# unit of it). Source: the `entries` line of each XPHB class record, e.g. Druid "Druidic Focus
 # (Quarterstaff)", Fighter "Arrows (20)|XPHB|20 Arrows", Wizard "Robe". "holy symbol" and the musical
 # instrument are nested picks, the Monk's tool is the sentinel below.
 CLASS_2024_EQUIPMENT_ITEM_MAP = {
-    "arrows (20)": ("arrow", 20),
+    "arrows (20)": ("arrow", 1),
     "robe": ("robes", 1),
     "druidic focus": ("quarterstaff", 1),
 }

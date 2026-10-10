@@ -287,3 +287,24 @@ def test_f5_origin_pick_before_a_later_lessons_feat_keeps_its_language(catalog):
     assert origin["selected"] == ["draconic", "elvish"] and origin["status"] == "resolved"
     assert "draconic" in res["sheet"]["proficiencies"]["languages"]
     assert not [p for p in res["pruned"] if p["choiceId"] == "origin:languages"]
+
+
+# --- Finding 6: "Arrows (20)" is ONE catalog `arrow` item (already a 20-pack) ----------------------------------------
+
+@needs_data
+def test_f6_ranger_package_a_arrows_are_one_pack_and_the_carried_weight_is_35(catalog):
+    cid = "class:ranger:1:equipment-choice-0"
+    d = _draft([("ranger", 1, None, {})])
+    base = resolve(d, catalog)
+    option = next(o for o in _card(base, cid)["options"] if "arrow" in o["id"])
+    assert "Arrows (20)" in option["label"] and "arrow" not in option.get("quantities", {})
+    d["classes"][0]["choices"][cid] = [option["id"]]
+    bg_cid = "background:soldier-xphb:equipment-choice-0"
+    d["background"]["choices"][bg_cid] = [_card(base, bg_cid)["options"][0]["id"]]
+    res = resolve(d, catalog)
+    assert next(e for e in res["sheet"]["equipment"]["chosen"] if e["itemId"] == "arrow")["qty"] == 1
+    assert res["derived"]["carryingCapacity"]["carried"] == 35
+
+
+def test_f6_arrow_and_bolt_catalog_items_are_packs_of_twenty(catalog):
+    assert catalog.items["arrow"]["quantity"] == 20 and catalog.items["crossbow-bolt"]["quantity"] == 20
