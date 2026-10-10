@@ -19,6 +19,7 @@ Resource shape (see the plan, "Resource shape"):
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -128,12 +129,40 @@ def _barbarian(ctx: Ctx, rc: dict) -> list[dict]:
     resistances = ["bludgeoning", "piercing", "slashing"]
     if reference_data.TOTEM_BEAR_OPTION_ID in _picked_option_ids(ctx, "barbarian"):
         # 2014 Totem Warrior Bear: every damage type except psychic. The 2024
-        # Wild Heart per-rage choice is not modelled.
+        # Wild Heart per-rage options are listed in details.perRageOptions.
         resistances = [t for t in reference_data.DAMAGE_TYPES if t != "psychic"]
     details = {"damageBonus": bonus, "resistances": resistances}
     if from_table:
         details["shortRestRegains"] = 1
+    options = _wild_heart_rage_options(ctx, rc)
+    if options:
+        details["perRageOptions"] = options
     return [_resource(rc, "Rage", uses=uses, unlimited=unlimited, recharge="long", details=details)]
+
+
+# G1: (feature id, minimum Barbarian level) of the XPHB Wild Heart features that
+# give a choice of one option each time the Rage is activated.
+_WILD_HEART_RAGE_FEATURES = (
+    ("wild-heart-xphb-3-rage-of-the-wilds", 3),
+    ("wild-heart-xphb-14-power-of-the-wilds", 14),
+)
+
+
+def _wild_heart_rage_options(ctx: Ctx, rc: dict) -> list[dict]:
+    """[{name, effect}] from the catalog text of Rage of the Wilds / Power of the Wilds
+    ("Bear. While your Rage is active, ..."); 2024 ruleset and the Wild Heart only."""
+    if ctx.ruleset != "2024" or rc.get("subclass_id") != "wild-heart-xphb":
+        return []
+    out = []
+    for fid, min_level in _WILD_HEART_RAGE_FEATURES:
+        feature = ctx.catalog.features.get(fid)
+        if not feature or rc["level"] < min_level:
+            continue
+        for line in feature.get("desc") or []:
+            m = re.match(r"^([A-Z][a-z]+)\. (.+)$", line)
+            if m:
+                out.append({"name": m.group(1), "effect": m.group(2)})
+    return out
 
 
 def _rogue(ctx: Ctx, rc: dict) -> list[dict]:

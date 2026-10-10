@@ -44,6 +44,12 @@ function detailParts(d: Record<string, unknown> | undefined): string[] {
   if (typeof d.knownForms === "number") parts.push(`известни форми: ${d.knownForms}`);
   if (d.fly === true) parts.push("летене");
   if (d.swim === true) parts.push("плуване");
+  const options = d.perRageOptions;
+  if (Array.isArray(options) && options.length > 0)
+    parts.push(
+      "при всяка ярост една от опциите: " +
+        options.map((o: { name: string; effect: string }) => `${o.name}: ${o.effect}`).join("; "),
+    );
   return parts;
 }
 
