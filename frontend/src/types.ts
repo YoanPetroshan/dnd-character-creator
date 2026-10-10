@@ -111,6 +111,8 @@ export interface SheetClassSpells {
   spellMastery?: SheetSpellSummary[];
   /** Wizard 20 (2024): the two Signature Spells (always prepared; one free cast per rest). */
   signatureSpells?: SheetSpellSummary[];
+  /** Warlock (2024) with Pact of the Tome: the Book of Shadows cantrips, then the two rituals (prepared, function as Warlock spells). */
+  pactOfTheTome?: SheetSpellSummary[];
   /** Warlock only: the Mystic Arcanum picks (level 6-9 spells, one per gained level). */
   mysticArcanum?: { level: number; id: string; name: string }[];
   spellSaveDC: number | null;

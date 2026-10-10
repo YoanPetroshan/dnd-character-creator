@@ -6,6 +6,8 @@ returns "nothing", so the SRD cards stay.
 """
 from __future__ import annotations
 
+import re
+
 from catalog.reference_data import (
     CLASS_LANGUAGES_2024, CLASS_OPTION_CHOICES_2024, EXPERTISE_2024, INVOCATION_EFFECTS, INVOCATION_EFFECTS_2024, LANGUAGES_2024_RARE, LANGUAGES_2024_STANDARD, PRIMAL_KNOWLEDGE_2024,
     SKILL_NAMES, SRD_CARDS_REPLACED_2024,
@@ -505,6 +507,9 @@ def wizard_spell_pick_templates(catalog, class_level: int, book_ids: list[str], 
 
 INVOCATION_FEATURE = "xphb-warlock-1-eldritch-invocations"
 INVOCATION_CID = f"class:warlock:1:invocations:{INVOCATION_FEATURE}"
+TOME_ID, BLADE_ID = "opt-pact-of-the-tome-xphb", "opt-pact-of-the-blade-xphb"
+AGONIZING_ID, SPEAR_ID, REPELLING_ID = "opt-agonizing-blast-xphb", "opt-eldritch-spear-xphb", "opt-repelling-blast-xphb"
+LESSONS_ID = "opt-lessons-of-the-first-ones-xphb"
 
 
 def invocation_base_id(option_id: str) -> str:
@@ -594,16 +599,23 @@ def _invocation_unmet_2024(catalog, option_id: str, level: int, selected: set[st
     return None
 
 
-def gate_invocations(catalog, choice: dict, level: int, cantrips: list[str]) -> tuple[dict, list[dict]]:
+def gate_invocations(catalog, choice: dict, level: int, cantrips: list[str],
+                    tome_cantrips: list[str] = ()) -> tuple[dict, list[dict]]:
     """Disable options whose prerequisites are unmet and drop selected ones that no longer qualify, to a
     fixed point (removing Pact of the Blade also removes Thirsting Blade, then Devouring Blade).
+    C7c: `tome_cantrips` (the Pact of the Tome picks) count as Warlock cantrips while the Tome is selected
+    ("they function as Warlock spells for you"), so dropping the Tome can drop Agonizing Blast in turn.
     Returns (new choice, non-blocking pruned entries)."""
     selected = list(choice["selected"])
     dropped: list[str] = []
     names = {o["id"]: o["label"] for o in choice["options"]}
+
+    def known(keep: set[str]) -> list[str]:
+        return list(cantrips) + (list(tome_cantrips) if TOME_ID in keep else [])
+
     for _ in range(12):
         keep = set(selected)
-        bad = [s for s in selected if _invocation_unmet_2024(catalog, s, level, keep, cantrips)]
+        bad = [s for s in selected if _invocation_unmet_2024(catalog, s, level, keep, known(keep))]
         if not bad:
             break
         selected = [s for s in selected if s not in bad]
@@ -611,7 +623,7 @@ def gate_invocations(catalog, choice: dict, level: int, cantrips: list[str]) -> 
     keep = set(selected)
     options = []
     for o in choice["options"]:
-        reason = _invocation_unmet_2024(catalog, o["id"], level, keep, cantrips)
+        reason = _invocation_unmet_2024(catalog, o["id"], level, keep, known(keep))
         options.append({**o, "disabled": True, "disabledReason": reason} if reason else o)
     pruned = []
     if dropped:
@@ -646,3 +658,245 @@ def invocation_effect(catalog, option_id: str) -> dict | None:
         out["senses"] = dict(rec["senses"])
     out.update(INVOCATION_EFFECTS_2024.get(option_id) or {})
     return out or None
+
+
+# ---- C7c: invocation dependents (target cantrips, Pact of the Tome, Pact of the Blade) ---------------------------
+# Cards that exist only for SELECTED invocation instances. Their cids contain `:invocation:` (singular), never
+# `:invocations:`, so the R8 count-variable / `selected_invocation_ids` plumbing ignores them:
+#   class:warlock:invocation:<instance id>:cantrip   target of Agonizing Blast / Eldritch Spear / Repelling Blast
+#   class:warlock:invocation:opt-pact-of-the-tome-xphb:cantrips | :rituals
+#   class:warlock:invocation:opt-pact-of-the-blade-xphb:weapon
+#   class:warlock:invocation:<Lessons instance>:feat (+ the feat's own cascade under `...:feat:<index>`; built in resolve)
+# They are built from the RAW stored invocation selection (like the feat cascades) and pruned after the
+# invocation gate when their instance is no longer selected (`prune_invocation_dependents`).
+
+DEPENDENT_PREFIX = "class:warlock:invocation:"
+_DEPENDENT_RE = re.compile(r"^class:warlock:invocation:([^:]+):")
+_RANGE_RE = re.compile(r"^(\d+) feet$")
+# target invocations: what the cantrip must do (XPHB text)
+_TARGET_KIND = {AGONIZING_ID: "damage", SPEAR_ID: "damage", REPELLING_ID: "attack"}
+SPEAR_MIN_RANGE_FEET = 10
+
+
+def dependent_cid(instance_id: str, kind: str) -> str:
+    return f"{DEPENDENT_PREFIX}{instance_id}:{kind}"
+
+
+def is_dependent_choice(c: dict) -> bool:
+    return c["source"]["kind"] in ("class", "feat") and c["id"].startswith(DEPENDENT_PREFIX)
+
+
+def spell_range_feet(spell: dict) -> int | None:
+    """The spell's range in feet when it is a plain "N feet" range; None for Self, Touch and the rest."""
+    m = _RANGE_RE.match((spell.get("range") or "").strip())
+    return int(m.group(1)) if m else None
+
+
+def raw_invocation_instances(catalog, rc: dict, ruleset: str) -> list[str]:
+    """The instance ids (`<id>` / `<id>~k`) the stored invocation selection resolves to BEFORE the cantrip-based
+    gate: the card's valid picks (first `count`), minus those failing the structural prerequisites that do not
+    need the spell cards (Warlock level, repeat instance k needs k-1). The late gate then decides the rest."""
+    tpls = invocation_templates(catalog, rc, ruleset)
+    if not tpls:
+        return []
+    tpl = tpls[0]
+    picks = effective_picks(tpl["options"], (rc.get("class_choices") or {}).get(INVOCATION_CID), tpl["count"])
+    kept: list[str] = []
+    for _ in range(len(picks) + 1):
+        again = [s for s in picks if s not in kept and _structure_ok(catalog, s, rc["level"], set(kept))]
+        if not again:
+            break
+        kept += again
+    return [s for s in picks if s in kept]
+
+
+def _structure_ok(catalog, option_id: str, level: int, kept: set[str]) -> bool:
+    rec = catalog.features.get(invocation_base_id(option_id)) or {}
+    if ((rec.get("prerequisite_2024") or {}).get("level") or 0) > level:
+        return False
+    k = invocation_instance(option_id)
+    return k == 1 or invocation_base_id(option_id) + ("" if k == 2 else f"~{k - 1}") in kept
+
+
+def _instance_label(catalog, instance_id: str) -> str:
+    k = invocation_instance(instance_id)
+    name = (catalog.features.get(invocation_base_id(instance_id)) or {}).get("name", instance_id)
+    return name if k == 1 else f"{name} ({k})"
+
+
+def _spell_option(catalog, sid: str) -> dict:
+    return {"id": sid, "label": (catalog.spells.get(sid) or {}).get("name", sid)}
+
+
+def _target_source(rc: dict) -> dict:
+    return {"kind": "class", "id": "warlock", "label": rc["cls"]["name"], "level": 2}
+
+
+def _target_reason(catalog, base_id: str, spell: dict) -> str | None:
+    from engine.spells import spell_attack_roll, spell_deals_damage
+    if _TARGET_KIND[base_id] == "attack":
+        return None if spell_attack_roll(spell) else "does not require an attack roll"
+    if not spell_deals_damage(spell):
+        return "does not deal damage"
+    if base_id == SPEAR_ID and (spell_range_feet(spell) or 0) < SPEAR_MIN_RANGE_FEET:
+        return "range is under 10 feet"
+    return None
+
+
+def target_templates(catalog, rc: dict, instances: list[str], candidates: list[str]) -> list[dict]:
+    """One single-pick card per selected Agonizing Blast / Eldritch Spear / Repelling Blast instance. `candidates`
+    are the known Warlock cantrips (plus the Tome's). Instances of one invocation hold different cantrips: the
+    lower instance wins a duplicated stored pick, and every card disables the other instances' picks."""
+    class_choices = rc.get("class_choices") or {}
+    ordered = sorted((i for i in instances if invocation_base_id(i) in _TARGET_KIND),
+                     key=lambda i: ((catalog.features.get(invocation_base_id(i)) or {}).get("name", ""), invocation_instance(i)))
+    cands = sorted(dict.fromkeys(c for c in candidates if c in catalog.spells), key=lambda c: catalog.spells[c]["name"])
+    chosen: dict[str, str] = {}  # instance id -> its effective pick
+    for inst in ordered:
+        base = invocation_base_id(inst)
+        stored = class_choices.get(dependent_cid(inst, "cantrip"))
+        taken = {chosen[o] for o in chosen if invocation_base_id(o) == base}
+        for sid in (list(dict.fromkeys(x for x in stored if isinstance(x, str))) if isinstance(stored, list) else []):
+            if sid in cands and sid not in taken and not _target_reason(catalog, base, catalog.spells[sid]):
+                chosen[inst] = sid
+                break
+    out = []
+    for inst in ordered:
+        base = invocation_base_id(inst)
+        options = []
+        for sid in cands:
+            opt = _spell_option(catalog, sid)
+            reason = _target_reason(catalog, base, catalog.spells[sid])
+            holder = next((o for o in chosen if o != inst and invocation_base_id(o) == base and chosen[o] == sid), None)
+            if reason is None and holder:
+                reason = f"already chosen for {_instance_label(catalog, holder)}"
+            if reason:
+                opt.update(disabled=True, disabledReason=reason)
+            options.append(opt)
+        name = _instance_label(catalog, inst)
+        out.append({
+            "id": dependent_cid(inst, "cantrip"), "source": _target_source(rc), "label": f"{name}: Cantrip",
+            "description": ((catalog.features.get(base) or {}).get("desc") or [""])[0], "count": 1, "options": options,
+        })
+    return out
+
+
+def instance_target(choices: list[dict], instance_id: str) -> str | None:
+    """The resolved target cantrip id of one Agonizing / Spear / Repelling instance, or None."""
+    cid = dependent_cid(instance_id, "cantrip")
+    card = next((c for c in choices if c.get("id") == cid), None)
+    return card["selected"][0] if card and card.get("selected") else None
+
+
+TOME_CANTRIPS = {"filter": {"level": [0]}, "count": 3}
+TOME_RITUALS = {"filter": {"level": [1], "ritual": True}, "count": 2}
+
+
+def tome_templates(catalog, rc: dict, instances: list[str], spell_options, owned: set[str]) -> list[dict]:
+    """Pact of the Tome: three cantrips and two level 1 Ritual spells from any class's list, none of which the
+    Warlock already has prepared. `spell_options(filter)` is resolve's `_spell_filter_options` (ruleset / sources
+    aware). The cards exist while the Tome is among the selected instances."""
+    if TOME_ID not in instances:
+        return []
+    out = []
+    for kind, spec, label, noun in (("cantrips", TOME_CANTRIPS, "Cantrips", "cantrips"),
+                                    ("rituals", TOME_RITUALS, "Rituals", "level 1 spells with the Ritual tag")):
+        options = []
+        for o in spell_options(spec["filter"]):
+            sid = o["item"]["index"]
+            opt = {"id": sid, "label": o["item"]["name"]}
+            if sid in owned:
+                opt.update(disabled=True, disabledReason="already prepared")
+            options.append(opt)
+        out.append({
+            "id": dependent_cid(TOME_ID, kind), "source": {**_target_source(rc), "level": 1}, "label": f"Pact of the Tome: {label}",
+            "description": f"Choose {spec['count']} {noun} from any class's spell list that you don't already have prepared. "
+                           "While the Book of Shadows is on your person you have them prepared and they function as Warlock spells.",
+            "count": spec["count"], "options": options,
+        })
+    return out
+
+
+def tome_picks(choices: list[dict]) -> dict[str, list[str]]:
+    """{"cantrips": [...], "rituals": [...]} of the resolved Pact of the Tome cards ([] when absent)."""
+    out = {}
+    for kind in ("cantrips", "rituals"):
+        card = next((c for c in choices if c.get("id") == dependent_cid(TOME_ID, kind)), None)
+        out[kind] = list(card["selected"]) if card else []
+    return out
+
+
+def blade_template(catalog, rc: dict, instances: list[str]) -> list[dict]:
+    """Pact of the Blade (E5): the pact weapon pick. Built EARLY with every Simple / Martial Melee weapon; the
+    inventory only exists later, so `gate_pact_weapon` narrows the options then."""
+    if BLADE_ID not in instances:
+        return []
+    weapons = sorted((i for i in catalog.items.values()
+                      if (i.get("equipment_category") or {}).get("index") == "weapon" and i.get("weapon_range") == "Melee"
+                      and i.get("weapon_category") in ("Simple", "Martial")), key=lambda i: i["name"])
+    if not weapons:
+        return []
+    return [{
+        "id": dependent_cid(BLADE_ID, "weapon"), "source": {**_target_source(rc), "level": 1}, "label": "Pact of the Blade: Pact Weapon",
+        "description": "Choose the Simple or Martial Melee weapon you bond with, from your equipment. You are proficient with it "
+                       "and can use your Charisma modifier for its attack and damage rolls.",
+        "count": 1, "options": [{"id": i["index"], "label": i["name"]} for i in weapons],
+    }]
+
+
+def invocation_dependent_templates(catalog, rc: dict, ruleset: str, templates: list[dict], spell_options,
+                                   owned: set[str]) -> list[dict]:
+    """Target, Tome and Blade cards of the Warlock (everything except Lessons, which needs the feat walk).
+    `templates` are the templates built so far (the Warlock cantrip card is read from there)."""
+    if ruleset != "2024" or rc.get("cls_id") != "warlock" or not rc.get("cls") or not _invocation_ready(catalog):
+        return []
+    instances = raw_invocation_instances(catalog, rc, ruleset)
+    if not instances:
+        return []
+    class_choices = rc.get("class_choices") or {}
+    cantrip_card = next((t for t in templates if t["id"] == "class:warlock:spells-cantrips"), None)
+    known = effective_picks(cantrip_card["options"], class_choices.get(cantrip_card["id"]), cantrip_card["count"]) if cantrip_card else []
+    prepared_card = next((t for t in templates if t["id"] == "class:warlock:spells-known"), None)
+    prepared = effective_picks(prepared_card["options"], class_choices.get(prepared_card["id"]), prepared_card["count"]) if prepared_card else []
+    tome = tome_templates(catalog, rc, instances, spell_options, owned | set(known) | set(prepared))
+    tome_cantrips: list[str] = []
+    for tpl in tome:
+        if tpl["id"].endswith(":cantrips"):
+            tome_cantrips = effective_picks(tpl["options"], class_choices.get(tpl["id"]), tpl["count"])
+    return target_templates(catalog, rc, instances, known + tome_cantrips) + tome  # + blade_template: next commit
+
+
+def prune_invocation_dependents(choices: list[dict], selected_instances) -> list[dict]:
+    """After the invocation gate: drop the dependent cards whose instance is no longer selected. Mutates `choices`;
+    returns non-blocking pruned entries for the cards that held a pick."""
+    keep = set(selected_instances)
+    pruned = []
+    for c in list(choices):
+        m = _DEPENDENT_RE.match(c["id"])
+        if m and m.group(1) not in keep:
+            choices.remove(c)
+            if c.get("selected"):
+                pruned.append({"choiceId": c["id"], "reason": f"'{c['label']}' no longer applies: its invocation is no longer selected, so the pick was ignored."})
+    return pruned
+
+
+def gate_pact_weapon(choices: list[dict], inventory_ids, catalog) -> list[dict]:
+    """Narrow the pact weapon card to the weapons of the inventory and drop a pick that left it. Mutates `choices`;
+    returns non-blocking pruned entries."""
+    pruned = []
+    cid = dependent_cid(BLADE_ID, "weapon")
+    for i, c in enumerate(choices):
+        if c["id"] != cid:
+            continue
+        options = [o for o in c["options"] if o["id"] in inventory_ids]
+        selected = [s for s in c["selected"] if s in inventory_ids]
+        gone = [(catalog.items.get(s) or {}).get("name", s) for s in c["selected"] if s not in inventory_ids]
+        if gone:
+            pruned.append({"choiceId": cid, "reason": f"'{c['label']}': {', '.join(gone)} is no longer in your equipment and was ignored."})
+        choices[i] = {**c, "options": options, "selected": selected, "status": "resolved" if len(selected) == c["count"] else "pending"}
+    return pruned
+
+
+def selected_pact_weapon(choices: list[dict]) -> str | None:
+    card = next((c for c in choices if c.get("id") == dependent_cid(BLADE_ID, "weapon")), None)
+    return card["selected"][0] if card and card.get("selected") else None

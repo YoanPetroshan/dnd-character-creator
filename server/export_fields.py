@@ -77,8 +77,9 @@ _DAMAGE_NAMES_BG = {
 }
 
 
-# C6d: Wizard 18 / 20 spell picks printed under the class's spells (key on the sheet.spells entry, label).
-SPELL_PICK_LINES = (("spellMastery", "Майсторство със заклинания"), ("signatureSpells", "Запазени заклинания"))
+# C6d / C7c: Wizard 18 / 20 and Pact of the Tome spell picks printed under the class's spells (key on the sheet.spells entry, label).
+SPELL_PICK_LINES = (("spellMastery", "Майсторство със заклинания"), ("signatureSpells", "Запазени заклинания"),
+                    ("pactOfTheTome", "Книга на сенките"))  # C7c: Warlock Pact of the Tome
 
 
 def resource_detail_parts(details: dict | None) -> list[str]:

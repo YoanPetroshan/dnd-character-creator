@@ -1905,7 +1905,8 @@ def _gate_invocation_choices(choices: list[dict], resolved_classes: list[dict], 
         level = next((rc["level"] for rc in resolved_classes if rc["cls_id"] == cls_id), 0)
         if class_choices_2024.is_invocation_card_2024(c):  # C7a: prerequisites incl. Pacts inside the card
             cantrips = [sel for o in choices if o["id"] == f"class:{cls_id}:spells-cantrips" for sel in o["selected"]]
-            choices[i], more = class_choices_2024.gate_invocations(catalog, c, level, cantrips)
+            choices[i], more = class_choices_2024.gate_invocations(
+                catalog, c, level, cantrips, class_choices_2024.tome_picks(choices)["cantrips"])  # C7c: Tome cantrips count
             pruned += more
             continue
         pacts = {sel for o in choices if o["source"].get("id") == cls_id and ":feature:" in o["id"] for sel in o["selected"]}
@@ -3172,6 +3173,8 @@ def _is_count_variable_choice(tpl: dict) -> bool:
         return True  # C2: Weapon Mastery count follows the class table
     if tpl["source"]["kind"] == "class" and ":invocations:" in tpl["id"]:
         return True  # Eldritch Invocations known follow the warlock level table
+    if tpl["source"]["kind"] == "class" and tpl["id"].startswith(class_choices_2024.DEPENDENT_PREFIX):
+        return True  # C7c: invocation dependents (targets, Tome, pact weapon, Lessons feat) follow the spell cards / inventory
     # C6d: Spell Mastery / Signature Spells picks follow the spellbook and the class level
     return tpl["source"]["kind"] == "class" and tpl["id"].endswith(
         (":spells-cantrips", ":spells-known", ":spellbook", ":spell-mastery-1", ":spell-mastery-2", ":signature-spells"))
@@ -4413,6 +4416,15 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             )
             class_choices_2024.label_magical_secrets(catalog, spell_templates, rc_cls_id, rc_level, ruleset)
             choice_templates += spell_templates
+            if rc_cls_id == "warlock":  # C7c: target cantrips, Pact of the Tome, pact weapon
+                kept_tome = {x for cid_ in (class_choices_2024.dependent_cid(class_choices_2024.TOME_ID, k) for k in ("cantrips", "rituals"))
+                             for x in (rc["class_choices"].get(cid_) if isinstance(rc["class_choices"].get(cid_), list) else [])
+                             if isinstance(x, str)}
+                owned_spells = set(class_always) | set(
+                    _subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc_level, raw_feature_ids, "always"))
+                choice_templates += class_choices_2024.invocation_dependent_templates(
+                    catalog, rc, ruleset, spell_templates,
+                    lambda flt: _spell_filter_options(catalog, flt, draft.get("sources"), ruleset, kept_tome), owned_spells)
 
     asi_levels = primary.get("asi_levels", []) if primary else []
     level_row = primary.get("level_row") if primary else None
@@ -4583,6 +4595,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 names = ", ".join((catalog.spells.get(d) or catalog.items.get(d) or {}).get("name", d) for d in dropped)
                 if _is_mastery_choice(tpl):  # F1: here only options the class filter / catalog no longer offers
                     reason = f"'{tpl['label']}': {names} is not an available weapon for this class and was ignored."
+                elif tpl["source"]["kind"] == "class" and tpl["id"].startswith(class_choices_2024.DEPENDENT_PREFIX):
+                    names = ", ".join(
+                        (catalog.spells.get(d) or catalog.items.get(d) or catalog.feats.get(d[len("feat:"):]) or {}).get("name", d)
+                        for d in dropped)  # C7c
+                    reason = f"'{tpl['label']}': {names} is no longer available and was ignored."
                 else:
                     reason = (
                         f"'{tpl['id']}' now allows {tpl['count']} selection(s); "
@@ -4715,6 +4732,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             **({"spellbook": _spell_summaries(next((c for c in choices if c["id"] == "class:wizard:spellbook"), None))}
                if rc_cls_id == "wizard" else {}),
             **wizard_pick_keys,
+            **({"pactOfTheTome": [s for kind in ("cantrips", "rituals") for s in _spell_summaries(
+                next((c for c in choices if c["id"] == class_choices_2024.dependent_cid(class_choices_2024.TOME_ID, kind)), None))]}
+               if rc_cls_id == "warlock" and any(c["id"] == class_choices_2024.dependent_cid(class_choices_2024.TOME_ID, "cantrips") for c in choices) else {}),
             # Subclass spells (Life domain, oath spells, ...): always
             # prepared, outside the known/prepared limits.
             "alwaysPrepared": [
@@ -4958,6 +4978,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # R8: the invocation gate runs first so Beguiling Influence's skills count for expertise.
     pruned += _gate_mastery_choices(choices, catalog, proficient_weapons)  # C2
     pruned += _gate_invocation_choices(choices, resolved_classes, catalog)
+    inv_card = next((c for c in choices if class_choices_2024.is_invocation_card_2024(c)), None)
+    if inv_card:  # C7c: dependents of an instance the gate dropped go with it
+        pruned += class_choices_2024.prune_invocation_dependents(choices, inv_card["selected"])
     invocation_effects = features_mod.invocation_effects(
         choices, {rc["cls_id"]: rc["level"] for rc in resolved_classes if rc["cls"]}, catalog)
     proficient_skills.update(features_mod.invocation_skills(invocation_effects))

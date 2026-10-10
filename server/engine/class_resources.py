@@ -390,16 +390,36 @@ def _warlock(ctx: Ctx, rc: dict) -> list[dict]:
             suffix = f" ({k})" if k > 1 else ""
             eff = class_choices_2024.invocation_effect(ctx.catalog, sel) or {}
             bonus = eff.get("resource_bonus")
+            target = class_choices_2024.instance_target(ctx.choices, inst)  # C7c: the picked cantrip
+            target_spell = (ctx.catalog.spells.get(target) or {}) if target else {}
             if bonus:
-                details = ({"spell": bonus["spell"]} if bonus.get("spell") else
-                           {"note": "Add your Charisma modifier to the damage rolls of one known Warlock cantrip that deals damage."})
+                if bonus.get("spell"):
+                    details = {"spell": bonus["spell"]}
+                elif target_spell:
+                    details = {"spell": target, "note": f"Add your Charisma modifier to the damage rolls of {target_spell['name']}."}
+                else:
+                    details = {"note": "Add your Charisma modifier to the damage rolls of one known Warlock cantrip that deals damage."}
                 out.append(_resource(rc, bonus["name"] + suffix, bonus=cha, details=details))
             elif eff.get("note") and "innate_spell" not in eff and "swim_equals_walk" not in eff:
                 label = (ctx.catalog.features.get(sel) or {}).get("name", sel).replace("Eldritch Invocation: ", "") + suffix
                 note = eff["note"].format(cha_names=max(1, cha), cha_names_word="name" if max(1, cha) == 1 else "names",
                                           spear_range=30 * rc["level"])
-                out.append(_resource(rc, label, details={"note": note}))
+                details = {"note": note}
+                if target_spell:
+                    details = {"spell": target, "note": _target_note(sel, target_spell, rc["level"], note)}
+                out.append(_resource(rc, label, details=details))
     return out
+
+
+def _target_note(invocation_id: str, spell: dict, warlock_level: int, generic: str) -> str:
+    """C7c: the note of Eldritch Spear / Repelling Blast once the target cantrip is picked."""
+    if invocation_id == class_choices_2024.SPEAR_ID:
+        base = class_choices_2024.spell_range_feet(spell) or 0
+        extra = 30 * warlock_level
+        return f"{spell['name']}: range {base} ft + {extra} ft (30 x Warlock level {warlock_level}) = {base + extra} ft."
+    if invocation_id == class_choices_2024.REPELLING_ID:
+        return f"{spell['name']}: when you hit a Large or smaller creature you can push it up to 10 feet straight away from you."
+    return generic
 
 
 def _pact_slot_count(rc: dict) -> int:
