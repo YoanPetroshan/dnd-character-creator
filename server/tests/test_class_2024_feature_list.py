@@ -164,12 +164,16 @@ def test_unmapped_choice_features_keep_their_srd_row(catalog):
     pb = next(f for f in _rows(res) if f["name"] == "Pact Boon")
     assert pb["level"] == 3 and pb["choice"]
     assert "Eldritch Invocations" in _names(res) and "Pact Magic" in _names(res)
+    # C6b-1: the SRD Ranger cards are gone under 2024 (Deft Explorer / R4 replace them), so there
+    # is no terrain or enemy pick to attach; the SRD fallback row remains for an SRD-only catalog.
     res = resolve(_d([_cls("ranger", 1)]), catalog)
+    assert not [c for c in res["choices"] if ":terrain-type:" in c["id"] or ":enemy-type:" in c["id"]]
+    bare = copy.copy(catalog)
+    bare.class_2024_records = {}
+    bare.class_2024_level_features = {}
+    res = resolve(_d([_cls("ranger", 1)]), bare)
     picks = {c["id"]: [c["options"][0]["id"]] for c in res["choices"] if ":terrain-type:" in c["id"] or ":enemy-type:" in c["id"]}
-    res = resolve(_d([_cls("ranger", 1, choices=picks)]), catalog)
-    by = {f["name"]: f for f in _rows(res)}
-    assert by["Favored Enemy"]["choice"]  # mapped onto the XPHB row
-    assert by["Natural Explorer (1 terrain type)"]["choice"]  # no XPHB twin: SRD row kept
+    assert picks
 
 
 def _autofill(catalog, cls, level):
@@ -227,13 +231,14 @@ def test_mapping_table_only_names_real_srd_ids_and_xphb_names(catalog):
             xnames = [catalog.features[i]["name"] for lvl in sorted(catalog.class_2024_level_features[cls])
                       for i in catalog.class_2024_level_features[cls][lvl]]
             assert xnames.count(name) > ordinal, (cls, srd_id)
-    for srd_id in sheet_features.SRD_CHOICE_FEATURES_WITHOUT_XPHB:
+    for srd_id in (*sheet_features.SRD_CHOICE_FEATURES_WITHOUT_XPHB, *sheet_features.SRD_CHOICE_FEATURES_REPLACED_2024):
         assert srd_id in catalog.features
 
 
 def test_every_srd_class_level_choice_feature_is_mapped_or_listed_unmapped(catalog):
     mapped = {k[1] for k in sheet_features.SRD_TO_XPHB_FEATURE}
-    covered = mapped | set(sheet_features.SRD_CHOICE_FEATURES_WITHOUT_XPHB)
+    covered = (mapped | set(sheet_features.SRD_CHOICE_FEATURES_WITHOUT_XPHB)
+               | set(sheet_features.SRD_CHOICE_FEATURES_REPLACED_2024))
     for i, f in catalog.features.items():
         fs = f.get("feature_specific") or {}
         if i.startswith("xphb-") or f.get("subclass") or not fs:

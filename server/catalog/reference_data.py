@@ -635,3 +635,41 @@ CLASS_ORDER_CHOICES: dict[str, dict] = {
         },
     },
 }
+
+
+# ---- 2024 Expertise cards (C6b-1) -------------------------------------------
+# Keyed by the XPHB feature id (imported into catalog.features by C1). Texts read from the
+# imported catalog on 2026-10-10:
+#   Bard 2 / 9, Rogue 1 / 6   "You gain Expertise in two of your skill proficiencies of your choice."
+#   Ranger 9                  "Choose two of your skill proficiencies with which you lack Expertise."
+#   Ranger 2 Deft Explorer    "Choose one of your skill proficiencies with which you lack Expertise."
+#   Wizard 2 Scholar          "Choose one of the following skills in which you have proficiency:
+#                              Arcana, History, Investigation, Medicine, Nature, or Religion."
+# Keys: class, level, count, skills (None = every skill, else the allowed skill ids),
+# lacks_expertise (True = options that already have Expertise are disabled; only the two
+# "with which you lack Expertise" texts, decision E1: the other cards allow a wasted duplicate).
+# No card offers tools (2024 Expertise is skills only).
+EXPERTISE_2024: dict[str, dict] = {
+    "xphb-bard-2-expertise": {"class": "bard", "level": 2, "count": 2, "skills": None, "lacks_expertise": False},
+    "xphb-bard-9-expertise": {"class": "bard", "level": 9, "count": 2, "skills": None, "lacks_expertise": False},
+    "xphb-rogue-1-expertise": {"class": "rogue", "level": 1, "count": 2, "skills": None, "lacks_expertise": False},
+    "xphb-rogue-6-expertise": {"class": "rogue", "level": 6, "count": 2, "skills": None, "lacks_expertise": False},
+    "xphb-ranger-2-deft-explorer": {"class": "ranger", "level": 2, "count": 1, "skills": None, "lacks_expertise": True},
+    "xphb-ranger-9-expertise": {"class": "ranger", "level": 9, "count": 2, "skills": None, "lacks_expertise": True},
+    "xphb-wizard-2-scholar": {
+        "class": "wizard", "level": 2, "count": 1, "lacks_expertise": False,
+        "skills": ["skill-arcana", "skill-history", "skill-investigation", "skill-medicine", "skill-nature", "skill-religion"],
+    },
+}
+
+# SRD (2014) class cards that the 2024 cards replace; skipped under ruleset "2024" only when the
+# replacing XPHB feature exists in the catalog. The Ranger's Favored Enemy / Natural Explorer
+# cards have no 2024 counterpart card at all (2024 Favored Enemy is a resource, Deft Explorer
+# replaces Natural Explorer), so they go whenever the XPHB Ranger is imported.
+SRD_CARDS_REPLACED_2024: dict[str, tuple[str, ...]] = {
+    "bard": ("bard-expertise-1", "bard-expertise-2"),
+    "rogue": ("rogue-expertise-1", "rogue-expertise-2"),
+    "ranger": ("favored-enemy-1-type", "favored-enemy-2-types", "favored-enemy-3-enemies",
+               "natural-explorer-1-terrain-type", "natural-explorer-2-terrain-types",
+               "natural-explorer-3-terrain-types"),
+}

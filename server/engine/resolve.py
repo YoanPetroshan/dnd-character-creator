@@ -65,6 +65,7 @@ from catalog.reference_data import (
 )
 from . import asi as asi_mod
 from . import attacks as attacks_mod
+from . import class_choices_2024
 from . import class_resources as class_resources_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
@@ -1824,32 +1825,59 @@ def _expertise_selected_values(choices: list[dict]) -> list[str]:
     return out
 
 
-def _gate_expertise_choices(choices: list[dict], proficient_skills: set[str]) -> list[dict]:
+def _gate_expertise_choices(
+    choices: list[dict], proficient_skills: set[str], fixed_expertise=(), class_order: list[str] = (),
+) -> list[dict]:
     """Restrict every feat- or class-sourced Expertise Choice to skills (and,
     for the Rogue, tools) the character is proficient in. Mutates `choices` in place (entries replaced by index);
-    returns non-blocking pruned entries for selections that were dropped."""
-    pruned: list[dict] = []
-    for i, c in enumerate(choices):
-        if not _is_expertise_choice(c):
-            continue
-        options = [
-            o if (o["id"] in proficient_skills or o.get("disabled"))
-            else {**o, "disabled": True, "disabledReason": "not proficient"}
-            for o in c["options"]
-        ]
+    returns non-blocking pruned entries for selections that were dropped.
+
+    C6b-1: a card flagged `lacksExpertise` (2024 Deft Explorer, Ranger 9: "with which you lack
+    Expertise") also disables, and drops stored picks of, skills that already have Expertise from
+    an earlier source. The walk order is fixed Expertise from feats (`fixed_expertise`), feat
+    cards, then class cards by (position in `class_order`, class level); the later pick is the
+    duplicate. Cards without the flag allow a duplicate (it is simply wasted, decision E1)."""
+    pruned_by_index: dict[int, dict] = {}  # reported in `choices` order, whatever the walk order
+    indexes = [i for i, c in enumerate(choices) if _is_expertise_choice(c)]
+
+    def walk_key(i: int):
+        c = choices[i]
+        if c["source"]["kind"] == "feat":
+            return (0, 0, 0, i)
+        cls_id = c["source"].get("id")
+        return (1, class_order.index(cls_id) if cls_id in class_order else len(class_order), c["source"].get("level") or 0, i)
+
+    have: set[str] = set(fixed_expertise)
+    for i in sorted(indexes, key=walk_key):
+        c = choices[i]
+        lacks = bool(c.get("lacksExpertise"))
+        options = []
+        for o in c["options"]:
+            if o.get("disabled"):
+                options.append(o)
+            elif o["id"] not in proficient_skills:
+                options.append({**o, "disabled": True, "disabledReason": "not proficient"})
+            elif lacks and o["id"] in have:
+                options.append({**o, "disabled": True, "disabledReason": "already has Expertise"})
+            else:
+                options.append(o)
+        enabled = {o["id"] for o in options if not o.get("disabled")}
         selected = c.get("selected", [])
-        kept = [s for s in selected if s in proficient_skills]
-        dropped = [s for s in selected if s not in proficient_skills]
+        kept = [s for s in selected if s in enabled or (s in proficient_skills and not lacks)]
+        dropped = [s for s in selected if s not in kept]
         if dropped:
             labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
             names = ", ".join(labels.get(d, d) for d in dropped)
-            pruned.append({
-                "choiceId": c["id"],
-                "reason": f"'{c['label']}': {names} is no longer a proficient skill; the Expertise selection was ignored.",
-            })
+            lost_profs = [d for d in dropped if d not in proficient_skills]
+            if lost_profs:
+                reason = f"'{c['label']}': {names} is no longer a proficient skill; the Expertise selection was ignored."
+            else:
+                reason = f"'{c['label']}': {names} already has Expertise; the Expertise selection was ignored."
+            pruned_by_index[i] = {"choiceId": c["id"], "reason": reason}
         choices[i] = {**c, "options": options, "selected": kept,
                       "status": "resolved" if len(kept) == c["count"] else "pending"}
-    return pruned
+        have.update(kept)
+    return [pruned_by_index[i] for i in sorted(pruned_by_index)]
 
 
 def _invocation_unmet(inv: dict, warlock_level: int, pacts: set[str], cantrips: set[str]) -> str | None:
@@ -4280,9 +4308,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc_fs_slots = fs_slots_by_class.get(rc["index"], [])
         choice_templates += _feature_choice_templates(
             catalog, rc_cls_id, rc_cls["name"], feature_refs, rc_subclass_id, class_level=rc_level,
-            skip_features={idx for _cid, _lvl, idx in rc_fs_slots},
+            skip_features={idx for _cid, _lvl, idx in rc_fs_slots} | class_choices_2024.replaced_srd_features(catalog, rc_cls_id, ruleset),
             sources=draft.get("sources"), class_choices=rc_class_choices,
         )
+        choice_templates += class_choices_2024.expertise_templates(catalog, rc, ruleset)  # C6b-1
         for tpl in choice_templates:  # G1: SRD style options already held (feat or earlier SRD style)
             held_names = fs_taken_by_cid.get(tpl["id"])
             if held_names and any(tpl["id"] == c for c, _l, _i in srd_fs_slots_by_class.get(rc["index"], [])):
@@ -4952,7 +4981,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     invocation_effects = features_mod.invocation_effects(
         choices, {rc["cls_id"]: rc["level"] for rc in resolved_classes if rc["cls"]})
     proficient_skills.update(features_mod.invocation_skills(invocation_effects))
-    pruned += _gate_expertise_choices(choices, proficient_skills | proficient_tools)
+    pruned += _gate_expertise_choices(
+        choices, proficient_skills | proficient_tools, _feat_expertise_skills(resolved_feats),
+        [rc["cls_id"] for rc in resolved_classes if rc["cls"]])
 
     # Phase 4c-i Task 6: was class-only (primary class's saving_throws
     # field) — a granted feat's own FIXED saving-throw-proficiency grant
@@ -5193,7 +5224,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     return {
         "sheet": sheet,
         # F2-C: `count_by_level` is an internal template key (count-variable test), not API shape.
-        "choices": [{k: v for k, v in c.items() if k != "count_by_level"} for c in choices],
+        "choices": [{k: v for k, v in c.items() if k not in ("count_by_level", "lacksExpertise")} for c in choices],
         "derived": derived,
         "problems": problems,
         "warnings": warnings,

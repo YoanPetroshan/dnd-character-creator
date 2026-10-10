@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import re
 
-_CLASS_CHOICE_ID = re.compile(r"^class:([^:]+):\d+:(?:feature|expertise-choice|enemy-type|terrain-type|invocations):(.+)$")
+_CLASS_CHOICE_ID = re.compile(r"^class:([^:]+):\d+:(?:feature|expertise-choice|enemy-type|terrain-type|invocations|languages):(.+)$")
 
 
 def _labels(choice: dict) -> list[str]:
@@ -77,8 +77,12 @@ SRD_TO_XPHB_FEATURE: dict[tuple[str, str], tuple[str, int]] = {
     ("paladin", "paladin-fighting-style"): ("Fighting Style", 0),
     ("ranger", "ranger-fighting-style"): ("Fighting Style", 0),
 }
-SRD_CHOICE_FEATURES_WITHOUT_XPHB = ("pact-boon", "natural-explorer-1-terrain-type",
-                                    "natural-explorer-2-terrain-types", "natural-explorer-3-terrain-types")
+SRD_CHOICE_FEATURES_WITHOUT_XPHB = ("pact-boon",)
+# C6b-1: under ruleset 2024 with the XPHB Ranger imported these cards are no longer offered
+# (Deft Explorer replaces Natural Explorer), so their rows are unreachable there; mixed / 2014
+# and an SRD-only catalog still show them with the SRD row.
+SRD_CHOICE_FEATURES_REPLACED_2024 = ("natural-explorer-1-terrain-type", "natural-explorer-2-terrain-types",
+                                     "natural-explorer-3-terrain-types")
 _FS_FEATURE_IDS = frozenset({"fighter-fighting-style", "paladin-fighting-style", "ranger-fighting-style",
                              "additional-fighting-style", "champion-xphb-7-additional-fighting-style"})
 _FS_CARD_ID = re.compile(r"^class:([^:]+):(\d+):fighting-style$")
@@ -114,12 +118,13 @@ def _order_labels(choices: list[dict]) -> dict[str, tuple[str, list[str]]]:
     return out
 
 
-def _xphb_class_rows(catalog, cls_id: str, class_level: int) -> list[tuple[int, str, int]]:
-    """[(level, name, ordinal)] of the XPHB class feature list up to class_level, in level
-    order; ordinal = how many features of the same name came before (Indomitable 9/13/17)."""
+def _xphb_class_rows(catalog, cls_id: str, class_level: int) -> list[tuple[int, str, int, str]]:
+    """[(level, name, ordinal, XPHB feature id)] of the XPHB class feature list up to class_level,
+    in level order; ordinal = how many features of the same name came before (Indomitable
+    9/13/17)."""
     by_level = (getattr(catalog, "class_2024_level_features", None) or {}).get(cls_id) or {}
     seen: dict[str, int] = {}
-    rows: list[tuple[int, str, int]] = []
+    rows: list[tuple[int, str, int, str]] = []
     for lvl in sorted(by_level):
         for fid in by_level[lvl]:
             feature = catalog.features.get(fid)
@@ -128,7 +133,7 @@ def _xphb_class_rows(catalog, cls_id: str, class_level: int) -> list[tuple[int, 
             ordinal = seen.get(feature["name"], 0)
             seen[feature["name"]] = ordinal + 1
             if lvl <= class_level:
-                rows.append((lvl, feature["name"], ordinal))
+                rows.append((lvl, feature["name"], ordinal, fid))
     return rows
 
 
@@ -183,6 +188,11 @@ def build_features(catalog, resolved_classes, refs_by_class, race, race_id, subr
                         _strip_prefix(l, name) for l in class_choices[(cls_id, srd_id)])
             class_fs = sorted(k for k in fs_labels if k[0] == cls_id and k not in fs_used)
             fs_rows = [r for r in xphb_rows if r[1] == "Fighting Style"]
+            # C6b-1: a card whose cid ends in an XPHB feature id of this class attaches to that
+            # row (expertise, and later languages / invocations / metamagic cards).
+            row_fids = {r[3] for r in xphb_rows}
+            by_fid = {fid: labels for (c_id, fid), labels in class_choices.items()
+                      if c_id == cls_id and fid in row_fids}
             for key in class_fs:  # the class's own Fighting Style feat card(s)
                 row = next((r for r in fs_rows if r[0] == key[1]), None)
                 if row:
@@ -193,8 +203,8 @@ def build_features(catalog, resolved_classes, refs_by_class, race, race_id, subr
             if cls_id in order_labels:
                 by_target.setdefault((order_labels[cls_id][0], 0), []).extend(order_labels[cls_id][1])
             placed: set[tuple[str, int]] = set()
-            for lvl, name, ordinal in xphb_rows:
-                labels = by_target.get((name, ordinal), [])
+            for lvl, name, ordinal, fid in xphb_rows:
+                labels = by_target.get((name, ordinal), []) + by_fid.get(fid, [])
                 if labels:
                     placed.add((name, ordinal))
                 class_entries.append(_entry(class_source, name, lvl, labels))
