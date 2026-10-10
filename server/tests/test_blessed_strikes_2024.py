@@ -196,7 +196,8 @@ def test_druid_potent_spellcasting_and_range_at_15(catalog):
 @needs_data
 def test_resource_order_follows_the_class(catalog):
     names = [r["name"] for r in _res(catalog, [_druid(7)])["derived"]["classResources"] if r["classId"] == "druid"]
-    assert names == ["Wild Shape", "Primal Strike"]
+    # R9 appends the 2024 tail (Wild Companion note, Wild Resurgence) after the class's own entries
+    assert names == ["Wild Shape", "Primal Strike", "Wild Companion", "Wild Resurgence"]
     names = [r["name"] for r in _res(catalog, [_cleric(7)])["derived"]["classResources"] if r["classId"] == "cleric"]
     assert names == ["Channel Divinity", "Divine Strike"]
 

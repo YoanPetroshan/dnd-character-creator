@@ -524,6 +524,123 @@ SORCERER_2024_CREATING_SLOTS: list[tuple[int, int, int]] = [
     (5, 7, 9),
 ]
 
+# --- Class resources (R9, decision E14): the 2024 resource tail, prose-only ---
+# No XPHB class table column carries these numbers (columns: barbarian rages / rage-damage / weapon-mastery,
+# bard bardic-die, cleric + paladin channel-divinity, druid wild-shape, fighter second-wind / weapon-mastery,
+# monk martial-arts / focus-points / unarmored-movement, ranger favored-enemy, rogue sneak-attack, sorcerer
+# sorcery-points, warlock invocations). `class_resources._tail_2024` builds one resource per entry, under ruleset
+# "2024" only, when the XPHB feature record `feature` is in the catalog and the class level has reached that
+# record's level. `uses` is an int, "wis_min1" (max(1, Wisdom modifier)) or None (note only, no uses and no
+# recharge). `note` may use {half_level} (floor(class level / 2)) and {wis_min1}; `extras` are
+# (feature id, text) pairs appended to the note once that XPHB feature record's level is reached.
+# Texts are the XPHB feature texts as imported (quoted per entry).
+RESOURCE_TAIL_2024: tuple[dict, ...] = (
+    # Innate Sorcery: "You can use this feature twice, and you regain all expended uses of it when you finish a
+    # Long Rest." / "The spell save DC of your Sorcerer spells increases by 1. You have Advantage on the attack
+    # rolls of Sorcerer spells you cast."
+    {"class": "sorcerer", "feature": "xphb-sorcerer-1-innate-sorcery", "name": "Innate Sorcery", "uses": 2,
+     "recharge": "long",
+     "note": "Bonus Action, 1 minute: the spell save DC of your Sorcerer spells increases by 1 and you have "
+             "Advantage on the attack rolls of Sorcerer spells you cast",
+     "extras": (
+         # Sorcery Incarnate (7): "If you have no uses of Innate Sorcery left, you can use it if you spend 2 Sorcery
+         # Points when you take the Bonus Action to activate it. ... you can use up to two of your Metamagic options
+         # on each spell you cast."
+         ("xphb-sorcerer-7-sorcery-incarnate", "with no uses left you can activate it by spending 2 Sorcery Points; "
+          "while it is active you can use up to two Metamagic options on each spell you cast"),
+         # Arcane Apotheosis (20): "While your Innate Sorcery feature is active, you can use one Metamagic option on
+         # each of your turns without spending Sorcery Points on it."
+         ("xphb-sorcerer-20-arcane-apotheosis", "while it is active you can use one Metamagic option on each of "
+          "your turns without spending Sorcery Points on it"))},
+    # Sorcerous Restoration: "When you finish a Short Rest, you can regain expended Sorcery Points, but no more than
+    # a number equal to half your Sorcerer level (round down). Once you use this feature, you can't do so again
+    # until you finish a Long Rest."
+    {"class": "sorcerer", "feature": "xphb-sorcerer-5-sorcerous-restoration", "name": "Sorcerous Restoration",
+     "uses": 1, "recharge": "long",
+     "note": "When you finish a Short Rest, regain expended Sorcery Points, up to half your Sorcerer level "
+             "rounded down ({half_level})"},
+    # Uncanny Metabolism: "When you roll Initiative, you can regain all expended Focus Points. When you do so, roll
+    # your Martial Arts die, and regain a number of Hit Points equal to your Monk level plus the number rolled.
+    # Once you use this feature, you can't use it again until you finish a Long Rest." (details.heal is built from
+    # the Martial Arts die resource)
+    {"class": "monk", "feature": "xphb-monk-2-uncanny-metabolism", "name": "Uncanny Metabolism", "uses": 1,
+     "recharge": "long", "heal_martial_arts": True,
+     "note": "When you roll Initiative, regain all expended Focus Points and regain Hit Points equal to your Monk "
+             "level plus a roll of your Martial Arts die"},
+    # Divine Intervention: "As a Magic action, choose any Cleric spell of level 5 or lower that doesn't require a
+    # Reaction to cast. As part of the same action, you cast that spell without expending a spell slot or needing
+    # Material components. You can't use this feature again until you finish a Long Rest."
+    {"class": "cleric", "feature": "xphb-cleric-10-divine-intervention", "name": "Divine Intervention", "uses": 1,
+     "recharge": "long",
+     "note": "Magic action: cast any Cleric spell of level 5 or lower that doesn't require a Reaction, without "
+             "a spell slot or Material components",
+     "extras": (
+         # Greater Divine Intervention (20): "you can choose Wish when you select a spell. If you do so, you can't
+         # use Divine Intervention again until you finish 2d4 Long Rests."
+         ("xphb-cleric-20-greater-divine-intervention", "you can choose Wish; if you do, you can't use Divine "
+          "Intervention again until you finish 2d4 Long Rests"),)},
+    # Paladin's Smite: "You always have the Divine Smite spell prepared. In addition, you can cast it without
+    # expending a spell slot, but you must finish a Long Rest before you can cast it in this way again."
+    {"class": "paladin", "feature": "xphb-paladin-2-paladins-smite", "name": "Paladin's Smite", "uses": 1,
+     "recharge": "long", "note": "Cast Divine Smite without expending a spell slot"},
+    # Faithful Steed: "You always have the Find Steed spell prepared. You can also cast the spell once without
+    # expending a spell slot, and you regain the ability to do so when you finish a Long Rest."
+    {"class": "paladin", "feature": "xphb-paladin-5-faithful-steed", "name": "Faithful Steed", "uses": 1,
+     "recharge": "long", "note": "Cast Find Steed once without expending a spell slot"},
+    # Tireless: "As a Magic action, you can give yourself a number of Temporary Hit Points equal to 1d8 plus your
+    # Wisdom modifier (minimum of 1). You can use this action a number of times equal to your Wisdom modifier
+    # (minimum of once), and you regain all expended uses when you finish a Long Rest. ... Whenever you finish a
+    # Short Rest, your Exhaustion level, if any, decreases by 1."
+    {"class": "ranger", "feature": "xphb-ranger-10-tireless", "name": "Tireless", "uses": "wis_min1",
+     "recharge": "long",
+     "note": "Magic action: gain Temporary Hit Points equal to 1d8 + {wis_min1} (Wisdom modifier, minimum 1); "
+             "whenever you finish a Short Rest your Exhaustion level decreases by 1"},
+    # Nature's Veil: "As a Bonus Action, you can give yourself the Invisible condition until the end of your next
+    # turn. You can use this feature a number of times equal to your Wisdom modifier (minimum of once), and you
+    # regain all expended uses when you finish a Long Rest."
+    {"class": "ranger", "feature": "xphb-ranger-14-natures-veil", "name": "Nature's Veil", "uses": "wis_min1",
+     "recharge": "long",
+     "note": "Bonus Action: gain the Invisible condition until the end of your next turn"},
+    # Wild Companion (decision E9, a note only): "As a Magic action, you can expend a spell slot or a use of Wild
+    # Shape to cast the Find Familiar spell without Material components. When you cast the spell in this way, the
+    # familiar is Fey and disappears when you finish a Long Rest."
+    {"class": "druid", "feature": "xphb-druid-2-wild-companion", "name": "Wild Companion", "uses": None,
+     "recharge": None,
+     "note": "Magic action: expend a spell slot or a use of Wild Shape to cast Find Familiar without Material "
+             "components; the familiar is Fey and disappears when you finish a Long Rest"},
+    # Wild Resurgence: "Once on each of your turns, if you have no uses of Wild Shape left, you can give yourself
+    # one use by expending a spell slot (no action required). In addition, you can expend one use of Wild Shape
+    # (no action required) to give yourself a level 1 spell slot, but you can't do so again until you finish a
+    # Long Rest." (the one use counted is the second, once per Long Rest, benefit)
+    {"class": "druid", "feature": "xphb-druid-5-wild-resurgence", "name": "Wild Resurgence", "uses": 1,
+     "recharge": "long",
+     "note": "Once on each of your turns, with no Wild Shape uses left, expend a spell slot to regain one use "
+             "(no action); expend one Wild Shape use to gain a level 1 spell slot (no action)"},
+    # Archdruid, Nature Magician: "You can convert uses of Wild Shape into a spell slot (no action required).
+    # Choose a number of your unexpended uses of Wild Shape and convert them into a single spell slot, with each
+    # use contributing 2 spell levels. For example, if you convert two uses of Wild Shape, you produce a level 4
+    # spell slot. Once you use this benefit, you can't do so again until you finish a Long Rest."
+    {"class": "druid", "feature": "xphb-druid-20-archdruid", "name": "Nature Magician", "uses": 1,
+     "recharge": "long",
+     "note": "Convert unexpended Wild Shape uses into one spell slot, each use giving 2 spell levels "
+             "(two uses = a level 4 slot), no action"},
+    # Stroke of Luck: "If you fail a D20 Test, you can turn the roll into a 20. Once you use this feature, you
+    # can't use it again until you finish a Short or Long Rest."
+    {"class": "rogue", "feature": "xphb-rogue-20-stroke-of-luck", "name": "Stroke of Luck", "uses": 1,
+     "recharge": "short-or-long", "note": "If you fail a D20 Test, you can turn the roll into a 20"},
+    # Persistent Rage: "When you roll Initiative, you can regain all expended uses of Rage. After you regain uses
+    # of Rage in this way, you can't do so again until you finish a Long Rest."
+    {"class": "barbarian", "feature": "xphb-barbarian-15-persistent-rage", "name": "Persistent Rage", "uses": 1,
+     "recharge": "long", "note": "When you roll Initiative, regain all expended uses of Rage"},
+)
+
+# Wizard Signature Spells (XPHB, level 20), built from the picked spells, not from a table row: "Choose two level
+# 3 spells in your spellbook as your signature spells. You always have these spells prepared, and you can cast
+# each of them once at level 3 without expending a spell slot. When you do so, you can't cast them in this way
+# again until you finish a Short or Long Rest."
+SIGNATURE_SPELLS_2024 = {"feature": "xphb-wizard-20-signature-spells", "choice": "class:wizard:20:signature-spells",
+                         "recharge": "short-or-long"}
+
 # Arcane Recovery (SRD `arcane-recovery`, XPHB Arcane Recovery): "combined level ... no more
 # than half your Wizard level (round up), and none of the slots can be level 6 or higher".
 ARCANE_RECOVERY_MAX_SLOT_LEVEL = 5

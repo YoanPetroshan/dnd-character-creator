@@ -447,6 +447,60 @@ def _warlock_features_2024(ctx: Ctx, rc: dict) -> list[dict]:
     return out
 
 
+def _feature_level(ctx: Ctx, feature_id: str) -> int | None:
+    """The level of an XPHB feature record in the catalog, or None when the record is missing."""
+    feature = (getattr(ctx.catalog, "features", None) or {}).get(feature_id)
+    return (feature.get("level") or 1) if feature else None
+
+
+def _tail_2024(ctx: Ctx, rc: dict) -> list[dict]:
+    """R9 (decision E14): XPHB class features with a use count or recharge that no class table carries
+    (`reference_data.RESOURCE_TAIL_2024`), plus Wizard Signature Spells from the picked spells. Ruleset "2024"
+    only; an entry needs its XPHB feature record in the catalog and the class level at that record's level, so an
+    SRD-only catalog gives nothing. Appended after the class's own entries (Sorcery Points stay first)."""
+    if ctx.ruleset != "2024":
+        return []
+    level, cls_id = rc["level"], rc["cls_id"]
+    out = []
+    for spec in reference_data.RESOURCE_TAIL_2024:
+        if spec["class"] != cls_id:
+            continue
+        first = _feature_level(ctx, spec["feature"])
+        if first is None or level < first:
+            continue
+        wis = max(1, ctx.modifiers.get("WIS", 0))
+        note = spec["note"].format(half_level=level // 2, wis_min1=wis)
+        for extra_id, text in spec.get("extras") or ():
+            extra_level = _feature_level(ctx, extra_id)
+            if extra_level is not None and level >= extra_level:
+                note += "; " + text
+        details = {"note": note}
+        if spec.get("heal_martial_arts"):
+            die = _martial_arts_die(ctx, rc)
+            if die:
+                details["heal"] = f"1{die}+{level}"
+        uses = wis if spec["uses"] == "wis_min1" else spec["uses"]
+        out.append(_resource(rc, spec["name"], uses=uses, recharge=spec["recharge"], details=details))
+    if cls_id == "wizard":
+        out += _signature_spells(ctx, rc)
+    return out
+
+
+def _signature_spells(ctx: Ctx, rc: dict) -> list[dict]:
+    """Wizard 20 Signature Spells: one cast per picked spell per Short or Long Rest; nothing while unpicked."""
+    sig = reference_data.SIGNATURE_SPELLS_2024
+    first = _feature_level(ctx, sig["feature"])
+    if first is None or rc["level"] < first or not isinstance(ctx.choices, list):
+        return []
+    picked = next((c.get("selected") or [] for c in ctx.choices if c.get("id") == sig["choice"]), [])
+    spells = getattr(ctx.catalog, "spells", {}) or {}
+    names = [(spells.get(sid) or {}).get("name", sid) for sid in picked]
+    if not names:
+        return []
+    return [_resource(rc, "Signature Spells", uses=len(names), recharge=sig["recharge"], details={
+        "note": f"Cast each of {', '.join(names)} once at level 3 without a spell slot"})]
+
+
 _BUILDERS: dict[str, Callable[[Ctx, dict], list[dict]]] = {
     "warlock": _warlock,
     "barbarian": _barbarian,
@@ -570,6 +624,7 @@ def resources_for(catalog, resolved_classes: list[dict], modifiers: dict, prof_b
         builder = _BUILDERS.get(rc["cls_id"])
         if builder:
             out += builder(ctx, rc)
+        out += _tail_2024(ctx, rc)  # R9: 2024 only
         sub_builder = _SUBCLASS_BUILDERS.get(rc.get("subclass_id") or "")
         if sub_builder:
             out += sub_builder(ctx, rc)
