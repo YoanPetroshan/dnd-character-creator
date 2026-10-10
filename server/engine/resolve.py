@@ -4578,6 +4578,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     level_row = primary.get("level_row") if primary else None
     if bg and bg_id:
         choice_templates += _background_choice_templates(bg, bg_id)
+        choice_templates += class_choices_2024.origin_language_templates(bg, bg_id, ruleset)  # C8
         if background_ability_choice_tpl:
             choice_templates.append(background_ability_choice_tpl)
     # Phase 4c-ii Task 1: `resolved_feats` is already computed above (right
@@ -5141,10 +5142,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     pruned += _gate_expertise_choices(
         choices, proficient_skills | proficient_tools, _feat_expertise_skills(resolved_feats),
         [rc["cls_id"] for rc in resolved_classes if rc["cls"]])
-    # C6b-2: class language cards yield to the fixed languages and to the other language cards.
+    # C6b-2 + C8: origin and class language cards yield to fixed languages and to the other cards.
     fixed_languages = [lang["index"] for lang in (bg.get("languages", []) if bg else [])] + \
         [lang["index"] for lang in (race.get("languages", []) if race else [])] + \
-        _feat_languages(resolved_feats) + class_choices_2024.fixed_class_languages(catalog, resolved_classes, ruleset)
+        _feat_languages(resolved_feats) + class_choices_2024.fixed_class_languages(catalog, resolved_classes, ruleset) + \
+        class_choices_2024.fixed_origin_languages(ruleset)  # C8: Common
     pruned += class_choices_2024.gate_languages(choices, fixed_languages, [rc["cls_id"] for rc in resolved_classes if rc["cls"]])
 
     # Phase 4c-i Task 6: was class-only (primary class's saving_throws

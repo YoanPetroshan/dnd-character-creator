@@ -120,21 +120,59 @@ def is_class_language_card(c: dict) -> bool:
     return c["source"]["kind"] == "class" and ":languages:" in c["id"]
 
 
+# ---- C8: 2024 origin languages --------------------------------------------------------------
+# PHB 2024 ch. 2 "Choose Languages": "Your character knows at least three languages: Common plus
+# two languages you roll or choose from the Standard Languages table." (decision E10)
+
+ORIGIN_LANGUAGES_CID = "origin:languages"
+ORIGIN_LANGUAGES_PICKS = 2
+
+
+def fixed_origin_languages(ruleset: str) -> list[str]:
+    """Languages every 2024 character knows (Common). [] outside 2024."""
+    return ["common"] if ruleset == "2024" else []
+
+
+def is_origin_language_card(c: dict) -> bool:
+    return c["id"] == ORIGIN_LANGUAGES_CID and c["source"]["kind"] == "background"
+
+
+def origin_language_templates(bg: dict | None, bg_id: str | None, ruleset: str) -> list[dict]:
+    """The single 2-pick card of Standard languages (Common excluded: it is fixed). Source kind
+    `background` so BackgroundPage renders it and the export gate counts it; the picks are stored
+    under background.choices. No card without a chosen background (nowhere to store the picks)."""
+    if ruleset != "2024" or not bg or not bg_id:
+        return []
+    return [{
+        "id": ORIGIN_LANGUAGES_CID,
+        "source": {"kind": "background", "id": bg_id, "label": bg.get("name", "")},
+        "label": "Languages",
+        "description": ("Your character knows Common plus two languages you choose from the Standard "
+                        "Languages table (Player's Handbook 2024, chapter 2)."),
+        "count": ORIGIN_LANGUAGES_PICKS,
+        "options": [{"id": l["index"], "label": l["name"]} for l in LANGUAGES_2024_STANDARD if l["index"] != "common"],
+    }]
+
+
 def gate_languages(choices: list[dict], fixed_languages, class_order: list[str] = ()) -> list[dict]:
-    """Disable ("already known") and drop stored picks of languages the character already knows:
-    fixed languages plus the picks of every non-class language card (background / species / feat
-    cards keep priority), then class language cards by (class order, class level). Mutates
-    `choices` by index; returns non-blocking `pruned` entries in `choices` order."""
-    idxs = [i for i, c in enumerate(choices) if is_class_language_card(c)]
+    """Disable ("already known") and drop stored picks of languages the character already knows.
+    Priority: fixed languages, picks of every other non-class language card (background / species /
+    feat cards), the C8 origin card, then class language cards by (class order, class level).
+    Mutates `choices` by index; returns non-blocking `pruned` entries in `choices` order."""
+    idxs = [i for i, c in enumerate(choices) if is_class_language_card(c) or is_origin_language_card(c)]
     if not idxs:
         return []
     known: set[str] = set(fixed_languages)
     for c in choices:
-        if c["source"]["kind"] in ("background", "species", "feat") and c["id"].endswith(":languages"):
+        if (c["source"]["kind"] in ("background", "species", "feat") and c["id"].endswith(":languages")
+                and not is_origin_language_card(c)):
             known.update(c["selected"])
 
     def key(i):
-        src = choices[i]["source"]
+        c = choices[i]
+        if is_origin_language_card(c):
+            return (-1, 0, i)
+        src = c["source"]
         cid = src.get("id")
         return (class_order.index(cid) if cid in class_order else len(class_order), src.get("level") or 0, i)
 
