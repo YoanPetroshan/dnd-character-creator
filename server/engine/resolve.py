@@ -4936,6 +4936,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "expertiseSkills": expertise_all,
         "features": sheet_features_mod.build_features(
             catalog, resolved_classes, refs_by_class, race, race_id, subrace, bg, bg_id, resolved_feats, choices,
+            ruleset=ruleset,
         ),
         "feats": sheet_feats,
         "weaponMasteries": weapon_masteries,
