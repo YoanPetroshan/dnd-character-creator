@@ -114,7 +114,7 @@ def test_twelve_class_records(catalog):
     assert set(catalog.class_2024_records) == CLASSES
     for name, rec in catalog.class_2024_records.items():
         assert set(rec) == {"feat_progression", "features", "starting_proficiencies", "multiclassing",
-                            "starting_equipment"}
+                            "starting_equipment", "saving_throws", "primary_ability"}  # last two: C9a
         assert rec["features"] and rec["starting_proficiencies"] and rec["starting_equipment"]
         # XPHB gives monk, sorcerer and wizard an empty multiclassing record (no extra proficiencies)
         assert bool(rec["multiclassing"]) == (name not in {"monk", "sorcerer", "wizard"})

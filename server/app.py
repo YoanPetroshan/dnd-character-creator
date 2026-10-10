@@ -125,10 +125,17 @@ def api_catalog_class(class_id: str):
     if not cls:
         return jsonify({"error": "not found"}), 404
     ruleset = request.args.get("ruleset", "mixed")
+    cls_2024 = _catalog.classes_2024.get(class_id) if ruleset == "2024" else None  # C9a
+    if cls_2024:
+        cls = cls_2024
     sources = [s for s in (request.args.get("sources") or "").split(",") if s]
     include = request.args.get("include") or ""
     level_feature_counts = {}
+    xphb_levels = _catalog.class_2024_level_features.get(class_id) if cls_2024 else None
     for lvl in range(1, 21):
+        if xphb_levels:
+            level_feature_counts[str(lvl)] = len(xphb_levels.get(lvl, []))
+            continue
         row = _catalog.class_level_row(class_id, lvl)
         level_feature_counts[str(lvl)] = len(row.get("features", [])) if row else 0
     chosen = [s for s in _catalog.subclasses.values() if s.get("class", {}).get("index") == class_id]

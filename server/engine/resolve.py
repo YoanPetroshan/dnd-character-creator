@@ -3794,6 +3794,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             entry_level = 1
 
         entry_cls = catalog.classes.get(entry_cls_id) if entry_cls_id else None
+        if entry_cls and draft.get("ruleset") == "2024":  # C9a: XPHB chassis (raw string, as O2)
+            entry_cls = catalog.classes_2024.get(entry_cls_id, entry_cls)
         if entry_cls_id and not entry_cls:
             problems.append({"id": "unknown-class", "message": f"Unknown class '{entry_cls_id}'."})
 
@@ -4936,12 +4938,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         for prof_id in SUBCLASS_PROFICIENCIES.get(rc["subclass_id"], []):
             _categorize_proficiency(prof_id)
         if rc["index"] == 0:
-            override = reference_data.RULESET_CLASS_WEAPON_PROFICIENCIES.get((ruleset, rc["cls_id"]), {})  # F1 (C2)
-            for p in rc["cls"].get("proficiencies", []):
-                if p["index"] not in override.get("drop", ()):
-                    _categorize_proficiency(p["index"])
-            for prof_id in override.get("add", ()):
-                _categorize_proficiency(prof_id)
+            for p in rc["cls"].get("proficiencies", []):  # C9a: the 2024 chassis dict already holds XPHB lists
+                _categorize_proficiency(p["index"])
         else:
             for p in rc["cls"].get("multi_classing", {}).get("proficiencies", []):
                 _categorize_proficiency(p["index"])

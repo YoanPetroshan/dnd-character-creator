@@ -64,6 +64,9 @@ class Catalog:
     class_2024_records: dict[str, dict] = field(default_factory=dict)
     class_2024_level_features: dict[str, dict[int, list[str]]] = field(default_factory=dict)
     weapon_masteries: dict[str, list[str]] = field(default_factory=dict)
+    # C9a: full merged class dicts with the XPHB proficiencies / skill and tool choices /
+    # multiclass proficiencies; read by resolve() only under ruleset "2024".
+    classes_2024: dict[str, dict] = field(default_factory=dict)
     # Level-row indexes (class_id, level) / (subclass_id, level) -> row, built
     # lazily and rebuilt when the number of rows changes.
     _row_index: tuple | None = field(default=None, repr=False, compare=False)
@@ -181,6 +184,13 @@ def _merge_official_items(catalog: Catalog) -> None:
     attach_masteries(catalog.items, raw_items, catalog.weapon_masteries)
 
 
+def _merge_class_chassis_2024(catalog: Catalog) -> None:
+    """C9a: builds `catalog.classes_2024` from the XPHB class records (empty without them)."""
+    from .official_source import convert_class_chassis_2024
+
+    catalog.classes_2024 = convert_class_chassis_2024(catalog.class_2024_records, catalog.classes)
+
+
 def load() -> Catalog:
     from .official_source import (
         load_official_races, load_official_backgrounds, load_official_feats, official_dir,
@@ -214,4 +224,5 @@ def load() -> Catalog:
     )
     _merge_official_subclasses(catalog)
     _merge_official_items(catalog)
+    _merge_class_chassis_2024(catalog)
     return catalog

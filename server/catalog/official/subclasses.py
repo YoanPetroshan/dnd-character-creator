@@ -157,7 +157,8 @@ def load_class_2024_records(class_dir) -> dict[str, dict]:
     """XPHB class records of the 12 SRD classes -> {class id: {"feat_progression":
     raw featProgression list, "features": [{"name", "level", "ref"}] (the
     `classFeatures` refs in order, placeholders included), "starting_proficiencies",
-    "multiclassing", "starting_equipment": the raw 5etools values}} (C1, data only).
+    "multiclassing", "starting_equipment": the raw 5etools values, plus C9a's "saving_throws" (the
+    raw `proficiency` list) and "primary_ability" (the raw `primaryAbility` list)}} (C1, data only).
     {} when the directory or index is missing."""
     out: dict[str, dict] = {}
     for raw in _raw_class_records(class_dir, "class"):
@@ -176,6 +177,8 @@ def load_class_2024_records(class_dir) -> dict[str, dict]:
             "starting_proficiencies": raw.get("startingProficiencies") or {},
             "multiclassing": raw.get("multiclassing") or {},
             "starting_equipment": raw.get("startingEquipment") or {},
+            "saving_throws": list(raw.get("proficiency") or []),  # C9a: ["str", "con"]
+            "primary_ability": list(raw.get("primaryAbility") or []),  # C9a: [{"str": True}, {"dex": True}]
         }
     return out
 

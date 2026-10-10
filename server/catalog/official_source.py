@@ -198,6 +198,7 @@ from .official.items import (  # noqa: F401
     load_raw_base_items,
     load_raw_item_masteries,
 )
+from .official.class_chassis import convert_class_chassis_2024  # noqa: F401
 from .official.subclasses import (  # noqa: F401
     convert_subclasses,
     subclass_twins_from,

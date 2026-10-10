@@ -55,6 +55,10 @@ def weapon_is_proficient(item: dict, proficiency_ids) -> bool:
         or (item.get("weapon_category") == "Martial"
             and reference_data.MARTIAL_FINESSE_LIGHT_PROFICIENCY_ID in proficiency_ids
             and {p["index"] for p in item.get("properties", [])} & {"finesse", "light"})
+        # C9a: 2024 Monk, "Martial weapons that have the Light property"
+        or (item.get("weapon_category") == "Martial"
+            and reference_data.MARTIAL_LIGHT_PROFICIENCY_ID in proficiency_ids
+            and "light" in {p["index"] for p in item.get("properties", [])})
     )
 
 
