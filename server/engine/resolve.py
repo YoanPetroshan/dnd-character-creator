@@ -4936,11 +4936,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         if inv_item:
             slot = inventory.setdefault(entry["itemId"], {"item": inv_item, "qty": 0})
             slot["qty"] += entry.get("qty", 1) if isinstance(entry.get("qty", 1), int) else 1
-    # C7c: the Pact of the Blade weapon must come from the inventory; it always gets an attack row (it is conjured in hand).
-    pruned += class_choices_2024.gate_pact_weapon(choices, set(inventory), catalog)
+    # C7c + F3a-2c: the Pact of the Blade weapon is conjured, so it need not be in the inventory; it always gets an
+    # attack row, built from the catalog item.
     pact_weapon_id = class_choices_2024.selected_pact_weapon(choices)
-    if pact_weapon_id and all(i["index"] != pact_weapon_id for i in equipped_items):
-        equipped_items.append(inventory[pact_weapon_id]["item"])
+    if pact_weapon_id and catalog.items.get(pact_weapon_id) and all(i["index"] != pact_weapon_id for i in equipped_items):
+        equipped_items.append(catalog.items[pact_weapon_id])
     gear = worn_mod.apply(equipped_items, equipment_dict, inventory, catalog.items)
     equipped_items = gear.items
     warnings += gear.warnings

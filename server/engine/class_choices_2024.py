@@ -872,8 +872,8 @@ def tome_picks(choices: list[dict]) -> dict[str, list[str]]:
 
 
 def blade_template(catalog, rc: dict, instances: list[str]) -> list[dict]:
-    """Pact of the Blade (E5): the pact weapon pick. Built EARLY with every Simple / Martial Melee weapon; the
-    inventory only exists later, so `gate_pact_weapon` narrows the options then."""
+    """Pact of the Blade (E5): the pact weapon pick, every Simple / Martial Melee weapon of the catalog (F3a-2c:
+    the text lets you conjure "a Simple or Martial Melee weapon of your choice"; it need not be owned)."""
     if BLADE_ID not in instances:
         return []
     weapons = sorted((i for i in catalog.items.values()
@@ -883,7 +883,7 @@ def blade_template(catalog, rc: dict, instances: list[str]) -> list[dict]:
         return []
     return [{
         "id": dependent_cid(BLADE_ID, "weapon"), "source": {**_target_source(rc), "level": 1}, "label": "Pact of the Blade: Pact Weapon",
-        "description": "Choose the Simple or Martial Melee weapon you bond with, from your equipment. You are proficient with it "
+        "description": "Choose the Simple or Martial Melee weapon you conjure and bond with. You are proficient with it "
                        "and can use your Charisma modifier for its attack and damage rolls.",
         "count": 1, "options": [{"id": i["index"], "label": i["name"]} for i in weapons],
     }]
@@ -922,23 +922,6 @@ def prune_invocation_dependents(choices: list[dict], selected_instances) -> list
             choices.remove(c)
             if c.get("selected"):
                 pruned.append({"choiceId": c["id"], "reason": f"'{c['label']}' no longer applies: its invocation is no longer selected, so the pick was ignored."})
-    return pruned
-
-
-def gate_pact_weapon(choices: list[dict], inventory_ids, catalog) -> list[dict]:
-    """Narrow the pact weapon card to the weapons of the inventory and drop a pick that left it. Mutates `choices`;
-    returns non-blocking pruned entries."""
-    pruned = []
-    cid = dependent_cid(BLADE_ID, "weapon")
-    for i, c in enumerate(choices):
-        if c["id"] != cid:
-            continue
-        options = [o for o in c["options"] if o["id"] in inventory_ids]
-        selected = [s for s in c["selected"] if s in inventory_ids]
-        gone = [(catalog.items.get(s) or {}).get("name", s) for s in c["selected"] if s not in inventory_ids]
-        if gone:
-            pruned.append({"choiceId": cid, "reason": f"'{c['label']}': {', '.join(gone)} is no longer in your equipment and was ignored."})
-        choices[i] = {**c, "options": options, "selected": selected, "status": "resolved" if len(selected) == c["count"] else "pending"}
     return pruned
 
 

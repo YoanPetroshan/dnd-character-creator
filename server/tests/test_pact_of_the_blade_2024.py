@@ -6,9 +6,9 @@ the bonded weapon, you can use your Charisma modifier for the attack and damage 
 Dexterity". Thirsting Blade: Extra Attack with the pact weapon only.
 
 Rule matrix (text -> engine):
-  card      class:warlock:invocation:opt-pact-of-the-blade-xphb:weapon, count 1, options = the Simple / Martial Melee
-            weapons of the inventory (granted + chosen + added), built early and narrowed late (the inventory is only
-            known after the choice pass); a pick no longer in the inventory is pruned.
+  card      class:warlock:invocation:opt-pact-of-the-blade-xphb:weapon, count 1, options = EVERY Simple / Martial Melee
+            weapon of the catalog (F3a-2c: the text says you conjure "a Simple or Martial Melee weapon of your choice",
+            it need not be owned); the pick never depends on the inventory.
   row       the picked weapon's attack row: proficient, ability CHA when the CHA modifier beats its normal ability
             (a tie keeps the normal one), note "Pact weapon"; Thirsting Blade adds a note to that row; the row exists
             even when the item is not marked equipped; with equipment.wielded the row carries wielded / CHA as usual.
@@ -36,12 +36,16 @@ def catalog():
 
 
 @needs_data
-def test_blade_card_offers_the_melee_weapons_of_the_inventory(catalog):
+def test_blade_card_offers_every_simple_and_martial_melee_weapon(catalog):
     r = _res(catalog, 5, [BLADE], [EB, MI], added=LONGSWORD + [{"itemId": "shortbow", "qty": 1, "equipped": False}])
     card = _card(r, BLADE_W)
     ids = {o["id"] for o in card["options"]}
-    assert "longsword" in ids and "dagger" in ids  # the Warlock kit has a dagger
-    assert "shortbow" not in ids and "greatsword" not in ids  # not melee / not in the inventory
+    assert {"longsword", "dagger", "greatsword", "club", "whip"} <= ids  # owned or not
+    assert "shortbow" not in ids and "longbow" not in ids and "net" not in ids  # ranged weapons (even owned) are not offered
+    expected = {i["index"] for i in catalog.items.values()
+                if (i.get("equipment_category") or {}).get("index") == "weapon" and i.get("weapon_range") == "Melee"
+                and i.get("weapon_category") in ("Simple", "Martial")}
+    assert ids == expected
     assert card["count"] == 1
     assert _card(_res(catalog, 5, [CHAIN], [EB, MI]), BLADE_W) is None
 
@@ -85,12 +89,22 @@ def test_pact_weapon_not_equipped_still_gets_a_row_and_thirsting_blade_is_noted(
 
 
 @needs_data
-def test_pact_weapon_gone_from_the_inventory_is_pruned(catalog):
+def test_pact_weapon_not_in_the_inventory_still_gets_its_row(catalog):
+    # F3a-2c: the pact weapon is created, so it need not be owned: proficient, CHA, row built from the catalog item
     r = _res(catalog, 5, [BLADE], [EB, MI], extra={BLADE_W: ["greatsword"]})  # not in the inventory
     card = _card(r, BLADE_W)
-    assert card["selected"] == [] and card["status"] == "pending"
-    assert _pruned(r, BLADE_W)
-    assert not [p for p in r["problems"] if "over-selected" in p["id"]]
+    assert card["selected"] == ["greatsword"] and card["status"] == "resolved"
+    assert not _pruned(r, BLADE_W)
+    row = next(a for a in r["derived"]["attacks"] if a["itemId"] == "greatsword")
+    assert row["proficient"] is True and row["ability"] == "CHA" and any("Pact weapon" in n for n in row["notes"])
+    assert row["damage"] == "2d6+3"
+
+
+@needs_data
+def test_pact_weapon_not_in_the_inventory_with_the_wielded_model(catalog):
+    r = _res(catalog, 5, [BLADE], [EB, MI], wielded={"main": None, "off": None}, extra={BLADE_W: ["greatsword"]})
+    row = next(a for a in r["derived"]["attacks"] if a["itemId"] == "greatsword")
+    assert row["proficient"] is True and row["ability"] == "CHA" and row["wielded"] is False
 
 
 @needs_data
@@ -118,16 +132,9 @@ def test_srd_only_catalog_degrades(catalog):
     assert _dependent_ids(r) == []
 
 
-def test_gate_pact_weapon_helper_narrows_options_and_drops_missing_picks():
-    class Cat:
-        items = {"longsword": {"name": "Longsword"}, "greatsword": {"name": "Greatsword"}}
-
-    card = {"id": BLADE_W, "label": "Pact of the Blade: Pact Weapon", "count": 1, "selected": ["greatsword"],
-            "options": [{"id": "longsword", "label": "Longsword"}, {"id": "greatsword", "label": "Greatsword"}]}
-    choices = [card]
-    pruned = class_choices_2024.gate_pact_weapon(choices, {"longsword"}, Cat())
-    assert [o["id"] for o in choices[0]["options"]] == ["longsword"] and choices[0]["selected"] == []
-    assert choices[0]["status"] == "pending" and "Greatsword" in pruned[0]["reason"]
-    assert class_choices_2024.selected_pact_weapon(choices) is None
+def test_pact_weapon_helpers():
+    card = {"id": BLADE_W, "label": "Pact of the Blade: Pact Weapon", "count": 1, "selected": [], "options": []}
+    assert class_choices_2024.selected_pact_weapon([card]) is None
+    assert class_choices_2024.selected_pact_weapon([{**card, "selected": ["greatsword"]}]) == "greatsword"
     assert class_choices_2024.pact_weapon_row_notes([BLADE, THIRST + "~2"]) == [
         n for n in class_choices_2024.pact_weapon_row_notes([THIRST])]
