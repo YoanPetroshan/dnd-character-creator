@@ -1,5 +1,7 @@
 # Plan: class-feature numbers, the 2024 class chassis, and small gaps
 
+> **Note (2026-10-11):** the statements below that C6b, C6c, C7 and C9 are "skipped" were superseded by `docs/superpowers/plans/2026-10-10-2024-chassis-remaining-stages.md`; all of those slices (plus C8, R9, F0, F3a, F3b) are done. See ARCHITECTURE-CURRENT-STATE.md, "2024 chassis (C) overview".
+
 (Opus planner, 2026-10-09. Suggested file name: `docs/superpowers/plans/2026-10-09-class-resources-2024-chassis-small-gaps.md`.)
 
 I only read code and data for this plan and changed nothing. The numbers below that are marked "verified" came from scripts I ran on the real SRD files (`chargen/data/srd/5e-SRD-Levels.json`, `5e-SRD-Features.json`) and the real 5etools files (`~/.claude/dnd/.data/official/class/*.json`, `items-base.json`, `feats.json`, `optionalfeatures.json`). Anything marked **VERIFY** must be checked by a script before its test is written. If a script and this plan disagree, the script wins, and the executor writes the deviation into the slice's ARCHITECTURE section.
