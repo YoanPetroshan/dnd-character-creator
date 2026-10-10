@@ -4348,8 +4348,12 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
 
     # Expertise needs the full proficiency picture (skills, plus the Rogue's
     # thieves' tools), so it is gated only after every grant above is in.
-    pruned += _gate_expertise_choices(choices, proficient_skills | proficient_tools)
+    # R8: the invocation gate runs first so Beguiling Influence's skills count for expertise.
     pruned += _gate_invocation_choices(choices, resolved_classes, catalog)
+    invocation_effects = features_mod.invocation_effects(
+        choices, {rc["cls_id"]: rc["level"] for rc in resolved_classes if rc["cls"]})
+    proficient_skills.update(features_mod.invocation_skills(invocation_effects))
+    pruned += _gate_expertise_choices(choices, proficient_skills | proficient_tools)
 
     # Phase 4c-i Task 6: was class-only (primary class's saving_throws
     # field) — a granted feat's own FIXED saving-throw-proficiency grant
@@ -4392,7 +4396,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                     })
         hp_class_entries.append({"hit_die": rc_hit_die, "level": rc["level"], "hp_rolls": rc_hp_rolls})
     class_feature_list = _class_feature_list(catalog, resolved_classes, choices)
-    effects = features_mod.active_effects(class_feature_list)
+    effects = features_mod.active_effects(class_feature_list) + invocation_effects
     # R5: Diamond Soul / Slippery Mind grants (the latter depends on the ruleset).
     for ab in features_mod.save_proficiencies(effects, [idx for _, _, idx in class_feature_list], ruleset):
         if ab not in proficient_save_abilities:
@@ -4502,9 +4506,15 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     for sense_kind, sense_range in _feat_senses(resolved_feats).items():
         if sense_range > senses.get(sense_kind, 0):
             senses[sense_kind] = sense_range
+    for sense_kind, sense_range in features_mod.invocation_senses(invocation_effects).items():  # R8
+        if sense_range > senses.get(sense_kind, 0):
+            senses[sense_kind] = sense_range
     innate_spells = (_species_innate_spells(race, subrace, catalog, species_variant)
                      + _species_trait_spell_choices(race, subrace, catalog, choices)
-                     + _feat_innate_spells(resolved_feats, catalog, choices))
+                     + _feat_innate_spells(resolved_feats, catalog, choices)
+                     + [{**_innate_entry_to_sheet(e, catalog), "source": "Eldritch Invocation",
+                         **({"note": e["note"]} if e.get("note") else {})}
+                        for e in features_mod.invocation_innate_entries(invocation_effects)])
 
     refs_by_class = {
         rc["cls_id"]: _cumulative_feature_refs(catalog, rc["cls_id"], rc["subclass_id"], rc["level"])

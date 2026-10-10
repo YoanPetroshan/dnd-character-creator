@@ -302,7 +302,30 @@ def _ranger(ctx: Ctx, rc: dict) -> list[dict]:
     return [_resource(rc, "Favored Enemy (Hunter's Mark)", uses=uses, recharge="long")]
 
 
+def _warlock(ctx: Ctx, rc: dict) -> list[dict]:
+    """R8: resource entries for invocations with a number or a text-only effect
+    (Agonizing Blast: CHA modifier; Thirsting Blade, Repelling Blast, Book of
+    Ancient Secrets: notes). `ctx.choices` is read after the invocation gate."""
+    if not isinstance(ctx.choices, list):
+        return []
+    out = []
+    for c in ctx.choices:
+        if (c.get("source") or {}).get("id") != "warlock" or ":invocations:" not in c.get("id", ""):
+            continue
+        for sel in c.get("selected") or []:
+            eff = reference_data.INVOCATION_EFFECTS.get(sel) or {}
+            bonus = eff.get("resource_bonus")
+            if bonus:
+                out.append(_resource(rc, bonus["name"], bonus=ctx.modifiers.get(bonus["ability"], 0),
+                                     details={"spell": bonus["spell"]}))
+            elif eff.get("note") and "innate_spell" not in eff:
+                label = (ctx.catalog.features.get(sel) or {}).get("name", sel).replace("Eldritch Invocation: ", "")
+                out.append(_resource(rc, label, details={"note": eff["note"]}))
+    return out
+
+
 _BUILDERS: dict[str, Callable[[Ctx, dict], list[dict]]] = {
+    "warlock": _warlock,
     "barbarian": _barbarian,
     "rogue": _rogue,
     "fighter": _fighter,

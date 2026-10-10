@@ -161,6 +161,9 @@ export interface SheetInnateSpell {
   uses: string;
   ability: Ability | null;
   variant: string | null;
+  /** Origin label, e.g. "Eldritch Invocation". */
+  source?: string;
+  note?: string;
 }
 
 export type SheetFeatureSourceKind = "class" | "subclass" | "species" | "background" | "feat";
@@ -254,7 +257,7 @@ export interface ClassResource {
   pool?: number;
   bonus?: number;
   dc?: number;
-  details?: Record<string, unknown> & { damageBonus?: number; heal?: string; maxCr?: string };
+  details?: Record<string, unknown> & { damageBonus?: number; heal?: string; maxCr?: string; note?: string };
 }
 
 export interface Derived {

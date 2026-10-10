@@ -53,7 +53,7 @@ def yaml_document(resolution: dict) -> dict:
 _MODE_NAMES = {"walk": "ходене", "fly": "летене", "swim": "плуване", "climb": "катерене", "burrow": "ровене"}
 _SENSE_NAMES = {
     "darkvision": "тъмно зрение", "blindsight": "сляпо зрение",
-    "tremorsense": "усещане за вибрации", "truesight": "истинско зрение",
+    "tremorsense": "усещане за вибрации", "truesight": "истинско зрение", "devilsSight": "дяволско зрение",
 }
 _DAMAGE_SECTIONS = (("resistances", "Устойчивост"), ("immunities", "Имунитет"), ("vulnerabilities", "Уязвимост"))
 
@@ -83,6 +83,9 @@ def resource_line(r: dict) -> str:
     word = _RECHARGE_WORDS.get(r.get("recharge"))
     if word:
         core = f"{core} ({word})" if core else f"({word})"
+    note = (r.get("details") or {}).get("note")
+    if note:
+        core = f"{core}, {note}" if core else note
     damage = (r.get("details") or {}).get("damageBonus")
     if damage is not None:
         core += f", щета +{damage}"

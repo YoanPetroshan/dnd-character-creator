@@ -19,6 +19,8 @@ export function describeResource(r: ClassResource): string {
   let core = parts.join(", ");
   const word = r.recharge ? RECHARGE[r.recharge] : undefined;
   if (word) core = core ? `${core} (${word})` : `(${word})`;
+  const note = r.details?.note;
+  if (typeof note === "string") core = core ? `${core}, ${note}` : note;
   const damage = r.details?.damageBonus;
   if (typeof damage === "number") core += `, щета +${damage}`;
   const heal = r.details?.heal;

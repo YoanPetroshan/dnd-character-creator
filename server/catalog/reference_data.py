@@ -500,3 +500,58 @@ MANEUVER_DC_BASE = 8
 # Arcane Archer (XGE `arcane-shot`): "You have two uses of this ability, and you regain all
 # expended uses of it when you finish a short or long rest."
 ARCANE_SHOT_USES = 2
+
+
+# ---- Eldritch Invocation effects (R8, SRD set) ------------------------------
+# Keyed by SRD feature id. Every entry was checked against the SRD feature text
+# and the SRD spell ids (tests/test_invocation_effects.py re-checks them).
+# Keys: innate_spell {spell, uses "at-will" | "1/long rest", level} (CHA, source
+# "Eldritch Invocation"); skills; ac_formula (same shape as CLASS_FEATURE_EFFECTS,
+# decision D6); senses (devilsSight, not darkvision); resource_bonus (Agonizing
+# Blast, CHA mod); note (text-only effects). "Once using a warlock spell slot ...
+# until you finish a long rest" -> "1/long rest" at the spell's own level.
+_INV = "eldritch-invocation-"
+
+
+def _at_will(spell: str, level: int) -> dict:
+    return {"innate_spell": {"spell": spell, "uses": "at-will", "level": level}}
+
+
+def _once(spell: str, level: int) -> dict:
+    return {"innate_spell": {"spell": spell, "uses": "1/long rest", "level": level}}
+
+
+INVOCATION_EFFECTS: dict[str, dict] = {
+    _INV + "armor-of-shadows": {
+        **_at_will("mage-armor", 1),
+        "ac_formula": {"base": 13, "abilities": ["DEX"], "allows_shield": True},
+    },
+    _INV + "ascendant-step": _at_will("levitate", 2),
+    _INV + "beast-speech": _at_will("speak-with-animals", 1),
+    _INV + "eldritch-sight": _at_will("detect-magic", 1),
+    _INV + "fiendish-vigor": _at_will("false-life", 1),
+    _INV + "mask-of-many-faces": _at_will("disguise-self", 1),
+    _INV + "misty-visions": _at_will("silent-image", 1),
+    _INV + "otherworldly-leap": _at_will("jump", 1),
+    _INV + "master-of-myriad-forms": _at_will("alter-self", 2),
+    _INV + "whispers-of-the-grave": _at_will("speak-with-dead", 3),
+    _INV + "visions-of-distant-realms": _at_will("arcane-eye", 4),
+    # At will, but "finish a long rest before you can use this invocation on the same creature again".
+    _INV + "chains-of-carceri": {
+        **_at_will("hold-monster", 5),
+        "note": "Only against a celestial, fiend or elemental; once per creature per long rest.",
+    },
+    _INV + "thief-of-five-fates": _once("bane", 1),
+    _INV + "mire-the-mind": _once("slow", 3),
+    _INV + "sign-of-ill-omen": _once("bestow-curse", 3),
+    _INV + "bewitching-whispers": _once("compulsion", 4),
+    _INV + "dreadful-word": _once("confusion", 4),
+    _INV + "sculptor-of-flesh": _once("polymorph", 4),
+    _INV + "minions-of-chaos": _once("conjure-elemental", 5),
+    _INV + "beguiling-influence": {"skills": ["skill-deception", "skill-persuasion"]},
+    _INV + "devils-sight": {"senses": {"devilsSight": 120}},
+    _INV + "agonizing-blast": {"resource_bonus": {"name": "Agonizing Blast", "ability": "CHA", "spell": "eldritch-blast"}},
+    _INV + "thirsting-blade": {"note": "Attack with your pact weapon twice, instead of once, when you take the Attack action."},
+    _INV + "repelling-blast": {"note": "When eldritch blast hits a creature, you can push it up to 10 feet away from you in a straight line."},
+    _INV + "book-of-ancient-secrets": {"note": "Two 1st-level ritual spells in your Book of Shadows (the ritual book itself is not modelled)."},
+}
