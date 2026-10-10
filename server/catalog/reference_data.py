@@ -673,3 +673,53 @@ SRD_CARDS_REPLACED_2024: dict[str, tuple[str, ...]] = {
                "natural-explorer-1-terrain-type", "natural-explorer-2-terrain-types",
                "natural-explorer-3-terrain-types"),
 }
+
+
+# ---- 2024 class languages and Primal Knowledge (C6b-2) ----------------------------------------
+# PHB 2024 chapter 2 language tables (Standard and Rare). Deliberately NOT merged into LANGUAGES:
+# that list drives every mixed / 2014 language choice and must not change.
+LANGUAGES_2024_STANDARD: list[dict[str, str]] = [
+    {"index": "common", "name": "Common"},
+    {"index": "common-sign-language", "name": "Common Sign Language"},
+    {"index": "draconic", "name": "Draconic"},
+    {"index": "dwarvish", "name": "Dwarvish"},
+    {"index": "elvish", "name": "Elvish"},
+    {"index": "giant", "name": "Giant"},
+    {"index": "gnomish", "name": "Gnomish"},
+    {"index": "goblin", "name": "Goblin"},
+    {"index": "halfling", "name": "Halfling"},
+    {"index": "orc", "name": "Orc"},
+]
+LANGUAGES_2024_RARE: list[dict[str, str]] = [
+    {"index": "abyssal", "name": "Abyssal"},
+    {"index": "celestial", "name": "Celestial"},
+    {"index": "deep-speech", "name": "Deep Speech"},
+    {"index": "druidic", "name": "Druidic"},
+    {"index": "infernal", "name": "Infernal"},
+    {"index": "primordial", "name": "Primordial"},
+    {"index": "sylvan", "name": "Sylvan"},
+    {"index": "thieves-cant", "name": "Thieves' Cant"},
+    {"index": "undercommon", "name": "Undercommon"},
+]
+# id -> display name of every language any ruleset can produce (exports read this).
+LANGUAGE_NAMES: dict[str, str] = {
+    lang["index"]: lang["name"] for lang in LANGUAGES + LANGUAGES_2024_STANDARD + LANGUAGES_2024_RARE
+}
+
+# XPHB class features that grant languages (texts read from catalog.features on 2026-10-10):
+#   Rogue 1 Thieves' Cant   "You know Thieves' Cant and one other language of your choice, which you choose
+#                            from the language tables in chapter 2."
+#   Druid 1 Druidic         "You know Druidic, the secret language of Druids."
+#   Ranger 2 Deft Explorer  "Languages. You know two languages of your choice from the language tables in chapter 2."
+# Keys: class, level, fixed (language ids always known), choose (picks from the 19-entry pool, decision E2).
+CLASS_LANGUAGES_2024: dict[str, dict] = {
+    "xphb-rogue-1-thieves-cant": {"class": "rogue", "level": 1, "fixed": ["thieves-cant"], "choose": 1},
+    "xphb-druid-1-druidic": {"class": "druid", "level": 1, "fixed": ["druidic"], "choose": 0},
+    "xphb-ranger-2-deft-explorer": {"class": "ranger", "level": 2, "fixed": [], "choose": 2},
+}
+
+# XPHB Barbarian 3 Primal Knowledge: "You gain proficiency in another skill of your choice from the
+# skill list available to Barbarians at level 1." (options = classes_2024["barbarian"] level 1 skill list)
+PRIMAL_KNOWLEDGE_2024: dict[str, object] = {
+    "feature": "xphb-barbarian-3-primal-knowledge", "class": "barbarian", "level": 3,
+}

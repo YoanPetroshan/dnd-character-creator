@@ -8,10 +8,10 @@ already produces them — no new engine computation happens here.
 """
 from __future__ import annotations
 
-from catalog.reference_data import ABILITIES, LANGUAGES, SKILL_NAMES, proficiency_label
+from catalog.reference_data import ABILITIES, LANGUAGE_NAMES, SKILL_NAMES, proficiency_label
 from export_fields import extra_blocks, worn_wielded_line
 
-_LANGUAGE_NAMES = {lang["index"]: lang["name"] for lang in LANGUAGES}
+_LANGUAGE_NAMES = LANGUAGE_NAMES
 _PROFICIENCY_SECTIONS = (("armor", "Брони"), ("weapons", "Оръжия"), ("tools", "Инструменти"))
 
 _DETAIL_SECTIONS = [

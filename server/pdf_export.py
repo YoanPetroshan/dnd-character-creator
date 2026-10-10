@@ -13,11 +13,11 @@ from pathlib import Path
 
 from fpdf import FPDF
 
-from catalog.reference_data import ABILITIES, LANGUAGES, SKILL_NAMES, proficiency_label
+from catalog.reference_data import ABILITIES, LANGUAGE_NAMES, SKILL_NAMES, proficiency_label
 from export_fields import extra_blocks, worn_wielded_line
 
 _FONT_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
-_LANGUAGE_NAMES = {lang["index"]: lang["name"] for lang in LANGUAGES}
+_LANGUAGE_NAMES = LANGUAGE_NAMES
 _PROFICIENCY_SECTIONS = (("armor", "Брони"), ("weapons", "Оръжия"), ("tools", "Инструменти"))
 
 _DETAIL_SECTIONS = [

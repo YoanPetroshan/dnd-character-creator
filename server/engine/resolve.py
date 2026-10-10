@@ -4312,6 +4312,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             sources=draft.get("sources"), class_choices=rc_class_choices,
         )
         choice_templates += class_choices_2024.expertise_templates(catalog, rc, ruleset)  # C6b-1
+        choice_templates += class_choices_2024.language_templates(catalog, rc, ruleset)  # C6b-2
+        choice_templates += class_choices_2024.primal_knowledge_templates(catalog, rc, ruleset)  # C6b-2
         for tpl in choice_templates:  # G1: SRD style options already held (feat or earlier SRD style)
             held_names = fs_taken_by_cid.get(tpl["id"])
             if held_names and any(tpl["id"] == c for c, _l, _i in srd_fs_slots_by_class.get(rc["index"], [])):
@@ -4792,7 +4794,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         # "skill-"-prefixed, so this filter still excludes them.
         # Expertise picks are not proficiency grants (they must already be
         # proficient), so they never feed this set.
-        if c["source"]["kind"] in ("class", "species", "background", "feat") and "expertise-choice" not in c["id"]:
+        if (c["source"]["kind"] in ("class", "species", "background", "feat") and "expertise-choice" not in c["id"]
+                and not class_choices_2024.is_primal_knowledge_card(c)):  # C6b-2: gated against the others below
             proficient_skills.update(s for s in c["selected"] if s.startswith("skill-"))
     if bg:
         proficient_skills.update(p["index"] for p in bg.get("starting_proficiencies", []) if p["index"].startswith("skill-"))
@@ -4810,6 +4813,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # a feat's own proficiency_choices) are read.
     feat_proficiency_ids = _feat_proficiency_ids(resolved_feats)
     proficient_skills.update(p for p in feat_proficiency_ids if p.startswith("skill-"))
+    pruned += class_choices_2024.gate_primal_knowledge(choices, proficient_skills)  # C6b-2
+    for c in choices:
+        if class_choices_2024.is_primal_knowledge_card(c):
+            proficient_skills.update(s for s in c["selected"] if s.startswith("skill-"))
 
     proficient_armor: set[str] = set()
     proficient_weapons: set[str] = set()
@@ -4984,6 +4991,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     pruned += _gate_expertise_choices(
         choices, proficient_skills | proficient_tools, _feat_expertise_skills(resolved_feats),
         [rc["cls_id"] for rc in resolved_classes if rc["cls"]])
+    # C6b-2: class language cards yield to the fixed languages and to the other language cards.
+    fixed_languages = [lang["index"] for lang in (bg.get("languages", []) if bg else [])] + \
+        [lang["index"] for lang in (race.get("languages", []) if race else [])] + \
+        _feat_languages(resolved_feats) + class_choices_2024.fixed_class_languages(catalog, resolved_classes, ruleset)
+    pruned += class_choices_2024.gate_languages(choices, fixed_languages, [rc["cls_id"] for rc in resolved_classes if rc["cls"]])
 
     # Phase 4c-i Task 6: was class-only (primary class's saving_throws
     # field) — a granted feat's own FIXED saving-throw-proficiency grant
@@ -5106,12 +5118,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "stealthDisadvantage": stealth_disadvantage,
     }
 
-    fixed_languages = [lang["index"] for lang in (bg.get("languages", []) if bg else [])] + \
-        [lang["index"] for lang in (race.get("languages", []) if race else [])] + \
-        _feat_languages(resolved_feats)  # Phase 4c-i Task 6 — see that function's own docstring
+    # fixed_languages: computed with the class language gate above (Phase 4c-i Task 6 feat grants included)
     chosen_languages = [
         s for c in choices
-        if c["source"]["kind"] in ("background", "species", "feat") and c["id"].endswith(":languages")
+        if (c["source"]["kind"] in ("background", "species", "feat") and c["id"].endswith(":languages"))
+        or class_choices_2024.is_class_language_card(c)  # C6b-2
         for s in c["selected"]
     ]
 
