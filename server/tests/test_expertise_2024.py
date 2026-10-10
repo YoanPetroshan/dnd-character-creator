@@ -242,8 +242,9 @@ def test_lacks_expertise_blocks_a_skill_already_expert_from_an_earlier_card(cata
 
 
 @needs_data
-def test_lacks_expertise_blocks_a_skill_from_a_feat_card_even_though_the_feat_is_later_in_the_level_order(catalog):
-    """Skill Expert (Ranger ASI at level 4) is a feat card: feat expertise is walked first."""
+def test_lacks_expertise_blocks_the_later_feat_pick_in_level_order(catalog):
+    """F3a-3: Skill Expert (Ranger ASI at level 4) is walked at its real position, after Deft Explorer (level 2),
+    so the feat pick is the duplicate (it used to win because every feat card was walked first)."""
     picks = {
         "class:ranger:1:prof-choice-0": RANGER_SKILLS,
         "class:ranger:4:asi": ["feat:skill-expert-xphb"],
@@ -254,10 +255,10 @@ def test_lacks_expertise_blocks_a_skill_from_a_feat_card_even_though_the_feat_is
     }
     res = _res(catalog, [("ranger", 4, picks)])
     feat_card = _card(res, "class:ranger:4:asi:feat:skill-expert-xphb:expertise-choice-0")
-    assert feat_card["selected"] == ["skill-stealth"]
+    assert feat_card["selected"] == [] and feat_card["status"] == "pending"
+    assert _opt(feat_card, "skill-stealth")["disabledReason"] == "already has Expertise"
     deft = _card(res, DEFT)
-    assert deft["selected"] == []
-    assert _opt(deft, "skill-stealth")["disabledReason"] == "already has Expertise"
+    assert deft["selected"] == ["skill-stealth"]
 
 
 @needs_data
