@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 from typing import Callable
 
 from catalog import reference_data
+from engine import class_choices_2024
 
 UNLIMITED_ROW_VALUE = 9999  # SRD level rows store "unlimited" as 9999 (Barbarian 20 rages)
 
@@ -316,7 +317,12 @@ def _sorcerer(ctx: Ctx, rc: dict) -> list[dict]:
         costs = {lvl: cost for lvl, cost, min_level in reference_data.SORCERER_2024_CREATING_SLOTS if level >= min_level}
     else:
         costs = {s["spell_slot_level"]: s["sorcery_point_cost"] for s in cs.get("creating_spell_slots") or []}
-    return [_resource(rc, "Sorcery Points", uses=points, recharge="long", details={"slotCosts": costs} if costs else None)]
+    details = {"slotCosts": costs} if costs else {}
+    if ctx.ruleset == "2024":  # C6c-1: picked Metamagic options and their costs
+        picked = class_choices_2024.metamagic_details(ctx.catalog, ctx.choices)
+        if picked:
+            details["metamagic"] = picked
+    return [_resource(rc, "Sorcery Points", uses=points, recharge="long", details=details or None)]
 
 
 def _wizard(ctx: Ctx, rc: dict) -> list[dict]:

@@ -323,6 +323,10 @@ def _spell_from_5etools(raw: dict, class_lookup: dict, srd_indices=frozenset(), 
     }
     if material:
         record["material"] = material
+    if raw.get("damageInflict"):  # C6c-1: additive; read by engine.spells.spell_deals_damage
+        record["damage_inflict"] = list(raw["damageInflict"])
+    if raw.get("spellAttack"):
+        record["spell_attack"] = list(raw["spellAttack"])
     if casting_condition:
         record["casting_condition"] = _strip_tags(casting_condition)
     higher = []  # the "At Higher Levels" heading is dropped, like the SRD records

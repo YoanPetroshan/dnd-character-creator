@@ -4314,6 +4314,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choice_templates += class_choices_2024.expertise_templates(catalog, rc, ruleset)  # C6b-1
         choice_templates += class_choices_2024.language_templates(catalog, rc, ruleset)  # C6b-2
         choice_templates += class_choices_2024.primal_knowledge_templates(catalog, rc, ruleset)  # C6b-2
+        choice_templates += class_choices_2024.metamagic_templates(catalog, rc, ruleset)  # C6c-1
         for tpl in choice_templates:  # G1: SRD style options already held (feat or earlier SRD style)
             held_names = fs_taken_by_cid.get(tpl["id"])
             if held_names and any(tpl["id"] == c for c, _l, _i in srd_fs_slots_by_class.get(rc["index"], [])):

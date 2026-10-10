@@ -179,6 +179,7 @@ def load_class_2024_records(class_dir) -> dict[str, dict]:
             "starting_equipment": raw.get("startingEquipment") or {},
             "saving_throws": list(raw.get("proficiency") or []),  # C9a: ["str", "con"]
             "primary_ability": list(raw.get("primaryAbility") or []),  # C9a: [{"str": True}, {"dex": True}]
+            "optional_feature_progression": list(raw.get("optionalfeatureProgression") or []),  # C6c-1
         }
     return out
 
@@ -377,6 +378,114 @@ def convert_optional_features(raw_options) -> dict[str, dict]:
             "source": source, "ruleset": "2024" if source in RULESET_2024_SOURCES else "2014",
             "prerequisite_level": _option_prereq_level(raw),
             "feature_types": list(raw.get("featureType") or []),
+        })
+    return out
+
+
+def _opt_id(ref) -> str:
+    name, _, src = str(ref).partition("|")
+    return f"opt-{slug(name)}-{(src or 'XPHB').lower()}"
+
+
+def _has_repeatable(entries) -> bool:
+    for e in entries or []:
+        if isinstance(e, dict) and (e.get("name") == "Repeatable" or _has_repeatable(e.get("entries"))):
+            return True
+    return False
+
+
+def _prerequisite_2024(raw: dict) -> dict:
+    """XPHB EI prerequisite -> {level, optional_features [opt ids], cantrip "damage"|"attack"|None}."""
+    out = {"level": None, "optional_features": [], "cantrip": None}
+    for pre in raw.get("prerequisite") or []:
+        if not isinstance(pre, dict):
+            continue
+        level = pre.get("level")
+        level = level.get("level") if isinstance(level, dict) else level
+        if isinstance(level, int):
+            out["level"] = level
+        refs = pre.get("optionalfeature")
+        if isinstance(refs, list):
+            out["optional_features"] += [_opt_id(r) for r in refs if isinstance(r, str)]
+        spells = pre.get("spell")
+        if isinstance(spells, list):
+            for sp in spells:
+                if isinstance(sp, dict):
+                    out["cantrip"] = "attack" if "attack roll" in str(sp.get("entry", "")).lower() else "damage"
+    return out
+
+
+_INNATE_USES = {"daily": "1/long rest", "rest": "1/long rest", "ritual": "ritual"}
+
+
+def _spells_2024(raw_blocks, resolve_spell) -> dict:
+    """additionalSpells of an EI -> {innate [{spell, uses}], known_choose / prepared_choose
+    [{filter, count}], ability?}. Unresolvable names and unparsable filters are dropped."""
+    from .feats import _parse_spell_filter
+
+    out: dict = {"innate": [], "known_choose": [], "prepared_choose": []}
+
+    def add_names(names, uses):
+        for name in names:
+            if not isinstance(name, str):
+                continue
+            base = slug(_clean_spell_name(name))
+            spell_id = resolve_spell(base + "-xphb") or resolve_spell(base)
+            if spell_id:
+                out["innate"].append({"spell": spell_id, "uses": uses})
+
+    for block in raw_blocks if isinstance(raw_blocks, list) else []:
+        if not isinstance(block, dict):
+            continue
+        if isinstance(block.get("ability"), str):
+            out["ability"] = block["ability"]
+        innate = (block.get("innate") or {}).get("_") if isinstance(block.get("innate"), dict) else None
+        if isinstance(innate, list):
+            add_names(innate, "at-will")
+        elif isinstance(innate, dict):
+            for wrapper, value in innate.items():
+                if wrapper == "ritual" and isinstance(value, list):
+                    add_names(value, "ritual")
+                elif wrapper in ("daily", "rest") and isinstance(value, dict):
+                    for names in value.values():
+                        add_names(names if isinstance(names, list) else [], _INNATE_USES[wrapper])
+        for key, target in (("known", "known_choose"), ("prepared", "prepared_choose")):
+            items = (block.get(key) or {}).get("_") if isinstance(block.get(key), dict) else None
+            for item in items if isinstance(items, list) else []:
+                if isinstance(item, dict) and isinstance(item.get("choose"), str):
+                    parsed = _parse_spell_filter(item["choose"])
+                    if parsed:
+                        out[target].append({"filter": parsed, "count": int(item.get("count", 1))})
+    return out
+
+
+def convert_class_optional_features_2024(raw_options, resolve_spell) -> dict[str, dict]:
+    """C6c-1: `opt-<slug>-xphb` records for the XPHB Eldritch Invocations (EI) and Metamagic (MM).
+    Kept apart from convert_optional_features / OPTION_FEATURE_TYPES so the subclass path is unchanged.
+    Record: {index, name, desc, source, ruleset, feature_types, repeatable, prerequisite_2024, spells,
+    senses, feat_progression, cost}."""
+    out: dict[str, dict] = {}
+    for raw in raw_options or []:
+        if not isinstance(raw, dict) or raw.get("source") != "XPHB" or not raw.get("name"):
+            continue
+        types = raw.get("featureType") or []
+        if not {"EI", "MM"} & set(types):
+            continue
+        fid = f"opt-{slug(raw['name'])}-xphb"
+        consumes = raw.get("consumes") if isinstance(raw.get("consumes"), dict) else {}
+        senses: dict = {}
+        for sense in raw.get("senses") or []:
+            if isinstance(sense, dict):
+                senses.update({k: v for k, v in sense.items() if isinstance(v, int)})
+        out.setdefault(fid, {
+            "index": fid, "name": raw["name"], "desc": _flatten_entries(raw.get("entries") or []),
+            "source": "XPHB", "ruleset": "2024", "feature_types": list(types),
+            "repeatable": _has_repeatable(raw.get("entries")),
+            "prerequisite_2024": _prerequisite_2024(raw),
+            "spells": _spells_2024(raw.get("additionalSpells"), resolve_spell),
+            "senses": senses,
+            "feat_progression": list(raw.get("featProgression") or []),
+            "cost": int(consumes.get("amount", 1)) if consumes else 1,
         })
     return out
 

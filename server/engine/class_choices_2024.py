@@ -58,6 +58,9 @@ def replaced_srd_features(catalog, cls_id: str, ruleset: str) -> set[str]:
     """SRD feature ids whose card is replaced by a 2024 card (see SRD_CARDS_REPLACED_2024)."""
     if ruleset != "2024" or cls_id not in SRD_CARDS_REPLACED_2024:
         return set()
+    if cls_id == "sorcerer":  # C6c-1: only when the XPHB Metamagic card can exist
+        ok = METAMAGIC_FEATURE in catalog.features and optional_feature_progression(catalog, "sorcerer", "MM")
+        return set(SRD_CARDS_REPLACED_2024[cls_id]) if ok else set()
     if cls_id == "ranger":
         return set(SRD_CARDS_REPLACED_2024[cls_id]) if cls_id in (catalog.class_2024_records or {}) else set()
     return set(SRD_CARDS_REPLACED_2024[cls_id]) if expertise_entries(catalog, cls_id, ruleset) else set()
@@ -218,3 +221,61 @@ def gate_primal_knowledge(choices: list[dict], proficient_skills: set[str]) -> l
         choices[i] = {**c, "options": options, "selected": kept,
                       "status": "resolved" if len(kept) == c["count"] else "pending"}
     return pruned
+
+
+# ---- C6c-1: Sorcerer Metamagic (XPHB optional features) ---------------------------------------
+
+METAMAGIC_FEATURE = "xphb-sorcerer-2-metamagic"
+
+
+def optional_feature_progression(catalog, cls_id: str, feature_type: str) -> dict[int, int]:
+    """{class level: total picks} from the XPHB class record's optionalfeatureProgression for one
+    featureType ("MM"); {} when the record or the progression is missing."""
+    record = (getattr(catalog, "class_2024_records", None) or {}).get(cls_id) or {}
+    for prog in record.get("optional_feature_progression") or []:
+        if feature_type in (prog.get("featureType") or []) and isinstance(prog.get("progression"), dict):
+            return {int(k): v for k, v in prog["progression"].items() if str(k).isdigit() and isinstance(v, int)}
+    return {}
+
+
+def metamagic_cid() -> str:
+    return f"class:sorcerer:2:feature:{METAMAGIC_FEATURE}"
+
+
+def metamagic_templates(catalog, rc: dict, ruleset: str) -> list[dict]:
+    """Sorcerer under 2024: one Metamagic card, count = progression value at the highest reached
+    level ({2: 2, 10: 4, 17: 6}), options = the XPHB MM records labelled with their Sorcery Point
+    cost. `count_by_level` makes a level-down a non-blocking `pruned` entry."""
+    if ruleset != "2024" or rc.get("cls_id") != "sorcerer" or not rc.get("cls"):
+        return []
+    feature = catalog.features.get(METAMAGIC_FEATURE)
+    progression = optional_feature_progression(catalog, "sorcerer", "MM")
+    reached = [lvl for lvl in progression if lvl <= rc["level"]]
+    options = sorted((f for f in catalog.features.values()
+                      if f.get("source") == "XPHB" and "MM" in (f.get("feature_types") or [])),
+                     key=lambda f: f["name"])
+    if not feature or not reached or not options:
+        return []
+    return [{
+        "id": metamagic_cid(),
+        "source": {"kind": "class", "id": "sorcerer", "label": rc["cls"]["name"], "level": 2},
+        "label": feature["name"],
+        "description": _join(feature.get("desc")),
+        "count": progression[max(reached)],
+        "count_by_level": True,
+        "options": [{"id": o["index"], "label": f"{o['name']} ({o.get('cost', 1)} SP)",
+                     **({"description": _join(o["desc"])} if o.get("desc") else {})} for o in options],
+    }]
+
+
+def metamagic_details(catalog, choices) -> list[dict]:
+    """[{name, cost}] of the selected 2024 Metamagic options, in pick order ([] without a card)."""
+    if not isinstance(choices, list):
+        return []
+    card = next((c for c in choices if c.get("id") == metamagic_cid()), None)
+    out = []
+    for oid in (card or {}).get("selected") or []:
+        opt = catalog.features.get(oid)
+        if opt:
+            out.append({"name": opt["name"], "cost": opt.get("cost", 1)})
+    return out

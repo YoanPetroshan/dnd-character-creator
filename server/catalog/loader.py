@@ -133,7 +133,7 @@ def _merge_official_subclasses(catalog: Catalog) -> None:
     disk (subclass records, their features, their level rows, the 2014/2024
     twin map). SRD records win a key clash."""
     from .official_source import (
-        class_dir, convert_subclasses, convert_class_features_2024, load_class_2024_progressions, load_class_2024_records,
+        class_dir, convert_subclasses, convert_class_optional_features_2024, convert_class_features_2024, load_class_2024_progressions, load_class_2024_records,
         load_class_2024_tables, load_raw_class_features_2024, load_subclass_2024_tables, load_raw_class_data, load_raw_optional_features, optionalfeatures_file,
         subclass_twins_from,
     )
@@ -152,6 +152,12 @@ def _merge_official_subclasses(catalog: Catalog) -> None:
     if clash:
         raise ValueError(f"imported XPHB class feature ids clash with the SRD: {sorted(clash)[:5]}")
     catalog.features.update(class_features)
+    optional_2024 = convert_class_optional_features_2024(
+        load_raw_optional_features(optionalfeatures_file()), catalog.resolve_spell_id)
+    clash = set(optional_2024) & set(catalog.features)
+    if clash:
+        raise ValueError(f"imported XPHB optional feature ids clash: {sorted(clash)[:5]}")
+    catalog.features.update(optional_2024)
     raw_subs, raw_feats = load_raw_class_data(class_dir())
     if not raw_subs:
         return

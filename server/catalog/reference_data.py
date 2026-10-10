@@ -669,6 +669,7 @@ EXPERTISE_2024: dict[str, dict] = {
 SRD_CARDS_REPLACED_2024: dict[str, tuple[str, ...]] = {
     "bard": ("bard-expertise-1", "bard-expertise-2"),
     "rogue": ("rogue-expertise-1", "rogue-expertise-2"),
+    "sorcerer": ("metamagic-1", "metamagic-2", "metamagic-3"),
     "ranger": ("favored-enemy-1-type", "favored-enemy-2-types", "favored-enemy-3-enemies",
                "natural-explorer-1-terrain-type", "natural-explorer-2-terrain-types",
                "natural-explorer-3-terrain-types"),

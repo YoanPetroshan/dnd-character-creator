@@ -44,6 +44,9 @@ function detailParts(d: Record<string, unknown> | undefined): string[] {
   if (typeof d.knownForms === "number") parts.push(`известни форми: ${d.knownForms}`);
   if (d.fly === true) parts.push("летене");
   if (d.swim === true) parts.push("плуване");
+  const meta = d.metamagic;
+  if (Array.isArray(meta) && meta.length > 0)
+    parts.push("метамагия: " + meta.map((m: { name: string; cost: number }) => `${m.name} (${m.cost})`).join(", "));
   const options = d.perRageOptions;
   if (Array.isArray(options) && options.length > 0)
     parts.push(

@@ -108,6 +108,9 @@ def resource_detail_parts(details: dict | None) -> list[str]:
         parts.append("летене")
     if d.get("swim") is True:
         parts.append("плуване")
+    meta = d.get("metamagic")
+    if meta:
+        parts.append("метамагия: " + ", ".join(f"{m['name']} ({m['cost']})" for m in meta))
     options = d.get("perRageOptions")
     if options:
         parts.append("при всяка ярост една от опциите: " + "; ".join(f"{o['name']}: {o['effect']}" for o in options))

@@ -197,3 +197,13 @@ def spell_slots_for(catalog: Catalog, class_entries: list[tuple], ruleset: str =
     warlock = next(((c, lvl) for c, lvl, _ in parts if c in PACT_MAGIC_CLASSES), None)
     row = catalog.class_level_row(*warlock) if warlock else None
     return shared, warlock_pact_magic_slots(row["spellcasting"] if row else None)
+
+
+def spell_deals_damage(spell: dict) -> bool:
+    """C6c-1: True when the spell record deals damage (converted official `damage_inflict`, SRD `damage`)."""
+    return bool(spell.get("damage_inflict") or spell.get("damage"))
+
+
+def spell_attack_roll(spell: dict) -> bool:
+    """C6c-1: True when the spell uses an attack roll (official `spell_attack`, SRD `attack_type`)."""
+    return bool(spell.get("spell_attack") or spell.get("attack_type"))

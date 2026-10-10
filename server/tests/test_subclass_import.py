@@ -600,7 +600,8 @@ def test_converter_option_records_pools_and_attachment():
 
 @needs_classes
 def test_real_option_records(catalog):
-    opts = {i: f for i, f in catalog.features.items() if i.startswith("opt-")}
+    # the C6c-1 XPHB Invocation / Metamagic records (no prerequisite_level key) are a separate family
+    opts = {i: f for i, f in catalog.features.items() if i.startswith("opt-") and "prerequisite_level" in f}
     assert len(opts) == OPTION_RECORDS
     assert sum(1 for f in opts.values() if f["prerequisite_level"]) == 11
     attached = {i: f["feature_specific"]["optional_progression"] for i, f in catalog.features.items()
