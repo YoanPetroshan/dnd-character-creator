@@ -205,7 +205,8 @@ def test_agonizing_blast_negative_charisma_keeps_the_raw_modifier(catalog):
 
 @needs_data
 def test_eldritch_spear_range_note(catalog):
-    r = _res(catalog, 5, [SPEAR, SPEAR + "~2"], cantrips=["eldritch-blast-xphb"])
+    # F3a-2a: instance 2 needs a second eligible cantrip
+    r = _res(catalog, 5, [SPEAR, SPEAR + "~2"], cantrips=["eldritch-blast-xphb", "toll-the-dead-xphb"])
     assert "150 feet" in _resource(r, "Eldritch Spear")["details"]["note"]  # 30 x 5
     assert _resource(r, "Eldritch Spear (2)") is not None
     assert "300 feet" in _resource(_res(catalog, 10, [SPEAR], cantrips=["eldritch-blast-xphb"]), "Eldritch Spear")["details"]["note"]

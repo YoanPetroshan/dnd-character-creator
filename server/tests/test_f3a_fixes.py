@@ -63,3 +63,47 @@ def test_f1_2024_pick_pruned_when_switching_to_mixed(catalog):
     res = resolve(d, catalog)
     assert [p for p in res["pruned"] if p["choiceId"] == cid]
     assert _card(res, cid)["selected"] == []
+
+
+# --- Finding 2a: repeat instances of the target invocations need as many eligible cantrips as instances ------------
+
+from c7c_helpers import (AGON, BLADE_W, CANT, EB, INV, MI, REPEL, SPEAR, TOME, TOME_C, TTD, _card, _opt,  # noqa: E402
+                         _pruned, _res, tcid)
+
+SG = "shocking-grasp-xphb"
+
+
+@needs_data
+@pytest.mark.parametrize("base", [AGON, SPEAR, REPEL])
+def test_f2a_second_instance_needs_a_second_eligible_cantrip(catalog, base):
+    # Eldritch Blast is the only eligible cantrip (attack roll, damage, range 120) next to Minor Illusion
+    r = _res(catalog, 5, [base, f"{base}~2"], [EB, MI])
+    card = _card(r, INV)
+    o2 = _opt(card, f"{base}~2")
+    assert o2["disabled"] and o2["disabledReason"] == "needs another eligible cantrip"
+    assert f"{base}~2" not in card["selected"] and base in card["selected"]
+    assert "needs another eligible cantrip" in _pruned(r, INV) or "prerequisites" in _pruned(r, INV)
+    assert _card(r, tcid(f"{base}~2", "cantrip")) is None  # no card that can never be completed
+    # with a second qualifying cantrip the instance is open
+    r2 = _res(catalog, 5, [base, f"{base}~2"], [EB, "poison-spray-xphb", MI])  # attack roll, damage, range 30
+    assert not _opt(_card(r2, INV), f"{base}~2").get("disabled")
+
+
+@needs_data
+def test_f2a_eldritch_spear_counts_only_cantrips_with_range_ten_or_more(catalog):
+    # Shocking Grasp (Touch) comes from Pact of the Tome: it deals damage but cannot be the Spear's target
+    extra = {TOME_C: [SG, "guidance-xphb", "light-xphb"]}
+    r = _res(catalog, 5, [TOME, SPEAR, f"{SPEAR}~2"], [EB, MI], extra=extra)
+    assert _opt(_card(r, INV), f"{SPEAR}~2")["disabledReason"] == "needs another eligible cantrip"
+    # Agonizing Blast accepts it (damage only)
+    r2 = _res(catalog, 5, [TOME, AGON, f"{AGON}~2"], [EB, MI], extra=extra)
+    assert not _opt(_card(r2, INV), f"{AGON}~2").get("disabled")
+
+
+@needs_data
+def test_f2a_first_instance_without_any_eligible_target_is_disabled(catalog):
+    # a damaging cantrip exists (Shocking Grasp via the Tome) but none with range 10+: Spear can never get a target
+    extra = {TOME_C: [SG, "guidance-xphb", "light-xphb"]}
+    r = _res(catalog, 5, [TOME, SPEAR], [MI, "mage-hand-xphb"], extra=extra)
+    assert _opt(_card(r, INV), SPEAR).get("disabled")
+    assert SPEAR not in _card(r, INV)["selected"]

@@ -634,6 +634,13 @@ def _invocation_unmet_2024(catalog, option_id: str, level: int, selected: set[st
         prev = invocation_base_id(option_id) + ("" if k == 2 else f"~{k - 1}")
         if prev not in selected:
             return f"take {rec.get('name', 'it')}{'' if k == 2 else f' ({k - 1})'} first"
+    base = invocation_base_id(option_id)
+    if base in _TARGET_KIND:
+        # F3a-2a: instance k needs k different eligible cantrips (the same check the target cards use, incl.
+        # Eldritch Spear's range), or its target card could never be completed.
+        eligible = {c for c in cantrips if c in catalog.spells and not _target_reason(catalog, base, catalog.spells[c])}
+        if len(eligible) < k:
+            return "needs another eligible cantrip" if k > 1 else "needs an eligible cantrip"
     return None
 
 

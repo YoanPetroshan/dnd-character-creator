@@ -159,7 +159,8 @@ def test_repeat_instances_need_previous(catalog):
     assert _card(r)["selected"] == [TOME]
     r = _res(catalog, 5, picks=[AGON, AGON + "~2", TOME], cantrips=c)
     assert _card(r)["selected"] == [AGON, AGON + "~2", TOME]
-    r = _res(catalog, 5, picks=[AGON, AGON + "~2", AGON + "~3"], cantrips=c)
+    # F3a-2a: three instances need three eligible cantrips
+    r = _res(catalog, 5, picks=[AGON, AGON + "~2", AGON + "~3"], cantrips=c + ["poison-spray-xphb"])
     assert _card(r)["selected"] == [AGON, AGON + "~2", AGON + "~3"]
     r = _res(catalog, 5, picks=[AGON + "~3", AGON + "~2"], cantrips=c)  # base missing: whole chain falls
     assert _card(r)["selected"] == []
