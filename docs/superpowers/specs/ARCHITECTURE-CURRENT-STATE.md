@@ -647,21 +647,36 @@ Since F2-A every `details` key that carries meaning is printed in plain Bulgaria
 ## Open design questions (consolidated, 2026-10-10)
 
 Not guessed; each needs a user decision.
-1. 2024 Channel Divinity multiclass: merged pool (current) or separate pools per class (R3).
+1. ~~2024 Channel Divinity multiclass~~ CLOSED by G1-1: separate per-class pools under 2024, merged under 2014/mixed.
 2. Cleric Thaumaturge and Druid Magician Arcana bonuses currently stack (C6a).
 3. Weapon Mastery per class in a multiclass: each class gets its own card and the same weapon can be picked twice (C2).
-4. Elk/Tiger (SCAG) totem options are not filtered by `sources` (S4).
+4. ~~Elk/Tiger (SCAG) totem options not filtered by `sources`~~ CLOSED by G1-4.
 5. Armor of Shadows vs granted body armor: no worn/unequip model, so the default Warlock kit's leather armor means the AC formula never applies (R8).
 6. Agonizing Blast with a negative CHA modifier shows a negative bonus (R8).
-7. Mixed-ruleset duplicates between the SRD Fighting Style subfeature and the same-named FS feat (C3).
-8. 2024 Path of the Wild Heart per-rage choices are not modelled (R5).
+7. ~~Mixed-ruleset duplicates between the SRD Fighting Style subfeature and the same-named FS feat~~ CLOSED by G1-3.
+8. ~~2024 Path of the Wild Heart per-rage choices~~ CLOSED by G1-7 (listed as information in the Rage resource; the per-rage pick itself is not a build choice).
 9. Ranger 2024 shows Natural Explorer rows beside the XPHB rows (C5).
-10. S2 `repeatable` asymmetry (PHB version not repeatable, XPHB version is) and the Elemental Adept repeatable flag.
-11. Arcane Warrior (AU) is offered under the 2024 Fighting Style card (C3).
-12. The spell-slot note in the SPA is an approximation (S1).
+10. ~~S2 `repeatable` asymmetry / Elemental Adept flag~~ CLOSED by G1-2 (PHB Elemental Adept repeatable by override; PHB Magic Initiate and Skilled stay non-repeatable, as their text says).
+11. ~~Arcane Warrior (AU) under the 2024 Fighting Style card~~ CLOSED by G1-5.
+12. ~~The spell-slot note in the SPA is an approximation (S1)~~ CLOSED by G1-6.
 
 ## Review fixes F2 (2026-10-10)
 
 Display, messages, types, docs. (A) Resource `details` printed in exports and SPA (`resource_detail_parts`). (B) Old Wizard draft prune message says the picks are "not in your spellbook" (still non-blocking; the book is not seeded). (C) `Choice.granted` typed and shown on the choice card; the internal `count_by_level` key is stripped from `resolve()`'s choices. (D) The 200-entry `pruned` cap is applied last, so the "pruned-more" marker is always final. (E) Comment/docstring of `_is_count_variable_choice` corrected.
 
 Timing (`resolve()`, mean of 20, human/acolyte): mixed Fighter 20 2.7 ms, Monk 20 2.0 ms, Warlock 17/Paladin 3 2.6 ms, Wizard 20 2.8 ms; 2024 Fighter 20 1.5 ms, Monk 20 1.1 ms, Warlock 17/Paladin 3 2.1 ms, Wizard 20 2.0 ms (all under 50 ms). Server suite 2059 passed, root suite 405 passed / 8 skipped, frontend build green.
+
+
+## G1 rules-accuracy fixes (2026-10-10)
+
+Source for the rulings: the 2024 Player's Handbook text supplied by the user (Multiclassing section; feat rule "a feat can be taken only once unless its description has a Repeatable subsection"; chapter 5 feat list). One commit per item (`G1-1`..`G1-7`).
+
+1. **Channel Divinity (R3).** The 2024 Multiclassing chapter has no merge rule and each class text says "You can use this class's Channel Divinity twice". `resources_for` now skips `_merge_channel_divinity` under ruleset `2024`: `cleric:channel-divinity` and `paladin:channel-divinity` stay separate (own uses, `recharge "long"` with `shortRestRegains 1`, no `details.classes`). 2014 and mixed keep the PHB-2014 merge (one resource, uses = max, options combined). Cleric 6 / Paladin 3 in 2024: 3 + 2 uses (was one entry of 3).
+2. **Elemental Adept (S2).** PHB text in the catalog: "You can select this feat multiple times. Each time you do so, you must choose a different damage type." `reference_data.REPEATABLE_FEAT_OVERRIDES = {"elemental-adept-phb"}`, applied in `official/feats.py`. PHB Magic Initiate and Skilled have no repeat sentence (verified) and stay non-repeatable. The engine has no damage-type choice for the feat, so the "different type" rule is player-enforced (documented, not modelled). Outcomes: EA in any edition order is allowed (the feat being picked is repeatable); XPHB Magic Initiate/Skilled then PHB version stays blocked; PHB twice stays blocked.
+3. **Fighting Style duplicates, mixed.** SRD fighting-style subfeature cards (`Fighting Style`, `Additional Fighting Style`; option name minus "Fighting Style: " is the S2 name key) now take part in the F1 ordered walk (`_FightingStyleResolver` gets SRD slots). A held SRD pick records `name:<key>` ("Dueling, SRD"); later FS feat options read "already taken (Dueling, SRD)" and a stored duplicate gives the existing `feat-duplicate-*` problem. The other direction: SRD options whose name key is already held (earlier feat, or an earlier SRD style of another class, e.g. Fighter 1 + Paladin 2, or Champion Additional Fighting Style) are disabled with "already taken (...)", a stored duplicate is not applied (card pending) and reports `fighting-style-duplicate-<optionId>-<cid>`. Position decides (class order, then level), as in F1. Not modelled: the Bard Swords "Fighting Style" feature (no options in the data).
+4. **Feature-text options and sources (S4).** The converter adds `source` to a `text_options` option only when it differs from the subclass source (Elk, Tiger = SCAG in Totem Spirit / Aspect / Attunement; Storm Aura options have none). `_text_options_template(..., sources, keep)` hides an option whose source is not enabled unless it is already stored (then kept, `hiddenByFilters`). `_feature_choice_templates` takes `sources` and `class_choices`. The optional-progression pools (maneuvers etc.) are still not source-filtered.
+5. **Arcane Warrior (AU).** AU is a selectable source (the picker's `/api/catalog` source list includes AU, 42 books). An empty `draft.sources` means "everything", so Arcane Warrior used to be offered under 2024 by default. Following the book (chapter 5 lists exactly ten Fighting Style feats, plus Blessed Warrior / Druidic Warrior from class text): `_feat_offered` now requires, under ruleset `2024`, that a Fighting Style feat of a book other than XPHB has its book in an explicit source list. Applies to the 2024 card and the 2024 ASI pools; `mixed` is unchanged (it still shows Arcane Warrior unfiltered), a stored pick stays selected with `hiddenByFilters`. Pool sizes (Fighter, no sources; 21 ASI combos excluded): 2024 slot 4 140 -> **139**, slot 19 172 -> **171**; FS card Fighter 11 -> **10**, Paladin and Ranger 12 -> **11**; Paladin 2024 139. Unchanged: 2014 123, mixed 248 / 280, `srd`+`xphb` 62 / 74, Wizard 129 / 237.
+6. **Slot note exactness (S1).** New `derived.slotGrantingClasses` (class ids whose own table grants shared-pool slots at their level; Pact Magic never; same test `spell_slots_for` uses, via `spells._slot_granting`). In `DERIVED_FIELDS` (YAML), `Derived.slotGrantingClasses?` in `types.ts`; `SpellSlotsSummary` shows "(общи за всички класове)" when more than one class is listed and shows the shared line on a class tab when that class is listed (Warlock tab and the export page unchanged). Not re-checked in a browser at 375px (plain `<p>` text as before).
+7. **Wild Heart per-rage options (R5).** Text found in the catalog (`wild-heart-xphb-3-rage-of-the-wilds`: "Whenever you activate your Rage, you gain one of the following options of your choice." Bear / Eagle / Wolf; `wild-heart-xphb-14-power-of-the-wilds`: Falcon / Lion / Ram). Under ruleset 2024 with `wild-heart-xphb` the Rage resource gets `details.perRageOptions = [{name, effect}]` (effect = catalog text after "Name."; level 3 three entries, level 14 six). Printed by `export_fields.resource_detail_parts` and `ClassResourcesList` (mirrored): "при всяка ярост една от опциите: Bear: ...; Eagle: ...". The Bear resistance is not folded into the Rage resistances (the pick is per rage).
+
+Tests: server 2059 -> 2087 passed; root 405 passed / 8 skipped; `npm run build` green.
