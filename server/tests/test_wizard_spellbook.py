@@ -179,3 +179,13 @@ def test_resolve_wizard_20_with_a_full_book_is_fast(catalog):
     print(f"wizard 20 full book resolve: {ms:.1f} ms")
     assert ms < 50
     assert _choice(res, BOOK)["count"] == 44
+
+
+def test_prune_message_blames_the_spellbook_not_the_count(catalog):
+    """F2-B: prepared picks with no (or a smaller) spellbook are 'not in your spellbook'."""
+    stored = _book(catalog, 3, 4)
+    res = resolve(_draft(3, {PREP: stored}), catalog)  # level 3: prepared allows 5, but no book
+    reason = next(p["reason"] for p in res["pruned"] if p["choiceId"] == PREP)
+    assert "not in your spellbook" in reason and "now allows" not in reason
+    assert _choice(res, PREP)["selected"] == [] and res["problems"] == []  # D7: prune, non-blocking
+

@@ -4509,6 +4509,19 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                         f"'{tpl['id']}' now allows {tpl['count']} selection(s); "
                         f"{len(dropped)} stored selection(s) no longer fit and were ignored: {names}."
                     )
+                    if tpl["id"] == "class:wizard:spells-known":
+                        # F2-B: the prepared card offers only spellbook spells, so a pick the
+                        # card no longer offers is missing from the book, not over the count.
+                        outside = [d for d in dropped if d not in valid_ids]
+                        if outside:
+                            outside_names = ", ".join((catalog.spells.get(d) or {}).get("name", d) for d in outside)
+                            reason = (f"'{tpl['id']}': {len(outside)} stored prepared spell(s) are not in your "
+                                      f"spellbook and were ignored: {outside_names}.")
+                            rest = [d for d in dropped if d in valid_ids]
+                            if rest:
+                                rest_names = ", ".join((catalog.spells.get(d) or {}).get("name", d) for d in rest)
+                                reason += (f" Also {len(rest)} over the allowed {tpl['count']} "
+                                           f"selection(s): {rest_names}.")
                 pruned.append({"choiceId": tpl["id"], "reason": reason})
         elif len(selected) > tpl["count"]:
             problems.append({
