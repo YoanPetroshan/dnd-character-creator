@@ -2859,7 +2859,9 @@ def _is_count_variable_choice(tpl: dict) -> bool:
     stored over-count is staleness rather than a malformed Draft. Mirrors
     `isSpellChoice` in frontend/src/pages/ClassPage.tsx."""
     if tpl.get("count_by_level"):
-        return True  # level-scaled feat spell picks (Ritual Caster): over-count is staleness
+        return True
+    if tpl["source"]["kind"] == "class" and tpl["id"].endswith(":weapon-mastery"):
+        return True  # C2: Weapon Mastery count follows the class table  # level-scaled feat spell picks (Ritual Caster): over-count is staleness
     if tpl["source"]["kind"] == "class" and ":invocations:" in tpl["id"]:
         return True  # Eldritch Invocations known follow the warlock level table
     return tpl["source"]["kind"] == "class" and tpl["id"].endswith((":spells-cantrips", ":spells-known"))
@@ -3035,6 +3037,104 @@ def _spell_choice_templates(
             templates.append(tpl)
 
     return templates
+
+
+# C2: 2024 Weapon Mastery. XPHB class feature at level 1 of Barbarian, Fighter,
+# Paladin, Ranger and Rogue (each class of a multiclass character grants its own).
+# Count: the class table's "weapon-mastery" column (Barbarian, Fighter), else a
+# fixed 2 (Paladin, Ranger, Rogue: "two kinds of weapons", no table column).
+_MASTERY_FIXED_COUNT = {"paladin": 2, "ranger": 2, "rogue": 2}
+_MASTERY_CLASSES = ("barbarian", "fighter", "paladin", "ranger", "rogue")
+
+
+def _mastery_filter_reason(cls_id: str, item: dict) -> str | None:
+    """Why the class's Weapon Mastery filter excludes a weapon, or None.
+    Barbarian: Simple or Martial Melee. Rogue: Simple, or Martial with Finesse or
+    Light. Fighter, Paladin, Ranger: Simple or Martial (every weapon)."""
+    if cls_id == "barbarian" and item.get("weapon_range") != "Melee":
+        return "melee weapons only"
+    if cls_id == "rogue" and item.get("weapon_category") == "Martial":
+        props = {p["index"] for p in item.get("properties", [])}
+        if not props & {"finesse", "light"}:
+            return "martial weapons need Finesse or Light"
+    return None
+
+
+def _weapon_mastery_template(catalog: Catalog, rc: dict, ruleset: str) -> list[dict]:
+    """Weapon Mastery choice for one class (see above), only under ruleset "2024".
+    Built EARLY with the class-filter reasons; the proficiency check needs the
+    final weapon-proficiency set and is applied late by `_gate_mastery_choices`
+    (same build-early / gate-late pattern as the expertise and invocation gates).
+    No card when the catalog has no weapon with a mastery or no count is known."""
+    cls_id = rc.get("cls_id")
+    if ruleset != "2024" or cls_id not in _MASTERY_CLASSES or not rc.get("cls"):
+        return []
+    count = _MASTERY_FIXED_COUNT.get(cls_id)
+    if count is None:
+        values = (getattr(catalog, "class_2024_tables", None) or {}).get(cls_id, {}).get("weapon-mastery")
+        level = rc["level"]
+        if not values or not 0 < level <= len(values):
+            return []
+        count = values[level - 1]
+    options = []
+    for item in catalog.items.values():
+        if item.get("equipment_category", {}).get("index") != "weapon" or not item.get("mastery"):
+            continue
+        option = {"id": item["index"], "label": f"{item['name']} ({item['mastery']})"}
+        reason = _mastery_filter_reason(cls_id, item)
+        if reason:
+            option.update(disabled=True, disabledReason=reason)
+        options.append(option)
+    if not options or not count:
+        return []
+    return [{
+        "id": f"class:{cls_id}:weapon-mastery",
+        "source": {"kind": "class", "id": cls_id, "label": rc["cls"]["name"], "level": 1},
+        "label": "Weapon Mastery",
+        "description": f"Choose {count} kinds of weapons you are proficient with to use their mastery properties. "
+                       "You can change one choice after a long rest.",
+        "count": count,
+        "options": options,
+    }]
+
+
+def _gate_mastery_choices(choices: list[dict], catalog: Catalog, proficient_weapons: set[str]) -> list[dict]:
+    """Disable Weapon Mastery options the character is not proficient with and
+    drop stale selections of them. Mutates `choices`; returns non-blocking pruned."""
+    pruned: list[dict] = []
+    for i, c in enumerate(choices):
+        if c["source"]["kind"] != "class" or not c["id"].endswith(":weapon-mastery"):
+            continue
+        options, lacking = [], {}
+        for o in c["options"]:
+            item = catalog.items.get(o["id"])
+            if item and not o.get("disabled") and not attacks_mod.weapon_is_proficient(item, proficient_weapons):
+                lacking[o["id"]] = o["label"]
+                o = {**o, "disabled": True, "disabledReason": "not proficient"}
+            options.append(o)
+        selected = [s for s in c["selected"] if s not in lacking]
+        dropped = [lacking[s] for s in c["selected"] if s in lacking]
+        if dropped:
+            pruned.append({
+                "choiceId": c["id"],
+                "reason": f"'{c['label']}': {', '.join(dropped)} is no longer a proficient weapon and was ignored.",
+            })
+        choices[i] = {**c, "options": options, "selected": selected,
+                      "status": "resolved" if len(selected) == c["count"] else "pending"}
+    return pruned
+
+
+def _weapon_masteries(choices: list[dict], catalog: Catalog) -> list[dict]:
+    """sheet.weaponMasteries: every selected mastery weapon, first-seen order, deduped."""
+    out: list[dict] = []
+    for c in choices:
+        if c["source"]["kind"] != "class" or not c["id"].endswith(":weapon-mastery"):
+            continue
+        for sel in c["selected"]:
+            item = catalog.items.get(sel)
+            if item and item.get("mastery") and all(m["itemId"] != sel for m in out):
+                out.append({"itemId": sel, "name": item["name"], "mastery": item["mastery"]})
+    return out
 
 
 # Warlock level at which each Mystic Arcanum spell level is gained (identical
@@ -3829,6 +3929,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         if not (rc_cls and rc_cls_id):
             continue
         choice_templates += _mystic_arcanum_templates(catalog, rc, draft.get("sources"), ruleset, rc["class_choices"])
+        choice_templates += _weapon_mastery_template(catalog, rc, ruleset)
         caster = _effective_caster(catalog, rc, ruleset)
         if caster:
             spell_ability, spell_dict, list_class_id = caster
@@ -4022,7 +4123,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             selected = selected[: tpl["count"]]
             dropped = [s for s in raw_selected if s not in selected]
             if dropped:
-                names = ", ".join(catalog.spells[d]["name"] if d in catalog.spells else d for d in dropped)
+                names = ", ".join((catalog.spells.get(d) or catalog.items.get(d) or {}).get("name", d) for d in dropped)
                 pruned.append({
                     "choiceId": tpl["id"],
                     "reason": (
@@ -4349,6 +4450,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # Expertise needs the full proficiency picture (skills, plus the Rogue's
     # thieves' tools), so it is gated only after every grant above is in.
     # R8: the invocation gate runs first so Beguiling Influence's skills count for expertise.
+    pruned += _gate_mastery_choices(choices, catalog, proficient_weapons)  # C2
     pruned += _gate_invocation_choices(choices, resolved_classes, catalog)
     invocation_effects = features_mod.invocation_effects(
         choices, {rc["cls_id"]: rc["level"] for rc in resolved_classes if rc["cls"]})
@@ -4432,6 +4534,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         martial_arts = next((r for r in class_resources if r["id"] == "monk:martial-arts"), None)
         attacks = attacks + [attacks_mod.unarmed_strike(modifiers, prof_bonus, martial_arts and martial_arts.get("die"))]
     attacks = class_resources_mod.annotate_attacks(attacks, class_resources, equipped_items)
+    weapon_masteries = _weapon_masteries(choices, catalog)
+    attacks = attacks_mod.annotate_mastery(attacks, weapon_masteries)  # C2
     armor_problems, stealth_disadvantage = equipment_mod.armor_warnings(equipped_items, final_scores, weapon_proficiencies)
     warnings += armor_problems
     carrying = derived_mod.carrying_summary(
@@ -4569,6 +4673,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             catalog, resolved_classes, refs_by_class, race, race_id, subrace, bg, bg_id, resolved_feats, choices,
         ),
         "feats": sheet_feats,
+        "weaponMasteries": weapon_masteries,
     }
 
     return {

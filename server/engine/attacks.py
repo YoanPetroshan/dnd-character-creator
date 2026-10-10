@@ -11,6 +11,8 @@ two-handed grip and never gets it). Two-handed and ranged weapons get none.
 
 Monk unarmed strike (R2): `unarmed_strike`, see below.
 
+Weapon Mastery (C2) is chosen in resolve(); `annotate_mastery` adds `mastery` to rows.
+
 Out of scope: the Dueling "no other weapon" hand check (there is no hands
 model; the note tells the player), Weapon Mastery, magic items, Monk martial
 arts for non-Monks, feat attacks, other unarmed strikes (R2 adds the Monk's row).
@@ -37,6 +39,22 @@ def _range_text(item: dict) -> str | None:
     return f"{r['normal']}/{r['long']}" if r.get("long") else str(r["normal"])
 
 
+def weapon_is_proficient(item: dict, proficiency_ids) -> bool:
+    """Category proficiency (simple/martial) or the weapon's own proficiency id."""
+    return bool(
+        (item.get("weapon_category") == "Simple" and "simple-weapons" in proficiency_ids)
+        or (item.get("weapon_category") == "Martial" and "martial-weapons" in proficiency_ids)
+        or reference_data.weapon_proficiency_id(item["index"]) in proficiency_ids
+    )
+
+
+def annotate_mastery(attacks: list[dict], masteries: list[dict]) -> list[dict]:
+    """C2: `mastery` on every attack row = the mastery name when that weapon is
+    one of the character's chosen masteries, else None."""
+    by_item = {m["itemId"]: m["mastery"] for m in masteries}
+    return [{**a, "mastery": by_item.get(a["itemId"])} for a in attacks]
+
+
 def weapon_attack(item: dict, modifiers: dict, prof_bonus: int, proficiency_ids, styles: dict) -> dict | None:
     if item.get("equipment_category", {}).get("index") != "weapon":
         return None
@@ -51,11 +69,7 @@ def weapon_attack(item: dict, modifiers: dict, prof_bonus: int, proficiency_ids,
         ability = "STR"
     mod = modifiers.get(ability, 0)
 
-    proficient = (
-        (item.get("weapon_category") == "Simple" and "simple-weapons" in proficiency_ids)
-        or (item.get("weapon_category") == "Martial" and "martial-weapons" in proficiency_ids)
-        or reference_data.weapon_proficiency_id(item["index"]) in proficiency_ids
-    )
+    proficient = weapon_is_proficient(item, proficiency_ids)
     attack_bonus = mod + (prof_bonus if proficient else 0) + (styles.get("ranged_attack", 0) if ranged else 0)
 
     notes = [n for n in _NOTE_ORDER if n in props]

@@ -1,0 +1,183 @@
+"""C2: 2024 Weapon Mastery choice and mastery on attack rows.
+
+Rule (XPHB class features "Weapon Mastery", read from the 5etools class files on
+2026-10-10): Barbarian "two kinds of Simple or Martial Melee weapons" (table column
+2,2,2,3 from L4,4 from L10), Fighter "three kinds of Simple or Martial weapons"
+(table 3, 4 at L4, 5 at L10, 6 at L16), Paladin / Ranger / Rogue "two kinds of
+weapons ... with which you have proficiency" (fixed 2, no table column). The Rogue's
+proficiency itself is simple + martial Finesse/Light weapons. The feature is a
+level 1 class feature, so each class of a multiclass character grants its own.
+
+Matrix: ruleset (2024 / mixed / 2014) x class (the five / others) x level (count)
+x class filter (Barbarian ranged, Rogue heavy martial) x proficiency gate (SRD-chassis
+Rogue lacks e.g. Scimitar) x level-down prune x equipped weapon -> attack row."""
+import pytest
+
+from catalog import official_source
+from catalog.loader import load
+from catalog.official_source import has_official, has_official_classes
+from engine.resolve import resolve
+
+needs_data = pytest.mark.skipif(not (has_official() and has_official_classes()),
+                                reason="5etools official data not available")
+
+
+@pytest.fixture(scope="module")
+def catalog():
+    return load()
+
+
+def _res(catalog, classes, ruleset="2024", added=(), choices=None):
+    return resolve({
+        "ruleset": ruleset, "sources": [], "abilities": {"method": "manual", "base": {
+            "STR": 14, "DEX": 14, "CON": 12, "INT": 10, "WIS": 10, "CHA": 10}},
+        "species": {"id": "human"}, "background": {"id": "acolyte"},
+        "equipment": {"choices": {}, "added": list(added), "skipped": False},
+        "classes": [{"classId": c, "level": lv, "choices": (choices or {}).get(c, {})} for c, lv in classes],
+    }, catalog)
+
+
+def _card(res, cls):
+    return next((c for c in res["choices"] if c["id"] == f"class:{cls}:weapon-mastery"), None)
+
+
+def _opt(card, item_id):
+    return next(o for o in card["options"] if o["id"] == item_id)
+
+
+@needs_data
+@pytest.mark.parametrize("level,count", [(1, 3), (3, 3), (4, 4), (9, 4), (10, 5), (15, 5), (16, 6), (20, 6)])
+def test_fighter_counts(catalog, level, count):
+    card = _card(_res(catalog, [("fighter", level)]), "fighter")
+    assert card["count"] == count
+    longsword = _opt(card, "longsword")
+    assert longsword["label"] == "Longsword (Sap)" and not longsword.get("disabled")
+
+
+@needs_data
+@pytest.mark.parametrize("level,count", [(1, 2), (3, 2), (4, 3), (9, 3), (10, 4), (20, 4)])
+def test_barbarian_counts(catalog, level, count):
+    assert _card(_res(catalog, [("barbarian", level)]), "barbarian")["count"] == count
+
+
+@needs_data
+@pytest.mark.parametrize("cls", ["paladin", "ranger", "rogue"])
+def test_fixed_two_for_paladin_ranger_rogue(catalog, cls):
+    for level in (1, 10):
+        assert _card(_res(catalog, [(cls, level)]), cls)["count"] == 2
+
+
+@needs_data
+def test_barbarian_ranged_weapon_disabled(catalog):
+    card = _card(_res(catalog, [("barbarian", 1)]), "barbarian")
+    longbow = _opt(card, "longbow")
+    assert longbow["disabled"] and "melee" in longbow["disabledReason"]
+    assert not _opt(card, "greataxe").get("disabled")
+
+
+@needs_data
+def test_rogue_filter_and_proficiency(catalog):
+    card = _card(_res(catalog, [("rogue", 1)]), "rogue")
+    assert _opt(card, "greatsword")["disabled"]
+    assert not _opt(card, "rapier").get("disabled")
+    assert not _opt(card, "dagger").get("disabled")
+    # Longsword is martial without Finesse/Light: excluded by the 2024 filter
+    assert _opt(card, "longsword")["disabled"]
+    # SRD chassis Rogue has no Scimitar proficiency (2024 proficiencies are C9)
+    scimitar = _opt(card, "scimitar")
+    assert scimitar["disabled"] and "proficien" in scimitar["disabledReason"]
+
+
+@needs_data
+def test_non_mastery_weapons_are_not_offered(catalog):
+    ids = {o["id"] for o in _card(_res(catalog, [("fighter", 1)]), "fighter")["options"]}
+    assert "net" not in ids and "hoopak" not in ids
+    assert "musket" in ids and "pistol" in ids  # D9: imported weapons with a mastery
+
+
+@needs_data
+@pytest.mark.parametrize("ruleset", ["2014", "mixed"])
+def test_no_card_outside_2024(catalog, ruleset):
+    res = _res(catalog, [("fighter", 1)], ruleset)
+    assert _card(res, "fighter") is None
+    assert res["sheet"]["weaponMasteries"] == []
+
+
+@needs_data
+def test_no_card_for_other_classes(catalog):
+    assert _card(_res(catalog, [("wizard", 1)]), "wizard") is None
+
+
+@needs_data
+def test_selection_and_level_down_prune(catalog):
+    picks = ["longsword", "greataxe", "dagger", "rapier"]
+    res = _res(catalog, [("fighter", 4)], choices={"fighter": {"class:fighter:weapon-mastery": picks}})
+    assert _card(res, "fighter")["status"] == "resolved"
+    assert [m["itemId"] for m in res["sheet"]["weaponMasteries"]] == picks
+    assert res["sheet"]["weaponMasteries"][0] == {"itemId": "longsword", "name": "Longsword", "mastery": "Sap"}
+    res = _res(catalog, [("fighter", 3)], choices={"fighter": {"class:fighter:weapon-mastery": picks}})
+    assert _card(res, "fighter")["selected"] == picks[:3]
+    assert any(p["choiceId"] == "class:fighter:weapon-mastery" and "now allows 3" in p["reason"]
+               for p in res["pruned"])
+    assert not any(p["id"].startswith("over-selected") for p in res["problems"])
+
+
+@needs_data
+def test_stale_disabled_pick_is_dropped(catalog):
+    res = _res(catalog, [("barbarian", 1)], choices={"barbarian": {"class:barbarian:weapon-mastery": ["longbow", "greataxe"]}})
+    assert _card(res, "barbarian")["selected"] == ["greataxe"]
+    assert [m["itemId"] for m in res["sheet"]["weaponMasteries"]] == ["greataxe"]
+
+
+@needs_data
+def test_attack_row_gets_mastery(catalog):
+    res = _res(catalog, [("fighter", 1)], added=[{"itemId": "longsword", "qty": 1, "equipped": True}],
+               choices={"fighter": {"class:fighter:weapon-mastery": ["longsword", "dagger", "rapier"]}})
+    rows = {a["itemId"]: a for a in res["derived"]["attacks"]}
+    assert rows["longsword"]["mastery"] == "Sap"
+    other = _res(catalog, [("fighter", 1)], added=[{"itemId": "longsword", "qty": 1, "equipped": True}])
+    assert next(a for a in other["derived"]["attacks"] if a["itemId"] == "longsword")["mastery"] is None
+
+
+@needs_data
+def test_fighter_and_rogue_get_two_cards(catalog):
+    res = _res(catalog, [("fighter", 1), ("rogue", 1)])
+    assert _card(res, "fighter")["count"] == 3 and _card(res, "rogue")["count"] == 2
+    # a secondary Rogue gets no weapon proficiency from multiclassing, but Fighter's covers martial
+    assert not _opt(_card(res, "rogue"), "rapier").get("disabled")
+
+
+@needs_data
+def test_secondary_rogue_alone_lacks_proficiency(catalog):
+    res = _res(catalog, [("wizard", 1), ("rogue", 1)])
+    assert _opt(_card(res, "rogue"), "rapier")["disabled"]
+
+
+@needs_data
+def test_exports_carry_masteries(catalog):
+    from export_fields import extra_blocks
+    res = _res(catalog, [("fighter", 1)], added=[{"itemId": "longsword", "qty": 1, "equipped": True}],
+               choices={"fighter": {"class:fighter:weapon-mastery": ["longsword", "dagger", "rapier"]}})
+    blocks = extra_blocks(res)
+    assert ("h2", "Майсторство с оръжия") in blocks
+    assert ("bullet", "Longsword: Sap") in blocks
+    assert any(k == "bullet" and t.startswith("Longsword: +") and "майсторство Sap" in t for k, t in blocks)
+
+
+def test_srd_only_catalog_has_no_card(monkeypatch):
+    monkeypatch.setattr(official_source, "class_dir", lambda: None)
+    monkeypatch.setattr(official_source, "items_base_file", lambda: None)
+    cat = load()
+    res = _res(cat, [("fighter", 1), ("barbarian", 1)])
+    assert _card(res, "fighter") is None and _card(res, "barbarian") is None
+    assert res["sheet"]["weaponMasteries"] == []
+
+
+@needs_data
+def test_resolve_speed_fighter_20(catalog):
+    import time
+    _res(catalog, [("fighter", 20)])
+    start = time.perf_counter()
+    for _ in range(20):
+        _res(catalog, [("fighter", 20)])
+    assert (time.perf_counter() - start) / 20 < 0.05

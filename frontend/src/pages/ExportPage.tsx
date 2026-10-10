@@ -149,6 +149,19 @@ export function ExportPage() {
                 {a.offhandDamage && `, off hand ${a.offhandDamage}`}
                 {a.range && `, range ${a.range}`}
                 {a.notes.length > 0 && `; ${a.notes.join(", ")}`}
+                {a.mastery && `, mastery ${a.mastery}`}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {(resolution.sheet.weaponMasteries?.length ?? 0) > 0 && (
+        <div>
+          <h2>Майсторство с оръжия</h2>
+          <ul>
+            {resolution.sheet.weaponMasteries!.map((m) => (
+              <li key={m.itemId}>
+                {m.name}: {m.mastery}
               </li>
             ))}
           </ul>

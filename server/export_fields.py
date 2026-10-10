@@ -34,6 +34,7 @@ SHEET_TAIL_FIELDS: list[tuple[str, object]] = [
     ("proficiencies", {}), ("expertiseSkills", []), ("senses", {}), ("damageModifiers", {}),
     ("conditionImmunities", []), ("startingGold", 0), ("equipment", {}), ("spells", []),
     ("innateSpells", []), ("features", []), ("feats", []), ("grantedFeats", []), ("featOptions", []),
+    ("weaponMasteries", []),
 ]
 EXCLUDED: dict[tuple[str, str], str] = {}
 
@@ -148,7 +149,15 @@ def extra_blocks(resolution: dict) -> list[tuple[str, str]]:
                 line += f", range {a['range']}"
             if a.get("notes"):
                 line += "; " + ", ".join(a["notes"])
+            if a.get("mastery"):
+                line += f", майсторство {a['mastery']}"
             blocks.append(("bullet", line))
+
+    masteries = sheet.get("weaponMasteries") or []
+    if masteries:
+        blocks.append(("h2", "Майсторство с оръжия"))
+        for m in masteries:
+            blocks.append(("bullet", f"{m['name']}: {m['mastery']}"))
 
     resources = derived.get("classResources") or []
     if resources:

@@ -217,6 +217,8 @@ export interface Sheet {
   /** Class/subclass/species/background/feat features with the player's picks. */
   features?: SheetFeature[];
   feats?: SheetFeat[];
+  /** C2: chosen Weapon Masteries (2024). */
+  weaponMasteries?: WeaponMastery[];
 }
 
 export interface Attack {
@@ -234,6 +236,14 @@ export interface Attack {
   offhandDamage: string | null;
   range: string | null;
   notes: string[];
+  /** C2: the mastery name (e.g. "Sap") when this weapon is one of the chosen Weapon Masteries. */
+  mastery?: string | null;
+}
+
+export interface WeaponMastery {
+  itemId: string;
+  name: string;
+  mastery: string;
 }
 
 export interface CarryingCapacity {
