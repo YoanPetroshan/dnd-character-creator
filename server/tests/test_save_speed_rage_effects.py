@@ -57,7 +57,7 @@ def catalog():
     return load()
 
 
-def _res(catalog, classes, base=None, ruleset="mixed", added=(), picks=None):
+def _res(catalog, classes, base=None, ruleset="mixed", added=(), picks=None, species="human"):
     """classes: (classId, level[, subclassId]); human gives +1 to every score."""
     entries = []
     for spec in classes:
@@ -68,7 +68,7 @@ def _res(catalog, classes, base=None, ruleset="mixed", added=(), picks=None):
     scores = {a: 10 for a in ABS}
     scores.update(base or {})
     d = {"name": "t", "ruleset": ruleset, "sources": [], "classes": entries,
-         "background": {"id": "acolyte", "choices": {}}, "species": {"id": "human", "choices": {}},
+         "background": {"id": "acolyte", "choices": {}}, "species": {"id": species, "choices": {}},
          "abilities": {"method": "manual", "base": scores},
          "equipment": {"choices": {}, "added": [{"itemId": i, "qty": 1, "equipped": True} for i in added], "skipped": False},
          "details": {}}
@@ -173,6 +173,20 @@ def test_fast_movement_stacks_with_unarmored_movement(catalog):
     assert _res(catalog, [("barbarian", 5), ("monk", 2)], added=["hide-armor"])["derived"]["speed"] == 40
     assert _res(catalog, [("barbarian", 5), ("monk", 2)], added=["chain-mail"])["derived"]["speed"] == 30
     assert _res(catalog, [("barbarian", 4), ("monk", 2)])["derived"]["speed"] == 40
+
+
+def test_speed_bonuses_raise_only_the_walking_speed(catalog):
+    """F1 (6): "Your speed increases by 10 feet" (Fast Movement, Unarmored Movement) is the
+    walking speed. A Triton (walk 30, swim 30) Barbarian 5 / Monk 2 keeps swim 30; the
+    other speed modes are not raised by either feature."""
+    tri = _res(catalog, [("barbarian", 1)], species="triton-mpmm")["derived"]["speeds"]
+    assert tri["walk"] == 30 and tri["swim"] == 30
+    for classes, walk in (([("barbarian", 5)], 40), ([("monk", 2)], 40), ([("barbarian", 5), ("monk", 2)], 50)):
+        got = _res(catalog, classes, species="triton-mpmm")["derived"]
+        assert got["speeds"]["walk"] == walk and got["speed"] == walk, classes
+        assert got["speeds"]["swim"] == 30, classes
+    heavy = _res(catalog, [("barbarian", 5)], species="triton-mpmm", added=["chain-mail"])["derived"]["speeds"]
+    assert heavy["walk"] == 30 and heavy["swim"] == 30
 
 
 # ------------------------------------------------------------ Rage resistances

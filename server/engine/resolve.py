@@ -3045,6 +3045,14 @@ def _highest_spell_slot_level(spellcasting: dict) -> int:
     return highest
 
 
+def _raise_walk_speed(speeds: dict[str, int], bonus: int) -> dict[str, int]:
+    """F1: "Your speed increases by X feet" (Fast Movement, Unarmored Movement) raises the
+    walking speed only; swim, fly, climb and burrow keep their own values."""
+    if not bonus or "walk" not in speeds:
+        return speeds
+    return {**speeds, "walk": speeds["walk"] + bonus}
+
+
 def _is_mastery_choice(tpl: dict) -> bool:
     return tpl["source"]["kind"] == "class" and tpl["id"].endswith(":weapon-mastery")
 
@@ -4905,11 +4913,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     speeds = _species_speeds(race, subrace, species_variant)
     worn_armor = any(i.get("equipment_category", {}).get("index") == "armor" for i in equipped_items)  # body armor or shield
     if speeds and not worn_armor:
-        speed_bonus = features_mod.speed_bonus(effects, class_levels)
-        speeds = {mode: value + speed_bonus for mode, value in speeds.items()}
+        speeds = _raise_walk_speed(speeds, features_mod.speed_bonus(effects, class_levels))  # Unarmored Movement
     fast = features_mod.speed_bonus_unless_heavy(effects, equipped_items)  # R5: Fast Movement
     if speeds and fast:
-        speeds = {mode: value + fast for mode, value in speeds.items()}
+        speeds = _raise_walk_speed(speeds, fast)
     base_speed = speeds.get("walk")
     # Attacks, carrying capacity and armor warnings (Slice 9). Size is the
     # selected species size (Slice 8d), else the race's own, else Medium.
