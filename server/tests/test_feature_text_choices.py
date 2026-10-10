@@ -170,3 +170,52 @@ def test_level_down_prunes_aspect_pick(catalog):
     assert _choice(res, _cid(6, AB)) is None
     assert _choice(res, _cid(3, TS))["selected"] == [f"{TS}--wolf"]
     assert any(_cid(6, AB) in str(p) for p in res.get("pruned", []))
+
+
+# ---- G1-4: options honor draft.sources ---------------------------------------
+
+def test_converter_tags_an_option_whose_source_differs_from_the_subclass(monkeypatch):
+    monkeypatch.setitem(FEATURE_TEXT_CHOICES, "tot-phb-3-demo", 1)
+    sub = {"name": "Tot", "shortName": "Tot", "source": "PHB", "className": "Barbarian", "classSource": "PHB",
+           "edition": "classic", "subclassFeatures": ["Demo|Barbarian||Tot||3"]}
+    top = {"name": "Demo", "source": "PHB", "className": "Barbarian", "classSource": "PHB",
+           "subclassShortName": "Tot", "subclassSource": "PHB", "level": 3,
+           "entries": [{"type": "options", "count": 1, "entries": [
+               {"type": "refSubclassFeature", "subclassFeature": "Bear|Barbarian||Tot||3"},
+               {"type": "refSubclassFeature", "subclassFeature": "Elk|Barbarian||Tot||3"}]}]}
+    kids = [{"name": n, "source": s, "className": "Barbarian", "classSource": "PHB",
+             "subclassShortName": "Tot", "subclassSource": "PHB", "level": 3, "entries": ["x."]}
+            for n, s in (("Bear", "PHB"), ("Elk", "SCAG"))]
+    _, feats, _ = sub_mod.convert_subclasses([sub], [top] + kids, set(), lambda s: None)
+    opts = feats["tot-phb-3-demo"]["feature_specific"]["text_options"]["options"]
+    assert "source" not in opts[0] and opts[1]["source"] == "SCAG"
+
+
+@needs_official
+def test_real_data_elk_and_tiger_are_scag(catalog):
+    for fid in (TS, AB, TA):
+        by = {o["name"]: o.get("source") for o in catalog.features[fid]["feature_specific"]["text_options"]["options"]}
+        assert by == {"Bear": None, "Eagle": None, "Elk": "SCAG", "Tiger": "SCAG", "Wolf": None}
+    assert all("source" not in o for o in catalog.features[SA]["feature_specific"]["text_options"]["options"])
+
+
+@needs_official
+def test_scag_options_hidden_when_scag_is_not_a_selected_source(catalog):
+    d = _draft(3)
+    d["sources"] = ["srd", "phb"]
+    ch = _choice(resolve(d, catalog), _cid(3, TS))
+    assert [o["label"] for o in ch["options"]] == ["Bear", "Eagle", "Wolf"]
+    d["sources"] = ["srd", "phb", "scag"]
+    ch = _choice(resolve(d, catalog), _cid(3, TS))
+    assert [o["label"] for o in ch["options"]] == ["Bear", "Eagle", "Elk", "Tiger", "Wolf"]
+    assert not any(o.get("hiddenByFilters") for o in ch["options"])
+
+
+@needs_official
+def test_stored_hidden_scag_pick_stays_offered_and_selected(catalog):
+    d = _draft(3, {_cid(3, TS): [f"{TS}--elk"]})
+    d["sources"] = ["srd", "phb"]
+    ch = _choice(resolve(d, catalog), _cid(3, TS))
+    elk = next(o for o in ch["options"] if o["id"] == f"{TS}--elk")
+    assert elk["hiddenByFilters"] is True and ch["selected"] == [f"{TS}--elk"] and ch["status"] == "resolved"
+    assert [o["label"] for o in ch["options"] if o["id"] != f"{TS}--elk"] == ["Bear", "Eagle", "Wolf"]

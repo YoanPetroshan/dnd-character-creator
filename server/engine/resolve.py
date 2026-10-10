@@ -1552,12 +1552,21 @@ def _optional_progression_template(catalog: Catalog, feature: dict, cid: str, so
     return tpl
 
 
-def _text_options_template(spec: dict, cid: str, source: dict, name: str, description) -> dict:
+def _text_options_template(spec: dict, cid: str, source: dict, name: str, description,
+                           sources=None, keep=()) -> dict:
     """Build-time pick among options that the feature text lists (Totem
-    Spirit, Storm Aura...). Option ids are `<featureId>--<slug>`."""
+    Spirit, Storm Aura...). Option ids are `<featureId>--<slug>`. G1: an option
+    with its own `source` (Elk/Tiger, SCAG) follows draft.sources like other
+    source-gated options: hidden when its source is off, unless already stored
+    (then kept and flagged `hiddenByFilters`)."""
     options = []
     for opt in spec["options"]:
+        hidden = not _source_allowed({"source": opt.get("source")}, sources)
+        if hidden and opt["id"] not in keep:
+            continue
         option = {"id": opt["id"], "label": opt["name"]}
+        if hidden:
+            option["hiddenByFilters"] = True
         desc = _join_desc(opt.get("desc"))
         if desc:
             option["description"] = desc
@@ -1569,6 +1578,7 @@ def _text_options_template(spec: dict, cid: str, source: dict, name: str, descri
 def _feature_choice_templates(
     catalog: Catalog, cls_id: str, cls_name: str, feature_refs: list[tuple[int, dict]], subclass_id: str | None,
     class_level: int | None = None, skip_features: frozenset[str] | set[str] = frozenset(),
+    sources=None, class_choices: dict | None = None,
 ) -> list[dict]:
     templates = []
     if class_level is None:
@@ -1610,7 +1620,9 @@ def _feature_choice_templates(
             tpl = _optional_progression_template(catalog, feature, cid, source, class_level)
         elif specific.get("text_options"):
             cid = f"class:{cls_id}:{lvl}:feature:{feature['index']}"
-            tpl = _text_options_template(specific["text_options"], cid, source, feature["name"], description)
+            stored = (class_choices or {}).get(cid)
+            tpl = _text_options_template(specific["text_options"], cid, source, feature["name"], description,
+                                         sources, stored if isinstance(stored, list) else ())
         else:
             continue
         if tpl:
@@ -4261,6 +4273,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choice_templates += _feature_choice_templates(
             catalog, rc_cls_id, rc_cls["name"], feature_refs, rc_subclass_id, class_level=rc_level,
             skip_features={idx for _cid, _lvl, idx in rc_fs_slots},
+            sources=draft.get("sources"), class_choices=rc_class_choices,
         )
         for tpl in choice_templates:  # G1: SRD style options already held (feat or earlier SRD style)
             held_names = fs_taken_by_cid.get(tpl["id"])

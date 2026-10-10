@@ -510,7 +510,10 @@ def convert_subclasses(raw_subs, raw_feats, srd_subclass_ids, resolve_spell, raw
                     if child is None:
                         continue
                     desc = _flatten_entries(prepare(child.get("entries") or [], True))
-                    found.append({"id": f"{fid}--{slug(child['name'])}", "name": child["name"], "desc": desc})
+                    option = {"id": f"{fid}--{slug(child['name'])}", "name": child["name"], "desc": desc}
+                    if child.get("source") and child["source"] != record["source"]:
+                        option["source"] = child["source"]  # G1: e.g. Elk/Tiger (SCAG) inside a PHB subclass
+                    found.append(option)
                 if found:
                     return {"count": entry.get("count") or 1, "options": found}
             return None
