@@ -158,6 +158,23 @@ def normalize_draft(draft) -> tuple[dict, list[dict]]:
                     e["qty"] = n
                 clean_added.append(e)
             equipment["added"] = clean_added
+        for key, fields in (("worn", ("armor", "shield")), ("wielded", ("main", "off"))):
+            raw = equipment.get(key)
+            if raw is None:
+                equipment.pop(key, None)
+                continue
+            if not isinstance(raw, dict):
+                problems.append({"id": f"malformed-equipment-{key}", "message": f"'equipment.{key}' must be an object; it was ignored."})
+                equipment.pop(key)
+                continue
+            clean = dict(raw)
+            for f in fields:
+                v = clean.get(f)
+                ok = v is None or isinstance(v, bool) if f == "shield" else v is None or isinstance(v, str)
+                if f in clean and not ok:
+                    problems.append({"id": f"malformed-equipment-{key}", "message": f"'equipment.{key}.{f}' has the wrong type; it was ignored."})
+                    clean.pop(f)
+            equipment[key] = clean
         out["equipment"] = equipment
 
     return out, problems

@@ -68,6 +68,7 @@ from . import attacks as attacks_mod
 from . import class_resources as class_resources_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
+from . import worn as worn_mod
 from . import features as features_mod
 from . import sheet_features as sheet_features_mod
 from . import spells as spells_mod
@@ -4734,6 +4735,18 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         if granted_item:
             equipped_items.append(granted_item)
 
+    # G2: optional worn / wielded model. Absent -> `equipped_items` is untouched.
+    inventory: dict[str, dict] = {}
+    for entry in granted_equipment + chosen_equipment + added_resolved:
+        inv_item = catalog.items.get(entry["itemId"])
+        if inv_item:
+            slot = inventory.setdefault(entry["itemId"], {"item": inv_item, "qty": 0})
+            slot["qty"] += entry.get("qty", 1) if isinstance(entry.get("qty", 1), int) else 1
+    gear = worn_mod.apply(equipped_items, equipment_dict, inventory, catalog.items)
+    equipped_items = gear.items
+    warnings += gear.warnings
+    pruned += gear.pruned
+
     # Derived stats.
     proficient_skills: set[str] = set()
     for c in choices:
@@ -5019,7 +5032,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # selected species size (Slice 8d), else the race's own, else Medium.
     weapon_proficiencies = proficient_armor | proficient_weapons
     attacks = attacks_mod.attacks_from_gear(
-        equipped_items, modifiers, prof_bonus, proficient_weapons, features_mod.attack_styles(effects),
+        equipped_items, modifiers, prof_bonus, proficient_weapons, features_mod.attack_styles(effects), gear.hands,
     )
     class_resources = class_resources_mod.resources_for(
         catalog, resolved_classes, modifiers, prof_bonus, ruleset, choices=choices, warnings_out=warnings)
@@ -5149,7 +5162,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "startingGold": starting_gold,
         "equipment": {
             "granted": granted_equipment, "chosen": chosen_equipment, "added": added_resolved,
-            "narrativeItems": narrative_items,
+            "narrativeItems": narrative_items, "slots": gear.slots,
+            **({"worn": gear.worn} if gear.worn else {}), **({"wielded": gear.wielded} if gear.wielded else {}),
         },
         "spells": spells_summary,
         "details": details,

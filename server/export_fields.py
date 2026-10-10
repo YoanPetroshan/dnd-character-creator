@@ -146,6 +146,26 @@ def resource_line(r: dict) -> str:
     return f"{r['name']}: {core}" if core else r["name"]
 
 
+def worn_wielded_line(sheet: dict) -> str | None:
+    """G2: one plain line for the Equipment block, only when the draft sets worn/wielded.
+    Markdown and PDF both print exactly this text."""
+    eq = sheet.get("equipment") or {}
+    worn, wielded = eq.get("worn"), eq.get("wielded")
+    if not worn and not wielded:
+        return None
+    slots = eq.get("slots") or {}
+    names = {o["itemId"]: o["name"] for k in ("armor", "shield", "hands") for o in slots.get(k, [])}
+    parts = []
+    if worn:
+        armor = names.get(worn.get("armor"), worn.get("armor")) if worn.get("armor") else "без броня"
+        parts.append("броня: " + armor + (", щит" if worn.get("shield") else ""))
+    if wielded:
+        def hand(i):
+            return names.get(i, i) if i else "празна"
+        parts.append(f"в ръце: основна {hand(wielded.get('main'))}, свободна {hand(wielded.get('off'))}")
+    return "Носено: " + "; ".join(parts)
+
+
 def extra_blocks(resolution: dict) -> list[tuple[str, str]]:
     """Sections for the fields the fixed Markdown/PDF layout lacks."""
     sheet, derived = resolution["sheet"], resolution["derived"]

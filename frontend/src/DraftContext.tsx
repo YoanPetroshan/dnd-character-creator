@@ -65,7 +65,9 @@ type Action =
   | { type: "CLEAR_STALE_SELECTIONS"; keepIds: string[]; clearSubclassFor?: string[] }
   | { type: "ADD_ITEM"; itemId: string }
   | { type: "REMOVE_ITEM"; itemId: string }
-  | { type: "TOGGLE_EQUIPPED"; itemId: string };
+  | { type: "TOGGLE_EQUIPPED"; itemId: string }
+  | { type: "SET_WORN"; worn: Draft["equipment"]["worn"] }
+  | { type: "SET_WIELDED"; wielded: Draft["equipment"]["wielded"] };
 
 export const MAX_TOTAL_LEVEL = 20;
 
@@ -279,6 +281,14 @@ function reducer(state: Draft, action: Action): Draft {
           added: state.equipment.added.map((e) => (e.itemId === action.itemId ? { ...e, equipped: !e.equipped } : e)),
         },
       };
+    case "SET_WORN": {
+      const { worn: _drop, ...rest } = state.equipment;
+      return { ...state, equipment: action.worn ? { ...rest, worn: action.worn } : rest };
+    }
+    case "SET_WIELDED": {
+      const { wielded: _drop, ...rest } = state.equipment;
+      return { ...state, equipment: action.wielded ? { ...rest, wielded: action.wielded } : rest };
+    }
     default:
       return state;
   }

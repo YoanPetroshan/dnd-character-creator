@@ -74,6 +74,87 @@ export function EquipmentPage() {
         </div>
       )}
 
+      {sheetEquipment.slots && (
+        <div className="equipment-section">
+          <h2>Носено и държано</h2>
+          <label>
+            <input
+              type="checkbox"
+              checked={!!draft.equipment.worn}
+              onChange={(e) =>
+                dispatch({
+                  type: "SET_WORN",
+                  worn: e.target.checked
+                    ? { armor: sheetEquipment.slots?.current.armor ?? null, shield: sheetEquipment.slots?.current.shield ?? false }
+                    : undefined,
+                })
+              }
+            />
+            Задай ръчно какво нося
+          </label>
+          {draft.equipment.worn && (
+            <>
+              <label>
+                Броня
+                <select
+                  value={draft.equipment.worn.armor ?? ""}
+                  onChange={(e) =>
+                    dispatch({ type: "SET_WORN", worn: { ...draft.equipment.worn, armor: e.target.value || null } })
+                  }
+                >
+                  <option value="">Без броня</option>
+                  {sheetEquipment.slots.armor.map((o) => (
+                    <option key={o.itemId} value={o.itemId}>
+                      {o.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={draft.equipment.worn.shield == null ? !!sheetEquipment.worn?.shield : draft.equipment.worn.shield}
+                  onChange={(e) => dispatch({ type: "SET_WORN", worn: { ...draft.equipment.worn, shield: e.target.checked } })}
+                />
+                Щит
+              </label>
+            </>
+          )}
+          <label>
+            <input
+              type="checkbox"
+              checked={!!draft.equipment.wielded}
+              onChange={(e) => dispatch({ type: "SET_WIELDED", wielded: e.target.checked ? { main: null, off: null } : undefined })}
+            />
+            Задай ръчно какво държа в ръцете
+          </label>
+          {draft.equipment.wielded && (
+            <>
+              {(["main", "off"] as const).map((hand) => (
+                <label key={hand}>
+                  {hand === "main" ? "Основна ръка" : "Свободна ръка"}
+                  <select
+                    value={draft.equipment.wielded?.[hand] ?? ""}
+                    onChange={(e) =>
+                      dispatch({ type: "SET_WIELDED", wielded: { ...draft.equipment.wielded, [hand]: e.target.value || null } })
+                    }
+                  >
+                    <option value="">Празна</option>
+                    {sheetEquipment.slots!.hands
+                      .filter((o) => hand === "off" || o.kind !== "shield")
+                      .map((o) => (
+                        <option key={o.itemId} value={o.itemId}>
+                          {o.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+
       <h2>Предмети</h2>
       <input type="text" placeholder="Търсене…" value={query} onChange={(e) => setQuery(e.target.value)} />
       <select value={category} onChange={(e) => setCategory(e.target.value)}>

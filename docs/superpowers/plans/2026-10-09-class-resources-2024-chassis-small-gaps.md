@@ -546,6 +546,8 @@ Storm Soul and Raging Storm follow the Storm Aura environment, so they get no se
 
 **If D3 = (a):** count the distinct equipped weapons (excluding the one being rated and shields); no bonus when > 0. **If D3 = (c):** add `equipment.wielded` to `Draft`, `normalize.py`, a reducer action, and an EquipmentPage select (functional), and apply Dueling only when main is one-handed melee and off is empty or a shield; budget M.
 
+**Update 2026-10-10:** option (c) was added on top of (b) as G2 (`equipment.worn` / `wielded`, see ARCHITECTURE "G2"); without `wielded` the (b) behavior above still holds.
+
 **Risk.** Existing tests assert `damage` includes Dueling (Slice 9). Update them in the same commit and say so in the commit message.
 
 ### S6: PDF / Markdown / YAML field-level export check (S). After all R/C slices that add fields.

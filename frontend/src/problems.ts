@@ -37,7 +37,7 @@ export function stepForProblem(p: Problem): ProblemStep | null {
     id === "roll-out-of-range"
   )
     return "abilities";
-  if (id.startsWith("over-selected-") || id === "malformed-equipment-added" || id === "malformed-equipment-choices")
+  if (id.startsWith("over-selected-") || id === "malformed-equipment-added" || id === "malformed-equipment-worn" || id === "malformed-equipment-wielded" || id === "malformed-equipment-choices")
     return "equipment";
   return null;
 }

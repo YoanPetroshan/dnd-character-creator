@@ -189,7 +189,19 @@ export interface SheetFeat {
   choice?: string[];
 }
 
+export interface SlotItem {
+  itemId: string;
+  name: string;
+  kind?: "weapon" | "shield";
+  twoHanded?: boolean;
+}
+
 export interface SheetEquipment {
+  /** G2: what the worn/wielded selectors can offer, from the resolved inventory. */
+  slots?: { armor: SlotItem[]; shield: SlotItem[]; hands: SlotItem[]; current: { armor: string | null; shield: boolean } };
+  /** G2: present only when the draft sets worn / wielded. */
+  worn?: { armor: string | null; shield: boolean; manual: boolean };
+  wielded?: { main: string | null; off: string | null; manual: boolean };
   granted: SheetEquipmentEntry[];
   chosen: SheetEquipmentEntry[];
   added: SheetAddedEquipmentEntry[];
@@ -237,6 +249,8 @@ export interface Attack {
   versatileDamage: string | null;
   /** One-handed melee with Dueling only: damage including the +2 (S5). */
   duelingDamage: string | null;
+  /** G2: only when the draft sets equipment.wielded. */
+  wielded?: boolean;
   offhandDamage: string | null;
   range: string | null;
   notes: string[];
@@ -345,6 +359,10 @@ export interface Draft {
     startingChoice?: string;
     choices: Record<string, string[]>;
     added: { itemId: string; qty: number; equipped: boolean }[];
+    /** G2, optional: absent = best armor/shield auto-detected. armor null = none worn. */
+    worn?: { armor?: string | null; shield?: boolean | null };
+    /** G2, optional: absent = hands not tracked. */
+    wielded?: { main?: string | null; off?: string | null };
     skipped: boolean;
   };
   details: CharacterDetails;

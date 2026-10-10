@@ -9,7 +9,7 @@ already produces them — no new engine computation happens here.
 from __future__ import annotations
 
 from catalog.reference_data import ABILITIES, LANGUAGES, SKILL_NAMES, proficiency_label
-from export_fields import extra_blocks
+from export_fields import extra_blocks, worn_wielded_line
 
 _LANGUAGE_NAMES = {lang["index"]: lang["name"] for lang in LANGUAGES}
 _PROFICIENCY_SECTIONS = (("armor", "Брони"), ("weapons", "Оръжия"), ("tools", "Инструменти"))
@@ -177,6 +177,11 @@ def to_markdown(resolution: dict) -> str:
             qty_tag = f" x{e['qty']}" if e.get("qty", 1) != 1 else ""
             equipped_tag = " (екипиран)" if e.get("equipped") else ""
             lines.append(f"- {e['name']}{qty_tag}{equipped_tag}")
+        lines.append("")
+    line = worn_wielded_line(sheet)
+    if line:
+        any_equipment = True
+        lines.append(line)
         lines.append("")
     if not any_equipment:
         lines.append("—")

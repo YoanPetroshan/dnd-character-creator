@@ -13,8 +13,13 @@ Monk unarmed strike (R2): `unarmed_strike`, see below.
 
 Weapon Mastery (C2) is chosen in resolve(); `annotate_mastery` adds `mastery` to rows.
 
-Out of scope: the Dueling "no other weapon" hand check (there is no hands
-model; the note tells the player), Weapon Mastery, magic items, Monk martial
+G2: with `hands` ({"main", "off", "dueling_ok"}, built by engine.worn from
+`equipment.wielded`) Dueling is evaluated: the +2 goes into `damage` of the
+main-hand weapon only when the off hand holds no weapon, `duelingDamage` stays
+None and rows get `wielded: bool`. Without `hands` the S5 behavior is unchanged.
+Two-Weapon Fighting's `offhandDamage` is still per light weapon (not hand-aware).
+
+Out of scope: magic items, Weapon Mastery, magic items, Monk martial
 arts for non-Monks, feat attacks, other unarmed strikes (R2 adds the Monk's row).
 """
 from __future__ import annotations
@@ -60,7 +65,7 @@ def annotate_mastery(attacks: list[dict], masteries: list[dict]) -> list[dict]:
     return [{**a, "mastery": by_item.get(a["itemId"])} for a in attacks]
 
 
-def weapon_attack(item: dict, modifiers: dict, prof_bonus: int, proficiency_ids, styles: dict) -> dict | None:
+def weapon_attack(item: dict, modifiers: dict, prof_bonus: int, proficiency_ids, styles: dict, hands: dict | None = None) -> dict | None:
     if item.get("equipment_category", {}).get("index") != "weapon":
         return None
     props = {p["index"] for p in item.get("properties", [])}
@@ -97,23 +102,30 @@ def weapon_attack(item: dict, modifiers: dict, prof_bonus: int, proficiency_ids,
                 notes.append(GWF_2024_NOTE)
         if styles.get("thrown_damage") and "thrown" in props:
             notes.append(f"Thrown Weapon Fighting: +{styles['thrown_damage']} damage when thrown")
-        if dueling:
+        if dueling and hands is None:
             dueling_damage = _dice(dmg["damage_dice"], mod + dueling)
             notes.append(DUELING_NOTE)
+        elif dueling and item["index"] == hands.get("main") and hands.get("dueling_ok"):
+            # G2: the hands are known, so the +2 goes straight into `damage` (one-handed grip)
+            damage = _dice(dmg["damage_dice"], mod + dueling)
+            notes.append("Dueling: +2 damage")
 
-    return {
+    row = {
         "itemId": item["index"], "name": item["name"], "ability": ability, "proficient": proficient,
         "attackBonus": attack_bonus, "damage": damage, "damageType": damage_type,
         "duelingDamage": dueling_damage, "versatileDamage": versatile, "offhandDamage": offhand, "range": _range_text(item), "notes": notes,
     }
+    if hands is not None:  # G2: only when `equipment.wielded` is set
+        row["wielded"] = item["index"] in (hands.get("main"), hands.get("off"))
+    return row
 
 
-def attacks_from_gear(items: list[dict], modifiers: dict, prof_bonus: int, proficiency_ids, styles: dict) -> list[dict]:
+def attacks_from_gear(items: list[dict], modifiers: dict, prof_bonus: int, proficiency_ids, styles: dict, hands: dict | None = None) -> list[dict]:
     out, seen = [], set()
     for item in items:
         if item["index"] in seen:
             continue
-        a = weapon_attack(item, modifiers, prof_bonus, proficiency_ids, styles)
+        a = weapon_attack(item, modifiers, prof_bonus, proficiency_ids, styles, hands)
         if a:
             seen.add(item["index"])
             out.append(a)
