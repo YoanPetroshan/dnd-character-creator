@@ -7,7 +7,7 @@ returns "nothing", so the SRD cards stay.
 from __future__ import annotations
 
 from catalog.reference_data import (
-    CLASS_LANGUAGES_2024, CLASS_OPTION_CHOICES_2024, EXPERTISE_2024, LANGUAGES_2024_RARE, LANGUAGES_2024_STANDARD, PRIMAL_KNOWLEDGE_2024,
+    CLASS_LANGUAGES_2024, CLASS_OPTION_CHOICES_2024, EXPERTISE_2024, INVOCATION_EFFECTS, INVOCATION_EFFECTS_2024, LANGUAGES_2024_RARE, LANGUAGES_2024_STANDARD, PRIMAL_KNOWLEDGE_2024,
     SKILL_NAMES, SRD_CARDS_REPLACED_2024,
 )
 
@@ -619,3 +619,30 @@ def gate_invocations(catalog, choice: dict, level: int, cantrips: list[str]) -> 
                        f"'{choice['label']}': {', '.join(names.get(d, d) for d in dropped)} no longer meets its prerequisites and was ignored."})
     return {**choice, "options": options, "selected": selected,
             "status": "resolved" if len(selected) == choice["count"] else "pending"}, pruned
+
+
+# E6: the data says "ritual" for Pact of the Chain; the text says it is cast without a spell slot, so at will.
+_INNATE_USES_2024 = {"at-will": "at-will", "1/long rest": "1/long rest", "ritual": "at-will"}
+
+
+def invocation_effect(catalog, option_id: str) -> dict | None:
+    """C7b: the effect dict of one selected invocation (instance suffix already stripped).
+    SRD ids read `INVOCATION_EFFECTS`; XPHB ids merge what the imported record carries (the innate spell with its
+    frequency and the spell's catalog level, senses) with `INVOCATION_EFFECTS_2024` (table wins on a clash).
+    An innate spell missing from the catalog is left out (nothing unverifiable). None = no effect."""
+    eff = INVOCATION_EFFECTS.get(option_id)
+    if eff:
+        return eff
+    if not (option_id.startswith("opt-") and option_id.endswith("-xphb")):
+        return None
+    out: dict = {}
+    rec = (catalog.features.get(option_id) if catalog is not None else None) or {}
+    for entry in ((rec.get("spells") or {}).get("innate") or [])[:1]:
+        spell = catalog.spells.get(entry["spell"])
+        uses = _INNATE_USES_2024.get(entry.get("uses"))
+        if spell and uses:
+            out["innate_spell"] = {"spell": entry["spell"], "uses": uses, "level": spell["level"]}
+    if rec.get("senses"):
+        out["senses"] = dict(rec["senses"])
+    out.update(INVOCATION_EFFECTS_2024.get(option_id) or {})
+    return out or None

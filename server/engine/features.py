@@ -3,6 +3,7 @@ that apply to a resolved character. Pure: callers pass feature indices."""
 from __future__ import annotations
 
 from catalog import reference_data
+from engine import class_choices_2024
 
 ABILITIES = ("STR", "DEX", "CON", "INT", "WIS", "CHA")
 
@@ -118,11 +119,12 @@ def selected_invocation_ids(choices: list[dict]) -> list[tuple[str, str]]:
     return [(cls, sel.split("~", 1)[0]) for cls, sel in selected_invocation_instances(choices)]
 
 
-def invocation_effects(choices: list[dict], class_levels: dict[str, int]) -> list[tuple[str, int, dict]]:
-    """Same triple shape as `active_effects`, so ac_formulas() etc. read both."""
+def invocation_effects(choices: list[dict], class_levels: dict[str, int], catalog=None) -> list[tuple[str, int, dict]]:
+    """Same triple shape as `active_effects`, so ac_formulas() etc. read both. `catalog` (C7b) lets XPHB
+    invocations merge the innate spells / senses their record carries."""
     out = []
     for cls_id, fid in selected_invocation_ids(choices):
-        eff = reference_data.INVOCATION_EFFECTS.get(fid)
+        eff = class_choices_2024.invocation_effect(catalog, fid)
         if eff:
             out.append((cls_id, class_levels.get(cls_id, 0), eff))
     return out
@@ -136,13 +138,18 @@ def invocation_senses(effects) -> dict[str, int]:
     return out
 
 
+def swim_equals_walk(effects) -> bool:
+    """Gift of the Depths: "a Swim Speed equal to your Speed"."""
+    return any(e.get("swim_equals_walk") for _, _, e in effects)
+
+
 def invocation_skills(effects) -> list[str]:
     return [s for _, _, e in effects for s in e.get("skills") or []]
 
 
 def invocation_innate_entries(effects) -> list[dict]:
     """Raw innate-spell entries (catalog shape, plus `source`) for resolve to turn into sheet entries."""
-    return [{"spell_id": e["innate_spell"]["spell"], "name": e["innate_spell"]["spell"].replace("-", " ").title(),
+    return [{"spell_id": e["innate_spell"]["spell"], "name": e["innate_spell"]["spell"].removesuffix("-xphb").replace("-", " ").title(),
              "level": e["innate_spell"]["level"], "uses": e["innate_spell"]["uses"], "ability": "CHA",
              "variant": None, "note": e.get("note")}
             for _, _, e in effects if "innate_spell" in e]

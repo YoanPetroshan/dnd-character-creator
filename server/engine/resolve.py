@@ -4959,7 +4959,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     pruned += _gate_mastery_choices(choices, catalog, proficient_weapons)  # C2
     pruned += _gate_invocation_choices(choices, resolved_classes, catalog)
     invocation_effects = features_mod.invocation_effects(
-        choices, {rc["cls_id"]: rc["level"] for rc in resolved_classes if rc["cls"]})
+        choices, {rc["cls_id"]: rc["level"] for rc in resolved_classes if rc["cls"]}, catalog)
     proficient_skills.update(features_mod.invocation_skills(invocation_effects))
     pruned += _gate_expertise_choices(
         choices, proficient_skills | proficient_tools, _feat_expertise_skills(resolved_feats),
@@ -5041,6 +5041,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     fast = features_mod.speed_bonus_unless_heavy(effects, equipped_items)  # R5: Fast Movement
     if speeds and fast:
         speeds = _raise_walk_speed(speeds, fast)
+    if speeds.get("walk") and features_mod.swim_equals_walk(effects):  # C7b Gift of the Depths
+        speeds = {**speeds, "swim": max(speeds.get("swim", 0), speeds["walk"])}
     base_speed = speeds.get("walk")
     # Attacks, carrying capacity and armor warnings (Slice 9). Size is the
     # selected species size (Slice 8d), else the race's own, else Medium.

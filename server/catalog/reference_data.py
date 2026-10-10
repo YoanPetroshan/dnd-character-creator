@@ -598,6 +598,61 @@ INVOCATION_EFFECTS: dict[str, dict] = {
 }
 
 
+# ---- XPHB (2024) Eldritch Invocation effects (C7b) ---------------------------------------------
+# Keyed by the XPHB feature id `opt-<slug>-xphb`. Holds ONLY what the imported record does not carry:
+# innate spells (with frequency) and senses come from the record itself (class_choices_2024.invocation_effect).
+# Texts read from catalog.features on 2026-10-10 (tests/test_invocation_effects_2024.py re-checks them).
+# Keys as INVOCATION_EFFECTS, plus swim_equals_walk. Notes may use {cha_names} (max(1, CHA modifier)) and
+# {spear_range} (30 x Warlock level); they are formatted by class_resources._warlock (resource notes) only.
+# E6: Pact of the Chain's data says "ritual", the text "cast it as a Magic action without expending a spell
+# slot", so it is an at-will innate entry (the engine maps "ritual" to at-will) with the note below.
+# Not here (C7c): Pact of the Tome, Lessons of the First Ones.
+_XPHB_INV = "opt-{}-xphb"
+INVOCATION_EFFECTS_2024: dict[str, dict] = {
+    _XPHB_INV.format("armor-of-shadows"): {"ac_formula": {"base": 13, "abilities": ["DEX"], "allows_shield": True}},
+    _XPHB_INV.format("devils-sight"): {"senses": {"devilsSight": 120}},
+    _XPHB_INV.format("gift-of-the-depths"): {
+        "swim_equals_walk": True, "note": "You can breathe underwater and have a Swim Speed equal to your Speed."},
+    _XPHB_INV.format("eldritch-mind"): {"note": "Advantage on Constitution saving throws to maintain Concentration."},
+    _XPHB_INV.format("fiendish-vigor"): {
+        "note": "On yourself; you don't roll the die for the Temporary Hit Points, you get the highest number on the die."},
+    _XPHB_INV.format("one-with-shadows"): {
+        "note": "On yourself, while you are in an area of Dim Light or Darkness."},
+    _XPHB_INV.format("pact-of-the-chain"): {
+        "note": "Magic action, no spell slot. Special forms: Imp, Pseudodragon, Quasit, Skeleton, Slaad Tadpole, "
+                "Sphinx of Wonder, Sprite, Venomous Snake. When you take the Attack action you can forgo one of your "
+                "attacks so the familiar attacks with its Reaction."},
+    _XPHB_INV.format("pact-of-the-blade"): {
+        "note": "Bonus Action: conjure a pact weapon (Simple or Martial Melee) or bond with a magic weapon you touch. "
+                "You are proficient with it and can use it as a Spellcasting Focus. Attack and damage rolls can use "
+                "Charisma, and it can deal Necrotic, Psychic or Radiant damage or its normal type."},
+    _XPHB_INV.format("thirsting-blade"): {
+        "note": "Extra Attack with your pact weapon only: attack twice instead of once with the Attack action. "
+                "It doesn't give additional attacks if you also have Extra Attack (PHB 2024 Multiclassing)."},
+    _XPHB_INV.format("devouring-blade"): {"note": "The Extra Attack of Thirsting Blade confers two extra attacks rather than one."},
+    _XPHB_INV.format("eldritch-smite"): {
+        "note": "Once per turn on a pact weapon hit: expend a Pact Magic slot for an extra 1d8 Force damage plus 1d8 per "
+                "slot level; the target is Prone if Huge or smaller."},
+    _XPHB_INV.format("lifedrinker"): {
+        "note": "Once per turn on a pact weapon hit: extra 1d6 Necrotic, Psychic or Radiant damage, and you can expend a "
+                "Hit Point Die to regain the roll plus your Constitution modifier (minimum 1) Hit Points."},
+    _XPHB_INV.format("gaze-of-two-minds"): {
+        "note": "Bonus Action: touch a willing creature and perceive through its senses until the end of your next turn "
+                "(maintain with a Bonus Action each turn); you can cast spells from its space within 60 feet."},
+    _XPHB_INV.format("gift-of-the-protectors"): {
+        "note": "Book of Shadows page holds {cha_names} {cha_names_word} (Charisma modifier, minimum one). A named creature "
+                "reduced to 0 Hit Points but not killed drops to 1 instead; once triggered, no one benefits until a Long Rest."},
+    _XPHB_INV.format("investment-of-the-chain-master"): {
+        "note": "Your Find Familiar familiar gains a 40 ft Fly or Swim Speed, Bonus Action Attack command, Necrotic or "
+                "Radiant damage option, your spell save DC, and Reaction Resistance for it."},
+    _XPHB_INV.format("agonizing-blast"): {"resource_bonus": {"name": "Agonizing Blast", "ability": "CHA", "spell": None}},
+    _XPHB_INV.format("eldritch-spear"): {
+        "note": "One known damaging Warlock cantrip with range 10+ feet: its range increases by 30 x Warlock level = {spear_range} feet."},
+    _XPHB_INV.format("repelling-blast"): {
+        "note": "One known Warlock cantrip that requires an attack roll: when you hit a Large or smaller creature you can push it up to 10 feet straight away."},
+}
+
+
 # ---- 2024 class option choices (C6a orders, C6c-2 Blessed Strikes / Elemental Fury) -------------
 # XPHB class features that offer a pick between sibling feature records (ruleset "2024" only).
 # Texts read from the imported catalog.features on 2026-10-10:

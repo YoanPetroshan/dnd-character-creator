@@ -374,24 +374,56 @@ def _ranger(ctx: Ctx, rc: dict) -> list[dict]:
 
 
 def _warlock(ctx: Ctx, rc: dict) -> list[dict]:
-    """R8: resource entries for invocations with a number or a text-only effect
-    (Agonizing Blast: CHA modifier; Thirsting Blade, Repelling Blast, Book of
-    Ancient Secrets: notes). `ctx.choices` is read after the invocation gate."""
+    """Warlock resources. R8/C7b: entries for invocations with a number or a text-only effect (Agonizing Blast:
+    CHA modifier; Thirsting Blade, Repelling Blast, ...: notes), one per repeat instance ("Agonizing Blast (2)").
+    2024 (C7b): Magical Cunning and Contact Patron. `ctx.choices` is read after the invocation gate."""
+    out = _warlock_features_2024(ctx, rc)
     if not isinstance(ctx.choices, list):
-        return []
-    out = []
+        return out
+    cha = ctx.modifiers.get("CHA", 0)
     for c in ctx.choices:
         if (c.get("source") or {}).get("id") != "warlock" or ":invocations:" not in c.get("id", ""):
             continue
-        for sel in (s.split("~", 1)[0] for s in c.get("selected") or []):  # C7a: strip repeat-instance suffix
-            eff = reference_data.INVOCATION_EFFECTS.get(sel) or {}
+        for inst in c.get("selected") or []:  # C7a: `<id>~k` repeat instances
+            sel = class_choices_2024.invocation_base_id(inst)
+            k = class_choices_2024.invocation_instance(inst)
+            suffix = f" ({k})" if k > 1 else ""
+            eff = class_choices_2024.invocation_effect(ctx.catalog, sel) or {}
             bonus = eff.get("resource_bonus")
             if bonus:
-                out.append(_resource(rc, bonus["name"], bonus=ctx.modifiers.get(bonus["ability"], 0),
-                                     details={"spell": bonus["spell"]}))
-            elif eff.get("note") and "innate_spell" not in eff:
-                label = (ctx.catalog.features.get(sel) or {}).get("name", sel).replace("Eldritch Invocation: ", "")
-                out.append(_resource(rc, label, details={"note": eff["note"]}))
+                details = ({"spell": bonus["spell"]} if bonus.get("spell") else
+                           {"note": "Add your Charisma modifier to the damage rolls of one known Warlock cantrip that deals damage."})
+                out.append(_resource(rc, bonus["name"] + suffix, bonus=cha, details=details))
+            elif eff.get("note") and "innate_spell" not in eff and "swim_equals_walk" not in eff:
+                label = (ctx.catalog.features.get(sel) or {}).get("name", sel).replace("Eldritch Invocation: ", "") + suffix
+                note = eff["note"].format(cha_names=max(1, cha), cha_names_word="name" if max(1, cha) == 1 else "names",
+                                          spear_range=30 * rc["level"])
+                out.append(_resource(rc, label, details={"note": note}))
+    return out
+
+
+def _pact_slot_count(rc: dict) -> int:
+    from engine.spells import warlock_pact_magic_slots
+    return sum(warlock_pact_magic_slots((rc.get("level_row") or {}).get("spellcasting")).values())
+
+
+def _warlock_features_2024(ctx: Ctx, rc: dict) -> list[dict]:
+    """Magical Cunning (2) and Contact Patron (9), 2024 only, when the XPHB feature records exist. Texts
+    (XPHB): Magical Cunning "regain expended Pact Magic spell slots but no more than a number equal to half your
+    maximum (round up) ... until you finish a Long Rest"; Contact Patron "cast [Contact Other Plane] without
+    expending a spell slot ... can't do so in this way again until you finish a Long Rest"."""
+    if ctx.ruleset != "2024":
+        return []
+    features = getattr(ctx.catalog, "features", {}) or {}
+    out = []
+    if rc["level"] >= 2 and "xphb-warlock-2-magical-cunning" in features:
+        slots = _pact_slot_count(rc)
+        note = (f"1 minute rite: regain expended Pact Magic slots, up to half your maximum Pact Magic slots ({slots}) "
+                f"rounded up = {-(-slots // 2)}") if slots else "1 minute rite: regain up to half your maximum Pact Magic slots, rounded up"
+        out.append(_resource(rc, "Magical Cunning", uses=1, recharge="long", details={"note": note}))
+    if rc["level"] >= 9 and "xphb-warlock-9-contact-patron" in features:
+        out.append(_resource(rc, "Contact Patron", uses=1, recharge="long", details={
+            "note": "Cast Contact Other Plane without a spell slot to contact your patron; you automatically succeed on its saving throw."}))
     return out
 
 
