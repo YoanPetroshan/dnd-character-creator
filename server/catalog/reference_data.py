@@ -598,10 +598,9 @@ INVOCATION_EFFECTS: dict[str, dict] = {
 }
 
 
-# ---- 2024 level-1 class "order" choices (C6a) -------------------------------
-# XPHB Cleric "Divine Order" and Druid "Primal Order" (ruleset "2024" only). The
-# effects below were checked against the imported catalog.features text on 2026-10-10
-# (xphb-cleric-1-protector / -thaumaturge, xphb-druid-1-warden / -magician):
+# ---- 2024 class option choices (C6a orders, C6c-2 Blessed Strikes / Elemental Fury) -------------
+# XPHB class features that offer a pick between sibling feature records (ruleset "2024" only).
+# Texts read from the imported catalog.features on 2026-10-10:
 #   Protector   "you gain proficiency with Martial weapons and training with Heavy armor."
 #   Thaumaturge "You know one extra cantrip from the Cleric spell list. In addition ... a bonus
 #                to your Intelligence (Arcana or Religion) checks. The bonus equals your Wisdom
@@ -609,13 +608,27 @@ INVOCATION_EFFECTS: dict[str, dict] = {
 #   Warden      "... proficiency with Martial weapons and training with Medium armor."
 #   Magician    "You know one extra cantrip from the Druid spell list. ... Intelligence (Arcana or
 #                Nature) checks. The bonus equals your Wisdom modifier (minimum bonus of +1)."
-# Option id = the catalog feature index (the text is read from there). Keys per option:
-# proficiencies (ids of the shared proficiency sets), extra_cantrips (count bump on the class
-# cantrip card), skill_bonus {skills, ability, minimum}: bonus = max(minimum, ability modifier)
-# added to those skills' totals.
-CLASS_ORDER_CHOICES: dict[str, dict] = {
-    "cleric": {
-        "slug": "divine-order", "feature": "xphb-cleric-1-divine-order", "label": "Divine Order",
+#   Blessed Strikes (Cleric 7)  "You gain one of the following options of your choice (if you get either
+#                option from a Cleric subclass in an older book, use only the option you choose for this
+#                feature)."  Divine Strike: "extra 1d8 Necrotic or Radiant damage (your choice)" once per
+#                turn on a weapon hit; Potent Spellcasting: "Add your Wisdom modifier to the damage you
+#                deal with any Cleric cantrip." Improved Blessed Strikes (14): Divine Strike "increases to
+#                2d8"; Potent Spellcasting: temporary hit points "equal to twice your Wisdom modifier".
+#   Elemental Fury (Druid 7)    "You gain one of the following options of your choice."  Primal Strike:
+#                "extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit)" once per turn on
+#                a weapon (or Wild Shape Beast form) hit; Potent Spellcasting: "... any Druid cantrip."
+#                Improved Elemental Fury (15): Potent: a cantrip with range 10 feet or greater gains 300
+#                feet; Primal Strike "increases to 2d8".
+# Keyed by (class, slug). Keys: feature (XPHB feature record that must exist), label, level (the class level
+# the card appears at), cid (the stored-pick key; the C6a cids keep their historic shape), options
+# {catalog feature index: effect}. Effect keys: proficiencies (ids of the shared proficiency sets),
+# extra_cantrips (count bump on the class cantrip card), skill_bonus {skills, ability, minimum}: bonus =
+# max(minimum, ability modifier) added to those skills' totals (C6a); divine_strike / primal_strike
+# {dice_by_level {class level: dice}, types} and potent_spellcasting {class, improved_level} are read by class_resources (C6c-2, decision E3: resources + attack-row notes).
+CLASS_OPTION_CHOICES_2024: dict[tuple[str, str], dict] = {
+    ("cleric", "divine-order"): {
+        "feature": "xphb-cleric-1-divine-order", "label": "Divine Order", "level": 1,
+        "cid": "class:cleric:1:divine-order",
         "options": {
             "xphb-cleric-1-protector": {"proficiencies": ["martial-weapons", "heavy-armor"]},
             "xphb-cleric-1-thaumaturge": {
@@ -624,14 +637,35 @@ CLASS_ORDER_CHOICES: dict[str, dict] = {
             },
         },
     },
-    "druid": {
-        "slug": "primal-order", "feature": "xphb-druid-1-primal-order", "label": "Primal Order",
+    ("druid", "primal-order"): {
+        "feature": "xphb-druid-1-primal-order", "label": "Primal Order", "level": 1,
+        "cid": "class:druid:1:primal-order",
         "options": {
             "xphb-druid-1-magician": {
                 "extra_cantrips": 1,
                 "skill_bonus": {"skills": ["skill-arcana", "skill-nature"], "ability": "WIS", "minimum": 1},
             },
             "xphb-druid-1-warden": {"proficiencies": ["martial-weapons", "medium-armor"]},
+        },
+    },
+    ("cleric", "blessed-strikes"): {
+        "feature": "xphb-cleric-7-blessed-strikes", "label": "Blessed Strikes", "level": 7,
+        "cid": "class:cleric:7:feature:xphb-cleric-7-blessed-strikes",
+        "options": {
+            "xphb-cleric-7-divine-strike": {
+                "divine_strike": {"dice_by_level": {7: "1d8", 14: "2d8"}, "types": "Necrotic or Radiant"}},
+            "xphb-cleric-7-potent-spellcasting": {
+                "potent_spellcasting": {"class": "Cleric", "improved_level": 14}},
+        },
+    },
+    ("druid", "elemental-fury"): {
+        "feature": "xphb-druid-7-elemental-fury", "label": "Elemental Fury", "level": 7,
+        "cid": "class:druid:7:feature:xphb-druid-7-elemental-fury",
+        "options": {
+            "xphb-druid-7-potent-spellcasting": {
+                "potent_spellcasting": {"class": "Druid", "improved_level": 15}},
+            "xphb-druid-7-primal-strike": {
+                "primal_strike": {"dice_by_level": {7: "1d8", 15: "2d8"}, "types": "Cold, Fire, Lightning, or Thunder"}},
         },
     },
 }

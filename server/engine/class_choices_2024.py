@@ -1,4 +1,4 @@
-"""C6b-1 / C6b-2: 2024 class choice cards that are built from XPHB feature ids (helper for resolve()).
+"""C6a / C6b-1 / C6b-2 / C6c-1 / C6c-2: 2024 class choice cards that are built from XPHB feature ids (helper for resolve()).
 
 Pure functions over the catalog; resolve() only wires them. Everything here is ruleset "2024"
 only: with any other ruleset, or an SRD-only catalog (no XPHB feature records), every function
@@ -7,7 +7,7 @@ returns "nothing", so the SRD cards stay.
 from __future__ import annotations
 
 from catalog.reference_data import (
-    CLASS_LANGUAGES_2024, EXPERTISE_2024, LANGUAGES_2024_RARE, LANGUAGES_2024_STANDARD, PRIMAL_KNOWLEDGE_2024,
+    CLASS_LANGUAGES_2024, CLASS_OPTION_CHOICES_2024, EXPERTISE_2024, LANGUAGES_2024_RARE, LANGUAGES_2024_STANDARD, PRIMAL_KNOWLEDGE_2024,
     SKILL_NAMES, SRD_CARDS_REPLACED_2024,
 )
 
@@ -279,3 +279,117 @@ def metamagic_details(catalog, choices) -> list[dict]:
         if opt:
             out.append({"name": opt["name"], "cost": opt.get("cost", 1)})
     return out
+
+
+# ---- C6a / C6c-2: class option cards (Divine / Primal Order, Blessed Strikes, Elemental Fury) ------
+
+def class_option_specs(cls_id: str | None) -> list[tuple[str, dict]]:
+    """[(slug, CLASS_OPTION_CHOICES_2024 entry)] of a class, by level."""
+    found = [(slug, spec) for (cls, slug), spec in CLASS_OPTION_CHOICES_2024.items() if cls == cls_id]
+    return sorted(found, key=lambda pair: pair[1]["level"])
+
+
+def class_option_options(catalog, cls_id: str, slug: str, ruleset: str) -> list[dict]:
+    """The options of one class option card, each `{id, label, description?}` from the imported XPHB
+    feature records; [] when the ruleset is not 2024, the entry is unknown or the catalog lacks the
+    XPHB records (SRD-only data)."""
+    spec = CLASS_OPTION_CHOICES_2024.get((cls_id, slug))
+    if ruleset != "2024" or not spec or spec["feature"] not in catalog.features:
+        return []
+    options = []
+    for opt_id in spec["options"]:
+        opt = catalog.features.get(opt_id)
+        if not opt:
+            return []
+        option = {"id": opt_id, "label": opt["name"]}
+        desc = _join(opt.get("desc"))
+        if desc:
+            option["description"] = desc
+        options.append(option)
+    return options
+
+
+def class_option_templates(catalog, rc: dict, ruleset: str) -> list[dict]:
+    """One required pick (count 1) per option entry of the class whose level is reached, under ruleset
+    "2024" only: C6a `class:<cls>:1:divine-order` / `...:primal-order` and C6c-2
+    `class:<cls>:7:feature:<xphb feature id>` (the feature id lets sheet_features attach the pick to its
+    C5 row). Every class entry of a multiclass character grants its own. No card under 2014 / mixed, so
+    a stored pick there (or below the card's level) falls into the stale-cid `pruned` pass."""
+    cls_id = rc.get("cls_id")
+    if not rc.get("cls") or not cls_id:
+        return []
+    out = []
+    for slug, spec in class_option_specs(cls_id):
+        options = class_option_options(catalog, cls_id, slug, ruleset)
+        if not options or rc["level"] < spec["level"]:
+            continue
+        out.append({
+            "id": spec["cid"],
+            "source": {"kind": "class", "id": cls_id, "label": rc["cls"]["name"], "level": spec["level"]},
+            "label": spec["label"],
+            "description": _join(catalog.features[spec["feature"]].get("desc")),
+            "count": 1,
+            "options": options,
+        })
+    return out
+
+
+def class_option_effect(catalog, rc: dict, slug: str, ruleset: str) -> dict:
+    """Effect record of the option stored in the draft for this class entry's card, or {}. Mirrors the
+    generic choice pass: the first valid stored option counts, so e.g. the cantrip count agrees with the
+    resolved selection."""
+    cls_id = rc.get("cls_id")
+    spec = CLASS_OPTION_CHOICES_2024.get((cls_id, slug))
+    options = class_option_options(catalog, cls_id, slug, ruleset)
+    if not options or not spec or rc["level"] < spec["level"]:
+        return {}
+    stored = rc["class_choices"].get(spec["cid"])
+    if not isinstance(stored, list):
+        return {}
+    valid = {o["id"] for o in options}
+    pick = next((s for s in stored if isinstance(s, str) and s in valid), None)
+    return spec["options"][pick] if pick else {}
+
+
+def class_option_extra_cantrips(catalog, rc: dict, ruleset: str) -> int:
+    """Extra cantrips known from the stored class option picks of this class entry (Thaumaturge / Magician)."""
+    return sum(class_option_effect(catalog, rc, slug, ruleset).get("extra_cantrips", 0)
+               for slug, _spec in class_option_specs(rc.get("cls_id")))
+
+
+def selected_class_options(choices, cls_id: str | None = None) -> list[tuple[str, str, dict]]:
+    """[(slug, option id, effect record)] of the resolved (selected) class option cards, in choice order;
+    only the cards of `cls_id` when given."""
+    if not isinstance(choices, list):
+        return []
+    out = []
+    for c in choices:
+        src = c.get("source") or {}
+        if src.get("kind") != "class" or not c.get("selected") or (cls_id and src.get("id") != cls_id):
+            continue
+        for slug, spec in class_option_specs(src.get("id")):
+            if c["id"] == spec["cid"]:
+                effect = spec["options"].get(c["selected"][0])
+                if effect is not None:
+                    out.append((slug, c["selected"][0], effect))
+    return out
+
+
+def selected_class_option_effects(choices) -> list[dict]:
+    """Effect records of the resolved class option cards, in choice order."""
+    return [effect for _slug, _opt, effect in selected_class_options(choices)]
+
+
+def strike_effect(choices, cls_id: str, key: str) -> dict | None:
+    """The `divine_strike` / `primal_strike` / `potent_spellcasting` effect of a class's resolved
+    Blessed Strikes / Elemental Fury card, or None."""
+    for _slug, _opt, effect in selected_class_options(choices, cls_id):
+        if key in effect:
+            return effect[key]
+    return None
+
+
+def dice_at_level(dice_by_level: dict[int, str], level: int) -> str | None:
+    """The dice string of the highest reached level key, None below the first."""
+    reached = [lvl for lvl in dice_by_level if lvl <= level]
+    return dice_by_level[max(reached)] if reached else None

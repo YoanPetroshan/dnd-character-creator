@@ -248,6 +248,34 @@ def _cleric(ctx: Ctx, rc: dict) -> list[dict]:
     # Destroy Undead is 2014 only; the 2024 Cleric has Sear Undead (no CR column).
     if ctx.ruleset != "2024" and cs.get("destroy_undead_cr"):
         out.append(_resource(rc, "Destroy Undead", details={"maxCr": _cr_text(cs["destroy_undead_cr"])}))
+    return out + _class_strikes(ctx, rc)
+
+
+def _class_strikes(ctx: Ctx, rc: dict) -> list[dict]:
+    """C6c-2 (decision E3): the picked 2024 Blessed Strikes / Elemental Fury option as a resource. Divine
+    Strike / Primal Strike carry `dice` (the attack-row notes read them) and Potent Spellcasting a `bonus`
+    (the WIS modifier added to the class's cantrip damage) with the improved text from level 14 / 15 in
+    `details.note`. Nothing outside ruleset 2024 or without the pick."""
+    if ctx.ruleset != "2024":
+        return []
+    cls_id, level = rc["cls_id"], rc["level"]
+    out = []
+    for key, name, usage in (("divine_strike", "Divine Strike", "once per turn, when you hit with a weapon"),
+                             ("primal_strike", "Primal Strike", "once per turn, when you hit with a weapon or a Wild Shape Beast form")):
+        effect = class_choices_2024.strike_effect(ctx.choices, cls_id, key)
+        dice = effect and class_choices_2024.dice_at_level(effect["dice_by_level"], level)
+        if dice:
+            out.append(_resource(rc, name, dice=dice, details={"note": usage, "damageTypes": effect["types"]}))
+    potent = class_choices_2024.strike_effect(ctx.choices, cls_id, "potent_spellcasting")
+    if potent:
+        wis = ctx.modifiers.get("WIS", 0)
+        note = f"add WIS modifier to the damage of any {potent['class']} cantrip"
+        if level >= potent["improved_level"]:
+            if cls_id == "cleric":
+                note += f"; a damaging cantrip can grant temporary hit points equal to twice WIS modifier ({2 * wis}) within 60 feet"
+            else:
+                note += "; cantrips with range 10 feet or more gain +300 feet of range"
+        out.append(_resource(rc, "Potent Spellcasting", bonus=wis, details={"note": note}))
     return out
 
 
@@ -264,6 +292,10 @@ def _paladin(ctx: Ctx, rc: dict) -> list[dict]:
 
 
 def _druid(ctx: Ctx, rc: dict) -> list[dict]:
+    return _wild_shape(ctx, rc) + _class_strikes(ctx, rc)
+
+
+def _wild_shape(ctx: Ctx, rc: dict) -> list[dict]:
     level = rc["level"]
     uses = ctx.table("druid", "wild-shape", level)
     if uses is not None:
@@ -514,12 +546,15 @@ def annotate_attacks(attacks: list[dict], resources: list[dict], items: list[dic
     """D5: attack-row notes from class resources. A Barbarian's Rage adds
     "Rage: +N damage" to melee rows that use Strength (PHB: melee weapon attack
     using Strength); a Rogue's Sneak Attack adds "Sneak Attack Xd6" to finesse
-    and ranged weapon rows. Rows with no catalog weapon (the Monk's unarmed
+    and ranged weapon rows; under 2024 a picked Divine Strike / Primal Strike adds
+    "Divine Strike: +1d8 necrotic or radiant (once per turn)" to every weapon row (C6c-2). Rows with no catalog weapon (the Monk's unarmed
     strike) get neither. The notes are information; the damage number is unchanged."""
     by_id = {r["id"]: r for r in resources}
     rage = (by_id.get("barbarian:rage") or {}).get("details", {}).get("damageBonus")
     sneak = (by_id.get("rogue:sneak-attack") or {}).get("dice")
-    if not rage and not sneak:
+    strikes = [(r["name"], r["dice"], r["details"]["damageTypes"].lower())
+               for r in (by_id.get("cleric:divine-strike"), by_id.get("druid:primal-strike")) if r]  # C6c-2
+    if not rage and not sneak and not strikes:
         return attacks
     weapons = {i["index"]: i for i in items}
     out = []
@@ -533,5 +568,7 @@ def annotate_attacks(attacks: list[dict], resources: list[dict], items: list[dic
                 notes.append(f"Rage: +{rage} damage")
             if sneak and (finesse or ranged):
                 notes.append(f"Sneak Attack {sneak}")
+            for name, dice, types in strikes:
+                notes.append(f"{name}: +{dice} {types} (once per turn)")
         out.append({**a, "notes": notes})
     return out
