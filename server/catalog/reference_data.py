@@ -211,7 +211,9 @@ def proficiency_label(prof_id: str) -> str:
 #   ability_bonus / ability_cap  Primal Champion (+4 STR/CON, cap 24).
 #   attack_bonus / damage_bonus  Archery (+2 ranged attack) and Dueling (+2
 #                       one-handed melee damage); read by engine/features.attack_styles.
-#   two_weapon_fighting / great_weapon_fighting  flags, same reader.
+#   two_weapon_fighting / great_weapon_fighting  flags, same reader
+#                       (great_weapon_fighting_2024 = the XPHB wording; damage_bonus.thrown = Thrown
+#                       Weapon Fighting, shown as a note on thrown weapons).
 CLASS_FEATURE_EFFECTS: dict[str, dict] = {
     "barbarian-unarmored-defense": {"ac_formula": {"base": 10, "abilities": ["DEX", "CON"], "allows_shield": True}},
     "monk-unarmored-defense": {"ac_formula": {"base": 10, "abilities": ["DEX", "WIS"], "allows_shield": False}},
@@ -234,6 +236,20 @@ CLASS_FEATURE_EFFECTS: dict[str, dict] = {
     "opt-two-weapon-fighting-phb": {"two_weapon_fighting": True},
     "fighter-fighting-style-great-weapon-fighting": {"great_weapon_fighting": True},
     "fighting-style-great-weapon-fighting": {"great_weapon_fighting": True},
+    # C3: the 2024 (XPHB) Fighting Style feats, keyed by feat index. Defense, Archery,
+    # Dueling, Two-Weapon Fighting reuse the 2014 shapes; Great Weapon Fighting is its
+    # own flag (the 2024 text is "treat a 1 or 2 on a damage die as a 3", not a reroll);
+    # Thrown Weapon Fighting is damage_bonus.thrown. Blind Fighting's blindsight comes
+    # from the feat record's own `senses`. Interception, Protection (reactions),
+    # Unarmed Fighting (no generic unarmed strike for non-Monks), Blessed / Druidic /
+    # Arcane Warrior (cantrip picks cascade as ordinary feat spell choices) have no
+    # numeric effect here.
+    "archery-xphb": {"attack_bonus": {"ranged": 2}},
+    "defense-xphb": {"ac_bonus_armored": 1},
+    "dueling-xphb": {"damage_bonus": {"one_handed_melee": 2}},
+    "great-weapon-fighting-xphb": {"great_weapon_fighting_2024": True},
+    "two-weapon-fighting-xphb": {"two_weapon_fighting": True},
+    "thrown-weapon-fighting-xphb": {"damage_bonus": {"thrown": 2}},
     "jack-of-all-trades": {"half_proficiency": "floor"},
     "remarkable-athlete": {"half_proficiency": "ceil"},
     "primal-champion": {"ability_bonus": {"STR": 4, "CON": 4}, "ability_cap": 24},

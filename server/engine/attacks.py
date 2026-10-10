@@ -23,6 +23,7 @@ from catalog import reference_data
 
 _NOTE_ORDER = ("two-handed", "heavy", "ammunition", "loading", "reach", "thrown")
 GWF_NOTE = "Great Weapon Fighting: reroll 1s and 2s"
+GWF_2024_NOTE = "Great Weapon Fighting: treat 1s and 2s as 3"
 DUELING_NOTE = "Dueling: only with no other weapon"
 
 
@@ -85,8 +86,13 @@ def weapon_attack(item: dict, modifiers: dict, prof_bonus: int, proficiency_ids,
             versatile = _dice(item["two_handed_damage"]["damage_dice"], mod)  # never Dueling
         if not ranged and "light" in props:
             offhand = _dice(dmg["damage_dice"], mod if styles.get("two_weapon_fighting") else min(mod, 0))
-        if styles.get("great_weapon_fighting") and not ranged and (two_handed or "versatile" in props):
-            notes.append(GWF_NOTE)
+        if not ranged and (two_handed or "versatile" in props):
+            if styles.get("great_weapon_fighting"):
+                notes.append(GWF_NOTE)
+            if styles.get("great_weapon_fighting_2024"):
+                notes.append(GWF_2024_NOTE)
+        if styles.get("thrown_damage") and "thrown" in props:
+            notes.append(f"Thrown Weapon Fighting: +{styles['thrown_damage']} damage when thrown")
         if dueling:
             dueling_damage = _dice(dmg["damage_dice"], mod + dueling)
             notes.append(DUELING_NOTE)

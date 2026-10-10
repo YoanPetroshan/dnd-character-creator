@@ -70,6 +70,8 @@ def attack_styles(effects) -> dict:
         "one_handed_melee_damage": max([e["damage_bonus"].get("one_handed_melee", 0) for _, _, e in effects if "damage_bonus" in e], default=0),
         "two_weapon_fighting": any(e.get("two_weapon_fighting") for _, _, e in effects),
         "great_weapon_fighting": any(e.get("great_weapon_fighting") for _, _, e in effects),
+        "great_weapon_fighting_2024": any(e.get("great_weapon_fighting_2024") for _, _, e in effects),
+        "thrown_damage": max([e["damage_bonus"].get("thrown", 0) for _, _, e in effects if "damage_bonus" in e], default=0),
     }
 
 

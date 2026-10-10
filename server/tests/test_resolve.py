@@ -4169,7 +4169,7 @@ def test_asi_feat_options_honor_draft_sources(catalog):
     assert "feat:actor-xphb" in xphb_ids
     assert all(catalog.feats[i[len("feat:"):]]["source"] == "XPHB" for i in xphb_ids)
     _, unrestricted_ids = feat_option_ids([])  # empty sources = no filtering, same as races/backgrounds
-    assert len(unrestricted_ids) == 237
+    assert len(unrestricted_ids) == 250  # 237 before C3 added the 13 Fighting Style feats (a Fighter holds the feature)
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")

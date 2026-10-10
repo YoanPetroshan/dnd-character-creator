@@ -1131,12 +1131,17 @@ class _HeldFeatState:
     subrace_names: set[str] = field(default_factory=set)
     size: str | None = None
     can_cast_spell: bool = False
+    # C3: the character has a "Fighting Style" class feature (any class, any
+    # edition's feature of that name). Gates the Fighting Style feats (FS, FS:P,
+    # FS:R) at Ability Score Improvements and the 5etools `feature: Fighting Style`
+    # prerequisite.
+    fighting_style: bool = False
 
     def copy(self) -> "_HeldFeatState":
         return _HeldFeatState(
             set(self.feat_indices), set(self.feat_categories), set(self.proficiency_ids),
             self.has_spellcasting_feature, set(self.race_names), set(self.subrace_names),
-            self.size, self.can_cast_spell,
+            self.size, self.can_cast_spell, self.fighting_style,
         )
 
     def add_feat(self, feat: dict) -> None:
@@ -1251,7 +1256,7 @@ def _feat_offered(feat: dict, sources, ruleset: str = "mixed") -> bool:
 def _resolve_asi_selected_feats(
     resolved_classes: list[dict], catalog: Catalog, sources=None,
     taken_indices: dict[str, str] | None = None, skipped_duplicates: list[dict] | None = None,
-    ruleset: str = "mixed",
+    ruleset: str = "mixed", fighting_style: bool = False,
 ) -> tuple[list[dict], dict[str, list[tuple[str, int]]]]:
     """ASI-or-feat Task 3: the ASI-level counterpart to
     _resolve_granted_feats (background grants). Reads each resolved
@@ -1329,7 +1334,7 @@ def _resolve_asi_selected_feats(
             if not (len(selected) == 1 and selected[0].startswith("feat:")):
                 continue
             catalog_feat = catalog.feats.get(selected[0][len("feat:"):])
-            if not (catalog_feat and _asi_pick_honored(catalog_feat, sources, ruleset, lvl)):
+            if not (catalog_feat and _asi_pick_honored(catalog_feat, sources, ruleset, lvl, fighting_style)):
                 continue
             if _taken_reason(catalog_feat, seen):
                 if skipped_duplicates is not None:
@@ -1549,14 +1554,14 @@ def _text_options_template(spec: dict, cid: str, source: dict, name: str, descri
 
 def _feature_choice_templates(
     catalog: Catalog, cls_id: str, cls_name: str, feature_refs: list[tuple[int, dict]], subclass_id: str | None,
-    class_level: int | None = None,
+    class_level: int | None = None, skip_features: frozenset[str] | set[str] = frozenset(),
 ) -> list[dict]:
     templates = []
     if class_level is None:
         class_level = max((lvl for lvl, _ in feature_refs), default=1)
     for lvl, ref in feature_refs:
         feature = catalog.features.get(ref["index"])
-        if not feature:
+        if not feature or ref["index"] in skip_features:  # C3: replaced by a fighting-style feat card
             continue
         feature_subclass = feature.get("subclass")
         if feature_subclass and feature_subclass.get("index") != subclass_id:
@@ -2267,6 +2272,20 @@ def _feat_ref_index(ref: str) -> str:
     return f"{slug(name)}-{source.lower()}"
 
 
+_SPELLCASTING_PREREQUISITE_FEATURES = ("Spellcasting", "Pact Magic")
+_KNOWN_PREREQUISITE_FEATURES = _SPELLCASTING_PREREQUISITE_FEATURES + ("Fighting Style",)
+
+
+def _feature_prerequisite_met(features, held: "_HeldFeatState") -> bool:
+    """A 5etools `feature` prerequisite (a list of feature names, any one will do):
+    Spellcasting / Pact Magic = the character has a spellcasting feature, Fighting
+    Style = the character has a Fighting Style feature (C3)."""
+    return any(
+        held.fighting_style if name == "Fighting Style" else held.has_spellcasting_feature
+        for name in features
+    )
+
+
 def _alt_value_is_valid(key: str, value) -> bool:
     if key == "level":
         return isinstance(value, int)
@@ -2287,7 +2306,7 @@ def _alt_value_is_valid(key: str, value) -> bool:
     if key == "feature":
         return (
             isinstance(value, list) and bool(value)
-            and all(isinstance(v, str) and v in ("Spellcasting", "Pact Magic") for v in value)
+            and all(isinstance(v, str) and v in _KNOWN_PREREQUISITE_FEATURES for v in value)
         )
     return True  # ability shape is tolerated as before
 
@@ -2393,7 +2412,9 @@ def _feat_prerequisite_alt_met(
     held = held or _HeldFeatState()
     if "feat" in alt and not any(_feat_ref_index(r) in held.feat_indices for r in alt["feat"]):
         return False
-    if (alt.get("spellcasting2020") or "feature" in alt) and not held.has_spellcasting_feature:
+    if alt.get("spellcasting2020") and not held.has_spellcasting_feature:
+        return False
+    if "feature" in alt and not _feature_prerequisite_met(alt["feature"], held):
         return False
     if alt.get("spellcastingFeature") and not held.has_spellcasting_feature:
         return False
@@ -2557,19 +2578,26 @@ _ASI_FEAT_CATEGORIES_DEFAULT = {"", "G", "O"}
 _ASI_EPIC_BOON_LEVEL = 19
 _ASI_CID_RE = re.compile(r"^class:[^:]+:\d+:asi$")
 _ASI_EXCLUDED_FEAT_INDICES = {"ability-score-improvement-xphb"}
+_FIGHTING_STYLE_CATEGORIES = {"FS", "FS:P", "FS:R"}
 
 
-def _is_asi_eligible_feat(feat: dict, ruleset: str = "mixed", slot_level: int = 4) -> bool:
+def _is_asi_eligible_feat(feat: dict, ruleset: str = "mixed", slot_level: int = 4, fighting_style: bool = False) -> bool:
     """Whether `feat` may be taken in place of an Ability Score Improvement
     at class level `slot_level` under `ruleset` (structural eligibility; the
     draft.sources / ruleset-visibility filter is _feat_offered, prerequisites
     are checked separately). The literal "Ability Score Improvement" entry is
     excluded because it duplicates this app's own ASI-combo mechanic. Shared
     by _asi_feat_pool (which options to offer) and _resolve_asi_selected_feats
-    (which selections to honor) so the two can't drift apart."""
+    (which selections to honor) so the two can't drift apart.
+
+    C3 (U3): the Fighting Style feats (FS, FS:P, FS:R) are eligible under 2024 and
+    mixed when the character has a Fighting Style feature (`fighting_style`), never
+    under 2014. The 2014 chassis keeps its SRD fighting-style subfeatures instead."""
     if feat["index"] in _ASI_EXCLUDED_FEAT_INDICES or feat["name"] == "Ability Score Improvement":
         return False
     category = feat.get("category") or ""
+    if category in _FIGHTING_STYLE_CATEGORIES:
+        return fighting_style and ruleset != "2014"
     if category == "EB":
         return ruleset != "2014" and slot_level >= _ASI_EPIC_BOON_LEVEL
     return category in _ASI_FEAT_CATEGORIES.get(ruleset, _ASI_FEAT_CATEGORIES_DEFAULT)
@@ -2608,27 +2636,30 @@ def _feat_options(feats: list[dict], ruleset: str) -> list[tuple[dict, dict]]:
     return out
 
 
-def _asi_feat_in_pool(feat: dict, sources, ruleset: str, slot_level: int) -> bool:
-    return _is_asi_eligible_feat(feat, ruleset, slot_level) and _feat_offered(feat, sources, ruleset)
+def _asi_feat_in_pool(feat: dict, sources, ruleset: str, slot_level: int, fighting_style: bool = False) -> bool:
+    return _is_asi_eligible_feat(feat, ruleset, slot_level, fighting_style) and _feat_offered(feat, sources, ruleset)
 
 
-def _asi_pick_honored(feat: dict, sources, ruleset: str, slot_level: int) -> bool:
+def _asi_pick_honored(feat: dict, sources, ruleset: str, slot_level: int, fighting_style: bool = False) -> bool:
     """Whether a stored feat pick at an ASI slot is applied: it is in the
     filtered pool, OR it is structurally eligible at that slot under the
     permissive "mixed" rules (so switching ruleset/sources never silently
     drops an already-chosen feat; the pick is kept and warned about, F2).
     Used by both the option template and the resolver."""
-    return _asi_feat_in_pool(feat, sources, ruleset, slot_level) or _is_asi_eligible_feat(feat, "mixed", slot_level)
+    return (_asi_feat_in_pool(feat, sources, ruleset, slot_level, fighting_style)
+            or _is_asi_eligible_feat(feat, "mixed", slot_level, fighting_style))
 
 
-def _asi_feat_pool(catalog: Catalog, sources, ruleset: str, slot_level: int, keep_index: str | None = None) -> list[dict]:
+def _asi_feat_pool(
+    catalog: Catalog, sources, ruleset: str, slot_level: int, keep_index: str | None = None, fighting_style: bool = False,
+) -> list[dict]:
     """The feats offered at an ASI slot: structurally eligible AND allowed by
     draft.sources / the ruleset. `keep_index` (the already-selected feat) is
     appended, as a COPY tagged `_hidden_by_filters`, when it is honored
     (_asi_pick_honored) but not in the pool."""
-    pool = [f for f in catalog.feats.values() if _asi_feat_in_pool(f, sources, ruleset, slot_level)]
+    pool = [f for f in catalog.feats.values() if _asi_feat_in_pool(f, sources, ruleset, slot_level, fighting_style)]
     kept = catalog.feats.get(keep_index) if keep_index else None
-    if kept and all(f['index'] != kept['index'] for f in pool) and _asi_pick_honored(kept, sources, ruleset, slot_level):
+    if kept and all(f['index'] != kept['index'] for f in pool) and _asi_pick_honored(kept, sources, ruleset, slot_level, fighting_style):
         pool.append({**kept, "_hidden_by_filters": True})
     return pool
 
@@ -2683,8 +2714,12 @@ def _feat_prerequisite_failing_parts(
             f"{ab.upper()} {minimum}"
             for entry in ability_req if isinstance(entry, dict) for ab, minimum in entry.items()
         ))
-    if (alt.get("spellcasting2020") or "feature" in alt) and not (held and held.has_spellcasting_feature):
+    if alt.get("spellcasting2020") and not (held and held.has_spellcasting_feature):
         parts.append("the Spellcasting or Pact Magic feature")
+    if "feature" in alt and not (held and _feature_prerequisite_met(alt["feature"], held)):
+        parts.append(
+            "the Fighting Style feature" if alt["feature"] == ["Fighting Style"] else "the Spellcasting or Pact Magic feature"
+        )
     if alt.get("spellcastingFeature") and not (held and held.has_spellcasting_feature):
         parts.append("the Spellcasting feature")
     if alt.get("spellcasting") and not (held and held.can_cast_spell):
@@ -2735,17 +2770,18 @@ def _asi_choice_templates(
     # `sources` is draft.sources: feat options are filtered exactly like a
     # race/background record (see _feat_source_allowed). SRD-only drafts
     # therefore get zero feat options — the 2014 SRD has no feats.
-    pools: dict[bool, list[dict]] = {}
+    pools: dict[tuple[bool, bool], list[dict]] = {}
     templates = []
     for lvl in asi_levels:
         cid = f"class:{cls_id}:{lvl}:asi"
         epic = lvl >= _ASI_EPIC_BOON_LEVEL
-        if epic not in pools:
-            pools[epic] = _asi_feat_pool(catalog, sources, ruleset, lvl)
-        general_feats = pools[epic]
+        fighting_style = bool((held_by_level or {}).get(lvl) and held_by_level[lvl].fighting_style)  # C3
+        if (epic, fighting_style) not in pools:
+            pools[(epic, fighting_style)] = _asi_feat_pool(catalog, sources, ruleset, lvl, fighting_style=fighting_style)
+        general_feats = pools[(epic, fighting_style)]
         keep_index = _stored_asi_feat_pick(class_choices, cid)
         if keep_index and not any(f["index"] == keep_index for f in general_feats):
-            kept_pool = _asi_feat_pool(catalog, sources, ruleset, lvl, keep_index)
+            kept_pool = _asi_feat_pool(catalog, sources, ruleset, lvl, keep_index, fighting_style)
             general_feats = general_feats + [f for f in kept_pool if f.get("_hidden_by_filters")]
         current_scores = scores_by_level.get(lvl, {})
         options = []
@@ -2775,6 +2811,134 @@ def _asi_choice_templates(
             "description": "Increase one ability score by 2, or two ability scores by 1 each — or take a feat instead.",
             "count": 1,
             "options": options,
+        })
+    return templates
+
+
+# C3: 2024 Fighting Style as a feat choice. XPHB Fighter (level 1), Paladin and
+# Ranger (level 2) "gain a Fighting Style feat of your choice"; the XPHB Champion's
+# "Additional Fighting Style" (level 7) grants another one. Under ruleset 2024 only
+# (mixed and 2014 keep the SRD fighting-style subfeatures, U9) these features'
+# cards are feat cards: cid `class:<cls>:<lvl>:fighting-style`, options
+# `feat:<index>` from `_feat_options`, prerequisite / duplicate states as for ASI
+# feats. The picked feat is tagged like an ASI feat (`_asi_origin`, `_asi_level`) plus
+# `_fs_cid`, so cid prefixes, instance keys, cascaded choices and sheet.feats work.
+_FS_FEATURE_INDICES = frozenset({
+    "fighter-fighting-style", "paladin-fighting-style", "ranger-fighting-style",
+    "additional-fighting-style", "champion-xphb-7-additional-fighting-style",
+})
+_FS_CLASS_CATEGORIES = {"fighter": ("FS",), "paladin": ("FS", "FS:P"), "ranger": ("FS", "FS:R")}
+
+
+def _class_has_fighting_style(catalog: Catalog, rc: dict) -> bool:
+    """Whether the class (and subclass) feature list up to the class level has a
+    feature named "Fighting Style" (the 5etools `Fighting Style` prerequisite)."""
+    for _lvl, ref in _cumulative_feature_refs(catalog, rc["cls_id"], rc["subclass_id"], rc["level"]):
+        feature = catalog.features.get(ref["index"])
+        if not feature:
+            continue
+        sub = feature.get("subclass")
+        if sub and sub.get("index") != rc["subclass_id"]:
+            continue
+        if feature.get("name") == "Fighting Style":
+            return True
+    return False
+
+
+def _fighting_style_pool(catalog: Catalog, cls_id: str, sources, ruleset: str) -> list[dict]:
+    cats = _FS_CLASS_CATEGORIES.get(cls_id, ())
+    return [f for f in catalog.feats.values() if f.get("category") in cats and _feat_offered(f, sources, ruleset)]
+
+
+def _fighting_style_slots(catalog: Catalog, rc: dict, sources, ruleset: str) -> list[tuple[str, int, str]]:
+    """[(cid, class level, feature index)] of the class's fighting-style feat cards,
+    by level. Empty outside ruleset 2024, for other classes, and when the catalog
+    offers no Fighting Style feat (SRD-only data, sources without XPHB): the SRD
+    subfeature card stays then."""
+    if ruleset != "2024" or rc["cls_id"] not in _FS_CLASS_CATEGORIES or not rc["cls"]:
+        return []
+    if not _fighting_style_pool(catalog, rc["cls_id"], sources, ruleset):
+        return []
+    slots: dict[str, tuple[str, int, str]] = {}
+    for lvl, ref in _cumulative_feature_refs(catalog, rc["cls_id"], rc["subclass_id"], rc["level"]):
+        if ref["index"] not in _FS_FEATURE_INDICES:
+            continue
+        feature = catalog.features.get(ref["index"])
+        sub = (feature or {}).get("subclass")
+        if not feature or (sub and sub.get("index") != rc["subclass_id"]):
+            continue
+        cid = f"class:{rc['cls_id']}:{lvl}:fighting-style"
+        slots.setdefault(cid, (cid, lvl, ref["index"]))
+    return sorted(slots.values(), key=lambda slot: slot[1])
+
+
+def _resolve_fighting_style_feats(
+    resolved_classes: list[dict], slots_by_class: dict[int, list[tuple[str, int, str]]], catalog: Catalog,
+    taken: dict[str, str], skipped_duplicates: list[dict],
+) -> tuple[list[dict], dict[str, dict[str, str]]]:
+    """The feats picked at the fighting-style cards (see above): (picks,
+    taken_by_cid). `taken_by_cid[cid]` = what was already held before that card
+    (background, species, earlier fighting-style cards), the map its options read
+    for the "already taken" state. First pick wins; a later duplicate is skipped and
+    appended to `skipped_duplicates`. Any FS-category feat of the class is honored
+    (a pick hidden by sources/ruleset stays, like an ASI pick); anything else is
+    ignored and lands in `pruned` through the generic stale-selection pass."""
+    taken = dict(taken)
+    picks: list[dict] = []
+    taken_by_cid: dict[str, dict[str, str]] = {}
+    for rc in resolved_classes:
+        cats = _FS_CLASS_CATEGORIES.get(rc["cls_id"], ())
+        for cid, lvl, _idx in slots_by_class.get(rc["index"], []):
+            taken_by_cid[cid] = dict(taken)
+            feat_index = _stored_asi_feat_pick(rc["class_choices"], cid)
+            feat = catalog.feats.get(feat_index) if feat_index else None
+            if not feat or feat.get("category") not in cats:
+                continue
+            if _taken_reason(feat, taken):
+                skipped_duplicates.append({"feat": feat, "cid": cid, "level": lvl, "cls": rc["cls"]})
+                continue
+            _taken_add(taken, [feat])
+            picks.append({**feat, "_fs_cid": cid, "_asi_level": lvl, "_asi_origin": f"{cid}:feat:{feat['index']}"})
+    return picks, taken_by_cid
+
+
+def _fighting_style_templates(
+    catalog: Catalog, rc: dict, slots: list[tuple[str, int, str]], sources, ruleset: str, total_level: int,
+    scores: dict[str, int], use_prerequisites: bool, held: "_HeldFeatState", taken_by_cid: dict[str, dict[str, str]],
+) -> list[dict]:
+    """One feat card per fighting-style slot of the class (see above)."""
+    cls_id = rc["cls_id"]
+    cats = _FS_CLASS_CATEGORIES.get(cls_id, ())
+    holder = held.copy()
+    holder.fighting_style = True  # the character is gaining the feature right here
+    templates = []
+    for cid, lvl, feature_index in slots:
+        feats = _fighting_style_pool(catalog, cls_id, sources, ruleset)
+        keep_index = _stored_asi_feat_pick(rc["class_choices"], cid)
+        kept = catalog.feats.get(keep_index) if keep_index else None
+        if kept and kept.get("category") in cats and all(f["index"] != kept["index"] for f in feats):
+            feats.append({**kept, "_hidden_by_filters": True})
+        options = []
+        for feat, option in _feat_options(feats, ruleset):
+            option.pop("group", None)
+            if feat.get("_hidden_by_filters"):
+                option["hiddenByFilters"] = True
+            reason = (
+                _feat_prerequisite_unmet_reason(feat, total_level, scores, use_prerequisites, holder, catalog)
+                or _taken_reason(feat, taken_by_cid.get(cid))
+            )
+            if reason:
+                option["disabled"] = True
+                option["disabledReason"] = reason
+            options.append(option)
+        feature = catalog.features[feature_index]
+        text_feature = catalog.features.get(f"xphb-{cls_id}-{lvl}-fighting-style") or (
+            feature if feature_index.startswith("champion-xphb") else {})
+        templates.append({
+            "id": cid, "source": {"kind": "class", "id": cls_id, "label": rc["cls"]["name"], "level": lvl},
+            "label": feature["name"],
+            "description": _join_desc(text_feature.get("desc")) or "Choose a Fighting Style feat.",
+            "count": 1, "options": options,
         })
     return templates
 
@@ -3307,10 +3471,14 @@ def _apply_species_overlap(class_templates: list[dict], race: dict | None, subra
                 opt["disabledReason"] = f"already granted by {race['name']}"
 
 
-def _class_feature_list(catalog: Catalog, resolved_classes: list[dict], choices: list[dict] | None = None) -> list[tuple[str, int, str]]:
+def _class_feature_list(
+    catalog: Catalog, resolved_classes: list[dict], choices: list[dict] | None = None, feats: list[dict] | None = None,
+) -> list[tuple[str, int, str]]:
     """(class_id, class_level, feature_index) for every class/subclass
     feature the character has, plus selected feature options (e.g. a
-    chosen Fighting Style) read from `choices` when given."""
+    chosen Fighting Style) read from `choices` when given, plus (C3) the
+    resolved Fighting Style feats in `feats` (picked at a fighting-style card or an
+    ASI) under their feat index, so CLASS_FEATURE_EFFECTS can key on `defense-xphb`."""
     out: list[tuple[str, int, str]] = []
     for rc in resolved_classes:
         if not rc["cls"] or not rc["cls_id"]:
@@ -3327,6 +3495,12 @@ def _class_feature_list(catalog: Catalog, resolved_classes: list[dict], choices:
             lvl = next((rc["level"] for rc in resolved_classes if rc["cls_id"] == src.get("id")), 0)
             for sel in [g["id"] for g in c.get("granted") or []] + list(c.get("selected") or []):
                 out.append((src["id"], lvl, sel))
+    first = next((rc for rc in resolved_classes if rc["cls_id"] and rc["cls"]), None)
+    for feat in feats or []:
+        if feat.get("category") in _FIGHTING_STYLE_CATEGORIES and first:
+            origin = feat.get("_asi_origin") or ""
+            rc = next((r for r in resolved_classes if origin.startswith(f"class:{r['cls_id']}:")), first)
+            out.append((rc["cls_id"], rc["level"], feat["index"]))
     return out
 
 
@@ -3554,6 +3728,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc["cls"] and spells_mod.single_class_spell_slots(catalog, rc["cls_id"], rc["level"], rc["subclass_id"], draft.get("ruleset"))
         for rc in resolved_classes
     )
+    held.fighting_style = any(_class_has_fighting_style(catalog, rc) for rc in resolved_classes if rc["cls"] and rc["cls_id"])  # C3
     held.race_names, held.subrace_names, held.size = _held_race_state(race, subrace, species_size)
     held.can_cast_spell = held.has_spellcasting_feature or bool(
         _species_innate_spells(race, subrace, catalog, species_variant)
@@ -3673,11 +3848,35 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     for species_feat in species_feats:
         held.add_feat(species_feat)
 
+    # C3: 2024 fighting-style feat cards (precedence: background, species, fighting
+    # style, ASI levels; first pick wins).
+    fs_slots_by_class = {
+        rc["index"]: _fighting_style_slots(catalog, rc, draft.get("sources"), ruleset)
+        for rc in resolved_classes if rc["cls"] and rc["cls_id"]
+    }
+    skipped_duplicate_fs_feats: list[dict] = []
+    fs_feats, fs_taken_by_cid = _resolve_fighting_style_feats(
+        resolved_classes, fs_slots_by_class, catalog, _taken_add({}, background_feats + species_feats),
+        skipped_duplicate_fs_feats,
+    )
+    for dup in skipped_duplicate_fs_feats:
+        problems.append({
+            "id": f"feat-duplicate-{dup['feat']['index']}-{dup['cid']}",
+            "message": f"{dup['feat']['name']} was already taken, so the pick at {dup['cls']['name']} level {dup['level']} isn't applied.",
+        })
+    for fs_feat in fs_feats:
+        held.add_feat(fs_feat)
+        if not _feat_offered(fs_feat, draft.get("sources"), ruleset):
+            warnings.append({
+                "id": f"feat-hidden-by-filters-{fs_feat['_fs_cid']}",
+                "message": f"{fs_feat['name']} is outside the current ruleset/sources but stays selected.",
+            })
+
     skipped_duplicate_asi_feats: list[dict] = []
     asi_feat_picks, asi_feat_deltas_by_cid = _resolve_asi_selected_feats(
         resolved_classes, catalog, draft.get("sources"),
-        taken_indices=_taken_add({}, background_feats + species_feats), skipped_duplicates=skipped_duplicate_asi_feats,
-        ruleset=ruleset,
+        taken_indices=_taken_add({}, background_feats + species_feats + fs_feats),
+        skipped_duplicates=skipped_duplicate_asi_feats, ruleset=ruleset, fighting_style=held.fighting_style,
     )
     for dup in skipped_duplicate_asi_feats:
         problems.append({
@@ -3685,7 +3884,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             "message": f"{dup['feat']['name']} was already taken, so the pick at {dup['cls']['name']} level {dup['level']} isn't applied.",
         })
     for pick in asi_feat_picks:
-        if not _asi_feat_in_pool(pick, draft.get("sources"), ruleset, pick["_asi_level"]):
+        if not _asi_feat_in_pool(pick, draft.get("sources"), ruleset, pick["_asi_level"], held.fighting_style):
             warnings.append({
                 "id": f"feat-hidden-by-filters-{pick['_asi_cid']}",
                 "message": f"{pick['name']} is outside the current ruleset/sources but stays selected.",
@@ -3829,13 +4028,28 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc_level_row = catalog.class_level_row(rc_cls_id, rc_level)
         rc["level_row"] = rc_level_row
         feature_refs = _cumulative_feature_refs(catalog, rc_cls_id, rc_subclass_id, rc_level)
-        choice_templates += _feature_choice_templates(catalog, rc_cls_id, rc_cls["name"], feature_refs, rc_subclass_id, class_level=rc_level)
+        rc_fs_slots = fs_slots_by_class.get(rc["index"], [])
+        choice_templates += _feature_choice_templates(
+            catalog, rc_cls_id, rc_cls["name"], feature_refs, rc_subclass_id, class_level=rc_level,
+            skip_features={idx for _cid, _lvl, idx in rc_fs_slots},
+        )
+        choice_templates += _fighting_style_templates(  # C3
+            catalog, rc, rc_fs_slots, draft.get("sources"), ruleset, total_level, final_scores, use_feat_prereqs, held,
+            fs_taken_by_cid,
+        )
+        for fs_feat in fs_feats:  # cascaded choices (Blessed / Druidic Warrior cantrips) under the pick's origin
+            if fs_feat["_asi_origin"].startswith(f"class:{rc_cls_id}:"):
+                choice_templates += _feat_choice_templates([fs_feat], origin=fs_feat["_asi_origin"])
+                choice_templates += _feat_spell_choice_templates(
+                    [fs_feat], catalog, origin=fs_feat["_asi_origin"], raw_selections=rc_class_choices,
+                    total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
+                )
         choice_templates += _asi_choice_templates(
             rc_cls_id, rc_cls["name"], rc_asi_levels, rc_asi_scores_by_level, catalog, total_level, use_feat_prereqs,
             draft.get("sources"),
             taken_by_level={
                 lvl: _taken_add(
-                    _taken_add({}, background_feats + species_feats),
+                    _taken_add({}, background_feats + species_feats + fs_feats),
                     [f for f in asi_feat_picks if asi_feat_order.get(f["_asi_cid"], 1 << 30) < asi_feat_order.get(f"class:{rc_cls_id}:{lvl}:asi", -1)],
                 )
                 for lvl in rc_asi_levels
@@ -3867,7 +4081,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 ]
 
     asi_selected_feats = [f for f in asi_feat_picks if f["_asi_cid"] not in prerequisite_blocked_asi_feat_cids]
-    resolved_feats = background_feats + species_feats + asi_selected_feats
+    resolved_feats = background_feats + species_feats + fs_feats + asi_selected_feats
 
     use_prereqs = bool(use_prerequisites_prefs.get("multiclass"))
     problems += _multiclass_prerequisite_problems(resolved_classes, final_scores, use_prereqs)
@@ -4497,7 +4711,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                         "message": f"The HP roll for {rc['cls_id']} level {lvl} must be between 1 and {rc_hit_die}; the average was used instead.",
                     })
         hp_class_entries.append({"hit_die": rc_hit_die, "level": rc["level"], "hp_rolls": rc_hp_rolls})
-    class_feature_list = _class_feature_list(catalog, resolved_classes, choices)
+    class_feature_list = _class_feature_list(catalog, resolved_classes, choices, resolved_feats)
     effects = features_mod.active_effects(class_feature_list) + invocation_effects
     # R5: Diamond Soul / Slippery Mind grants (the latter depends on the ruleset).
     for ab in features_mod.save_proficiencies(effects, [idx for _, _, idx in class_feature_list], ruleset):
@@ -4665,7 +4879,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         # Background grants keep their bare-slug ids (unchanged); a feat
         # taken at an ASI level is appended by its full catalog index
         # (e.g. "actor-xphb") — the exact id it was selected by.
-        "grantedFeats": granted_feats + [f["index"] for f in species_feats] + [f["index"] for f in asi_selected_feats],
+        "grantedFeats": granted_feats + [f["index"] for f in species_feats] + [f["index"] for f in fs_feats] + [f["index"] for f in asi_selected_feats],
         "featOptions": feat_options,
         "senses": senses,
         "expertiseSkills": expertise_all,

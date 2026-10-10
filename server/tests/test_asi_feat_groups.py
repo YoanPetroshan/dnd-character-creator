@@ -42,7 +42,7 @@ def test_group_order_and_first_ids(catalog):
     mixed = _feats(_opts("mixed", catalog))
     groups = [o["group"] for o in mixed]
     assert [g for i, g in enumerate(groups) if i == 0 or g != groups[i - 1]] == ["general", "origin", "feat-2014"]
-    assert [o["id"] for o in mixed[:3]] == ["feat:abjuration-adept-au", "feat:actor-xphb", "feat:athlete-xphb"]
+    assert [o["id"] for o in mixed[:3]] == ["feat:abjuration-adept-au", "feat:actor-xphb", "feat:arcane-warrior-au"]
     y2014 = _feats(_opts("2014", catalog))
     gs = [o["group"] for o in y2014]
     assert [g for i, g in enumerate(gs) if i == 0 or g != gs[i - 1]] == ["feat-2014", "general"]

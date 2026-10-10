@@ -180,7 +180,7 @@ export interface SheetFeature {
 export interface SheetFeat {
   id: string;
   name: string;
-  origin: "background" | "species" | "asi";
+  origin: "background" | "species" | "asi" | "fighting-style";
   level: number | null;
   choice?: string[];
 }
