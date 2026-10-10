@@ -526,3 +526,29 @@ def test_pruned_list_is_capped_with_a_count_line(client):
     assert len(body["pruned"]) == 201
     assert body["pruned"][-1]["choiceId"] == "pruned-more"
     assert "4800" in body["pruned"][-1]["reason"]
+
+
+# --- S6: every kitchen-sink draft exports in every format ---
+
+from kitchen_sink import KITCHEN_SINK, build, skip_reason
+
+
+@pytest.mark.parametrize("sid", list(KITCHEN_SINK))
+def test_kitchen_sink_drafts_export_in_every_format(client, sid):
+    from app import _catalog
+    from engine.resolve import resolve
+
+    if skip_reason(KITCHEN_SINK[sid]):
+        pytest.skip(skip_reason(KITCHEN_SINK[sid]))
+    draft = build(sid, _catalog, resolve)
+    resolved = client.post("/api/resolve", json=draft).get_json()
+    names = [r["name"] for r in resolved["derived"]["classResources"]]
+    for fmt, magic in (("yaml", None), ("markdown", None), ("pdf", b"%PDF")):
+        resp = client.post(f"/api/export/{fmt}", json=draft)
+        assert resp.status_code == 200, (fmt, resp.get_data(as_text=True)[:300])
+        if magic:
+            assert resp.data.startswith(magic)
+    doc = yaml.safe_load(client.post("/api/export/yaml", json=draft).data.decode("utf-8"))
+    assert [r["name"] for r in doc["classResources"]] == names
+    md = client.post("/api/export/markdown", json=draft).data.decode("utf-8")
+    assert all(n in md for n in names)

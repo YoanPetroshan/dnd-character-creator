@@ -155,3 +155,163 @@ def test_markdown_and_pdf_show_dueling_damage(catalog):
     assert "- Longsword: +2, 1d8 slashing (versatile 1d10), с Дуел 1d8+2" in md
     text = "".join(p.extract_text() for p in PdfReader(io.BytesIO(to_pdf(res))).pages)
     assert "с Дуел 1d8+2" in text
+
+
+# ---- S6: kitchen-sink field-level sweep across YAML, Markdown and PDF -------
+
+import re
+
+from kitchen_sink import KITCHEN_SINK, build, skip_reason
+
+# What each draft must actually put on the sheet, so a passing sweep is not vacuous.
+_EXPECT = {
+    "barbarian20-2014": {"resources": ["Rage"], "apa": 2},
+    "barbarian20-2024": {"resources": ["Rage"], "apa": 2, "masteries": True, "mastery_suffix": True},
+    "monk14": {"resources": ["Martial Arts", "Ki"], "apa": 2},
+    "paladin6": {"resources": ["Lay on Hands", "Channel Divinity"], "apa": 2},
+    "cleric6": {"resources": ["Channel Divinity"]},
+    "warlock17": {"resources": ["Agonizing Blast"], "feature_choice": "Armor of Shadows", "arcanum": 4, "devils_sight": True, "innate": True},
+    "fighter10-2024": {"resources": ["Second Wind", "Action Surge", "Indomitable"], "apa": 2, "masteries": True,
+                       "mastery_suffix": True, "dueling": True, "feature_choice": "Dueling"},
+    "wizard5-2014": {"resources": ["Arcane Recovery"], "spellbook": True},
+    "wizard5-2024": {"resources": ["Arcane Recovery"], "spellbook": True},
+    "psi-warrior11": {"resources": ["Psionic Energy Dice"], "apa": 3},
+    "totem-bear6": {"resources": ["Rage"], "feature_choice": "Bear"},
+    "cleric1-thaumaturge-2024": {"feature_choice": "Thaumaturge"},
+}
+assert set(_EXPECT) == set(KITCHEN_SINK)
+
+_SINK_RES: dict = {}
+
+
+def _sink(sid, catalog):
+    reason = skip_reason(KITCHEN_SINK[sid])
+    if reason:
+        pytest.skip(reason)
+    if sid not in _SINK_RES:
+        draft = build(sid, catalog, resolve)
+        res = resolve(draft, catalog)
+        assert res["problems"] == [] and all(c["status"] == "resolved" for c in res["choices"] if c["source"]["kind"] != "equipment")
+        _SINK_RES[sid] = res
+    return _SINK_RES[sid]
+
+
+def _flat(text: str) -> str:
+    return re.sub(r"\s+", " ", text)
+
+
+def _pdf_text(res) -> str:
+    return _flat("\n".join(p.extract_text() for p in PdfReader(io.BytesIO(to_pdf(res))).pages))
+
+
+def _expected_strings(res) -> list[tuple[str, str]]:
+    """(label, text) pairs that must appear in both Markdown and the PDF."""
+    sheet, derived = res["sheet"], res["derived"]
+    out = [("classResource", r["name"]) for r in derived["classResources"]]
+    out += [("weaponMastery", m["name"]) for m in sheet["weaponMasteries"]]
+    for cs in sheet["spells"]:
+        out += [("mysticArcanum", m["name"]) for m in cs.get("mysticArcanum") or []]
+        if cs.get("spellbook"):
+            out.append(("spellbook heading", "Книга със заклинания"))
+            out += [("spellbook", s["name"]) for s in cs["spellbook"]]
+    out += [("innateSpell", e["name"]) for e in sheet["innateSpells"]]
+    if derived["attacksPerAction"] > 1:
+        out.append(("attacksPerAction", f"Атаки на действие: {derived['attacksPerAction']}"))
+    for a in derived["attacks"]:
+        if a.get("duelingDamage"):
+            out.append(("duelingDamage", f"с Дуел {a['duelingDamage']}"))
+        if a.get("mastery"):
+            out.append(("mastery suffix", f"майсторство {a['mastery']}"))
+    if "devilsSight" in sheet["senses"]:
+        out.append(("senses.devilsSight", f"дяволско зрение {sheet['senses']['devilsSight']} фута"))
+    for f in sheet["features"]:
+        if f.get("choice"):
+            out.append(("feature choice", f"{f['name']}" + (f" (ниво {f['level']})" if f.get("level") else "")
+                        + ": " + ", ".join(f["choice"])))
+    return out
+
+
+@pytest.mark.parametrize("sid", list(KITCHEN_SINK))
+def test_kitchen_sink_yaml_carries_every_key(catalog, sid):
+    res = _sink(sid, catalog)
+    doc = yaml.safe_load(to_yaml(res))
+    for section in ("sheet", "derived"):
+        for key in res[section]:
+            assert key in doc or (section, key) in export_fields.EXCLUDED, f"{section}.{key}"
+    for key in ("classResources", "attacksPerAction", "weaponMasteries", "innateSpells", "senses", "spells", "features"):
+        assert key in doc
+    assert doc["classResources"] == res["derived"]["classResources"]
+    assert doc["weaponMasteries"] == res["sheet"]["weaponMasteries"]
+    assert doc["attacksPerAction"] == res["derived"]["attacksPerAction"]
+
+
+@pytest.mark.parametrize("sid", list(KITCHEN_SINK))
+def test_kitchen_sink_fields_are_non_empty_as_expected(catalog, sid):
+    """Guards the sweep against passing vacuously: the draft really carries the field."""
+    res = _sink(sid, catalog)
+    sheet, derived, want = res["sheet"], res["derived"], _EXPECT[sid]
+    assert {r["name"] for r in derived["classResources"]} >= set(want.get("resources", []))
+    if "apa" in want:
+        assert derived["attacksPerAction"] == want["apa"]
+    if want.get("masteries"):
+        assert sheet["weaponMasteries"]
+    if want.get("mastery_suffix"):
+        assert any(a.get("mastery") for a in derived["attacks"])
+    if want.get("dueling"):
+        assert any(a.get("duelingDamage") for a in derived["attacks"])
+    if "arcanum" in want:
+        assert sum(len(s.get("mysticArcanum") or []) for s in sheet["spells"]) == want["arcanum"]
+    if want.get("spellbook"):
+        assert any(s.get("spellbook") for s in sheet["spells"])
+    if want.get("devils_sight"):
+        assert sheet["senses"].get("devilsSight") == 120
+    if want.get("innate"):
+        assert sheet["innateSpells"]
+    if "feature_choice" in want:
+        assert any(want["feature_choice"] in (f.get("choice") or []) for f in sheet["features"])
+
+
+@pytest.mark.parametrize("sid", list(KITCHEN_SINK))
+def test_kitchen_sink_fields_reach_markdown_and_pdf(catalog, sid):
+    res = _sink(sid, catalog)
+    md, pdf = _flat(to_markdown(res)), _pdf_text(res)
+    expected = _expected_strings(res)
+    assert expected, "nothing to check"
+    for label, text in expected:
+        assert text in md, f"{label} {text!r} missing from Markdown"
+        assert text in pdf, f"{label} {text!r} missing from the PDF"
+
+
+@pytest.mark.parametrize("sid", list(KITCHEN_SINK))
+def test_kitchen_sink_bulgarian_text_has_no_substituted_glyphs(catalog, sid, caplog):
+    res = _sink(sid, catalog)
+    with caplog.at_level("WARNING"):
+        pdf = _pdf_text(res)  # fpdf2 logs "missing the following glyphs" for an undrawable character
+    assert "glyph" not in caplog.text.lower(), caplog.text
+    md = to_markdown(res)
+    if "?" not in md:
+        assert "?" not in pdf
+    for _, heading in (b for b in export_fields.extra_blocks(res) if b[0] == "h2"):
+        assert heading in pdf, heading
+    for heading in ("Заклинания", "Книга със заклинания", "Мистичен арканум", "Вродени заклинания"):
+        if heading in md:
+            assert heading in pdf, heading
+
+
+def test_pdf_renders_the_times_sign_and_other_symbols(catalog, caplog):
+    """Item and feature names can carry '×' / curly quotes; DejaVu has them, '?' would mean a fallback."""
+    res = _rogue_1(catalog)
+    res["sheet"]["name"] = "Дракон × Герой’s"
+    res["sheet"]["equipment"]["narrativeItems"] = ["20× стрела", "Ключ – ковчег"]
+    with caplog.at_level("WARNING"):
+        text = _pdf_text(res)
+    assert "glyph" not in caplog.text.lower(), caplog.text
+    assert "×" in text and "20× стрела" in text and "’" in text and "–" in text and "?" not in text
+
+
+def test_kitchen_sink_markdown_and_pdf_share_the_same_blocks(catalog):
+    for sid in KITCHEN_SINK:
+        res = _sink(sid, catalog)
+        md = to_markdown(res)
+        for kind, text in export_fields.extra_blocks(res):
+            assert text in md, text
