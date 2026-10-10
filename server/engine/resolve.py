@@ -1257,6 +1257,7 @@ def _resolve_asi_selected_feats(
     resolved_classes: list[dict], catalog: Catalog, sources=None,
     taken_indices: dict[str, str] | None = None, skipped_duplicates: list[dict] | None = None,
     ruleset: str = "mixed", fighting_style: bool = False,
+    before_level=None, taken_before_cid: dict[str, dict[str, str]] | None = None,
 ) -> tuple[list[dict], dict[str, list[tuple[str, int]]]]:
     """ASI-or-feat Task 3: the ASI-level counterpart to
     _resolve_granted_feats (background grants). Reads each resolved
@@ -1317,7 +1318,13 @@ def _resolve_asi_selected_feats(
     `taken_indices` (the background's granted feats) or picked at an
     EARLIER ASI level is skipped — the first pick wins, a later duplicate
     isn't applied — and appended to `skipped_duplicates` (when given) so
-    resolve() can report it."""
+    resolve() can report it.
+
+    F1: the walk is one ordered pass shared with the C3 fighting-style cards.
+    `before_level(rc, upto_level_or_None, seen)` is called before each ASI level (and
+    with None after the class's last one) so the cards of levels <= that level resolve
+    first against the same `seen` map; `taken_before_cid[cid]` receives a snapshot of
+    `seen` before each ASI level (what its options read for "already taken")."""
     asi_feat_picks: list[dict] = []
     seen: dict[str, str] = dict(taken_indices or {})
     feat_deltas_by_cid: dict[str, list[tuple[str, int]]] = {}
@@ -1327,6 +1334,10 @@ def _resolve_asi_selected_feats(
             continue
         for lvl in _asi_granting_levels(catalog, cls_id, level):
             cid = f"class:{cls_id}:{lvl}:asi"
+            if before_level:
+                before_level(rc, lvl, seen)
+            if taken_before_cid is not None:
+                taken_before_cid[cid] = dict(seen)
             raw_selected = class_choices.get(cid) or []
             if not isinstance(raw_selected, list):
                 continue
@@ -1356,6 +1367,8 @@ def _resolve_asi_selected_feats(
                     deltas.extend(deltas_by_option.get(opt_id, []))
             if deltas:
                 feat_deltas_by_cid[cid] = deltas
+        if before_level:
+            before_level(rc, None, seen)
     return asi_feat_picks, feat_deltas_by_cid
 
 
@@ -2872,34 +2885,44 @@ def _fighting_style_slots(catalog: Catalog, rc: dict, sources, ruleset: str) -> 
     return sorted(slots.values(), key=lambda slot: slot[1])
 
 
-def _resolve_fighting_style_feats(
-    resolved_classes: list[dict], slots_by_class: dict[int, list[tuple[str, int, str]]], catalog: Catalog,
-    taken: dict[str, str], skipped_duplicates: list[dict],
-) -> tuple[list[dict], dict[str, dict[str, str]]]:
-    """The feats picked at the fighting-style cards (see above): (picks,
-    taken_by_cid). `taken_by_cid[cid]` = what was already held before that card
-    (background, species, earlier fighting-style cards), the map its options read
-    for the "already taken" state. First pick wins; a later duplicate is skipped and
-    appended to `skipped_duplicates`. Any FS-category feat of the class is honored
-    (a pick hidden by sources/ruleset stays, like an ASI pick); anything else is
-    ignored and lands in `pruned` through the generic stale-selection pass."""
-    taken = dict(taken)
-    picks: list[dict] = []
-    taken_by_cid: dict[str, dict[str, str]] = {}
-    for rc in resolved_classes:
+class _FightingStyleResolver:
+    """The feats picked at the fighting-style cards (see above), resolved in ONE order
+    with the ASI picks (F1): by (class index, class level), a card before the ASI of the
+    same level. `__call__(rc, upto_level_or_None, seen)` is the `before_level` hook of
+    `_resolve_asi_selected_feats`: it resolves the not-yet-done cards of `rc` whose level
+    is <= `upto_level` (all of them for None) against `seen` (background, species and
+    every pick at an earlier position, whatever its kind), so the LATER pick is the
+    duplicate. `taken_by_cid[cid]` = `seen` before that card, the map its options read
+    for the "already taken" state. A duplicate is skipped and appended to
+    `skipped_duplicates`. Any FS-category feat of the class is honored (a pick hidden by
+    sources/ruleset stays, like an ASI pick); anything else is ignored and lands in
+    `pruned` through the generic stale-selection pass."""
+
+    def __init__(self, slots_by_class: dict[int, list[tuple[str, int, str]]], catalog: Catalog,
+                 skipped_duplicates: list[dict]):
+        self.slots_by_class = slots_by_class
+        self.catalog = catalog
+        self.skipped_duplicates = skipped_duplicates
+        self.picks: list[dict] = []
+        self.taken_by_cid: dict[str, dict[str, str]] = {}
+        self._done: set[str] = set()
+
+    def __call__(self, rc: dict, upto_level: int | None, seen: dict[str, str]) -> None:
         cats = _FS_CLASS_CATEGORIES.get(rc["cls_id"], ())
-        for cid, lvl, _idx in slots_by_class.get(rc["index"], []):
-            taken_by_cid[cid] = dict(taken)
+        for cid, lvl, _idx in self.slots_by_class.get(rc["index"], []):
+            if cid in self._done or (upto_level is not None and lvl > upto_level):
+                continue
+            self._done.add(cid)
+            self.taken_by_cid[cid] = dict(seen)
             feat_index = _stored_asi_feat_pick(rc["class_choices"], cid)
-            feat = catalog.feats.get(feat_index) if feat_index else None
+            feat = self.catalog.feats.get(feat_index) if feat_index else None
             if not feat or feat.get("category") not in cats:
                 continue
-            if _taken_reason(feat, taken):
-                skipped_duplicates.append({"feat": feat, "cid": cid, "level": lvl, "cls": rc["cls"]})
+            if _taken_reason(feat, seen):
+                self.skipped_duplicates.append({"feat": feat, "cid": cid, "level": lvl, "cls": rc["cls"]})
                 continue
-            _taken_add(taken, [feat])
-            picks.append({**feat, "_fs_cid": cid, "_asi_level": lvl, "_asi_origin": f"{cid}:feat:{feat['index']}"})
-    return picks, taken_by_cid
+            _taken_add(seen, [feat])
+            self.picks.append({**feat, "_fs_cid": cid, "_asi_level": lvl, "_asi_origin": f"{cid}:feat:{feat['index']}"})
 
 
 def _fighting_style_templates(
@@ -3974,10 +3997,18 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         for rc in resolved_classes if rc["cls"] and rc["cls_id"]
     }
     skipped_duplicate_fs_feats: list[dict] = []
-    fs_feats, fs_taken_by_cid = _resolve_fighting_style_feats(
-        resolved_classes, fs_slots_by_class, catalog, _taken_add({}, background_feats + species_feats),
-        skipped_duplicate_fs_feats,
+    fs_resolver = _FightingStyleResolver(fs_slots_by_class, catalog, skipped_duplicate_fs_feats)
+    skipped_duplicate_asi_feats: list[dict] = []
+    asi_taken_before_cid: dict[str, dict[str, str]] = {}
+    # F1: fighting-style cards and ASI picks resolve in one pass, ordered by (class
+    # index, class level); the later pick is the duplicate.
+    asi_feat_picks, asi_feat_deltas_by_cid = _resolve_asi_selected_feats(
+        resolved_classes, catalog, draft.get("sources"),
+        taken_indices=_taken_add({}, background_feats + species_feats),
+        skipped_duplicates=skipped_duplicate_asi_feats, ruleset=ruleset, fighting_style=held.fighting_style,
+        before_level=fs_resolver, taken_before_cid=asi_taken_before_cid,
     )
+    fs_feats, fs_taken_by_cid = fs_resolver.picks, fs_resolver.taken_by_cid
     for dup in skipped_duplicate_fs_feats:
         problems.append({
             "id": f"feat-duplicate-{dup['feat']['index']}-{dup['cid']}",
@@ -3991,12 +4022,6 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 "message": f"{fs_feat['name']} is outside the current ruleset/sources but stays selected.",
             })
 
-    skipped_duplicate_asi_feats: list[dict] = []
-    asi_feat_picks, asi_feat_deltas_by_cid = _resolve_asi_selected_feats(
-        resolved_classes, catalog, draft.get("sources"),
-        taken_indices=_taken_add({}, background_feats + species_feats + fs_feats),
-        skipped_duplicates=skipped_duplicate_asi_feats, ruleset=ruleset, fighting_style=held.fighting_style,
-    )
     for dup in skipped_duplicate_asi_feats:
         problems.append({
             "id": f"feat-duplicate-{dup['feat']['index']}-{dup['cid']}",
@@ -4009,15 +4034,6 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 "message": f"{pick['name']} is outside the current ruleset/sources but stays selected.",
             })
     asi_feats_by_cid = {f["_asi_cid"]: f for f in asi_feat_picks}
-    # Walk order of every ASI cid (class order, then level) — the "first
-    # pick wins" order _resolve_asi_selected_feats applies duplicates in.
-    asi_feat_order = {
-        f"class:{rc['cls_id']}:{lvl}:asi": n
-        for n, (rc, lvl) in enumerate(
-            (rc, lvl) for rc in resolved_classes if rc["cls_id"] and rc["cls"]
-            for lvl in _asi_granting_levels(catalog, rc["cls_id"], rc["level"])
-        )
-    }
     prerequisite_blocked_asi_feat_cids: set[str] = set()
 
     feat_bonuses = _feat_ability_bonuses(background_feats + species_feats)  # ASI-selected feats' bonuses: see _apply_asi_progression
@@ -4166,13 +4182,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choice_templates += _asi_choice_templates(
             rc_cls_id, rc_cls["name"], rc_asi_levels, rc_asi_scores_by_level, catalog, total_level, use_feat_prereqs,
             draft.get("sources"),
-            taken_by_level={
-                lvl: _taken_add(
-                    _taken_add({}, background_feats + species_feats + fs_feats),
-                    [f for f in asi_feat_picks if asi_feat_order.get(f["_asi_cid"], 1 << 30) < asi_feat_order.get(f"class:{rc_cls_id}:{lvl}:asi", -1)],
-                )
-                for lvl in rc_asi_levels
-            },
+            taken_by_level={lvl: asi_taken_before_cid.get(f"class:{rc_cls_id}:{lvl}:asi", {}) for lvl in rc_asi_levels},
             held_by_level=rc_held_by_level, ruleset=ruleset, class_choices=rc_class_choices,
         )
         # ASI-or-feat Task 3: a feat THIS class took at one of its own ASI

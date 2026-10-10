@@ -264,6 +264,37 @@ def test_champion_additional_fighting_style_cannot_repeat(catalog):
     assert ok["problems"] == []
 
 
+def _problem_ids(res):
+    return [p["id"] for p in res["problems"] if p["id"].startswith("feat-duplicate-")]
+
+
+@needs_data
+def test_duplicate_blames_the_later_pick_across_asi_and_fighting_style(catalog):
+    """F1 (1): picks are ordered by class level whatever their kind, so the LATER pick is the
+    duplicate. Champion 8: ASI at 4, 6, 8; fighting-style cards at 1 and 7."""
+    sub = {"fighter": "champion-xphb"}
+    # ASI at 4 comes before the level-7 card: the card is the duplicate.
+    res = _res(catalog, [("fighter", 8)], subclass=sub, choices={"fighter": {
+        "class:fighter:4:asi": ["feat:archery-xphb"], "class:fighter:7:fighting-style": ["feat:archery-xphb"]}})
+    assert _problem_ids(res) == ["feat-duplicate-archery-xphb-class:fighter:7:fighting-style"]
+    feats = [f for f in res["sheet"]["feats"] if f["id"] == "archery-xphb"]
+    assert len(feats) == 1 and feats[0]["origin"] == "asi" and feats[0]["level"] == 4
+    card7 = _card(res, "fighter", 7)
+    assert _opt(card7, "archery-xphb")["disabled"] and _opt(card7, "archery-xphb")["disabledReason"] == "already taken"
+    asi4 = next(o for o in _asi(res, "fighter", 4)["options"] if o["id"] == "feat:archery-xphb")
+    assert not asi4.get("disabled")
+    # The card at 7 comes before the ASI at 8: the ASI pick is the duplicate.
+    res = _res(catalog, [("fighter", 8)], subclass=sub, choices={"fighter": {
+        "class:fighter:7:fighting-style": ["feat:archery-xphb"], "class:fighter:8:asi": ["feat:archery-xphb"]}})
+    assert _problem_ids(res) == ["feat-duplicate-archery-xphb-class:fighter:8:asi"]
+    asi8 = next(o for o in _asi(res, "fighter", 8)["options"] if o["id"] == "feat:archery-xphb")
+    assert asi8["disabled"] and asi8["disabledReason"] == "already taken"
+    # An ASI at 4 does not block a LOWER card (level 1).
+    res = _res(catalog, [("fighter", 8)], subclass=sub, choices={"fighter": {
+        "class:fighter:1:fighting-style": ["feat:archery-xphb"], "class:fighter:4:asi": ["feat:archery-xphb"]}})
+    assert _problem_ids(res) == ["feat-duplicate-archery-xphb-class:fighter:4:asi"]
+
+
 @needs_data
 def test_no_second_card_without_champion(catalog):
     res = _res(catalog, [("fighter", 7)])
