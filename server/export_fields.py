@@ -76,9 +76,10 @@ def resource_line(r: dict) -> str:
         parts.append("без ограничение")
     elif r.get("uses") is not None:
         parts.append(str(r["uses"]))
-    for key, label in (("die", ""), ("dice", ""), ("pool", "пул "), ("bonus", "бонус +"), ("dc", "ТС ")):
+    for key, label in (("die", ""), ("dice", ""), ("pool", "пул "), ("bonus", "бонус "), ("dc", "ТС ")):
         if r.get(key) is not None:
-            parts.append(f"{label}{r[key]}")
+            value = f"{r[key]:+d}" if key == "bonus" else r[key]
+            parts.append(f"{label}{value}")
     core = ", ".join(parts)
     word = _RECHARGE_WORDS.get(r.get("recharge"))
     if word:

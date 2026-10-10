@@ -14,7 +14,7 @@ export function describeResource(r: ClassResource): string {
   if (r.die) parts.push(r.die);
   if (r.dice) parts.push(r.dice);
   if (r.pool != null) parts.push(`пул ${r.pool}`);
-  if (r.bonus != null) parts.push(`бонус +${r.bonus}`);
+  if (r.bonus != null) parts.push(`бонус ${r.bonus >= 0 ? "+" : ""}${r.bonus}`);
   if (r.dc != null) parts.push(`ТС ${r.dc}`);
   let core = parts.join(", ");
   const word = r.recharge ? RECHARGE[r.recharge] : undefined;
