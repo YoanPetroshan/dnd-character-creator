@@ -10,6 +10,8 @@ export interface ChoiceOption {
   group?: string;
   /** Option is hidden by the current ruleset/source filters (treated like an unavailable option). */
   hiddenByFilters?: boolean;
+  /** 2024 class starting-equipment package: {item id: count} for members with a count other than 1. */
+  quantities?: Record<string, number>;
 }
 
 export type ChoiceSourceKind =

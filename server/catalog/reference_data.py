@@ -302,6 +302,20 @@ def weapon_proficiency_id(item_index: str) -> str:
 MARTIAL_FINESSE_LIGHT_PROFICIENCY_ID = "martial-weapons-finesse-or-light"
 MARTIAL_LIGHT_PROFICIENCY_ID = "martial-weapons-light"
 
+# C9b: XPHB class starting-equipment names that are not a plain catalog item name (the catalog is
+# the SRD item list). Keys are the lower-cased 5etools item name; values are (catalog item id,
+# count per unit). Source: the `entries` line of each XPHB class record, e.g. Druid "Druidic Focus
+# (Quarterstaff)", Fighter "Arrows (20)|XPHB|20 Arrows", Wizard "Robe". "holy symbol" and the musical
+# instrument are nested picks, the Monk's tool is the sentinel below.
+CLASS_2024_EQUIPMENT_ITEM_MAP = {
+    "arrows (20)": ("arrow", 20),
+    "robe": ("robes", 1),
+    "druidic focus": ("quarterstaff", 1),
+}
+# Monk A: "Artisan's Tools or Musical Instrument chosen for the tool proficiency above". The option
+# member id is this sentinel; resolve() replaces it by the item of the Monk's tool proficiency pick.
+MONK_TOOL_SENTINEL = "monk-tool"
+
 
 # SRD racial trait index -> mechanical effect. The bundled SRD JSON describes
 # these traits in prose only (official 5etools races carry real fields

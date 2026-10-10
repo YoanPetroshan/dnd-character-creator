@@ -3688,18 +3688,36 @@ def _gather_equipped_items(
     return equipped
 
 
-def _chosen_equipment(equipment_choices: list[dict], item_lookup: dict) -> list[dict]:
+def _monk_tool_pick(choices: list[dict]) -> str | None:
+    """C9b: the Monk's tool proficiency pick (one of the Artisan's Tools / Musical Instrument ids),
+    which the Monk starting-equipment package hands out as an item."""
+    tool_ids = {t["index"] for t in reference_data.TOOLS}
+    for c in choices:
+        if (c["id"].startswith("class:monk:1:prof-choice-") and c["selected"]
+                and any(o["id"] in tool_ids for o in c["options"])):
+            return c["selected"][0]
+    return None
+
+
+def _chosen_equipment(equipment_choices: list[dict], item_lookup: dict, monk_tool: str | None = None) -> list[dict]:
+    """The catalog items of the selected equipment bundles. A bundle option may carry `quantities`
+    ({item id: n}, 2024 class packages only, decision E8); everything else is qty 1. The Monk
+    sentinel stands for `monk_tool` (the item of the tool proficiency pick)."""
     result: list[dict] = []
     for choice in equipment_choices:
+        options_by_id = {opt["id"]: opt for opt in choice.get("options", [])}
         for selected_id in choice["selected"]:
+            quantities = (options_by_id.get(selected_id) or {}).get("quantities") or {}
             for item_id in selected_id.split("+"):
+                if item_id == reference_data.MONK_TOOL_SENTINEL:
+                    item_id = monk_tool or ""
                 item = item_lookup.get(item_id)
                 if item:
-                    result.append({"itemId": item_id, "name": item["name"], "qty": 1})
+                    result.append({"itemId": item_id, "name": item["name"], "qty": quantities.get(item_id, 1)})
     return result
 
 
-def _selected_gold_and_narrative_items(equipment_choices: list[dict]) -> tuple[int, list[str]]:
+def _selected_gold_and_narrative_items(equipment_choices: list[dict], monk_tool: str | None = None) -> tuple[int, list[str]]:
     """A small, disclosed second pass over the SAME selected-equipment ids
     _gather_equipped_items/_chosen_equipment already iterate (each
     selected_id split on "+"), reading the parts THOSE functions
@@ -3737,6 +3755,9 @@ def _selected_gold_and_narrative_items(equipment_choices: list[dict]) -> tuple[i
                     amount = item_id[len("gp-"):]
                     if amount.isdigit():
                         gold += int(amount)
+                elif item_id == reference_data.MONK_TOOL_SENTINEL:
+                    if not monk_tool:  # C9b: no tool proficiency pick yet -> the label is a narrative item
+                        narrative_items.append(zipped[i] if zipped else "Artisan's Tools or Musical Instrument")
                 elif item_id.startswith(("flavor-", "category-", "unlisted-")):
                     # zipped is None only if an item's own name literally
                     # contains "+" or " + ", throwing off the split — falls
@@ -4777,7 +4798,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
 
     equipment_choices = [c for c in choices if c["source"]["kind"] == "equipment"]
     equipped_items = _gather_equipped_items(equipment_choices, added_raw if isinstance(added_raw, list) else [], catalog.items)
-    chosen_equipment = _chosen_equipment(equipment_choices, catalog.items)
+    monk_tool = _monk_tool_pick(choices)  # C9b
+    chosen_equipment = _chosen_equipment(equipment_choices, catalog.items, monk_tool)
 
     # starting_gold is SRD's own fixed per-background field, shape
     # {"quantity": N, "unit": "gp"} (confirmed against the bundled SRD
@@ -4789,7 +4811,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # while an official background's own bundle may carry gold only in the
     # selectable option, with its fixed field left None).
     fixed_gold = (bg.get("starting_gold") or {}).get("quantity", 0) if bg else 0
-    selected_gold, narrative_items = _selected_gold_and_narrative_items(equipment_choices)
+    selected_gold, narrative_items = _selected_gold_and_narrative_items(equipment_choices, monk_tool)
     starting_gold = fixed_gold + selected_gold
 
     # bg["starting_narrative_items"] (Finding 1 of the final whole-branch

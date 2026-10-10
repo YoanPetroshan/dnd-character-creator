@@ -9,20 +9,27 @@ the SRD shapes, so every consumer (`resolve()`'s class loop, the choice template
 proficiency block, the API) reads them unchanged. Equipment keys stay the SRD ones (C9b).
 
 Mapping of the 5etools strings is strict: anything unmapped raises ValueError, so a data
-change cannot silently drop a grant."""
+change cannot silently drop a grant.
+
+C9b adds the starting-equipment packages (`_class_equipment_options_2024`): the overlay's
+`starting_equipment_options` is the XPHB A/B(/C) package envelope (flag `keep_counts`, decision E8)
+and `starting_equipment` is []. A class record without usable `defaultData` keeps the SRD equipment."""
 from __future__ import annotations
 
 import re
 
 from catalog.reference_data import (
+    CLASS_2024_EQUIPMENT_ITEM_MAP,
     MARTIAL_FINESSE_LIGHT_PROFICIENCY_ID,
     MARTIAL_LIGHT_PROFICIENCY_ID,
+    MONK_TOOL_SENTINEL,
     SKILL_NAMES,
     TOOLS,
     proficiency_label,
 )
 
 from .common import slug
+from .equipment import _equipment_bundle_member_from_5etools
 from .proficiencies import _skill_choice_envelope_from_5etools, _tool_choice_envelope_from_5etools
 
 _ARMOR = {"light": "light-armor", "medium": "medium-armor", "heavy": "heavy-armor", "shield": "shields"}
@@ -123,6 +130,93 @@ def _gained(block: dict, save_ids: list[str]) -> tuple[list[dict], list[dict]]:
     return [_entry(i) for i in ids], _skill_envelopes(block.get("skills")) + tool_choices
 
 
+# ---- C9b: starting equipment packages ------------------------------------------------------
+
+_NESTED_PICKS = {  # the nested "choice" member: (category index, category name, description)
+    "holy symbol": ("holy-symbols", "Holy Symbols", "a holy symbol"),  # PHB ch. 6 table: Amulet / Emblem / Reliquary
+    "instrumentMusical": ("musical-instruments", "Musical Instruments", "a musical instrument"),
+}
+_TAG = re.compile(r"\{@\w+ ([^}]*)\}")
+_GOLD = re.compile(r"(\d+) GP")
+
+
+def _nested_pick(key: str) -> dict:
+    category, name, desc = _NESTED_PICKS[key]
+    return {"option_type": "choice", "choice": {"desc": desc, "choose": 1, "type": "equipment", "from": {
+        "option_set_type": "equipment_category",
+        "equipment_category": {"index": category, "name": name, "url": ""}}}}
+
+
+def _counted(index: str, name: str, count: int = 1) -> dict:
+    return {"option_type": "counted_reference", "count": count, "of": {"index": index, "name": name, "url": ""}}
+
+
+def _item_name_and_quantity(raw) -> tuple[str, int]:
+    item = raw if isinstance(raw, str) else raw.get("item", "")
+    return item.split("|", 1)[0].strip().lower(), (1 if isinstance(raw, str) else raw.get("quantity", 1))
+
+
+def _equipment_member(raw) -> dict:
+    """One 5etools package member -> an options_array member (counted_reference or nested choice)."""
+    if isinstance(raw, dict):
+        if "equipmentTypes" in raw:  # the Monk's "Artisan's Tools or Musical Instrument" (plural key)
+            return _counted(MONK_TOOL_SENTINEL, "Artisan's Tools or Musical Instrument (chosen for the tool proficiency)")
+        if raw.get("equipmentType") == "instrumentMusical":
+            return _nested_pick("instrumentMusical")
+        if raw.get("special") == "Spellbook":
+            return _counted("spellbook", "Spellbook")
+    if isinstance(raw, str) or "item" in raw:
+        name, quantity = _item_name_and_quantity(raw)
+        if name == "holy symbol":
+            return _nested_pick("holy symbol")
+        mapped = CLASS_2024_EQUIPMENT_ITEM_MAP.get(name)
+        if mapped:
+            index, per_unit = mapped
+            label = {"arrow": "Arrows", "robes": "Robes", "quarterstaff": "Druidic Focus (Quarterstaff)"}.get(index, index)
+            return _counted(index, label, per_unit * quantity)
+    member = _equipment_bundle_member_from_5etools(raw)
+    index = member["of"]["index"] if member.get("option_type") == "counted_reference" else ""
+    if index.startswith(("unlisted-", "category-", "flavor-")):
+        raise ValueError(f"unmapped XPHB starting equipment member {raw!r}")
+    return member
+
+
+def _strip_tags(text: str) -> str:
+    def plain(match):
+        parts = match.group(1).split("|")
+        return parts[2] if len(parts) > 2 and parts[2] else parts[0]
+    return _TAG.sub(plain, text)
+
+
+def _class_equipment_options_2024(raw: dict) -> list[dict] | None:
+    """The XPHB `startingEquipment` -> [one SRD-shaped envelope] (A/B, Fighter A/B/C), or None when
+    the record has no usable package (the SRD equipment is then kept). Gold comes from the data,
+    unless the record's own `entries` line gives another amount: the text wins (the Cleric A value
+    is 7000 cp = 70 GP while its line says "7 GP")."""
+    data = (raw or {}).get("defaultData") or []
+    if not (data and isinstance(data[0], dict)):
+        return None
+    entries = [e for e in (raw.get("entries") or []) if isinstance(e, str)]
+    text = _strip_tags(entries[0]) if entries else ""
+    segments = re.split(r"\(([A-Z])\)", text)[1:]
+    text_gold = {segments[i]: _GOLD.search(segments[i + 1]) for i in range(0, len(segments) - 1, 2)}
+    options = []
+    for letter in sorted(k for k in data[0] if len(k) == 1 and k.isalpha()):
+        items = []
+        for member in data[0][letter]:
+            if isinstance(member, dict) and "value" in member:
+                match = text_gold.get(letter)
+                gold = int(match.group(1)) if match else member["value"] // 100
+                items.append(_counted(f"gp-{gold}", f"{gold} GP"))
+            else:
+                items.append(_equipment_member(member))
+        options.append({"option_type": "multiple", "items": items})
+    if not options:
+        return None
+    return [{"desc": text, "choose": 1, "type": "equipment", "keep_counts": True,
+             "from": {"option_set_type": "options_array", "options": options}}]
+
+
 def convert_class_chassis_2024(records: dict, srd_classes: dict) -> dict[str, dict]:
     """{class id: full merged class dict} for every XPHB record that has an SRD class."""
     out: dict[str, dict] = {}
@@ -140,6 +234,10 @@ def convert_class_chassis_2024(records: dict, srd_classes: dict) -> dict[str, di
             "multi_classing": {**(srd.get("multi_classing") or {}),
                                "proficiencies": mc_proficiencies, "proficiency_choices": mc_choices},
         }
+        equipment = _class_equipment_options_2024(record.get("starting_equipment") or {})
+        if equipment is not None:  # C9b
+            out[cls_id]["starting_equipment_options"] = equipment
+            out[cls_id]["starting_equipment"] = []
     return out
 
 

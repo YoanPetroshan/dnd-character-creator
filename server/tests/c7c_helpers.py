@@ -36,7 +36,9 @@ def _draft(level, picks=None, cantrips=None, extra=None, bg="soldier-xphb", cha=
         ch[INV] = picks
     if cantrips is not None:
         ch[CANT] = cantrips
-    equipment = {"choices": {}, "added": added or [], "skipped": False}
+    # C9b: a 2024 Warlock has no automatic kit any more; package A is the SRD kit these tests relied on (leather armor, daggers)
+    package = {"class:warlock:1:equipment-choice-0": ["leather-armor+sickle+dagger+orb+book+scholars-pack+gp-15"]} if ruleset == "2024" else {}
+    equipment = {"choices": package, "added": added or [], "skipped": False}
     if wielded is not None:
         equipment["wielded"] = wielded
     return {

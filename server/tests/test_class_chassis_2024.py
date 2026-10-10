@@ -121,9 +121,10 @@ def test_twelve_overlays_full_merged_dicts(catalog):
     for cid, cls in catalog.classes_2024.items():
         srd = catalog.classes[cid]
         assert set(srd) <= set(cls)  # a FULL merged dict, never a partial overlay
-        for key in ("index", "name", "hit_die", "saving_throws", "class_levels", "subclasses",
-                    "starting_equipment", "starting_equipment_options"):
-            assert cls[key] == srd[key], (cid, key)  # equipment stays the SRD one until C9b
+        for key in ("index", "name", "hit_die", "saving_throws", "class_levels", "subclasses"):
+            assert cls[key] == srd[key], (cid, key)
+        # C9b replaced the SRD equipment keys by the XPHB packages (test_class_equipment_2024.py)
+        assert cls["starting_equipment"] == [] and cls["starting_equipment_options"] != srd["starting_equipment_options"]
 
 
 @needs_classes

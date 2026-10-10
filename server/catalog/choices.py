@@ -91,10 +91,18 @@ def _bundle_label_and_id(items: list[dict]) -> tuple[str, str] | None:
     return None
 
 
-def build_choice_options(from_field: dict) -> list[dict] | None:
+def _bundle_quantities(items: list[dict]) -> dict[str, int]:
+    """C9b: {item id: count} for the counted members of a bundle whose count is not 1 (2024 class
+    packages only; the ids of a bundle never carry quantities)."""
+    return {sub["of"]["index"]: sub["count"] for sub in items
+            if sub.get("option_type") == "counted_reference" and sub.get("count", 1) != 1}
+
+
+def build_choice_options(from_field: dict, keep_counts: bool = False) -> list[dict] | None:
     """Returns [{id, label}] for this option set, or None if it can't be
     resolved from bundled Phase 1 data (equipment_category, or a
-    resource_list type other than languages)."""
+    resource_list type other than languages). `keep_counts` (C9b, decision E8) adds
+    `quantities: {item id: n}` to a bundle option that has counts other than 1."""
     set_type = from_field.get("option_set_type")
 
     if set_type == "options_array":
@@ -105,7 +113,8 @@ def build_choice_options(from_field: dict) -> list[dict] | None:
                 if bundle is None:
                     continue
                 label, option_id = bundle
-                options.append({"id": option_id, "label": label})
+                quantities = _bundle_quantities(opt.get("items", [])) if keep_counts else {}
+                options.append({"id": option_id, "label": label, **({"quantities": quantities} if quantities else {})})
                 continue
             label = _option_label(opt)
             if label is None:
@@ -156,7 +165,7 @@ def build_choice_template(
     Returns a Choice template WITHOUT 'selected'/'status' — the engine adds
     those once it has the Draft's actual selections — or None if the option
     set can't be resolved from bundled Phase 1 data."""
-    options = build_choice_options(envelope.get("from", {}))
+    options = build_choice_options(envelope.get("from", {}), keep_counts=bool(envelope.get("keep_counts")))
     if options is None:
         return None
     desc = description if description is not None else envelope.get("desc")
@@ -255,6 +264,7 @@ def build_equipment_choice(
     dependents: dict[str, list[dict]] = {}
     seen: set[str] = set()
     slot_index = 0
+    keep_counts = bool(envelope.get("keep_counts"))  # C9b: only the 2024 class packages set it
     for opt in from_field.get("options", []):
         members = opt.get("items") if opt.get("option_type") == "multiple" else [opt]
         id_parts: list[str] = []
@@ -297,7 +307,9 @@ def build_equipment_choice(
         if option_id in seen:
             continue
         seen.add(option_id)
-        options.append({"id": option_id, "label": " + ".join(label_parts)})
+        quantities = _bundle_quantities(members) if keep_counts else {}
+        options.append({"id": option_id, "label": " + ".join(label_parts),
+                        **({"quantities": quantities} if quantities else {})})
         if subs:
             dependents[option_id] = subs
     if not options:

@@ -61,7 +61,9 @@ def _draft(level, picks, cantrips=None, cha=16, dex=14, worn=None, ruleset="2024
     ch = {INV: picks}
     if cantrips is not None:
         ch[CANT] = cantrips
-    equipment = {"choices": {}, "added": [], "skipped": False}
+    # C9b: 2024 Warlock package A (leather armor, daggers) stands in for the old automatic SRD kit
+    package = {"class:warlock:1:equipment-choice-0": ["leather-armor+sickle+dagger+orb+book+scholars-pack+gp-15"]} if ruleset == "2024" else {}
+    equipment = {"choices": package, "added": [], "skipped": False}
     if worn is not None:
         equipment["worn"] = worn
     return {
