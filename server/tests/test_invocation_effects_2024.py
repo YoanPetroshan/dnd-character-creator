@@ -260,6 +260,15 @@ def test_magical_cunning_note_half_the_pact_slots_rounded_up(catalog):
 
 
 @needs_data
+def test_magical_cunning_at_warlock_20_regains_all_slots_eldritch_master(catalog):
+    # F3a-7: Eldritch Master (Warlock 20): "When you use your Magical Cunning feature, you regain all your expended
+    # Pact Magic spell slots."
+    note = _resource(_res(catalog, 20, []), "Magical Cunning")["details"]["note"]
+    assert "ALL your expended Pact Magic slots" in note and "half" not in note
+    assert "half" in _resource(_res(catalog, 19, []), "Magical Cunning")["details"]["note"]
+
+
+@needs_data
 def test_contact_patron_from_level_9(catalog):
     assert _resource(_res(catalog, 8, []), "Contact Patron") is None
     res = _resource(_res(catalog, 9, []), "Contact Patron")

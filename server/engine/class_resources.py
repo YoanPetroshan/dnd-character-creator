@@ -440,6 +440,9 @@ def _warlock_features_2024(ctx: Ctx, rc: dict) -> list[dict]:
         slots = _pact_slot_count(rc)
         note = (f"1 minute rite: regain expended Pact Magic slots, up to half your maximum Pact Magic slots ({slots}) "
                 f"rounded up = {-(-slots // 2)}") if slots else "1 minute rite: regain up to half your maximum Pact Magic slots, rounded up"
+        if rc["level"] >= 20 and "xphb-warlock-20-eldritch-master" in features:  # F3a-7: "you regain all your expended Pact Magic spell slots"
+            note = (f"1 minute rite: regain ALL your expended Pact Magic slots (Eldritch Master; maximum {slots})" if slots
+                    else "1 minute rite: regain ALL your expended Pact Magic slots (Eldritch Master)")
         out.append(_resource(rc, "Magical Cunning", uses=1, recharge="long", details={"note": note}))
     if rc["level"] >= 9 and "xphb-warlock-9-contact-patron" in features:
         out.append(_resource(rc, "Contact Patron", uses=1, recharge="long", details={
