@@ -57,6 +57,13 @@ class Catalog:
     class_2024_progressions: dict[str, dict] = field(default_factory=dict)
     class_2024_tables: dict[str, dict[str, list]] = field(default_factory=dict)  # R1: non-spell XPHB class table columns
     subclass_2024_tables: dict[str, dict[str, list]] = field(default_factory=dict)  # R1: XPHB subclass table columns
+    # C1: XPHB class records ({feat_progression, features, starting_proficiencies,
+    # multiclassing, starting_equipment}), imported XPHB class features'
+    # per-level ids ({class: {level: [ids]}}) and the weapon masteries
+    # ({name: desc}); data only, no resolve behaviour reads them yet.
+    class_2024_records: dict[str, dict] = field(default_factory=dict)
+    class_2024_level_features: dict[str, dict[int, list[str]]] = field(default_factory=dict)
+    weapon_masteries: dict[str, list[str]] = field(default_factory=dict)
     # Level-row indexes (class_id, level) / (subclass_id, level) -> row, built
     # lazily and rebuilt when the number of rows changes.
     _row_index: tuple | None = field(default=None, repr=False, compare=False)
@@ -123,7 +130,8 @@ def _merge_official_subclasses(catalog: Catalog) -> None:
     disk (subclass records, their features, their level rows, the 2014/2024
     twin map). SRD records win a key clash."""
     from .official_source import (
-        class_dir, convert_subclasses, load_class_2024_progressions, load_class_2024_tables, load_subclass_2024_tables, load_raw_class_data, load_raw_optional_features, optionalfeatures_file,
+        class_dir, convert_subclasses, convert_class_features_2024, load_class_2024_progressions, load_class_2024_records,
+        load_class_2024_tables, load_raw_class_features_2024, load_subclass_2024_tables, load_raw_class_data, load_raw_optional_features, optionalfeatures_file,
         subclass_twins_from,
     )
 
@@ -134,6 +142,13 @@ def _merge_official_subclasses(catalog: Catalog) -> None:
     catalog.class_2024_progressions = load_class_2024_progressions(class_dir())
     catalog.class_2024_tables = load_class_2024_tables(class_dir())
     catalog.subclass_2024_tables = load_subclass_2024_tables(class_dir())
+    catalog.class_2024_records = load_class_2024_records(class_dir())
+    class_features, catalog.class_2024_level_features = convert_class_features_2024(
+        load_raw_class_features_2024(class_dir()), catalog.class_2024_records)
+    clash = set(class_features) & set(catalog.features)
+    if clash:
+        raise ValueError(f"imported XPHB class feature ids clash with the SRD: {sorted(clash)[:5]}")
+    catalog.features.update(class_features)
     raw_subs, raw_feats = load_raw_class_data(class_dir())
     if not raw_subs:
         return
@@ -151,13 +166,19 @@ def _merge_official_subclasses(catalog: Catalog) -> None:
 def _merge_official_items(catalog: Catalog) -> None:
     """Tags the SRD items and merges the mundane non-SRD weapons and armor of
     `items-base.json`. SRD records win a key clash."""
-    from .official_source import convert_items, items_base_file, load_raw_base_items
+    from .official_source import (
+        attach_masteries, convert_item_masteries, convert_items, items_base_file, load_raw_base_items,
+        load_raw_item_masteries,
+    )
 
     for item in catalog.items.values():
         item.setdefault("source", "SRD")
         item.setdefault("ruleset", "2014")
-    for index, item in convert_items(load_raw_base_items(items_base_file()), set(catalog.items)).items():
+    raw_items = load_raw_base_items(items_base_file())
+    for index, item in convert_items(raw_items, set(catalog.items)).items():
         catalog.items.setdefault(index, item)
+    catalog.weapon_masteries = convert_item_masteries(load_raw_item_masteries(items_base_file()))
+    attach_masteries(catalog.items, raw_items, catalog.weapon_masteries)
 
 
 def load() -> Catalog:

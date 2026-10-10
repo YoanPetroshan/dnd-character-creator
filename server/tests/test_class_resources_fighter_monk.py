@@ -220,7 +220,9 @@ def test_extra_attack_feature_ids_exist_in_the_catalog(catalog):
 @needs_classes
 def test_every_extra_attack_feature_in_the_catalog_is_in_the_table(catalog):
     fighter = {"extra-attack-1"}  # the Fighter's own 5/11/20 come from the level-row `extra_attacks`
-    named = {fid for fid, f in catalog.features.items() if f["name"] == "Extra Attack"} - fighter
+    # C1 imported XPHB class features (`xphb-*`) are 2024 chassis data, not read by the 2014 table
+    named = {fid for fid, f in catalog.features.items()
+             if f["name"] == "Extra Attack" and not fid.startswith("xphb-")} - fighter
     assert named == set(cr.EXTRA_ATTACK_FEATURES)
 
 

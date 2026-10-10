@@ -6,7 +6,8 @@ def test_load_returns_expected_counts():
     catalog = load()
     assert len(catalog.classes) == 12
     if has_official_classes():  # Slice 11b: +164 subclasses, +1089 features, +671 rows (script-verified)
-        assert len(catalog.features) == 407 + 1089 + 76  # +76 optional-feature records (11b.6)
+        # +76 optional-feature records (11b.6), +173 XPHB class features (C1, script-verified)
+        assert len(catalog.features) == 407 + 1089 + 76 + 173
         assert len(catalog.levels) == 290 + 671
         assert len(catalog.subclasses) == 12 + 164
     else:

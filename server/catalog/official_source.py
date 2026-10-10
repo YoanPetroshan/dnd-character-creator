@@ -191,12 +191,21 @@ from .official.spells import (  # noqa: F401
     load_raw_spells,
     load_spell_class_lookup,
 )
-from .official.items import convert_items, load_raw_base_items  # noqa: F401
+from .official.items import (  # noqa: F401
+    attach_masteries,
+    convert_item_masteries,
+    convert_items,
+    load_raw_base_items,
+    load_raw_item_masteries,
+)
 from .official.subclasses import (  # noqa: F401
     convert_subclasses,
     subclass_twins_from,
     unresolved_spell_refs,
     load_class_2024_progressions,
+    load_class_2024_records,
+    load_raw_class_features_2024,
+    convert_class_features_2024,
     load_class_2024_tables,
     load_subclass_2024_tables,
     load_raw_class_data,

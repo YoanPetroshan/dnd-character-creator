@@ -153,6 +153,40 @@ def load_subclass_2024_tables(class_dir) -> dict[str, dict[str, list]]:
     return out
 
 
+def load_class_2024_records(class_dir) -> dict[str, dict]:
+    """XPHB class records of the 12 SRD classes -> {class id: {"feat_progression":
+    raw featProgression list, "features": [{"name", "level", "ref"}] (the
+    `classFeatures` refs in order, placeholders included), "starting_proficiencies",
+    "multiclassing", "starting_equipment": the raw 5etools values}} (C1, data only).
+    {} when the directory or index is missing."""
+    out: dict[str, dict] = {}
+    for raw in _raw_class_records(class_dir, "class"):
+        cls_id = str(raw.get("name", "")).lower()
+        if raw.get("source") != "XPHB" or cls_id not in SRD_CLASS_IDS:
+            continue
+        features = []
+        for entry in raw.get("classFeatures") or []:
+            ref = entry.get("classFeature") if isinstance(entry, dict) else entry
+            parts = ref.split("|") if isinstance(ref, str) else []
+            if len(parts) >= 4 and parts[3].isdigit():
+                features.append({"name": parts[0], "level": int(parts[3]), "ref": ref})
+        out[cls_id] = {
+            "feat_progression": list(raw.get("featProgression") or []),
+            "features": features,
+            "starting_proficiencies": raw.get("startingProficiencies") or {},
+            "multiclassing": raw.get("multiclassing") or {},
+            "starting_equipment": raw.get("startingEquipment") or {},
+        }
+    return out
+
+
+def load_raw_class_features_2024(class_dir) -> list[dict]:
+    """Every XPHB `classFeature` record of the 12 SRD classes (C1)."""
+    return [r for r in _raw_class_records(class_dir, "classFeature")
+            if r.get("source") == "XPHB" and str(r.get("className", "")).lower() in SRD_CLASS_IDS
+            and r.get("classSource", "XPHB") == "XPHB"]
+
+
 def _raw_class_records(class_dir, key: str) -> list[dict]:
     if not class_dir:
         return []
@@ -561,3 +595,41 @@ def subclass_twins_from(raw_subs, known_ids) -> dict[str, str]:
                 twins[a] = b
                 twins[b] = a
     return twins
+
+
+_CLASS_FEATURE_PLACEHOLDERS = frozenset({"Subclass Feature", "Ability Score Improvement", "Epic Boon"})
+
+
+def _is_placeholder_feature(raw: dict) -> bool:
+    """Rows that only mark a level: the subclass grant ("<Class> Subclass",
+    "Subclass Feature"), "Ability Score Improvement" and "Epic Boon"."""
+    name = raw.get("name")
+    return (name in _CLASS_FEATURE_PLACEHOLDERS
+            or name == f"{raw.get('className')} Subclass")
+
+
+def convert_class_features_2024(raw_features, class_records=None):
+    """(features, level_features): `xphb-<class>-<level>-<slug(name)>` ->
+    {index, name, level, class, desc, source "XPHB", ruleset "2024"} for every
+    non-placeholder XPHB class feature (child records such as Protector or Turn
+    Undead included, so entry references can be resolved later), and
+    {class: {level: [ids]}} listing only the features the class record's
+    `classFeatures` refs name (the real per-level list). Ids that clash are
+    skipped (first wins)."""
+    features: dict[str, dict] = {}
+    for raw in raw_features or []:
+        if _is_placeholder_feature(raw) or not raw.get("name") or not isinstance(raw.get("level"), int):
+            continue
+        cls = str(raw["className"]).lower()
+        fid = f"xphb-{cls}-{raw['level']}-{slug(raw['name'])}"
+        features.setdefault(fid, {
+            "index": fid, "name": raw["name"], "level": raw["level"], "class": {"index": cls, "name": raw["className"]},
+            "desc": _flatten_entries(raw.get("entries") or []), "source": "XPHB", "ruleset": "2024",
+        })
+    level_features: dict[str, dict[int, list[str]]] = {}
+    for cls, rec in (class_records or {}).items():
+        for ref in rec.get("features", []):
+            fid = f"xphb-{cls}-{ref['level']}-{slug(ref['name'])}"
+            if fid in features and fid not in level_features.setdefault(cls, {}).setdefault(ref["level"], []):
+                level_features[cls][ref["level"]].append(fid)
+    return features, level_features

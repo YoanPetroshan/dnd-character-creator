@@ -3,7 +3,8 @@
 Only `baseitem` records of the weapon (M, R) and armor (LA, MA, HA, S) types
 with no magic rarity are read; everything the SRD equipment list already has
 (by `srd`/`srd52` flag or by name) and the 2024 reprints of kept 2014 items
-are skipped. Mastery, reload and burst-fire are not modelled.
+are skipped. Reload and burst-fire are not modelled; weapon mastery is attached
+afterwards by `attach_masteries` (C1).
 """
 from __future__ import annotations
 
@@ -150,3 +151,54 @@ def convert_items(raw_items, existing_ids) -> dict[str, dict]:
         item["index"] = index
         out[index] = item
     return out
+
+
+def load_raw_item_masteries(path) -> list[dict]:
+    """Every `itemMastery` record of `items-base.json`; [] when missing or broken."""
+    if not path:
+        return []
+    try:
+        with open(Path(path), encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return []
+    return [m for m in data.get("itemMastery", []) if isinstance(m, dict)] if isinstance(data, dict) else []
+
+
+def convert_item_masteries(raw_masteries) -> dict[str, list[str]]:
+    """{mastery name: desc paragraphs} from the XPHB `itemMastery` records."""
+    from .spells import _flatten_entries
+
+    return {m["name"]: _flatten_entries(m.get("entries") or [])
+            for m in raw_masteries or [] if m.get("name") and m.get("source") == "XPHB"}
+
+
+def _normalize_weapon_name(name: str) -> str:
+    """"Crossbow, light" -> "light crossbow"; everything else lowercased."""
+    name = str(name or "").strip().lower()
+    head, comma, tail = name.partition(",")
+    return f"{tail.strip()} {head.strip()}" if comma else name
+
+
+def attach_masteries(items: dict[str, dict], raw_items, masteries) -> int:
+    """Sets `item["mastery"] = "<Name>"` on every weapon in `items` whose
+    normalized name equals that of an XPHB base item with a known mastery
+    (the SRD "Crossbow, light" matches "Light Crossbow"). Weapons XPHB gives no
+    mastery (Net, Double-Bladed Scimitar, Hoopak, Yklwa) are left alone.
+    Returns the number of items changed."""
+    by_name: dict[str, str] = {}
+    for raw in raw_items or []:
+        if raw.get("source") != "XPHB" or _type_code(raw) not in _WEAPON_TYPES:
+            continue
+        first = next((str(m).split("|")[0] for m in raw.get("mastery") or []), None)
+        if first in masteries:
+            by_name.setdefault(_normalize_weapon_name(raw.get("name")), first)
+    changed = 0
+    for item in items.values():
+        if item.get("equipment_category", {}).get("index") != "weapon":
+            continue
+        mastery = by_name.get(_normalize_weapon_name(item.get("name")))
+        if mastery:
+            item["mastery"] = mastery
+            changed += 1
+    return changed
