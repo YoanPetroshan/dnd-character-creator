@@ -2890,6 +2890,38 @@ def _fighting_style_slots(catalog: Catalog, rc: dict, sources, ruleset: str) -> 
     return sorted(slots.values(), key=lambda slot: slot[1])
 
 
+def _srd_fighting_style_slots(catalog: Catalog, rc: dict, replaced: set[str]) -> list[tuple[str, int, str]]:
+    """G1: [(cid, class level, feature index)] of the SRD "Fighting Style" /
+    "Additional Fighting Style" subfeature cards the class has (the ones not replaced by
+    a 2024 feat card). Their picks take part in the fighting-style duplicate check."""
+    slots = []
+    for lvl, ref in _cumulative_feature_refs(catalog, rc["cls_id"], rc["subclass_id"], rc["level"]):
+        feature = catalog.features.get(ref["index"])
+        if not feature or ref["index"] in replaced:
+            continue
+        sub = feature.get("subclass")
+        if sub and sub.get("index") != rc["subclass_id"]:
+            continue
+        if feature.get("name") in ("Fighting Style", "Additional Fighting Style") \
+                and (feature.get("feature_specific") or {}).get("subfeature_options"):
+            slots.append((f"class:{rc['cls_id']}:{lvl}:feature:{feature['index']}", lvl, feature["index"]))
+    return slots
+
+
+def _srd_style_options(catalog: Catalog, feature_index: str) -> dict[str, str]:
+    """{option feature id: name key} of an SRD fighting-style card ("Fighting Style:
+    Dueling" -> "dueling", the key `_feat_name_key` gives the feat "Dueling")."""
+    opts = ((catalog.features[feature_index].get("feature_specific") or {})
+            .get("subfeature_options", {}).get("from", {}).get("options", []))
+    out = {}
+    for o in opts:
+        item = (o.get("item") or {}).get("index")
+        feat = catalog.features.get(item or "")
+        if feat:
+            out[item] = re.sub(r"^Fighting Style:\s*", "", feat["name"]).strip().lower()
+    return out
+
+
 class _FightingStyleResolver:
     """The feats picked at the fighting-style cards (see above), resolved in ONE order
     with the ASI picks (F1): by (class index, class level), a card before the ASI of the
@@ -2904,8 +2936,11 @@ class _FightingStyleResolver:
     `pruned` through the generic stale-selection pass."""
 
     def __init__(self, slots_by_class: dict[int, list[tuple[str, int, str]]], catalog: Catalog,
-                 skipped_duplicates: list[dict]):
+                 skipped_duplicates: list[dict], srd_slots_by_class: dict[int, list[tuple[str, int, str]]] | None = None,
+                 skipped_srd: list[dict] | None = None):
         self.slots_by_class = slots_by_class
+        self.srd_slots_by_class = srd_slots_by_class or {}
+        self.skipped_srd = skipped_srd if skipped_srd is not None else []
         self.catalog = catalog
         self.skipped_duplicates = skipped_duplicates
         self.picks: list[dict] = []
@@ -2914,11 +2949,26 @@ class _FightingStyleResolver:
 
     def __call__(self, rc: dict, upto_level: int | None, seen: dict[str, str]) -> None:
         cats = _FS_CLASS_CATEGORIES.get(rc["cls_id"], ())
-        for cid, lvl, _idx in self.slots_by_class.get(rc["index"], []):
+        slots = sorted([(c, l, i, False) for c, l, i in self.slots_by_class.get(rc["index"], [])]
+                       + [(c, l, i, True) for c, l, i in self.srd_slots_by_class.get(rc["index"], [])],
+                       key=lambda t: t[1])
+        for cid, lvl, _idx, is_srd in slots:
             if cid in self._done or (upto_level is not None and lvl > upto_level):
                 continue
             self._done.add(cid)
             self.taken_by_cid[cid] = dict(seen)
+            if is_srd:  # G1: an SRD style pick is held by its name key (first holder wins)
+                raw = rc["class_choices"].get(cid)
+                options = _srd_style_options(self.catalog, _idx)
+                pick = next((x for x in (raw if isinstance(raw, list) else []) if isinstance(x, str) and x in options), None)
+                if pick:
+                    key = "name:" + options[pick]
+                    if key in seen:
+                        self.skipped_srd.append({"option": pick, "cid": cid, "level": lvl, "cls": rc["cls"],
+                                                 "name": self.catalog.features[pick]["name"]})
+                    else:
+                        seen[key] = f"{options[pick].title()}, SRD"
+                continue
             feat_index = _stored_asi_feat_pick(rc["class_choices"], cid)
             feat = self.catalog.feats.get(feat_index) if feat_index else None
             if not feat or feat.get("category") not in cats:
@@ -4030,7 +4080,13 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         for rc in resolved_classes if rc["cls"] and rc["cls_id"]
     }
     skipped_duplicate_fs_feats: list[dict] = []
-    fs_resolver = _FightingStyleResolver(fs_slots_by_class, catalog, skipped_duplicate_fs_feats)
+    srd_fs_slots_by_class = {
+        rc["index"]: _srd_fighting_style_slots(catalog, rc, {idx for _c, _l, idx in fs_slots_by_class.get(rc["index"], [])})
+        for rc in resolved_classes if rc["cls"] and rc["cls_id"]
+    }
+    skipped_srd_styles: list[dict] = []
+    fs_resolver = _FightingStyleResolver(fs_slots_by_class, catalog, skipped_duplicate_fs_feats,
+                                         srd_fs_slots_by_class, skipped_srd_styles)
     skipped_duplicate_asi_feats: list[dict] = []
     asi_taken_before_cid: dict[str, dict[str, str]] = {}
     # F1: fighting-style cards and ASI picks resolve in one pass, ordered by (class
@@ -4042,6 +4098,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         before_level=fs_resolver, taken_before_cid=asi_taken_before_cid,
     )
     fs_feats, fs_taken_by_cid = fs_resolver.picks, fs_resolver.taken_by_cid
+    for dup in skipped_srd_styles:  # G1
+        problems.append({
+            "id": f"fighting-style-duplicate-{dup['option']}-{dup['cid']}",
+            "message": f"{dup['name']} was already taken, so the pick at {dup['cls']['name']} level {dup['level']} isn't applied.",
+        })
     for dup in skipped_duplicate_fs_feats:
         problems.append({
             "id": f"feat-duplicate-{dup['feat']['index']}-{dup['cid']}",
@@ -4201,6 +4262,15 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             catalog, rc_cls_id, rc_cls["name"], feature_refs, rc_subclass_id, class_level=rc_level,
             skip_features={idx for _cid, _lvl, idx in rc_fs_slots},
         )
+        for tpl in choice_templates:  # G1: SRD style options already held (feat or earlier SRD style)
+            held_names = fs_taken_by_cid.get(tpl["id"])
+            if held_names and any(tpl["id"] == c for c, _l, _i in srd_fs_slots_by_class.get(rc["index"], [])):
+                names = _srd_style_options(catalog, tpl["id"].rsplit(":", 1)[1])
+                for opt in tpl["options"]:
+                    label = held_names.get("name:" + names.get(opt["id"], "\0"))
+                    if label is not None:
+                        opt["disabled"] = True
+                        opt["disabledReason"] = f"already taken ({label})"
         choice_templates += _fighting_style_templates(  # C3
             catalog, rc, rc_fs_slots, draft.get("sources"), ruleset, total_level, final_scores, use_feat_prereqs, held,
             fs_taken_by_cid,
