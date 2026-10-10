@@ -31,7 +31,7 @@ from catalog.loader import load
 from c7c_helpers import (  # noqa: F401
     AGON, BLADE, BLADE_W, CANT, CHAIN, EB, FB, INV, KNOWN, LESSONS, LONGSWORD, MI, REPEL, SPEAR, THIRST, TOME, TOME_C, TOME_R,
     TTD, X, _card, _dependent_ids, _draft, _l, _opt, _problem_ids, _pruned, _res, _resource, _srd_only, needs_data, tcid,
-    time_resolve,
+    _l, time_resolve,
 )
 from engine import class_choices_2024
 from engine.resolve import resolve
@@ -256,3 +256,25 @@ def test_helpers_range_and_instance_cards(catalog):
     assert class_choices_2024.spell_range_feet(catalog.spells["chill-touch-xphb"]) is None
     assert class_choices_2024.spell_range_feet(catalog.spells["thunderclap-xphb"]) is None
     assert class_choices_2024.dependent_cid(f"{AGON}~2", "cantrip") == tcid(f"{AGON}~2", "cantrip")
+
+
+@needs_data
+def test_malformed_stored_dependent_values_do_not_crash(catalog):
+    extra = {tcid(AGON, "cantrip"): "eldritch-blast-xphb", TOME_C: {"a": 1}, TOME_R: [None, 5, "detect-magic-xphb"],
+             BLADE_W: 7, tcid(_l(), "feat"): [["feat:alert-xphb"]]}
+    r = _res(catalog, 5, [AGON, TOME, BLADE, _l()], [EB, MI], extra=extra)
+    assert _card(r, tcid(AGON, "cantrip"))["selected"] == []
+    assert _card(r, TOME_R)["selected"] == ["detect-magic-xphb"]
+    assert not [p for p in r["problems"] if "over-selected" in p["id"]]
+
+
+def test_prune_dependents_and_instance_target_helpers():
+    card = lambda cid, sel: {"id": cid, "label": cid, "selected": sel, "source": {"kind": "class"}}  # noqa: E731
+    choices = [card(INV, [AGON]), card(tcid(AGON, "cantrip"), [EB]), card(tcid(f"{AGON}~2", "cantrip"), [TTD]),
+               card(tcid(f"{AGON}~3", "cantrip"), []), card("class:warlock:spells-cantrips", [EB])]
+    assert class_choices_2024.instance_target(choices, AGON) == EB
+    assert class_choices_2024.instance_target(choices, f"{AGON}~3") is None
+    assert class_choices_2024.instance_target(choices, REPEL) is None
+    pruned = class_choices_2024.prune_invocation_dependents(choices, [AGON])
+    assert [c["id"] for c in choices] == [INV, tcid(AGON, "cantrip"), "class:warlock:spells-cantrips"]
+    assert [p["choiceId"] for p in pruned] == [tcid(f"{AGON}~2", "cantrip")]  # the empty ~3 card goes silently

@@ -173,6 +173,8 @@ _EXPECT = {
     "warlock17": {"resources": ["Agonizing Blast"], "feature_choice": "Armor of Shadows", "arcanum": 4, "devils_sight": True, "innate": True},
     "fighter10-2024": {"resources": ["Second Wind", "Action Surge", "Indomitable"], "apa": 2, "masteries": True,
                        "mastery_suffix": True, "dueling": True, "feature_choice": "Dueling"},
+    "warlock7-2024": {"resources": ["Agonizing Blast", "Pact of the Blade"], "tome": True, "lessons": True, "pact_weapon": True,
+                      "devils_sight": True, "feature_choice": "Pact of the Tome"},
     "wizard5-2014": {"resources": ["Arcane Recovery"], "spellbook": True},
     "wizard5-2024": {"resources": ["Arcane Recovery"], "spellbook": True},
     "psi-warrior11": {"resources": ["Psionic Energy Dice"], "apa": 3},
@@ -213,6 +215,7 @@ def _expected_strings(res) -> list[tuple[str, str]]:
     out += [("weaponMastery", m["name"]) for m in sheet["weaponMasteries"]]
     for cs in sheet["spells"]:
         out += [("mysticArcanum", m["name"]) for m in cs.get("mysticArcanum") or []]
+        out += [("pactOfTheTome", s["name"]) for s in cs.get("pactOfTheTome") or []]  # C7c
         if cs.get("spellbook"):
             out.append(("spellbook heading", "Книга със заклинания"))
             out += [("spellbook", s["name"]) for s in cs["spellbook"]]
@@ -277,6 +280,12 @@ def test_kitchen_sink_fields_are_non_empty_as_expected(catalog, sid):
         assert sum(len(s.get("mysticArcanum") or []) for s in sheet["spells"]) == want["arcanum"]
     if want.get("spellbook"):
         assert any(s.get("spellbook") for s in sheet["spells"])
+    if want.get("tome"):  # C7c
+        assert sum(len(s.get("pactOfTheTome") or []) for s in sheet["spells"]) == 5
+    if want.get("lessons"):
+        assert any(f["origin"] == "invocation" for f in sheet["feats"])
+    if want.get("pact_weapon"):
+        assert any("Pact weapon" in " ".join(a["notes"]) and a["proficient"] for a in derived["attacks"])  # STR 16 = CHA 16: ability stays STR
     if want.get("devils_sight"):
         assert sheet["senses"].get("devilsSight") == 120
     if want.get("innate"):

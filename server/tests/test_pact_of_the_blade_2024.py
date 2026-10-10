@@ -116,3 +116,18 @@ def test_no_pact_weapon_outside_ruleset_2024(catalog, ruleset):
 def test_srd_only_catalog_degrades(catalog):
     r = _res(_srd_only(catalog), 5, [BLADE], [EB, MI], extra={BLADE_W: ["longsword"]}, added=LONGSWORD)
     assert _dependent_ids(r) == []
+
+
+def test_gate_pact_weapon_helper_narrows_options_and_drops_missing_picks():
+    class Cat:
+        items = {"longsword": {"name": "Longsword"}, "greatsword": {"name": "Greatsword"}}
+
+    card = {"id": BLADE_W, "label": "Pact of the Blade: Pact Weapon", "count": 1, "selected": ["greatsword"],
+            "options": [{"id": "longsword", "label": "Longsword"}, {"id": "greatsword", "label": "Greatsword"}]}
+    choices = [card]
+    pruned = class_choices_2024.gate_pact_weapon(choices, {"longsword"}, Cat())
+    assert [o["id"] for o in choices[0]["options"]] == ["longsword"] and choices[0]["selected"] == []
+    assert choices[0]["status"] == "pending" and "Greatsword" in pruned[0]["reason"]
+    assert class_choices_2024.selected_pact_weapon(choices) is None
+    assert class_choices_2024.pact_weapon_row_notes([BLADE, THIRST + "~2"]) == [
+        n for n in class_choices_2024.pact_weapon_row_notes([THIRST])]

@@ -190,7 +190,7 @@ export interface SheetFeature {
 export interface SheetFeat {
   id: string;
   name: string;
-  origin: "background" | "species" | "asi" | "fighting-style";
+  origin: "background" | "species" | "asi" | "fighting-style" | "invocation";
   level: number | null;
   choice?: string[];
 }

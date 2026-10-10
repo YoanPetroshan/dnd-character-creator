@@ -6,6 +6,7 @@ import copy
 
 _BASE = {"STR": 16, "DEX": 14, "CON": 14, "INT": 14, "WIS": 14, "CHA": 16}
 _WL_INV = "class:warlock:2:invocations:eldritch-invocations"
+_WL_INV_2024 = "class:warlock:1:invocations:xphb-warlock-1-eldritch-invocations"
 _P = "eldritch-invocation-"
 
 
@@ -29,6 +30,13 @@ KITCHEN_SINK: dict[str, dict] = {
     "fighter10-2024": _sub("fighter", 10, "2024", marks=("classes", "official"), overrides={
         "class:fighter:1:fighting-style": ["feat:dueling-xphb"],
         "class:fighter:weapon-mastery": ["longsword"]},
+        equip=[{"itemId": "longsword", "qty": 1, "equipped": True}]),
+    "warlock7-2024": _sub("warlock", 7, "2024", marks=("classes", "official", "spells"), overrides={
+        "class:warlock:spells-cantrips": ["eldritch-blast-xphb", "minor-illusion-xphb", "mage-hand-xphb"],
+        _WL_INV_2024: ["opt-pact-of-the-tome-xphb", "opt-pact-of-the-blade-xphb", "opt-thirsting-blade-xphb",
+                       "opt-agonizing-blast-xphb", "opt-lessons-of-the-first-ones-xphb", "opt-devils-sight-xphb"],
+        "class:warlock:invocation:opt-agonizing-blast-xphb:cantrip": ["eldritch-blast-xphb"],
+        "class:warlock:invocation:opt-pact-of-the-blade-xphb:weapon": ["longsword"]},
         equip=[{"itemId": "longsword", "qty": 1, "equipped": True}]),
     "wizard5-2014": _sub("wizard", 5, "2014", marks=("classes",)),
     "wizard5-2024": _sub("wizard", 5, "2024", marks=("classes", "official")),

@@ -1,4 +1,4 @@
-"""C6a / C6b-1 / C6b-2 / C6c-1 / C6c-2: 2024 class choice cards that are built from XPHB feature ids (helper for resolve()).
+"""C6a / C6b-1 / C6b-2 / C6c-1 / C6c-2 / C7a-c: 2024 class choice cards that are built from XPHB feature ids (helper for resolve()).
 
 Pure functions over the catalog; resolve() only wires them. Everything here is ruleset "2024"
 only: with any other ruleset, or an SRD-only catalog (no XPHB feature records), every function
@@ -718,7 +718,7 @@ def _structure_ok(catalog, option_id: str, level: int, kept: set[str]) -> bool:
     return k == 1 or invocation_base_id(option_id) + ("" if k == 2 else f"~{k - 1}") in kept
 
 
-def _instance_label(catalog, instance_id: str) -> str:
+def instance_label(catalog, instance_id: str) -> str:
     k = invocation_instance(instance_id)
     name = (catalog.features.get(invocation_base_id(instance_id)) or {}).get("name", instance_id)
     return name if k == 1 else f"{name} ({k})"
@@ -769,11 +769,11 @@ def target_templates(catalog, rc: dict, instances: list[str], candidates: list[s
             reason = _target_reason(catalog, base, catalog.spells[sid])
             holder = next((o for o in chosen if o != inst and invocation_base_id(o) == base and chosen[o] == sid), None)
             if reason is None and holder:
-                reason = f"already chosen for {_instance_label(catalog, holder)}"
+                reason = f"already chosen for {instance_label(catalog, holder)}"
             if reason:
                 opt.update(disabled=True, disabledReason=reason)
             options.append(opt)
-        name = _instance_label(catalog, inst)
+        name = instance_label(catalog, inst)
         out.append({
             "id": dependent_cid(inst, "cantrip"), "source": _target_source(rc), "label": f"{name}: Cantrip",
             "description": ((catalog.features.get(base) or {}).get("desc") or [""])[0], "count": 1, "options": options,
@@ -907,3 +907,13 @@ def pact_weapon_row_notes(selected_ids) -> list[str]:
     from catalog.reference_data import PACT_WEAPON_ROW_NOTES_2024
     bases = {invocation_base_id(s) for s in selected_ids}
     return [note for fid, note in PACT_WEAPON_ROW_NOTES_2024.items() if fid in bases]
+
+
+def lessons_instances(catalog, rc: dict, ruleset: str) -> list[str]:
+    """Selected Lessons of the First Ones instance ids (`<id>`, `<id>~2`, ...) in instance order: the stored
+    selection minus what fails the structural prerequisites (Warlock level 2, instance k needs k-1). Lessons has no
+    spell prerequisite, so the late gate never drops what this returns (the feat walk needs it EARLY)."""
+    if ruleset != "2024" or rc.get("cls_id") != "warlock" or not rc.get("cls") or not _invocation_ready(catalog):
+        return []
+    return sorted((i for i in raw_invocation_instances(catalog, rc, ruleset) if invocation_base_id(i) == LESSONS_ID),
+                  key=invocation_instance)
