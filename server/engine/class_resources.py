@@ -383,7 +383,7 @@ def _warlock(ctx: Ctx, rc: dict) -> list[dict]:
     for c in ctx.choices:
         if (c.get("source") or {}).get("id") != "warlock" or ":invocations:" not in c.get("id", ""):
             continue
-        for sel in c.get("selected") or []:
+        for sel in (s.split("~", 1)[0] for s in c.get("selected") or []):  # C7a: strip repeat-instance suffix
             eff = reference_data.INVOCATION_EFFECTS.get(sel) or {}
             bonus = eff.get("resource_bonus")
             if bonus:

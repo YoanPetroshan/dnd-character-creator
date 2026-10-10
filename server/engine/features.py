@@ -105,11 +105,17 @@ def speed_bonus_unless_heavy(effects, equipped_items) -> int:
     return sum(e["speed_bonus_unless_heavy_armor"] for _, _, e in effects if "speed_bonus_unless_heavy_armor" in e)
 
 
-def selected_invocation_ids(choices: list[dict]) -> list[tuple[str, str]]:
-    """(class_id, invocation feature id) for every selected Eldritch Invocation.
-    Call after `_gate_invocation_choices`, so unmet picks are already gone."""
+def selected_invocation_instances(choices: list[dict]) -> list[tuple[str, str]]:
+    """(class_id, option id) for every selected Eldritch Invocation, keeping the `~k` repeat-instance suffix
+    (C7a, for per-instance dependents). Call after `_gate_invocation_choices`."""
     return [(c["source"]["id"], sel) for c in choices
             if c["source"]["kind"] == "class" and ":invocations:" in c["id"] for sel in c["selected"]]
+
+
+def selected_invocation_ids(choices: list[dict]) -> list[tuple[str, str]]:
+    """(class_id, invocation feature id) for every selected Eldritch Invocation, instance suffix stripped
+    (effect lookup). Call after `_gate_invocation_choices`, so unmet picks are already gone."""
+    return [(cls, sel.split("~", 1)[0]) for cls, sel in selected_invocation_instances(choices)]
 
 
 def invocation_effects(choices: list[dict], class_levels: dict[str, int]) -> list[tuple[str, int, dict]]:

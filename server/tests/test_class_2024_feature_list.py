@@ -158,12 +158,20 @@ def test_expertise_metamagic_invocations_favored_enemy_attach_by_ordinal(catalog
 
 @needs_classes
 def test_unmapped_choice_features_keep_their_srd_row(catalog):
+    # C7a: under 2024 the Pacts are invocations, so the SRD Pact Boon card is gone; an SRD-only catalog keeps it.
     res = resolve(_d([_cls("warlock", 3)]), catalog)
+    assert not [c for c in res["choices"] if c["id"].endswith(":pact-boon")]
+    assert "Eldritch Invocations" in _names(res) and "Pact Magic" in _names(res)
+    bare_wl = copy.copy(catalog)
+    bare_wl.features = {k: v for k, v in catalog.features.items() if not k.endswith("-xphb")}
+    bare_wl.class_2024_records = {}
+    bare_wl.class_2024_level_features = {}
+    res = resolve(_d([_cls("warlock", 3)]), bare_wl)
     picks = {c["id"]: [c["options"][0]["id"]] for c in res["choices"] if c["id"].endswith(":pact-boon")}
-    res = resolve(_d([_cls("warlock", 3, choices=picks)]), catalog)
+    assert picks
+    res = resolve(_d([_cls("warlock", 3, choices=picks)]), bare_wl)
     pb = next(f for f in _rows(res) if f["name"] == "Pact Boon")
     assert pb["level"] == 3 and pb["choice"]
-    assert "Eldritch Invocations" in _names(res) and "Pact Magic" in _names(res)
     # C6b-1: the SRD Ranger cards are gone under 2024 (Deft Explorer / R4 replace them), so there
     # is no terrain or enemy pick to attach; the SRD fallback row remains for an SRD-only catalog.
     res = resolve(_d([_cls("ranger", 1)]), catalog)

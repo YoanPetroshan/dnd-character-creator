@@ -61,6 +61,8 @@ def replaced_srd_features(catalog, cls_id: str, ruleset: str) -> set[str]:
     if cls_id == "sorcerer":  # C6c-1: only when the XPHB Metamagic card can exist
         ok = METAMAGIC_FEATURE in catalog.features and optional_feature_progression(catalog, "sorcerer", "MM")
         return set(SRD_CARDS_REPLACED_2024[cls_id]) if ok else set()
+    if cls_id == "warlock":  # C7a: only when the XPHB invocation card can exist
+        return set(SRD_CARDS_REPLACED_2024[cls_id]) if _invocation_ready(catalog) else set()
     if cls_id == "ranger":
         return set(SRD_CARDS_REPLACED_2024[cls_id]) if cls_id in (catalog.class_2024_records or {}) else set()
     return set(SRD_CARDS_REPLACED_2024[cls_id]) if expertise_entries(catalog, cls_id, ruleset) else set()
@@ -497,3 +499,123 @@ def wizard_spell_pick_templates(catalog, class_level: int, book_ids: list[str], 
         for sid in effective_picks(tpl["options"], (class_choices or {}).get(cid), spec["count"]):
             always[sid] = spec["grant"]
     return templates, always
+
+
+# ---- C7a: Warlock Eldritch Invocations (XPHB optional features) -------------------------------
+
+INVOCATION_FEATURE = "xphb-warlock-1-eldritch-invocations"
+INVOCATION_CID = f"class:warlock:1:invocations:{INVOCATION_FEATURE}"
+
+
+def invocation_base_id(option_id: str) -> str:
+    """`opt-agonizing-blast-xphb~2` -> `opt-agonizing-blast-xphb` (E4: repeat instances are `<id>~k`)."""
+    return option_id.split("~", 1)[0]
+
+
+def invocation_instance(option_id: str) -> int:
+    tail = option_id.partition("~")[2]
+    return int(tail) if tail.isdigit() else 1
+
+
+def invocation_records(catalog) -> list[dict]:
+    """The XPHB Eldritch Invocation records (featureType EI), sorted by name."""
+    return sorted((f for f in catalog.features.values()
+                   if f.get("source") == "XPHB" and "EI" in (f.get("feature_types") or [])), key=lambda f: f["name"])
+
+
+def invocation_counts(catalog) -> list[int]:
+    """Invocations known per Warlock level (index level-1): the class table, else the record progression."""
+    table = ((getattr(catalog, "class_2024_tables", None) or {}).get("warlock") or {}).get("invocations")
+    if isinstance(table, list) and table:
+        return table
+    record = (getattr(catalog, "class_2024_records", None) or {}).get("warlock") or {}
+    for prog in record.get("optional_feature_progression") or []:
+        if "EI" in (prog.get("featureType") or []) and isinstance(prog.get("progression"), list):
+            return prog["progression"]
+    return []
+
+
+def _invocation_ready(catalog) -> bool:
+    return INVOCATION_FEATURE in catalog.features and bool(invocation_counts(catalog)) and bool(invocation_records(catalog))
+
+
+def invocation_templates(catalog, rc: dict, ruleset: str) -> list[dict]:
+    """Warlock under 2024: one Eldritch Invocation card (Pacts are invocations). Count = the table value at
+    the Warlock level; options = the 28 XPHB records plus `<id>~k` repeat instances (E4), each shown after its
+    base. Prerequisites are enforced late by `gate_invocations` (disabled + reasons)."""
+    if ruleset != "2024" or rc.get("cls_id") != "warlock" or not rc.get("cls") or not _invocation_ready(catalog):
+        return []
+    counts = invocation_counts(catalog)
+    count = counts[min(rc["level"], len(counts)) - 1]
+    options = []
+    for rec in invocation_records(catalog):
+        base = {"id": rec["index"], "label": rec["name"]}
+        if rec.get("desc"):
+            base["description"] = _join(rec["desc"])
+        options.append(base)
+        if rec.get("repeatable"):
+            for k in range(2, count + 1):
+                options.append({**base, "id": f"{rec['index']}~{k}", "label": f"{rec['name']} ({k})"})
+    return [{
+        "id": INVOCATION_CID,
+        "source": {"kind": "class", "id": "warlock", "label": rc["cls"]["name"], "level": 1},
+        "label": catalog.features[INVOCATION_FEATURE]["name"],
+        "description": _join(catalog.features[INVOCATION_FEATURE].get("desc")),
+        "count": count,
+        "options": options,
+    }]
+
+
+def is_invocation_card_2024(c: dict) -> bool:
+    return c["source"]["kind"] == "class" and c["id"] == INVOCATION_CID
+
+
+def _invocation_unmet_2024(catalog, option_id: str, level: int, selected: set[str], cantrips: list[str]) -> str | None:
+    from engine.spells import spell_attack_roll, spell_deals_damage
+    rec = catalog.features.get(invocation_base_id(option_id)) or {}
+    pre = rec.get("prerequisite_2024") or {}
+    if (pre.get("level") or 0) > level:
+        return f"requires warlock level {pre['level']}"
+    bases = {invocation_base_id(s) for s in selected}
+    for need in pre.get("optional_features") or []:
+        if need not in bases:
+            return "requires " + (catalog.features.get(need) or {}).get("name", need)
+    kind = pre.get("cantrip")
+    if kind:
+        test = spell_attack_roll if kind == "attack" else spell_deals_damage
+        if not any(test(catalog.spells.get(c) or {}) for c in cantrips):
+            return ("requires a Warlock cantrip that requires an attack roll" if kind == "attack"
+                    else "requires a Warlock cantrip that deals damage")
+    k = invocation_instance(option_id)
+    if k > 1:
+        prev = invocation_base_id(option_id) + ("" if k == 2 else f"~{k - 1}")
+        if prev not in selected:
+            return f"take {rec.get('name', 'it')}{'' if k == 2 else f' ({k - 1})'} first"
+    return None
+
+
+def gate_invocations(catalog, choice: dict, level: int, cantrips: list[str]) -> tuple[dict, list[dict]]:
+    """Disable options whose prerequisites are unmet and drop selected ones that no longer qualify, to a
+    fixed point (removing Pact of the Blade also removes Thirsting Blade, then Devouring Blade).
+    Returns (new choice, non-blocking pruned entries)."""
+    selected = list(choice["selected"])
+    dropped: list[str] = []
+    names = {o["id"]: o["label"] for o in choice["options"]}
+    for _ in range(12):
+        keep = set(selected)
+        bad = [s for s in selected if _invocation_unmet_2024(catalog, s, level, keep, cantrips)]
+        if not bad:
+            break
+        selected = [s for s in selected if s not in bad]
+        dropped += bad
+    keep = set(selected)
+    options = []
+    for o in choice["options"]:
+        reason = _invocation_unmet_2024(catalog, o["id"], level, keep, cantrips)
+        options.append({**o, "disabled": True, "disabledReason": reason} if reason else o)
+    pruned = []
+    if dropped:
+        pruned.append({"choiceId": choice["id"], "reason":
+                       f"'{choice['label']}': {', '.join(names.get(d, d) for d in dropped)} no longer meets its prerequisites and was ignored."})
+    return {**choice, "options": options, "selected": selected,
+            "status": "resolved" if len(selected) == choice["count"] else "pending"}, pruned

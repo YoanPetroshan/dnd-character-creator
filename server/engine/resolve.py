@@ -1903,6 +1903,11 @@ def _gate_invocation_choices(choices: list[dict], resolved_classes: list[dict], 
             continue
         cls_id = c["source"]["id"]
         level = next((rc["level"] for rc in resolved_classes if rc["cls_id"] == cls_id), 0)
+        if class_choices_2024.is_invocation_card_2024(c):  # C7a: prerequisites incl. Pacts inside the card
+            cantrips = [sel for o in choices if o["id"] == f"class:{cls_id}:spells-cantrips" for sel in o["selected"]]
+            choices[i], more = class_choices_2024.gate_invocations(catalog, c, level, cantrips)
+            pruned += more
+            continue
         pacts = {sel for o in choices if o["source"].get("id") == cls_id and ":feature:" in o["id"] for sel in o["selected"]}
         cantrips = {sel for o in choices if o["id"] == f"class:{cls_id}:spells-cantrips" for sel in o["selected"]}
         options, unmet_ids = [], {}
@@ -4256,6 +4261,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choice_templates += class_choices_2024.language_templates(catalog, rc, ruleset)  # C6b-2
         choice_templates += class_choices_2024.primal_knowledge_templates(catalog, rc, ruleset)  # C6b-2
         choice_templates += class_choices_2024.metamagic_templates(catalog, rc, ruleset)  # C6c-1
+        choice_templates += class_choices_2024.invocation_templates(catalog, rc, ruleset)  # C7a
         for tpl in choice_templates:  # G1: SRD style options already held (feat or earlier SRD style)
             held_names = fs_taken_by_cid.get(tpl["id"])
             if held_names and any(tpl["id"] == c for c, _l, _i in srd_fs_slots_by_class.get(rc["index"], [])):

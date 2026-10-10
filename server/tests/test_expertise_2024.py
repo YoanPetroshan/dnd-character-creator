@@ -87,7 +87,7 @@ def test_expertise_table_matches_the_rules():
     }
     assert EXPERTISE_2024["xphb-wizard-2-scholar"]["skills"] == [
         "skill-arcana", "skill-history", "skill-investigation", "skill-medicine", "skill-nature", "skill-religion"]
-    assert set(SRD_CARDS_REPLACED_2024) == {"bard", "rogue", "ranger", "sorcerer"}  # sorcerer: C6c-1 Metamagic
+    assert set(SRD_CARDS_REPLACED_2024) == {"bard", "rogue", "ranger", "sorcerer", "warlock"}  # sorcerer: C6c-1 Metamagic, warlock: C7a invocations
 
 
 @needs_data
