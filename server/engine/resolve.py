@@ -59,7 +59,7 @@ from catalog.choices import build_choice_template, build_equipment_choice
 from catalog.loader import Catalog
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
 from catalog.reference_data import (
-    ABILITIES, SPECIFIC_WEAPON_PROFICIENCY_IDS, SRD_TRAIT_EFFECTS, SUBCLASS_PROFICIENCIES, SUBCLASS_EXTRA_FEATURES,
+    ABILITIES, CLASS_ORDER_CHOICES, SPECIFIC_WEAPON_PROFICIENCY_IDS, SRD_TRAIT_EFFECTS, SUBCLASS_PROFICIENCIES, SUBCLASS_EXTRA_FEATURES,
     SUBCLASS_SPELLCASTING_ABILITY, SUBCLASS_SPELL_SCHOOL_LIMITS, ruleset_allows, subclass_unlock_level,
 )
 from . import asi as asi_mod
@@ -3337,6 +3337,76 @@ def _gate_mastery_choices(choices: list[dict], catalog: Catalog, proficient_weap
     return pruned
 
 
+def _class_order_options(catalog: Catalog, cls_id: str, ruleset: str) -> list[dict]:
+    """C6a: the Divine Order / Primal Order options of a class (ruleset "2024" only), each
+    `{id, label, description?}` from the imported XPHB feature records; [] when the class has
+    no order, the ruleset is not 2024 or the catalog lacks the XPHB records (SRD-only data)."""
+    spec = CLASS_ORDER_CHOICES.get(cls_id)
+    if ruleset != "2024" or not spec or spec["feature"] not in catalog.features:
+        return []
+    options = []
+    for opt_id in spec["options"]:
+        opt = catalog.features.get(opt_id)
+        if not opt:
+            return []
+        option = {"id": opt_id, "label": opt["name"]}
+        desc = _join_desc(opt.get("desc"))
+        if desc:
+            option["description"] = desc
+        options.append(option)
+    return options
+
+
+def _class_order_template(catalog: Catalog, rc: dict, ruleset: str) -> list[dict]:
+    """C6a: `class:<cls>:1:divine-order` / `...:1:primal-order`, one required pick at level 1
+    of Cleric / Druid under ruleset "2024" (every class entry of a multiclass character grants
+    its own, as for Weapon Mastery). No card under 2014 / mixed, so a stored pick there falls
+    into the stale-cid `pruned` pass."""
+    cls_id = rc.get("cls_id")
+    options = _class_order_options(catalog, cls_id, ruleset)
+    if not options or not rc.get("cls"):
+        return []
+    spec = CLASS_ORDER_CHOICES[cls_id]
+    return [{
+        "id": f"class:{cls_id}:1:{spec['slug']}",
+        "source": {"kind": "class", "id": cls_id, "label": rc["cls"]["name"], "level": 1},
+        "label": spec["label"],
+        "description": _join_desc(catalog.features[spec["feature"]].get("desc")) or "",
+        "count": 1,
+        "options": options,
+    }]
+
+
+def _class_order_effect(catalog: Catalog, rc: dict, ruleset: str) -> dict:
+    """C6a: effect record (reference_data.CLASS_ORDER_CHOICES) of the order stored in the
+    draft for this class entry, or {}. Mirrors the generic choice pass: the first valid stored
+    option counts, so the cantrip count agrees with the resolved selection."""
+    options = _class_order_options(catalog, rc.get("cls_id"), ruleset)
+    if not options:
+        return {}
+    spec = CLASS_ORDER_CHOICES[rc["cls_id"]]
+    stored = rc["class_choices"].get(f"class:{rc['cls_id']}:1:{spec['slug']}")
+    if not isinstance(stored, list):
+        return {}
+    valid = {o["id"] for o in options}
+    pick = next((s for s in stored if isinstance(s, str) and s in valid), None)
+    return spec["options"][pick] if pick else {}
+
+
+def _selected_class_order_effects(choices: list[dict]) -> list[dict]:
+    """C6a: effect records of the resolved (selected) order cards, in choice order."""
+    out = []
+    for c in choices:
+        if c["source"]["kind"] != "class" or not c["selected"]:
+            continue
+        spec = CLASS_ORDER_CHOICES.get(c["source"]["id"])
+        if spec and c["id"] == f"class:{c['source']['id']}:1:{spec['slug']}":
+            effect = spec["options"].get(c["selected"][0])
+            if effect:
+                out.append(effect)
+    return out
+
+
 def _weapon_masteries(choices: list[dict], catalog: Catalog) -> list[dict]:
     """sheet.weaponMasteries: every selected mastery weapon, first-seen order, deduped."""
     out: list[dict] = []
@@ -4193,9 +4263,13 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             continue
         choice_templates += _mystic_arcanum_templates(catalog, rc, draft.get("sources"), ruleset, rc["class_choices"])
         choice_templates += _weapon_mastery_template(catalog, rc, ruleset)
+        choice_templates += _class_order_template(catalog, rc, ruleset)  # C6a
         caster = _effective_caster(catalog, rc, ruleset)
         if caster:
             spell_ability, spell_dict, list_class_id = caster
+            extra_cantrips = _class_order_effect(catalog, rc, ruleset).get("extra_cantrips", 0)  # C6a Thaumaturge / Magician
+            if extra_cantrips and spell_dict.get("cantrips_known", 0) > 0:
+                spell_dict = {**spell_dict, "cantrips_known": spell_dict["cantrips_known"] + extra_cantrips}
             raw_feature_ids = {
                 sel for cid, sels in rc["class_choices"].items() if ":feature:" in cid and isinstance(sels, list)
                 for sel in sels if isinstance(sel, str)
@@ -4700,6 +4774,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 if not s.startswith("skill-"):
                     _categorize_proficiency(s)
 
+    for effect in _selected_class_order_effects(choices):  # C6a Protector / Warden
+        for prof_id in effect.get("proficiencies", []):
+            _categorize_proficiency(prof_id)
+
     for rc in resolved_classes:
         if not rc["cls"]:
             continue
@@ -4778,6 +4856,14 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     skills = derived_mod.skill_scores(
         modifiers, list(proficient_skills), prof_bonus, expertise_all, jack, remarkable,
     )
+    # C6a Thaumaturge / Magician: bonus = max(minimum, WIS modifier) on the listed INT skills,
+    # added to the skill totals (never to passive checks, none of these skills has one).
+    for effect in _selected_class_order_effects(choices):
+        bonus = effect.get("skill_bonus")
+        if bonus:
+            amount = max(bonus["minimum"], modifiers[bonus["ability"]])
+            for skill_id in bonus["skills"]:
+                skills[skill_id] += amount
     speeds = _species_speeds(race, subrace, species_variant)
     worn_armor = any(i.get("equipment_category", {}).get("index") == "armor" for i in equipped_items)  # body armor or shield
     if speeds and not worn_armor:

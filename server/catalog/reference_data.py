@@ -571,3 +571,42 @@ INVOCATION_EFFECTS: dict[str, dict] = {
     _INV + "repelling-blast": {"note": "When eldritch blast hits a creature, you can push it up to 10 feet away from you in a straight line."},
     _INV + "book-of-ancient-secrets": {"note": "Two 1st-level ritual spells in your Book of Shadows (the ritual book itself is not modelled)."},
 }
+
+
+# ---- 2024 level-1 class "order" choices (C6a) -------------------------------
+# XPHB Cleric "Divine Order" and Druid "Primal Order" (ruleset "2024" only). The
+# effects below were checked against the imported catalog.features text on 2026-10-10
+# (xphb-cleric-1-protector / -thaumaturge, xphb-druid-1-warden / -magician):
+#   Protector   "you gain proficiency with Martial weapons and training with Heavy armor."
+#   Thaumaturge "You know one extra cantrip from the Cleric spell list. In addition ... a bonus
+#                to your Intelligence (Arcana or Religion) checks. The bonus equals your Wisdom
+#                modifier (minimum of +1)."
+#   Warden      "... proficiency with Martial weapons and training with Medium armor."
+#   Magician    "You know one extra cantrip from the Druid spell list. ... Intelligence (Arcana or
+#                Nature) checks. The bonus equals your Wisdom modifier (minimum bonus of +1)."
+# Option id = the catalog feature index (the text is read from there). Keys per option:
+# proficiencies (ids of the shared proficiency sets), extra_cantrips (count bump on the class
+# cantrip card), skill_bonus {skills, ability, minimum}: bonus = max(minimum, ability modifier)
+# added to those skills' totals.
+CLASS_ORDER_CHOICES: dict[str, dict] = {
+    "cleric": {
+        "slug": "divine-order", "feature": "xphb-cleric-1-divine-order", "label": "Divine Order",
+        "options": {
+            "xphb-cleric-1-protector": {"proficiencies": ["martial-weapons", "heavy-armor"]},
+            "xphb-cleric-1-thaumaturge": {
+                "extra_cantrips": 1,
+                "skill_bonus": {"skills": ["skill-arcana", "skill-religion"], "ability": "WIS", "minimum": 1},
+            },
+        },
+    },
+    "druid": {
+        "slug": "primal-order", "feature": "xphb-druid-1-primal-order", "label": "Primal Order",
+        "options": {
+            "xphb-druid-1-magician": {
+                "extra_cantrips": 1,
+                "skill_bonus": {"skills": ["skill-arcana", "skill-nature"], "ability": "WIS", "minimum": 1},
+            },
+            "xphb-druid-1-warden": {"proficiencies": ["martial-weapons", "medium-armor"]},
+        },
+    },
+}

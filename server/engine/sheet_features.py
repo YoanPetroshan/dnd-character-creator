@@ -83,6 +83,7 @@ _FS_FEATURE_IDS = frozenset({"fighter-fighting-style", "paladin-fighting-style",
                              "additional-fighting-style", "champion-xphb-7-additional-fighting-style"})
 _FS_CARD_ID = re.compile(r"^class:([^:]+):(\d+):fighting-style$")
 _MASTERY_CARD_ID = re.compile(r"^class:([^:]+):weapon-mastery$")
+_ORDER_CARD_ID = re.compile(r"^class:([^:]+):1:(?:divine|primal)-order$")  # C6a, XPHB row "Divine Order" / "Primal Order"
 
 
 def _fighting_style_labels(choices: list[dict]) -> dict[tuple[str, int], list[str]]:
@@ -100,6 +101,16 @@ def _mastery_labels(choices: list[dict]) -> dict[str, list[str]]:
         m = _MASTERY_CARD_ID.match(c["id"]) if c["source"]["kind"] == "class" else None
         if m and c["selected"]:
             out.setdefault(m.group(1), []).extend(_labels(c))
+    return out
+
+
+def _order_labels(choices: list[dict]) -> dict[str, tuple[str, list[str]]]:
+    """{class id: (card label, option labels)} of the Divine / Primal Order cards (C6a)."""
+    out: dict[str, tuple[str, list[str]]] = {}
+    for c in choices:
+        m = _ORDER_CARD_ID.match(c["id"]) if c["source"]["kind"] == "class" else None
+        if m and c["selected"]:
+            out[m.group(1)] = (c["label"], _labels(c))
     return out
 
 
@@ -127,6 +138,7 @@ def build_features(catalog, resolved_classes, refs_by_class, race, race_id, subr
     class_choices = _class_choice_labels(choices)
     fs_labels = _fighting_style_labels(choices) if ruleset == "2024" else {}
     mastery_labels = _mastery_labels(choices) if ruleset == "2024" else {}
+    order_labels = _order_labels(choices) if ruleset == "2024" else {}
 
     for rc in resolved_classes:
         if not rc["cls"] or not rc["cls_id"]:
@@ -178,6 +190,8 @@ def build_features(catalog, resolved_classes, refs_by_class, race, race_id, subr
                     fs_used.add(key)
             if cls_id in mastery_labels:
                 by_target.setdefault(("Weapon Mastery", 0), []).extend(mastery_labels[cls_id])
+            if cls_id in order_labels:
+                by_target.setdefault((order_labels[cls_id][0], 0), []).extend(order_labels[cls_id][1])
             placed: set[tuple[str, int]] = set()
             for lvl, name, ordinal in xphb_rows:
                 labels = by_target.get((name, ordinal), [])
@@ -197,6 +211,8 @@ def build_features(catalog, resolved_classes, refs_by_class, race, race_id, subr
                     class_entries.append(_entry(class_source, "Fighting Style", key[1], fs_labels[key]))
             if cls_id in mastery_labels and ("Weapon Mastery", 0) not in placed:
                 class_entries.append(_entry(class_source, "Weapon Mastery", 1, mastery_labels[cls_id]))
+            if cls_id in order_labels and (order_labels[cls_id][0], 0) not in placed:
+                class_entries.append(_entry(class_source, order_labels[cls_id][0], 1, order_labels[cls_id][1]))
             class_entries.sort(key=lambda e: e["level"])  # stable: XPHB order within a level
         out += class_entries + subclass_entries
 
