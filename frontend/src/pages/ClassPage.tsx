@@ -12,7 +12,7 @@ import { SpellSlotsSummary } from "../components/SpellSlotsSummary";
 type ClassTab = "features" | "spells";
 
 function isSpellChoiceId(choiceId: string): boolean {
-  return choiceId.endsWith(":spells-cantrips") || choiceId.endsWith(":spells-known") || choiceId.includes(":mystic-arcanum-");
+  return choiceId.endsWith(":spells-cantrips") || choiceId.endsWith(":spells-known") || choiceId.endsWith(":spellbook") || choiceId.includes(":mystic-arcanum-");
 }
 
 interface ClassDetail {
@@ -64,7 +64,10 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
       )
     : [];
   const featureChoices = classChoices.filter((c) => !isSpellChoiceId(c.id));
-  const spellChoices = classChoices.filter((c) => isSpellChoiceId(c.id));
+  // C4: the Wizard's spellbook card comes first (prepared spells are drawn from it).
+  const spellChoices = classChoices
+    .filter((c) => isSpellChoiceId(c.id))
+    .sort((a, b) => Number(b.id.endsWith(":spellbook")) - Number(a.id.endsWith(":spellbook")));
   const prunedReasons = new Map((resolution?.pruned ?? []).map((p) => [p.choiceId, p.reason]));
   const hasSpells = spellChoices.length > 0;
   const effectiveTab: ClassTab = hasSpells ? tab : "features";

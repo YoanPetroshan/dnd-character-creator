@@ -222,6 +222,10 @@ def to_markdown(resolution: dict) -> str:
                 for s in class_spells["cantrips"]:
                     lines.append(f"- {s['name']}")
                 lines.append("")
+            if class_spells.get("spellbook"):
+                book = ", ".join(f"{s['name']} (ниво {s['level']})" for s in class_spells["spellbook"])
+                lines.append(f"- **Книга със заклинания{suffix}:** {book}")
+                lines.append("")
             if class_spells["known"]:
                 lines.append(f"### Известни/Подготвени заклинания{suffix}")
                 for s in class_spells["known"]:

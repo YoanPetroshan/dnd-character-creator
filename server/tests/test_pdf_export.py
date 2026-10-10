@@ -356,3 +356,22 @@ def test_pdf_omits_the_arcanum_line_without_picks():
     resolution = _warlock_with_arcanum()
     resolution["sheet"]["spells"][0]["mysticArcanum"] = []
     assert "арканум" not in _extract_text(to_pdf(resolution))
+
+
+def _wizard_with_book():
+    resolution = _sample_resolution()
+    resolution["sheet"]["classes"] = [{"id": "wizard", "name": "Wizard", "level": 1, "subclass": None}]
+    resolution["sheet"]["spells"] = [{
+        "classId": "wizard", "cantrips": [], "known": [{"id": "sleep", "name": "Sleep", "level": 1}],
+        "spellbook": [{"id": "sleep", "name": "Sleep", "level": 1}, {"id": "shield", "name": "Shield", "level": 1}],
+        "spellSaveDC": 13, "spellAttackBonus": 5,
+    }]
+    return resolution
+
+
+def test_pdf_prints_the_spellbook_line_only_when_there_is_a_book():
+    text = _extract_text(to_pdf(_wizard_with_book()))
+    assert "Книга със заклинания: Sleep (ниво 1), Shield (ниво 1)" in text
+    resolution = _wizard_with_book()
+    del resolution["sheet"]["spells"][0]["spellbook"]
+    assert "Книга със заклинания" not in _extract_text(to_pdf(resolution))

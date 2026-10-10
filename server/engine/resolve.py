@@ -3028,7 +3028,7 @@ def _is_count_variable_choice(tpl: dict) -> bool:
         return True  # C2: Weapon Mastery count follows the class table  # level-scaled feat spell picks (Ritual Caster): over-count is staleness
     if tpl["source"]["kind"] == "class" and ":invocations:" in tpl["id"]:
         return True  # Eldritch Invocations known follow the warlock level table
-    return tpl["source"]["kind"] == "class" and tpl["id"].endswith((":spells-cantrips", ":spells-known"))
+    return tpl["source"]["kind"] == "class" and tpl["id"].endswith((":spells-cantrips", ":spells-known", ":spellbook"))
 
 
 def _tag_spell_level_groups(catalog: Catalog, tpl: dict) -> None:
@@ -3114,6 +3114,29 @@ def _effective_caster(catalog: Catalog, rc: dict, ruleset: str = "mixed") -> tup
     return str(block.get("ability", "INT")).upper(), sc, str(block.get("list_class") or "wizard")
 
 
+def _wizard_spellbook_template(
+    catalog: Catalog, cls: dict, cls_id: str, spellcasting: dict, class_level: int, sources, ruleset: str,
+    source: dict, keep: set[str], stored,
+) -> dict:
+    """C4: the Wizard's spellbook choice (cid `class:wizard:spellbook`, both
+    rulesets). XPHB / PHB: six level 1 spells at Wizard level 1, +2 for every
+    later Wizard level, each of a level the character has spell slots for. Count
+    follows the class level, so it is count-variable (`_is_count_variable_choice`,
+    level-down reports `pruned`, never a blocking problem)."""
+    count = 6 + 2 * (class_level - 1)
+    max_spell_level = _highest_spell_slot_level(spellcasting)
+    envelope = {"choose": count, "from": {
+        "option_set_type": "options_array",
+        "options": _spell_options_up_to(catalog, cls_id, max_spell_level, sources, ruleset, keep),
+    }}
+    level_word = "level 1 spell" if max_spell_level == 1 else f"level-{max_spell_level}-or-lower spell"
+    description = (f"Choose {count} {level_word}s for your spellbook (six at level 1, two more for each Wizard level). "
+                   "Prepared spells are drawn from the book.")
+    tpl = build_choice_template(envelope, f"class:{cls_id}:spellbook", source, "Spellbook", description=description)
+    _tag_spell_level_groups(catalog, tpl)
+    return tpl
+
+
 def _spell_choice_templates(
     catalog: Catalog, cls: dict, cls_id: str, level_row: dict | None, ability_modifier: int, class_level: int,
     expanded_spell_ids: list[str] = (), always_prepared: dict[str, str] | None = None,
@@ -3169,11 +3192,30 @@ def _spell_choice_templates(
             templates.append(tpl)
 
     known_count = spells_mod.known_spell_count(level_row, ability_modifier, class_level=class_level, cls_id=cls_id)
+    # C4: only the Wizard class has a spellbook (Eldritch Knight / Arcane
+    # Trickster are fighter/rogue classes with list_class_id "wizard" and are
+    # not affected). The prepared card then draws from the stored book.
+    wizard_book: list[str] | None = None
+    if cls_id == "wizard" and list_id == "wizard" and class_level >= 1 and _highest_spell_slot_level(spellcasting) > 0:
+        book_tpl = _wizard_spellbook_template(
+            catalog, cls, cls_id, spellcasting, class_level, sources, ruleset, source, _kept(f"class:{cls_id}:spellbook"),
+            (class_choices or {}).get(f"class:{cls_id}:spellbook"),
+        )
+        templates.append(book_tpl)
+        valid_book = {o["id"] for o in book_tpl["options"]}
+        stored_book = (class_choices or {}).get(f"class:{cls_id}:spellbook")
+        stored_book = list(dict.fromkeys(x for x in stored_book if isinstance(x, str))) if isinstance(stored_book, list) else []
+        # Same rule as the generic pass: first `count` valid picks.
+        wizard_book = [x for x in stored_book if x in valid_book][: book_tpl["count"]]
     if known_count > 0:
         max_spell_level = _highest_spell_slot_level(spellcasting)
-        option_list = _spell_options_up_to(catalog, list_id, max_spell_level, sources, ruleset, _kept(f"class:{cls_id}:spells-known"))
+        if wizard_book is not None:
+            option_list = [{"option_type": "reference", "item": {"index": sid, "name": catalog.spells[sid]["name"]}} for sid in wizard_book]
+            option_list.sort(key=lambda o: (catalog.spells[o["item"]["index"]]["level"], o["item"]["name"]))
+        else:
+            option_list = _spell_options_up_to(catalog, list_id, max_spell_level, sources, ruleset, _kept(f"class:{cls_id}:spells-known"))
         present = {o["item"]["index"] for o in option_list}
-        for sid in expanded_spell_ids:  # e.g. Fiend Expanded Spell List
+        for sid in (expanded_spell_ids if wizard_book is None else ()):  # e.g. Fiend Expanded Spell List
             spell = catalog.spells[sid]
             if sid not in present and 1 <= spell["level"] <= max_spell_level:
                 option_list.append({"option_type": "reference", "item": {"index": sid, "name": spell["name"]}})
@@ -3188,7 +3230,14 @@ def _spell_choice_templates(
         verb = "know" if is_known_caster else "prepare"
         level_word = "spell" if max_spell_level == 1 else f"level-{max_spell_level}-or-lower spell"
         description = f"Choose {known_count} {level_word}{'s' if known_count != 1 else ''} to {verb} from the {list_name} spell list."
+        if wizard_book is not None:
+            description = (f"Choose {known_count} {level_word}{'s' if known_count != 1 else ''} to {verb} from your spellbook."
+                           if wizard_book else "Choose spells for your spellbook first.")
         tpl = build_choice_template(envelope, cid, source, label, description=description)
+        if tpl is None and wizard_book is not None and not wizard_book:
+            # build_choice_template returns None for an empty option list; an
+            # empty spellbook must still show the (option-less) prepared card.
+            tpl = {"id": cid, "source": source, "label": label, "description": description, "count": known_count, "options": []}
         if tpl:
             _tag_spell_level_groups(catalog, tpl)
             for opt in tpl["options"]:
@@ -4444,6 +4493,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             **({"mysticArcanum": arcanum} if rc_cls_id == "warlock" else {}),
             "cantrips": _spell_summaries(rc_cantrip_choice),
             "known": _spell_summaries(rc_known_spells_choice),
+            **({"spellbook": _spell_summaries(next((c for c in choices if c["id"] == "class:wizard:spellbook"), None))}
+               if rc_cls_id == "wizard" else {}),
             # Subclass spells (Life domain, oath spells, ...): always
             # prepared, outside the known/prepared limits.
             "alwaysPrepared": [

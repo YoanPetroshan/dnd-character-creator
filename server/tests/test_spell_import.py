@@ -394,7 +394,7 @@ def test_existing_srd_spell_pick_resolves_unchanged_under_every_ruleset(catalog)
     for ruleset in ("mixed", "2014", "2024"):
         d = {
             "name": "T", "ruleset": ruleset, "sources": [], "background": {"id": "acolyte", "choices": {}},
-            "classes": [{"classId": "wizard", "level": 1, "choices": {"class:wizard:spells-known": ["magic-missile"]}}],
+            "classes": [{"classId": "wizard", "level": 1, "choices": {"class:wizard:spellbook": ["magic-missile"], "class:wizard:spells-known": ["magic-missile"]}}],
             "species": {"id": "human", "choices": {}},
             "abilities": {"method": "manual", "base": {"STR": 10, "DEX": 14, "CON": 14, "INT": 16, "WIS": 12, "CHA": 8}},
         }

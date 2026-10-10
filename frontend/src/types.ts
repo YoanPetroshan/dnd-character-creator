@@ -101,6 +101,8 @@ export interface SheetClassSpells {
   classId: string;
   cantrips: SheetSpellSummary[];
   known: SheetSpellSummary[];
+  /** Wizard only (C4): the spellbook; the prepared spells in `known` are drawn from it. */
+  spellbook?: SheetSpellSummary[];
   /** Subclass spells (domain/oath/circle): always prepared, outside the limits. */
   alwaysPrepared: SheetSpellSummary[];
   /** Warlock only: the Mystic Arcanum picks (level 6-9 spells, one per gained level). */

@@ -1525,6 +1525,7 @@ def test_selected_cantrips_and_known_spells_appear_in_the_sheet(catalog):
             "classId": "wizard", "level": 1,
             "choices": {
                 "class:wizard:spells-cantrips": [cantrip_id],
+                "class:wizard:spellbook": [spell_id],  # C4: prepared spells come from the book
                 "class:wizard:spells-known": [spell_id],
             },
         }],
@@ -1785,7 +1786,8 @@ def test_spell_options_expand_with_level(catalog):
         abilities={"method": "manual", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 16, "WIS": 10, "CHA": 10}},
     )
     resolution = resolve(draft, catalog)
-    known_choice = next(c for c in resolution["choices"] if c["id"] == "class:wizard:spells-known")
+    # C4: the spell pool is the spellbook card; the prepared card only offers the stored book.
+    known_choice = next(c for c in resolution["choices"] if c["id"] == "class:wizard:spellbook")
     option_ids = {o["id"] for o in known_choice["options"]}
     fireball_present = "fireball" in option_ids  # fireball is a real 3rd-level wizard spell, verified earlier this session
     assert fireball_present
@@ -2318,6 +2320,7 @@ def test_non_proficiency_class_choices_do_not_pollute_proficiency_buckets(catalo
                 "classId": "wizard", "level": 1,
                 "choices": {
                     "class:wizard:spells-cantrips": [cantrip_id],
+                    "class:wizard:spellbook": ["mage-armor"],
                     "class:wizard:spells-known": ["mage-armor"],
                 },
             },
@@ -2428,6 +2431,7 @@ def test_single_class_spellcaster_spells_appear_as_a_list_of_one(catalog):
             "classId": "wizard", "level": 1,
             "choices": {
                 "class:wizard:spells-cantrips": [cantrip_id],
+                "class:wizard:spellbook": [spell_id],  # C4: prepared spells come from the book
                 "class:wizard:spells-known": [spell_id],
             },
         }],
@@ -2463,6 +2467,7 @@ def test_secondary_class_spellcaster_spells_appear_in_the_sheet(catalog):
                 "classId": "wizard", "level": 2,
                 "choices": {
                     "class:wizard:spells-cantrips": [cantrip_id],
+                    "class:wizard:spellbook": [spell_id],  # C4: prepared spells come from the book
                     "class:wizard:spells-known": [spell_id],
                 },
             },
@@ -2696,6 +2701,7 @@ def test_each_caster_in_sheet_spells_carries_its_own_save_dc_and_attack_bonus(ca
     draft = _fighter_acolyte_human_draft(
         classes=[{"classId": "wizard", "level": 3, "choices": {
             "class:wizard:spells-cantrips": ["fire-bolt"],
+            "class:wizard:spellbook": ["magic-missile"],
             "class:wizard:spells-known": ["magic-missile"],
         }}],
         abilities={"method": "manual", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 16, "WIS": 10, "CHA": 10}},
@@ -2770,6 +2776,7 @@ def test_pruning_a_multiclass_choice_does_not_disturb_the_other_class(catalog):
             {"classId": "fighter", "level": 4, "choices": {"class:fighter:4:asi": ["str-plus-2"]}},
             {"classId": "wizard", "level": 3, "choices": {
                 "class:wizard:spells-cantrips": ["acid-splash", "chill-touch", "dancing-lights"],
+                "class:wizard:spellbook": ["alarm", "burning-hands", "charm-person"],
                 "class:wizard:spells-known": ["alarm", "burning-hands", "charm-person"],
             }},
         ],
@@ -4211,19 +4218,21 @@ def _choice(resolution, cid):
 
 
 def test_leveling_a_wizard_down_prunes_excess_spells_instead_of_a_problem(catalog):
-    choices = {"class:wizard:spells-cantrips": _W4_CANTRIPS, "class:wizard:spells-known": _W4_KNOWN}
+    # C4: the book holds the prepared picks (level 4 allows 12 book spells, level 1 six).
+    choices = {"class:wizard:spells-cantrips": _W4_CANTRIPS, "class:wizard:spellbook": _W4_KNOWN, "class:wizard:spells-known": _W4_KNOWN}
     at4 = resolve(_wizard_at(4, 16, choices), catalog)
     assert at4["pruned"] == [] and at4["problems"] == []
     assert _choice(at4, "class:wizard:spells-known")["count"] == 7
 
     at1 = resolve(_wizard_at(1, 16, choices), catalog)
     assert not [p for p in at1["problems"] if p["id"].startswith("over-selected-")]
-    assert [p["choiceId"] for p in at1["pruned"]] == ["class:wizard:spells-cantrips", "class:wizard:spells-known"]
+    assert [p["choiceId"] for p in at1["pruned"]] == [
+        "class:wizard:spells-cantrips", "class:wizard:spellbook", "class:wizard:spells-known"]  # C4: the book is pruned too
     cantrips = _choice(at1, "class:wizard:spells-cantrips")
     known = _choice(at1, "class:wizard:spells-known")
     assert (cantrips["count"], cantrips["selected"], cantrips["status"]) == (3, _W4_CANTRIPS[:3], "resolved")
     assert (known["count"], known["selected"], known["status"]) == (4, _W4_KNOWN[:4], "resolved")
-    known_reason = at1["pruned"][1]["reason"]
+    known_reason = at1["pruned"][2]["reason"]
     assert "class:wizard:spells-known" in known_reason
     assert all(name in known_reason for name in ("Burning Hands", "Misty Step", "Blur"))
     assert "Acid Splash" in at1["pruned"][0]["reason"]
@@ -4231,18 +4240,19 @@ def test_leveling_a_wizard_down_prunes_excess_spells_instead_of_a_problem(catalo
 
 def test_leveling_down_drops_a_now_out_of_range_spell_level_as_pruned(catalog):
     known = ["magic-missile", "shield", "sleep", "alarm", "burning-hands", "misty-step"]
-    ok = resolve(_wizard_at(3, 16, {"class:wizard:spells-known": known}), catalog)
+    both = {"class:wizard:spellbook": known, "class:wizard:spells-known": known}  # C4: book first
+    ok = resolve(_wizard_at(3, 16, both), catalog)
     assert ok["pruned"] == [] and ok["problems"] == []
-    down = resolve(_wizard_at(2, 16, {"class:wizard:spells-known": known}), catalog)
-    assert [p["choiceId"] for p in down["pruned"]] == ["class:wizard:spells-known"]
-    assert "Misty Step" in down["pruned"][0]["reason"]
+    down = resolve(_wizard_at(2, 16, both), catalog)
+    assert [p["choiceId"] for p in down["pruned"]] == ["class:wizard:spellbook", "class:wizard:spells-known"]
+    assert "Misty Step" in down["pruned"][0]["reason"] and "Misty Step" in down["pruned"][1]["reason"]
     assert _choice(down, "class:wizard:spells-known")["selected"] == known[:5]
     assert down["problems"] == []
 
 
 def test_lowering_the_spellcasting_ability_prunes_excess_prepared_spells(catalog):
     known = ["magic-missile", "shield", "sleep", "alarm", "burning-hands", "detect-magic", "feather-fall"]
-    res = resolve(_wizard_at(4, 14, {"class:wizard:spells-known": known}), catalog)
+    res = resolve(_wizard_at(4, 14, {"class:wizard:spellbook": known, "class:wizard:spells-known": known}), catalog)
     assert [p["choiceId"] for p in res["pruned"]] == ["class:wizard:spells-known"]
     assert "Feather Fall" in res["pruned"][0]["reason"]
     assert _choice(res, "class:wizard:spells-known")["selected"] == known[:6]

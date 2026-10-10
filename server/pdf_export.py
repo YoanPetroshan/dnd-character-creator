@@ -229,6 +229,9 @@ def to_pdf(resolution: dict) -> bytes:
                 pdf.h3(f"Трикове{suffix}")
                 for s in class_spells["cantrips"]:
                     pdf.bullet(s["name"])
+            if class_spells.get("spellbook"):
+                book = ", ".join(f"{s['name']} (ниво {s['level']})" for s in class_spells["spellbook"])
+                pdf.body(f"Книга със заклинания{suffix}: {book}")
             if class_spells["known"]:
                 pdf.h3(f"Известни/Подготвени заклинания{suffix}")
                 for s in class_spells["known"]:
