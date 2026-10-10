@@ -288,6 +288,23 @@ def weapon_proficiency_id(item_index: str) -> str:
     return WEAPON_PROFICIENCY_ID_OVERRIDES.get(item_index, item_index + "s")
 
 
+# F1 (C2): ruleset overrides of a PRIMARY class's weapon proficiencies (the SRD class
+# rows are the 2014 lists). XPHB Rogue (read from the 5etools class file):
+# startingProficiencies.weapons = Simple + "Martial weapons that have the Finesse or Light
+# property"; its multiclassing proficienciesGained has NO weapons (a secondary Rogue gets
+# none from multiclassing, which is also what the SRD multi_classing rows give). So under
+# ruleset 2024 the 2014 specific-weapon grants (longsword, rapier, shortsword, hand
+# crossbow) are replaced by the pseudo-id below, which `attacks.weapon_is_proficient`
+# resolves by weapon category + properties. 2014 and mixed keep the SRD list.
+MARTIAL_FINESSE_LIGHT_PROFICIENCY_ID = "martial-weapons-finesse-or-light"
+RULESET_CLASS_WEAPON_PROFICIENCIES: dict[tuple[str, str], dict[str, set[str] | list[str]]] = {
+    ("2024", "rogue"): {
+        "drop": {"longswords", "rapiers", "shortswords", "hand-crossbows"},
+        "add": [MARTIAL_FINESSE_LIGHT_PROFICIENCY_ID],
+    },
+}
+
+
 # SRD racial trait index -> mechanical effect. The bundled SRD JSON describes
 # these traits in prose only (official 5etools races carry real fields
 # instead, and use synthetic trait ids, so they never match here). Keys:

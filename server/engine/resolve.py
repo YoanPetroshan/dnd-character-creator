@@ -55,6 +55,7 @@ import re
 
 from dataclasses import dataclass, field
 
+from catalog import reference_data
 from catalog.choices import build_choice_template, build_equipment_choice
 from catalog.loader import Catalog
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
@@ -4798,8 +4799,12 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         for prof_id in SUBCLASS_PROFICIENCIES.get(rc["subclass_id"], []):
             _categorize_proficiency(prof_id)
         if rc["index"] == 0:
+            override = reference_data.RULESET_CLASS_WEAPON_PROFICIENCIES.get((ruleset, rc["cls_id"]), {})  # F1 (C2)
             for p in rc["cls"].get("proficiencies", []):
-                _categorize_proficiency(p["index"])
+                if p["index"] not in override.get("drop", ()):
+                    _categorize_proficiency(p["index"])
+            for prof_id in override.get("add", ()):
+                _categorize_proficiency(prof_id)
         else:
             for p in rc["cls"].get("multi_classing", {}).get("proficiencies", []):
                 _categorize_proficiency(p["index"])

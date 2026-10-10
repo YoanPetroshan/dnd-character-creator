@@ -202,13 +202,14 @@ def test_weapon_mastery_gate_sees_martial_weapons_from_a_protector(catalog):
     res = _res(catalog, [("ranger", 1), ("cleric", 1)], choices={"cleric": {DIVINE: [PROTECTOR]}})
     card = _card(res, "class:ranger:weapon-mastery")
     assert not next(o for o in card["options"] if o["id"] == "longsword").get("disabled")
-    # Rogue is proficient only in simple + finesse/light martial, so a Protector Cleric 1 makes a
+    # F1: a primary 2024 Rogue is itself proficient with martial finesse/light weapons, so use a
+    # SECONDARY Rogue (no weapon proficiency from multiclassing): a Protector Cleric 1 makes a
     # martial weapon the Rogue filter allows (rapier, finesse) selectable via the shared set
-    res = _res(catalog, [("rogue", 1), ("cleric", 1)], choices={"cleric": {DIVINE: [PROTECTOR]}})
+    res = _res(catalog, [("cleric", 1), ("rogue", 1)], choices={"cleric": {DIVINE: [PROTECTOR]}})
     card = _card(res, "class:rogue:weapon-mastery")
     rapier = next(o for o in card["options"] if o["id"] == "rapier")
     assert not rapier.get("disabled")
-    res = _res(catalog, [("rogue", 1), ("cleric", 1)], choices={"cleric": {DIVINE: [THAUMATURGE]}})
+    res = _res(catalog, [("cleric", 1), ("rogue", 1)], choices={"cleric": {DIVINE: [THAUMATURGE]}})
     card = _card(res, "class:rogue:weapon-mastery")
     assert next(o for o in card["options"] if o["id"] == "scimitar").get("disabledReason") == "not proficient"
 

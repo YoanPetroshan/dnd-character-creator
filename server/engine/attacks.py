@@ -46,6 +46,10 @@ def weapon_is_proficient(item: dict, proficiency_ids) -> bool:
         (item.get("weapon_category") == "Simple" and "simple-weapons" in proficiency_ids)
         or (item.get("weapon_category") == "Martial" and "martial-weapons" in proficiency_ids)
         or reference_data.weapon_proficiency_id(item["index"]) in proficiency_ids
+        # F1: 2024 Rogue, "Martial weapons that have the Finesse or Light property"
+        or (item.get("weapon_category") == "Martial"
+            and reference_data.MARTIAL_FINESSE_LIGHT_PROFICIENCY_ID in proficiency_ids
+            and {p["index"] for p in item.get("properties", [])} & {"finesse", "light"})
     )
 
 

@@ -83,9 +83,8 @@ def test_rogue_filter_and_proficiency(catalog):
     assert not _opt(card, "dagger").get("disabled")
     # Longsword is martial without Finesse/Light: excluded by the 2024 filter
     assert _opt(card, "longsword")["disabled"]
-    # SRD chassis Rogue has no Scimitar proficiency (2024 proficiencies are C9)
-    scimitar = _opt(card, "scimitar")
-    assert scimitar["disabled"] and "proficien" in scimitar["disabledReason"]
+    # F1: the 2024 Rogue is proficient with martial Finesse/Light weapons, Scimitar included
+    assert not _opt(card, "scimitar").get("disabled")
 
 
 @needs_data
@@ -181,3 +180,46 @@ def test_resolve_speed_fighter_20(catalog):
     for _ in range(20):
         _res(catalog, [("fighter", 20)])
     assert (time.perf_counter() - start) / 20 < 0.05
+
+
+def _gear(*ids):
+    return [{"itemId": i, "qty": 1, "equipped": True} for i in ids]
+
+
+def _atk(res, item_id):
+    return next(a for a in res["derived"]["attacks"] if a["itemId"] == item_id)
+
+
+@needs_data
+def test_rogue_2024_weapon_proficiency_rule(catalog):
+    """F1 (C2). XPHB Rogue startingProficiencies.weapons: Simple + "Martial weapons that have
+    the Finesse or Light property"; its multiclassing proficienciesGained lists no weapons.
+    Cases: 2024 primary Rogue (scimitar, whip, rapier, shortsword: proficient; longsword,
+    greatsword: not) | 2014 / mixed Rogue = SRD list (longsword, rapier yes; scimitar no) |
+    secondary Rogue (no weapon proficiency from multiclassing) | Rogue + Fighter (Fighter's
+    martial covers all) | attack rows follow the same proficiency (+2 proficiency bonus)."""
+    gear = _gear("scimitar", "whip", "rapier", "shortsword", "longsword", "dagger")
+    res = _res(catalog, [("rogue", 1)], added=gear)
+    plain = {i: _atk(res, i)["attackBonus"] for i in ("scimitar", "whip", "rapier", "shortsword", "longsword", "dagger")}
+    assert plain["longsword"] == 2  # DEX 14 is not used (longsword is not finesse): STR 14 = +2, no proficiency
+    for i in ("scimitar", "whip", "rapier", "shortsword", "dagger"):
+        assert plain[i] == 4, i  # DEX +2 + proficiency 2
+    weapons = res["sheet"]["proficiencies"]["weapons"]
+    assert "martial-weapons-finesse-or-light" in weapons and "longswords" not in weapons
+    for ruleset in ("2014", "mixed"):
+        old = _res(catalog, [("rogue", 1)], ruleset, added=gear)
+        assert _atk(old, "longsword")["attackBonus"] == 4 and _atk(old, "rapier")["attackBonus"] == 4
+        assert _atk(old, "scimitar")["attackBonus"] == 2 and _atk(old, "whip")["attackBonus"] == 2
+        assert "martial-weapons-finesse-or-light" not in old["sheet"]["proficiencies"]["weapons"]
+    sec = _res(catalog, [("wizard", 1), ("rogue", 1)], added=gear)
+    assert _atk(sec, "rapier")["attackBonus"] == 2 and "martial-weapons-finesse-or-light" not in sec["sheet"]["proficiencies"]["weapons"]
+    both = _res(catalog, [("fighter", 1), ("rogue", 1)], added=gear)
+    assert _atk(both, "longsword")["attackBonus"] == 4 and _atk(both, "scimitar")["attackBonus"] == 4
+
+
+@needs_data
+def test_rogue_2024_mastery_accepts_scimitar_and_whip(catalog):
+    cid = "class:rogue:weapon-mastery"
+    res = _res(catalog, [("rogue", 1)], choices={"rogue": {cid: ["scimitar", "whip"]}})
+    assert _card(res, "rogue")["selected"] == ["scimitar", "whip"] and _card(res, "rogue")["status"] == "resolved"
+    assert res["pruned"] == []
