@@ -9,16 +9,12 @@ to you." So there is ONE combined `channel-divinity` resource: uses = the
 maximum over the classes that grant it, `classId` = the class giving that
 maximum (the first class in class order on a tie).
 
-2024 (XPHB) check, done by reading the imported XPHB class data: the data has
-NO multiclassing rules text (the class records only carry proficiencies; the
-Multiclassing chapter is not imported), so the 2024 multiclass sentence could
-not be read. What the data does say is per class: Cleric "You can use this
-class's Channel Divinity twice ... You gain additional uses when you reach
-certain Cleric levels, as shown in the Channel Divinity column", Paladin "You
-can use this class's Channel Divinity twice ... You gain an additional use when
-you reach Paladin level 11". "This class's" hints at separate pools in 2024,
-but that is not a multiclass rule, so the single combined resource is kept
-under every ruleset (open question for the user, see ARCHITECTURE R3).
+2024 (XPHB) rule (G1): the 2024 Multiclassing chapter has no Channel Divinity
+merge rule, and each class text says "You can use this class's Channel Divinity
+twice" (Cleric; Paladin "twice ... an additional use at level 11"). So under
+ruleset == "2024" each class keeps its OWN resource (`cleric:channel-divinity`,
+`paladin:channel-divinity`), with its own uses and recharge, and nothing is
+merged. Under 2014 and mixed the PHB-2014 merge above applies.
 
 Case matrix (Channel Divinity):
   Cleric 1 -> none | Cleric 2 -> 1 | Cleric 6 -> 2 | Cleric 18 -> 3 (2014 SRD
@@ -190,14 +186,20 @@ def test_combined_channel_divinity_lists_the_contributing_classes(catalog):
 
 
 @needs_classes
-@pytest.mark.parametrize("classes,uses,class_id", [
-    ([("cleric", 6), ("paladin", 3)], 3, "cleric"),   # max(3, 2), not 5
-    ([("paladin", 11), ("cleric", 2)], 3, "paladin"),
-    ([("paladin", 3), ("cleric", 2)], 2, "paladin"),  # tie -> first class
+@pytest.mark.parametrize("classes,expected", [
+    ([("cleric", 6), ("paladin", 3)], [("cleric", 3), ("paladin", 2)]),   # not max, not 5
+    ([("paladin", 11), ("cleric", 2)], [("paladin", 3), ("cleric", 2)]),
+    ([("paladin", 3), ("cleric", 2)], [("paladin", 2), ("cleric", 2)]),
 ])
-def test_channel_divinity_combined_2024(catalog, classes, uses, class_id):
+def test_channel_divinity_is_separate_per_class_2024(catalog, classes, expected):
+    """G1: XPHB Multiclassing (PHB 2024) has no Channel Divinity merge rule and
+    each class text says "You can use this class's Channel Divinity twice", so
+    under ruleset 2024 each class keeps its own resource (own uses, own recharge)."""
     cds = _cds(_res(catalog, classes, "2024"))
-    assert len(cds) == 1 and cds[0]["uses"] == uses and cds[0]["classId"] == class_id
+    assert [(r["classId"], r["uses"]) for r in cds] == expected
+    assert len({r["id"] for r in cds}) == 2
+    assert all("classes" not in (r.get("details") or {}) for r in cds)
+    assert all(r["recharge"] == "long" for r in cds)
 
 
 def test_other_resources_of_a_multiclass_stay_separate(catalog):

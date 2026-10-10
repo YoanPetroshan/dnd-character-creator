@@ -454,7 +454,9 @@ def resources_for(catalog, resolved_classes: list[dict], modifiers: dict, prof_b
         sub_builder = _SUBCLASS_BUILDERS.get(rc.get("subclass_id") or "")
         if sub_builder:
             out += sub_builder(ctx, rc)
-    return _merge_channel_divinity(out)
+    # G1: the 2024 Multiclassing chapter has no merge rule and every class text
+    # says "this class's Channel Divinity", so 2024 keeps separate per-class pools.
+    return out if ruleset == "2024" else _merge_channel_divinity(out)
 
 
 def _merge_channel_divinity(resources: list[dict]) -> list[dict]:
