@@ -4768,12 +4768,30 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                                 reason += (f" Also {len(rest)} over the allowed {tpl['count']} "
                                            f"selection(s): {rest_names}.")
                 pruned.append({"choiceId": tpl["id"], "reason": reason})
-        elif len(selected) > tpl["count"]:
-            problems.append({
-                "id": f"over-selected-{tpl['id']}",
-                "message": f"'{tpl['label']}' allows {tpl['count']} selection(s) but {len(selected)} were submitted.",
-            })
-            selected = selected[: tpl["count"]]
+        else:
+            # F3a-1: a stored pick the card does not offer at all (e.g. a 2014 equipment bundle after switching to
+            # the 2024 packages, which reuse the cid) is reported instead of vanishing. ASI feat picks have their
+            # own entry above.
+            offered = {o["id"] for o in tpl["options"]}
+            gone = [s for s in raw_selected if s not in offered
+                    and not (s.startswith("feat:") and _ASI_CID_RE.match(tpl["id"]))]
+            if gone:
+                def _pick_name(pick):
+                    def _one(part):
+                        rec = catalog.items.get(part) or catalog.spells.get(part) or catalog.feats.get(part) or {}
+                        return rec.get("name", part)
+                    return " + ".join(_one(p) for p in pick.split("+")) if "+" in pick else _one(pick)
+                pruned.append({
+                    "choiceId": tpl["id"],
+                    "reason": (f"'{tpl['label']}': {', '.join(_pick_name(g) for g in gone)} is no longer offered "
+                               f"and was ignored."),
+                })
+            if len(selected) > tpl["count"]:
+                problems.append({
+                    "id": f"over-selected-{tpl['id']}",
+                    "message": f"'{tpl['label']}' allows {tpl['count']} selection(s) but {len(selected)} were submitted.",
+                })
+                selected = selected[: tpl["count"]]
         status = "resolved" if len(selected) == tpl["count"] else "pending"
         choices.append({**tpl, "selected": selected, "status": status})
 

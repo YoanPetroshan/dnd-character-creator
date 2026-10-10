@@ -2748,8 +2748,8 @@ def test_clearing_a_subclass_prunes_its_subclass_gated_feature_choice(catalog):
     # correctly stays reachable and unpruned.
     draft = _fighter_acolyte_human_draft(
         classes=[{"classId": "fighter", "level": 10, "subclassId": "champion", "choices": {
-            "class:fighter:1:feature:fighter-fighting-style": ["fighting-style-defense"],
-            "class:fighter:10:feature:additional-fighting-style": ["fighting-style-dueling"],
+            "class:fighter:1:feature:fighter-fighting-style": ["fighter-fighting-style-defense"],
+            "class:fighter:10:feature:additional-fighting-style": ["fighter-fighting-style-dueling"],
         }}],
     )
     resolution = resolve(draft, catalog)
