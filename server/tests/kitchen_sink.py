@@ -79,7 +79,7 @@ def fill(draft: dict, catalog, overrides: dict, resolve) -> dict:
     """Pick every pending choice: the override ids first, then the first enabled options."""
     for _ in range(10):
         res = resolve(draft, catalog)
-        todo = [c for c in res["choices"] if c["status"] != "resolved"]
+        todo = [c for c in res["choices"] if c["status"] == "pending"]  # F3a: "unavailable" cards cannot be filled
         if not todo:
             return draft
         # spell cards first, then re-resolve: invocation prerequisites (Agonizing Blast needs

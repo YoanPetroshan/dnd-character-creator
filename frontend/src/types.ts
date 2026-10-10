@@ -179,6 +179,8 @@ export interface SheetInnateSpell {
   /** Origin label, e.g. "Eldritch Invocation". */
   source?: string;
   note?: string;
+  /** Feat catalog id when the spell comes from a feat (Magic Initiate, ...). */
+  featId?: string;
 }
 
 export type SheetFeatureSourceKind = "class" | "subclass" | "species" | "background" | "feat";
@@ -251,7 +253,8 @@ export interface Sheet {
 export interface Attack {
   itemId: string;
   name: string;
-  ability: "STR" | "DEX";
+  /** "CHA" on the Pact of the Blade pact weapon row (C7c). */
+  ability: "STR" | "DEX" | "CHA";
   proficient: boolean;
   attackBonus: number;
   /** null for a weapon without damage (net). */
