@@ -246,3 +246,44 @@ def test_f4_primal_knowledge_still_yields_to_earlier_sources(catalog):
     assert pk["selected"] == [] and pk["status"] == "pending"
     assert next(o for o in pk["options"] if o["id"] == "skill-athletics")["disabledReason"] == "already proficient"
     assert any(p["choiceId"] == PK for p in res["pruned"])
+
+
+# --- Finding 5: language duplicates are blamed on the later source -------------------------------------------------
+
+THIEVES = "class:rogue:1:languages:xphb-rogue-1-thieves-cant"
+
+
+@needs_data
+def test_f5_rogue_pick_before_multiclass_druid_keeps_druidic(catalog):
+    d = _draft([("rogue", 1, None, {THIEVES: ["druidic"]}), ("druid", 1, None, {})])
+    res = resolve(d, catalog)
+    card = _card(res, THIEVES)
+    assert card["selected"] == ["druidic"] and card["status"] == "resolved"  # Druid comes LATER in the build
+    assert not [p for p in res["pruned"] if p["choiceId"] == THIEVES]
+    assert "druidic" in res["sheet"]["proficiencies"]["languages"]
+
+
+@needs_data
+def test_f5_rogue_pick_after_the_druid_is_the_duplicate(catalog):
+    d = _draft([("druid", 1, None, {}), ("rogue", 1, None, {THIEVES: ["druidic"]})])
+    res = resolve(d, catalog)
+    card = _card(res, THIEVES)
+    assert card["selected"] == [] and card["status"] == "pending"
+    assert next(o for o in card["options"] if o["id"] == "druidic")["disabledReason"] == "already known"
+    assert [p["choiceId"] for p in res["pruned"] if "already known" in p["reason"]] == [THIEVES]
+
+
+LESSONS_CID = "class:warlock:invocation:opt-lessons-of-the-first-ones-xphb:feat"
+
+
+@needs_data
+def test_f5_origin_pick_before_a_later_lessons_feat_keeps_its_language(catalog):
+    inv = "class:warlock:1:invocations:xphb-warlock-1-eldritch-invocations"
+    ch = {inv: ["opt-lessons-of-the-first-ones-xphb", "opt-devils-sight-xphb", "opt-armor-of-shadows-xphb"],
+          LESSONS_CID: ["feat:cult-of-the-dragon-initiate-frhof"]}
+    d = _draft([("warlock", 2, None, ch)], bg_choices={"origin:languages": ["draconic", "elvish"]})
+    res = resolve(d, catalog)
+    origin = _card(res, "origin:languages")
+    assert origin["selected"] == ["draconic", "elvish"] and origin["status"] == "resolved"
+    assert "draconic" in res["sheet"]["proficiencies"]["languages"]
+    assert not [p for p in res["pruned"] if p["choiceId"] == "origin:languages"]

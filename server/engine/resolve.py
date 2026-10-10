@@ -441,6 +441,17 @@ def _feat_languages(feats: list[dict]) -> list[str]:
     return [lang["index"] for feat in feats for lang in feat.get("languages", [])]
 
 
+def _feat_build_position(feat: dict, class_order) -> tuple[int, int] | None:
+    """F3a-5: where a granted feat sits in the build: (class position, class level) for ASI feats (their ASI level)
+    and Lessons of the First Ones feats (Warlock 2); None for origin feats (background / species)."""
+    order = list(class_order)
+    if feat.get("_asi_cid"):
+        return class_choices_2024.card_position({"id": feat["_asi_cid"], "source": {"kind": "class"}}, order)
+    if feat.get("_inv_cid"):
+        return (order.index("warlock") if "warlock" in order else len(order), feat.get("_asi_level") or 2)
+    return None
+
+
 def _feat_expertise_skills(feats: list[dict]) -> list[str]:
     """Flattens every resolved granted feat's FIXED `expertise_skills`
     (official_source._expertise_skills_from_5etools' own "skill-{slug}"
@@ -5197,11 +5208,17 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choices, proficient_skills | proficient_tools, _feat_expertise_skills(resolved_feats),
         [rc["cls_id"] for rc in resolved_classes if rc["cls"]], ruleset)
     # C6b-2 + C8: origin and class language cards yield to fixed languages and to the other cards.
+    # F3a-5: class fixed languages and Lessons / ASI feat languages count from their (class, level) position on, so
+    # an earlier pick wins and the later duplicate is blamed; origin feats, species, background and Common come first.
+    lang_class_order = [rc["cls_id"] for rc in resolved_classes if rc["cls"]]
     fixed_languages = [lang["index"] for lang in (bg.get("languages", []) if bg else [])] + \
         [lang["index"] for lang in (race.get("languages", []) if race else [])] + \
-        _feat_languages(resolved_feats) + class_choices_2024.fixed_class_languages(catalog, resolved_classes, ruleset) + \
+        _feat_languages([f for f in resolved_feats if not _feat_build_position(f, lang_class_order)]) + \
         class_choices_2024.fixed_origin_languages(ruleset)  # C8: Common
-    pruned += class_choices_2024.gate_languages(choices, fixed_languages, [rc["cls_id"] for rc in resolved_classes if rc["cls"]])
+    positioned_languages = class_choices_2024.fixed_class_language_entries(catalog, resolved_classes, ruleset) + [
+        (pos, lang["index"]) for f in resolved_feats if (pos := _feat_build_position(f, lang_class_order))
+        for lang in f.get("languages", [])]
+    pruned += class_choices_2024.gate_languages(choices, fixed_languages, lang_class_order, positioned_languages)
 
     # Phase 4c-i Task 6: was class-only (primary class's saving_throws
     # field) — a granted feat's own FIXED saving-throw-proficiency grant
@@ -5407,7 +5424,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "proficiencies": {
             "skills": sorted(proficient_skills),
             "savingThrows": proficient_save_abilities,
-            "languages": sorted(set(fixed_languages + chosen_languages)),
+            "languages": sorted(set(fixed_languages + [lang for _pos, lang in positioned_languages] + chosen_languages)),
             "armor": sorted(proficient_armor),
             "weapons": sorted(proficient_weapons),
             "tools": sorted(proficient_tools),

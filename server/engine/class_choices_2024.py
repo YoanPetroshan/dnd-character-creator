@@ -92,6 +92,19 @@ def fixed_class_languages(catalog, resolved_classes, ruleset: str) -> list[str]:
     return out
 
 
+def fixed_class_language_entries(catalog, resolved_classes, ruleset: str) -> list[tuple[tuple[int, int], str]]:
+    """F3a-5: `fixed_class_languages` with the position (class position, class level of the feature) of each."""
+    order = [rc["cls_id"] for rc in resolved_classes if rc.get("cls") and rc.get("cls_id")]
+    out: list[tuple[tuple[int, int], str]] = []
+    for rc in resolved_classes:
+        if not rc.get("cls") or not rc.get("cls_id"):
+            continue
+        for _fid, e in _language_entries(catalog, rc["cls_id"], ruleset):
+            if e["level"] <= rc["level"]:
+                out += [((order.index(rc["cls_id"]), e["level"]), lang) for lang in e["fixed"]]
+    return out
+
+
 def language_templates(catalog, rc: dict, ruleset: str) -> list[dict]:
     """One card per class language feature with a pick (Thieves' Cant 1, Deft Explorer 2), up to
     the class level. cid `class:<cls>:<lvl>:languages:<xphb feature id>`; options are the PHB 2024
@@ -154,33 +167,44 @@ def origin_language_templates(bg: dict | None, bg_id: str | None, ruleset: str) 
     }]
 
 
-def gate_languages(choices: list[dict], fixed_languages, class_order: list[str] = ()) -> list[dict]:
+def gate_languages(choices: list[dict], fixed_languages, class_order: list[str] = (), positioned_fixed=()) -> list[dict]:
     """Disable ("already known") and drop stored picks of languages the character already knows.
-    Priority: fixed languages, picks of every other non-class language card (background / species /
-    feat cards), the C8 origin card, then class language cards by (class order, class level).
+    Priority: `fixed_languages` (species / background / origin feats / Common), picks of every other
+    origin language card (background / species / origin feat cards), the C8 origin card, then class
+    language cards by (class order, class level).
+    F3a-5: `positioned_fixed` = [((class position, class level), language)] are fixed grants (class
+    features, Lessons / ASI feats) and ASI feat language picks counted only for cards at or after
+    their position, so an earlier pick wins and the later duplicate is blamed.
     Mutates `choices` by index; returns non-blocking `pruned` entries in `choices` order."""
     idxs = [i for i, c in enumerate(choices) if is_class_language_card(c) or is_origin_language_card(c)]
     if not idxs:
         return []
     known: set[str] = set(fixed_languages)
+    positioned = list(positioned_fixed)
     for c in choices:
         if (c["source"]["kind"] in ("background", "species", "feat") and c["id"].endswith(":languages")
                 and not is_origin_language_card(c)):
-            known.update(c["selected"])
+            pos = card_position(c, class_order) if c["source"]["kind"] == "feat" else (-1, 0)
+            if pos is None or pos == (-1, 0):
+                known.update(c["selected"])
+            else:
+                positioned += [(pos, lang) for lang in c["selected"]]
 
-    def key(i):
+    def pos_of(i):
         c = choices[i]
         if is_origin_language_card(c):
-            return (-1, 0, i)
+            return (-1, 0)
         src = c["source"]
         cid = src.get("id")
-        return (class_order.index(cid) if cid in class_order else len(class_order), src.get("level") or 0, i)
+        return (class_order.index(cid) if cid in class_order else len(class_order), src.get("level") or 0)
 
     pruned_by_index: dict[int, dict] = {}
-    for i in sorted(idxs, key=key):
+    for i in sorted(idxs, key=lambda i: (*pos_of(i), i)):
         c = choices[i]
+        here = pos_of(i)
+        known_here = known | {lang for pos, lang in positioned if pos <= here}
         options = [
-            o if o.get("disabled") or o["id"] not in known
+            o if o.get("disabled") or o["id"] not in known_here
             else {**o, "disabled": True, "disabledReason": "already known"}
             for o in c["options"]
         ]
