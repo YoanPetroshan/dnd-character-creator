@@ -89,7 +89,10 @@ def strip_g2(res: dict) -> dict:
 
 # ---- old drafts: identical output ------------------------------------------------------------
 
-_CASE_NAMES = list(json.load(gzip.open(GOLDEN, "rt"))) if GOLDEN.exists() else []
+# Names ending "-2024" are excluded from the strict comparison: 2024 output evolves through the
+# C-series stages. Mixed/2014 stability is guarded by test_c_series_golden.py (F0). The entries
+# stay in the golden file.
+_CASE_NAMES = [n for n in (json.load(gzip.open(GOLDEN, "rt")) if GOLDEN.exists() else []) if not n.endswith("-2024")]
 
 
 @pytest.mark.parametrize("name", _CASE_NAMES)
