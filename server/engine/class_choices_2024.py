@@ -239,6 +239,49 @@ def primal_knowledge_templates(catalog, rc: dict, ruleset: str) -> list[dict]:
     }]
 
 
+_CLASS_CID_LEVEL_RE = re.compile(r"^class:([^:]+):(\d+):")
+
+
+def card_position(c: dict, class_order) -> tuple[int, int] | None:
+    """Where a card's grant sits in the build: (class position, class level); (-1, 0) for origin cards (species,
+    background, background feats); None for class cards without a level in their cid (spell cards ...). ASI feat
+    cards (`class:<cls>:<lvl>:asi:feat:...`) sit at their ASI level."""
+    kind = c["source"]["kind"]
+    m = _CLASS_CID_LEVEL_RE.match(c["id"])
+    if kind in ("species", "background") or (kind == "feat" and not m):
+        return (-1, 0)
+    if not m:
+        return None
+    order = list(class_order)
+    return (order.index(m.group(1)) if m.group(1) in order else len(order), int(m.group(2)))
+
+
+def gate_after_primal_knowledge(choices: list[dict], class_order, skill: str | None) -> list[dict]:
+    """F3a-4: skill proficiency picks that come AFTER Barbarian 3 see Primal Knowledge's skill as already
+    proficient: the option is disabled and a stored pick of it is dropped (the later pick is the duplicate).
+    Returns the pruned entries."""
+    if not skill or PRIMAL_KNOWLEDGE_2024["class"] not in list(class_order):
+        return []
+    pk_pos = (list(class_order).index(PRIMAL_KNOWLEDGE_2024["class"]), PRIMAL_KNOWLEDGE_2024["level"])
+    pruned: list[dict] = []
+    for i, c in enumerate(choices):
+        if c["source"]["kind"] not in ("class", "feat") or is_primal_knowledge_card(c):
+            continue
+        if not ("proficiency-choice" in c["id"] or ":prof-choice-" in c["id"]) or "expertise-choice" in c["id"]:
+            continue
+        pos = card_position(c, class_order)
+        if pos is None or pos <= pk_pos or not any(o["id"] == skill for o in c["options"]):
+            continue
+        options = [o if o["id"] != skill or o.get("disabled") else {**o, "disabled": True, "disabledReason": "already proficient"}
+                   for o in c["options"]]
+        kept = [s for s in c["selected"] if s != skill]
+        if len(kept) != len(c["selected"]):
+            name = next((o.get("label", skill) for o in c["options"] if o["id"] == skill), skill)
+            pruned.append({"choiceId": c["id"], "reason": f"'{c['label']}': {name} is already proficient (Primal Knowledge); the selection was ignored."})
+        choices[i] = {**c, "options": options, "selected": kept, "status": "resolved" if len(kept) == c["count"] else "pending"}
+    return pruned
+
+
 def gate_primal_knowledge(choices: list[dict], proficient_skills: set[str]) -> list[dict]:
     """`proficient_skills` = every proficiency from sources other than this card. Options already
     proficient are disabled "already proficient" ("another skill"); stored picks of them are

@@ -212,3 +212,37 @@ def test_f3_feat_expertise_is_checked_at_its_real_position_not_first(catalog):
     assert _card(res, DEFT)["selected"] == ["skill-athletics"]
     assert _card(res, f"{SE}:expertise-choice-0")["selected"] == ["skill-insight"]
     assert not [p for p in res["pruned"] if "Expertise" in p["reason"]]
+
+
+# --- Finding 4: Primal Knowledge only yields to proficiencies gained at or before Barbarian 3 ---------------------
+
+PK = "class:barbarian:3:feature:xphb-barbarian-3-primal-knowledge"
+BSE = "class:barbarian:4:asi:feat:skill-expert-xphb"
+
+
+def _barb4(pk, feat_prof):
+    ch = {"class:barbarian:1:prof-choice-0": ["skill-athletics", "skill-intimidation"], PK: pk,
+          "class:barbarian:4:asi": ["feat:skill-expert-xphb"], f"{BSE}:proficiency-choice-0": feat_prof}
+    return _draft([("barbarian", 4, "berserker-xphb", ch)], background="sage-xphb")
+
+
+@needs_data
+def test_f4_primal_knowledge_keeps_its_skill_and_the_later_feat_card_shows_it_as_proficient(catalog):
+    res = resolve(_barb4(["skill-perception"], ["skill-perception"]), catalog)
+    pk = _card(res, PK)
+    assert pk["selected"] == ["skill-perception"] and pk["status"] == "resolved"
+    feat = _card(res, f"{BSE}:proficiency-choice-0")
+    opt = next(o for o in feat["options"] if o["id"] == "skill-perception")
+    assert opt["disabled"] and opt["disabledReason"] == "already proficient"
+    assert feat["selected"] == [] and feat["status"] == "pending"
+    assert [p["choiceId"] for p in res["pruned"] if "proficient" in p["reason"]] == [f"{BSE}:proficiency-choice-0"]
+    assert "skill-perception" in res["sheet"]["proficiencies"]["skills"]
+
+
+@needs_data
+def test_f4_primal_knowledge_still_yields_to_earlier_sources(catalog):
+    res = resolve(_barb4(["skill-athletics"], ["skill-acrobatics"]), catalog)  # Athletics: the level 1 skill pick
+    pk = _card(res, PK)
+    assert pk["selected"] == [] and pk["status"] == "pending"
+    assert next(o for o in pk["options"] if o["id"] == "skill-athletics")["disabledReason"] == "already proficient"
+    assert any(p["choiceId"] == PK for p in res["pruned"])

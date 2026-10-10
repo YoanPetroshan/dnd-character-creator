@@ -4976,8 +4976,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         if (c["source"]["kind"] in ("class", "species", "background", "feat") and "expertise-choice" not in c["id"]
                 and not class_choices_2024.is_primal_knowledge_card(c)):  # C6b-2: gated against the others below
             proficient_skills.update(s for s in c["selected"] if s.startswith("skill-"))
+    fixed_origin_skills: set[str] = set()  # F3a-4: grants that predate every class level
     if bg:
         proficient_skills.update(p["index"] for p in bg.get("starting_proficiencies", []) if p["index"].startswith("skill-"))
+        fixed_origin_skills.update(p["index"] for p in bg.get("starting_proficiencies", []) if p["index"].startswith("skill-"))
     if race:
         trait_refs = list(race.get("traits", [])) + (list(subrace.get("racial_traits", [])) if subrace else [])
         for ref in trait_refs:
@@ -4985,6 +4987,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             if not trait:
                 continue
             proficient_skills.update(p["index"] for p in trait.get("proficiencies", []) if p["index"].startswith("skill-"))
+            fixed_origin_skills.update(p["index"] for p in trait.get("proficiencies", []) if p["index"].startswith("skill-"))
     # Phase 4c-i Task 6: a granted feat's own FIXED skill-proficiency grant
     # (e.g. a hypothetical background-granted Skilled/Prodigy-style feat)
     # feeds this SAME set, mirroring the bg/race passes just above — see
@@ -4992,10 +4995,30 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # a feat's own proficiency_choices) are read.
     feat_proficiency_ids = _feat_proficiency_ids(resolved_feats)
     proficient_skills.update(p for p in feat_proficiency_ids if p.startswith("skill-"))
-    pruned += class_choices_2024.gate_primal_knowledge(choices, proficient_skills)  # C6b-2
+    fixed_origin_skills.update(p for f in resolved_feats if not f.get("_asi_cid")
+                               for p in _feat_proficiency_ids([f]) if p.startswith("skill-"))
+    # C6b-2 + F3a-4: Primal Knowledge (Barbarian 3) yields only to proficiencies gained at or before it; the skill
+    # picks that come later see its skill as already proficient instead.
+    pk_class_order = [rc["cls_id"] for rc in resolved_classes if rc["cls"]]
+    pk_pos = (pk_class_order.index("barbarian"), 3) if "barbarian" in pk_class_order else None
+    proficient_before_pk = proficient_skills
+    if pk_pos is not None:
+        proficient_before_pk = set(fixed_origin_skills)  # background + species + (origin) feat grants
+        for c in choices:
+            pos = class_choices_2024.card_position(c, pk_class_order)
+            if (c["source"]["kind"] in ("class", "species", "background", "feat") and "expertise-choice" not in c["id"]
+                    and not class_choices_2024.is_primal_knowledge_card(c) and pos is not None and pos <= pk_pos):
+                proficient_before_pk.update(s for s in c["selected"] if s.startswith("skill-"))
+        for f in resolved_feats:  # ASI feats sit at their ASI level
+            if f.get("_asi_cid") and (class_choices_2024.card_position(
+                    {"id": f["_asi_cid"], "source": {"kind": "class"}}, pk_class_order) or (99, 0)) <= pk_pos:
+                proficient_before_pk.update(p for p in _feat_proficiency_ids([f]) if p.startswith("skill-"))
+    pruned += class_choices_2024.gate_primal_knowledge(choices, proficient_before_pk)  # C6b-2
     for c in choices:
         if class_choices_2024.is_primal_knowledge_card(c):
             proficient_skills.update(s for s in c["selected"] if s.startswith("skill-"))
+            if pk_pos is not None and c["selected"]:
+                pruned += class_choices_2024.gate_after_primal_knowledge(choices, pk_class_order, c["selected"][0])
 
     proficient_armor: set[str] = set()
     proficient_weapons: set[str] = set()
