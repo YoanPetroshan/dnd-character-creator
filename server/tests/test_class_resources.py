@@ -121,6 +121,18 @@ def test_real_catalog_class_tables(catalog):
 # ------------------------------------------------------------ Barbarian
 
 
+@needs_classes
+def test_barbarian_rage_recharge_by_ruleset(catalog):
+    """F1 (3): XPHB Rage "You regain one expended use when you finish a Short Rest, and you
+    regain all expended uses when you finish a Long Rest" -> 2024 recharge long +
+    shortRestRegains 1 (same pattern as Channel Divinity); 2014 / mixed Rage is long only."""
+    rage = _entry(_res(catalog, [("barbarian", 5)], "2024"), "barbarian:rage")
+    assert rage["recharge"] == "long" and rage["details"]["shortRestRegains"] == 1
+    for ruleset in ("2014", "mixed"):
+        rage = _entry(_res(catalog, [("barbarian", 5)], ruleset), "barbarian:rage")
+        assert rage["recharge"] == "long" and "shortRestRegains" not in rage["details"]
+
+
 @pytest.mark.parametrize("ruleset", ["2014", "mixed"])
 @pytest.mark.parametrize("level,uses,bonus", [(1, 2, 2), (3, 3, 2), (8, 4, 2), (9, 4, 3), (12, 5, 3), (15, 5, 3), (16, 5, 4), (19, 6, 4)])
 def test_barbarian_rage_uses_srd_numbers_outside_2024(catalog, ruleset, level, uses, bonus):

@@ -116,6 +116,7 @@ def _barbarian(ctx: Ctx, rc: dict) -> list[dict]:
     level = rc["level"]
     cs = _class_specific(rc)
     uses = ctx.table("barbarian", "rages", level)
+    from_table = uses is not None  # 2024 (XPHB): one use back on a short rest, all on a long rest
     bonus = ctx.table("barbarian", "rage-damage", level)
     if uses is None:
         uses = cs.get("rage_count")
@@ -129,10 +130,10 @@ def _barbarian(ctx: Ctx, rc: dict) -> list[dict]:
         # 2014 Totem Warrior Bear: every damage type except psychic. The 2024
         # Wild Heart per-rage choice is not modelled.
         resistances = [t for t in reference_data.DAMAGE_TYPES if t != "psychic"]
-    return [_resource(
-        rc, "Rage", uses=uses, unlimited=unlimited, recharge="long",
-        details={"damageBonus": bonus, "resistances": resistances},
-    )]
+    details = {"damageBonus": bonus, "resistances": resistances}
+    if from_table:
+        details["shortRestRegains"] = 1
+    return [_resource(rc, "Rage", uses=uses, unlimited=unlimited, recharge="long", details=details)]
 
 
 def _rogue(ctx: Ctx, rc: dict) -> list[dict]:
@@ -151,8 +152,11 @@ def _fighter(ctx: Ctx, rc: dict) -> list[dict]:
     cs = _class_specific(rc)
     out = []
     wind = ctx.table("fighter", "second-wind", level)
-    out.append(_resource(rc, "Second Wind", uses=1 if wind is None else wind, recharge="short-or-long",
-                         details={"heal": f"1d10+{level}"}))
+    details = {"heal": f"1d10+{level}"}
+    if wind is not None:  # 2024 (XPHB): one use back on a short rest, all on a long rest
+        details["shortRestRegains"] = 1
+    out.append(_resource(rc, "Second Wind", uses=1 if wind is None else wind,
+                         recharge="short-or-long" if wind is None else "long", details=details))
     if cs.get("action_surges"):
         out.append(_resource(rc, "Action Surge", uses=cs["action_surges"], recharge="short-or-long"))
     if cs.get("indomitable_uses"):

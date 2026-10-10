@@ -111,6 +111,18 @@ def test_fighter_2024_second_wind_table(catalog, level, uses):
 
 
 @needs_classes
+def test_fighter_second_wind_recharge_by_ruleset(catalog):
+    """F1 (3): XPHB "You regain one expended use when you finish a Short Rest, and you regain
+    all expended uses when you finish a Long Rest" -> 2024 recharge long + shortRestRegains 1;
+    2014 / mixed stay one use that returns on a short or long rest."""
+    sw = _entry(_res(catalog, [("fighter", 4)], "2024"), "fighter:second-wind")
+    assert sw["recharge"] == "long" and sw["details"]["shortRestRegains"] == 1 and sw["details"]["heal"] == "1d10+4"
+    for ruleset in ("2014", "mixed"):
+        sw = _entry(_res(catalog, [("fighter", 4)], ruleset), "fighter:second-wind")
+        assert sw["recharge"] == "short-or-long" and "shortRestRegains" not in sw["details"]
+
+
+@needs_classes
 def test_fighter_mixed_ignores_the_2024_table(catalog):
     assert _entry(_res(catalog, [("fighter", 10)], "mixed"), "fighter:second-wind")["uses"] == 1
 
