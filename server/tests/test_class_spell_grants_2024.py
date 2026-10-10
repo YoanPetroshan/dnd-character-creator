@@ -310,11 +310,12 @@ def test_without_picks_the_sheet_key_is_an_empty_list(catalog):
 
 
 @needs_data
-def test_empty_book_gives_option_less_pending_mastery_cards(catalog):
+def test_empty_book_gives_option_less_unavailable_mastery_cards(catalog):
+    # F3a-2b: an option-less new 2024 card is "unavailable" (non-blocking); the empty spellbook card still blocks
     res = _res(catalog, [_wizard(18, book=[])])
     for cid in (MASTERY1, MASTERY2):
         card = _card(res, cid)
-        assert card["options"] == [] and card["status"] == "pending" and "spellbook" in card["description"].lower()
+        assert card["options"] == [] and card["status"] == "unavailable" and "spellbook" in card["description"].lower()
 
 
 @needs_data

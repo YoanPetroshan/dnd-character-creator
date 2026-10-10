@@ -962,3 +962,32 @@ def lessons_instances(catalog, rc: dict, ruleset: str) -> list[str]:
         return []
     return sorted((i for i in raw_invocation_instances(catalog, rc, ruleset) if invocation_base_id(i) == LESSONS_ID),
                   key=invocation_instance)
+
+
+# ---- F3a-2b: new 2024 cards that can never be completed ----------------------------------------------------------
+# A card the 2024 chassis introduced (expertise, class languages, XPHB feature picks, Spell Mastery / Signature
+# Spells, the Warlock's invocation dependents) can end up with every option disabled for the current character (no
+# eligible spell, nothing left to learn). Such a card must not block export: its status becomes "unavailable" and
+# `unavailableReason` explains why. SRD / 2014 cards keep their behaviour (they are never touched).
+_NEW_2024_CARD_RE = re.compile(
+    r"^class:[a-z-]+:\d+:(?:expertise-choice|languages):|^class:[a-z-]+:\d+:feature:xphb-"
+    r"|^class:wizard:\d+:(?:spell-mastery-\d|signature-spells)$")
+
+
+def is_new_2024_class_card(c: dict) -> bool:
+    return c["source"]["kind"] == "class" and bool(_NEW_2024_CARD_RE.match(c["id"]) or c["id"].startswith(DEPENDENT_PREFIX))
+
+
+def mark_unavailable(choices: list[dict], ruleset: str) -> list[dict]:
+    """Under 2024, pending new-chassis cards with no enabled option become `unavailable` (non-blocking)."""
+    if ruleset != "2024":
+        return choices
+    out = []
+    for c in choices:
+        if (c["status"] == "pending" and c["count"] > 0 and is_new_2024_class_card(c)
+                and not any(not o.get("disabled") for o in c["options"])):
+            reason = ("Nothing can be chosen here with the current character: " +
+                      ("no option is offered yet." if not c["options"] else "every option is unavailable."))
+            c = {**c, "status": "unavailable", "unavailableReason": reason}
+        out.append(c)
+    return out

@@ -107,3 +107,49 @@ def test_f2a_first_instance_without_any_eligible_target_is_disabled(catalog):
     r = _res(catalog, 5, [TOME, SPEAR], [MI, "mage-hand-xphb"], extra=extra)
     assert _opt(_card(r, INV), SPEAR).get("disabled")
     assert SPEAR not in _card(r, INV)["selected"]
+
+
+# --- Finding 2b: a new 2024 class card with no enabled option is unavailable, not blocking -------------------------
+
+from engine import class_choices_2024  # noqa: E402
+
+BOOK, MASTERY1, MASTERY2 = "class:wizard:spellbook", "class:wizard:18:spell-mastery-1", "class:wizard:18:spell-mastery-2"
+SIGNATURE = "class:wizard:20:signature-spells"
+
+
+def _wizard(level, book):
+    return _draft([("wizard", level, None, {BOOK: book})], species="human-xphb", background="sage-xphb")
+
+
+def _card_dict(cid, options, status="pending", count=1, kind="class"):
+    return {"id": cid, "source": {"kind": kind, "id": "wizard", "level": 18}, "label": "L", "description": "d",
+            "count": count, "options": options, "selected": [], "status": status}
+
+
+@needs_data
+def test_f2b_card_without_enabled_options_is_unavailable_and_does_not_block_export(catalog):
+    from app import _pending_export_problems
+    res = resolve(_wizard(18, ["alarm-xphb"]), catalog)  # Alarm: 1 minute, so no Spell Mastery candidate
+    card = _card(res, MASTERY1)
+    assert card["status"] == "unavailable" and card["unavailableReason"]
+    ids = [p["id"] for p in _pending_export_problems(res)]
+    assert f"unresolved-choice-{MASTERY1}" not in ids and f"unresolved-choice-{SIGNATURE}" not in ids
+    # the spellbook itself is still pending and still blocks
+    assert f"unresolved-choice-{BOOK}" in ids
+
+
+def test_f2b_helper_marks_only_new_2024_cards_with_zero_enabled_options():
+    off = [{"id": "a", "label": "A", "disabled": True, "disabledReason": "x"}]
+    mastery = _card_dict(MASTERY1, [])
+    expert = _card_dict("class:rogue:1:expertise-choice:xphb-rogue-1-expertise", off)
+    languages = _card_dict("class:rogue:1:languages:xphb-rogue-1-thieves-cant", off)
+    target = _card_dict("class:warlock:invocation:opt-agonizing-blast-xphb:cantrip", [])
+    srd = _card_dict("class:ranger:1:feature:favored-enemy", [])  # SRD id: untouched
+    has_enabled = _card_dict(MASTERY2, [{"id": "a", "label": "A"}])
+    done = _card_dict(SIGNATURE, [], status="resolved")
+    cards = [mastery, expert, languages, target, srd, has_enabled, done]
+    out = class_choices_2024.mark_unavailable(copy.deepcopy(cards), "2024")
+    assert [c["status"] for c in out] == ["unavailable"] * 4 + ["pending", "pending", "resolved"]
+    assert all(c.get("unavailableReason") for c in out[:4])
+    # other rulesets: untouched
+    assert class_choices_2024.mark_unavailable(copy.deepcopy(cards), "mixed") == cards

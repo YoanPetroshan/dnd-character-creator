@@ -5402,6 +5402,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "weaponMasteries": weapon_masteries,
     }
 
+    choices = class_choices_2024.mark_unavailable(choices, ruleset)  # F3a-2b: uncompletable new 2024 cards do not block
+
     if len(pruned) > MAX_PRUNED_REPORTED:  # F2-D: cap last, so every gate's entries count and the marker ends the list
         extra = len(pruned) - MAX_PRUNED_REPORTED
         pruned = pruned[:MAX_PRUNED_REPORTED] + [{

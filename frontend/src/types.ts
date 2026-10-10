@@ -30,7 +30,8 @@ export interface ChoiceSource {
   level?: number;
 }
 
-export type ChoiceStatus = "pending" | "resolved" | "invalid";
+/** "unavailable" (F3a): a new 2024 card with no enabled option; it never blocks export. */
+export type ChoiceStatus = "pending" | "resolved" | "invalid" | "unavailable";
 
 export interface Choice {
   id: string;
@@ -43,6 +44,8 @@ export interface Choice {
   status: ChoiceStatus;
   /** Options granted automatically (e.g. Elemental Attunement); not pickable. */
   granted?: { id: string; label: string }[];
+  /** Set with status "unavailable": why nothing can be chosen. */
+  unavailableReason?: string;
 }
 
 export interface Problem {
