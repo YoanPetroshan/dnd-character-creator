@@ -208,6 +208,8 @@ def _expected_strings(res) -> list[tuple[str, str]]:
     """(label, text) pairs that must appear in both Markdown and the PDF."""
     sheet, derived = res["sheet"], res["derived"]
     out = [("classResource", r["name"]) for r in derived["classResources"]]
+    for r in derived["classResources"]:
+        out += [("resourceDetail", frag) for frag in export_fields.resource_detail_parts(r.get("details"))]
     out += [("weaponMastery", m["name"]) for m in sheet["weaponMasteries"]]
     for cs in sheet["spells"]:
         out += [("mysticArcanum", m["name"]) for m in cs.get("mysticArcanum") or []]
@@ -229,6 +231,18 @@ def _expected_strings(res) -> list[tuple[str, str]]:
             out.append(("feature choice", f"{f['name']}" + (f" (ниво {f['level']})" if f.get("level") else "")
                         + ": " + ", ".join(f["choice"])))
     return out
+
+
+def test_kitchen_sink_rage_details_are_printed(catalog):
+    """F2-A: the Rage resistances and (2024) short-rest regain reach Markdown and PDF."""
+    for sid, want in (("barbarian20-2024", "1 използване се възстановява при кратка почивка"),
+                      ("barbarian20-2014", "съпротива: дробящи, пробождащи, режещи"),
+                      ("totem-bear6", "съпротива: всички видове щета освен психична")):
+        res = _sink(sid, catalog)
+        assert want in _flat(to_markdown(res)), (sid, want)
+        assert want in _pdf_text(res), (sid, want)
+    res = _sink("barbarian20-2024", catalog)
+    assert "съпротива: дробящи, пробождащи, режещи" in _flat(to_markdown(res))
 
 
 @pytest.mark.parametrize("sid", list(KITCHEN_SINK))

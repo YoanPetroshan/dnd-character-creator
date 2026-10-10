@@ -70,6 +70,47 @@ def expertise_label(entry: str) -> str:
 _RECHARGE_WORDS = {"long": "дълга почивка", "short": "кратка почивка", "short-or-long": "кратка или дълга почивка"}
 
 
+_DAMAGE_NAMES_BG = {
+    "acid": "киселинни", "bludgeoning": "дробящи", "cold": "студени", "fire": "огнени", "force": "силови",
+    "lightning": "мълниеносни", "necrotic": "некротични", "piercing": "пробождащи", "poison": "отровни",
+    "psychic": "психични", "radiant": "лъчисти", "slashing": "режещи", "thunder": "гръмотевични",
+}
+
+
+def resource_detail_parts(details: dict | None) -> list[str]:
+    """Short Bulgarian fragments for a class resource's `details` (only what is meaningful)."""
+    d = details or {}
+    parts: list[str] = []
+    res = d.get("resistances")
+    if res:
+        if len(res) == len(_DAMAGE_NAMES_BG) - 1 and "psychic" not in res:
+            parts.append("съпротива: всички видове щета освен психична")
+        else:
+            parts.append("съпротива: " + ", ".join(_DAMAGE_NAMES_BG.get(t, t) for t in res))
+    if d.get("shortRestRegains"):
+        n = d["shortRestRegains"]
+        parts.append(f"{n} използване се възстановява при кратка почивка" if n == 1
+                     else f"{n} използвания се възстановяват при кратка почивка")
+    if d.get("spellSlotRegainsUse"):
+        parts.append("използване се възстановява срещу слот за заклинание")
+    if d.get("bonusActionRegainsOne"):
+        parts.append("бонус действие: връща 1 зар")
+    if d.get("onShortRest"):
+        parts.append("при кратка почивка")
+    if d.get("maxSlotLevel") is not None:
+        parts.append(f"слотове до ниво {d['maxSlotLevel']}")
+    costs = d.get("slotCosts")
+    if costs:
+        parts.append(", ".join(f"слот ниво {lvl} за {costs[lvl]} т." for lvl in sorted(costs, key=int)))
+    if d.get("knownForms") is not None:
+        parts.append(f"известни форми: {d['knownForms']}")
+    if d.get("fly") is True:
+        parts.append("летене")
+    if d.get("swim") is True:
+        parts.append("плуване")
+    return parts
+
+
 def resource_line(r: dict) -> str:
     """One class resource as a bullet: `Rage: 3 (дълга почивка), щета +2`."""
     parts = []
@@ -94,6 +135,8 @@ def resource_line(r: dict) -> str:
     heal = (r.get("details") or {}).get("heal")
     if heal:
         core += f", лекуване {heal}"
+    for fragment in resource_detail_parts(r.get("details")):
+        core = f"{core}, {fragment}" if core else fragment
     max_cr = (r.get("details") or {}).get("maxCr")
     if max_cr:
         core = f"{core}, макс. CR {max_cr}" if core else f"макс. CR {max_cr}"
