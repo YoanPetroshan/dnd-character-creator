@@ -13,6 +13,9 @@ Monk unarmed strike (R2): `unarmed_strike`, see below.
 
 Weapon Mastery (C2) is chosen in resolve(); `annotate_mastery` adds `mastery` to rows.
 
+C7c: `attacks_from_gear(..., pact_weapon=<item id>)` makes that weapon's row proficient and lets it use Charisma
+when the CHA modifier beats the weapon's normal ability (Pact of the Blade, ruleset 2024).
+
 G2: with `hands` ({"main", "off", "dueling_ok"}, built by engine.worn from
 `equipment.wielded`) Dueling is evaluated: the +2 goes into `damage` of the
 main-hand weapon only when the off hand holds no weapon, `duelingDamage` stays
@@ -30,6 +33,7 @@ _NOTE_ORDER = ("two-handed", "heavy", "ammunition", "loading", "reach", "thrown"
 GWF_NOTE = "Great Weapon Fighting: reroll 1s and 2s"
 GWF_2024_NOTE = "Great Weapon Fighting: treat 1s and 2s as 3"
 DUELING_NOTE = "Dueling: only with no other weapon"
+PACT_WEAPON_NOTE = "Pact weapon: proficient; Charisma for attack and damage; Necrotic, Psychic or Radiant damage allowed"  # C7c (2024)
 
 
 def _dice(dice: str, mod: int) -> str:
@@ -69,7 +73,8 @@ def annotate_mastery(attacks: list[dict], masteries: list[dict]) -> list[dict]:
     return [{**a, "mastery": by_item.get(a["itemId"])} for a in attacks]
 
 
-def weapon_attack(item: dict, modifiers: dict, prof_bonus: int, proficiency_ids, styles: dict, hands: dict | None = None) -> dict | None:
+def weapon_attack(item: dict, modifiers: dict, prof_bonus: int, proficiency_ids, styles: dict, hands: dict | None = None,
+                  pact: bool = False) -> dict | None:
     if item.get("equipment_category", {}).get("index") != "weapon":
         return None
     props = {p["index"] for p in item.get("properties", [])}
@@ -82,11 +87,15 @@ def weapon_attack(item: dict, modifiers: dict, prof_bonus: int, proficiency_ids,
     else:
         ability = "STR"
     mod = modifiers.get(ability, 0)
+    if pact and modifiers.get("CHA", 0) > mod:  # C7c: the Pact of the Blade weapon uses Charisma when that is better
+        ability, mod = "CHA", modifiers["CHA"]
 
-    proficient = weapon_is_proficient(item, proficiency_ids)
+    proficient = True if pact else weapon_is_proficient(item, proficiency_ids)
     attack_bonus = mod + (prof_bonus if proficient else 0) + (styles.get("ranged_attack", 0) if ranged else 0)
 
     notes = [n for n in _NOTE_ORDER if n in props]
+    if pact:
+        notes.append(PACT_WEAPON_NOTE)
     dmg = item.get("damage")
     two_handed = "two-handed" in props
     dueling = 0 if ranged or two_handed else styles.get("one_handed_melee_damage", 0)
@@ -124,12 +133,13 @@ def weapon_attack(item: dict, modifiers: dict, prof_bonus: int, proficiency_ids,
     return row
 
 
-def attacks_from_gear(items: list[dict], modifiers: dict, prof_bonus: int, proficiency_ids, styles: dict, hands: dict | None = None) -> list[dict]:
+def attacks_from_gear(items: list[dict], modifiers: dict, prof_bonus: int, proficiency_ids, styles: dict, hands: dict | None = None,
+                      pact_weapon: str | None = None) -> list[dict]:
     out, seen = [], set()
     for item in items:
         if item["index"] in seen:
             continue
-        a = weapon_attack(item, modifiers, prof_bonus, proficiency_ids, styles, hands)
+        a = weapon_attack(item, modifiers, prof_bonus, proficiency_ids, styles, hands, pact=item["index"] == pact_weapon)
         if a:
             seen.add(item["index"])
             out.append(a)

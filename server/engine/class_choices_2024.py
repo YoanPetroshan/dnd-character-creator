@@ -863,7 +863,7 @@ def invocation_dependent_templates(catalog, rc: dict, ruleset: str, templates: l
     for tpl in tome:
         if tpl["id"].endswith(":cantrips"):
             tome_cantrips = effective_picks(tpl["options"], class_choices.get(tpl["id"]), tpl["count"])
-    return target_templates(catalog, rc, instances, known + tome_cantrips) + tome  # + blade_template: next commit
+    return target_templates(catalog, rc, instances, known + tome_cantrips) + tome + blade_template(catalog, rc, instances)
 
 
 def prune_invocation_dependents(choices: list[dict], selected_instances) -> list[dict]:
@@ -900,3 +900,10 @@ def gate_pact_weapon(choices: list[dict], inventory_ids, catalog) -> list[dict]:
 def selected_pact_weapon(choices: list[dict]) -> str | None:
     card = next((c for c in choices if c.get("id") == dependent_cid(BLADE_ID, "weapon")), None)
     return card["selected"][0] if card and card.get("selected") else None
+
+
+def pact_weapon_row_notes(selected_ids) -> list[str]:
+    """Notes for the pact weapon's attack row from the selected XPHB invocations (instance suffix stripped), in table order."""
+    from catalog.reference_data import PACT_WEAPON_ROW_NOTES_2024
+    bases = {invocation_base_id(s) for s in selected_ids}
+    return [note for fid, note in PACT_WEAPON_ROW_NOTES_2024.items() if fid in bases]

@@ -653,6 +653,17 @@ INVOCATION_EFFECTS_2024: dict[str, dict] = {
 }
 
 
+# C7c: short notes added to the attack row of the Pact of the Blade weapon, by selected XPHB invocation id (the Blade's own
+# note is attacks.PACT_WEAPON_NOTE; texts as in
+# INVOCATION_EFFECTS_2024 and the XPHB records, read 2026-10-11). The numbers on the row are unchanged (information).
+PACT_WEAPON_ROW_NOTES_2024: dict[str, str] = {
+    _XPHB_INV.format("thirsting-blade"): "Thirsting Blade: attack twice with the Attack action (not on top of Extra Attack)",
+    _XPHB_INV.format("devouring-blade"): "Devouring Blade: Thirsting Blade confers two extra attacks rather than one",
+    _XPHB_INV.format("eldritch-smite"): "Eldritch Smite: once per turn, expend a Pact Magic slot for +1d8 Force (+1d8 per slot level), Prone if Huge or smaller",
+    _XPHB_INV.format("lifedrinker"): "Lifedrinker: once per turn +1d6 Necrotic, Psychic or Radiant; spend a Hit Point Die to heal",
+}
+
+
 # ---- 2024 class option choices (C6a orders, C6c-2 Blessed Strikes / Elemental Fury) -------------
 # XPHB class features that offer a pick between sibling feature records (ruleset "2024" only).
 # Texts read from the imported catalog.features on 2026-10-10:
