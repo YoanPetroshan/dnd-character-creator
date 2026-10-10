@@ -81,8 +81,9 @@ def test_rogue_filter_and_proficiency(catalog):
     assert _opt(card, "greatsword")["disabled"]
     assert not _opt(card, "rapier").get("disabled")
     assert not _opt(card, "dagger").get("disabled")
-    # Longsword is martial without Finesse/Light: excluded by the 2024 filter
-    assert _opt(card, "longsword")["disabled"]
+    # Longsword is martial without Finesse/Light: the Rogue is not proficient (F3a-8: no Rogue-specific filter)
+    assert _opt(card, "longsword")["disabled"] and _opt(card, "longsword")["disabledReason"] == "not proficient"
+    assert _opt(card, "greatsword")["disabledReason"] == "not proficient"
     # F1: the 2024 Rogue is proficient with martial Finesse/Light weapons, Scimitar included
     assert not _opt(card, "scimitar").get("disabled")
 
@@ -215,6 +216,17 @@ def test_rogue_2024_weapon_proficiency_rule(catalog):
     assert _atk(sec, "rapier")["attackBonus"] == 2 and "martial-weapons-finesse-or-light" not in sec["sheet"]["proficiencies"]["weapons"]
     both = _res(catalog, [("fighter", 1), ("rogue", 1)], added=gear)
     assert _atk(both, "longsword")["attackBonus"] == 4 and _atk(both, "scimitar")["attackBonus"] == 4
+
+
+@needs_data
+def test_rogue_mastery_has_no_class_filter_proficiency_alone_limits_it(catalog):
+    """F3a-8: XPHB Rogue "two kinds of weapons of your choice with which you have proficiency". A Rogue who is
+    also proficient with every martial weapon (Fighter 1) may pick a heavy one."""
+    cid = "class:rogue:weapon-mastery"
+    res = _res(catalog, [("fighter", 1), ("rogue", 1)], choices={"rogue": {cid: ["greatsword", "longsword"]}})
+    card = _card(res, "rogue")
+    assert not _opt(card, "greatsword").get("disabled")
+    assert card["selected"] == ["greatsword", "longsword"] and card["status"] == "resolved"
 
 
 @needs_data

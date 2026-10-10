@@ -3541,14 +3541,11 @@ _MASTERY_CLASSES = ("barbarian", "fighter", "paladin", "ranger", "rogue")
 
 def _mastery_filter_reason(cls_id: str, item: dict) -> str | None:
     """Why the class's Weapon Mastery filter excludes a weapon, or None.
-    Barbarian: Simple or Martial Melee. Rogue: Simple, or Martial with Finesse or
-    Light. Fighter, Paladin, Ranger: Simple or Martial (every weapon)."""
+    Barbarian: Simple or Martial Melee. Fighter, Paladin, Ranger and Rogue: Simple or Martial (every
+    weapon); F3a-8: the XPHB Rogue text is "two kinds of weapons of your choice with which you have
+    proficiency", so only the proficiency gate limits the Rogue."""
     if cls_id == "barbarian" and item.get("weapon_range") != "Melee":
         return "melee weapons only"
-    if cls_id == "rogue" and item.get("weapon_category") == "Martial":
-        props = {p["index"] for p in item.get("properties", [])}
-        if not props & {"finesse", "light"}:
-            return "martial weapons need Finesse or Light"
     return None
 
 
