@@ -1825,8 +1825,13 @@ def _expertise_selected_values(choices: list[dict]) -> list[str]:
     return out
 
 
+_ASI_FEAT_CID_RE = re.compile(r"^class:([^:]+):(\d+):asi:feat:")
+SKILL_EXPERT_2024 = "skill-expert-xphb"
+
+
 def _gate_expertise_choices(
     choices: list[dict], proficient_skills: set[str], fixed_expertise=(), class_order: list[str] = (),
+    ruleset: str = "mixed",
 ) -> list[dict]:
     """Restrict every feat- or class-sourced Expertise Choice to skills (and,
     for the Rogue, tools) the character is proficient in. Mutates `choices` in place (entries replaced by index);
@@ -1834,23 +1839,31 @@ def _gate_expertise_choices(
 
     C6b-1: a card flagged `lacksExpertise` (2024 Deft Explorer, Ranger 9: "with which you lack
     Expertise") also disables, and drops stored picks of, skills that already have Expertise from
-    an earlier source. The walk order is fixed Expertise from feats (`fixed_expertise`), feat
-    cards, then class cards by (position in `class_order`, class level); the later pick is the
-    duplicate. Cards without the flag allow a duplicate (it is simply wasted, decision E1)."""
+    an earlier source. The walk order is fixed Expertise from feats (`fixed_expertise`), origin
+    feat cards, then class cards and ASI feat cards by (position in `class_order`, class level;
+    F3a-3: an ASI feat card sits at its ASI level, after the class feature of the same level); the
+    later pick is the duplicate. Cards without the flag allow a duplicate (it is simply wasted,
+    decision E1). F3a-3: under 2024 Skill Expert's card is flagged too (XPHB text: "a skill in
+    which you have proficiency but lack Expertise")."""
     pruned_by_index: dict[int, dict] = {}  # reported in `choices` order, whatever the walk order
     indexes = [i for i, c in enumerate(choices) if _is_expertise_choice(c)]
 
     def walk_key(i: int):
         c = choices[i]
         if c["source"]["kind"] == "feat":
-            return (0, 0, 0, i)
+            m = _ASI_FEAT_CID_RE.match(c["id"])
+            if not m:
+                return (0, 0, 0, 0, i)  # origin feats come first
+            cls_id = m.group(1)
+            return (1, class_order.index(cls_id) if cls_id in class_order else len(class_order), int(m.group(2)), 1, i)
         cls_id = c["source"].get("id")
-        return (1, class_order.index(cls_id) if cls_id in class_order else len(class_order), c["source"].get("level") or 0, i)
+        return (1, class_order.index(cls_id) if cls_id in class_order else len(class_order), c["source"].get("level") or 0, 0, i)
 
     have: set[str] = set(fixed_expertise)
     for i in sorted(indexes, key=walk_key):
         c = choices[i]
-        lacks = bool(c.get("lacksExpertise"))
+        lacks = bool(c.get("lacksExpertise")) or (
+            ruleset == "2024" and c["source"]["kind"] == "feat" and c["source"].get("id") == SKILL_EXPERT_2024)
         options = []
         for o in c["options"]:
             if o.get("disabled"):
@@ -5159,7 +5172,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     proficient_skills.update(features_mod.invocation_skills(invocation_effects))
     pruned += _gate_expertise_choices(
         choices, proficient_skills | proficient_tools, _feat_expertise_skills(resolved_feats),
-        [rc["cls_id"] for rc in resolved_classes if rc["cls"]])
+        [rc["cls_id"] for rc in resolved_classes if rc["cls"]], ruleset)
     # C6b-2 + C8: origin and class language cards yield to fixed languages and to the other cards.
     fixed_languages = [lang["index"] for lang in (bg.get("languages", []) if bg else [])] + \
         [lang["index"] for lang in (race.get("languages", []) if race else [])] + \

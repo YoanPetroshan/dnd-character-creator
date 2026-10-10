@@ -153,3 +153,62 @@ def test_f2b_helper_marks_only_new_2024_cards_with_zero_enabled_options():
     assert all(c.get("unavailableReason") for c in out[:4])
     # other rulesets: untouched
     assert class_choices_2024.mark_unavailable(copy.deepcopy(cards), "mixed") == cards
+
+
+# --- Finding 3: Expertise walk order and Skill Expert "lack Expertise" --------------------------------------------
+
+DEFT = "class:ranger:2:expertise-choice:xphb-ranger-2-deft-explorer"
+SE = "class:ranger:4:asi:feat:skill-expert-xphb"
+
+
+def _ranger4(deft, feat_exp, ruleset="2024"):
+    ch = {"class:ranger:1:prof-choice-0": ["skill-athletics", "skill-insight", "skill-nature"],
+          "class:ranger:4:asi": ["feat:skill-expert-xphb"], f"{SE}:proficiency-choice-0": ["skill-acrobatics"],
+          f"{SE}:expertise-choice-0": feat_exp}
+    if deft is not None:
+        ch[DEFT] = deft
+    d = _draft([("ranger", 4, None, ch)], background="sage-xphb")
+    d["ruleset"] = ruleset
+    return d
+
+
+@needs_data
+def test_f3_earlier_deft_explorer_wins_the_duplicate_and_the_later_feat_pick_is_blamed(catalog):
+    res = resolve(_ranger4(["skill-athletics"], ["skill-athletics"]), catalog)
+    deft, feat = _card(res, DEFT), _card(res, f"{SE}:expertise-choice-0")
+    assert deft["selected"] == ["skill-athletics"] and deft["status"] == "resolved"
+    assert feat["selected"] == [] and feat["status"] == "pending"
+    athletics = next(o for o in feat["options"] if o["id"] == "skill-athletics")
+    assert athletics["disabled"] and "already has Expertise" in athletics["disabledReason"]
+    pruned = [p for p in res["pruned"] if "Expertise" in p["reason"]]
+    assert [p["choiceId"] for p in pruned] == [f"{SE}:expertise-choice-0"]
+    assert res["sheet"]["expertiseSkills"] == ["skill-athletics"]
+
+
+@needs_data
+@pytest.mark.parametrize("ruleset,species,bg,exp_cid,blocked", [
+    ("2024", "human-xphb", "sage-xphb", "class:rogue:1:expertise-choice:xphb-rogue-1-expertise", True),
+    ("mixed", "human", "acolyte", "class:rogue:1:expertise-choice:rogue-expertise-1", False)])
+def test_f3_skill_expert_lacks_expertise_only_under_2024(catalog, ruleset, species, bg, exp_cid, blocked):
+    # Skill Expert (XPHB): "Choose one skill in which you have proficiency but lack Expertise." Rogue Expertise comes
+    # first (level 1), the feat second (ASI 4). mixed/2014 keep allowing the (wasted) duplicate.
+    feat_exp = "class:rogue:4:asi:feat:skill-expert-xphb:expertise-choice-0"
+    ch = {"class:rogue:1:prof-choice-0": ["skill-athletics", "skill-stealth", "skill-insight", "skill-perception"],
+          exp_cid: ["skill-athletics", "skill-stealth"], "class:rogue:4:asi": ["feat:skill-expert-xphb"],
+          "class:rogue:4:asi:feat:skill-expert-xphb:proficiency-choice-0": ["skill-acrobatics"], feat_exp: ["skill-athletics"]}
+    res = resolve(_draft([("rogue", 4, None, ch)], ruleset=ruleset, species=species, background=bg), catalog)
+    feat = _card(res, feat_exp)
+    if blocked:
+        assert feat["selected"] == [] and feat["status"] == "pending"
+        assert next(o for o in feat["options"] if o["id"] == "skill-athletics")["disabledReason"] == "already has Expertise"
+    else:
+        assert feat["selected"] == ["skill-athletics"] and feat["status"] == "resolved"
+
+
+@needs_data
+def test_f3_feat_expertise_is_checked_at_its_real_position_not_first(catalog):
+    # Skill Expert at ASI 4 is walked AFTER Ranger 2 (before: every feat card came first, so the feat won)
+    res = resolve(_ranger4(["skill-athletics"], ["skill-insight"]), catalog)
+    assert _card(res, DEFT)["selected"] == ["skill-athletics"]
+    assert _card(res, f"{SE}:expertise-choice-0")["selected"] == ["skill-insight"]
+    assert not [p for p in res["pruned"] if "Expertise" in p["reason"]]
