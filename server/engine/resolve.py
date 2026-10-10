@@ -3045,6 +3045,10 @@ def _highest_spell_slot_level(spellcasting: dict) -> int:
     return highest
 
 
+def _is_mastery_choice(tpl: dict) -> bool:
+    return tpl["source"]["kind"] == "class" and tpl["id"].endswith(":weapon-mastery")
+
+
 def _is_count_variable_choice(tpl: dict) -> bool:
     """True for the spell choices whose allowed count follows the class
     level table / casting modifier (see _spell_choice_templates), so a
@@ -3340,8 +3344,10 @@ def _weapon_mastery_template(catalog: Catalog, rc: dict, ruleset: str) -> list[d
 
 
 def _gate_mastery_choices(choices: list[dict], catalog: Catalog, proficient_weapons: set[str]) -> list[dict]:
-    """Disable Weapon Mastery options the character is not proficient with and
-    drop stale selections of them. Mutates `choices`; returns non-blocking pruned."""
+    """Disable Weapon Mastery options the character is not proficient with, drop stale
+    selections of them, and only then cut the rest to the card's count (F1: the generic
+    pass leaves mastery picks un-truncated, so a non-proficient pick never costs a valid
+    one its place). Mutates `choices`; returns non-blocking pruned, each naming its reason."""
     pruned: list[dict] = []
     for i, c in enumerate(choices):
         if c["source"]["kind"] != "class" or not c["id"].endswith(":weapon-mastery"):
@@ -3353,12 +3359,23 @@ def _gate_mastery_choices(choices: list[dict], catalog: Catalog, proficient_weap
                 lacking[o["id"]] = o["label"]
                 o = {**o, "disabled": True, "disabledReason": "not proficient"}
             options.append(o)
-        selected = [s for s in c["selected"] if s not in lacking]
+        proficient = [s for s in c["selected"] if s not in lacking]
+        selected = proficient[: c["count"]]
         dropped = [lacking[s] for s in c["selected"] if s in lacking]
         if dropped:
             pruned.append({
                 "choiceId": c["id"],
                 "reason": f"'{c['label']}': {', '.join(dropped)} is no longer a proficient weapon and was ignored.",
+            })
+        overflow = proficient[c["count"]:]
+        if overflow:
+            names = ", ".join((catalog.items.get(d) or {}).get("name", d) for d in overflow)
+            pruned.append({
+                "choiceId": c["id"],
+                "reason": (
+                    f"'{c['id']}' now allows {c['count']} selection(s); "
+                    f"{len(overflow)} stored selection(s) no longer fit and were ignored: {names}."
+                ),
             })
         choices[i] = {**c, "options": options, "selected": selected,
                       "status": "resolved" if len(selected) == c["count"] else "pending"}
@@ -4472,17 +4489,19 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             # being offered — both leave stale selections in the Draft.
             # Report them as non-blocking `pruned` entries (keep the first
             # `count` valid selections), not an over-selected problem.
-            selected = selected[: tpl["count"]]
+            if not _is_mastery_choice(tpl):  # F1: mastery truncates after the proficiency gate
+                selected = selected[: tpl["count"]]
             dropped = [s for s in raw_selected if s not in selected]
             if dropped:
                 names = ", ".join((catalog.spells.get(d) or catalog.items.get(d) or {}).get("name", d) for d in dropped)
-                pruned.append({
-                    "choiceId": tpl["id"],
-                    "reason": (
+                if _is_mastery_choice(tpl):  # F1: here only options the class filter / catalog no longer offers
+                    reason = f"'{tpl['label']}': {names} is not an available weapon for this class and was ignored."
+                else:
+                    reason = (
                         f"'{tpl['id']}' now allows {tpl['count']} selection(s); "
                         f"{len(dropped)} stored selection(s) no longer fit and were ignored: {names}."
-                    ),
-                })
+                    )
+                pruned.append({"choiceId": tpl["id"], "reason": reason})
         elif len(selected) > tpl["count"]:
             problems.append({
                 "id": f"over-selected-{tpl['id']}",

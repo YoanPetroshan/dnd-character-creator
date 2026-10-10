@@ -223,3 +223,28 @@ def test_rogue_2024_mastery_accepts_scimitar_and_whip(catalog):
     res = _res(catalog, [("rogue", 1)], choices={"rogue": {cid: ["scimitar", "whip"]}})
     assert _card(res, "rogue")["selected"] == ["scimitar", "whip"] and _card(res, "rogue")["status"] == "resolved"
     assert res["pruned"] == []
+
+
+@needs_data
+def test_proficiency_gate_runs_before_count_truncation(catalog):
+    """F1 (5): a stored pick the character is not proficient with must not use up a slot.
+    Wizard 1 / Rogue 1 (a secondary Rogue has no martial proficiency), count 2, stored
+    [scimitar, dagger, quarterstaff]: scimitar is not proficient, so the result is [dagger, quarterstaff]
+    (not [dagger]) and each prune message names its real reason."""
+    cid = "class:rogue:weapon-mastery"
+    res = _res(catalog, [("wizard", 1), ("rogue", 1)], choices={"rogue": {cid: ["scimitar", "dagger", "quarterstaff"]}})
+    card = _card(res, "rogue")
+    assert card["selected"] == ["dagger", "quarterstaff"] and card["status"] == "resolved"
+    reasons = [p["reason"] for p in res["pruned"] if p["choiceId"] == cid]
+    assert len(reasons) == 1 and "Scimitar" in reasons[0] and "no longer a proficient weapon" in reasons[0]
+    assert "now allows" not in reasons[0]
+    # a plain over-count (all proficient) still says so, and drops the LAST picks
+    over = _res(catalog, [("rogue", 1)], choices={"rogue": {cid: ["scimitar", "rapier", "dagger"]}})
+    assert _card(over, "rogue")["selected"] == ["scimitar", "rapier"]
+    reasons = [p["reason"] for p in over["pruned"] if p["choiceId"] == cid]
+    assert len(reasons) == 1 and "now allows 2" in reasons[0] and "Dagger" in reasons[0]
+    # a class-filter exclusion (Rogue, Longsword) is not blamed on the count
+    filt = _res(catalog, [("rogue", 1)], choices={"rogue": {cid: ["longsword", "rapier", "dagger"]}})
+    assert _card(filt, "rogue")["selected"] == ["rapier", "dagger"]
+    reasons = [p["reason"] for p in filt["pruned"] if p["choiceId"] == cid]
+    assert len(reasons) == 1 and "now allows" not in reasons[0] and "Longsword" in reasons[0]
