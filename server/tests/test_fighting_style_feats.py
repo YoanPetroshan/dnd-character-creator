@@ -74,7 +74,7 @@ def test_fighter_1_2024_card_is_a_feat_choice(catalog):
     assert card["count"] == 1 and card["status"] == "pending"
     assert card["source"]["kind"] == "class" and card["source"]["level"] == 1
     ids = [o["id"] for o in card["options"]]
-    assert len(ids) == 11
+    assert len(ids) == 10  # G1: XPHB lists exactly ten; Arcane Warrior (AU) needs AU enabled
     assert all(i.startswith("feat:") for i in ids)
     assert len(_card(_res(catalog, [("fighter", 1)], sources=["srd", "xphb"]), "fighter", 1)["options"]) == 10
     for want in ("archery", "blind-fighting", "defense", "dueling", "great-weapon-fighting", "interception",
@@ -82,7 +82,7 @@ def test_fighter_1_2024_card_is_a_feat_choice(catalog):
         assert f"feat:{want}-xphb" in ids
     for no in ("feat:blessed-warrior-xphb", "feat:druidic-warrior-xphb"):
         assert no not in ids
-    assert "feat:arcane-warrior-au" in ids
+    assert "feat:arcane-warrior-au" not in ids
     assert not any(o.get("disabled") for o in card["options"])
     assert _old_card(res, "fighter", 1, "fighter-fighting-style") is None
 
@@ -101,7 +101,7 @@ def test_paladin_2_offers_blessed_warrior_not_before_level_2(catalog):
     assert _card(_res(catalog, [("paladin", 1)]), "paladin", 2) is None
     res = _res(catalog, [("paladin", 2)])
     card = _card(res, "paladin", 2)
-    assert len(card["options"]) == 12
+    assert len(card["options"]) == 11  # G1: no Arcane Warrior (AU) without AU enabled
     assert _opt(card, "blessed-warrior-xphb") and not _opt(card, "druidic-warrior-xphb")
     assert _old_card(res, "paladin", 2, "paladin-fighting-style") is None
 
@@ -109,7 +109,7 @@ def test_paladin_2_offers_blessed_warrior_not_before_level_2(catalog):
 @needs_data
 def test_ranger_2_offers_druidic_warrior(catalog):
     card = _card(_res(catalog, [("ranger", 2)]), "ranger", 2)
-    assert len(card["options"]) == 12
+    assert len(card["options"]) == 11
     assert _opt(card, "druidic-warrior-xphb") and not _opt(card, "blessed-warrior-xphb")
 
 
@@ -340,7 +340,7 @@ def test_fighter_4_2024_asi_offers_fs_feats(catalog):
     ids = {o["id"] for o in opts}
     # F1: Blessed / Druidic Warrior need the level-2 Paladin / Ranger feature: not in ASI pools.
     assert not {"feat:blessed-warrior-xphb", "feat:druidic-warrior-xphb"} & ids
-    assert "feat:arcane-warrior-au" in ids  # AU "G"-style feats are in the 2024 pool (A1)
+    assert "feat:arcane-warrior-au" not in ids  # G1: AU Fighting Style feat needs AU enabled under 2024
     taken = _res(catalog, [("fighter", 4)], choices={"fighter": {"class:fighter:1:fighting-style": ["feat:archery-xphb"]}})
     state = next(o for o in _asi(taken, "fighter", 4)["options"] if o["id"] == "feat:archery-xphb")
     assert state["disabled"] and state["disabledReason"] == "already taken"
@@ -432,3 +432,30 @@ def test_arcane_warrior_and_druidic_warrior_cascade_without_crashing(catalog):
     assert any(c["id"].startswith("class:fighter:1:fighting-style:feat:arcane-warrior-au:") for c in res["choices"])
     res = _res(catalog, [("ranger", 2)], choices={"ranger": {"class:ranger:2:fighting-style": ["feat:druidic-warrior-xphb"]}})
     assert any(c["id"].startswith("class:ranger:2:fighting-style:feat:druidic-warrior-xphb:") for c in res["choices"])
+
+
+# ---- G1-5: unofficial (AU) Fighting Style feats under 2024 ---------------------
+
+@needs_data
+def test_arcane_warrior_au_needs_au_enabled_under_2024(catalog):
+    """XPHB chapter 5 lists exactly ten Fighting Style feats (plus Blessed / Druidic
+    Warrior from the class text). Arcane Warrior is Unearthed Arcana: under 2024 it is
+    offered (card and ASI pool) only when AU is an explicitly selected source."""
+    res = _res(catalog, [("fighter", 4)])  # no source filter = no explicit AU
+    ids = [o["id"] for o in _card(res, "fighter", 1)["options"]]
+    assert len(ids) == 10 and "feat:arcane-warrior-au" not in ids
+    assert "feat:arcane-warrior-au" not in {o["id"] for o in _asi(res, "fighter", 4)["options"]}
+    res = _res(catalog, [("fighter", 4)], sources=["srd", "xphb", "au"])
+    assert "feat:arcane-warrior-au" in [o["id"] for o in _card(res, "fighter", 1)["options"]]
+    assert "feat:arcane-warrior-au" in {o["id"] for o in _asi(res, "fighter", 4)["options"]}
+    # mixed keeps every edition and source when unfiltered
+    assert "feat:arcane-warrior-au" in {o["id"] for o in _asi(_res(catalog, [("fighter", 4)], "mixed"), "fighter", 4)["options"]}
+
+
+@needs_data
+def test_stored_arcane_warrior_pick_stays_when_au_is_off(catalog):
+    cid = "class:fighter:1:fighting-style"
+    res = _res(catalog, [("fighter", 1)], choices={"fighter": {cid: ["feat:arcane-warrior-au"]}})
+    opt = _opt(_card(res, "fighter", 1), "arcane-warrior-au")
+    assert opt["hiddenByFilters"] is True
+    assert _card(res, "fighter", 1)["selected"] == ["feat:arcane-warrior-au"]

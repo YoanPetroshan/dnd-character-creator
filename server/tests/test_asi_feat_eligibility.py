@@ -10,7 +10,11 @@ only from those classes' fighting-style cards. Pool sizes for a Fighter, before 
 after C3 -> after F1: 2024 slot 4 129 -> 142 -> 140, slot 19 161 -> 174 -> 172; mixed
 237 -> 250 -> 248 and 269 -> 282 -> 280; sources srd+xphb 2024/mixed 52 -> 64 -> 62
 (slot 19: 64 -> 76 -> 74); 2014 unchanged (123); a Wizard (no Fighting Style feature)
-unchanged (129 / 237)."""
+unchanged (129 / 237).
+
+G1: under 2024 Arcane Warrior (AU) is offered only when AU is an explicit source, so the
+unfiltered 2024 Fighter pools lose one: slot 4 140 -> 139, slot 19 172 -> 171 (mixed and
+the srd+xphb counts are unchanged)."""
 import pytest
 
 from catalog.loader import load
@@ -54,7 +58,7 @@ def test_fighter_4_2014_pool(catalog):
 
 def test_fighter_4_2024_pool(catalog):
     ids = _ids(_options(resolve(_draft("2024", 4), catalog)))
-    assert len(ids) == 21 + 140
+    assert len(ids) == 21 + 139  # G1: Arcane Warrior (AU) needs AU enabled under 2024
     assert {"feat:alert-xphb", "feat:great-weapon-master-xphb", "feat:archery-xphb"} <= ids
     assert not {"feat:blessed-warrior-xphb", "feat:druidic-warrior-xphb"} & ids  # F1
     for no in ("feat:great-weapon-master-phb", "feat:boon-of-combat-prowess-xphb",
@@ -76,11 +80,11 @@ def test_unknown_ruleset_behaves_like_mixed(catalog):
 def test_fighter_19_epic_boon_only_at_slot_19(catalog):
     r = resolve(_draft("2024", 19), catalog)
     at19 = _options(r, 19)
-    assert len(at19) == 21 + 172
+    assert len(at19) == 21 + 171
     boon = next(o for o in at19 if o["id"] == "feat:boon-of-combat-prowess-xphb")
     assert not boon.get("disabled")
     assert "feat:boon-of-combat-prowess-xphb" not in _ids(_options(r, 16))
-    assert len(_options(r, 16)) == 21 + 140
+    assert len(_options(r, 16)) == 21 + 139
 
 
 def test_fighter_19_2014_no_epic_boon(catalog):
@@ -127,4 +131,4 @@ def test_wizard_pools_do_not_change_with_c3(catalog):
                      "species": {"id": "human"}, "background": {"id": "acolyte"}}, catalog)
         return len(next(c for c in r["choices"] if c["id"] == f"class:{cls}:4:asi")["options"]) - 21
     assert (n("2014"), n("2024"), n("mixed")) == (123, 129, 237)
-    assert (n("2014", "paladin"), n("2024", "paladin"), n("mixed", "paladin")) == (123, 140, 248)
+    assert (n("2014", "paladin"), n("2024", "paladin"), n("mixed", "paladin")) == (123, 139, 248)

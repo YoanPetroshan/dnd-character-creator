@@ -1250,7 +1250,12 @@ def _feat_source_allowed(feat: dict, sources) -> bool:
 
 def _feat_offered(feat: dict, sources, ruleset: str = "mixed") -> bool:
     """A feat that may be offered (and honored) as an option: allowed by
-    draft.sources and visible under the draft's ruleset."""
+    draft.sources and visible under the draft's ruleset. G1: under 2024 a Fighting
+    Style feat of another book than XPHB (Arcane Warrior, AU) needs its book in an
+    explicit source list; the 2024 book lists exactly its own Fighting Style feats."""
+    if (ruleset == "2024" and (feat.get("category") or "") in _FS_FEAT_CATEGORIES and feat.get("source") != "XPHB"
+            and not any(isinstance(s, str) and s.lower() == (feat.get("source") or "").lower() for s in sources or [])):
+        return False
     return _source_allowed(feat, sources) and ruleset_allows(feat, "feat", ruleset)
 
 
