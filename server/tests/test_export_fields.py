@@ -7,6 +7,7 @@ from pypdf import PdfReader
 
 import export_fields
 from catalog.loader import load
+from catalog.reference_data import LANGUAGE_NAMES, SKILL_NAMES
 from engine.resolve import resolve
 from export import to_yaml
 from markdown_export import to_markdown
@@ -180,6 +181,18 @@ _EXPECT = {
     "psi-warrior11": {"resources": ["Psionic Energy Dice"], "apa": 3},
     "totem-bear6": {"resources": ["Rage"], "feature_choice": "Bear"},
     "cleric1-thaumaturge-2024": {"feature_choice": "Thaumaturge"},
+    # F3b: the C6b..C9b / R9 stages
+    "rogue6-2024": {"resources": ["Sneak Attack"], "masteries": True, "expertise": 4, "feature_choice": "Dwarvish",
+                    "languages": ["common", "thieves-cant"]},
+    "sorcerer17-2024": {"resources": ["Sorcery Points", "Innate Sorcery", "Sorcerous Restoration"],
+                        "feature_choice": "Careful Spell (1 SP)", "languages": ["common"]},
+    "cleric7-2024": {"resources": ["Channel Divinity", "Divine Strike"], "feature_choice": "Divine Strike"},
+    "wizard20-2024": {"resources": ["Arcane Recovery"], "spellbook": True, "spell_mastery": 2, "signature": 2,
+                      "expertise": 1, "feature_choice": "Arcana"},
+    "ranger9-2024": {"masteries": True, "expertise": 3, "feature_choice": "Elvish", "languages": ["common", "elvish"]},
+    "barbarian3-2024": {"resources": ["Rage"], "feature_choice": "Perception", "masteries": True},
+    "fighter4-2024": {"resources": ["Second Wind", "Action Surge"], "masteries": True, "feature_choice": "Archery",
+                      "equip_qty": ("Javelin", 8)},
 }
 assert set(_EXPECT) == set(KITCHEN_SINK)
 
@@ -227,6 +240,17 @@ def _expected_strings(res) -> list[tuple[str, str]]:
             out.append(("duelingDamage", f"с Дуел {a['duelingDamage']}"))
         if a.get("mastery"):
             out.append(("mastery suffix", f"майсторство {a['mastery']}"))
+    out += [("language", LANGUAGE_NAMES.get(lang, lang)) for lang in sheet["proficiencies"]["languages"]]  # F3b: C6b-2 / C8
+    for cs in sheet["spells"]:  # C6d: Wizard 18 / 20 picks
+        for key, heading in export_fields.SPELL_PICK_LINES:
+            out += [(key, s["name"]) for s in cs.get(key) or []]
+            if cs.get(key):
+                out.append((key + " heading", heading))
+    for key in ("granted", "chosen", "added"):  # C9b: package quantities
+        for e in sheet["equipment"][key]:
+            out.append(("equipment", e["name"] + (f" x{e['qty']}" if e.get("qty", 1) != 1 else "")))
+    if sheet.get("expertiseSkills"):
+        out.append(("expertise heading", "Експертиза"))
     if "devilsSight" in sheet["senses"]:
         out.append(("senses.devilsSight", f"дяволско зрение {sheet['senses']['devilsSight']} фута"))
     for f in sheet["features"]:
@@ -280,6 +304,18 @@ def test_kitchen_sink_fields_are_non_empty_as_expected(catalog, sid):
         assert sum(len(s.get("mysticArcanum") or []) for s in sheet["spells"]) == want["arcanum"]
     if want.get("spellbook"):
         assert any(s.get("spellbook") for s in sheet["spells"])
+    if "expertise" in want:  # C6b-1
+        assert len(sheet["expertiseSkills"]) == want["expertise"]
+    for lang in want.get("languages", []):  # C6b-2 / C8
+        assert lang in sheet["proficiencies"]["languages"]
+        assert lang in LANGUAGE_NAMES, lang
+    if "spell_mastery" in want:  # C6d
+        assert sum(len(s.get("spellMastery") or []) for s in sheet["spells"]) == want["spell_mastery"]
+    if "signature" in want:
+        assert sum(len(s.get("signatureSpells") or []) for s in sheet["spells"]) == want["signature"]
+    if "equip_qty" in want:  # C9b
+        name, qty = want["equip_qty"]
+        assert any(e["name"] == name and e["qty"] == qty for k in ("granted", "chosen", "added") for e in sheet["equipment"][k])
     if want.get("tome"):  # C7c
         assert sum(len(s.get("pactOfTheTome") or []) for s in sheet["spells"]) == 5
     if want.get("lessons"):
@@ -338,3 +374,25 @@ def test_kitchen_sink_markdown_and_pdf_share_the_same_blocks(catalog):
         md = to_markdown(res)
         for kind, text in export_fields.extra_blocks(res):
             assert text in md, text
+
+
+def test_kitchen_sink_2024_stage_lines_reach_every_export(catalog):
+    """F3b: spot checks on the C6b..C9b / R9 lines, printed in the book's words in all three formats."""
+    for sid, needles in (
+        ("rogue6-2024", ["Thieves' Cant", "Common", "Експертиза", "Stealth: ", "(експертиза)", "майсторство"]),
+        ("sorcerer17-2024", ["Sorcery Points", "Innate Sorcery", "Sorcerous Restoration", "Careful Spell (1 SP)"]),
+        ("cleric7-2024", ["Divine Strike", "Blessed Strikes"]),
+        ("wizard20-2024", ["Майсторство със заклинания", "Burning Hands (ниво 1)", "Scorching Ray (ниво 2)", "Запазени заклинания", "Fireball (ниво 3)", "Scholar"]),
+        ("ranger9-2024", ["Elvish", "Dwarvish", "Deft Explorer"]),
+        ("barbarian3-2024", ["Primal Knowledge"]),
+        ("fighter4-2024", ["Javelin x8", "Fighting Style"]),
+        ("warlock7-2024", ["Pact weapon", "Lessons of the First Ones", "Книга на сенките"]),
+    ):
+        res = _sink(sid, catalog)
+        md, pdf = _flat(to_markdown(res)), _pdf_text(res)
+        for needle in needles:
+            assert needle in md, (sid, needle, "Markdown")
+            assert needle in pdf, (sid, needle, "PDF")
+        doc = yaml.safe_load(to_yaml(res))
+        assert doc["proficiencies"]["languages"] == res["sheet"]["proficiencies"]["languages"], sid
+        assert doc["equipment"] == res["sheet"]["equipment"], sid

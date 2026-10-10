@@ -10,9 +10,15 @@ _WL_INV_2024 = "class:warlock:1:invocations:xphb-warlock-1-eldritch-invocations"
 _P = "eldritch-invocation-"
 
 
-def _sub(index, level, ruleset="mixed", sub=None, overrides=None, equip=(), marks=()):
-    return {"classes": [(index, level, sub)], "ruleset": ruleset, "overrides": overrides or {},
+def _sub(index, level, ruleset="mixed", sub=None, overrides=None, equip=(), marks=(), origin=None):
+    spec = {"classes": [(index, level, sub)], "ruleset": ruleset, "overrides": overrides or {},
             "equip": list(equip), "marks": marks}
+    if origin:  # F3b: (species id, background id) instead of the SRD Human / Acolyte
+        spec["origin"] = origin
+    return spec
+
+
+_XPHB_ORIGIN = ("human-xphb", "soldier-xphb")
 
 
 # id -> spec. `marks` name the skip markers the draft needs (see needs()).
@@ -47,6 +53,21 @@ KITCHEN_SINK: dict[str, dict] = {
             "totem-warrior-phb-6-aspect-of-the-beast--bear"]}),
     "cleric1-thaumaturge-2024": _sub("cleric", 1, "2024", marks=("classes", "official"), overrides={
         "class:cleric:1:divine-order": ["xphb-cleric-1-thaumaturge"]}),
+    # F3b: the C6b..C9b / R9 stages, 2024 origin (Human, Soldier) so the origin language card is present
+    "rogue6-2024": _sub("rogue", 6, "2024", marks=("classes", "official"), origin=_XPHB_ORIGIN, overrides={
+        "class:rogue:1:expertise-choice:xphb-rogue-1-expertise": ["skill-stealth", "skill-sleight-of-hand"],
+        "class:rogue:6:expertise-choice:xphb-rogue-6-expertise": ["skill-perception", "skill-acrobatics"],
+        "class:rogue:1:prof-choice-0": ["skill-stealth", "skill-sleight-of-hand", "skill-perception", "skill-acrobatics"]}),
+    "sorcerer17-2024": _sub("sorcerer", 17, "2024", marks=("classes", "official", "spells"), origin=_XPHB_ORIGIN),
+    "cleric7-2024": _sub("cleric", 7, "2024", marks=("classes", "official", "spells"), origin=_XPHB_ORIGIN, overrides={
+        "class:cleric:7:feature:xphb-cleric-7-blessed-strikes": ["opt-divine-strike-xphb"]}),
+    "wizard20-2024": _sub("wizard", 20, "2024", marks=("classes", "official", "spells"), origin=_XPHB_ORIGIN, overrides={
+        "class:wizard:spellbook": ["fireball-xphb", "counterspell-xphb", "fly-xphb", "haste-xphb", "scorching-ray-xphb"],
+        "class:wizard:spells-known": ["burning-hands-xphb", "scorching-ray-xphb", "fireball-xphb"],
+        "class:wizard:20:signature-spells": ["fireball-xphb", "counterspell-xphb"]}),
+    "ranger9-2024": _sub("ranger", 9, "2024", marks=("classes", "official", "spells"), origin=_XPHB_ORIGIN),
+    "barbarian3-2024": _sub("barbarian", 3, "2024", marks=("classes", "official"), origin=_XPHB_ORIGIN),
+    "fighter4-2024": _sub("fighter", 4, "2024", marks=("classes", "official"), origin=_XPHB_ORIGIN),
 }
 
 
@@ -59,7 +80,8 @@ def base_draft(spec: dict) -> dict:
         classes.append(c)
     return {"name": "Кухненска мивка", "ruleset": spec["ruleset"], "sources": [],
             "abilities": {"method": "manual", "base": dict(_BASE)},
-            "species": {"id": "human", "choices": {}}, "background": {"id": "acolyte", "choices": {}},
+            "species": {"id": spec.get("origin", ("human", "acolyte"))[0], "choices": {}},
+            "background": {"id": spec.get("origin", ("human", "acolyte"))[1], "choices": {}},
             "equipment": {"choices": {}, "added": copy.deepcopy(spec["equip"]), "skipped": False},
             "classes": classes}
 
@@ -85,7 +107,9 @@ def fill(draft: dict, catalog, overrides: dict, resolve) -> dict:
         # spell cards first, then re-resolve: invocation prerequisites (Agonizing Blast needs
         # eldritch blast) read the stored spell picks
         spell_cards = [c for c in todo if ":spells-" in c["id"] and c["options"]]
-        for c in spell_cards or todo:
+        # F3b: then proficiency cards, so an Expertise card (options gated to proficient skills) sees them
+        prof_cards = [c for c in todo if ("prof-choice" in c["id"] or "proficiency-choice" in c["id"]) and c["options"]]
+        for c in spell_cards or prof_cards or todo:
             ids = [o["id"] for o in c["options"] if not o.get("disabled")]
             picked = [i for i in overrides.get(c["id"], []) if i in ids]
             picked += [i for i in ids if i not in picked]
