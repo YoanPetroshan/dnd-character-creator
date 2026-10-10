@@ -68,7 +68,10 @@ export function EquipmentPage() {
           <h2>Избрана екипировка</h2>
           <ul>
             {sheetEquipment.chosen.map((c, i) => (
-              <li key={`${c.itemId}-${i}`}>{c.name}</li>
+              <li key={`${c.itemId}-${i}`}>
+                {c.name}
+                {c.qty !== 1 ? ` ×${c.qty}` : ""}
+              </li>
             ))}
           </ul>
         </div>
