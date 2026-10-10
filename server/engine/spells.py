@@ -161,6 +161,20 @@ def warlock_pact_magic_slots(level_row: dict | None) -> dict[str, int]:
     return _nonzero_spell_slots(level_row)
 
 
+def _slot_granting(catalog: Catalog, parts: list[tuple], ruleset: str) -> list[tuple]:
+    return [
+        (cls_id, level, sub) for cls_id, level, sub in parts
+        if cls_id not in PACT_MAGIC_CLASSES and single_class_spell_slots(catalog, cls_id, level, sub, ruleset)
+    ]
+
+
+def slot_granting_classes(catalog: Catalog, class_entries: list[tuple], ruleset: str = "mixed") -> list[str]:
+    """G1 (S1 exactness): ids of the classes that grant shared-pool spell slots at
+    their current level (Pact Magic classes never join the pool). More than one means
+    the shared pool is the combined multiclass table."""
+    return [c for c, _l, _s in _slot_granting(catalog, [_entry_parts(e) for e in class_entries], ruleset)]
+
+
 def spell_slots_for(catalog: Catalog, class_entries: list[tuple], ruleset: str = "mixed") -> tuple[dict[str, int], dict[str, int]]:
     """(shared slot pool, Warlock Pact Magic pool) for [(class_id, class_level)]
     or [(class_id, class_level, subclass_id)].
@@ -175,10 +189,7 @@ def spell_slots_for(catalog: Catalog, class_entries: list[tuple], ruleset: str =
     Pact Magic classes never join the shared pool; the Warlock is looked up at
     its own class level."""
     parts = [_entry_parts(e) for e in class_entries]
-    slot_granting = [
-        (cls_id, level, sub) for cls_id, level, sub in parts
-        if cls_id not in PACT_MAGIC_CLASSES and single_class_spell_slots(catalog, cls_id, level, sub, ruleset)
-    ]
+    slot_granting = _slot_granting(catalog, parts, ruleset)
     if len(slot_granting) == 1:
         shared = single_class_spell_slots(catalog, *slot_granting[0], ruleset)
     else:

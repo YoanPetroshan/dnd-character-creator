@@ -10,13 +10,13 @@ function sortedSlots(slots: Record<string, number> | undefined): [number, number
 /** Plain-text spell slot lines from derived.spellSlots / derived.warlockSpellSlots.
  *  `classId` limits the pact line to a Warlock tab; omit it (export page) to show both. */
 export function SpellSlotsSummary({ resolution, classId }: { resolution: Resolution; classId?: string }) {
-  const { spellSlots, warlockSpellSlots } = resolution.derived;
+  const { spellSlots, warlockSpellSlots, slotGrantingClasses = [] } = resolution.derived;
   const shared = sortedSlots(spellSlots);
   const pact = sortedSlots(warlockSpellSlots);
-  // Only the shared pool is "common" when more than one non-Warlock class has a spells entry.
-  const sharers = resolution.sheet.spells.filter((s) => s.classId !== "warlock").length;
+  // The shared pool is "common" exactly when more than one class grants slots (server-computed).
+  const sharers = slotGrantingClasses.length;
   const showPact = pact.length > 0 && (classId === undefined || classId === "warlock");
-  const showShared = shared.length > 0 && (classId === undefined || classId === "warlock" || sharers > 0);
+  const showShared = shared.length > 0 && (classId === undefined || classId === "warlock" || (classId !== undefined && slotGrantingClasses.includes(classId)));
   return (
     <>
       {showShared && (

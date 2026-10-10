@@ -291,6 +291,7 @@ export interface Derived {
   passiveInvestigation: number;
   spellSlots: Record<string, number>;
   warlockSpellSlots: Record<string, number>;
+  slotGrantingClasses?: string[];
   /** Equipped weapons, one entry per distinct weapon. Optional: older stored resolutions lack it. */
   attacks?: Attack[];
   /** Class resources in class order (R1). Optional: older stored resolutions lack it. */

@@ -27,7 +27,7 @@ DERIVED_FIELDS: list[tuple[str, object]] = [
     ("abilityModifiers", {}), ("proficiencyBonus", None), ("hitPointMax", None), ("hitDice", None),
     ("armorClass", None), ("speed", None), ("speeds", {}), ("savingThrows", {}), ("skills", {}),
     ("initiative", None), ("passivePerception", None), ("passiveInsight", None), ("passiveInvestigation", None),
-    ("spellSlots", {}), ("warlockSpellSlots", {}),
+    ("spellSlots", {}), ("warlockSpellSlots", {}), ("slotGrantingClasses", []),
     ("attacks", []), ("attacksPerAction", 1), ("classResources", []), ("carryingCapacity", None), ("stealthDisadvantage", False),
 ]
 SHEET_TAIL_FIELDS: list[tuple[str, object]] = [

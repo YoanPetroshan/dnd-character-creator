@@ -4719,9 +4719,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
 
     # Spell-slot pools: see spells.spell_slots_for for the single-class vs
     # combined multiclass rule and the separate Warlock Pact Magic pool.
-    spell_slots, warlock_slots = spells_mod.spell_slots_for(
-        catalog, [(rc["cls_id"], rc["level"], rc["subclass_id"]) for rc in resolved_classes if rc["cls"]], ruleset,
-    )
+    slot_entries = [(rc["cls_id"], rc["level"], rc["subclass_id"]) for rc in resolved_classes if rc["cls"]]
+    spell_slots, warlock_slots = spells_mod.spell_slots_for(catalog, slot_entries, ruleset)
+    slot_granting_class_ids = spells_mod.slot_granting_classes(catalog, slot_entries, ruleset)
 
     granted_equipment = []
     if cls:
@@ -5056,6 +5056,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "passiveInvestigation": derived_mod.passive_skill(skills, "skill-investigation"),
         "spellSlots": spell_slots,
         "warlockSpellSlots": warlock_slots,
+        "slotGrantingClasses": slot_granting_class_ids,
         "attacks": attacks,
         "attacksPerAction": class_resources_mod.attacks_per_action(resolved_classes),
         "classResources": class_resources,
