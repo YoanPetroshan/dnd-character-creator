@@ -4758,7 +4758,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             # being offered — both leave stale selections in the Draft.
             # Report them as non-blocking `pruned` entries (keep the first
             # `count` valid selections), not an over-selected problem.
-            if not _is_mastery_choice(tpl):  # F1: mastery truncates after the proficiency gate
+            if not _is_mastery_choice(tpl) and not class_choices_2024.is_invocation_card_2024(tpl):
+                # F1: mastery truncates after the proficiency gate; F3a-9: the 2024 invocation card after its prerequisite gate
                 selected = selected[: tpl["count"]]
             dropped = [s for s in raw_selected if s not in selected]
             if dropped:

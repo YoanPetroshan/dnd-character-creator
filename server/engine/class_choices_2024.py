@@ -725,11 +725,18 @@ def gate_invocations(catalog, choice: dict, level: int, cantrips: list[str],
     def known(keep: set[str]) -> list[str]:
         return list(cantrips) + (list(tome_cantrips) if TOME_ID in keep else [])
 
+    overflow: list[str] = []
     for _ in range(12):
         keep = set(selected)
         bad = [s for s in selected if _invocation_unmet_2024(catalog, s, level, keep, known(keep))]
         if not bad:
-            break
+            if len(selected) <= choice["count"]:
+                break
+            # F3a-9: the count cut comes AFTER the prerequisite check, so valid picks behind invalid ones survive;
+            # cutting can remove an enabler, hence another round
+            overflow += selected[choice["count"]:]
+            selected = selected[:choice["count"]]
+            continue
         selected = [s for s in selected if s not in bad]
         dropped += bad
     keep = set(selected)
@@ -741,6 +748,10 @@ def gate_invocations(catalog, choice: dict, level: int, cantrips: list[str],
     if dropped:
         pruned.append({"choiceId": choice["id"], "reason":
                        f"'{choice['label']}': {', '.join(names.get(d, d) for d in dropped)} no longer meets its prerequisites and was ignored."})
+    if overflow:
+        pruned.append({"choiceId": choice["id"], "reason":
+                       f"'{choice['id']}' now allows {choice['count']} selection(s); {len(overflow)} stored selection(s) "
+                       f"no longer fit and were ignored: {', '.join(names.get(d, d) for d in overflow)}."})
     return {**choice, "options": options, "selected": selected,
             "status": "resolved" if len(selected) == choice["count"] else "pending"}, pruned
 
@@ -812,14 +823,14 @@ def raw_invocation_instances(catalog, rc: dict, ruleset: str) -> list[str]:
     if not tpls:
         return []
     tpl = tpls[0]
-    picks = effective_picks(tpl["options"], (rc.get("class_choices") or {}).get(INVOCATION_CID), tpl["count"])
+    picks = effective_picks(tpl["options"], (rc.get("class_choices") or {}).get(INVOCATION_CID), len(tpl["options"]))
     kept: list[str] = []
     for _ in range(len(picks) + 1):
         again = [s for s in picks if s not in kept and _structure_ok(catalog, s, rc["level"], set(kept))]
         if not again:
             break
         kept += again
-    return [s for s in picks if s in kept]
+    return [s for s in picks if s in kept][:tpl["count"]]  # F3a-9: structure first, then the count cut
 
 
 def _structure_ok(catalog, option_id: str, level: int, kept: set[str]) -> bool:

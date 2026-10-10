@@ -308,3 +308,39 @@ def test_f6_ranger_package_a_arrows_are_one_pack_and_the_carried_weight_is_35(ca
 
 def test_f6_arrow_and_bolt_catalog_items_are_packs_of_twenty(catalog):
     assert catalog.items["arrow"]["quantity"] == 20 and catalog.items["crossbow-bolt"]["quantity"] == 20
+
+
+# --- Finding 9: level-down cuts the 2024 invocation list AFTER the prerequisite check ------------------------------
+
+from c7c_helpers import BLADE, THIRST  # noqa: E402
+
+
+@needs_data
+def test_f9_level_down_keeps_the_valid_pick_that_sat_behind_invalid_ones(catalog):
+    # Warlock 2 knows 3 invocations. Thirsting Blade (Warlock 5 + Blade), Ascendant Step (5) and Whispers of the Grave
+    # (7) are stored before Pact of the Tome: all invalid at level 2, so the Tome must survive (it used to be cut).
+    stored = [THIRST, "opt-ascendant-step-xphb", "opt-whispers-of-the-grave-xphb", TOME, "opt-devils-sight-xphb"]
+    res = _res(catalog, 2, stored, [EB, MI])
+    card = _card(res, INV)
+    assert card["selected"] == [TOME, "opt-devils-sight-xphb"] and card["count"] == 3 and card["status"] == "pending"
+    assert _card(res, tcid(TOME, "cantrips")) is not None  # the Tome's own cards exist
+    assert "prerequisites" in _pruned(res, INV)
+
+
+@needs_data
+def test_f9_overflow_after_the_gate_is_still_cut_and_reported(catalog):
+    stored = [TOME, BLADE, "opt-devils-sight-xphb", "opt-armor-of-shadows-xphb", "opt-eldritch-mind-xphb"]
+    res = _res(catalog, 2, stored, [EB, MI])
+    card = _card(res, INV)
+    assert card["selected"] == stored[:3] and card["status"] == "resolved"
+    assert "now allows 3 selection(s)" in _pruned(res, INV)
+    assert not [p for p in res["problems"] if "over-selected" in p["id"]]
+
+
+@needs_data
+def test_f9_cutting_a_pact_drops_the_invocation_that_needs_it(catalog):
+    # Level 5 knows 5; Thirsting Blade needs the Blade. [A, B, C, D, BLADE-after-the-cut ...] must not keep Thirsting.
+    stored = [TOME, "opt-devils-sight-xphb", "opt-armor-of-shadows-xphb", "opt-eldritch-mind-xphb", "opt-fiendish-vigor-xphb", BLADE, THIRST]
+    res = _res(catalog, 5, stored, [EB, MI])
+    card = _card(res, INV)
+    assert BLADE not in card["selected"] and THIRST not in card["selected"] and len(card["selected"]) == 5
