@@ -5,11 +5,14 @@ being picked is `repeatable`.
 
 RAW rule: you can't take the same feat more than once unless it says so. The
 5etools data flags the 2024 versions of Elemental Adept, Magic Initiate and
-Skilled `repeatable`; their 2014 versions are NOT flagged. Matrix:
+Skilled `repeatable`; their 2014 versions are NOT flagged, except that G1 flags
+PHB Elemental Adept by override (its PHB text says "You can select this feat
+multiple times"). Matrix:
   - taken XPHB Alert (background), pick PHB Alert  -> blocked, cross-edition reason
   - taken PHB Alert (ASI), pick XPHB Alert later   -> blocked (first pick wins)
   - taken XPHB Magic Initiate, pick PHB Magic Initiate -> blocked (picked is not repeatable)
   - taken PHB Magic Initiate, pick XPHB Magic Initiate -> allowed (picked is repeatable)
+  - Elemental Adept in any edition order -> allowed (picked feat is repeatable)
   - 2014 / 2024 rulesets: each pool has one edition, A1 counts unchanged.
 """
 import pytest
@@ -100,6 +103,37 @@ def test_repeatable_magic_initiate_matrix(catalog):
     # XPHB again after XPHB: repeatable, still allowed
     r = resolve(_draft(background="acolyte", picks={"class:fighter:4:asi": "feat:magic-initiate-xphb"}), catalog)
     assert not _opt(r, "class:fighter:8:asi", "feat:magic-initiate-xphb").get("disabled")
+
+
+def test_elemental_adept_phb_is_repeatable_but_magic_initiate_and_skilled_are_not(catalog):
+    """G1: the PHB 2014 Elemental Adept text says "You can select this feat
+    multiple times. Each time you do so, you must choose a different damage
+    type." (the 5etools PHB record lacks the flag; reference_data overrides it).
+    The PHB Magic Initiate and Skilled texts have no such sentence."""
+    assert catalog.feats["elemental-adept-phb"]["repeatable"] is True
+    assert catalog.feats["elemental-adept-xphb"]["repeatable"] is True
+    for i in ("magic-initiate-phb", "skilled-phb"):
+        assert not catalog.feats[i]["repeatable"]
+        assert "multiple times" not in str(catalog.feats[i]["entries"]).lower()
+    assert "multiple times" in str(catalog.feats["elemental-adept-phb"]["entries"])
+
+
+@pytest.mark.parametrize("first,second", [
+    ("elemental-adept-phb", "elemental-adept-phb"),    # PHB twice (different damage type each time)
+    ("elemental-adept-phb", "elemental-adept-xphb"),
+    ("elemental-adept-xphb", "elemental-adept-phb"),   # picked PHB one is repeatable now
+])
+def test_elemental_adept_can_be_taken_again_in_any_edition_order(catalog, first, second):
+    r = resolve(_draft(background="acolyte", picks={"class:fighter:4:asi": f"feat:{first}"}), catalog)
+    assert not _opt(r, "class:fighter:8:asi", f"feat:{second}").get("disabled")
+
+
+@pytest.mark.parametrize("first,second", [
+    ("skilled-xphb", "skilled-phb"), ("skilled-phb", "skilled-phb"), ("magic-initiate-phb", "magic-initiate-phb"),
+])
+def test_non_repeatable_phb_feats_stay_blocked(catalog, first, second):
+    r = resolve(_draft(background="acolyte", picks={"class:fighter:4:asi": f"feat:{first}"}), catalog)
+    assert _opt(r, "class:fighter:8:asi", f"feat:{second}")["disabled"] is True
 
 
 @pytest.mark.parametrize("ruleset", ["2014", "2024"])

@@ -401,6 +401,16 @@ def ruleset_for_edition(raw: dict) -> str:
     return "2024" if raw.get("edition") == "one" else "2014"
 
 
+# G1: feats that may be taken more than once although the imported 5etools record
+# carries no `repeatable` flag. PHB 2014 Elemental Adept: "You can select this
+# feat multiple times. Each time you do so, you must choose a different damage
+# type." (the XPHB version has the flag in the data). The engine does not model
+# the damage-type choice, so a second take is simply allowed and the "different
+# type" rule is player-enforced. PHB Magic Initiate and Skilled are NOT here:
+# their PHB text has no repeat sentence.
+REPEATABLE_FEAT_OVERRIDES = {"elemental-adept-phb"}
+
+
 def ruleset_for_feat(raw: dict) -> str:
     return "2024" if raw.get("source") in RULESET_2024_SOURCES else "2014"
 

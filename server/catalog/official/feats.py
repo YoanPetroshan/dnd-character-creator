@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 import json
 import re
-from catalog.reference_data import ruleset_for_feat
+from catalog.reference_data import REPEATABLE_FEAT_OVERRIDES, ruleset_for_feat
 from .common import _ABILITY_KEYS, _ability_bonuses_from_5etools, _condition_immunities_from_5etools, _damage_modifiers_from_5etools, _senses_from_5etools, slug
 from .innate_spells import _SPELL_SCHOOL_CODES, _clean_innate_spell_name, _innate_spell_ability
 from .languages import _language_grants_from_5etools
@@ -71,7 +71,7 @@ def _feat_from_5etools(raw: dict) -> dict | None:
         "source": raw.get("source", ""),
         "ruleset": ruleset_for_feat(raw),
         "category": raw.get("category", ""),
-        "repeatable": bool(raw.get("repeatable")),
+        "repeatable": bool(raw.get("repeatable")) or index in REPEATABLE_FEAT_OVERRIDES,
         "entries": raw.get("entries", []),
         "prerequisite": raw.get("prerequisite", []),  # Task 6 (prerequisite checking)
         "ability_bonuses": _ability_bonuses_from_5etools(raw.get("ability", [])),
