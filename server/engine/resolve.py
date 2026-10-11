@@ -5396,13 +5396,15 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                    for a in attacks]
     weapon_masteries = _weapon_masteries(choices, catalog)
     attacks = attacks_mod.annotate_mastery(attacks, weapon_masteries)  # C2
-    armor_problems, stealth_disadvantage = equipment_mod.armor_warnings(equipped_items, final_scores, weapon_proficiencies)
+    armor_problems, stealth_disadvantage = equipment_mod.armor_warnings(
+        equipped_items, final_scores, weapon_proficiencies, feat_effects_mod.medium_armor_stealth_ok(feat_inst))  # FE4
     warnings += armor_problems
     carrying = derived_mod.carrying_summary(
         final_scores.get("STR", 10), species_size or (race or {}).get("size") or "Medium",
         granted_equipment + chosen_equipment + added_resolved, catalog.items,
     )
     feat_numbers = feat_effects_mod.numbers_for(modifiers, final_scores, prof_bonus, sum(class_levels.values()))  # FE3
+    feat_passive = feat_effects_mod.passive_bonus(feat_inst)  # FE4 Observant (PHB): passive scores only
     derived = {
         "abilityModifiers": modifiers,
         "proficiencyBonus": prof_bonus,
@@ -5412,17 +5414,19 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         + feat_effects_mod.hp_bonus(feat_inst, sum(class_levels.values())),
         "hitDice": " + ".join(f"{rc['level']}d{rc['cls']['hit_die']}" for rc in resolved_classes if rc["cls"] and rc["cls"].get("hit_die")) or None,
         "armorClass": equipment_mod.armor_class_from_gear(
-            equipped_items, modifiers["DEX"], features_mod.ac_formulas(effects), modifiers,
-            features_mod.armored_ac_bonus(effects),
-        ),
+            equipped_items, modifiers["DEX"], features_mod.ac_formulas(effects) + feat_effects_mod.ac_formulas(feat_inst),
+            modifiers, features_mod.armored_ac_bonus(effects),
+            medium_dex_cap=feat_effects_mod.medium_armor_dex_cap(feat_inst, final_scores.get("DEX", 10)),  # FE4
+        ) + feat_effects_mod.ac_bonus(feat_inst, gear.hands, equipped_items),  # FE4 (needs equipment.wielded)
         "speed": base_speed,  # walking speed; `speeds` carries every mode
         "speeds": speeds,
         "initiative": derived_mod.initiative(modifiers, prof_bonus, jack, remarkable, feat_init_bonus, feat_init_pb),
         "savingThrows": saves,
         "skills": skills,
-        "passivePerception": derived_mod.passive_perception(skills),
+        "passivePerception": derived_mod.passive_perception(skills) + feat_passive.get("skill-perception", 0),
         "passiveInsight": derived_mod.passive_skill(skills, "skill-insight"),
-        "passiveInvestigation": derived_mod.passive_skill(skills, "skill-investigation"),
+        "passiveInvestigation": derived_mod.passive_skill(skills, "skill-investigation")
+        + feat_passive.get("skill-investigation", 0),
         "spellSlots": spell_slots,
         "warlockSpellSlots": warlock_slots,
         "slotGrantingClasses": slot_granting_class_ids,
@@ -5476,6 +5480,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     for sense_kind, sense_range in features_mod.invocation_senses(invocation_effects).items():  # R8
         if sense_range > senses.get(sense_kind, 0):
             senses[sense_kind] = sense_range
+    senses = feat_effects_mod.add_senses(senses, feat_inst)  # FE4 Keenness of the Stone Giant (adds to the final range)
     innate_spells = (_species_innate_spells(race, subrace, catalog, species_variant)
                      + _species_trait_spell_choices(race, subrace, catalog, choices)
                      + _feat_innate_spells(resolved_feats, catalog, choices)

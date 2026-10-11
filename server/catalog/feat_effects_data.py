@@ -670,6 +670,46 @@ FEAT_EFFECT_QUOTES.update({
     "orcish-fury-xge": "you can't use it again until you finish a short or long rest",
 })
 
+# FE4: Armor Class, passive scores, Stealth and senses. Governing sentences in FEAT_EFFECT_QUOTES (pinned by
+# tests/test_feat_defense.py). Conditional AC (F-D3) applies only when ``equipment.wielded`` proves the
+# condition; the static note says so, so a build without the wielded hands still sees the rule.
+FEAT_EFFECTS.update({
+    "dragon-hide-xge": {
+        "ac_formula": {"base": 13, "abilities": ["DEX"], "allows_shield": True},
+        "notes": ["Claws (no action to extend or retract): unarmed strikes deal 1d4 + Strength modifier slashing damage."]},
+    "medium-armor-master-phb": {
+        "medium_armor_dex_cap": {"cap": 3, "min_dex_score": 16}, "medium_armor_stealth_ok": True},
+    "medium-armor-master-xphb": {
+        "medium_armor_dex_cap": {"cap": 3, "min_dex_score": 16}},
+    "dual-wielder-phb": {
+        "ac_bonus_if": {"bonus": 1, "wielded": "two-melee"},
+        "notes": ["+1 AC while wielding a separate melee weapon in each hand (included in Armor Class when the "
+                  "wielded hands are set on the Equipment page)."]},
+    "revenant-blade-erlw": {
+        "ac_bonus_if": {"bonus": 1, "wielded": {"item": "double-bladed-scimitar", "two_hands": True}},
+        "notes": ["+1 AC while holding a double-bladed scimitar with two hands (included in Armor Class when the "
+                  "wielded hands are set on the Equipment page).",
+                  "A double-bladed scimitar has the Finesse property when you wield it (not applied to its attack row)."]},
+    "observant-phb": {
+        "passive_bonus": {"skill-perception": 5, "skill-investigation": 5},
+        "notes": ["If you can see a creature's mouth while it speaks a language you understand, you can read its lips."]},
+    "keenness-of-the-stone-giant-bgg": {"senses_additive": {"darkvision": 60}},
+})
+
+FEAT_EFFECT_QUOTES.update({
+    "dragon-hide-xge": "While you aren't wearing armor, you can calculate your AC as 13 + your Dexterity modifier. "
+                       "You can use a shield and still gain this benefit.",
+    "medium-armor-master-phb": ("Wearing medium armor doesn't impose disadvantage on your Dexterity (Stealth) checks.",
+                                "you can add 3, rather than 2, to your AC if you have a Dexterity of 16 or higher"),
+    "medium-armor-master-xphb": "you can add 3, rather than 2 to your AC if you have a Dexterity score of 16 or higher",
+    "dual-wielder-phb": "You gain a +1 bonus to AC while you are wielding a separate melee weapon in each hand.",
+    "revenant-blade-erlw": ("While you are holding a double-bladed scimitar with two hands, you gain a +1 bonus to Armor Class.",
+                            "A double-bladed scimitar has the finesse property when you wield it."),
+    "observant-phb": "You have a +5 bonus to your passive Wisdom (Perception) and passive Intelligence (Investigation) scores.",
+    "keenness-of-the-stone-giant-bgg": "You gain darkvision with a range of 60 feet. If you already have darkvision from "
+                                       "another source, its range increases by 60 feet.",
+})
+
 # Feats not classified yet. Each slice removes the ones it covers (by adding them to FEAT_EFFECTS);
 # FE10 empties it.
 FEAT_PENDING: frozenset[str] = frozenset(FEAT_KINDS) - frozenset(FEAT_EFFECTS)

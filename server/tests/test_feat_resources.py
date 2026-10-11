@@ -48,8 +48,10 @@ FE3_DATA_ONLY = ("heavily-armored-phb", "heavily-armored-xphb", "lightly-armored
                  "resilient-phb", "resilient-xphb", "skilled-phb", "skilled-xphb", "magic-initiate-phb",
                  "magic-initiate-xphb", "fey-touched-xphb", "shadow-touched-xphb")
 FE3_WITH_TEXT = tuple(i for i, e in fed.FEAT_EFFECTS.items() if e.get("notes") or e.get("resources"))
+FE4_ENTRIES = ("dragon-hide-xge", "medium-armor-master-phb", "medium-armor-master-xphb", "dual-wielder-phb",
+               "revenant-blade-erlw", "observant-phb", "keenness-of-the-stone-giant-bgg")  # later slice (tests/test_feat_defense.py)
 FE3_WITH_TEXT = tuple(i for i in FE3_WITH_TEXT if i in fed.FEAT_EFFECT_QUOTES and i not in
-                      ("alert-phb",))
+                      ("alert-phb",) + FE4_ENTRIES)
 
 
 @pytest.fixture(scope="module")
