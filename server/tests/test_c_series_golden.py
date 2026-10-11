@@ -58,7 +58,9 @@ MULTICLASS = {
 
 # Additive keys a later slice may legitimately add under mixed/2014: dotted paths, "[]" = every
 # list element. Empty on purpose; adding to it needs the user's agreement and a note here.
-STRIP: tuple[str, ...] = ()
+# "derived.featResources": FE3 additive key (feat resources, e.g. Lucky), always [] for the feat-less golden
+# drafts; user-approved feat-effects series (decision F-D1). Both sides are stripped, nothing else changes.
+STRIP: tuple[str, ...] = ("derived.featResources",)
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
                                ("spells", official.has_official_spells)) if not ok()]

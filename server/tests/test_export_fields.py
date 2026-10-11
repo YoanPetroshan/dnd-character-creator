@@ -225,6 +225,8 @@ def _expected_strings(res) -> list[tuple[str, str]]:
     out = [("classResource", r["name"]) for r in derived["classResources"]]
     for r in derived["classResources"]:
         out += [("resourceDetail", frag) for frag in export_fields.resource_detail_parts(r.get("details"))]
+    out += [("featResource", r["name"]) for r in derived.get("featResources", [])]  # FE3
+    out += [("featNote", note) for f in sheet["feats"] for note in f.get("notes", [])]  # FE3
     out += [("weaponMastery", m["name"]) for m in sheet["weaponMasteries"]]
     for cs in sheet["spells"]:
         out += [("mysticArcanum", m["name"]) for m in cs.get("mysticArcanum") or []]

@@ -263,8 +263,10 @@ def build_features(catalog, resolved_classes, refs_by_class, race, race_id, subr
     return out
 
 
-def feats_summary(feats: list[dict], choices: list[dict]) -> list[dict]:
-    """sheet.feats: [{id, name, origin: "background"|"species"|"asi"|"fighting-style"|"invocation", level, choice?}]."""
+def feats_summary(feats: list[dict], choices: list[dict], notes_by_instance: dict | None = None) -> list[dict]:
+    """sheet.feats: [{id, name, origin: "background"|"species"|"asi"|"fighting-style"|"invocation", level, choice?, notes?}].
+    ``notes_by_instance`` (FE3, ``feat_effects.notes``) maps an instance's cid prefix to its note lines;
+    ``notes`` appears only when there are any."""
     out = []
     for feat in feats:
         prefix = feat.get("_asi_origin") or feat.get("_species_origin") or f"feat:{feat['index']}"
@@ -277,5 +279,7 @@ def feats_summary(feats: list[dict], choices: list[dict]) -> list[dict]:
         }
         if labels:
             entry["choice"] = labels
+        if (notes_by_instance or {}).get(prefix):
+            entry["notes"] = notes_by_instance[prefix]
         out.append(entry)
     return out

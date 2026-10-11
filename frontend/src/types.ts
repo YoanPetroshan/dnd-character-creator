@@ -200,6 +200,8 @@ export interface SheetFeat {
   origin: "background" | "species" | "asi" | "fighting-style" | "invocation";
   level: number | null;
   choice?: string[];
+  /** FE3: effects of the feat that are not folded into a number, with the character's numbers filled in. */
+  notes?: string[];
 }
 
 export interface SlotItem {
@@ -286,10 +288,8 @@ export interface CarryingCapacity {
 }
 
 /** A class feature with a number to track (R1): rages, sneak attack dice, ... */
-export interface ClassResource {
+export interface ResourceCore {
   id: string;
-  classId: string;
-  source: { kind: "class" | "subclass"; id: string | null; label: string };
   name: string;
   uses: number | null;
   unlimited?: boolean;
@@ -300,6 +300,17 @@ export interface ClassResource {
   bonus?: number;
   dc?: number;
   details?: Record<string, unknown> & { damageBonus?: number; heal?: string; maxCr?: string; note?: string };
+}
+
+export interface ClassResource extends ResourceCore {
+  classId: string;
+  source: { kind: "class" | "subclass"; id: string | null; label: string };
+}
+
+/** FE3: a resource a feat grants (Lucky points, Guarded Mind, ...): the class resource shape with `featId`. */
+export interface FeatResource extends ResourceCore {
+  featId: string;
+  source: { kind: "feat"; id: string; label: string };
 }
 
 export interface Derived {
@@ -324,6 +335,8 @@ export interface Derived {
   attacks?: Attack[];
   /** Class resources in class order (R1). Optional: older stored resolutions lack it. */
   classResources?: ClassResource[];
+  /** FE3: resources granted by feats; optional because older stored resolutions lack it. */
+  featResources?: FeatResource[];
   /** Attacks per Attack action (R2): 1 + the largest Extra Attack, never stacked. Optional: older stored resolutions lack it. */
   attacksPerAction?: number;
   carryingCapacity?: CarryingCapacity;

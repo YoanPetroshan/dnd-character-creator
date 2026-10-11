@@ -8,10 +8,16 @@ the ruleset.
 FE1 covers the numeric derived stats: initiative, hit point maximum, walking speed and the
 Athlete climb speed. Numeric effects are deduplicated by the feat's edition-independent name
 key, so a stray duplicate (the S2 rules already forbid one) can never double Alert or Tough.
+
+FE3 adds the output surfaces: ``notes`` (text for effects that are not folded into a number, with
+the character's numbers filled in) and ``resources`` (``derived.featResources``).
 """
 from __future__ import annotations
 
+import ast
 import re
+
+CHOOSE_ABILITY = "(choose the ability)"
 
 
 def _name_key(feat: dict) -> str:
@@ -25,10 +31,22 @@ def _origin(feat: dict) -> str:
             else "background")
 
 
-def instances(resolved_feats, table: dict) -> list[dict]:
+def increased_ability(feat: dict, choices, prefix: str) -> str | None:
+    """The ability this feat instance increased, as ``"STR"``..: its single fixed increase, else
+    the selected ``<prefix>:ability-bonus`` pick, else None (not chosen yet, or the feat has none)."""
+    fixed = {b["ability_score"]["index"].upper() for b in feat.get("ability_bonuses") or []}
+    if len(fixed) == 1:
+        return next(iter(fixed))
+    card = next((c for c in choices or [] if c.get("id") == f"{prefix}:ability-bonus"), None)
+    selected = (card or {}).get("selected") or []
+    return selected[0].upper() if selected else None
+
+
+def instances(resolved_feats, table: dict, choices=None) -> list[dict]:
     """One entry per held feat instance that has an effect entry:
-    ``{feat, index, prefix, origin, effect}``. Kept-but-hidden picks (A2) are included because
-    they are in ``resolved_feats``; ``data_only`` entries carry nothing for the engine."""
+    ``{feat, index, prefix, origin, effect, increased}``. Kept-but-hidden picks (A2) are included
+    because they are in ``resolved_feats``; ``data_only`` entries carry nothing for the engine.
+    ``increased`` is the instance's increased ability (see ``increased_ability``)."""
     out = []
     for feat in resolved_feats:
         effect = table.get(feat["index"])
@@ -36,7 +54,8 @@ def instances(resolved_feats, table: dict) -> list[dict]:
             continue
         prefix = feat.get("_asi_origin") or feat.get("_species_origin") or f"feat:{feat['index']}"
         out.append({"feat": feat, "index": feat["index"], "prefix": prefix,
-                    "origin": _origin(feat), "effect": effect})
+                    "origin": _origin(feat), "effect": effect,
+                    "increased": increased_ability(feat, choices, prefix)})
     return out
 
 
@@ -73,3 +92,101 @@ def walk_bonus(insts: list[dict]) -> int:
 
 def climb_equals_walk(insts: list[dict]) -> bool:
     return any(_numeric(insts, "climb_equals_walk"))
+
+
+# ---------------------------------------------------------------- FE3: notes and resources
+
+_ABILITIES = ("STR", "DEX", "CON", "INT", "WIS", "CHA")
+_PLACEHOLDER = re.compile(r"\{([^{}]+)\}")
+
+
+def numbers_for(modifiers: dict, scores: dict, prof_bonus: int, total_level: int) -> dict:
+    """Names a note template may use: ``pb``, ``level``, ``<abl>_mod`` and ``<abl>_score`` (lowercase)."""
+    env = {"pb": prof_bonus, "level": total_level}
+    for ability in _ABILITIES:
+        if ability in modifiers:
+            env[f"{ability.lower()}_mod"] = modifiers[ability]
+        if ability in scores:
+            env[f"{ability.lower()}_score"] = scores[ability]
+    return env
+
+
+def _eval(node, env: dict):
+    """Safe integer arithmetic: + - * //, max/min, numbers and names of ``env``. None = a name that is
+    not known yet (``inc_mod`` of a feat whose ability is still to be chosen). Anything else raises."""
+    if isinstance(node, ast.Expression):
+        return _eval(node.body, env)
+    if isinstance(node, ast.Constant) and isinstance(node.value, int):
+        return node.value
+    if isinstance(node, ast.Name):
+        if node.id not in env:
+            raise KeyError(node.id)
+        return env[node.id]
+    if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Sub, ast.Mult, ast.FloorDiv)):
+        left, right = _eval(node.left, env), _eval(node.right, env)
+        if left is None or right is None:
+            return None
+        return {ast.Add: left + right, ast.Sub: left - right, ast.Mult: left * right,
+                ast.FloorDiv: left // right if right else 0}[type(node.op)]
+    if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in ("max", "min")
+            and not node.keywords):
+        values = [_eval(a, env) for a in node.args]
+        return None if any(v is None for v in values) else (max if node.func.id == "max" else min)(values)
+    raise ValueError(f"unsupported note expression: {ast.dump(node)}")
+
+
+def render(template: str, env: dict) -> str:
+    """Format a note template. ``{expr}`` is replaced by the value, ``{sum:a,b}`` by ``a + b = total``.
+    A placeholder that needs the increased ability before it is chosen renders ``CHOOSE_ABILITY``;
+    an unknown name raises (it is a data bug, caught by the data guard tests)."""
+    def sub(match):
+        body = match.group(1)
+        if body.startswith("sum:"):
+            values = [_eval(ast.parse(part.strip(), mode="eval"), env) for part in body[4:].split(",")]
+            if any(v is None for v in values):
+                return CHOOSE_ABILITY
+            return " + ".join(str(v) for v in values) + f" = {sum(values)}"
+        value = _eval(ast.parse(body.strip(), mode="eval"), env)
+        return CHOOSE_ABILITY if value is None else str(value)
+    return _PLACEHOLDER.sub(sub, template)
+
+
+def _env(inst: dict, numbers: dict) -> dict:
+    env = dict(numbers)
+    if inst["increased"]:
+        env["inc_mod"] = numbers.get(f"{inst['increased'].lower()}_mod")
+    else:
+        env["inc_mod"] = None
+    return env
+
+
+def notes(insts: list[dict], numbers: dict) -> dict[str, list[str]]:
+    """{instance prefix: formatted notes} for the instances that have any."""
+    out = {}
+    for inst in insts:
+        texts = inst["effect"].get("notes")
+        if texts:
+            env = _env(inst, numbers)
+            out[inst["prefix"]] = [render(t, env) for t in texts]
+    return out
+
+
+def _slug(text: str) -> str:
+    return "-".join("".join(ch if ch.isalnum() else " " for ch in text.lower()).split())
+
+
+def resources(insts: list[dict], numbers: dict) -> list[dict]:
+    """``derived.featResources``: the class-resource shape with ``featId`` instead of ``classId`` and
+    ``source.kind == "feat"``. Uses are an int or ``"pb"`` (the Proficiency Bonus). One entry per
+    feat instance (the id is scoped by the instance prefix, so a repeatable feat never collides)."""
+    out = []
+    for inst in insts:
+        for res in inst["effect"].get("resources") or []:
+            uses = numbers["pb"] if res["uses"] == "pb" else res["uses"]
+            entry = {"id": f"{inst['prefix']}:{_slug(res['name'])}", "featId": inst["index"],
+                     "source": {"kind": "feat", "id": inst["index"], "label": inst["feat"]["name"]},
+                     "name": res["name"], "uses": uses, "recharge": res.get("recharge")}
+            if res.get("note"):
+                entry["details"] = {"note": res["note"]}
+            out.append(entry)
+    return out

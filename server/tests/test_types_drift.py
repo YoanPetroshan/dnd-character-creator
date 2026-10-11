@@ -27,6 +27,7 @@ CONTAINERS = [
     ("choices[].options[]", "ChoiceOption"),
     ("derived.attacks[]", "Attack"),
     ("derived.classResources[]", "ClassResource"),
+    ("derived.featResources[]", "FeatResource"),
     ("sheet.features[]", "SheetFeature"),
     ("sheet.feats[]", "SheetFeat"),
     ("sheet.spells[]", "SheetClassSpells"),

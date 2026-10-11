@@ -5368,7 +5368,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     fast = features_mod.speed_bonus_unless_heavy(effects, equipped_items)  # R5: Fast Movement
     if speeds and fast:
         speeds = _raise_walk_speed(speeds, fast)
-    feat_inst = feat_effects_mod.instances(resolved_feats, feat_effects_data.FEAT_EFFECTS)  # FE1
+    feat_inst = feat_effects_mod.instances(resolved_feats, feat_effects_data.FEAT_EFFECTS, choices)  # FE1
     if speeds and feat_effects_mod.walk_bonus(feat_inst):  # Mobile, Speedy, Boon of Speed, ... (walk only)
         speeds = _raise_walk_speed(speeds, feat_effects_mod.walk_bonus(feat_inst))
     if speeds.get("walk") and features_mod.swim_equals_walk(effects):  # C7b Gift of the Depths
@@ -5402,6 +5402,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         final_scores.get("STR", 10), species_size or (race or {}).get("size") or "Medium",
         granted_equipment + chosen_equipment + added_resolved, catalog.items,
     )
+    feat_numbers = feat_effects_mod.numbers_for(modifiers, final_scores, prof_bonus, sum(class_levels.values()))  # FE3
     derived = {
         "abilityModifiers": modifiers,
         "proficiencyBonus": prof_bonus,
@@ -5428,6 +5429,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "attacks": attacks,
         "attacksPerAction": class_resources_mod.attacks_per_action(resolved_classes),
         "classResources": class_resources,
+        "featResources": feat_effects_mod.resources(feat_inst, feat_numbers),  # FE3
         "carryingCapacity": carrying,
         "stealthDisadvantage": stealth_disadvantage,
     }
@@ -5485,7 +5487,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc["cls_id"]: _cumulative_feature_refs(catalog, rc["cls_id"], rc["subclass_id"], rc["level"])
         for rc in resolved_classes if rc["cls"] and rc["cls_id"]
     }
-    sheet_feats = sheet_features_mod.feats_summary(resolved_feats, choices)
+    sheet_feats = sheet_features_mod.feats_summary(resolved_feats, choices, feat_effects_mod.notes(feat_inst, feat_numbers))
 
     sheet = {
         "name": draft.get("name") or "",

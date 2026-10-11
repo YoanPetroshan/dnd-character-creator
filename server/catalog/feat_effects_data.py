@@ -38,8 +38,11 @@ Effect vocabulary (every key optional; the full semantics are in plan section 4.
     offhand                     {non_light_one_handed_melee | light_crossbow_mod | dw2024: True}
     finesse_items               [item index]
     attack_notes                [{when: {predicate}, text}]
-    resources                   [{name, uses, recharge, die, dice, pool, dc, note}]
-    notes                       [text]
+    resources                   [{name, uses, recharge, note}]  (FE3 implements these keys; uses = int | "pb";
+                                        recharge = long | short | short-or-long; die/dice/pool/dc come with the
+                                        slices that need them)
+    notes                       [template]  ({expr} over pb, level, <abl>_mod, <abl>_score, inc_mod;
+                                        {sum:a,b} prints "a + b = total"; see engine/feat_effects.render)
     data_only                   bool   (everything is carried by catalog fields or by
                                         reference_data.CLASS_FEATURE_EFFECTS)
 
@@ -461,6 +464,211 @@ FEAT_EFFECT_QUOTES: dict[str, str] = {
     "transmuted-anatomy-au": "Your Speed increases by 5 feet.",
     "athlete-xphb": "You gain a Climb Speed equal to your Speed.",
 }
+
+# FE3: notes (effects that are not folded into a number, with the character's numbers filled in) and
+# feat resources. Note templates: {expr} = integer arithmetic over pb, level, <abl>_mod, <abl>_score
+# (lowercase ability) and inc_mod (the modifier of the ability this feat increased); {sum:a,b} prints
+# "a + b = total". A template that needs inc_mod renders "(choose the ability)" until it is chosen.
+# data_only: the effect is carried by the catalog fields (proficiencies, saving throw / language /
+# spell choices) and already reaches the sheet; the entry only classifies the feat.
+FEAT_EFFECTS.update({index: {"data_only": True} for index in (
+    "heavily-armored-phb", "heavily-armored-xphb", "lightly-armored-phb", "lightly-armored-xphb",
+    "moderately-armored-phb", "moderately-armored-xphb", "martial-weapon-training-xphb",
+    "resilient-phb", "resilient-xphb", "skilled-phb", "skilled-xphb", "magic-initiate-phb",
+    "magic-initiate-xphb", "fey-touched-xphb", "shadow-touched-xphb")})
+
+FEAT_EFFECTS.update({
+    "actor-phb": {"notes": [
+        "Advantage on Charisma (Deception) and Charisma (Performance) checks to pass yourself off as a different person.",
+        "Mimicry: copy a voice or creature sound you heard for at least 1 minute; a listener's Wisdom (Insight) check, "
+        "contested by your Charisma (Deception) check, reveals the fake."]},
+    "actor-xphb": {"notes": [
+        "Impersonation: Advantage on Charisma (Deception or Performance) checks to convince others you are the person you are disguised as.",
+        "Mimicry: a creature that hears it needs a Wisdom (Insight) check against DC {8+cha_mod+pb} to see it is faked."]},
+    "athlete-phb": {"notes": [
+        "Standing up from prone costs only 5 feet of movement; climbing costs no extra movement; "
+        "a running jump needs only 5 feet of movement first."]},
+    "chef-xphb": {"notes": [
+        "Replenishing Meal (Short Rest): food for {4+pb} creatures; each that spends Hit Dice regains an extra 1d8 Hit Points.",
+        "Bolstering Treats: {pb} treats per batch (1 hour of work or a Long Rest); eating one (Bonus Action) gives "
+        "{pb} Temporary Hit Points for 8 hours."]},
+    "crafter-xphb": {"notes": [
+        "Discount: 20 percent off nonmagical items you buy.",
+        "Fast Crafting: after a Long Rest craft one piece of gear from the Fast Crafting table (you need the tools "
+        "and proficiency); it falls apart at your next Long Rest."]},
+    "defensive-duelist-phb": {"notes": [
+        "Reaction (finesse weapon you are proficient with): +{pb} AC against one melee attack that hit you."]},
+    "defensive-duelist-xphb": {"notes": [
+        "Parry (Reaction, holding a Finesse weapon): +{pb} AC against melee attacks until the start of your next turn."]},
+    "durable-phb": {"notes": [
+        "A Hit Die you roll to regain hit points restores at least {max(2,2*con_mod)} hit points."]},
+    "durable-xphb": {"notes": [
+        "Advantage on Death Saving Throws.",
+        "Speedy Recovery (Bonus Action): expend a Hit Point Die and regain Hit Points equal to the roll."]},
+    "dungeon-delver-phb": {"notes": [
+        "Advantage on Wisdom (Perception) and Intelligence (Investigation) checks to find secret doors, and on saves against traps.",
+        "Resistance to trap damage; a fast travel pace does not lower your passive Wisdom (Perception)."]},
+    "grappler-phb": {"notes": [
+        "Advantage on attack rolls against a creature you are grappling.",
+        "Action: pin a creature you grapple with another grapple check; you both are Restrained until the grapple ends."]},
+    "grappler-xphb": {"notes": [
+        "Punch and Grab: an Unarmed Strike hit in the Attack action can deal damage and grapple (once per turn).",
+        "Advantage on attack rolls against a creature Grappled by you; moving it costs no extra movement if it is your size or smaller."]},
+    "healer-phb": {"notes": [
+        "Healer's kit: stabilizing a dying creature also gives it 1 hit point.",
+        "Action, one kit use: restore 1d6 + 4 hit points plus the creature's maximum number of Hit Dice (once per creature until a rest)."]},
+    "healer-xphb": {"notes": [
+        "Battle Medic (Utilize, one Healer's Kit use): the creature spends a Hit Point Die and regains the roll + {pb} Hit Points.",
+        "Reroll a 1 on a die that restores Hit Points with a spell or Battle Medic."]},
+    "heavy-armor-master-phb": {"notes": [
+        "While wearing heavy armor: bludgeoning, piercing and slashing damage from nonmagical attacks is reduced by 3."]},
+    "heavy-armor-master-xphb": {"notes": [
+        "While wearing Heavy armor: Bludgeoning, Piercing and Slashing damage from an attack that hits you is reduced by {pb}."]},
+    "inspiring-leader-phb": {"notes": [
+        "Inspire (10 minutes): up to six friendly creatures each gain {sum:level,cha_mod} Temporary Hit Points "
+        "(once per short or long rest each)."]},
+    "inspiring-leader-xphb": {"notes": [
+        "Bolstering Performance (after a Short or Long Rest): up to six allies within 30 feet each gain "
+        "{sum:level,inc_mod} Temporary Hit Points."]},
+    "keen-mind-phb": {"notes": [
+        "You always know north and the hours left before sunrise or sunset, and recall anything seen or heard in the past month."]},
+    "linguist-phb": {"notes": [
+        "Ciphers: others need an Intelligence check against DC {int_score+pb} to decipher your code."]},
+    "mage-slayer-phb": {"notes": [
+        "Reaction: a melee weapon attack against a creature within 5 feet that casts a spell.",
+        "A creature you damage that is concentrating has disadvantage on its concentration save.",
+        "Advantage on saves against spells cast by creatures within 5 feet of you."]},
+    "mage-slayer-xphb": {
+        "notes": [
+            "Concentration Breaker: a creature you damage while it is concentrating has Disadvantage on its concentration save.",
+            "Guarded Mind: turn a failed Intelligence, Wisdom or Charisma save into a success (see the resource)."],
+        "resources": [{"name": "Guarded Mind", "uses": 1, "recharge": "short-or-long"}]},
+    "mounted-combatant-phb": {"notes": [
+        "While mounted and not incapacitated: advantage on melee attacks against unmounted creatures smaller than your mount; "
+        "you can take an attack aimed at your mount; your mount takes no damage on a successful Dexterity save for half, and half on a failure."]},
+    "mounted-combatant-xphb": {"notes": [
+        "Mounted Strike: Advantage on attacks against unmounted creatures within 5 feet of your mount that are at least one size smaller than it.",
+        "Leap Aside: your mount takes no damage on a successful Dexterity save for half, and half on a failure.",
+        "Veer: while mounted, an attack that hits your mount can hit you instead."]},
+    "musician-xphb": {"notes": [
+        "Encouraging Song (after a Short or Long Rest): Heroic Inspiration for up to {pb} allies who hear it."]},
+    "ritual-caster-phb": {"notes": [
+        "Ritual book with two 1st-level ritual spells from one class list; copying a found ritual spell takes 2 hours and 50 gp per spell level."]},
+    "ritual-caster-xphb": {
+        "notes": [
+            "Ritual Spells: {pb} level 1 Ritual spells always prepared; one more each time your Proficiency Bonus increases.",
+            "Quick Ritual: cast a prepared Ritual spell at its normal casting time without a spell slot (see the resource)."],
+        "resources": [{"name": "Quick Ritual", "uses": 1, "recharge": "long"}]},
+    "sentinel-phb": {"notes": [
+        "A creature you hit with an opportunity attack has speed 0 for the rest of the turn; Disengage does not stop your opportunity attacks.",
+        "Reaction: a melee weapon attack against a creature within 5 feet that attacks a target other than you (unless that target has this feat)."]},
+    "sentinel-xphb": {"notes": [
+        "Guardian: an Opportunity Attack against a creature within 5 feet that takes the Disengage action or hits a target other than you.",
+        "Halt: a creature you hit with an Opportunity Attack has Speed 0 for the rest of the turn."]},
+    "shield-master-phb": {"notes": [
+        "While wielding a shield: a bonus action shove after the Attack action; add the shield's AC bonus to Dexterity saves against "
+        "effects that target only you; a reaction to take no damage on a successful Dexterity save for half."]},
+    "shield-master-xphb": {"notes": [
+        "Shield Bash: Strength save DC {8+str_mod+pb} (push 5 feet or knock Prone) after a melee hit in the Attack action, once per turn.",
+        "Interpose Shield: Reaction, no damage on a successful Dexterity save for half damage while holding a Shield."]},
+    "skulker-phb": {"notes": [
+        "You can hide when lightly obscured; a missed ranged attack from hiding does not reveal you; dim light does not "
+        "impose disadvantage on your sight-based Wisdom (Perception) checks."]},
+    "skulker-xphb": {"notes": [
+        "Blindsight 10 feet (counted in Senses).",
+        "Fog of War: Advantage on Dexterity (Stealth) checks to Hide during combat; a missed attack from hiding does not reveal your location."]},
+    "spell-sniper-phb": {"notes": [
+        "The range of spells that need an attack roll is doubled; your ranged spell attacks ignore half and three-quarters cover; "
+        "you also learn one attack-roll cantrip."]},
+    "spell-sniper-xphb": {"notes": [
+        "Bypass Cover: your spell attack rolls ignore half and three-quarters cover.",
+        "Casting in Melee: enemies within 5 feet do not give Disadvantage on your spell attack rolls.",
+        "Increased Range: an attack-roll spell with a range of 10 feet or more gains 60 feet of range."]},
+    "telekinetic-xphb": {"notes": [
+        "Telekinetic Shove (Bonus Action): a creature you see within 30 feet makes a Strength save, DC {8+inc_mod+pb}, "
+        "or is moved 5 feet toward or away from you."]},
+    "telepathic-xphb": {"notes": [
+        "Telepathic Utterance: speak telepathically to a creature you can see within 60 feet, in a language you know."]},
+    "war-caster-phb": {"notes": [
+        "Advantage on Constitution saves to keep concentration when you take damage; somatic components with weapons or a shield in hand; "
+        "reaction: cast a one-action spell at a creature whose movement provokes an opportunity attack."]},
+    "war-caster-xphb": {"notes": [
+        "Advantage on Constitution saves to maintain Concentration; Somatic components with weapons or a Shield in hand; "
+        "Reactive Spell: cast a one-action spell at a creature that provokes an Opportunity Attack."]},
+    "lucky-phb": {
+        "notes": ["Spend a luck point to roll an extra d20 on an attack roll, ability check or saving throw, or when an attack "
+                  "roll is made against you, and choose which d20 counts."],
+        "resources": [{"name": "Luck Points", "uses": 3, "recharge": "long"}]},
+    "lucky-xphb": {
+        "notes": ["Spend 1 Luck Point to gain Advantage on a d20 Test, or to impose Disadvantage on an attack roll against you."],
+        "resources": [{"name": "Luck Points", "uses": "pb", "recharge": "long"}]},
+    "second-chance-xge": {
+        "notes": ["Reaction: when a creature you can see hits you with an attack roll, it must reroll."],
+        "resources": [{"name": "Second Chance", "uses": 1, "recharge": "short-or-long",
+                       "note": "also regained when you roll initiative"}]},
+    "fade-away-xge": {
+        "notes": ["Reaction right after you take damage: become invisible until the end of your next turn or until you "
+                  "attack, deal damage or force a saving throw."],
+        "resources": [{"name": "Fade Away", "uses": 1, "recharge": "short-or-long"}]},
+    "orcish-fury-xge": {
+        "notes": ["Once per rest, on a hit with a simple or martial weapon, roll one of its damage dice again as extra damage "
+                  "of the weapon's type.",
+                  "Reaction right after Relentless Endurance: make one weapon attack."],
+        "resources": [{"name": "Orcish Fury", "uses": 1, "recharge": "short-or-long"}]},
+})
+
+# FE3 quotes: the governing sentence(s) of each FE3 entry that carries notes or resources, pinned against the
+# catalog text by tests/test_feat_resources.py. A tuple pins several sentences of one entry.
+FEAT_EFFECT_QUOTES.update({
+    "actor-phb": "You can mimic the speech of another person or the sounds made by other creatures.",
+    "actor-xphb": "8 plus your Charisma modifier and Proficiency Bonus",
+    "athlete-phb": "Climbing doesn't cost you extra movement.",
+    "chef-xphb": ("a number of creatures equal to 4 plus your Proficiency",
+                  "gain a number of Temporary Hit Points equal to your Proficiency"),
+    "crafter-xphb": "you receive a 20 percent discount on it",
+    "defensive-duelist-phb": "you can use your reaction to add your proficiency bonus to your AC for that attack",
+    "defensive-duelist-xphb": "you can take a Reaction to add your Proficiency Bonus to your Armor Class",
+    "durable-phb": "the minimum number of hit points you regain from the roll equals twice your Constitution modifier (minimum of 2)",
+    "durable-xphb": "you can expend one of your Hit Point Dice, roll the die, and regain a number of Hit Points equal to the roll",
+    "dungeon-delver-phb": "You have resistance to the damage dealt by traps.",
+    "grappler-phb": "You have advantage on attack rolls against a creature you are grappling.",
+    "grappler-xphb": "You have Advantage on attack rolls against a creature Grappled by you.",
+    "healer-phb": "restore 1d6 + 4 hit points to it",
+    "healer-xphb": "The creature regains a number of Hit Points equal to the roll plus your Proficiency Bonus.",
+    "heavy-armor-master-phb": "damage that you take from nonmagical attacks is reduced by 3",
+    "heavy-armor-master-xphb": "is reduced by an amount equal to your Proficiency",
+    "inspiring-leader-phb": "Each creature can gain temporary hit points equal to your level + your Charisma modifier.",
+    "inspiring-leader-xphb": "Temporary Hit Points equal to your character level plus the modifier of the ability you increased with this feat",
+    "keen-mind-phb": "You always know which way is north.",
+    "linguist-phb": "they succeed on an Intelligence check (DC equal to your Intelligence score + your proficiency bonus)",
+    "mage-slayer-phb": "You have advantage on saving throws against spells cast by creatures within 5 feet of you.",
+    "mage-slayer-xphb": ("If you fail an Intelligence, a Wisdom, or a Charisma saving throw, you can cause yourself to succeed instead.",
+                         "you can't use it again until you finish a Short or Long Rest"),
+    "mounted-combatant-phb": "You can force an attack targeted at your mount to target you instead.",
+    "mounted-combatant-xphb": "you can force an attack that hits your mount to hit you instead",
+    "musician-xphb": "The number of allies you can affect in this way equals your Proficiency Bonus.",
+    "ritual-caster-phb": "The process of copying the spell into your ritual book takes 2 hours per level of the spell, and costs 50 gp per level.",
+    "ritual-caster-xphb": ("Choose a number of level 1 spells equal to your Proficiency Bonus",
+                           "you can't use this benefit again until you finish a Long Rest"),
+    "sentinel-phb": "When you hit a creature with an opportunity attack, the creature's speed becomes 0 for the rest of the turn.",
+    "sentinel-xphb": "When you hit a creature with an Opportunity Attack, the creature's Speed becomes 0 for the rest of the current turn.",
+    "shield-master-phb": "you can add your shield's AC bonus to any Dexterity saving throw you make against a spell or other harmful effect that targets only you",
+    "shield-master-xphb": "8 plus your Strength modifier and Proficiency Bonus",
+    "skulker-phb": "Dim light doesn't impose disadvantage on your Wisdom (Perception) checks relying on sight.",
+    "skulker-xphb": "You have Blindsight with a range of 10 feet.",
+    "spell-sniper-phb": "When you cast a spell that requires you to make an attack roll, the spell's range is doubled.",
+    "spell-sniper-xphb": "you can increase the spell's range by 60 feet",
+    "telekinetic-xphb": "8 plus the ability modifier of the score increased by this feat and your Proficiency Bonus",
+    "telepathic-xphb": "You can speak telepathically to any creature you can see within 60 feet of yourself.",
+    "war-caster-phb": "You have advantage on Constitution saving throws that you make to maintain your concentration on a spell when you take damage.",
+    "war-caster-xphb": "You have Advantage on Constitution saving throws that you make to maintain Concentration.",
+    "lucky-phb": ("You have 3 luck points.", "You regain your expended luck points when you finish a long rest."),
+    "lucky-xphb": ("You have a number of Luck Points equal to your Proficiency",
+                   "You regain your expended Luck Points when you finish a Long Rest."),
+    "second-chance-xge": "you can't use it again until you roll initiative at the start of combat or until you finish a short or long rest",
+    "fade-away-xge": "you can't do so again until you finish a short or long rest",
+    "orcish-fury-xge": "you can't use it again until you finish a short or long rest",
+})
 
 # Feats not classified yet. Each slice removes the ones it covers (by adding them to FEAT_EFFECTS);
 # FE10 empties it.

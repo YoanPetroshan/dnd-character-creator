@@ -36,7 +36,7 @@ from catalog.official.feats import _feat_from_5etools  # noqa: E402
 pytestmark = pytest.mark.skipif(not official.has_official(), reason="5etools official data missing")
 
 # Lowered by each FE slice that classifies feats; FE10 sets it to 0.
-PENDING_CEILING = 286
+PENDING_CEILING = 227
 # Raised only by FE12 (additive golden cases that hold feats).
 GOLDEN_FEAT_CASES = 0
 GOLDEN = pathlib.Path(__file__).parent / "golden" / "c_series_mixed_2014_baseline.json.gz"
@@ -103,7 +103,9 @@ def test_fighting_style_feats_done_through_class_feature_effects_are_data_only(c
     from catalog.reference_data import CLASS_FEATURE_EFFECTS
     done = {i for i, k in fed.FEAT_KINDS.items() if k == {"fighting-style"}}
     assert len(done) == 7
-    assert done == {i for i, e in fed.FEAT_EFFECTS.items() if e == {"data_only": True}}
+    # (FE3 added data_only entries for the proficiency / spell feats; the 7 FS ones are still exactly these.)
+    assert done == {i for i, e in fed.FEAT_EFFECTS.items()
+                    if e == {"data_only": True} and fed.FEAT_KINDS[i] == {"fighting-style"}}
     for index in done:
         assert catalog.feats[index]["category"].startswith("FS"), index
     # Six of the seven are keyed in CLASS_FEATURE_EFFECTS; Blind Fighting's blindsight comes

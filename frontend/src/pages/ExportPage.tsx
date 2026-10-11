@@ -173,6 +173,26 @@ export function ExportPage() {
           <ClassResourcesList resources={resolution.derived.classResources!} />
         </div>
       )}
+      {(resolution.derived.featResources?.length ?? 0) > 0 && (
+        <div>
+          <h2>Ресурси от таланти</h2>
+          <ClassResourcesList resources={resolution.derived.featResources!} />
+        </div>
+      )}
+      {(resolution.sheet.feats?.length ?? 0) > 0 && (
+        <div>
+          <h2>Таланти</h2>
+          <ul>
+            {resolution.sheet.feats!.map((f) => (
+              <li key={f.id}>
+                {f.name}
+                {f.choice && f.choice.length > 0 && `: ${f.choice.join(", ")}`}
+                {f.notes && f.notes.length > 0 && ` — ${f.notes.join("; ")}`}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <SpellSlotsSummary resolution={resolution} />
       {resolution.derived.carryingCapacity && (
         <p>
