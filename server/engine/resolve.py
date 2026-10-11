@@ -55,7 +55,7 @@ import re
 
 from dataclasses import dataclass, field
 
-from catalog import reference_data
+from catalog import feat_effects_data, reference_data
 from catalog.choices import build_choice_template, build_equipment_choice
 from catalog.loader import Catalog
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
@@ -70,6 +70,7 @@ from . import class_resources as class_resources_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
 from . import worn as worn_mod
+from . import feat_effects as feat_effects_mod
 from . import features as features_mod
 from . import sheet_features as sheet_features_mod
 from . import spells as spells_mod
@@ -5289,8 +5290,14 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     fast = features_mod.speed_bonus_unless_heavy(effects, equipped_items)  # R5: Fast Movement
     if speeds and fast:
         speeds = _raise_walk_speed(speeds, fast)
+    feat_inst = feat_effects_mod.instances(resolved_feats, feat_effects_data.FEAT_EFFECTS)  # FE1
+    if speeds and feat_effects_mod.walk_bonus(feat_inst):  # Mobile, Speedy, Boon of Speed, ... (walk only)
+        speeds = _raise_walk_speed(speeds, feat_effects_mod.walk_bonus(feat_inst))
     if speeds.get("walk") and features_mod.swim_equals_walk(effects):  # C7b Gift of the Depths
         speeds = {**speeds, "swim": max(speeds.get("swim", 0), speeds["walk"])}
+    if speeds.get("walk") and feat_effects_mod.climb_equals_walk(feat_inst):  # FE1 Athlete (XPHB)
+        speeds = {**speeds, "climb": max(speeds.get("climb", 0), speeds["walk"])}
+    feat_init_bonus, feat_init_pb = feat_effects_mod.initiative_parts(feat_inst)
     base_speed = speeds.get("walk")
     # Attacks, carrying capacity and armor warnings (Slice 9). Size is the
     # selected species size (Slice 8d), else the race's own, else Medium.
@@ -5322,7 +5329,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "proficiencyBonus": prof_bonus,
         "hitPointMax": derived_mod.hit_point_max_multiclass(hp_class_entries, modifiers["CON"], hp_type)
         + features_mod.hp_bonus(effects, class_levels)
-        + sum(e.get("hp_per_level", 0) for e in _srd_trait_effects(race, subrace)) * sum(class_levels.values()),
+        + sum(e.get("hp_per_level", 0) for e in _srd_trait_effects(race, subrace)) * sum(class_levels.values())
+        + feat_effects_mod.hp_bonus(feat_inst, sum(class_levels.values())),
         "hitDice": " + ".join(f"{rc['level']}d{rc['cls']['hit_die']}" for rc in resolved_classes if rc["cls"] and rc["cls"].get("hit_die")) or None,
         "armorClass": equipment_mod.armor_class_from_gear(
             equipped_items, modifiers["DEX"], features_mod.ac_formulas(effects), modifiers,
@@ -5330,7 +5338,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         ),
         "speed": base_speed,  # walking speed; `speeds` carries every mode
         "speeds": speeds,
-        "initiative": derived_mod.initiative(modifiers, prof_bonus, jack, remarkable),
+        "initiative": derived_mod.initiative(modifiers, prof_bonus, jack, remarkable, feat_init_bonus, feat_init_pb),
         "savingThrows": saves,
         "skills": skills,
         "passivePerception": derived_mod.passive_perception(skills),

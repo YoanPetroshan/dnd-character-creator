@@ -108,8 +108,14 @@ def skill_scores(
     return out
 
 
-def initiative(modifiers: dict[str, int], prof_bonus: int, jack_of_all_trades: bool = False, remarkable_athlete: bool = False) -> int:
-    return modifiers["DEX"] + _half_bonus(prof_bonus, "DEX", jack_of_all_trades, remarkable_athlete)
+def initiative(
+    modifiers: dict[str, int], prof_bonus: int, jack_of_all_trades: bool = False, remarkable_athlete: bool = False,
+    bonus: int = 0, proficient: bool = False,
+) -> int:
+    """FE1: ``bonus`` is a flat modifier (Alert PHB); ``proficient`` adds the full Proficiency Bonus
+    (Alert XPHB), which replaces the Jack of All Trades / Remarkable Athlete half bonus."""
+    half = prof_bonus if proficient else _half_bonus(prof_bonus, "DEX", jack_of_all_trades, remarkable_athlete)
+    return modifiers["DEX"] + half + bonus
 
 
 def passive_perception(skills: dict[str, int]) -> int:

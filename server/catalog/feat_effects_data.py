@@ -429,6 +429,39 @@ FEAT_KINDS: dict[str, frozenset[str]] = _build_kinds()
 # reference_data.CLASS_FEATURE_EFFECTS (and Blind Fighting's blindsight): nothing new to add.
 FEAT_EFFECTS: dict[str, dict] = {index: {"data_only": True} for index in _DONE_FIGHTING_STYLE}
 
+# FE1: initiative, hit point maximum, walking speed, climb speed. The governing sentence of each
+# entry is in FEAT_EFFECT_QUOTES (tags stripped), pinned against the catalog text by a test.
+FEAT_EFFECTS.update({
+    "alert-phb": {"initiative": 5},
+    "alert-xphb": {"initiative": "pb"},
+    "tough-phb": {"hp_per_level": 2},
+    "tough-xphb": {"hp_per_level": 2},
+    "boon-of-fortitude-xphb": {"hp_flat": 40},
+    "mobile-phb": {"walk_bonus": 10},
+    "speedy-xphb": {"walk_bonus": 10},
+    "boon-of-speed-xphb": {"walk_bonus": 30},
+    "squat-nimbleness-xge": {"walk_bonus": 5},
+    "mark-of-passage-efa": {"walk_bonus": 5},
+    "transmuted-anatomy-au": {"walk_bonus": 5},
+    "athlete-xphb": {"climb_equals_walk": True},
+})
+
+# index -> the sentence (plain text, 5etools tags stripped) that governs the entry.
+FEAT_EFFECT_QUOTES: dict[str, str] = {
+    "alert-phb": "You gain a +5 bonus to initiative.",
+    "alert-xphb": "you can add your Proficiency Bonus to the roll",
+    "tough-phb": "Whenever you gain a level thereafter, your hit point maximum increases by an additional 2 hit points.",
+    "tough-xphb": "Whenever you gain a character level thereafter, your Hit Point maximum increases by an additional 2 Hit Points.",
+    "boon-of-fortitude-xphb": "Your Hit Point maximum increases by 40.",
+    "mobile-phb": "Your speed increases by 10 feet.",
+    "speedy-xphb": "Your Speed increases by 10 feet.",
+    "boon-of-speed-xphb": "Your Speed increases by 30 feet.",
+    "squat-nimbleness-xge": "Increase your walking speed by 5 feet.",
+    "mark-of-passage-efa": "Your Speed increases by 5 feet.",
+    "transmuted-anatomy-au": "Your Speed increases by 5 feet.",
+    "athlete-xphb": "You gain a Climb Speed equal to your Speed.",
+}
+
 # Feats not classified yet. Each slice removes the ones it covers (by adding them to FEAT_EFFECTS);
 # FE10 empties it.
 FEAT_PENDING: frozenset[str] = frozenset(FEAT_KINDS) - frozenset(FEAT_EFFECTS)

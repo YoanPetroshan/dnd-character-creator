@@ -36,7 +36,7 @@ from catalog.official.feats import _feat_from_5etools  # noqa: E402
 pytestmark = pytest.mark.skipif(not official.has_official(), reason="5etools official data missing")
 
 # Lowered by each FE slice that classifies feats; FE10 sets it to 0.
-PENDING_CEILING = 298
+PENDING_CEILING = 286
 # Raised only by FE12 (additive golden cases that hold feats).
 GOLDEN_FEAT_CASES = 0
 GOLDEN = pathlib.Path(__file__).parent / "golden" / "c_series_mixed_2014_baseline.json.gz"
