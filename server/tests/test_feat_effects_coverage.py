@@ -36,7 +36,7 @@ from catalog.official.feats import _feat_from_5etools  # noqa: E402
 pytestmark = pytest.mark.skipif(not official.has_official(), reason="5etools official data missing")
 
 # Lowered by each FE slice that classifies feats; FE10 sets it to 0.
-PENDING_CEILING = 192
+PENDING_CEILING = 184
 # Raised only by FE12 (additive golden cases that hold feats).
 GOLDEN_FEAT_CASES = 0
 GOLDEN = pathlib.Path(__file__).parent / "golden" / "c_series_mixed_2014_baseline.json.gz"
@@ -190,15 +190,16 @@ def test_echoing_soul_data_count_is_one_while_the_text_says_two(catalog, raw_fea
     raw = dict(raw_feats)["echoing-soul-rhw"]
     assert raw["skillProficiencies"] == [{"any": 1}]
     assert "proficiency in two skills of your choice" in _text(catalog.feats["echoing-soul-rhw"])
-    # Today's catalog follows the data (one skill card): FE6 overrides the count to 2.
-    assert catalog.feats["echoing-soul-rhw"]["proficiency_choices"][0]["choose"] == 1
+    # FE6 overrides the count to the text's two skills (reference_data.FEAT_SKILL_PICK_COUNT_OVERRIDES).
+    assert catalog.feats["echoing-soul-rhw"]["proficiency_choices"][0]["choose"] == 2
 
 
-def test_harper_agent_thieves_cant_is_dropped_by_the_data_conversion(catalog, raw_feats):
-    """B4. The data says ``languageProficiencies: [{"thieves' cant": true}]``; today the catalog drops it."""
+def test_harper_agent_thieves_cant_comes_from_the_override_table(catalog, raw_feats):
+    """B4. The data says ``languageProficiencies: [{"thieves' cant": true}]``; the converter drops the unknown
+    key and FE6's override table adds "You know Thieves' Cant." """
     raw = dict(raw_feats)["harper-agent-frhof"]
     assert raw["languageProficiencies"] == [{"thieves' cant": True}]
-    assert catalog.feats["harper-agent-frhof"]["languages"] == []
+    assert [lang["index"] for lang in catalog.feats["harper-agent-frhof"]["languages"]] == ["thieves-cant"]
     assert catalog.feats["harper-agent-frhof"]["language_options"] is None
 
 

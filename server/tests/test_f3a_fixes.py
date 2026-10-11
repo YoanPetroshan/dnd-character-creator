@@ -188,10 +188,11 @@ def test_f3_earlier_deft_explorer_wins_the_duplicate_and_the_later_feat_pick_is_
 @needs_data
 @pytest.mark.parametrize("ruleset,species,bg,exp_cid,blocked", [
     ("2024", "human-xphb", "sage-xphb", "class:rogue:1:expertise-choice:xphb-rogue-1-expertise", True),
-    ("mixed", "human", "acolyte", "class:rogue:1:expertise-choice:rogue-expertise-1", False)])
-def test_f3_skill_expert_lacks_expertise_only_under_2024(catalog, ruleset, species, bg, exp_cid, blocked):
+    ("mixed", "human", "acolyte", "class:rogue:1:expertise-choice:rogue-expertise-1", True)])
+def test_f3_skill_expert_lacks_expertise_under_every_ruleset(catalog, ruleset, species, bg, exp_cid, blocked):
     # Skill Expert (XPHB): "Choose one skill in which you have proficiency but lack Expertise." Rogue Expertise comes
-    # first (level 1), the feat second (ASI 4). mixed/2014 keep allowing the (wasted) duplicate.
+    # first (level 1), the feat second (ASI 4). FE6 (B7): the feat's own rule applies under every ruleset (it used to be
+    # 2024 only; the SRD Rogue card itself still allows a duplicate outside 2024).
     feat_exp = "class:rogue:4:asi:feat:skill-expert-xphb:expertise-choice-0"
     ch = {"class:rogue:1:prof-choice-0": ["skill-athletics", "skill-stealth", "skill-insight", "skill-perception"],
           exp_cid: ["skill-athletics", "skill-stealth"], "class:rogue:4:asi": ["feat:skill-expert-xphb"],

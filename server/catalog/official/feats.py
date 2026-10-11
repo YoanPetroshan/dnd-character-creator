@@ -4,7 +4,10 @@ from __future__ import annotations
 from pathlib import Path
 import json
 import re
-from catalog.reference_data import REPEATABLE_FEAT_OVERRIDES, ruleset_for_feat
+from catalog.reference_data import (
+    FEAT_FIXED_LANGUAGE_OVERRIDES, FEAT_SKILL_PICK_COUNT_OVERRIDES, LANGUAGE_NAMES, REPEATABLE_FEAT_OVERRIDES,
+    ruleset_for_feat,
+)
 from .common import _ABILITY_KEYS, _ability_bonuses_from_5etools, _condition_immunities_from_5etools, _damage_modifiers_from_5etools, _senses_from_5etools, slug
 from .innate_spells import _SPELL_SCHOOL_CODES, _clean_innate_spell_name, _innate_spell_ability
 from .languages import _language_grants_from_5etools
@@ -52,6 +55,15 @@ def _feat_from_5etools(raw: dict) -> dict | None:
     name_slug = slug(raw["name"])
     index = f"{name_slug}-{source}"
     fixed_languages, language_options = _language_grants_from_5etools(raw)
+    for lang_id in FEAT_FIXED_LANGUAGE_OVERRIDES.get(index, []):  # FE6 (B4)
+        if all(lang["index"] != lang_id for lang in fixed_languages):
+            fixed_languages = fixed_languages + [{"index": lang_id, "name": LANGUAGE_NAMES[lang_id], "url": ""}]
+    proficiency_choices = _proficiency_choices_from_5etools(raw) + _skill_tool_choices_from_5etools(raw)
+    if index in FEAT_SKILL_PICK_COUNT_OVERRIDES:  # FE6 (B3): the text says two skills, the data one
+        proficiency_choices = [
+            {**env, "choose": FEAT_SKILL_PICK_COUNT_OVERRIDES[index]}
+            if env.get("from", {}).get("option_set_type") == "any_skill" else env
+            for env in proficiency_choices]
     # Task 5: resist/immune/senses — reuses the SAME race-side
     # _damage_modifiers_from_5etools/_condition_immunities_from_5etools
     # conversion machinery UNCHANGED (both already read off a generic raw
@@ -98,7 +110,7 @@ def _feat_from_5etools(raw: dict) -> dict | None:
         # unconverted, not guessed at; see test_official_source.py's
         # Task 3 section docstring for the full reasoning.
         "proficiencies": _proficiencies_from_5etools(raw),
-        "proficiency_choices": _proficiency_choices_from_5etools(raw) + _skill_tool_choices_from_5etools(raw),
+        "proficiency_choices": proficiency_choices,
         # Task 4: language grants — reuses the SAME background-side
         # _language_grants_from_5etools conversion machinery directly (see
         # that function's own docstring for the "any"/"anyStandard" key

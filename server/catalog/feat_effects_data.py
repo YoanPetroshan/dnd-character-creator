@@ -933,6 +933,32 @@ FEAT_EFFECT_QUOTES.update({
                                           "you can deal extra damage to the target equal to the ability score increased by this feat"),
 })
 
+# FE6: skill and Expertise rules. The flags are read by engine.resolve when it builds the feat's cards:
+# ``prof_or_expertise`` marks the skill card (a pick the character is already proficient in, at the feat's
+# position in the build, becomes Expertise); ``lacks_expertise`` marks the Expertise card (a skill that already
+# has Expertise is refused under EVERY ruleset: the feats' own rule). Echoing Soul and Harper Agent are carried
+# by catalog fields (the skill count override and the Thieves' Cant language), so they are ``data_only``.
+FEAT_EFFECTS.update({
+    "keen-mind-xphb": {"prof_or_expertise": True},
+    "observant-xphb": {"prof_or_expertise": True},
+    "skill-expert-tce": {"lacks_expertise": True},
+    "prodigy-xge": {"lacks_expertise": True},
+    "skill-expert-xphb": {"lacks_expertise": True},
+    "boon-of-skill-xphb": {"lacks_expertise": True},
+    "echoing-soul-rhw": {"data_only": True},
+    "harper-agent-frhof": {"data_only": True},
+})
+FEAT_EFFECT_QUOTES.update({
+    "keen-mind-xphb": "If you lack proficiency in the chosen skill, you gain proficiency in it, and if you already have proficiency in it, you gain Expertise in it.",
+    "observant-xphb": "If you lack proficiency with the chosen skill, you gain proficiency in it, and if you already have proficiency in it, you gain Expertise in it.",
+    "skill-expert-tce": "The skill you choose must be one that isn't already benefiting from a feature, such as Expertise, that doubles your proficiency bonus.",
+    "prodigy-xge": "The skill you choose must be one that isn't already benefiting from a feature, such as Expertise, that doubles your proficiency bonus.",
+    "skill-expert-xphb": "Choose one skill in which you have proficiency but lack Expertise.",
+    "boon-of-skill-xphb": "Choose one skill in which you lack Expertise.",
+    "echoing-soul-rhw": "You have proficiency in two skills of your choice.",
+    "harper-agent-frhof": "You know Thieves' Cant.",
+})
+
 # Feats not classified yet. Each slice removes the ones it covers (by adding them to FEAT_EFFECTS);
 # FE10 empties it.
 FEAT_PENDING: frozenset[str] = frozenset(FEAT_KINDS) - frozenset(FEAT_EFFECTS)

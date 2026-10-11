@@ -139,7 +139,7 @@ def test_entries_use_only_known_vocabulary_and_values():
 def test_the_xphb_observant_text_has_no_passive_bonus(catalog):
     """Observant (XPHB) is the proficiency-or-Expertise feat (FE6): no passive +5 in its own text."""
     assert "passive" not in _plain(catalog.feats["observant-xphb"]["entries"])
-    assert "observant-xphb" in fed.FEAT_PENDING
+    assert "observant-xphb" in fed.FEAT_EFFECTS and "observant-xphb" not in fed.FEAT_PENDING  # FE6
 
 
 def test_keenness_bonus_senses_in_the_raw_data_agree():

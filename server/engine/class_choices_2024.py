@@ -291,6 +291,8 @@ def gate_after_primal_knowledge(choices: list[dict], class_order, skill: str | N
     for i, c in enumerate(choices):
         if c["source"]["kind"] not in ("class", "feat") or is_primal_knowledge_card(c):
             continue
+        if c.get("profOrExpertise"):  # FE6: Keen Mind / Observant turn an already proficient skill into Expertise
+            continue
         if not ("proficiency-choice" in c["id"] or ":prof-choice-" in c["id"]) or "expertise-choice" in c["id"]:
             continue
         pos = card_position(c, class_order)

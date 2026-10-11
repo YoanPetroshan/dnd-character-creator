@@ -1611,7 +1611,8 @@ def test_echoing_soul_offers_a_wildcard_any_skill_choice():
     feats = load_official_feats(official_dir())
     feat = next(f for f in feats if f["name"] == "Echoing Soul")
     envelope = feat["proficiency_choices"][0]
-    assert envelope == {"choose": 1, "type": "proficiencies", "from": {"option_set_type": "any_skill"}}
+    # FE6 (B3): the data says one skill, the feat text "proficiency in two skills of your choice" wins.
+    assert envelope == {"choose": 2, "type": "proficiencies", "from": {"option_set_type": "any_skill"}}
 
 
 def test_poisoner_grants_a_fixed_tool_proficiency():
@@ -1787,15 +1788,12 @@ def test_cult_of_the_dragon_initiate_fixed_draconic_conditionally_substitutes_th
     assert feat["language_options"] is None
 
 
-def test_harper_agent_thieves_cant_is_a_disclosed_unrecognized_language_gap():
-    # Harper Agent/FRHoF: {"thieves' cant": True} — Thieves' Cant is not a
-    # recognized language slug in reference_data.LANGUAGES (it's a secret
-    # argot, not one of the SRD's 16 standard/exotic languages), so this
-    # fixed grant is silently dropped, same disclosed fallback
-    # _language_ref_from_key already documents for any unrecognized key.
+def test_harper_agent_thieves_cant_is_added_by_the_override_table():
+    # Harper Agent/FRHoF: {"thieves' cant": True} is not a recognized slug in reference_data.LANGUAGES, so the
+    # converter drops it; FE6 (B4) adds "You know Thieves' Cant." through FEAT_FIXED_LANGUAGE_OVERRIDES.
     feats = load_official_feats(official_dir())
     feat = next(f for f in feats if f["name"] == "Harper Agent")
-    assert feat["languages"] == []
+    assert feat["languages"] == [{"index": "thieves-cant", "name": "Thieves' Cant", "url": ""}]
     assert feat["language_options"] is None
 
 

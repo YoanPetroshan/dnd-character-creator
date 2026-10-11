@@ -1802,6 +1802,8 @@ def _feat_choice_templates(feats: list[dict], origin: str | None = None) -> list
             description = f"Choose {choose} proficienc{'ies' if choose != 1 else 'y'} of your choice."
             tpl = build_choice_template(prof_envelope, cid, source, label, description=description)
             if tpl:
+                if feat_effects_data.FEAT_EFFECTS.get(feat["index"], {}).get("prof_or_expertise"):
+                    tpl["profOrExpertise"] = True  # FE6: an already proficient skill becomes Expertise (F-D4)
                 templates.append(tpl)
 
         # Skill Expert-style expertise picks and Resilient's saving-throw
@@ -1817,6 +1819,8 @@ def _feat_choice_templates(feats: list[dict], origin: str | None = None) -> list
             description = f"Choose {choose} skill{'s' if choose != 1 else ''} you are proficient in to gain Expertise."
             tpl = build_choice_template(env, f"{cid_prefix}:expertise-choice-{i}", source, f"{feat['name']}: Expertise", description=description)
             if tpl:
+                if feat_effects_data.FEAT_EFFECTS.get(feat["index"], {}).get("lacks_expertise"):
+                    tpl["lacksExpertise"] = True  # FE6 (B7): the feat's own text, whatever the ruleset
                 templates.append(tpl)
 
         for i, env in enumerate(feat.get("saving_throw_choices", []) or []):
@@ -1862,9 +1866,46 @@ def _expertise_selected_values(choices: list[dict]) -> list[str]:
 _ASI_FEAT_CID_RE = re.compile(r"^class:([^:]+):(\d+):asi:feat:")
 
 
+def _prof_or_expertise_priors(choices: list[dict], resolved_feats: list[dict], fixed_origin_skills: set[str],
+                              class_order: list[str]) -> dict[str, set[str]]:
+    """FE6 (F-D4): for every card flagged `profOrExpertise` (Keen Mind / Observant XPHB: "If you lack proficiency
+    in the chosen skill, you gain proficiency in it, and if you already have proficiency in it, you gain
+    Expertise in it"), the skills the character is already proficient in AT THE CARD'S POSITION: origin sources
+    (background, species, origin feats) first, then cards and ASI feats at or before its (class order, class
+    level), an ASI feat after the class feature of its level, and the flagged cards before it. A later grant of
+    the same skill never converts the pick. Returns {card id: skill ids}."""
+    flagged = [c for c in choices if c.get("profOrExpertise")]
+    if not flagged:
+        return {}
+    last = (len(class_order) + 1, 0)
+
+    def pos(c: dict):
+        return class_choices_2024.card_position(c, class_order) or last
+
+    order = {c["id"]: n for n, c in enumerate(sorted(flagged, key=lambda c: (pos(c), c["id"])))}
+    priors: dict[str, set[str]] = {}
+    for card in flagged:
+        here, rank = pos(card), order[card["id"]]
+        prior = set(fixed_origin_skills)
+        for c in choices:
+            if c is card or c["source"]["kind"] not in ("class", "species", "background", "feat") or "expertise-choice" in c["id"]:
+                continue
+            if c.get("profOrExpertise"):
+                before = order[c["id"]] < rank
+            else:
+                before = pos(c) <= here
+            if before:
+                prior.update(s for s in c["selected"] if s.startswith("skill-"))
+        for f in resolved_feats:  # fixed skill grants of ASI feats sit at their ASI level
+            if f.get("_asi_cid") and (_feat_build_position(f, class_order) or last) <= here:
+                prior.update(p for p in _feat_proficiency_ids([f]) if p.startswith("skill-"))
+        priors[card["id"]] = prior
+    return priors
+
+
 def _gate_expertise_choices(
     choices: list[dict], proficient_skills: set[str], fixed_expertise=(), class_order: list[str] = (),
-    ruleset: str = "mixed",
+    ruleset: str = "mixed", poe_priors: dict[str, set[str]] | None = None,
 ) -> list[dict]:
     """Restrict every feat- or class-sourced Expertise Choice to skills (and,
     for the Rogue, tools) the character is proficient in. Mutates `choices` in place (entries replaced by index);
@@ -1879,7 +1920,8 @@ def _gate_expertise_choices(
     Expertise card behaves as flagged (Bard, Rogue, Scholar, feat cards too); outside 2024 only
     flagged cards do (none in practice), an unflagged duplicate is simply wasted."""
     pruned_by_index: dict[int, dict] = {}  # reported in `choices` order, whatever the walk order
-    indexes = [i for i, c in enumerate(choices) if _is_expertise_choice(c)]
+    poe_priors = poe_priors or {}
+    indexes = [i for i, c in enumerate(choices) if _is_expertise_choice(c) or c["id"] in poe_priors]
 
     def walk_key(i: int):
         c = choices[i]
@@ -1895,6 +1937,24 @@ def _gate_expertise_choices(
     have: set[str] = set(fixed_expertise)
     for i in sorted(indexes, key=walk_key):
         c = choices[i]
+        if c["id"] in poe_priors:
+            # FE6: a proficiency-or-Expertise card. Any skill may be picked (an unproficient one just becomes a
+            # proficiency); a pick already proficient at the card's position is Expertise, and under 2024 (E1
+            # revised) may not repeat an Expertise skill.
+            prior = poe_priors[c["id"]]
+            options = [o if o.get("disabled") or not (ruleset == "2024" and o["id"] in prior and o["id"] in have)
+                       else {**o, "disabled": True, "disabledReason": "already has Expertise"} for o in c["options"]]
+            kept = [s for s in c.get("selected", []) if not (ruleset == "2024" and s in prior and s in have)]
+            dropped = [s for s in c.get("selected", []) if s not in kept]
+            if dropped:
+                labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
+                names = ", ".join(labels.get(d, d) for d in dropped)
+                pruned_by_index[i] = {"choiceId": c["id"],
+                                      "reason": f"'{c['label']}': {names} already has Expertise; the selection was ignored."}
+            choices[i] = {**c, "options": options, "selected": kept,
+                          "status": "resolved" if len(kept) == c["count"] else "pending"}
+            have.update(s for s in kept if s in prior)
+            continue
         # User decision 2026-10-11: under 2024 EVERY Expertise card forbids a skill that already has Expertise
         # (stricter than RAW on purpose: a pick is never wasted). mixed / 2014 keep the flag-only behavior.
         lacks = ruleset == "2024" or bool(c.get("lacksExpertise"))
@@ -5281,9 +5341,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     invocation_effects = features_mod.invocation_effects(
         choices, {rc["cls_id"]: rc["level"] for rc in resolved_classes if rc["cls"]}, catalog)
     proficient_skills.update(features_mod.invocation_skills(invocation_effects))
+    poe_priors = _prof_or_expertise_priors(
+        choices, resolved_feats, fixed_origin_skills, [rc["cls_id"] for rc in resolved_classes if rc["cls"]])  # FE6
     pruned += _gate_expertise_choices(
         choices, proficient_skills | proficient_tools, _feat_expertise_skills(resolved_feats),
-        [rc["cls_id"] for rc in resolved_classes if rc["cls"]], ruleset)
+        [rc["cls_id"] for rc in resolved_classes if rc["cls"]], ruleset, poe_priors)
     # C6b-2 + C8: origin and class language cards yield to fixed languages and to the other cards.
     # F3a-5: class fixed languages and Lessons / ASI feat languages count from their (class, level) position on, so
     # an earlier pick wins and the later duplicate is blamed; origin feats, species, background and Common come first.
@@ -5349,7 +5411,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         saves = {ab: value + aura for ab, value in saves.items()}
     class_levels = {rc["cls_id"]: rc["level"] for rc in resolved_classes if rc["cls"]}
     jack, remarkable = features_mod.half_proficiency(effects)
-    expertise_all = list(dict.fromkeys(_feat_expertise_skills(resolved_feats) + _expertise_selected_values(choices)))
+    poe_expertise = [sel for c in choices if c["id"] in poe_priors for sel in c["selected"] if sel in poe_priors[c["id"]]]
+    expertise_all = list(dict.fromkeys(
+        _feat_expertise_skills(resolved_feats) + _expertise_selected_values(choices) + poe_expertise))
     skills = derived_mod.skill_scores(
         modifiers, list(proficient_skills), prof_bonus, expertise_all, jack, remarkable,
     )
@@ -5563,7 +5627,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     return {
         "sheet": sheet,
         # F2-C: `count_by_level` is an internal template key (count-variable test), not API shape.
-        "choices": [{k: v for k, v in c.items() if k not in ("count_by_level", "lacksExpertise")} for c in choices],
+        "choices": [{k: v for k, v in c.items() if k not in ("count_by_level", "lacksExpertise", "profOrExpertise")} for c in choices],
         "derived": derived,
         "problems": problems,
         "warnings": warnings,

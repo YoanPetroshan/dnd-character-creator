@@ -425,6 +425,15 @@ def ruleset_for_edition(raw: dict) -> str:
 # their PHB text has no repeat sentence.
 REPEATABLE_FEAT_OVERRIDES = {"elemental-adept-phb"}
 
+# FE6 (B3): 5etools says `skillProficiencies: [{"any": 1}]` for Echoing Soul (Ravenloft), but the feat text says
+# "You have proficiency in two skills of your choice." The text wins: index -> number of skill picks.
+FEAT_SKILL_PICK_COUNT_OVERRIDES = {"echoing-soul-rhw": 2}
+
+# FE6 (B4): 5etools says `languageProficiencies: [{"thieves' cant": true}]` for Harper Agent (FRHoF) and the
+# converter used to drop the unknown key. index -> language ids ("You know Thieves' Cant."). Display names come
+# from LANGUAGE_NAMES (the 2024 rare table, C6b-2).
+FEAT_FIXED_LANGUAGE_OVERRIDES = {"harper-agent-frhof": ["thieves-cant"]}
+
 
 def ruleset_for_feat(raw: dict) -> str:
     return "2024" if raw.get("source") in RULESET_2024_SOURCES else "2014"
