@@ -1002,7 +1002,14 @@ def _background_ability_bonus_deltas(envelope: dict, built_options: list[dict]) 
     return deltas_by_id
 
 
-def _feat_ability_bonus_choice_templates(feats: list[dict], origin: str | None = None) -> list[tuple[dict, dict]]:
+def _feat_ability_cap(feat: dict) -> int:
+    """The ceiling of a feat's own ability increase: 20, or 30 for an Epic Boon (catalog `ability_cap`, FE2)."""
+    return feat.get("ability_cap") or asi_mod.ASI_CAP
+
+
+def _feat_ability_bonus_choice_templates(
+    feats: list[dict], origin: str | None = None, scores: dict[str, int] | None = None,
+) -> list[tuple[dict, dict]]:
     """Feat-side counterpart to _background_ability_bonus_choice_template/
     _species_ability_bonus_choice_template (Phase 4c-ii Task 2) — plural,
     unlike those two, because `feats` is itself a list (a background can in
@@ -1069,6 +1076,13 @@ def _feat_ability_bonus_choice_templates(feats: list[dict], origin: str | None =
         label = f"{feat['name']}: Ability Score Increase"
         tpl = build_choice_template(envelope, cid, source, label, description=description)
         if tpl:
+            if scores is not None:
+                cap = _feat_ability_cap(feat)
+                deltas_by_option = _feat_ability_bonus_deltas(envelope)
+                for option in tpl["options"]:
+                    if asi_mod.asi_exceeds_cap(deltas_by_option.get(option["id"], []), scores, cap):
+                        option["disabled"] = True
+                        option["disabledReason"] = f"already at maximum ({cap})"
             pairs.append((tpl, feat))
     return pairs
 
@@ -1172,6 +1186,7 @@ def _apply_asi_progression(
     feat_deltas_by_cid: dict[str, list[tuple[str, int]]] | None = None,
     total_level: int = 0, use_feat_prerequisites: bool = False,
     held: "_HeldFeatState | None" = None, held_by_level: dict[int, "_HeldFeatState"] | None = None,
+    cap_skipped_feat_cids: set[str] | None = None,
 ) -> tuple[dict[int, dict[str, int]], dict[str, int], set[str]]:
     """Walks ASI-granting levels in ascending order, applying each
     level's stored selection (if present and valid) to a running
@@ -1203,17 +1218,20 @@ def _apply_asi_progression(
       `resolved_feats` (none of its other effects apply either) and
       report it.
     - Otherwise its delta is applied only if it doesn't push any score
-      over 20 (asi_mod.asi_exceeds_cap, the SAME check combos get). The
-      feat itself still counts as taken; only the increase is skipped.
-      (The background-side equivalent — a background-granted feat's own
-      ability bonus, folded into `feat_bonuses` before this walk — stays
-      uncapped: a pre-existing Phase 4c-ii gap, out of this plan's scope.)
+      over the FEAT'S cap (asi_mod.asi_exceeds_cap, the check combos get,
+      with `cap` = the feat's own `ability_cap`: 20, or 30 for an Epic
+      Boon, FE2). Combos always stay at 20. The feat itself still counts
+      as taken; only the increase is skipped, and the cid is added to
+      `cap_skipped_feat_cids` (when given) so resolve() knows which delta
+      was NOT applied. (The background / species side — an origin feat's
+      bonus, folded into `feat_bonuses` before this walk — is clamped at
+      the same cap in resolve(), FE2 / B2.)
 
     What keeps scores in range: resolve()'s 1-30 range check runs BEFORE
     this walk, on the pre-ASI scores, and nothing re-checks afterwards.
     This walk never needs it, because every delta it applies — combo or
-    feat — is cap-gated at 20, so it never raises any score above
-    max(20, that score's pre-walk value).
+    feat — is cap-gated (20, or 30 for an Epic Boon), so it never raises
+    any score above max(that cap, that score's pre-walk value).
 
     With no feat maps passed (or empty ones) the feat branch is never
     taken and this is the combo-only behavior."""
@@ -1241,8 +1259,12 @@ def _apply_asi_progression(
             if held is not None:
                 held.add_feat(asi_feats_by_cid[cid])
             deltas = feat_deltas_by_cid.get(cid, [])
-            if deltas and not asi_mod.asi_exceeds_cap(deltas, running):
-                running = asi_mod.apply_asi(deltas, running)
+            if deltas:
+                if asi_mod.asi_exceeds_cap(deltas, running, _feat_ability_cap(asi_feats_by_cid[cid])):
+                    if cap_skipped_feat_cids is not None:
+                        cap_skipped_feat_cids.add(cid)
+                else:
+                    running = asi_mod.apply_asi(deltas, running)
     return scores_by_level, running, blocked_feat_cids
 
 
@@ -2546,8 +2568,15 @@ def _feat_instance_key(feat: dict) -> str:
 def _feat_prerequisite_problems(
     feats: list[dict], total_level: int, final_scores: dict[str, int], use_prerequisites: bool,
     chosen_ability_deltas_by_instance: dict[str, list[tuple[str, int]]] | None = None,
+    applied_fixed_deltas_by_instance: dict[str, list[tuple[str, int]]] | None = None,
 ) -> list[dict]:
-    """Structural precedent: _multiclass_prerequisite_problems above — same
+    """FE2: `applied_fixed_deltas_by_instance` (keyed by _feat_instance_key) says what a feat's FIXED increase
+    really added to `final_scores`: clamped for an origin feat at its cap (B2), nothing for an ASI feat skipped
+    at its cap. When an instance is listed, that is subtracted instead of the raw `ability_bonuses`, so a
+    delta that never landed is not subtracted (the false positive the ASI-or-feat review found). Chosen deltas
+    (`chosen_ability_deltas_by_instance`) are now the applied ones too.
+
+    Structural precedent: _multiclass_prerequisite_problems above — same
     "only check if the preference is on," same "append a problem, NEVER
     block or hide the underlying grant" (a feat with an unmet prerequisite
     still fully applies its effects; this only surfaces a `problems` entry
@@ -2639,9 +2668,13 @@ def _feat_prerequisite_problems(
         # species'/background's) are left untouched in `final_scores`
         # itself and in every other feat's own check this same loop runs.
         scores_without_own_bonus = dict(final_scores)
-        for entry in feat.get("ability_bonuses", []):
-            ab = entry["ability_score"]["index"].upper()
-            scores_without_own_bonus[ab] = scores_without_own_bonus.get(ab, 0) - entry["bonus"]
+        applied_fixed = (applied_fixed_deltas_by_instance or {}).get(_feat_instance_key(feat))
+        if applied_fixed is not None:
+            fixed_deltas = applied_fixed
+        else:
+            fixed_deltas = [(e["ability_score"]["index"].upper(), e["bonus"]) for e in feat.get("ability_bonuses", [])]
+        for ab, delta in fixed_deltas:
+            scores_without_own_bonus[ab] = scores_without_own_bonus.get(ab, 0) - delta
         # Task 4: subtract THIS feat's own CHOSEN ability-bonus delta back
         # out too, same discipline, keyed by this feat's own instance.
         for ab_key, delta in chosen_ability_deltas_by_instance.get(_feat_instance_key(feat), []):
@@ -4286,8 +4319,34 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             })
     asi_feats_by_cid = {f["_asi_cid"]: f for f in asi_feat_picks}
     prerequisite_blocked_asi_feat_cids: set[str] = set()
+    cap_skipped_asi_feat_cids: set[str] = set()  # FE2: ASI feats whose increase did not fit under their cap
 
-    feat_bonuses = _feat_ability_bonuses(background_feats + species_feats)  # ASI-selected feats' bonuses: see _apply_asi_progression
+    # FE2 (B2): origin feats (background, then species) have no per-level gate to skip at, so each one's
+    # delta is CLAMPED to the room left under its own cap (20, or 30 for an Epic Boon) on the scores it lands on:
+    # base + species + background bonuses, then the earlier origin feats. Only the feat's delta is clamped, never
+    # the species / background bonuses themselves. ASI-selected feats: see _apply_asi_progression.
+    feat_bonuses: dict[str, int] = {}
+    origin_running: dict[str, int] = {}
+    for ab in derived_mod.ABILITIES:
+        try:
+            raw_base = int(base_scores.get(ab, 10))
+        except (TypeError, ValueError):
+            raw_base = 10
+        origin_running[ab] = raw_base + species_bonuses.get(ab, 0) + background_bonuses.get(ab, 0)
+    applied_fixed_deltas_by_instance: dict[str, list[tuple[str, int]]] = {}  # what was really added, per feat instance
+
+    def _apply_origin_delta(feat: dict, ab_key: str, delta: int) -> int:
+        applied = asi_mod.clamped_delta(ab_key, delta, origin_running, _feat_ability_cap(feat))
+        if applied:
+            feat_bonuses[ab_key] = feat_bonuses.get(ab_key, 0) + applied
+            origin_running[ab_key] = origin_running.get(ab_key, 10) + applied
+        return applied
+
+    def _apply_origin_fixed(feat: dict) -> None:
+        applied_fixed_deltas_by_instance[_feat_instance_key(feat)] = [
+            (ab_key, _apply_origin_delta(feat, ab_key, delta))
+            for ab_key, delta in _feat_ability_bonuses([feat]).items()
+        ]
 
     # Phase 4c-ii Task 2: a FOURTH source into this same early pass — a
     # background-granted feat's own ability_bonus_options CHOICE (as
@@ -4309,8 +4368,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # build its own lookup dict — see that function's own docstring
     # (Finding 3 of the final whole-branch review, 2026-09-28) for the
     # silent-desync risk that duplication used to carry.
-    feat_ability_choice_pairs = _feat_ability_bonus_choice_templates(background_feats)
-    feat_ability_choice_tpls = [tpl for tpl, _ in feat_ability_choice_pairs]
+    feat_ability_choice_pairs: list[tuple[dict, dict]] = []
+    feat_ability_choice_tpls: list[dict] = []
     # Task 4 (ASI-or-feat): this SAME loop already computes each
     # background-granted feat's own selected ability-bonus ids and their
     # deltas (feeding `feat_bonuses` above) — also record them here, keyed
@@ -4327,41 +4386,42 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # background-granted feat's own chosen bonus needs this explicit
     # subtraction at all).
     background_chosen_ability_deltas_by_instance: dict[str, list[tuple[str, int]]] = {}
-    if feat_ability_choice_tpls:
-        feat_background_choices_raw = background_dict.get("choices") if isinstance(background_dict.get("choices"), dict) else {}
-        for feat_ability_tpl, source_feat in feat_ability_choice_pairs:
-            valid_feat_ability_ids = {o["id"] for o in feat_ability_tpl["options"] if not o.get("disabled")}
-            raw_selected = feat_background_choices_raw.get(feat_ability_tpl["id"]) or []
-            # Same dedupe-before-cap-and-apply discipline as species'/
-            # background's own passes above.
-            deduped_selected = list(dict.fromkeys(s for s in raw_selected if isinstance(s, str)))
-            selected_feat_abilities = [s for s in deduped_selected if s in valid_feat_ability_ids][: feat_ability_tpl["count"]]
-            feat_ability_deltas = _feat_ability_bonus_deltas(source_feat["ability_bonus_options"])
-            instance_chosen_deltas: list[tuple[str, int]] = []
-            for ab_id in selected_feat_abilities:
-                for ab_key, delta in feat_ability_deltas.get(ab_id, []):
-                    feat_bonuses[ab_key] = feat_bonuses.get(ab_key, 0) + delta
-                    instance_chosen_deltas.append((ab_key, delta))
-            if instance_chosen_deltas:
-                background_chosen_ability_deltas_by_instance[_feat_instance_key(source_feat)] = instance_chosen_deltas
+    feat_background_choices_raw = background_dict.get("choices") if isinstance(background_dict.get("choices"), dict) else {}
+
+    def _apply_chosen_origin_deltas(source_feat: dict, feat_ability_tpl: dict, raw_choices: dict) -> None:
+        # Options at the feat's cap are already disabled in the template (scores = the pre-feat scores), so a
+        # stored pick of one is dropped here and pruned later by the generic pass.
+        valid_feat_ability_ids = {o["id"] for o in feat_ability_tpl["options"] if not o.get("disabled")}
+        raw_selected = raw_choices.get(feat_ability_tpl["id"]) or []
+        # Same dedupe-before-cap-and-apply discipline as species'/background's own passes above.
+        deduped_selected = list(dict.fromkeys(s for s in raw_selected if isinstance(s, str)))
+        selected_feat_abilities = [s for s in deduped_selected if s in valid_feat_ability_ids][: feat_ability_tpl["count"]]
+        feat_ability_deltas = _feat_ability_bonus_deltas(source_feat["ability_bonus_options"])
+        instance_chosen_deltas: list[tuple[str, int]] = []
+        for ab_id in selected_feat_abilities:
+            for ab_key, delta in feat_ability_deltas.get(ab_id, []):
+                applied = _apply_origin_delta(source_feat, ab_key, delta)
+                if applied:
+                    instance_chosen_deltas.append((ab_key, applied))
+        if instance_chosen_deltas:
+            background_chosen_ability_deltas_by_instance[_feat_instance_key(source_feat)] = instance_chosen_deltas
+
+    for background_feat in background_feats:
+        _apply_origin_fixed(background_feat)
+        for feat_ability_tpl, source_feat in _feat_ability_bonus_choice_templates([background_feat], scores=dict(origin_running)):
+            feat_ability_choice_pairs.append((feat_ability_tpl, source_feat))
+            feat_ability_choice_tpls.append(feat_ability_tpl)
+            _apply_chosen_origin_deltas(source_feat, feat_ability_tpl, feat_background_choices_raw)
     # Species-granted feats: the same pass, selections read from
     # species.choices under each feat's own `_species_origin` prefix.
     species_feat_ability_tpls: list[dict] = []
     for species_feat in species_feats:
-        for feat_ability_tpl, source_feat in _feat_ability_bonus_choice_templates([species_feat], origin=species_feat["_species_origin"]):
+        _apply_origin_fixed(species_feat)
+        for feat_ability_tpl, source_feat in _feat_ability_bonus_choice_templates(
+            [species_feat], origin=species_feat["_species_origin"], scores=dict(origin_running),
+        ):
             species_feat_ability_tpls.append(feat_ability_tpl)
-            valid_feat_ability_ids = {o["id"] for o in feat_ability_tpl["options"] if not o.get("disabled")}
-            raw_selected = species_choices_raw.get(feat_ability_tpl["id"]) or []
-            deduped_selected = list(dict.fromkeys(s for s in raw_selected if isinstance(s, str)))
-            selected_feat_abilities = [s for s in deduped_selected if s in valid_feat_ability_ids][: feat_ability_tpl["count"]]
-            feat_ability_deltas = _feat_ability_bonus_deltas(source_feat["ability_bonus_options"])
-            instance_chosen_deltas = []
-            for ab_id in selected_feat_abilities:
-                for ab_key, delta in feat_ability_deltas.get(ab_id, []):
-                    feat_bonuses[ab_key] = feat_bonuses.get(ab_key, 0) + delta
-                    instance_chosen_deltas.append((ab_key, delta))
-            if instance_chosen_deltas:
-                background_chosen_ability_deltas_by_instance[_feat_instance_key(source_feat)] = instance_chosen_deltas
+            _apply_chosen_origin_deltas(source_feat, feat_ability_tpl, species_choices_raw)
 
     final_scores: dict[str, int] = {}
     for ab in derived_mod.ABILITIES:
@@ -4387,7 +4447,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc_asi_scores_by_level, final_scores, rc_blocked_feat_cids = _apply_asi_progression(
             final_scores, rc_asi_levels, rc_class_choices, rc_cls_id,
             asi_feats_by_cid, asi_feat_deltas_by_cid, total_level, use_feat_prereqs,
-            held=held, held_by_level=rc_held_by_level,
+            held=held, held_by_level=rc_held_by_level, cap_skipped_feat_cids=cap_skipped_asi_feat_cids,
         )
         prerequisite_blocked_asi_feat_cids |= rc_blocked_feat_cids
         # A feat picked at an ASI level whose option is disabled there
@@ -4481,8 +4541,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                     [asi_feat], catalog, origin=asi_feat["_asi_origin"], raw_selections=rc_class_choices,
                     total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
                 )
-                choice_templates += [
-                    tpl for tpl, _ in _feat_ability_bonus_choice_templates([asi_feat], origin=asi_feat["_asi_origin"])
+                choice_templates += [  # FE2: options at the feat's cap read this level's running scores
+                    tpl for tpl, _ in _feat_ability_bonus_choice_templates(
+                        [asi_feat], origin=asi_feat["_asi_origin"],
+                        scores=rc_asi_scores_by_level.get(asi_feat["_asi_level"], {}),
+                    )
                 ]
 
     asi_selected_feats = [f for f in asi_feat_picks if f["_asi_cid"] not in prerequisite_blocked_asi_feat_cids]
@@ -4518,8 +4581,13 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # to `final_scores` produces a false "prerequisite unmet"). Only a
     # background-granted feat needs the explicit subtraction this
     # function does, since it has no equivalent per-level gate.
+    # FE2: the fixed increase to subtract is the one that was APPLIED (clamped for an origin feat, skipped
+    # for an ASI feat at its cap), never the raw one.
+    for skipped_cid in cap_skipped_asi_feat_cids:
+        applied_fixed_deltas_by_instance[_feat_instance_key(asi_feats_by_cid[skipped_cid])] = []
     problems += _feat_prerequisite_problems(
         resolved_feats, total_level, final_scores, use_feat_prereqs, background_chosen_ability_deltas_by_instance,
+        applied_fixed_deltas_by_instance,
     )
 
     # Primal Champion et al.: fixed ability-score feature bonuses, applied
@@ -4809,6 +4877,16 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                     "reason": (f"'{tpl['label']}': {', '.join(_pick_name(g) for g in gone)} is no longer offered "
                                f"and was ignored."),
                 })
+            if tpl["source"]["kind"] == "feat" and tpl["id"].endswith(":ability-bonus"):
+                # FE2 (B9): a stored pick of an option closed by the feat's ability cap is reported, not lost silently.
+                closed = [o for o in tpl["options"] if o.get("disabled") and o["id"] in raw_selected]
+                if closed:
+                    pruned.append({
+                        "choiceId": tpl["id"],
+                        "reason": (f"'{tpl['label']}': " + ", ".join(
+                            f"{o['id'].upper()} is {o.get('disabledReason', 'not available')}" for o in closed)
+                            + " and was ignored."),
+                    })
             if len(selected) > tpl["count"]:
                 problems.append({
                     "id": f"over-selected-{tpl['id']}",

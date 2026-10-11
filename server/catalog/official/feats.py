@@ -76,6 +76,9 @@ def _feat_from_5etools(raw: dict) -> dict | None:
         "prerequisite": raw.get("prerequisite", []),  # Task 6 (prerequisite checking)
         "ability_bonuses": _ability_bonuses_from_5etools(raw.get("ability", [])),
         "ability_bonus_options": _feat_ability_bonus_options_from_5etools(raw.get("ability", [])),
+        # FE2 (B1): the score ceiling of this feat's increase. 5etools carries it as
+        # `ability[].max` (30 on every Epic Boon); every other feat says "to a maximum of 20".
+        "ability_cap": _feat_ability_cap_from_5etools(raw.get("ability", [])),
         # Task 3: skill/tool/weapon/armor proficiencies — reuses the SAME
         # race/background-side conversion machinery UNCHANGED
         # (_proficiencies_from_5etools/_proficiency_choices_from_5etools
@@ -459,6 +462,13 @@ def _saving_throw_proficiencies_from_5etools(raw: dict) -> list[str]:
             if val is True and key in _ABILITY_KEYS:
                 throws.append(key.upper())
     return throws
+
+
+def _feat_ability_cap_from_5etools(ability_list: list[dict]) -> int:
+    """The highest `max` of the feat's `ability` records, else the ordinary 20.
+    A hidden record (the ASI feat's two descriptive entries) never counts."""
+    caps = [e["max"] for e in ability_list or [] if not e.get("hidden") and isinstance(e.get("max"), int)]
+    return max(caps) if caps else 20
 
 
 def _feat_ability_bonus_options_from_5etools(ability_list: list[dict]) -> dict | None:

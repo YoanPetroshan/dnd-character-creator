@@ -28,8 +28,16 @@ def asi_combinations() -> list[tuple[str, list[tuple[str, int]]]]:
     return combos
 
 
-def asi_exceeds_cap(deltas: list[tuple[str, int]], current_scores: dict[str, int]) -> bool:
-    return any(current_scores.get(ab, 10) + delta > ASI_CAP for ab, delta in deltas)
+def asi_exceeds_cap(deltas: list[tuple[str, int]], current_scores: dict[str, int], cap: int = ASI_CAP) -> bool:
+    """`cap` is 20 for combos and ordinary feats; an Epic Boon raises it to 30 (FE2, B1)."""
+    return any(current_scores.get(ab, 10) + delta > cap for ab, delta in deltas)
+
+
+def clamped_delta(ability: str, delta: int, current_scores: dict[str, int], cap: int = ASI_CAP) -> int:
+    """The part of `delta` that fits under `cap`: min(delta, max(0, cap - score)). For the +1 deltas every
+    feat carries this equals the skip rule of asi_exceeds_cap. Used for origin feats (background / species),
+    which have no per-level gate to skip at (FE2, B2)."""
+    return min(delta, max(0, cap - current_scores.get(ability, 10)))
 
 
 def apply_asi(deltas: list[tuple[str, int]], scores: dict[str, int]) -> dict[str, int]:
