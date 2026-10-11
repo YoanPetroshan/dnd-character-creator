@@ -283,6 +283,8 @@ SPECIFIC_WEAPON_PROFICIENCY_IDS = {
     "sickles", "slings", "spears",
     "battleaxes", "handaxes", "light-hammers", "warhammers", "shortbows", "longbows",
 }
+# FE5: weapon-group proficiency ids a feat grants (Gunner: "firearms"); attacks.weapon_is_proficient maps it to the DMG firearms.
+FEAT_WEAPON_PROFICIENCY_IDS = {"firearms"}
 WEAPON_PROFICIENCY_ID_OVERRIDES = {
     "crossbow-light": "crossbows-light",
     "crossbow-hand": "hand-crossbows",

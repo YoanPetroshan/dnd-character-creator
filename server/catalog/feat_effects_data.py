@@ -689,7 +689,7 @@ FEAT_EFFECTS.update({
         "ac_bonus_if": {"bonus": 1, "wielded": {"item": "double-bladed-scimitar", "two_hands": True}},
         "notes": ["+1 AC while holding a double-bladed scimitar with two hands (included in Armor Class when the "
                   "wielded hands are set on the Equipment page).",
-                  "A double-bladed scimitar has the Finesse property when you wield it (not applied to its attack row)."]},
+                  "A double-bladed scimitar has the Finesse property when you wield it (applied to its attack row)."]},
     "observant-phb": {
         "passive_bonus": {"skill-perception": 5, "skill-investigation": 5},
         "notes": ["If you can see a creature's mouth while it speaks a language you understand, you can read its lips."]},
@@ -708,6 +708,229 @@ FEAT_EFFECT_QUOTES.update({
     "observant-phb": "You have a +5 bonus to your passive Wisdom (Perception) and passive Intelligence (Investigation) scores.",
     "keenness-of-the-stone-giant-bgg": "You gain darkvision with a range of 60 feet. If you already have darkvision from "
                                        "another source, its range increases by 60 feet.",
+})
+
+# FE5: attack rows. Optional or conditional riders never fold into ``damage`` (F-D2): they are row notes, with the
+# character's number filled in. ``attack_notes`` entries are ``{when, text}``; ``when`` is a predicate (or a list of
+# predicates, any of which may match) over the attack row:
+#   melee / ranged (bool)   the weapon's range kind (the unarmed strike is melee)
+#   weapon (bool)           the row is a catalog weapon (not the unarmed strike)
+#   properties              {"all": [...], "any": [...]} weapon properties; ``lacks`` [...] properties it must not have
+#   damage_types / items / ability_in    the row's damage type / item id / attack ability must be in the list
+#   proficient (bool)       the row's proficiency; ``damaging`` (bool) the row has a damage die
+# Text placeholders: {pb}, {inc_mod}, {inc_score}, {mod} (the row's ability modifier), {die} (one die of the row's
+# damage dice), {dtype}, {dmg:1d4} (a die plus the row's modifier) and the {expr} arithmetic of the FE3 notes.
+# ``unarmed`` is an Unarmed Strike the feat improves (F-D6: the row exists only when such a feat is held);
+# ``offhand`` and ``finesse_items`` change the row's numbers. Governing sentences: FEAT_EFFECT_QUOTES.
+_CROSSBOWS = ["crossbow-hand", "crossbow-light", "crossbow-heavy"]
+_FIREARMS = ["musket", "pistol"]
+
+_ATTACK_EFFECTS = {
+    "savage-attacker-phb": {"attack_notes": [
+        {"when": {"melee": True, "weapon": True},
+         "text": "Savage Attacker: once per turn, reroll the weapon's damage dice and use either total."}]},
+    "savage-attacker-xphb": {"attack_notes": [
+        {"when": {"weapon": True},
+         "text": "Savage Attacker: once per turn when you hit, roll the weapon's damage dice twice and use either roll."}]},
+    "great-weapon-master-phb": {"attack_notes": [
+        {"when": {"melee": True, "weapon": True, "properties": {"all": ["heavy"]}, "proficient": True},
+         "text": "Great Weapon Master: before you attack you may take -5 to the attack roll; if it hits, +10 damage."},
+        {"when": {"melee": True, "weapon": True},
+         "text": "Great Weapon Master: on your turn, a critical hit or reducing a creature to 0 hit points with a melee "
+                 "weapon lets you make one melee weapon attack as a bonus action."}]},
+    "great-weapon-master-xphb": {"attack_notes": [
+        {"when": {"weapon": True, "properties": {"all": ["heavy"]}},
+         "text": "Great Weapon Master: +{pb} damage when you hit with this Heavy weapon as part of the Attack action "
+                 "on your turn."},
+        {"when": {"melee": True, "weapon": True},
+         "text": "Great Weapon Master (Hew): after a Critical Hit or reducing a creature to 0 Hit Points with a Melee "
+                 "weapon, make one attack with the same weapon as a Bonus Action."}]},
+    "sharpshooter-phb": {"attack_notes": [
+        {"when": {"ranged": True, "weapon": True, "proficient": True},
+         "text": "Sharpshooter: before you attack you may take -5 to the attack roll; if it hits, +10 damage."},
+        {"when": {"ranged": True, "weapon": True},
+         "text": "Sharpshooter: no disadvantage at long range; ignores half and three-quarters cover."}]},
+    "sharpshooter-xphb": {"attack_notes": [
+        {"when": {"ranged": True, "weapon": True},
+         "text": "Sharpshooter: ignores Half and Three-Quarters Cover; no Disadvantage within 5 feet of an enemy or at "
+                 "long range."}]},
+    "crossbow-expert-phb": {"attack_notes": [
+        {"when": {"items": _CROSSBOWS, "proficient": True},
+         "text": "Crossbow Expert: ignore the loading quality; no disadvantage within 5 feet of a hostile creature."},
+        {"when": {"items": ["crossbow-hand"]},
+         "text": "Crossbow Expert: after attacking with a one-handed weapon in the Attack action, a bonus action "
+                 "attack with a hand crossbow you are holding."}]},
+    "crossbow-expert-xphb": {
+        "offhand": {"light_crossbow_mod": True},
+        "attack_notes": [
+            {"when": {"items": _CROSSBOWS},
+             "text": "Crossbow Expert: ignore the Loading property; no Disadvantage within 5 feet of an enemy."},
+            {"when": {"items": _CROSSBOWS, "properties": {"all": ["light"]}},
+             "text": "Crossbow Expert (Dual Wielding): the extra attack of the Light property adds your ability "
+                     "modifier to the damage."}]},
+    "dual-wielder-phb": {
+        "offhand": {"non_light_one_handed_melee": True},
+        "attack_notes": [
+            {"when": {"melee": True, "weapon": True, "lacks": ["two-handed", "light"]},
+             "text": "Dual Wielder: two-weapon fighting is allowed with this weapon although it is not Light."}]},
+    "dual-wielder-xphb": {
+        "offhand": {"dw2024": True},
+        "attack_notes": [
+            {"when": {"melee": True, "weapon": True, "lacks": ["two-handed"]},
+             "text": "Dual Wielder: after attacking with a Light weapon in the Attack action, one extra Bonus Action "
+                     "attack with this weapon (no ability modifier to its damage unless negative)."}]},
+    "tavern-brawler-phb": {"unarmed": {
+        "name": "Tavern Brawler", "die": "1d4", "type": "bludgeoning", "ability": "STR",
+        "notes": ["Tavern Brawler: proficient with improvised weapons; when you hit with an unarmed strike or an "
+                  "improvised weapon, a bonus action to attempt a grapple."]}},
+    "tavern-brawler-xphb": {"unarmed": {
+        "name": "Tavern Brawler", "die": "1d4", "type": "bludgeoning", "ability": "STR",
+        "notes": ["Tavern Brawler: reroll a 1 on a damage die and use the new roll; when you hit as part of the Attack "
+                  "action you can also push the target 5 feet (once per turn)."]}},
+    "unarmed-fighting-xphb": {"unarmed": {
+        "name": "Unarmed Fighting", "die": "1d6", "die_free_hands": "1d8", "type": "bludgeoning", "ability": "STR",
+        "notes": ["Unarmed Fighting: at the start of each of your turns, 1d4 Bludgeoning damage to one creature "
+                  "Grappled by you."]}},
+    "dragon-hide-xge": {"unarmed": {
+        "name": "Dragon Hide claws", "die": "1d4", "type": "slashing", "ability": "STR",
+        "notes": ["Dragon Hide: retractable claws (no action to extend or retract) deal slashing damage."]}},
+    "revenant-blade-erlw": {
+        "finesse_items": ["double-bladed-scimitar"],
+        "attack_notes": [
+            {"when": {"items": ["double-bladed-scimitar"]},
+             "text": "Revenant Blade: Finesse while you wield it (the better of Strength and Dexterity)."}]},
+    "piercer-tce": {"attack_notes": [
+        {"when": {"damage_types": ["piercing"]},
+         "text": "Piercer: once per turn when you hit, reroll one damage die and use the new roll; on a critical hit "
+                 "roll one additional damage die."}]},
+    "piercer-xphb": {"attack_notes": [
+        {"when": {"damage_types": ["piercing"]},
+         "text": "Piercer: once per turn when you hit, reroll one damage die and use the new roll; on a Critical Hit "
+                 "roll one additional damage die."}]},
+    "slasher-tce": {"attack_notes": [
+        {"when": {"damage_types": ["slashing"]},
+         "text": "Slasher: once per turn when you hit, reduce the target's speed by 10 feet until the start of your "
+                 "next turn; on a critical hit it has disadvantage on all attack rolls until then."}]},
+    "slasher-xphb": {"attack_notes": [
+        {"when": {"damage_types": ["slashing"]},
+         "text": "Slasher: once per turn when you hit, reduce the target's Speed by 10 feet until the start of your "
+                 "next turn; on a Critical Hit it has Disadvantage on attack rolls until then."}]},
+    "crusher-tce": {"attack_notes": [
+        {"when": {"damage_types": ["bludgeoning"]},
+         "text": "Crusher: once per turn when you hit, move the target 5 feet to an unoccupied space (no more than one "
+                 "size larger than you); on a critical hit, attack rolls against it have advantage until the start "
+                 "of your next turn."}]},
+    "crusher-xphb": {"attack_notes": [
+        {"when": {"damage_types": ["bludgeoning"]},
+         "text": "Crusher: once per turn when you hit, move the target 5 feet to an unoccupied space (no more than one "
+                 "size larger than you); on a Critical Hit, attack rolls against it have Advantage until the start "
+                 "of your next turn."}]},
+    "polearm-master-phb": {"attack_notes": [
+        {"when": {"items": ["glaive", "halberd", "quarterstaff", "spear"]},
+         "text": "Polearm Master: after the Attack action with only this weapon, a bonus action attack with its "
+                 "opposite end: {dmg:1d4} bludgeoning (same ability modifier)."},
+        {"when": {"items": ["glaive", "halberd", "pike", "quarterstaff", "spear"]},
+         "text": "Polearm Master: creatures that enter your reach with this weapon provoke an opportunity attack."}]},
+    "polearm-master-xphb": {"attack_notes": [
+        {"when": [{"items": ["quarterstaff", "spear"]},
+                  {"melee": True, "weapon": True, "properties": {"all": ["heavy", "reach"]}}],
+         "text": "Polearm Master (Pole Strike): after the Attack action, a Bonus Action attack with the opposite end: "
+                 "{dmg:1d4} Bludgeoning."},
+        {"when": [{"items": ["quarterstaff", "spear"]},
+                  {"melee": True, "weapon": True, "properties": {"all": ["heavy", "reach"]}}],
+         "text": "Polearm Master (Reactive Strike): Reaction melee attack against a creature that enters your reach."}]},
+    "charger-phb": {"attack_notes": [
+        {"when": {"melee": True, "weapon": True},
+         "text": "Charger: after the Dash action, a bonus action melee attack; if you moved at least 10 feet in a "
+                 "straight line first, +5 damage on a hit (not included in the damage shown)."}]},
+    "charger-xphb": {"attack_notes": [
+        {"when": {"melee": True},
+         "text": "Charger (Charge Attack): after moving at least 10 feet in a straight line toward the target, +1d8 "
+                 "damage or push it up to 10 feet (once per turn; not included in the damage shown)."}]},
+    "gunner-tce": {"attack_notes": [
+        {"when": {"items": _FIREARMS},
+         "text": "Gunner: ignore the loading property; no disadvantage within 5 feet of a hostile creature."}]},
+    "elven-accuracy-xge": {"attack_notes": [
+        {"when": {"ability_in": ["DEX", "INT", "WIS", "CHA"]},
+         "text": "Elven Accuracy: with advantage on this attack, you can reroll one of the dice once."}]},
+    "orcish-fury-xge": {"attack_notes": [
+        {"when": {"weapon": True, "damaging": True},
+         "text": "Orcish Fury: on a hit, roll one of the weapon's damage dice again for +{die} {dtype} extra damage "
+                 "(once per short or long rest)."}]},
+    "poisoner-tce": {"attack_notes": [
+        {"when": {"weapon": True},
+         "text": "Poisoner: apply a poison dose as a bonus action; a creature damaged by it fails a DC 14 Constitution "
+                 "save and takes 2d8 poison damage and is poisoned until the end of your next turn."}]},
+    "poisoner-xphb": {"attack_notes": [
+        {"when": {"weapon": True},
+         "text": "Poisoner: apply a poison dose as a Bonus Action; a creature damaged by it must succeed on a DC "
+                 "{8+inc_mod+pb} Constitution save or take 2d8 Poison damage and be Poisoned until the end of your "
+                 "next turn."}]},
+    "bomber-abh": {"attack_notes": [
+        {"when": {"weapon": True, "properties": {"any": ["thrown"]}},
+         "text": "Bomber: no Disadvantage at long range with Thrown weapons; a thrown vial or flask can target "
+                 "something you see within 40 feet."}]},
+    "boon-of-irresistible-offense-xphb": {"attack_notes": [
+        {"when": {"damage_types": ["bludgeoning", "piercing", "slashing"]},
+         "text": "Boon of Irresistible Offense: your {dtype} damage always ignores Resistance."},
+        {"when": {},
+         "text": "Boon of Irresistible Offense: on a 20 on the d20, extra damage equal to {inc_score} (the score you "
+                 "increased), of the attack's type."}]},
+}
+FEAT_EFFECTS.update({
+    index: ({**FEAT_EFFECTS.get(index, {}), **effect}) for index, effect in _ATTACK_EFFECTS.items()})
+
+FEAT_EFFECT_QUOTES.update({
+    "savage-attacker-phb": "Once per turn when you roll damage for a melee weapon attack, you can reroll the weapon's damage dice and use either total.",
+    "savage-attacker-xphb": "Once per turn when you hit a target with a weapon, you can roll the weapon's damage dice twice and use either roll against the target.",
+    "great-weapon-master-phb": ("Before you make a melee attack with a heavy weapon that you are proficient with, you can choose to take a -5 penalty to the attack roll. If the attack hits, you add +10 to the attack's damage.",
+                                "you can make one melee weapon attack as a bonus action"),
+    "great-weapon-master-xphb": ("The extra damage equals your Proficiency Bonus.",
+                                 "you can make one attack with the same weapon as a Bonus Action"),
+    "sharpshooter-phb": ("Before you make an attack with a ranged weapon that you are proficient with, you can choose to take a -5 penalty to the attack roll. If the attack hits, you add +10 to the attack's damage.",
+                         "Attacking at long range doesn't impose disadvantage on your ranged weapon attack rolls."),
+    "sharpshooter-xphb": ("Your ranged attacks with weapons ignore Half Cover and Three-Quarters Cover.",
+                          "Being within 5 feet of an enemy doesn't impose Disadvantage on your attack rolls with Ranged weapons."),
+    "crossbow-expert-phb": ("You ignore the loading quality of crossbows with which you are proficient.",
+                            "you can use a bonus action to attack with a hand crossbow you are holding"),
+    "crossbow-expert-xphb": ("You ignore the Loading property of the Hand Crossbow, Heavy Crossbow, and Light Crossbow",
+                             "you can add your ability modifier to the damage of the extra attack if that attack is with a crossbow that has the Light property"),
+    "dual-wielder-phb": ("You gain a +1 bonus to AC while you are wielding a separate melee weapon in each hand.",
+                         "You can use two-weapon fighting even when the one-handed melee weapons you are wielding aren't light."),
+    "dual-wielder-xphb": ("you can make one extra attack as a Bonus Action later on the same turn with a different weapon, which must be a Melee weapon that lacks the Two-Handed property",
+                          "You don't add your ability modifier to the extra attack's damage unless that modifier is negative."),
+    "dragon-hide-xge": ("While you aren't wearing armor, you can calculate your AC as 13 + your Dexterity modifier. "
+                        "You can use a shield and still gain this benefit.",
+                        "you deal slashing damage equal to 1d4 + your Strength modifier, instead of the normal bludgeoning damage for an unarmed strike"),
+    "orcish-fury-xge": ("you can't use it again until you finish a short or long rest",
+                        "you can roll one of the weapon's damage dice an additional time and add it as extra damage of the weapon's damage type"),
+    "tavern-brawler-phb": "Your unarmed strike uses a d4 for damage.",
+    "tavern-brawler-xphb": ("you can deal Bludgeoning damage equal to 1d4 plus your Strength modifier instead of the normal damage of an Unarmed Strike",
+                            "you can reroll the die if it rolls a 1"),
+    "unarmed-fighting-xphb": ("you can deal Bludgeoning damage equal to 1d6 plus your Strength modifier instead of the normal damage of an Unarmed Strike",
+                              "If you aren't holding any weapons or a Shield when you make the attack roll, the d6 becomes a d8."),
+    "piercer-tce": "Once per turn, when you hit a creature with an attack that deals piercing damage, you can reroll one of the attack's damage dice, and you must use the new roll.",
+    "piercer-xphb": "Once per turn, when you hit a creature with an attack that deals Piercing damage, you can reroll one of the attack's damage dice, and you must use the new roll.",
+    "slasher-tce": "Once per turn when you hit a creature with an attack that deals slashing damage, you can reduce the speed of the target by 10 feet until the start of your next turn.",
+    "slasher-xphb": "Once per turn when you hit a creature with an attack that deals Slashing damage, you can reduce the Speed of that creature by 10 feet until the start of your next turn.",
+    "crusher-tce": "Once per turn, when you hit a creature with an attack that deals bludgeoning damage, you can move it 5 feet to an unoccupied space, provided the target is no more than one size larger than you.",
+    "crusher-xphb": "Once per turn, when you hit a creature with an attack that deals Bludgeoning damage, you can move it 5 feet to an unoccupied space if the target is no more than one size larger than you.",
+    "polearm-master-phb": ("The weapon's damage die for this attack is a d4, and the attack deals bludgeoning damage.",
+                           "While you are wielding a glaive, halberd, pike, quarterstaff, or spear, other creatures provoke an opportunity attack from you when they enter the reach you have with that weapon."),
+    "polearm-master-xphb": ("The weapon deals Bludgeoning damage, and the weapon's damage die for this attack is a d4.",
+                            "you can take a Reaction to make one melee attack against a creature that enters the reach you have with that weapon"),
+    "charger-phb": "you either gain a +5 bonus to the attack's damage roll",
+    "charger-xphb": "gain a 1d8 bonus to the attack's damage roll, or push the target up to 10 feet away if it is no more than one size larger than you",
+    "gunner-tce": ("You ignore the loading property of firearms.",
+                   "Being within 5 feet of a hostile creature doesn't impose disadvantage on your ranged attack rolls."),
+    "elven-accuracy-xge": "Whenever you have advantage on an attack roll using Dexterity, Intelligence, Wisdom, or Charisma, you can reroll one of the dice once.",
+    "poisoner-tce": ("When you make a damage roll that deals poison damage, it ignores resistance to poison damage.",
+                     "that creature must succeed on a 14 Constitution saving throw or take 2d8 poison damage"),
+    "poisoner-xphb": ("Constitution saving throw (8 plus the modifier of the ability increased by this feat and your Proficiency Bonus) or take 2d8 Poison damage",),
+    "bomber-abh": ("you can target an object or creature you can see within 40 feet of yourself",
+                   "Attacking at long range doesn't impose Disadvantage on your attack rolls with Thrown weapons."),
+    "boon-of-irresistible-offense-xphb": ("The Bludgeoning, Piercing, and Slashing damage you deal always ignores Resistance.",
+                                          "you can deal extra damage to the target equal to the ability score increased by this feat"),
 })
 
 # Feats not classified yet. Each slice removes the ones it covers (by adding them to FEAT_EFFECTS);

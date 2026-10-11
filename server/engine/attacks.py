@@ -22,8 +22,13 @@ main-hand weapon only when the off hand holds no weapon, `duelingDamage` stays
 None and rows get `wielded: bool`. Without `hands` the S5 behavior is unchanged.
 Two-Weapon Fighting's `offhandDamage` is still per light weapon (not hand-aware).
 
-Out of scope: magic items, Weapon Mastery, magic items, Monk martial
-arts for non-Monks, feat attacks, other unarmed strikes (R2 adds the Monk's row).
+FE5 (feat attacks): `styles` may carry `offhand_non_light` / `offhand_dw2024` (Dual Wielder: an off-hand `offhandDamage`
+for one-handed or non-Two-Handed melee weapons), `offhand_light_crossbow_mod` (Crossbow Expert XPHB: the modifier on the
+Light crossbow's extra attack) and `finesse_items` (Revenant Blade); `unarmed_strike(..., feat=, monk=)` builds the Unarmed
+Strike row a feat improves. Optional riders (Great Weapon Master, Savage Attacker, ...) are row notes added by
+`engine.feat_effects.annotate_attacks`, never part of `damage` (F-D2).
+
+Out of scope: magic items, Monk martial arts for non-Monks, other unarmed strikes (R2 adds the Monk's row).
 """
 from __future__ import annotations
 
@@ -49,10 +54,14 @@ def _range_text(item: dict) -> str | None:
     return f"{r['normal']}/{r['long']}" if r.get("long") else str(r["normal"])
 
 
+FIREARM_ITEM_IDS = frozenset({"musket", "pistol"})  # the DMG firearms in the catalog; Gunner grants the "firearms" id
+
+
 def weapon_is_proficient(item: dict, proficiency_ids) -> bool:
     """Category proficiency (simple/martial) or the weapon's own proficiency id."""
     return bool(
-        (item.get("weapon_category") == "Simple" and "simple-weapons" in proficiency_ids)
+        (item["index"] in FIREARM_ITEM_IDS and "firearms" in proficiency_ids)  # FE5: Gunner (TCE)
+        or (item.get("weapon_category") == "Simple" and "simple-weapons" in proficiency_ids)
         or (item.get("weapon_category") == "Martial" and "martial-weapons" in proficiency_ids)
         or reference_data.weapon_proficiency_id(item["index"]) in proficiency_ids
         # F1: 2024 Rogue, "Martial weapons that have the Finesse or Light property"
@@ -80,7 +89,7 @@ def weapon_attack(item: dict, modifiers: dict, prof_bonus: int, proficiency_ids,
     props = {p["index"] for p in item.get("properties", [])}
     ranged = item.get("weapon_range") == "Ranged"
 
-    if "finesse" in props:
+    if "finesse" in props or item["index"] in styles.get("finesse_items", ()):  # FE5: Revenant Blade
         ability = "DEX" if modifiers.get("DEX", 0) > modifiers.get("STR", 0) else "STR"
     elif ranged:
         ability = "DEX"
@@ -108,6 +117,11 @@ def weapon_attack(item: dict, modifiers: dict, prof_bonus: int, proficiency_ids,
             versatile = _dice(item["two_handed_damage"]["damage_dice"], mod)  # never Dueling
         if not ranged and "light" in props:
             offhand = _dice(dmg["damage_dice"], mod if styles.get("two_weapon_fighting") else min(mod, 0))
+        elif not ranged and not two_handed and (styles.get("offhand_non_light") or styles.get("offhand_dw2024")):
+            # FE5 Dual Wielder: the off-hand attack with a weapon that is not Light (F-D5: Two-Weapon Fighting adds the modifier)
+            offhand = _dice(dmg["damage_dice"], mod if styles.get("two_weapon_fighting") else min(mod, 0))
+        elif ranged and "light" in props and styles.get("offhand_light_crossbow_mod") and "crossbow" in item["index"]:
+            offhand = _dice(dmg["damage_dice"], mod)  # FE5 Crossbow Expert (XPHB): add the modifier to the extra attack
         if not ranged and (two_handed or "versatile" in props):
             if styles.get("great_weapon_fighting"):
                 notes.append(GWF_NOTE)
@@ -149,15 +163,21 @@ def attacks_from_gear(items: list[dict], modifiers: dict, prof_bonus: int, profi
 UNARMED_STRIKE_ID = "unarmed-strike"  # no catalog item uses this id (verified by test)
 
 
-def unarmed_strike(modifiers: dict, prof_bonus: int, martial_arts_die: str | None) -> dict:
+def unarmed_strike(modifiers: dict, prof_bonus: int, martial_arts_die: str | None, feat: dict | None = None,
+                   monk: bool = True) -> dict:
     """The Monk's Martial Arts unarmed strike (SRD): the better of STR/DEX
     (tie STR), always proficient, damage = martial arts die + modifier ("1"
-    when no die is given). Callers add the row only for Monk level >= 1."""
-    ability = "DEX" if modifiers.get("DEX", 0) > modifiers.get("STR", 0) else "STR"
+    when no die is given). Callers add the row only for Monk level >= 1.
+
+    FE5 (F-D6): `feat` = `feat_effects.unarmed_spec(...)` = {die, type, notes}: a feat's die and damage type replace
+    the Martial Arts die when they are better (`die` None = Martial Arts stays), the notes list the alternatives.
+    `monk=False` (a non-Monk with such a feat) uses Strength only. Without `feat` the output is the R2 row."""
+    ability = "DEX" if monk and modifiers.get("DEX", 0) > modifiers.get("STR", 0) else "STR"
     mod = modifiers.get(ability, 0)
-    die = martial_arts_die and (f"1{martial_arts_die}" if martial_arts_die.startswith("d") else martial_arts_die)
+    die = (feat or {}).get("die") or (martial_arts_die and (f"1{martial_arts_die}" if martial_arts_die.startswith("d") else martial_arts_die))
     return {
         "itemId": UNARMED_STRIKE_ID, "name": "Unarmed Strike", "ability": ability, "proficient": True,
-        "attackBonus": mod + prof_bonus, "damage": _dice(die or "1", mod), "damageType": "bludgeoning",
-        "duelingDamage": None, "versatileDamage": None, "offhandDamage": None, "range": "5", "notes": ["Martial Arts"],
+        "attackBonus": mod + prof_bonus, "damage": _dice(die or "1", mod), "damageType": (feat or {}).get("type", "bludgeoning"),
+        "duelingDamage": None, "versatileDamage": None, "offhandDamage": None, "range": "5",
+        "notes": list(feat["notes"]) if feat else ["Martial Arts"],
     }

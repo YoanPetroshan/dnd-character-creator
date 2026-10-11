@@ -12,6 +12,9 @@ key, so a stray duplicate (the S2 rules already forbid one) can never double Ale
 FE4 adds Armor Class (formulas, conditional bonuses, the medium armor cap), passive score bonuses, the
 Stealth rule and additive senses.
 
+FE5 adds the attack rows: weapon-math flags (off-hand attacks, Finesse), the Unarmed Strike a feat improves
+(F-D6) and the predicate notes with the character's numbers (F-D2: optional riders are never folded into ``damage``).
+
 FE3 adds the output surfaces: ``notes`` (text for effects that are not folded into a number, with
 the character's numbers filled in) and ``resources`` (``derived.featResources``).
 """
@@ -260,4 +263,161 @@ def resources(insts: list[dict], numbers: dict) -> list[dict]:
             if res.get("note"):
                 entry["details"] = {"note": res["note"]}
             out.append(entry)
+    return out
+
+
+# ---------------------------------------------------------------- FE5: attack rows
+
+_DIE = re.compile(r"(\d+)d(\d+)")
+_DMG_PLACEHOLDER = re.compile(r"\{dmg:(\d+d\d+)\}")
+
+
+def attack_flags(insts: list[dict]) -> dict:
+    """Flags merged into ``features.attack_styles(...)`` for ``attacks.weapon_attack``: the off-hand attack of
+    Dual Wielder (PHB: non-Light one-handed melee; XPHB: any melee weapon without Two-Handed), Crossbow Expert
+    (XPHB: the modifier on the Light crossbow's extra attack) and Revenant Blade's Finesse items."""
+    offhand = _numeric(insts, "offhand")
+    return {
+        "offhand_non_light": any(o.get("non_light_one_handed_melee") for o in offhand),
+        "offhand_dw2024": any(o.get("dw2024") for o in offhand),
+        "offhand_light_crossbow_mod": any(o.get("light_crossbow_mod") for o in offhand),
+        "finesse_items": frozenset(i for items in _numeric(insts, "finesse_items") for i in items),
+    }
+
+
+def _sides(die: str | None) -> int:
+    match = re.search(r"d(\d+)", die or "")
+    return int(match.group(1)) if match else 0
+
+
+def _full_die(die: str | None) -> str:
+    return die if die and die[0].isdigit() else f"1{die}"
+
+
+def _holds_weapon_or_shield(hands: dict | None, items: list[dict]) -> bool:
+    """True unless ``equipment.wielded`` proves both hands hold nothing that is a weapon or a Shield. Without
+    ``wielded`` (``hands`` is None) nothing is proven, so the answer is True (F-D3 style)."""
+    if hands is None:
+        return True
+    by_id = {i["index"]: i for i in items}
+    for held in (hands.get("main"), hands.get("off")):
+        if held is None:
+            continue
+        item = by_id.get(held)
+        if item is None or (item.get("equipment_category") or {}).get("index") == "weapon" \
+                or item.get("armor_category") == "Shield":
+            return True
+    return False
+
+
+def unarmed_spec(insts: list[dict], hands: dict | None, items: list[dict], martial_arts_die: str | None,
+                 monk: bool = False) -> dict | None:
+    """F-D6: the Unarmed Strike row exists when a held feat improves it (Tavern Brawler, Unarmed Fighting, Dragon
+    Hide). Returns ``{die, type, notes}`` for ``attacks.unarmed_strike`` or None. The best die wins; on a tie the
+    Monk's Martial Arts (``die`` None) comes first, then the feats in the order held; the others are listed in
+    the notes. Unarmed Fighting's d6 becomes a d8 when ``wielded`` proves no weapon or Shield is held."""
+    entries = _numeric(insts, "unarmed")
+    if not entries:
+        return None
+    cands = []
+    if monk:
+        cands.append((_sides(martial_arts_die), 0, {"name": "Martial Arts", "die": None, "type": "bludgeoning",
+                                                      "notes": ["Martial Arts"]}))
+    holds = _holds_weapon_or_shield(hands, items)
+    for rank, entry in enumerate(entries, 1):
+        die, notes = entry["die"], list(entry["notes"])
+        free = entry.get("die_free_hands")
+        if free and not holds:
+            die = free
+            notes.insert(0, f"{entry['name']}: {free} because no weapon or Shield is held")
+        elif free:
+            notes.insert(0, f"{entry['name']}: the {die} becomes a {free} when no weapon or Shield is held")
+        cands.append((_sides(die), rank, {"name": entry["name"], "die": die, "type": entry["type"], "notes": notes}))
+    cands.sort(key=lambda c: (-c[0], c[1]))
+    best, others = cands[0][2], [c[2] for c in cands[1:]]
+    notes = list(best["notes"])
+    for other in others:
+        notes.append(f"Alternative: {other['name']} {_full_die(other['die'] or martial_arts_die)} {other['type']}")
+    return {"die": best["die"], "type": best["type"], "notes": notes}
+
+
+def _facts(row: dict, item: dict | None) -> dict:
+    props = {p["index"] for p in (item or {}).get("properties", [])}
+    return {"melee": (item.get("weapon_range") == "Melee") if item else True,
+            "ranged": (item.get("weapon_range") == "Ranged") if item else False,
+            "weapon": item is not None, "props": props}
+
+
+def _matches(when: dict, row: dict, facts: dict) -> bool:
+    props = facts["props"]
+    for key, want in when.items():
+        if key in ("melee", "ranged", "weapon"):
+            if facts[key] != want:
+                return False
+        elif key == "properties":
+            if not set(want.get("all", ())) <= props or (want.get("any") and not set(want["any"]) & props):
+                return False
+        elif key == "lacks":
+            if set(want) & props:
+                return False
+        elif key == "damage_types":
+            if row.get("damageType") not in want:
+                return False
+        elif key == "items":
+            if row["itemId"] not in want:
+                return False
+        elif key == "ability_in":
+            if row["ability"] not in want:
+                return False
+        elif key == "proficient":
+            if bool(row["proficient"]) != want:
+                return False
+        elif key == "damaging":
+            if (row.get("damage") is not None) != want:
+                return False
+        else:
+            raise ValueError(f"unknown attack predicate: {key}")
+    return True
+
+
+def _signed(dice: str, mod: int) -> str:
+    return dice if mod == 0 else f"{dice}{mod:+d}"
+
+
+def row_note(text: str, env: dict, row: dict) -> str:
+    """Fill a note template for an attack row: ``{dmg:XdY}``, ``{die}`` and ``{dtype}`` first, then FE3's ``render``
+    (``{pb}``, ``{mod}``, ``{inc_mod}``, ``{inc_score}``, arithmetic)."""
+    mod = env.get(f"{row['ability'].lower()}_mod") if row.get("ability") else 0
+    first = _DIE.search(row.get("damage") or "")
+    text = _DMG_PLACEHOLDER.sub(lambda m: _signed(m.group(1), mod or 0), text)
+    text = text.replace("{die}", f"1d{first.group(2)}" if first else "").replace("{dtype}", row.get("damageType") or "")
+    return render(text, {**env, "mod": mod or 0})
+
+
+def annotate_attacks(attacks: list[dict], items: list[dict], insts: list[dict], numbers: dict) -> list[dict]:
+    """Append the feats' attack-row notes (F-D2) with the character's numbers. Notes are information: ``damage`` is
+    unchanged. Rows without a catalog item (the Unarmed Strike) match as melee, non-weapon rows. A feat's notes are
+    taken once per feat name (the edition-independent key)."""
+    owners, seen = [], set()
+    for inst in insts:
+        if "attack_notes" in inst["effect"] and _name_key(inst["feat"]) not in seen:
+            seen.add(_name_key(inst["feat"]))
+            owners.append(inst)
+    if not owners:
+        return attacks
+    catalog_items = {i["index"]: i for i in items}
+    out = []
+    for row in attacks:
+        facts = _facts(row, catalog_items.get(row["itemId"]))
+        notes = list(row["notes"])
+        for inst in owners:
+            env = _env(inst, numbers)
+            env["inc_score"] = numbers.get(f"{inst['increased'].lower()}_score") if inst["increased"] else None
+            for entry in inst["effect"]["attack_notes"]:
+                when = entry["when"]
+                if any(_matches(w, row, facts) for w in (when if isinstance(when, list) else [when])):
+                    text = row_note(entry["text"], env, row)
+                    if text not in notes:
+                        notes.append(text)
+        out.append({**row, "notes": notes})
     return out

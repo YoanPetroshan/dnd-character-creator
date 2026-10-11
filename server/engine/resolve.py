@@ -5142,7 +5142,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             # guard is needed or they'd fall through to the tools bucket.
         if "armor" in prof_id or prof_id == "shields":
             proficient_armor.add(prof_id)
-        elif "weapon" in prof_id or prof_id in _SPECIFIC_WEAPON_PROFICIENCY_IDS:
+        elif "weapon" in prof_id or prof_id in _SPECIFIC_WEAPON_PROFICIENCY_IDS or prof_id in reference_data.FEAT_WEAPON_PROFICIENCY_IDS:
             proficient_weapons.add(prof_id)
         else:
             proficient_tools.add(prof_id)
@@ -5380,20 +5380,26 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # Attacks, carrying capacity and armor warnings (Slice 9). Size is the
     # selected species size (Slice 8d), else the race's own, else Medium.
     weapon_proficiencies = proficient_armor | proficient_weapons
+    feat_numbers = feat_effects_mod.numbers_for(modifiers, final_scores, prof_bonus, sum(class_levels.values()))  # FE3
     attacks = attacks_mod.attacks_from_gear(
-        equipped_items, modifiers, prof_bonus, proficient_weapons, features_mod.attack_styles(effects), gear.hands,
-        pact_weapon=pact_weapon_id,
+        equipped_items, modifiers, prof_bonus, proficient_weapons,
+        {**features_mod.attack_styles(effects), **feat_effects_mod.attack_flags(feat_inst)},  # FE5 off-hand attacks, Finesse
+        gear.hands, pact_weapon=pact_weapon_id,
     )
     class_resources = class_resources_mod.resources_for(
         catalog, resolved_classes, modifiers, prof_bonus, ruleset, choices=choices, warnings_out=warnings)
-    if class_levels.get("monk", 0) >= 1:  # R2: the Monk's unarmed strike, never deduped against gear
-        martial_arts = next((r for r in class_resources if r["id"] == "monk:martial-arts"), None)
-        attacks = attacks + [attacks_mod.unarmed_strike(modifiers, prof_bonus, martial_arts and martial_arts.get("die"))]
+    is_monk = class_levels.get("monk", 0) >= 1
+    martial_arts = next((r for r in class_resources if r["id"] == "monk:martial-arts"), None) if is_monk else None
+    martial_arts_die = martial_arts and martial_arts.get("die")
+    feat_unarmed = feat_effects_mod.unarmed_spec(feat_inst, gear.hands, equipped_items, martial_arts_die, monk=is_monk)  # FE5, F-D6
+    if is_monk or feat_unarmed:  # R2: the Monk's unarmed strike (never deduped against gear); FE5: or a feat's
+        attacks = attacks + [attacks_mod.unarmed_strike(modifiers, prof_bonus, martial_arts_die, feat_unarmed, monk=is_monk)]
     attacks = class_resources_mod.annotate_attacks(attacks, class_resources, equipped_items)
     if pact_weapon_id:  # C7c: Thirsting Blade, Eldritch Smite, ... notes on the pact weapon's row
         pact_notes = class_choices_2024.pact_weapon_row_notes(sel for _cls, sel in features_mod.selected_invocation_ids(choices))
         attacks = [{**a, "notes": a["notes"] + [n for n in pact_notes if n not in a["notes"]]} if a["itemId"] == pact_weapon_id else a
                    for a in attacks]
+    attacks = feat_effects_mod.annotate_attacks(attacks, equipped_items, feat_inst, feat_numbers)  # FE5 (F-D2 notes)
     weapon_masteries = _weapon_masteries(choices, catalog)
     attacks = attacks_mod.annotate_mastery(attacks, weapon_masteries)  # C2
     armor_problems, stealth_disadvantage = equipment_mod.armor_warnings(
@@ -5403,7 +5409,6 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         final_scores.get("STR", 10), species_size or (race or {}).get("size") or "Medium",
         granted_equipment + chosen_equipment + added_resolved, catalog.items,
     )
-    feat_numbers = feat_effects_mod.numbers_for(modifiers, final_scores, prof_bonus, sum(class_levels.values()))  # FE3
     feat_passive = feat_effects_mod.passive_bonus(feat_inst)  # FE4 Observant (PHB): passive scores only
     derived = {
         "abilityModifiers": modifiers,
