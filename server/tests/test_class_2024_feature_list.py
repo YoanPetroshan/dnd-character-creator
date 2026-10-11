@@ -145,13 +145,16 @@ def test_champion_additional_fighting_style_keeps_its_pick(catalog):
 
 @needs_classes
 def test_expertise_metamagic_invocations_favored_enemy_attach_by_ordinal(catalog):
-    res = resolve(_d([_cls("bard", 10)]), catalog)
+    profs = {"class:bard:1:prof-choice-0": ["skill-stealth", "skill-persuasion", "skill-performance"]}  # 5 proficient skills with Acolyte
+    res = resolve(_d([_cls("bard", 10, choices=profs)]), catalog)
     exp = [f for f in _rows(res) if f["name"] == "Expertise"]
     assert [f["level"] for f in exp] == [2, 9]  # XPHB levels, SRD cards at 3 and 10
     assert all(f.get("choice") is None for f in exp)  # nothing picked yet
-    picks = {c["id"]: [o["id"] for o in c["options"] if not o.get("disabled")][:c["count"]]
-             for c in res["choices"] if "expertise-choice" in c["id"]}
-    d = _d([_cls("bard", 10, choices=picks)])
+    picks, taken = {}, set()  # 2024: no Expertise card may repeat a skill, so the picks are disjoint
+    for c in (c for c in res["choices"] if "expertise-choice" in c["id"]):
+        picks[c["id"]] = [o["id"] for o in c["options"] if not o.get("disabled") and o["id"] not in taken][:c["count"]]
+        taken.update(picks[c["id"]])
+    d = _d([_cls("bard", 10, choices={**profs, **picks})])
     exp = [f for f in _rows(resolve(d, catalog)) if f["name"] == "Expertise"]
     assert all(f.get("choice") for f in exp)
 

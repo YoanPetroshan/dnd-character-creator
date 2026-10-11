@@ -1837,7 +1837,6 @@ def _expertise_selected_values(choices: list[dict]) -> list[str]:
 
 
 _ASI_FEAT_CID_RE = re.compile(r"^class:([^:]+):(\d+):asi:feat:")
-SKILL_EXPERT_2024 = "skill-expert-xphb"
 
 
 def _gate_expertise_choices(
@@ -1853,9 +1852,9 @@ def _gate_expertise_choices(
     an earlier source. The walk order is fixed Expertise from feats (`fixed_expertise`), origin
     feat cards, then class cards and ASI feat cards by (position in `class_order`, class level;
     F3a-3: an ASI feat card sits at its ASI level, after the class feature of the same level); the
-    later pick is the duplicate. Cards without the flag allow a duplicate (it is simply wasted,
-    decision E1). F3a-3: under 2024 Skill Expert's card is flagged too (XPHB text: "a skill in
-    which you have proficiency but lack Expertise")."""
+    later pick is the duplicate. Decision E1 (revised 2026-10-11): under ruleset 2024 every
+    Expertise card behaves as flagged (Bard, Rogue, Scholar, feat cards too); outside 2024 only
+    flagged cards do (none in practice), an unflagged duplicate is simply wasted."""
     pruned_by_index: dict[int, dict] = {}  # reported in `choices` order, whatever the walk order
     indexes = [i for i, c in enumerate(choices) if _is_expertise_choice(c)]
 
@@ -1873,8 +1872,9 @@ def _gate_expertise_choices(
     have: set[str] = set(fixed_expertise)
     for i in sorted(indexes, key=walk_key):
         c = choices[i]
-        lacks = bool(c.get("lacksExpertise")) or (
-            ruleset == "2024" and c["source"]["kind"] == "feat" and c["source"].get("id") == SKILL_EXPERT_2024)
+        # User decision 2026-10-11: under 2024 EVERY Expertise card forbids a skill that already has Expertise
+        # (stricter than RAW on purpose: a pick is never wasted). mixed / 2014 keep the flag-only behavior.
+        lacks = ruleset == "2024" or bool(c.get("lacksExpertise"))
         options = []
         for o in c["options"]:
             if o.get("disabled"):

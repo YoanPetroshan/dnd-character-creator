@@ -6,8 +6,8 @@ Rules (XPHB class features, text read from catalog.features on 2026-10-10):
   Ranger 2 Deft Explorer    "Choose one of your skill proficiencies with which you lack Expertise."
   Wizard 2 Scholar          "Choose one of the following skills in which you have proficiency: Arcana,
                              History, Investigation, Medicine, Nature, or Religion."
-Decision E1: only Deft Explorer and Ranger 9 forbid a skill that already has Expertise; the other
-cards allow a duplicate (wasted). 2024 Expertise is skills only (no thieves' tools).
+Decision E1 (revised 2026-10-11, user decision, stricter than RAW on purpose): under 2024 NO Expertise card
+may repeat a skill that already has Expertise (RAW only says so for Deft Explorer, Ranger 9, Skill Expert). 2024 Expertise is skills only (no thieves' tools).
 
 Matrix: ruleset (2024 / mixed / 2014) x class (Bard 1/2/9, Rogue 1/6, Ranger 1/2/6/9/14, Wizard 1/2)
 x proficiency (proficient / not) x duplicate source (earlier card, feat card) x flagged / unflagged
@@ -176,15 +176,119 @@ def test_expertise_requires_proficiency_and_derived_skills_add_it(catalog):
     assert any(p["choiceId"] == ROGUE1 and "no longer a proficient skill" in p["reason"] for p in res["pruned"])
 
 
+ROG_PICKS = {"class:rogue:1:prof-choice-0": ["skill-stealth", "skill-acrobatics", "skill-perception", "skill-insight"]}
+
+
 @needs_data
-def test_unflagged_cards_allow_a_duplicate_expertise(catalog):
-    """E1: Rogue 6 may name a skill the level 1 card already doubled (it is simply wasted)."""
-    picks = {"class:rogue:1:prof-choice-0": ["skill-stealth", "skill-acrobatics", "skill-perception", "skill-insight"],
-             ROGUE1: ["skill-stealth", "skill-acrobatics"], ROGUE6: ["skill-stealth", "skill-perception"]}
+def test_rogue_6_cannot_repeat_a_rogue_1_expertise_skill(catalog):
+    """Decision E1 (revised 2026-10-11, stricter than RAW): under 2024 no Expertise card may repeat a skill."""
+    picks = {**ROG_PICKS, ROGUE1: ["skill-stealth", "skill-acrobatics"], ROGUE6: ["skill-stealth", "skill-perception"]}
     res = _res(catalog, [("rogue", 6, picks)])
-    assert _opt(_card(res, ROGUE6), "skill-stealth").get("disabled") is None
-    assert _card(res, ROGUE6)["selected"] == ["skill-stealth", "skill-perception"]
+    r6 = _card(res, ROGUE6)
+    assert _opt(r6, "skill-stealth")["disabled"] and _opt(r6, "skill-stealth")["disabledReason"] == "already has Expertise"
+    assert _opt(r6, "skill-acrobatics")["disabledReason"] == "already has Expertise"
+    assert _opt(r6, "skill-perception").get("disabled") is None
+    assert r6["selected"] == ["skill-perception"] and r6["status"] == "pending"
+    assert any(p["choiceId"] == ROGUE6 and "Stealth" in p["reason"] and "already has Expertise" in p["reason"]
+               for p in res["pruned"])
+    assert not [p for p in res["pruned"] if p["choiceId"] == ROGUE1]
+    picks[ROGUE6] = ["skill-perception", "skill-insight"]
+    res = _res(catalog, [("rogue", 6, picks)])
+    assert _card(res, ROGUE6)["status"] == "resolved"
     assert not [p for p in res["pruned"] if p["choiceId"] == ROGUE6]
+
+
+@needs_data
+def test_bard_9_cannot_repeat_a_bard_2_expertise_skill(catalog):
+    picks = {"class:bard:1:prof-choice-0": ["skill-persuasion", "skill-performance", "skill-deception"],
+             BARD2: ["skill-persuasion", "skill-performance"], BARD9: ["skill-persuasion", "skill-deception"]}
+    res = _res(catalog, [("bard", 9, picks)])
+    b9 = _card(res, BARD9)
+    assert _opt(b9, "skill-persuasion")["disabledReason"] == "already has Expertise"
+    assert b9["selected"] == ["skill-deception"] and b9["status"] == "pending"
+    assert any(p["choiceId"] == BARD9 for p in res["pruned"])
+    assert _card(res, BARD2)["selected"] == ["skill-persuasion", "skill-performance"]
+
+
+@needs_data
+def test_multiclass_rogue_6_and_ranger_9_in_class_order(catalog):
+    """Rogue 6 then Ranger 9: the Ranger cards (later class index) are the duplicates."""
+    picks_rogue = {**ROG_PICKS, ROGUE1: ["skill-stealth", "skill-acrobatics"], ROGUE6: ["skill-perception", "skill-insight"]}
+    picks_ranger = {"class:ranger:multiclass-prof-choice-0": ["skill-nature"], RANGER9: ["skill-perception", "skill-nature"]}
+    res = _res(catalog, [("rogue", 6, picks_rogue), ("ranger", 9, picks_ranger)])
+    r9 = _card(res, RANGER9)
+    assert _opt(r9, "skill-perception")["disabledReason"] == "already has Expertise"
+    assert r9["selected"] == ["skill-nature"]
+    # reversed class order: the Ranger card now comes first and the Rogue 6 card is the duplicate
+    res = _res(catalog, [("ranger", 9, {"class:ranger:1:prof-choice-0": RANGER_SKILLS, RANGER9: ["skill-stealth", "skill-nature"]}),
+                         ("rogue", 6, {"class:rogue:multiclass-prof-choice-0": ["skill-stealth"], ROGUE1: ["skill-stealth"],
+                                       ROGUE6: ["skill-stealth", "skill-insight"]})])
+    assert _card(res, RANGER9)["selected"] == ["skill-stealth", "skill-nature"]
+    assert _opt(_card(res, ROGUE6), "skill-stealth")["disabledReason"] == "already has Expertise"
+    assert _card(res, ROGUE6)["selected"] == ["skill-insight"]  # Insight comes from the Acolyte background
+
+
+@needs_data
+def test_scholar_and_rogue_expertise_cannot_overlap_either_way(catalog):
+    wiz = {"class:wizard:1:prof-choice-0": ["skill-arcana", "skill-history"]}
+    rog = {"class:rogue:multiclass-prof-choice-0": ["skill-arcana"], ROGUE1: ["skill-arcana", "skill-history"]}
+    # Wizard first (class index 0): Scholar keeps Arcana, the Rogue card is the duplicate
+    res = _res(catalog, [("wizard", 2, {**wiz, SCHOLAR: ["skill-arcana"]}), ("rogue", 1, rog)])
+    assert _card(res, SCHOLAR)["selected"] == ["skill-arcana"]
+    r1 = _card(res, ROGUE1)
+    assert _opt(r1, "skill-arcana")["disabledReason"] == "already has Expertise"
+    assert r1["selected"] == ["skill-history"]
+    # Rogue first: Scholar is the duplicate (Religion comes from the Acolyte background)
+    rog_first = {**ROG_PICKS, ROGUE1: ["skill-religion", "skill-stealth"]}
+    res = _res(catalog, [("rogue", 1, rog_first), ("wizard", 2, {SCHOLAR: ["skill-religion"]})])
+    sch = _card(res, SCHOLAR)
+    assert _opt(sch, "skill-religion")["disabledReason"] == "already has Expertise"
+    assert sch["selected"] == []
+    assert any(p["choiceId"] == SCHOLAR and "already has Expertise" in p["reason"] for p in res["pruned"])
+
+
+@needs_data
+def test_level_order_inside_one_class_decides_the_duplicate(catalog):
+    """Stored in reverse (Rogue 6 first in the draft dict): level 1 still wins."""
+    picks = {**ROG_PICKS, ROGUE6: ["skill-stealth", "skill-perception"], ROGUE1: ["skill-stealth", "skill-acrobatics"]}
+    res = _res(catalog, [("rogue", 6, picks)])
+    assert _card(res, ROGUE1)["selected"] == ["skill-stealth", "skill-acrobatics"]
+    assert _card(res, ROGUE6)["selected"] == ["skill-perception"]
+
+
+@needs_data
+def test_a_skill_expert_feat_card_follows_the_same_gate_for_a_class_card(catalog):
+    """Rogue 1 Expertise, then an ASI feat (Skill Expert) at level 4: the feat pick is the later one."""
+    picks = {**ROG_PICKS, ROGUE1: ["skill-stealth", "skill-acrobatics"],
+             "class:rogue:4:asi": ["feat:skill-expert-xphb"],
+             "class:rogue:4:asi:feat:skill-expert-xphb:proficiency-choice-0": ["skill-athletics"],
+             "class:rogue:4:asi:feat:skill-expert-xphb:expertise-choice-0": ["skill-stealth"],
+             "class:rogue:4:asi:feat:skill-expert-xphb:ability-bonus": ["DEX"]}
+    res = _res(catalog, [("rogue", 4, picks)])
+    fc = _card(res, "class:rogue:4:asi:feat:skill-expert-xphb:expertise-choice-0")
+    assert fc["selected"] == [] and _opt(fc, "skill-stealth")["disabledReason"] == "already has Expertise"
+
+
+@needs_data
+def test_a_card_left_without_enabled_options_is_unavailable(catalog):
+    """Rogue 1 doubles Religion (Acolyte); the multiclass Wizard's Scholar has no other proficient skill,
+    so every option is disabled: the card is `unavailable` (non-blocking), not pending."""
+    res = _res(catalog, [("rogue", 1, {**ROG_PICKS, ROGUE1: ["skill-religion", "skill-stealth"]}), ("wizard", 2, {})])
+    sch = _card(res, SCHOLAR)
+    assert not [o for o in sch["options"] if not o.get("disabled")]
+    assert sch["status"] == "unavailable"
+
+
+@pytest.mark.parametrize("ruleset", ["mixed", "2014"])
+@needs_data
+def test_outside_2024_the_srd_cards_still_allow_a_duplicate(catalog, ruleset):
+    picks = {"class:rogue:1:prof-choice-0": ["skill-stealth", "skill-acrobatics", "skill-perception", "skill-insight"],
+             "class:rogue:1:expertise-choice:rogue-expertise-1": ["skill-stealth", "skill-acrobatics"],
+             "class:rogue:6:expertise-choice:rogue-expertise-2": ["skill-stealth", "skill-perception"]}
+    res = _res(catalog, [("rogue", 6, picks)], ruleset=ruleset)
+    card = _card(res, "class:rogue:6:expertise-choice:rogue-expertise-2")
+    assert _opt(card, "skill-stealth").get("disabled") is None
+    assert card["selected"] == ["skill-stealth", "skill-perception"]
 
 
 # ---- Ranger ---------------------------------------------------------------------------------
@@ -302,17 +406,19 @@ def test_scholar_options_and_proficiency(catalog):
 @needs_data
 def test_bard_9_rogue_6_has_four_cards_attached_to_their_own_xphb_rows(catalog):
     scores = {"DEX": 16, "CHA": 16}
+    # 6 proficient skills (3 Bard + Acolyte's Insight / Religion + 1 Rogue) for 8 Expertise picks, none repeated:
+    # the Rogue 6 card is left without picks (2024: no Expertise card may repeat a skill)
     picks_bard = {"class:bard:1:prof-choice-0": ["skill-stealth", "skill-persuasion", "skill-performance"],
-                  BARD2: ["skill-persuasion", "skill-performance"], BARD9: ["skill-stealth", "skill-persuasion"]}
+                  BARD2: ["skill-persuasion", "skill-performance"], BARD9: ["skill-stealth", "skill-religion"]}
     picks_rogue = {"class:rogue:multiclass-prof-choice-0": ["skill-acrobatics"],
-                   ROGUE1: ["skill-stealth", "skill-acrobatics"], ROGUE6: ["skill-acrobatics", "skill-persuasion"]}
+                   ROGUE1: ["skill-acrobatics", "skill-insight"], ROGUE6: ["skill-acrobatics", "skill-insight"]}
     res = _res(catalog, [("bard", 9, picks_bard), ("rogue", 6, picks_rogue)], scores=scores)
     assert set(_expertise_cards(res)) == {BARD2, BARD9, ROGUE1, ROGUE6}
     rows = [f for f in res["sheet"]["features"] if f["name"] == "Expertise"]
     by = {(f["source"]["id"], f["level"]): f.get("choice") for f in rows}
     assert by == {
-        ("bard", 2): ["Persuasion", "Performance"], ("bard", 9): ["Stealth", "Persuasion"],
-        ("rogue", 1): ["Stealth", "Acrobatics"], ("rogue", 6): ["Acrobatics", "Persuasion"],
+        ("bard", 2): ["Persuasion", "Performance"], ("bard", 9): ["Stealth", "Religion"],
+        ("rogue", 1): ["Acrobatics", "Insight"], ("rogue", 6): None,
     }
     # no SRD fallback row is added beside the XPHB rows
     assert [f["level"] for f in rows if f["source"]["id"] == "bard"] == [2, 9]
