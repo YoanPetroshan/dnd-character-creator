@@ -1,6 +1,6 @@
 """Feat effect scan table, vocabulary and coverage ratchet (FE0, data only, no behaviour change).
 
-Pure data: this module imports nothing and nothing in the engine reads it yet. Later FE slices
+Pure data (it imports only its sibling data module ``feat_effects_tail``, the FE10 tail). Later FE slices
 (docs/superpowers/plans/2026-10-11-feat-effects.md) fill ``FEAT_EFFECTS`` one slice at a time and
 shrink ``FEAT_PENDING`` until FE10 empties it. ``tests/test_feat_effects_coverage.py`` enforces
 the ratchet against ``catalog.feats``.
@@ -81,8 +81,8 @@ FEAT_EFFECT_KEYS: frozenset[str] = frozenset({
 SCAN_KINDS: frozenset[str] = frozenset(
     {"numeric", "choice", "attack", "resource", "notes", "fighting-style"})
 
-# Set to True by FE10, the slice that empties FEAT_PENDING; the ratchet test then requires it.
-FE10_DONE = False
+# True since FE10, the slice that emptied FEAT_PENDING; the ratchet test then requires it to stay empty.
+FE10_DONE = True
 
 _NUMERIC = (
     "alert-phb",
@@ -1135,4 +1135,22 @@ FEAT_EFFECT_QUOTES.update({
         "another source but can be used only on Metamagic). You regain all spent sorcery points when you finish a long rest."),
 })
 
+# FE10: the resource and note tail (every feat still pending after FE9) and the notes / resources that earlier slices
+# left out of entries they had classified for their number. See feat_effects_tail for the rules.
+from catalog.feat_effects_tail import COMPLETION, COMPLETION_QUOTES, TAIL_EFFECTS, TAIL_QUOTES  # noqa: E402
+
+assert not set(TAIL_EFFECTS) & set(FEAT_EFFECTS), "the FE10 tail must only classify feats that were still pending"
+FEAT_EFFECTS.update(TAIL_EFFECTS)
+FEAT_EFFECT_QUOTES.update(TAIL_QUOTES)
+for _index, _extra in COMPLETION.items():
+    _entry = dict(FEAT_EFFECTS[_index])
+    for _key in ("notes", "resources"):
+        if _key in _extra:
+            _entry[_key] = list(_entry.get(_key, [])) + list(_extra[_key])
+    FEAT_EFFECTS[_index] = _entry
+# Quotes pinning the text that FE10 added to an entry of an earlier slice (their first quote stays in FEAT_EFFECT_QUOTES).
+FEAT_EFFECT_EXTRA_QUOTES: dict[str, tuple[str, ...]] = {
+    index: (quote if isinstance(quote, tuple) else (quote,)) for index, quote in COMPLETION_QUOTES.items()}
+
+# Empty since FE10: every catalog feat is classified.
 FEAT_PENDING: frozenset[str] = frozenset(FEAT_KINDS) - frozenset(FEAT_EFFECTS)

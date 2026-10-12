@@ -31,6 +31,7 @@ from pypdf import PdfReader
 
 import export_fields
 from catalog import feat_effects_data as fed
+from catalog import feat_effects_tail as tail
 from catalog.loader import load
 from catalog.official_source import has_official, has_official_classes
 from engine import feat_effects as fe
@@ -55,8 +56,9 @@ FE7_ENTRIES = ("dragonscarred-frhof", "boon-of-energy-resistance-xphb", "portal-
                "strike-of-the-giants-bgg")  # later slice (tests/test_feat_resist_choices.py)
 FE8_ENTRIES = ("weapon-master-phb", "weapon-master-xphb")  # later slice (tests/test_feat_weapon_picks.py)
 FE9_ENTRIES = ("fighting-initiate-tce", "eldritch-adept-tce", "martial-adept-phb", "metamagic-adept-tce")  # tests/test_feat_option_picks.py
+FE10_ENTRIES = tuple(tail.TAIL_EFFECTS) + tuple(tail.COMPLETION)  # later slice (tests/test_feat_tail.py)
 FE3_WITH_TEXT = tuple(i for i in FE3_WITH_TEXT if i in fed.FEAT_EFFECT_QUOTES and i not in
-                      ("alert-phb",) + FE4_ENTRIES + FE7_ENTRIES + FE8_ENTRIES + FE9_ENTRIES)
+                      ("alert-phb",) + FE4_ENTRIES + FE7_ENTRIES + FE8_ENTRIES + FE9_ENTRIES + FE10_ENTRIES)
 
 
 @pytest.fixture(scope="module")
@@ -139,12 +141,14 @@ def test_the_fe3_entries_are_classified_and_the_ratchet_counts_them():
 def test_resource_entries_use_only_the_implemented_vocabulary():
     seen = 0
     for index, entry in fed.FEAT_EFFECTS.items():
+        if index in FE10_ENTRIES:
+            continue
         for res in entry.get("resources", []):
             seen += 1
             assert set(res) <= {"name", "uses", "recharge", "note", "die", "dc"}, index
             assert res["uses"] == "pb" or isinstance(res["uses"], int), index
             assert res["recharge"] in ("long", "short", "short-or-long"), index
-    assert seen == 12  # 7 from FE3, 3 from FE7, Martial Adept / Metamagic Adept from FE9
+    assert seen == 12  # 7 from FE3, 3 from FE7, Martial Adept / Metamagic Adept from FE9 (FE10: tests/test_feat_tail.py)
 
 
 def test_lucky_follows_its_own_edition():

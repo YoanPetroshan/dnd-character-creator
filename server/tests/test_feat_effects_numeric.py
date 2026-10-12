@@ -115,7 +115,9 @@ def test_quote_matches_catalog_text(catalog, index):
 
 
 def test_entries_use_only_fe1_vocabulary_and_values():
-    assert {i: fed.FEAT_EFFECTS[i] for i in FE1} == {
+    # (FE10 appended notes / a resource to some of these entries; the numbers are what this test pins.)
+    assert {i: {k: v for k, v in fed.FEAT_EFFECTS[i].items() if k not in ("notes", "resources")}
+            for i in FE1} == {
         "alert-phb": {"initiative": 5}, "alert-xphb": {"initiative": "pb"},
         "tough-phb": {"hp_per_level": 2}, "tough-xphb": {"hp_per_level": 2},
         "boon-of-fortitude-xphb": {"hp_flat": 40},

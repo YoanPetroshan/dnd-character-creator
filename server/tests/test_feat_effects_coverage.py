@@ -4,8 +4,8 @@ Data and tests only. Nothing in the engine reads ``catalog.feat_effects_data`` y
 
 Ratchet: every catalog feat index is in exactly one of ``FEAT_EFFECTS`` (classified) and
 ``FEAT_PENDING`` (not yet classified); every ``FEAT_EFFECTS`` key is a catalog feat and uses only
-the known vocabulary; ``FEAT_PENDING`` may only shrink (``PENDING_CEILING`` is lowered by each FE
-slice) and is empty once FE10 is done. ``FEAT_KINDS`` is the per-index scan table of plan
+the known vocabulary; ``FEAT_PENDING`` may only shrink (``PENDING_CEILING`` was lowered by each FE
+slice) and has been empty since FE10. ``FEAT_KINDS`` is the per-index scan table of plan
 section 3 and must cover the catalog exactly.
 
 Data guards (they pin assumptions later slices rely on, read from the raw 5etools feats.json):
@@ -35,8 +35,8 @@ from catalog.official.feats import _feat_from_5etools  # noqa: E402
 
 pytestmark = pytest.mark.skipif(not official.has_official(), reason="5etools official data missing")
 
-# Lowered by each FE slice that classifies feats; FE10 sets it to 0.
-PENDING_CEILING = 170
+# Lowered by each FE slice that classifies feats; FE10 set it to 0 (nothing may be added back).
+PENDING_CEILING = 0
 # Raised only by FE12 (additive golden cases that hold feats).
 GOLDEN_FEAT_CASES = 0
 GOLDEN = pathlib.Path(__file__).parent / "golden" / "c_series_mixed_2014_baseline.json.gz"
@@ -93,10 +93,14 @@ def test_every_effect_key_is_a_catalog_feat_and_uses_known_vocabulary(catalog):
 
 
 def test_pending_only_shrinks_and_is_empty_after_fe10():
+    """FE10: every catalog feat is classified, so the pending set is empty and stays empty."""
+    assert PENDING_CEILING == 0 and fed.FE10_DONE
     assert len(fed.FEAT_PENDING) <= PENDING_CEILING
-    if fed.FE10_DONE:
-        assert not fed.FEAT_PENDING
-    assert not fed.FE10_DONE or PENDING_CEILING == 0
+    assert fed.FEAT_PENDING == frozenset()
+
+
+def test_every_catalog_feat_has_an_effect_entry(catalog):
+    assert set(catalog.feats) == set(fed.FEAT_EFFECTS)
 
 
 def test_fighting_style_feats_done_through_class_feature_effects_are_data_only(catalog):

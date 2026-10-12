@@ -23,6 +23,8 @@ FE9 adds the option-pick feats (Fighting Initiate, Martial Adept, Metamagic Adep
 labels of the picked options (``{choice}`` in a note), and a resource may carry ``die`` and ``dc`` (an expression over
 ``pb`` / ``<abl>_mod``). The cards, the duplicate rule and the effects of the picks live in ``resolve``.
 
+FE10 adds the resource ``uses`` value ``"inc_mod"`` (Spell Subterfuge) and ends the ratchet: every feat has an entry.
+
 FE3 adds the output surfaces: ``notes`` (text for effects that are not folded into a number, with
 the character's numbers filled in) and ``resources`` (``derived.featResources``).
 """
@@ -328,7 +330,12 @@ def resources(insts: list[dict], numbers: dict) -> list[dict]:
     out = []
     for inst in insts:
         for res in inst["effect"].get("resources") or []:
-            uses = numbers["pb"] if res["uses"] == "pb" else res["uses"]
+            uses, pending = res["uses"], False
+            if uses == "pb":
+                uses = numbers["pb"]
+            elif uses == "inc_mod":  # FE10: "a number of times equal to the modifier of the score increased by this feat"
+                modifier = numbers.get(f"{inst['increased'].lower()}_mod") if inst["increased"] else None
+                uses, pending = max(0, modifier or 0), modifier is None
             entry = {"id": f"{inst['prefix']}:{_slug(res['name'])}", "featId": inst["index"],
                      "source": {"kind": "feat", "id": inst["index"], "label": inst["feat"]["name"]},
                      "name": res["name"], "uses": uses, "recharge": res.get("recharge")}
@@ -336,8 +343,9 @@ def resources(insts: list[dict], numbers: dict) -> list[dict]:
                 entry["die"] = res["die"]
             if res.get("dc"):  # FE9: an expression over pb / <abl>_mod, e.g. the maneuver save DC
                 entry["dc"] = _eval(ast.parse(res["dc"], mode="eval"), numbers)
-            if res.get("note"):
-                entry["details"] = {"note": render(res["note"], _env(inst, numbers))}
+            if res.get("note") or pending:
+                text = render(res["note"], _env(inst, numbers)) if res.get("note") else ""
+                entry["details"] = {"note": f"{text} {CHOOSE_ABILITY}".strip() if pending else text}
             out.append(entry)
     return out
 
