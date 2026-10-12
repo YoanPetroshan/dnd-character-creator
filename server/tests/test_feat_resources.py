@@ -53,8 +53,9 @@ FE4_ENTRIES = ("dragon-hide-xge", "medium-armor-master-phb", "medium-armor-maste
 FE7_ENTRIES = ("dragonscarred-frhof", "boon-of-energy-resistance-xphb", "portal-jumper-au", "spell-resistant-au",
                "scion-of-the-outer-planes-sato", "elemental-adept-phb", "elemental-adept-xphb",
                "strike-of-the-giants-bgg")  # later slice (tests/test_feat_resist_choices.py)
+FE8_ENTRIES = ("weapon-master-phb", "weapon-master-xphb")  # later slice (tests/test_feat_weapon_picks.py)
 FE3_WITH_TEXT = tuple(i for i in FE3_WITH_TEXT if i in fed.FEAT_EFFECT_QUOTES and i not in
-                      ("alert-phb",) + FE4_ENTRIES + FE7_ENTRIES)
+                      ("alert-phb",) + FE4_ENTRIES + FE7_ENTRIES + FE8_ENTRIES)
 
 
 @pytest.fixture(scope="module")

@@ -34,8 +34,9 @@ Effect vocabulary (every key optional; the full semantics are in plan section 4.
     damage_type_choice          {options, distinct_across_repeats}  (FE7: card ``:damage-type``; a repeat must differ)
     variant_choice              {suffix, label, description, options: [{id, label, note}]}
                                         (FE7: card ``:<suffix>``; the picked option's note joins the feat notes)
-    weapon_proficiency_choice   {count, categories}
-    mastery_choice              {count}
+    weapon_proficiency_choice   {count, categories}  (FE8: card ``:weapon-choice``; the picks join the proficient weapons)
+    mastery_choice              {count, categories}  (FE8: card ``:weapon-mastery``; proficient weapons only; the pick
+                                        joins sheet.weaponMasteries)
     option_picks                {kind, count, pool}
     unarmed                     {die, die_free_hands, type, ability, notes}
     offhand                     {non_light_one_handed_melee | light_crossbow_mod | dw2024: True}
@@ -1060,4 +1061,23 @@ FEAT_EFFECT_QUOTES.update({
 
 # Feats not classified yet. Each slice removes the ones it covers (by adding them to FEAT_EFFECTS);
 # FE10 empties it.
+# FE8: Weapon Master. PHB gives four weapon proficiencies (card ``:weapon-choice``, ids via
+# ``reference_data.weapon_proficiency_id``, added to the proficient weapons before the C2 mastery gate); XPHB gives one
+# Weapon Mastery pick among weapons the character is proficient with (card ``:weapon-mastery``, changeable on a Long
+# Rest: an editable build-time card, F-D7). Categories name the weapon_category values the card offers.
+FEAT_EFFECTS.update({
+    "weapon-master-phb": {
+        "weapon_proficiency_choice": {"count": 4, "categories": ["simple", "martial"]},
+        "notes": ["Proficiency with four chosen weapons (see the choice)."]},
+    "weapon-master-xphb": {
+        "mastery_choice": {"count": 1, "categories": ["simple", "martial"]},
+        "notes": ["Mastery Property: you can change the kind of weapon after a Long Rest."]},
+})
+FEAT_EFFECT_QUOTES.update({
+    "weapon-master-phb": "You gain proficiency with four weapons of your choice. Each one must be a simple or a martial weapon.",
+    "weapon-master-xphb": (
+        "use the mastery property of one kind of Simple or Martial weapon of your choice, provided you have proficiency with it.",
+        "Whenever you finish a Long Rest, you can change the kind of weapon to another eligible kind."),
+})
+
 FEAT_PENDING: frozenset[str] = frozenset(FEAT_KINDS) - frozenset(FEAT_EFFECTS)

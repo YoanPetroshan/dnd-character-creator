@@ -1735,7 +1735,7 @@ def _background_choice_templates(bg: dict, bg_id: str) -> list[dict]:
     return templates
 
 
-def _feat_choice_templates(feats: list[dict], origin: str | None = None) -> list[dict]:
+def _feat_choice_templates(feats: list[dict], origin: str | None = None, items: dict | None = None) -> list[dict]:
     """A granted feat's own choice-shaped fields, mirrored from
     _background_choice_templates' proficiency-choice/language blocks above
     (same build_choice_template call, same cid/source/label/description
@@ -1832,11 +1832,11 @@ def _feat_choice_templates(feats: list[dict], origin: str | None = None) -> list
             tpl = build_choice_template(env, f"{cid_prefix}:save-choice-{i}", source, f"{feat['name']}: Saving Throw", description=description)
             if tpl:
                 templates.append(tpl)
-        templates += _feat_extra_templates(feat, cid_prefix, feat_level)  # FE7
+        templates += _feat_extra_templates(feat, cid_prefix, feat_level, items)  # FE7, FE8
     return templates
 
 
-def _feat_extra_templates(feat: dict, cid_prefix: str, feat_level: int | None = None) -> list[dict]:
+def _feat_extra_templates(feat: dict, cid_prefix: str, feat_level: int | None = None, items: dict | None = None) -> list[dict]:
     """FE7: the cards a feat's effect entry asks for, under the same `<prefix>:<kind>` cids as its other
     cascaded cards (so the feat-kind merge sites and the page filters route them without change). Called for every
     feat instance by `_feat_choice_templates`, i.e. at all five sites (background, species, Fighting Style,
@@ -1845,6 +1845,9 @@ def _feat_extra_templates(feat: dict, cid_prefix: str, feat_level: int | None = 
       * `damage_type_choice` -> `:damage-type` (a repeatable feat taken again must pick a different type:
         `distinctGroup`, enforced by `_gate_distinct_choices`);
       * `variant_choice` -> `:<suffix>` (Strike of the Giants `:giant-type`).
+    FE8 (`items` = the catalog items): `weapon_proficiency_choice` -> `:weapon-choice` (Weapon Master PHB: the picks
+    join the proficient weapons, see `_feat_weapon_proficiencies`); `mastery_choice` -> `:weapon-mastery` (Weapon Master
+    XPHB: gated by `_gate_mastery_choices`, joins sheet.weaponMasteries).
     Scion's resistance has no card: it follows the `:spell-variant` pick."""
     effect = feat_effects_data.FEAT_EFFECTS.get(feat["index"]) or {}
     source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
@@ -1874,6 +1877,26 @@ def _feat_extra_templates(feat: dict, cid_prefix: str, feat_level: int | None = 
     if spec:
         templates.append(card(spec["suffix"], spec["label"], spec["description"], 1,
                               [{"id": o["id"], "label": o["label"]} for o in spec["options"]]))
+    for key, suffix, label, text in (
+            ("weapon_proficiency_choice", "weapon-choice", "Weapon Proficiencies", "Choose {n} weapon{s} you gain proficiency with."),
+            ("mastery_choice", "weapon-mastery", "Weapon Mastery",
+             "Choose {n} kind{s} of weapon you are proficient with to use its mastery property. You can change the choice after a long rest.")):
+        spec = effect.get(key)
+        if not spec or not items:
+            continue
+        cats = {c.capitalize() for c in spec["categories"]}
+        options = []
+        for item in items.values():
+            if item.get("equipment_category", {}).get("index") != "weapon" or item.get("weapon_category") not in cats:
+                continue
+            if key == "mastery_choice":
+                if item.get("mastery"):
+                    options.append({"id": item["index"], "label": f"{item['name']} ({item['mastery']})"})
+            else:
+                options.append({"id": item["index"], "label": item["name"]})
+        if options:
+            n = spec["count"]
+            templates.append(card(suffix, label, text.format(n=n, s="s" if n != 1 else ""), n, options))
     return templates
 
 
@@ -3456,7 +3479,8 @@ def _raise_walk_speed(speeds: dict[str, int], bonus: int) -> dict[str, int]:
 
 
 def _is_mastery_choice(tpl: dict) -> bool:
-    return tpl["source"]["kind"] == "class" and tpl["id"].endswith(":weapon-mastery")
+    """C2 class Weapon Mastery cards and (FE8) Weapon Master (XPHB)'s feat card share the `:weapon-mastery` suffix."""
+    return tpl["source"]["kind"] in ("class", "feat") and tpl["id"].endswith(":weapon-mastery")
 
 
 def _is_count_variable_choice(tpl: dict) -> bool:
@@ -3469,8 +3493,8 @@ def _is_count_variable_choice(tpl: dict) -> bool:
     frontend does not treat as spell cards."""
     if tpl.get("count_by_level"):
         return True  # level-scaled feat spell picks (Ritual Caster) and Elemental Attunement: over-count is staleness
-    if tpl["source"]["kind"] == "class" and tpl["id"].endswith(":weapon-mastery"):
-        return True  # C2: Weapon Mastery count follows the class table
+    if _is_mastery_choice(tpl):
+        return True  # C2: Weapon Mastery count follows the class table (FE8: and the feat card's proficiency gate)
     if tpl["source"]["kind"] == "class" and ":invocations:" in tpl["id"]:
         return True  # Eldritch Invocations known follow the warlock level table
     if tpl["source"]["kind"] == "class" and tpl["id"].startswith(class_choices_2024.DEPENDENT_PREFIX):
@@ -3772,17 +3796,24 @@ def _gate_mastery_choices(choices: list[dict], catalog: Catalog, proficient_weap
     pass leaves mastery picks un-truncated, so a non-proficient pick never costs a valid
     one its place). Mutates `choices`; returns non-blocking pruned, each naming its reason."""
     pruned: list[dict] = []
-    for i, c in enumerate(choices):
-        if c["source"]["kind"] != "class" or not c["id"].endswith(":weapon-mastery"):
-            continue
-        options, lacking = [], {}
+    mastered: set[str] = set()  # FE8: weapons already mastered by a class card; the feat card (walked last) may not repeat them
+    for i, c in sorted(((i, c) for i, c in enumerate(choices) if _is_mastery_choice(c)),
+                       key=lambda ic: ic[1]["source"]["kind"] == "feat"):
+        is_feat = c["source"]["kind"] == "feat"
+        options, lacking, repeated = [], {}, {}
         for o in c["options"]:
             item = catalog.items.get(o["id"])
             if item and not o.get("disabled") and not attacks_mod.weapon_is_proficient(item, proficient_weapons):
                 lacking[o["id"]] = o["label"]
                 o = {**o, "disabled": True, "disabledReason": "not proficient"}
+            elif is_feat and not o.get("disabled") and o["id"] in mastered:
+                repeated[o["id"]] = o["label"]
+                o = {**o, "disabled": True, "disabledReason": "already mastered"}
             options.append(o)
-        proficient = [s for s in c["selected"] if s not in lacking]
+        dup = [repeated[s] for s in c["selected"] if s in repeated and s not in lacking]
+        if dup:
+            pruned.append({"choiceId": c["id"], "reason": f"'{c['label']}': {', '.join(dup)} is already mastered through a class and was ignored."})
+        proficient = [s for s in c["selected"] if s not in lacking and s not in repeated]
         selected = proficient[: c["count"]]
         dropped = [lacking[s] for s in c["selected"] if s in lacking]
         if dropped:
@@ -3802,6 +3833,8 @@ def _gate_mastery_choices(choices: list[dict], catalog: Catalog, proficient_weap
             })
         choices[i] = {**c, "options": options, "selected": selected,
                       "status": "resolved" if len(selected) == c["count"] else "pending"}
+        if not is_feat:
+            mastered.update(selected)
     return pruned
 
 
@@ -3809,7 +3842,7 @@ def _weapon_masteries(choices: list[dict], catalog: Catalog) -> list[dict]:
     """sheet.weaponMasteries: every selected mastery weapon, first-seen order, deduped."""
     out: list[dict] = []
     for c in choices:
-        if c["source"]["kind"] != "class" or not c["id"].endswith(":weapon-mastery"):
+        if not _is_mastery_choice(c):  # class cards, then (FE8) Weapon Master (XPHB)'s feat card
             continue
         for sel in c["selected"]:
             item = catalog.items.get(sel)
@@ -4648,14 +4681,14 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             use_feat_prereqs, held, lessons_resolver.taken_by_cid, lessons_resolver.picked)
         for lessons_feat in lessons_feats:  # the Origin feat's own choices under its origin
             if lessons_feat["_asi_origin"].startswith(f"class:{rc_cls_id}:"):
-                choice_templates += _feat_choice_templates([lessons_feat], origin=lessons_feat["_asi_origin"])
+                choice_templates += _feat_choice_templates([lessons_feat], origin=lessons_feat["_asi_origin"], items=catalog.items)
                 choice_templates += _feat_spell_choice_templates(
                     [lessons_feat], catalog, origin=lessons_feat["_asi_origin"], raw_selections=rc_class_choices,
                     total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
                 )
         for fs_feat in fs_feats:  # cascaded choices (Blessed / Druidic Warrior cantrips) under the pick's origin
             if fs_feat["_asi_origin"].startswith(f"class:{rc_cls_id}:"):
-                choice_templates += _feat_choice_templates([fs_feat], origin=fs_feat["_asi_origin"])
+                choice_templates += _feat_choice_templates([fs_feat], origin=fs_feat["_asi_origin"], items=catalog.items)
                 choice_templates += _feat_spell_choice_templates(
                     [fs_feat], catalog, origin=fs_feat["_asi_origin"], raw_selections=rc_class_choices,
                     total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
@@ -4681,7 +4714,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             if asi_feat["_asi_cid"] in rc_blocked_feat_cids:
                 continue
             if asi_feat["_asi_origin"].startswith(f"class:{rc_cls_id}:"):
-                choice_templates += _feat_choice_templates([asi_feat], origin=asi_feat["_asi_origin"])
+                choice_templates += _feat_choice_templates([asi_feat], origin=asi_feat["_asi_origin"], items=catalog.items)
                 choice_templates += _feat_spell_choice_templates(
                     [asi_feat], catalog, origin=asi_feat["_asi_origin"], raw_selections=rc_class_choices,
                     total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
@@ -4827,7 +4860,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         variant_hints=(bg.get("feat_variant_hints") if bg else None) or {},
         total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
     )
-    choice_templates += _feat_choice_templates(background_feats)  # ASI-selected feats' templates: built origin-scoped in the per-class loop
+    choice_templates += _feat_choice_templates(background_feats, items=catalog.items)  # ASI-selected feats' templates: built origin-scoped in the per-class loop
     # Phase 4c-ii Task 2: `feat_ability_choice_tpls` was already built (and
     # applied to `feat_bonuses`) EARLY, in the "Final ability scores"
     # section above — appended here, unconditionally, mirroring exactly how
@@ -4839,7 +4872,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choice_templates.append(species_tpl)
     for species_feat in species_feats:
         origin = species_feat["_species_origin"]
-        choice_templates += _feat_choice_templates([species_feat], origin=origin)
+        choice_templates += _feat_choice_templates([species_feat], origin=origin, items=catalog.items)
         choice_templates += _feat_spell_choice_templates(
             [species_feat], catalog, origin=origin, raw_selections=species_choices_raw, total_level=total_level,
             sources=draft.get("sources"), ruleset=ruleset,
@@ -4979,7 +5012,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             if dropped:
                 names = ", ".join((catalog.spells.get(d) or catalog.items.get(d) or {}).get("name", d) for d in dropped)
                 if _is_mastery_choice(tpl):  # F1: here only options the class filter / catalog no longer offers
-                    reason = f"'{tpl['label']}': {names} is not an available weapon for this class and was ignored."
+                    where = "this class" if tpl["source"]["kind"] == "class" else "this feat"
+                    reason = f"'{tpl['label']}': {names} is not an available weapon for {where} and was ignored."
                 elif tpl["source"]["kind"] == "class" and tpl["id"].startswith(class_choices_2024.DEPENDENT_PREFIX):
                     names = ", ".join(
                         (catalog.spells.get(d) or catalog.items.get(d) or catalog.feats.get(d[len("feat:"):]) or {}).get("name", d)
@@ -5398,6 +5432,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             for s in c["selected"]:
                 if not s.startswith("skill-"):
                     _categorize_proficiency(s)
+
+    for c in choices:  # FE8: Weapon Master (PHB) picks are weapon proficiencies (filed straight into the weapon set)
+        if c["source"]["kind"] == "feat" and c["id"].endswith(":weapon-choice"):
+            proficient_weapons.update(reference_data.weapon_proficiency_id(s) for s in c["selected"])
 
     for effect in class_choices_2024.selected_class_option_effects(choices):  # C6a Protector / Warden
         for prof_id in effect.get("proficiencies", []):
