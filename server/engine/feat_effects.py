@@ -19,6 +19,10 @@ FE7 adds the resistance, damage-type and variant picks: ``instances`` reads each
 (``:resistance-choice``, ``:damage-type``, the variant card, Scion's ``:spell-variant``), ``resistances`` lists the
 damage types they grant and ``{choice}`` in a note is the pick.
 
+FE9 adds the option-pick feats (Fighting Initiate, Martial Adept, Metamagic Adept, Eldritch Adept): ``instances`` reads the
+labels of the picked options (``{choice}`` in a note), and a resource may carry ``die`` and ``dc`` (an expression over
+``pb`` / ``<abl>_mod``). The cards, the duplicate rule and the effects of the picks live in ``resolve``.
+
 FE3 adds the output surfaces: ``notes`` (text for effects that are not folded into a number, with
 the character's numbers filled in) and ``resources`` (``derived.featResources``).
 """
@@ -59,11 +63,24 @@ def _card(choices, cid: str) -> list[str]:
     return list((card or {}).get("selected") or [])
 
 
+_OPTION_SUFFIX = {"fighting-style": "fighting-style", "maneuver": "maneuvers", "metamagic": "metamagic",
+                  "invocation": "invocation"}
+
+
+def _option_labels(choices, cid: str) -> list[str]:
+    """FE9: the labels of the selected options of the card ``cid`` (the id when the card does not list it)."""
+    card = next((c for c in choices or [] if c.get("id") == cid), None)
+    names = {o["id"]: o["label"] for o in (card or {}).get("options") or []}
+    return [names.get(s, s) for s in (card or {}).get("selected") or []]
+
+
 def _picks(effect: dict, choices, prefix: str) -> tuple[list[str], list[str]]:
-    """(damage types granted as resistance, labels of the instance's pick) from the instance's FE7 cards."""
+    """(damage types granted as resistance, labels of the instance's pick) from the instance's FE7 / FE9 cards."""
     types: list[str] = []
     labels: list[str] = []
-    if "resist_choice" in effect:
+    if "option_picks" in effect:  # FE9: the picked options of the feat's own card
+        labels = _option_labels(choices, f"{prefix}:{_OPTION_SUFFIX[effect['option_picks']['kind']]}")
+    elif "resist_choice" in effect:
         types = _card(choices, f"{prefix}:resistance-choice")
         labels = [t.capitalize() for t in types]
     elif "resist_by_variant" in effect:
@@ -315,6 +332,10 @@ def resources(insts: list[dict], numbers: dict) -> list[dict]:
             entry = {"id": f"{inst['prefix']}:{_slug(res['name'])}", "featId": inst["index"],
                      "source": {"kind": "feat", "id": inst["index"], "label": inst["feat"]["name"]},
                      "name": res["name"], "uses": uses, "recharge": res.get("recharge")}
+            if res.get("die"):  # FE9 Martial Adept's d6
+                entry["die"] = res["die"]
+            if res.get("dc"):  # FE9: an expression over pb / <abl>_mod, e.g. the maneuver save DC
+                entry["dc"] = _eval(ast.parse(res["dc"], mode="eval"), numbers)
             if res.get("note"):
                 entry["details"] = {"note": render(res["note"], _env(inst, numbers))}
             out.append(entry)

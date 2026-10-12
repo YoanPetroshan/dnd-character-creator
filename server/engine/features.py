@@ -127,6 +127,16 @@ def invocation_effects(choices: list[dict], class_levels: dict[str, int], catalo
         eff = class_choices_2024.invocation_effect(catalog, fid)
         if eff:
             out.append((cls_id, class_levels.get(cls_id, 0), eff))
+    by_id = {c["id"]: c for c in choices}
+    for c in choices:  # FE9 Eldritch Adept: the feat's pick, cast with the ability chosen with the feat
+        if c["source"]["kind"] != "feat" or not c["id"].endswith(":invocation"):
+            continue
+        ability = ((by_id.get(c["id"] + "-ability") or {}).get("selected") or [None])[0]
+        for fid in c["selected"]:
+            eff = class_choices_2024.invocation_effect(catalog, fid)
+            if eff:
+                out.append(("warlock", class_levels.get("warlock", 0),
+                            {**eff, "source_label": c["source"]["label"], **({"ability": ability.upper()} if ability else {})}))
     return out
 
 
@@ -150,6 +160,6 @@ def invocation_skills(effects) -> list[str]:
 def invocation_innate_entries(effects) -> list[dict]:
     """Raw innate-spell entries (catalog shape, plus `source`) for resolve to turn into sheet entries."""
     return [{"spell_id": e["innate_spell"]["spell"], "name": e["innate_spell"]["spell"].removesuffix("-xphb").replace("-", " ").title(),
-             "level": e["innate_spell"]["level"], "uses": e["innate_spell"]["uses"], "ability": "CHA",
-             "variant": None, "note": e.get("note")}
+             "level": e["innate_spell"]["level"], "uses": e["innate_spell"]["uses"], "ability": e.get("ability", "CHA"),
+             "variant": None, "note": e.get("note"), "source_label": e.get("source_label", "Eldritch Invocation")}
             for _, _, e in effects if "innate_spell" in e]

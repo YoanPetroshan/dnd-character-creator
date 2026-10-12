@@ -54,8 +54,9 @@ FE7_ENTRIES = ("dragonscarred-frhof", "boon-of-energy-resistance-xphb", "portal-
                "scion-of-the-outer-planes-sato", "elemental-adept-phb", "elemental-adept-xphb",
                "strike-of-the-giants-bgg")  # later slice (tests/test_feat_resist_choices.py)
 FE8_ENTRIES = ("weapon-master-phb", "weapon-master-xphb")  # later slice (tests/test_feat_weapon_picks.py)
+FE9_ENTRIES = ("fighting-initiate-tce", "eldritch-adept-tce", "martial-adept-phb", "metamagic-adept-tce")  # tests/test_feat_option_picks.py
 FE3_WITH_TEXT = tuple(i for i in FE3_WITH_TEXT if i in fed.FEAT_EFFECT_QUOTES and i not in
-                      ("alert-phb",) + FE4_ENTRIES + FE7_ENTRIES + FE8_ENTRIES)
+                      ("alert-phb",) + FE4_ENTRIES + FE7_ENTRIES + FE8_ENTRIES + FE9_ENTRIES)
 
 
 @pytest.fixture(scope="module")
@@ -140,10 +141,10 @@ def test_resource_entries_use_only_the_implemented_vocabulary():
     for index, entry in fed.FEAT_EFFECTS.items():
         for res in entry.get("resources", []):
             seen += 1
-            assert set(res) <= {"name", "uses", "recharge", "note"}, index
+            assert set(res) <= {"name", "uses", "recharge", "note", "die", "dc"}, index
             assert res["uses"] == "pb" or isinstance(res["uses"], int), index
             assert res["recharge"] in ("long", "short", "short-or-long"), index
-    assert seen == 10  # 7 from FE3, Portal Step / Magic Resistant / Strike of the Giants from FE7
+    assert seen == 12  # 7 from FE3, 3 from FE7, Martial Adept / Metamagic Adept from FE9
 
 
 def test_lucky_follows_its_own_edition():

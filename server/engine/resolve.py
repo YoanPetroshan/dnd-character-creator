@@ -1555,6 +1555,26 @@ def _invocation_templates(catalog: Catalog, feature: dict, cid: str, source: dic
     }
 
 
+def _optional_feature_options(catalog: Catalog, option_ids, skip=(), class_level: int | None = None) -> list[dict]:
+    """The options of an optionalfeatureProgression list (`opt-*` records): label = name; an option with a level
+    prerequisite above `class_level` is disabled (FE9: `class_level` None = no level check, the Martial Adept list)."""
+    options = []
+    for opt_id in option_ids:
+        opt = catalog.features.get(opt_id)
+        if not opt or opt_id in skip:
+            continue
+        option = {"id": opt_id, "label": opt["name"]}
+        desc = _join_desc(opt.get("desc"))
+        if desc:
+            option["description"] = desc
+        need = opt.get("prerequisite_level")
+        if need and class_level is not None and need > class_level:
+            option["disabled"] = True
+            option["disabledReason"] = f"requires level {need}"
+        options.append(option)
+    return options
+
+
 def _optional_progression_template(catalog: Catalog, feature: dict, cid: str, source: dict, class_level: int) -> dict | None:
     """Subclass picks from optionalfeatureProgression (maneuvers, runes, ...):
     the count is the progression value of the highest level reached; options
@@ -1565,20 +1585,7 @@ def _optional_progression_template(catalog: Catalog, feature: dict, cid: str, so
         return None
     granted_ids = [oid for lvl, ids in (spec.get("required") or {}).items() if int(lvl) <= class_level
                    for oid in ids if oid in catalog.features]
-    options = []
-    for opt_id in spec["options"]:
-        opt = catalog.features.get(opt_id)
-        if not opt or opt_id in granted_ids:
-            continue
-        option = {"id": opt_id, "label": opt["name"]}
-        desc = _join_desc(opt.get("desc"))
-        if desc:
-            option["description"] = desc
-        need = opt.get("prerequisite_level")
-        if need and need > class_level:
-            option["disabled"] = True
-            option["disabledReason"] = f"requires level {need}"
-        options.append(option)
+    options = _optional_feature_options(catalog, spec["options"], granted_ids, class_level)
     description = _join_desc(feature.get("desc")) or ""
     tpl = {
         "id": cid, "source": source, "label": feature["name"], "description": description,
@@ -1735,7 +1742,8 @@ def _background_choice_templates(bg: dict, bg_id: str) -> list[dict]:
     return templates
 
 
-def _feat_choice_templates(feats: list[dict], origin: str | None = None, items: dict | None = None) -> list[dict]:
+def _feat_choice_templates(feats: list[dict], origin: str | None = None, items: dict | None = None,
+                           catalog: Catalog | None = None) -> list[dict]:
     """A granted feat's own choice-shaped fields, mirrored from
     _background_choice_templates' proficiency-choice/language blocks above
     (same build_choice_template call, same cid/source/label/description
@@ -1832,11 +1840,63 @@ def _feat_choice_templates(feats: list[dict], origin: str | None = None, items: 
             tpl = build_choice_template(env, f"{cid_prefix}:save-choice-{i}", source, f"{feat['name']}: Saving Throw", description=description)
             if tpl:
                 templates.append(tpl)
-        templates += _feat_extra_templates(feat, cid_prefix, feat_level, items)  # FE7, FE8
+        templates += _feat_extra_templates(feat, cid_prefix, feat_level, items, catalog)  # FE7, FE8, FE9
     return templates
 
 
-def _feat_extra_templates(feat: dict, cid_prefix: str, feat_level: int | None = None, items: dict | None = None) -> list[dict]:
+# FE9: card suffix, label and description per `option_picks` kind.
+_OPTION_PICK_CARDS = {
+    "fighting-style": ("fighting-style", "Fighting Style",
+                       "Learn {n} Fighting Style option{s} from the fighter class. It must differ from any style you already have."),
+    "maneuver": ("maneuvers", "Maneuvers", "Learn {n} maneuver{s} from those available to the Battle Master."),
+    "metamagic": ("metamagic", "Metamagic", "Learn {n} Metamagic option{s} from the sorcerer class."),
+    "invocation": ("invocation", "Eldritch Invocation",
+                   "Learn {n} Eldritch Invocation{s} from the warlock class. One with a prerequisite is for a Warlock who meets it."),
+}
+_FIGHTER_STYLE_FEATURE = "fighter-fighting-style"
+_BATTLE_MASTER_FEATURE = "battle-master-phb-3-battle-master"
+_SRD_METAMAGIC_FEATURE = "metamagic-1"
+_SRD_INVOCATIONS_FEATURE = "eldritch-invocations"
+
+
+def _option_pick_options(catalog: Catalog, kind: str) -> list[dict]:
+    """FE9 (V5-V8): the option pool of an `option_picks` feat. Fighting style: the SRD fighter styles (the TCE styles
+    are not imported); maneuver: the Battle Master (PHB) list, i.e. PHB + TCE maneuvers; metamagic: the SRD Metamagic
+    options (Seeking / Transmuted are not imported); invocation: the SRD invocations (prerequisites are enforced
+    late, by `_gate_option_picks`)."""
+    if kind == "maneuver":
+        spec = ((catalog.features.get(_BATTLE_MASTER_FEATURE) or {}).get("feature_specific") or {}).get("optional_progression")
+        return _optional_feature_options(catalog, (spec or {}).get("options") or [])
+    if kind == "invocation":
+        refs = ((catalog.features.get(_SRD_INVOCATIONS_FEATURE) or {}).get("feature_specific") or {}).get("invocations") or []
+        options = []
+        for ref in refs:
+            inv = catalog.features.get(ref["index"]) or {}
+            option = {"id": ref["index"], "label": ref["name"].replace("Eldritch Invocation: ", "")}
+            desc = _join_desc(inv.get("desc"))
+            if desc:
+                option["description"] = desc
+            options.append(option)
+        return options
+    prefix, feature_id = (("Fighting Style: ", _FIGHTER_STYLE_FEATURE) if kind == "fighting-style"
+                          else ("Metamagic: ", _SRD_METAMAGIC_FEATURE))
+    refs = (((catalog.features.get(feature_id) or {}).get("feature_specific") or {}).get("subfeature_options") or {}) \
+        .get("from", {}).get("options", [])
+    options = []
+    for ref in refs:
+        rec = catalog.features.get((ref.get("item") or {}).get("index") or "")
+        if not rec:
+            continue
+        option = {"id": rec["index"], "label": rec["name"].removeprefix(prefix)}
+        desc = _join_desc(rec.get("desc"))
+        if desc:
+            option["description"] = desc
+        options.append(option)
+    return options
+
+
+def _feat_extra_templates(feat: dict, cid_prefix: str, feat_level: int | None = None, items: dict | None = None,
+                          catalog: Catalog | None = None) -> list[dict]:
     """FE7: the cards a feat's effect entry asks for, under the same `<prefix>:<kind>` cids as its other
     cascaded cards (so the feat-kind merge sites and the page filters route them without change). Called for every
     feat instance by `_feat_choice_templates`, i.e. at all five sites (background, species, Fighting Style,
@@ -1848,6 +1908,9 @@ def _feat_extra_templates(feat: dict, cid_prefix: str, feat_level: int | None = 
     FE8 (`items` = the catalog items): `weapon_proficiency_choice` -> `:weapon-choice` (Weapon Master PHB: the picks
     join the proficient weapons, see `_feat_weapon_proficiencies`); `mastery_choice` -> `:weapon-mastery` (Weapon Master
     XPHB: gated by `_gate_mastery_choices`, joins sheet.weaponMasteries).
+    FE9 (`catalog`): `option_picks` -> the feat's own option card (`_OPTION_PICK_SUFFIX`): Fighting Initiate's fighter
+    style, Martial Adept's maneuvers, Metamagic Adept's options, Eldritch Adept's invocation (+ its spellcasting
+    ability); see `_option_pick_options` and `_gate_option_picks`.
     Scion's resistance has no card: it follows the `:spell-variant` pick."""
     effect = feat_effects_data.FEAT_EFFECTS.get(feat["index"]) or {}
     source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
@@ -1877,6 +1940,18 @@ def _feat_extra_templates(feat: dict, cid_prefix: str, feat_level: int | None = 
     if spec:
         templates.append(card(spec["suffix"], spec["label"], spec["description"], 1,
                               [{"id": o["id"], "label": o["label"]} for o in spec["options"]]))
+    spec = effect.get("option_picks")
+    if spec and catalog is not None:
+        options = _option_pick_options(catalog, spec["kind"])
+        if options:
+            n = spec["count"]
+            suffix, label, text = _OPTION_PICK_CARDS[spec["kind"]]
+            templates.append(card(suffix, label, text.format(n=n, s="s" if n != 1 else ""), n, options))
+            if spec["kind"] == "invocation":
+                templates.append(card("invocation-ability", "Spellcasting Ability",
+                                      "The ability you use to cast the invocation's spell (Intelligence, Wisdom or Charisma).", 1,
+                                      [{"id": a.lower(), "label": name} for a, name in
+                                       (("INT", "Intelligence"), ("WIS", "Wisdom"), ("CHA", "Charisma"))]))
     for key, suffix, label, text in (
             ("weapon_proficiency_choice", "weapon-choice", "Weapon Proficiencies", "Choose {n} weapon{s} you gain proficiency with."),
             ("mastery_choice", "weapon-mastery", "Weapon Mastery",
@@ -2142,6 +2217,134 @@ def _gate_invocation_choices(choices: list[dict], resolved_classes: list[dict], 
             })
         choices[i] = {**c, "options": options, "selected": selected,
                       "status": "resolved" if len(selected) == c["count"] else "pending"}
+    return pruned
+
+
+def _gate_feat_invocation_prereqs(choices: list[dict], resolved_classes: list[dict], catalog: Catalog) -> list[dict]:
+    """FE9 Eldritch Adept: "If the invocation has a prerequisite of any kind, you can choose that invocation only if
+    you're a warlock who meets the prerequisite." The `:invocation` feat card's options are disabled with the
+    warlock prerequisite reason (a non-Warlock has level 0, no Pact and no cantrips, so every invocation with a
+    prerequisite is closed) and a stored pick of one is dropped with a `pruned` entry. Pacts of a 2024 Warlock
+    (invocations) count as the matching 2014 Pact. Mutates `choices`; returns the pruned entries."""
+    cards = [i for i, c in enumerate(choices) if c["source"]["kind"] == "feat" and c["id"].endswith(":invocation")]
+    if not cards:
+        return []
+    level = next((rc["level"] for rc in resolved_classes if rc["cls_id"] == "warlock" and rc["cls"]), 0)
+    pacts = {sel for o in choices if o["source"].get("id") == "warlock" and ":feature:" in o["id"] for sel in o["selected"]}
+    for o in choices:
+        if class_choices_2024.is_invocation_card_2024(o):
+            pacts |= {m.group(0)[len("opt-"):-len("-xphb")] for sel in o["selected"]
+                      if (m := re.match(r"^opt-pact-of-the-(?:blade|chain|tome)-xphb", sel))}
+    cantrips = {sel for o in choices if o["id"] == "class:warlock:spells-cantrips" for sel in o["selected"]}
+    pruned = []
+    for i in cards:
+        c = choices[i]
+        unmet, options = {}, []
+        for o in c["options"]:
+            reason = None if o.get("disabled") else _invocation_unmet(catalog.features.get(o["id"]) or {}, level, pacts, cantrips)
+            if reason:
+                unmet[o["id"]] = o["label"]
+                o = {**o, "disabled": True, "disabledReason": reason}
+            options.append(o)
+        kept = [s for s in c["selected"] if s not in unmet]
+        if len(kept) != len(c["selected"]):
+            pruned.append({"choiceId": c["id"], "reason": (
+                f"'{c['label']}': {', '.join(unmet[s] for s in c['selected'] if s in unmet)} needs a Warlock who meets its "
+                f"prerequisite and was ignored.")})
+        choices[i] = {**c, "options": options, "selected": kept,
+                      "status": "resolved" if len(kept) == c["count"] else "pending"}
+    return pruned
+
+
+_PICK_PREFIX = re.compile(r"^(?:Fighting Style|Metamagic|Eldritch Invocation):\s*")
+_FEAT_PICK_GROUPS = {":fighting-style": "style", ":maneuvers": "maneuver", ":metamagic": "metamagic", ":invocation": "invocation"}
+_SRD_METAMAGIC_CID = re.compile(r"^class:sorcerer:\d+:feature:metamagic-\d+$")
+_BATTLE_MASTER_CID = re.compile(r"^class:fighter:\d+:feature:battle-master-(?:phb|xphb)-3-battle-master$")
+
+
+def _gate_duplicate_picks(choices: list[dict], catalog: Catalog, class_order: list[str],
+                          srd_style_cids: set[str], fs_cids: set[str]) -> list[dict]:
+    """FE9: one option cannot be held twice across the cards that offer the same family of options (Fighting Initiate's
+    "the one you choose must be different", and the same logic for maneuvers, Metamagic and invocations, which a feat
+    can learn on top of the class's own list). Families: fighting styles (SRD class cards, 2024 Fighting Style feat
+    cards, Fighting Initiate), maneuvers (Battle Master, Martial Adept), Metamagic (Sorcerer SRD / 2024, Metamagic
+    Adept), invocations (Warlock, Eldritch Adept). Cards are walked in build order (origin feats first, then by
+    (class index, level), a class card before the ASI of its level) and the later holder is the duplicate: its option
+    is disabled "already taken (<name>, <holder>)" and a stored duplicate is dropped with a `pruned` entry. Options are
+    compared by name, so the 2014 and 2024 editions of one option are the same. Fighting Style feat cards (the feat is
+    already resolved) and the 2024 invocation card only hold options. Mutates `choices`; returns the pruned entries."""
+    def info(c):
+        src, cid = c["source"], c["id"]
+        if src["kind"] == "feat":
+            for suffix, group in _FEAT_PICK_GROUPS.items():
+                if cid.endswith(suffix):
+                    return group, True, src["label"]
+            return None
+        if src["kind"] != "class":
+            return None
+        if cid in srd_style_cids:
+            return "style", True, "SRD"
+        if cid in fs_cids:
+            return "style", False, None
+        if _BATTLE_MASTER_CID.match(cid):
+            return "maneuver", True, "Battle Master"
+        if _SRD_METAMAGIC_CID.match(cid) or cid == class_choices_2024.metamagic_cid():
+            return "metamagic", True, "Sorcerer"
+        if ":invocations:" in cid and src.get("id") == "warlock":
+            return "invocation", not class_choices_2024.is_invocation_card_2024(c), "Warlock"
+        return None
+
+    def position(i):
+        c = choices[i]
+        m = _ASI_FEAT_CID_RE.match(c["id"])
+        slot = lambda cls: class_order.index(cls) if cls in class_order else len(class_order)  # noqa: E731
+        if c["source"]["kind"] == "feat":
+            return (1, slot(m.group(1)), int(m.group(2)), 1, i) if m else (0, 0, 0, 0, i)
+        return (1, slot(c["source"].get("id")), c["source"].get("level") or 0, 0, i)
+
+    def key_and_name(group, option_id, label):
+        if group == "style":
+            if option_id.startswith("feat:"):
+                feat = catalog.feats.get(option_id[len("feat:"):])
+                return (_feat_name_key(feat), feat["name"], feat.get("source")) if feat else (option_id, option_id, None)
+            name = _PICK_PREFIX.sub("", (catalog.features.get(option_id) or {}).get("name") or label).strip()
+            return name.lower(), name, None
+        name = re.sub(r"\s*\([^)]*\)\s*$", "", _PICK_PREFIX.sub("", label)).strip()
+        return name.lower(), name, None
+
+    members = [(i, *found) for i, c in enumerate(choices) if (found := info(c))]
+    feat_groups = {g for i, g, _m, _h in members if choices[i]["source"]["kind"] == "feat"}
+    members = [m for m in members if m[1] in feat_groups]  # no feat pick, no change: class lists stay as they were
+    if not members:
+        return []
+    held: dict[str, dict[str, str]] = {}  # options held by any card, read by the feat cards
+    held_by_feat: dict[str, dict[str, str]] = {}  # options held by a feat card, read by the class cards
+    pruned = []
+    for i, group, modifiable, holder in sorted(members, key=lambda m: position(m[0])):
+        c = choices[i]
+        is_feat = c["source"]["kind"] == "feat"
+        taken = (held if is_feat else held_by_feat).setdefault(group, {})
+        labels = {o["id"]: o["label"] for o in c["options"]}
+        picks = [(s, *key_and_name(group, s, labels.get(s, s))) for s in c["selected"]]  # (id, key, name, feat source)
+        if modifiable:
+            options = [{**o, "disabled": True, "disabledReason": f"already taken ({taken[key]})"}
+                       if (key := key_and_name(group, o["id"], o["label"])[0]) in taken and not o.get("disabled") else o
+                       for o in c["options"]]
+            dropped = [p for p in picks if p[1] in taken]
+            picks = [p for p in picks if p[1] not in taken]
+            if dropped:
+                pruned.append({"choiceId": c["id"], "reason": (
+                    f"'{c['label']}': {', '.join(p[2] for p in dropped)} was already taken "
+                    f"({taken[dropped[0][1]]}); the selection was ignored.")})
+            if dropped or any(a is not b for a, b in zip(options, c["options"])):
+                ids = [p[0] for p in picks]
+                choices[i] = {**c, "options": options, "selected": ids,
+                              "status": "resolved" if len(ids) == c["count"] else "pending"}
+        for _id, key, name, feat_source in picks:
+            label = f"{name}, {holder or feat_source or 'feat'}"
+            held.setdefault(group, {}).setdefault(key, label)
+            if is_feat:
+                held_by_feat.setdefault(group, {}).setdefault(key, label)
     return pruned
 
 
@@ -4067,6 +4270,10 @@ def _class_feature_list(
             for sel in [g["id"] for g in c.get("granted") or []] + list(c.get("selected") or []):
                 out.append((src["id"], lvl, sel))
     first = next((rc for rc in resolved_classes if rc["cls_id"] and rc["cls"]), None)
+    for c in choices or []:  # FE9 Fighting Initiate: the picked fighter style counts as a class feature (its effect, G1 names)
+        if (c.get("source") or {}).get("kind") == "feat" and c["id"].endswith(":" + _OPTION_PICK_CARDS["fighting-style"][0]) and first:
+            rc = next((r for r in resolved_classes if c["id"].startswith(f"class:{r['cls_id']}:")), first)
+            out += [(rc["cls_id"], rc["level"], sel) for sel in c.get("selected") or []]
     for feat in feats or []:
         if feat.get("category") in _FS_FEAT_CATEGORIES and first:
             origin = feat.get("_asi_origin") or ""
@@ -4681,14 +4888,14 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             use_feat_prereqs, held, lessons_resolver.taken_by_cid, lessons_resolver.picked)
         for lessons_feat in lessons_feats:  # the Origin feat's own choices under its origin
             if lessons_feat["_asi_origin"].startswith(f"class:{rc_cls_id}:"):
-                choice_templates += _feat_choice_templates([lessons_feat], origin=lessons_feat["_asi_origin"], items=catalog.items)
+                choice_templates += _feat_choice_templates([lessons_feat], origin=lessons_feat["_asi_origin"], items=catalog.items, catalog=catalog)
                 choice_templates += _feat_spell_choice_templates(
                     [lessons_feat], catalog, origin=lessons_feat["_asi_origin"], raw_selections=rc_class_choices,
                     total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
                 )
         for fs_feat in fs_feats:  # cascaded choices (Blessed / Druidic Warrior cantrips) under the pick's origin
             if fs_feat["_asi_origin"].startswith(f"class:{rc_cls_id}:"):
-                choice_templates += _feat_choice_templates([fs_feat], origin=fs_feat["_asi_origin"], items=catalog.items)
+                choice_templates += _feat_choice_templates([fs_feat], origin=fs_feat["_asi_origin"], items=catalog.items, catalog=catalog)
                 choice_templates += _feat_spell_choice_templates(
                     [fs_feat], catalog, origin=fs_feat["_asi_origin"], raw_selections=rc_class_choices,
                     total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
@@ -4714,7 +4921,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             if asi_feat["_asi_cid"] in rc_blocked_feat_cids:
                 continue
             if asi_feat["_asi_origin"].startswith(f"class:{rc_cls_id}:"):
-                choice_templates += _feat_choice_templates([asi_feat], origin=asi_feat["_asi_origin"], items=catalog.items)
+                choice_templates += _feat_choice_templates([asi_feat], origin=asi_feat["_asi_origin"], items=catalog.items, catalog=catalog)
                 choice_templates += _feat_spell_choice_templates(
                     [asi_feat], catalog, origin=asi_feat["_asi_origin"], raw_selections=rc_class_choices,
                     total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
@@ -4860,7 +5067,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         variant_hints=(bg.get("feat_variant_hints") if bg else None) or {},
         total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
     )
-    choice_templates += _feat_choice_templates(background_feats, items=catalog.items)  # ASI-selected feats' templates: built origin-scoped in the per-class loop
+    choice_templates += _feat_choice_templates(background_feats, items=catalog.items, catalog=catalog)  # ASI-selected feats' templates: built origin-scoped in the per-class loop
     # Phase 4c-ii Task 2: `feat_ability_choice_tpls` was already built (and
     # applied to `feat_bonuses`) EARLY, in the "Final ability scores"
     # section above — appended here, unconditionally, mirroring exactly how
@@ -4872,7 +5079,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choice_templates.append(species_tpl)
     for species_feat in species_feats:
         origin = species_feat["_species_origin"]
-        choice_templates += _feat_choice_templates([species_feat], origin=origin, items=catalog.items)
+        choice_templates += _feat_choice_templates([species_feat], origin=origin, items=catalog.items, catalog=catalog)
         choice_templates += _feat_spell_choice_templates(
             [species_feat], catalog, origin=origin, raw_selections=species_choices_raw, total_level=total_level,
             sources=draft.get("sources"), ruleset=ruleset,
@@ -5461,6 +5668,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     inv_card = next((c for c in choices if class_choices_2024.is_invocation_card_2024(c)), None)
     if inv_card:  # C7c: dependents of an instance the gate dropped go with it
         pruned += class_choices_2024.prune_invocation_dependents(choices, inv_card["selected"])
+    pruned += _gate_feat_invocation_prereqs(choices, resolved_classes, catalog)  # FE9 Eldritch Adept
+    pruned += _gate_duplicate_picks(  # FE9 Fighting Initiate, Martial Adept, Metamagic Adept, Eldritch Adept
+        choices, catalog, [rc["cls_id"] for rc in resolved_classes if rc["cls"]],
+        {cid for slots in srd_fs_slots_by_class.values() for cid, _l, _i in slots},
+        {cid for slots in fs_slots_by_class.values() for cid, _l, _i in slots})
     invocation_effects = features_mod.invocation_effects(
         choices, {rc["cls_id"]: rc["level"] for rc in resolved_classes if rc["cls"]}, catalog)
     proficient_skills.update(features_mod.invocation_skills(invocation_effects))
@@ -5679,7 +5891,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     innate_spells = (_species_innate_spells(race, subrace, catalog, species_variant)
                      + _species_trait_spell_choices(race, subrace, catalog, choices)
                      + _feat_innate_spells(resolved_feats, catalog, choices)
-                     + [{**_innate_entry_to_sheet(e, catalog), "source": "Eldritch Invocation",
+                     + [{**_innate_entry_to_sheet(e, catalog), "source": e["source_label"],
                          **({"note": e["note"]} if e.get("note") else {})}
                         for e in features_mod.invocation_innate_entries(invocation_effects)])
 

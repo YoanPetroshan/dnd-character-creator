@@ -382,7 +382,8 @@ def _warlock(ctx: Ctx, rc: dict) -> list[dict]:
         return out
     cha = ctx.modifiers.get("CHA", 0)
     for c in ctx.choices:
-        if (c.get("source") or {}).get("id") != "warlock" or ":invocations:" not in c.get("id", ""):
+        feat_pick = (c.get("source") or {}).get("kind") == "feat" and c.get("id", "").endswith(":invocation")  # FE9 Eldritch Adept
+        if not feat_pick and ((c.get("source") or {}).get("id") != "warlock" or ":invocations:" not in c.get("id", "")):
             continue
         for inst in c.get("selected") or []:  # C7a: `<id>~k` repeat instances
             sel = class_choices_2024.invocation_base_id(inst)

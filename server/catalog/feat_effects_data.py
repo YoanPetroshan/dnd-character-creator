@@ -37,14 +37,16 @@ Effect vocabulary (every key optional; the full semantics are in plan section 4.
     weapon_proficiency_choice   {count, categories}  (FE8: card ``:weapon-choice``; the picks join the proficient weapons)
     mastery_choice              {count, categories}  (FE8: card ``:weapon-mastery``; proficient weapons only; the pick
                                         joins sheet.weaponMasteries)
-    option_picks                {kind, count, pool}
+    option_picks                {kind, count}  (FE9: kind fighting-style | maneuver | metamagic | invocation; card
+                                        ``:fighting-style`` / ``:maneuvers`` / ``:metamagic`` / ``:invocation`` (+
+                                        ``:invocation-ability``); the pool is built in resolve from the SRD / Battle Master lists)
     unarmed                     {die, die_free_hands, type, ability, notes}
     offhand                     {non_light_one_handed_melee | light_crossbow_mod | dw2024: True}
     finesse_items               [item index]
     attack_notes                [{when: {predicate}, text}]
-    resources                   [{name, uses, recharge, note}]  (FE3 implements these keys; uses = int | "pb";
-                                        recharge = long | short | short-or-long; die/dice/pool/dc come with the
-                                        slices that need them)
+    resources                   [{name, uses, recharge, note, die, dc}]  (FE3 implements these keys; uses = int | "pb";
+                                        recharge = long | short | short-or-long; FE9 adds ``die`` and ``dc``, an
+                                        expression over pb / <abl>_mod; dice/pool come with the slices that need them)
     notes                       [template]  ({expr} over pb, level, <abl>_mod, <abl>_score, inc_mod;
                                         {sum:a,b} prints "a + b = total"; {choice} is the instance's pick (FE7);
                                         see engine/feat_effects.render)
@@ -1078,6 +1080,59 @@ FEAT_EFFECT_QUOTES.update({
     "weapon-master-xphb": (
         "use the mastery property of one kind of Simple or Martial weapon of your choice, provided you have proficiency with it.",
         "Whenever you finish a Long Rest, you can change the kind of weapon to another eligible kind."),
+})
+
+# FE9: option-pick feats. ``option_picks`` {kind, count} asks for one card of the feat's own options, cid
+# ``<prefix>:<suffix>``: fighting-style -> ``:fighting-style`` (the six SRD fighter styles; the pick joins the class
+# feature list, so CLASS_FEATURE_EFFECTS applies Archery / Defense / Dueling / ...), maneuver -> ``:maneuvers`` (the
+# Battle Master list, PHB + TCE), metamagic -> ``:metamagic`` (the SRD Metamagic options), invocation -> ``:invocation``
+# (the SRD invocations, prerequisites only for a Warlock who meets them; the effects reach
+# ``features.invocation_effects``). Resource keys ``die`` and ``dc`` (an expression over pb / <abl>_mod) are new.
+FEAT_EFFECTS.update({
+    "fighting-initiate-tce": {
+        "option_picks": {"kind": "fighting-style", "count": 1},
+        "notes": ["Fighting Style: {choice}. When you reach a level that grants Ability Score Improvement you can replace "
+                  "it with another fighter style you don't have."]},
+    "eldritch-adept-tce": {
+        "option_picks": {"kind": "invocation", "count": 1},
+        "notes": ["Eldritch Invocation: {choice}. Only an invocation without a prerequisite, or one a Warlock who meets "
+                  "it takes. Your spellcasting ability for it is chosen with the feat. When you gain a level you can "
+                  "replace it with another warlock invocation."]},
+    "martial-adept-phb": {
+        "option_picks": {"kind": "maneuver", "count": 2},
+        "resources": [{
+            "name": "Superiority Die (Martial Adept)", "uses": 1, "recharge": "short-or-long", "die": "d6",
+            "dc": "8 + pb + max(str_mod, dex_mod)",
+            "note": "Maneuvers: {choice}. This die is added to any superiority dice you have from another source "
+                    "(it stays a d6)."}]},
+    "metamagic-adept-tce": {
+        "option_picks": {"kind": "metamagic", "count": 2},
+        "resources": [{
+            "name": "Sorcery Points (Metamagic Adept)", "uses": 2, "recharge": "long",
+            "note": "Metamagic: {choice}. Added to any sorcery points you have from another source but usable only on "
+                    "Metamagic; you can use one Metamagic option per spell unless the option says otherwise."}]},
+})
+FEAT_EFFECT_QUOTES.update({
+    "fighting-initiate-tce": (
+        "If you already have a style, the one you choose must be different.",
+        "Whenever you reach a level that grants the Ability Score Improvement feature, you can replace this feat's "
+        "fighting style with another one from the fighter class that you don't have."),
+    "eldritch-adept-tce": (
+        "Your spellcasting ability for the invocation is Intelligence, Wisdom, or Charisma (choose when you select this feat).",
+        "If the invocation has a prerequisite of any kind, you can choose that invocation only if you're a warlock who "
+        "meets the prerequisite.",
+        "Whenever you gain a level, you can replace the invocation with another one from the warlock class."),
+    "martial-adept-phb": (
+        "of your choice from among those available to the Battle Master archetype in the fighter class.",
+        "the saving throw DC equals 8 + your proficiency bonus + your Strength or Dexterity modifier (your choice).",
+        "You gain one superiority die, which is a d6 (this die is added to any superiority dice you have from another source).",
+        "You regain your expended superiority dice when you finish a short or long rest."),
+    "metamagic-adept-tce": (
+        "of your choice from the sorcerer class.",
+        "Whenever you reach a level that grants the Ability Score Improvement feature, you can replace one of these "
+        "Metamagic options with another one from the sorcerer class.",
+        "You gain 2 sorcery points to spend on Metamagic (these points are added to any sorcery points you have from "
+        "another source but can be used only on Metamagic). You regain all spent sorcery points when you finish a long rest."),
 })
 
 FEAT_PENDING: frozenset[str] = frozenset(FEAT_KINDS) - frozenset(FEAT_EFFECTS)
