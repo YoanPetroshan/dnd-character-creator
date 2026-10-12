@@ -5747,6 +5747,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         saves = {ab: value + aura for ab, value in saves.items()}
     class_levels = {rc["cls_id"]: rc["level"] for rc in resolved_classes if rc["cls"]}
     jack, remarkable = features_mod.half_proficiency(effects)
+    # F-D9: XPHB Jack of All Trades covers only checks that use a skill proficiency you lack (never Initiative),
+    # XPHB Remarkable Athlete grants Advantage on Initiative and Athletics instead of a half Proficiency Bonus.
+    initiative_jack, initiative_remarkable = jack, remarkable
+    if ruleset == "2024":
+        initiative_jack = initiative_remarkable = remarkable = False
     poe_expertise = [sel for c in choices if c["id"] in poe_priors for sel in c["selected"] if sel in poe_priors[c["id"]]]
     expertise_all = list(dict.fromkeys(
         _feat_expertise_skills(resolved_feats) + _expertise_selected_values(choices) + poe_expertise))
@@ -5825,7 +5830,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         ) + feat_effects_mod.ac_bonus(feat_inst, gear.hands, equipped_items),  # FE4 (needs equipment.wielded)
         "speed": base_speed,  # walking speed; `speeds` carries every mode
         "speeds": speeds,
-        "initiative": derived_mod.initiative(modifiers, prof_bonus, jack, remarkable, feat_init_bonus, feat_init_pb),
+        "initiative": derived_mod.initiative(modifiers, prof_bonus, initiative_jack, initiative_remarkable, feat_init_bonus, feat_init_pb),
         "savingThrows": saves,
         "skills": skills,
         "passivePerception": derived_mod.passive_perception(skills) + feat_passive.get("skill-perception", 0),

@@ -194,6 +194,20 @@ _EXPECT = {
     "fighter4-2024": {"resources": ["Second Wind", "Action Surge"], "masteries": True, "feature_choice": "Archery",
                       "equip_qty": ("Javelin", 8)},
 }
+_EXPECT.update({
+    # FE12: feat effects reach every export (notes, resources, attack-row notes, feat picks)
+    "feats-mixed-fighter14": {"feats": ["alert-phb", "tough-phb", "great-weapon-master-phb", "lucky-phb", "observant-phb"],
+                              "feat_resources": ["Luck Points"], "attack_note": "Great Weapon Master: before you attack",
+                              "feat_note": "Alert", "initiative": 7},
+    "feats-2014-rogue16": {"resources": ["Sneak Attack"], "feats": ["keen-mind-phb", "weapon-master-phb", "resilient-phb"],
+                           "elemental_adept": 2, "feat_note": "Keen Mind", "attack_note": "Sneak Attack"},
+    "feats-mixed-wizard8": {"resources": ["Arcane Recovery"], "feats": ["martial-adept-phb", "eldritch-adept-tce"],
+                            "feat_resources": ["Superiority Die (Martial Adept)"], "innate": True, "feat_note": "Eldritch Adept"},
+    "feats-2024-fighter19": {"resources": ["Second Wind"], "feats": [
+        "alert-xphb", "tough-xphb", "great-weapon-master-xphb", "lucky-xphb", "observant-xphb", "keen-mind-xphb",
+        "weapon-master-xphb", "boon-of-fortitude-xphb"], "feat_resources": ["Luck Points"], "masteries": True,
+        "attack_note": "Great Weapon Master: +", "feat_note": "Alert", "initiative": 9},
+})
 assert set(_EXPECT) == set(KITCHEN_SINK)
 
 _SINK_RES: dict = {}
@@ -238,6 +252,9 @@ def _expected_strings(res) -> list[tuple[str, str]]:
     if derived["attacksPerAction"] > 1:
         out.append(("attacksPerAction", f"Атаки на действие: {derived['attacksPerAction']}"))
     for a in derived["attacks"]:
+        out += [("attackNote", n) for n in a.get("notes", [])]  # FE5 / FE12: feat riders on the attack rows
+        if a.get("offhandDamage"):
+            out.append(("offhandDamage", f"off hand {a['offhandDamage']}"))
         if a.get("duelingDamage"):
             out.append(("duelingDamage", f"с Дуел {a['duelingDamage']}"))
         if a.get("mastery"):
@@ -330,6 +347,20 @@ def test_kitchen_sink_fields_are_non_empty_as_expected(catalog, sid):
         assert sheet["innateSpells"]
     if "feature_choice" in want:
         assert any(want["feature_choice"] in (f.get("choice") or []) for f in sheet["features"])
+    # FE12 feat-holding drafts
+    ids = [f["id"] for f in sheet["feats"]]
+    for feat in want.get("feats", []):
+        assert feat in ids, feat
+    assert {r["name"] for r in derived["featResources"]} >= set(want.get("feat_resources", []))
+    if "elemental_adept" in want:
+        picks = [f["choice"][0] for f in sheet["feats"] if f["id"] == "elemental-adept-phb"]
+        assert len(picks) == want["elemental_adept"] and len(set(picks)) == len(picks)
+    if "initiative" in want:
+        assert derived["initiative"] == want["initiative"]
+    if "feat_note" in want:
+        assert any(f.get("notes") and want["feat_note"] in f["name"] for f in sheet["feats"])
+    if "attack_note" in want:
+        assert any(want["attack_note"] in n for a in derived["attacks"] for n in a["notes"])
 
 
 @pytest.mark.parametrize("sid", list(KITCHEN_SINK))

@@ -37,8 +37,9 @@ pytestmark = pytest.mark.skipif(not official.has_official(), reason="5etools off
 
 # Lowered by each FE slice that classifies feats; FE10 set it to 0 (nothing may be added back).
 PENDING_CEILING = 0
-# Raised only by FE12 (additive golden cases that hold feats).
-GOLDEN_FEAT_CASES = 0
+# Raised only by FE12 (additive golden cases that hold feats): feats-mixed-fighter14, feats-2014-rogue16 and
+# feats-mixed-wizard8, each under `sources` [] (the golden's `--append` mode added them; no existing case changed).
+GOLDEN_FEAT_CASES = 3
 GOLDEN = pathlib.Path(__file__).parent / "golden" / "c_series_mixed_2014_baseline.json.gz"
 
 

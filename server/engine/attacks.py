@@ -24,7 +24,8 @@ Two-Weapon Fighting's `offhandDamage` is still per light weapon (not hand-aware)
 
 FE5 (feat attacks): `styles` may carry `offhand_non_light` / `offhand_dw2024` (Dual Wielder: an off-hand `offhandDamage`
 for one-handed or non-Two-Handed melee weapons), `offhand_light_crossbow_mod` (Crossbow Expert XPHB: the modifier on the
-Light crossbow's extra attack) and `finesse_items` (Revenant Blade); `unarmed_strike(..., feat=, monk=)` builds the Unarmed
+Light crossbow's extra attack), `offhand_hand_crossbow_mod` (Crossbow Expert PHB: the hand crossbow's bonus action attack,
+FE12) and `finesse_items` (Revenant Blade); `unarmed_strike(..., feat=, monk=)` builds the Unarmed
 Strike row a feat improves. Optional riders (Great Weapon Master, Savage Attacker, ...) are row notes added by
 `engine.feat_effects.annotate_attacks`, never part of `damage` (F-D2).
 
@@ -122,6 +123,8 @@ def weapon_attack(item: dict, modifiers: dict, prof_bonus: int, proficiency_ids,
             offhand = _dice(dmg["damage_dice"], mod if styles.get("two_weapon_fighting") else min(mod, 0))
         elif ranged and "light" in props and styles.get("offhand_light_crossbow_mod") and "crossbow" in item["index"]:
             offhand = _dice(dmg["damage_dice"], mod)  # FE5 Crossbow Expert (XPHB): add the modifier to the extra attack
+        elif ranged and item["index"] == "crossbow-hand" and styles.get("offhand_hand_crossbow_mod"):
+            offhand = _dice(dmg["damage_dice"], mod)  # FE12 Crossbow Expert (PHB): the bonus action attack adds the modifier
         if not ranged and (two_handed or "versatile" in props):
             if styles.get("great_weapon_fighting"):
                 notes.append(GWF_NOTE)

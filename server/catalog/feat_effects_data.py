@@ -761,12 +761,15 @@ _ATTACK_EFFECTS = {
         {"when": {"ranged": True, "weapon": True},
          "text": "Sharpshooter: ignores Half and Three-Quarters Cover; no Disadvantage within 5 feet of an enemy or at "
                  "long range."}]},
-    "crossbow-expert-phb": {"attack_notes": [
-        {"when": {"items": _CROSSBOWS, "proficient": True},
-         "text": "Crossbow Expert: ignore the loading quality; no disadvantage within 5 feet of a hostile creature."},
-        {"when": {"items": ["crossbow-hand"]},
-         "text": "Crossbow Expert: after attacking with a one-handed weapon in the Attack action, a bonus action "
-                 "attack with a hand crossbow you are holding."}]},
+    "crossbow-expert-phb": {
+        "offhand": {"hand_crossbow_mod": True},   # FE12: Sage Advice - the bonus attack adds the ability modifier
+        "attack_notes": [
+            {"when": {"items": _CROSSBOWS, "proficient": True},
+             "text": "Crossbow Expert: ignore the loading quality; no disadvantage within 5 feet of a hostile creature."},
+            {"when": {"items": ["crossbow-hand"]},
+             "text": "Crossbow Expert: after attacking with a one-handed weapon in the Attack action, a bonus action "
+                     "attack with a hand crossbow you are holding; this bonus action attack adds your ability "
+                     "modifier to the damage (official Sage Advice; the offhand damage column)."}]},
     "crossbow-expert-xphb": {
         "offhand": {"light_crossbow_mod": True},
         "attack_notes": [

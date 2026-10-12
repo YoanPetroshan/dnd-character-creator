@@ -359,12 +359,14 @@ _DMG_PLACEHOLDER = re.compile(r"\{dmg:(\d+d\d+)\}")
 def attack_flags(insts: list[dict]) -> dict:
     """Flags merged into ``features.attack_styles(...)`` for ``attacks.weapon_attack``: the off-hand attack of
     Dual Wielder (PHB: non-Light one-handed melee; XPHB: any melee weapon without Two-Handed), Crossbow Expert
-    (XPHB: the modifier on the Light crossbow's extra attack) and Revenant Blade's Finesse items."""
+    (XPHB: the modifier on the Light crossbow's extra attack; PHB, FE12: the modifier on the hand crossbow's bonus
+    action attack, per official Sage Advice) and Revenant Blade's Finesse items."""
     offhand = _numeric(insts, "offhand")
     return {
         "offhand_non_light": any(o.get("non_light_one_handed_melee") for o in offhand),
         "offhand_dw2024": any(o.get("dw2024") for o in offhand),
         "offhand_light_crossbow_mod": any(o.get("light_crossbow_mod") for o in offhand),
+        "offhand_hand_crossbow_mod": any(o.get("hand_crossbow_mod") for o in offhand),
         "finesse_items": frozenset(i for items in _numeric(insts, "finesse_items") for i in items),
     }
 

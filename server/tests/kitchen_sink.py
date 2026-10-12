@@ -10,9 +10,11 @@ _WL_INV_2024 = "class:warlock:1:invocations:xphb-warlock-1-eldritch-invocations"
 _P = "eldritch-invocation-"
 
 
-def _sub(index, level, ruleset="mixed", sub=None, overrides=None, equip=(), marks=(), origin=None):
+def _sub(index, level, ruleset="mixed", sub=None, overrides=None, equip=(), marks=(), origin=None, feats=False):
     spec = {"classes": [(index, level, sub)], "ruleset": ruleset, "overrides": overrides or {},
             "equip": list(equip), "marks": marks}
+    if feats:  # FE12: a feat-holding draft (the golden adds it once, under `sources` [])
+        spec["feats"] = True
     if origin:  # F3b: (species id, background id) instead of the SRD Human / Acolyte
         spec["origin"] = origin
     return spec
@@ -68,6 +70,26 @@ KITCHEN_SINK: dict[str, dict] = {
     "ranger9-2024": _sub("ranger", 9, "2024", marks=("classes", "official", "spells"), origin=_XPHB_ORIGIN),
     "barbarian3-2024": _sub("barbarian", 3, "2024", marks=("classes", "official"), origin=_XPHB_ORIGIN),
     "fighter4-2024": _sub("fighter", 4, "2024", marks=("classes", "official"), origin=_XPHB_ORIGIN),
+    # FE12: feat-holding drafts (ASI feat picks as overrides; every feat card is filled with its first option)
+    "feats-mixed-fighter14": _sub("fighter", 14, "mixed", marks=("classes", "official"), feats=True, overrides={
+        "class:fighter:4:asi": ["feat:alert-phb"], "class:fighter:6:asi": ["feat:tough-phb"],
+        "class:fighter:8:asi": ["feat:great-weapon-master-phb"], "class:fighter:12:asi": ["feat:lucky-phb"],
+        "class:fighter:14:asi": ["feat:observant-phb"]},
+        equip=[{"itemId": "greataxe", "qty": 1, "equipped": True}, {"itemId": "longbow", "qty": 1, "equipped": True}]),
+    "feats-2014-rogue16": _sub("rogue", 16, "2014", marks=("classes", "official"), feats=True, overrides={
+        "class:rogue:4:asi": ["feat:keen-mind-phb"], "class:rogue:8:asi": ["feat:weapon-master-phb"],
+        "class:rogue:10:asi": ["feat:resilient-phb"], "class:rogue:12:asi": ["feat:elemental-adept-phb"],
+        "class:rogue:16:asi": ["feat:elemental-adept-phb"]},
+        equip=[{"itemId": "rapier", "qty": 1, "equipped": True}]),
+    "feats-mixed-wizard8": _sub("wizard", 8, "mixed", marks=("classes", "official", "spells"), feats=True, overrides={
+        "class:wizard:4:asi": ["feat:martial-adept-phb"], "class:wizard:8:asi": ["feat:eldritch-adept-tce"]}),
+    "feats-2024-fighter19": _sub("fighter", 19, "2024", marks=("classes", "official"), feats=True,
+                                 origin=("human-xphb", "criminal-xphb"), overrides={
+        "class:fighter:4:asi": ["feat:tough-xphb"], "class:fighter:6:asi": ["feat:great-weapon-master-xphb"],
+        "class:fighter:8:asi": ["feat:lucky-xphb"], "class:fighter:12:asi": ["feat:observant-xphb"],
+        "class:fighter:14:asi": ["feat:keen-mind-xphb"], "class:fighter:16:asi": ["feat:weapon-master-xphb"],
+        "class:fighter:19:asi": ["feat:boon-of-fortitude-xphb"]},
+        equip=[{"itemId": "greataxe", "qty": 1, "equipped": True}]),
 }
 
 

@@ -18,6 +18,10 @@ Governing sentences (catalog text, tags stripped; every one is pinned by ``test_
   Crossbow Expert XPHB  "you can add your ability modifier to the damage of the extra attack if that attack is with a
                         crossbow that has the Light property and you aren't already adding that modifier"
                         -> the hand crossbow row gets ``offhandDamage`` with the modifier.
+  Crossbow Expert PHB   "you can use a bonus action to attack with a hand crossbow you are holding" (FE12: official
+                        Sage Advice - the ability modifier IS added to that bonus attack's damage; the "no modifier
+                        unless negative" restriction belongs to two-weapon fighting only)
+                        -> the hand crossbow row gets ``offhandDamage`` with the modifier (PHB and XPHB alike).
   Dual Wielder PHB      "You can use two-weapon fighting even when the one-handed melee weapons you are wielding
                         aren't light."                                  -> ``offhandDamage`` on non-Light one-handed rows
   Dual Wielder XPHB     "... with a different weapon, which must be a Melee weapon that lacks the Two-Handed
@@ -280,13 +284,31 @@ def test_hand_crossbow_has_no_offhand_row_without_the_feat(catalog):
 
 
 def test_crossbow_expert_phb_notes_and_proficiency_gate(catalog):
-    f = _res(catalog, [("fighter", 4)], ["crossbow-expert-phb"], added=["crossbow-hand", "longbow"])
+    f = _res(catalog, [("fighter", 4)], ["crossbow-expert-phb"], base={"DEX": 16}, added=["crossbow-hand", "longbow"])
     assert _has(f, "crossbow-hand", "ignore the loading quality")
     assert _has(f, "crossbow-hand", "hand crossbow you are holding")
     assert not _has(f, "longbow", "Crossbow Expert")
-    assert _row(f, "crossbow-hand")["offhandDamage"] is None           # the PHB bonus attack is not two-weapon fighting
-    w = _res(catalog, [("wizard", 4)], ["crossbow-expert-phb"], added=["crossbow-heavy"])  # not proficient
-    assert not _has(w, "crossbow-heavy", "ignore the loading quality")
+    # FE12: the PHB bonus attack is not two-weapon fighting (Sage Advice): its damage adds the modifier
+    dex = _mod(f, "DEX")
+    assert dex > 0 and _row(f, "crossbow-hand")["offhandDamage"] == f"1d6+{dex}"
+    assert _row(f, "longbow")["offhandDamage"] is None
+    assert _has(f, "crossbow-hand", "bonus action attack")
+    assert _has(f, "crossbow-hand", "adds your ability modifier")
+
+
+def test_crossbow_expert_phb_bonus_attack_with_a_negative_modifier_and_other_crossbows(catalog):
+    r = _res(catalog, [("fighter", 4)], ["crossbow-expert-phb"], base={"DEX": 8}, added=["crossbow-hand", "crossbow-light"])
+    dex = _mod(r, "DEX")
+    assert dex < 0
+    assert _row(r, "crossbow-hand")["offhandDamage"] == f"1d6{dex}"
+    assert _row(r, "crossbow-light")["offhandDamage"] is None             # only the hand crossbow is named
+
+
+def test_crossbow_expert_both_editions_add_the_modifier_once(catalog):
+    for feat in ("crossbow-expert-phb", "crossbow-expert-xphb"):
+        row = _row(_res(catalog, [("fighter", 4)], [feat], base={"DEX": 16}, added=["crossbow-hand"]), "crossbow-hand")
+        assert row["offhandDamage"] == row["damage"]                    # the modifier is in it exactly once
+        assert row["offhandDamage"].count("+") == 1
 
 
 def test_dual_wielder_phb_offhand_for_a_non_light_one_handed_weapon(catalog):
@@ -607,9 +629,16 @@ def test_pure_attack_flags(catalog):
                          fed.FEAT_EFFECTS, [])
     flags = fe.attack_flags(insts)
     assert flags == {"offhand_non_light": True, "offhand_dw2024": False, "offhand_light_crossbow_mod": True,
-                     "finesse_items": frozenset({"double-bladed-scimitar"})}
+                     "offhand_hand_crossbow_mod": False, "finesse_items": frozenset({"double-bladed-scimitar"})}
     assert fe.attack_flags([]) == {"offhand_non_light": False, "offhand_dw2024": False,
-                                   "offhand_light_crossbow_mod": False, "finesse_items": frozenset()}
+                                   "offhand_light_crossbow_mod": False, "offhand_hand_crossbow_mod": False,
+                                   "finesse_items": frozenset()}
+
+
+def test_pure_attack_flags_crossbow_expert_phb(catalog):
+    insts = fe.instances([catalog.feats["crossbow-expert-phb"]], fed.FEAT_EFFECTS, [])
+    flags = fe.attack_flags(insts)
+    assert flags["offhand_hand_crossbow_mod"] is True and flags["offhand_light_crossbow_mod"] is False
 
 
 def test_weapon_attack_flags_are_off_by_default():

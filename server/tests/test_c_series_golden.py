@@ -20,6 +20,9 @@ on purpose (only after the user agreed that mixed/2014 output may change), run f
 
     ../.venv/bin/python tests/test_c_series_golden.py --regenerate
 
+FE12 appended the feat-holding kitchen-sink cases with ``--append`` (existing cases asserted unchanged and rewritten
+byte for byte; only the new names are added). Use ``--append`` for any later addition.
+
 The file was first written from the engine at commit 81fce17 (before any C-series work). The
 whole module skips when the local 5etools data (classes, official, spells) is absent.
 """
@@ -125,7 +128,8 @@ def case_drafts(catalog) -> dict[str, dict]:
     for sid, spec in ks.KITCHEN_SINK.items():
         if spec["ruleset"] == "2024":
             continue
-        for src in SOURCES:
+        # FE12: feat-holding drafts are added once, under `sources` [] (a "srd" filter would hide the feat picks)
+        for src in (([],) if spec.get("feats") else SOURCES):
             d = ks.base_draft(spec)
             d["sources"] = list(src)
             cases[f"ks/{_label(src)}/{sid}"] = (d, spec["overrides"])
@@ -145,6 +149,34 @@ def regenerate() -> None:
     with gzip.open(GOLDEN, "wt", compresslevel=9) as f:
         json.dump(out, f, sort_keys=True, separators=(",", ":"))
     print(f"wrote {len(out)} cases, {GOLDEN.stat().st_size} bytes")
+
+
+def append_new_cases() -> None:
+    """FE12: add only the cases the golden does not hold yet (the feat-holding kitchen-sink drafts).
+
+    Every existing entry is asserted unchanged first: its stored filled draft and (stripped) result must equal a fresh
+    resolve, and it is written back byte for byte. Nothing else in the file may move."""
+    catalog = load()
+    old = json.load(gzip.open(GOLDEN, "rt"))
+    before = {name: json.dumps(entry, sort_keys=True, separators=(",", ":")) for name, entry in old.items()}
+    for name, entry in old.items():
+        now = strip(json.loads(json.dumps(resolve(copy.deepcopy(entry["draft"]), catalog))))
+        assert now == strip(entry["result"]), f"existing golden case changed: {name}"
+    added = []
+    for name, (draft, overrides) in case_drafts(catalog).items():
+        if name in old:
+            continue
+        spec = ks.KITCHEN_SINK.get(name.rsplit("/", 1)[-1]) if name.startswith("ks/") else None
+        if spec and ks.skip_reason(spec):
+            continue
+        filled = ks.fill(draft, catalog, overrides, resolve)
+        old[name] = {"draft": filled, "result": json.loads(json.dumps(resolve(filled, catalog)))}
+        added.append(name)
+    for name, text in before.items():
+        assert json.dumps(old[name], sort_keys=True, separators=(",", ":")) == text, name
+    with gzip.open(GOLDEN, "wt", compresslevel=9) as f:
+        json.dump(old, f, sort_keys=True, separators=(",", ":"))
+    print(f"kept {len(before)} existing cases unchanged, added {len(added)}: {added}")
 
 
 def _load_golden() -> dict:
@@ -176,6 +208,9 @@ def test_mixed_and_2014_resolve_is_unchanged(catalog, name):
 
 
 if __name__ == "__main__":
-    if "--regenerate" not in sys.argv:
-        sys.exit("pass --regenerate to rewrite the golden file")
-    regenerate()
+    if "--append" in sys.argv:
+        append_new_cases()
+    elif "--regenerate" in sys.argv:
+        regenerate()
+    else:
+        sys.exit("pass --append (add new cases only) or --regenerate (rewrite everything) to change the golden file")
