@@ -15,6 +15,10 @@ Stealth rule and additive senses.
 FE5 adds the attack rows: weapon-math flags (off-hand attacks, Finesse), the Unarmed Strike a feat improves
 (F-D6) and the predicate notes with the character's numbers (F-D2: optional riders are never folded into ``damage``).
 
+FE7 adds the resistance, damage-type and variant picks: ``instances`` reads each instance's pick cards
+(``:resistance-choice``, ``:damage-type``, the variant card, Scion's ``:spell-variant``), ``resistances`` lists the
+damage types they grant and ``{choice}`` in a note is the pick.
+
 FE3 adds the output surfaces: ``notes`` (text for effects that are not folded into a number, with
 the character's numbers filled in) and ``resources`` (``derived.featResources``).
 """
@@ -24,6 +28,7 @@ import ast
 import re
 
 CHOOSE_ABILITY = "(choose the ability)"
+NOT_CHOSEN = "(not chosen yet)"
 
 
 def _name_key(feat: dict) -> str:
@@ -48,9 +53,35 @@ def increased_ability(feat: dict, choices, prefix: str) -> str | None:
     return selected[0].upper() if selected else None
 
 
+def _card(choices, cid: str) -> list[str]:
+    """Selected option ids of the choice card ``cid`` (empty when absent or not picked)."""
+    card = next((c for c in choices or [] if c.get("id") == cid), None)
+    return list((card or {}).get("selected") or [])
+
+
+def _picks(effect: dict, choices, prefix: str) -> tuple[list[str], list[str]]:
+    """(damage types granted as resistance, labels of the instance's pick) from the instance's FE7 cards."""
+    types: list[str] = []
+    labels: list[str] = []
+    if "resist_choice" in effect:
+        types = _card(choices, f"{prefix}:resistance-choice")
+        labels = [t.capitalize() for t in types]
+    elif "resist_by_variant" in effect:
+        for variant in _card(choices, f"{prefix}:spell-variant")[:1]:
+            damage = effect["resist_by_variant"].get(variant)
+            types, labels = ([damage], [damage.capitalize()]) if damage else ([], [])
+    elif "damage_type_choice" in effect:
+        labels = [t.capitalize() for t in _card(choices, f"{prefix}:damage-type")]
+    elif "variant_choice" in effect:
+        spec = effect["variant_choice"]
+        names = {o["id"]: o["label"] for o in spec["options"]}
+        labels = [names[v] for v in _card(choices, f"{prefix}:{spec['suffix']}") if v in names]
+    return types, labels
+
+
 def instances(resolved_feats, table: dict, choices=None) -> list[dict]:
     """One entry per held feat instance that has an effect entry:
-    ``{feat, index, prefix, origin, effect, increased}``. Kept-but-hidden picks (A2) are included
+    ``{feat, index, prefix, origin, effect, increased, resist, pick_text}``. Kept-but-hidden picks (A2) are included
     because they are in ``resolved_feats``; ``data_only`` entries carry nothing for the engine.
     ``increased`` is the instance's increased ability (see ``increased_ability``)."""
     out = []
@@ -59,9 +90,21 @@ def instances(resolved_feats, table: dict, choices=None) -> list[dict]:
         if not effect:
             continue
         prefix = feat.get("_asi_origin") or feat.get("_species_origin") or f"feat:{feat['index']}"
+        resist, labels = _picks(effect, choices, prefix)
         out.append({"feat": feat, "index": feat["index"], "prefix": prefix,
                     "origin": _origin(feat), "effect": effect,
-                    "increased": increased_ability(feat, choices, prefix)})
+                    "increased": increased_ability(feat, choices, prefix),
+                    "resist": resist, "pick_text": ", ".join(labels) or None})
+    return out
+
+
+def resistances(insts: list[dict]) -> list[str]:
+    """FE7: damage types the held feats' picks grant resistance to (``damageModifiers.resistances``), in order."""
+    out: list[str] = []
+    for inst in insts:
+        for damage in inst["resist"]:
+            if damage not in out:
+                out.append(damage)
     return out
 
 
@@ -231,14 +274,26 @@ def _env(inst: dict, numbers: dict) -> dict:
         env["inc_mod"] = numbers.get(f"{inst['increased'].lower()}_mod")
     else:
         env["inc_mod"] = None
+    env["choice"] = inst.get("pick_text") or NOT_CHOSEN  # FE7
     return env
+
+
+def _variant_note(inst: dict) -> str | None:
+    """FE7: the note of the picked option of a ``variant_choice`` feat (None while nothing is picked)."""
+    spec = inst["effect"].get("variant_choice")
+    if not spec or not inst.get("pick_text"):
+        return None
+    return next((o["note"] for o in spec["options"] if o["label"] == inst["pick_text"]), None)
 
 
 def notes(insts: list[dict], numbers: dict) -> dict[str, list[str]]:
     """{instance prefix: formatted notes} for the instances that have any."""
     out = {}
     for inst in insts:
-        texts = inst["effect"].get("notes")
+        texts = list(inst["effect"].get("notes") or [])
+        variant = _variant_note(inst)
+        if variant:
+            texts.append(variant)
         if texts:
             env = _env(inst, numbers)
             out[inst["prefix"]] = [render(t, env) for t in texts]
@@ -261,7 +316,7 @@ def resources(insts: list[dict], numbers: dict) -> list[dict]:
                      "source": {"kind": "feat", "id": inst["index"], "label": inst["feat"]["name"]},
                      "name": res["name"], "uses": uses, "recharge": res.get("recharge")}
             if res.get("note"):
-                entry["details"] = {"note": res["note"]}
+                entry["details"] = {"note": render(res["note"], _env(inst, numbers))}
             out.append(entry)
     return out
 

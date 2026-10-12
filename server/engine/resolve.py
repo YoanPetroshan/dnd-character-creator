@@ -1832,7 +1832,92 @@ def _feat_choice_templates(feats: list[dict], origin: str | None = None) -> list
             tpl = build_choice_template(env, f"{cid_prefix}:save-choice-{i}", source, f"{feat['name']}: Saving Throw", description=description)
             if tpl:
                 templates.append(tpl)
+        templates += _feat_extra_templates(feat, cid_prefix, feat_level)  # FE7
     return templates
+
+
+def _feat_extra_templates(feat: dict, cid_prefix: str, feat_level: int | None = None) -> list[dict]:
+    """FE7: the cards a feat's effect entry asks for, under the same `<prefix>:<kind>` cids as its other
+    cascaded cards (so the feat-kind merge sites and the page filters route them without change). Called for every
+    feat instance by `_feat_choice_templates`, i.e. at all five sites (background, species, Fighting Style,
+    Lessons, ASI).
+      * `resist_choice`  -> `:resistance-choice` (the picks join damageModifiers.resistances);
+      * `damage_type_choice` -> `:damage-type` (a repeatable feat taken again must pick a different type:
+        `distinctGroup`, enforced by `_gate_distinct_choices`);
+      * `variant_choice` -> `:<suffix>` (Strike of the Giants `:giant-type`).
+    Scion's resistance has no card: it follows the `:spell-variant` pick."""
+    effect = feat_effects_data.FEAT_EFFECTS.get(feat["index"]) or {}
+    source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
+    if feat_level is not None:
+        source["level"] = feat_level
+    templates = []
+
+    def card(suffix: str, label: str, description: str, count: int, options: list[dict], **extra) -> dict:
+        return {"id": f"{cid_prefix}:{suffix}", "source": dict(source), "label": f"{feat['name']}: {label}",
+                "description": description, "count": count, "options": options, **extra}
+
+    def types(ids):
+        return [{"id": t, "label": t.capitalize()} for t in ids]
+
+    spec = effect.get("resist_choice")
+    if spec:
+        n = spec["count"]
+        templates.append(card(
+            "resistance-choice", "Damage Resistance",
+            f"Choose {n} damage type{'s' if n != 1 else ''} you resist.", n, types(spec["options"])))
+    spec = effect.get("damage_type_choice")
+    if spec:
+        extra = {"distinctGroup": feat_effects_mod._name_key(feat)} if spec.get("distinct_across_repeats") else {}
+        templates.append(card("damage-type", "Damage Type", "Choose the damage type this feat applies to.", 1,
+                              types(spec["options"]), **extra))
+    spec = effect.get("variant_choice")
+    if spec:
+        templates.append(card(spec["suffix"], spec["label"], spec["description"], 1,
+                              [{"id": o["id"], "label": o["label"]} for o in spec["options"]]))
+    return templates
+
+
+def _gate_distinct_choices(choices: list[dict], class_order: list[str] = ()) -> list[dict]:
+    """FE7: cards flagged `distinctGroup` (Elemental Adept: "you must choose a different damage type" each time)
+    may not repeat an option across the instances of the same feat group (both editions share the group). Walk order
+    is origin feats first, then ASI feat cards by (class order, ASI level); the later pick is the duplicate: its option
+    is disabled "already chosen for <feat> (n)" (n = which instance holds it) and a stored duplicate is dropped with a
+    `pruned` entry. Mutates `choices` in place; returns the pruned entries."""
+    indexes = [i for i, c in enumerate(choices) if c.get("distinctGroup")]
+    if not indexes:
+        return []
+
+    def walk_key(i: int):
+        m = _ASI_FEAT_CID_RE.match(choices[i]["id"])
+        if not m:
+            return (0, 0, 0, i)
+        cls_id = m.group(1)
+        return (1, class_order.index(cls_id) if cls_id in class_order else len(class_order), int(m.group(2)), i)
+
+    pruned_by_index: dict[int, dict] = {}
+    held: dict[str, dict[str, int]] = {}  # group -> {option id: instance number}
+    count: dict[str, int] = {}
+    for i in sorted(indexes, key=walk_key):
+        c = choices[i]
+        group = c["distinctGroup"]
+        count[group] = count.get(group, 0) + 1
+        taken = held.setdefault(group, {})
+        name = c["source"]["label"]
+        options = [o if o.get("disabled") or o["id"] not in taken
+                   else {**o, "disabled": True, "disabledReason": f"already chosen for {name} ({taken[o['id']]})"}
+                   for o in c["options"]]
+        kept = [s for s in c.get("selected", []) if s not in taken]
+        dropped = [s for s in c.get("selected", []) if s not in kept]
+        if dropped:
+            labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
+            pruned_by_index[i] = {"choiceId": c["id"], "reason": (
+                f"'{c['label']}': {', '.join(labels.get(d, d) for d in dropped)} was already chosen for {name} "
+                f"({taken[dropped[0]]}); the selection was ignored.")}
+        choices[i] = {**c, "options": options, "selected": kept,
+                      "status": "resolved" if len(kept) == c["count"] else "pending"}
+        for s in kept:
+            taken[s] = count[group]
+    return [pruned_by_index[i] for i in sorted(pruned_by_index)]
 
 
 def _feat_selected_choice_values(choices: list[dict], marker: str) -> list[str]:
@@ -5343,6 +5428,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     proficient_skills.update(features_mod.invocation_skills(invocation_effects))
     poe_priors = _prof_or_expertise_priors(
         choices, resolved_feats, fixed_origin_skills, [rc["cls_id"] for rc in resolved_classes if rc["cls"]])  # FE6
+    pruned += _gate_distinct_choices(choices, [rc["cls_id"] for rc in resolved_classes if rc["cls"]])  # FE7
     pruned += _gate_expertise_choices(
         choices, proficient_skills | proficient_tools, _feat_expertise_skills(resolved_feats),
         [rc["cls_id"] for rc in resolved_classes if rc["cls"]], ruleset, poe_priors)
@@ -5540,6 +5626,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             damage = ((catalog.traits.get(sel) or {}).get("trait_specific") or {}).get("damage_type")
             if damage:
                 chosen_resistances.append(damage["index"])
+    chosen_resistances += feat_effects_mod.resistances(  # FE7: resistance picks of the held feats (Scion follows its plane)
+        feat_effects_mod.instances(resolved_feats, feat_effects_data.FEAT_EFFECTS, choices))
     damage_modifiers = _species_damage_modifiers(race, subrace, resolved_feats, chosen_resistances)
     condition_immunities = _species_condition_immunities(race, subrace, resolved_feats)
     senses = _species_senses(race, subrace, catalog, species_variant)
@@ -5627,7 +5715,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     return {
         "sheet": sheet,
         # F2-C: `count_by_level` is an internal template key (count-variable test), not API shape.
-        "choices": [{k: v for k, v in c.items() if k not in ("count_by_level", "lacksExpertise", "profOrExpertise")} for c in choices],
+        "choices": [{k: v for k, v in c.items() if k not in ("count_by_level", "lacksExpertise", "profOrExpertise", "distinctGroup")} for c in choices],
         "derived": derived,
         "problems": problems,
         "warnings": warnings,

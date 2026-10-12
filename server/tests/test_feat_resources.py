@@ -50,8 +50,11 @@ FE3_DATA_ONLY = ("heavily-armored-phb", "heavily-armored-xphb", "lightly-armored
 FE3_WITH_TEXT = tuple(i for i, e in fed.FEAT_EFFECTS.items() if e.get("notes") or e.get("resources"))
 FE4_ENTRIES = ("dragon-hide-xge", "medium-armor-master-phb", "medium-armor-master-xphb", "dual-wielder-phb",
                "revenant-blade-erlw", "observant-phb", "keenness-of-the-stone-giant-bgg")  # later slice (tests/test_feat_defense.py)
+FE7_ENTRIES = ("dragonscarred-frhof", "boon-of-energy-resistance-xphb", "portal-jumper-au", "spell-resistant-au",
+               "scion-of-the-outer-planes-sato", "elemental-adept-phb", "elemental-adept-xphb",
+               "strike-of-the-giants-bgg")  # later slice (tests/test_feat_resist_choices.py)
 FE3_WITH_TEXT = tuple(i for i in FE3_WITH_TEXT if i in fed.FEAT_EFFECT_QUOTES and i not in
-                      ("alert-phb",) + FE4_ENTRIES)
+                      ("alert-phb",) + FE4_ENTRIES + FE7_ENTRIES)
 
 
 @pytest.fixture(scope="module")
@@ -139,7 +142,7 @@ def test_resource_entries_use_only_the_implemented_vocabulary():
             assert set(res) <= {"name", "uses", "recharge", "note"}, index
             assert res["uses"] == "pb" or isinstance(res["uses"], int), index
             assert res["recharge"] in ("long", "short", "short-or-long"), index
-    assert seen == 7
+    assert seen == 10  # 7 from FE3, Portal Step / Magic Resistant / Strike of the Giants from FE7
 
 
 def test_lucky_follows_its_own_edition():

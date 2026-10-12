@@ -28,9 +28,12 @@ Effect vocabulary (every key optional; the full semantics are in plan section 4.
     senses_additive             {sense: range}
     prof_or_expertise           bool   (marks the feat's skill card)
     lacks_expertise             bool   (marks the feat's Expertise card under every ruleset)
-    resist_choice               {count, options}
-    resist_by_variant           {variant: damage type}
-    damage_type_choice          {options, distinct_across_repeats}
+    resist_choice               {count, options}                (FE7: card ``:resistance-choice``; picks join
+                                        damageModifiers.resistances)
+    resist_by_variant           {variant slug: damage type}     (FE7: read from the ``:spell-variant`` pick)
+    damage_type_choice          {options, distinct_across_repeats}  (FE7: card ``:damage-type``; a repeat must differ)
+    variant_choice              {suffix, label, description, options: [{id, label, note}]}
+                                        (FE7: card ``:<suffix>``; the picked option's note joins the feat notes)
     weapon_proficiency_choice   {count, categories}
     mastery_choice              {count}
     option_picks                {kind, count, pool}
@@ -42,7 +45,8 @@ Effect vocabulary (every key optional; the full semantics are in plan section 4.
                                         recharge = long | short | short-or-long; die/dice/pool/dc come with the
                                         slices that need them)
     notes                       [template]  ({expr} over pb, level, <abl>_mod, <abl>_score, inc_mod;
-                                        {sum:a,b} prints "a + b = total"; see engine/feat_effects.render)
+                                        {sum:a,b} prints "a + b = total"; {choice} is the instance's pick (FE7);
+                                        see engine/feat_effects.render)
     data_only                   bool   (everything is carried by catalog fields or by
                                         reference_data.CLASS_FEATURE_EFFECTS)
 
@@ -66,7 +70,7 @@ FEAT_EFFECT_KEYS: frozenset[str] = frozenset({
     "initiative", "hp_per_level", "hp_flat", "walk_bonus", "climb_equals_walk", "ac_formula",
     "medium_armor_dex_cap", "medium_armor_stealth_ok", "ac_bonus_if", "passive_bonus",
     "senses_additive", "prof_or_expertise", "lacks_expertise", "resist_choice",
-    "resist_by_variant", "damage_type_choice", "weapon_proficiency_choice", "mastery_choice",
+    "resist_by_variant", "damage_type_choice", "variant_choice", "weapon_proficiency_choice", "mastery_choice",
     "option_picks", "unarmed", "offhand", "finesse_items", "attack_notes", "resources", "notes",
     "data_only",
 })
@@ -957,6 +961,101 @@ FEAT_EFFECT_QUOTES.update({
     "boon-of-skill-xphb": "Choose one skill in which you lack Expertise.",
     "echoing-soul-rhw": "You have proficiency in two skills of your choice.",
     "harper-agent-frhof": "You know Thieves' Cant.",
+})
+
+# FE7: resistance, damage-type and variant picks. The cards are built by ``resolve._feat_extra_templates`` for every
+# feat instance (background, species, Fighting Style, Lessons, ASI) under the cid ``<prefix>:<suffix>``. The picks of a
+# ``resist_choice`` join ``damageModifiers.resistances``; Scion's ``resist_by_variant`` reads the ``:spell-variant`` pick
+# the spell machinery already offers (no extra card). Choices that the text lets you change on a rest (Boon of Energy
+# Resistance) stay editable build-time cards (F-D7). ``{choice}`` in a note is the instance's pick.
+_ENERGY = ["acid", "cold", "fire", "lightning", "necrotic", "poison", "psychic", "radiant", "thunder"]
+
+FEAT_EFFECTS.update({
+    "dragonscarred-frhof": {
+        "resist_choice": {"count": 1, "options": ["acid", "cold", "fire", "lightning", "poison"]},
+        "notes": ["Resistance to the chosen damage type: {choice}.",
+                  "When you deal damage as part of the Attack or Magic action on your turn, you can use the Dragon's "
+                  "Terror benefit of Cult of the Dragon Initiate as a Bonus Action that turn."]},
+    "boon-of-energy-resistance-xphb": {
+        "resist_choice": {"count": 2, "options": _ENERGY},
+        "notes": ["Resistance to two damage types: {choice}. You can change both choices when you finish a Long Rest.",
+                  "Energy Redirection (Reaction, when you take damage of a chosen type): a creature you can see within "
+                  "60 feet makes a Dexterity save, DC {8 + con_mod + pb}, or takes 2d12 + {con_mod} damage of that type."]},
+    "portal-jumper-au": {
+        "resist_choice": {"count": 1, "options": ["necrotic", "psychic", "radiant"]},
+        "notes": ["Resistance to the chosen damage type: {choice}."],
+        "resources": [{"name": "Portal Step", "uses": "pb", "recharge": "long",
+                       "note": "Spend 15 feet of movement to teleport to an unoccupied space you can see within 15 feet; "
+                               "once per turn."}]},
+    "spell-resistant-au": {
+        "resist_choice": {"count": 1, "options": ["necrotic", "psychic", "radiant", "thunder"]},
+        "notes": ["Resistance to the chosen damage type: {choice}."],
+        "resources": [{"name": "Magic Resistant", "uses": "pb", "recharge": "long",
+                       "note": "When you would fail a saving throw against a spell or magical effect, roll 1d6 and add "
+                               "it to the total."}]},
+    "scion-of-the-outer-planes-sato": {
+        "resist_by_variant": {"chaotic-outer-plane": "poison", "evil-outer-plane": "necrotic",
+                              "good-outer-plane": "radiant", "lawful-outer-plane": "force", "the-outlands": "psychic"},
+        "notes": ["Planar Infusion damage resistance: {choice}."]},
+    "elemental-adept-phb": {
+        "damage_type_choice": {"options": ["acid", "cold", "fire", "lightning", "thunder"],
+                               "distinct_across_repeats": True},
+        "notes": ["Chosen damage type: {choice}. Spells you cast ignore resistance to it, and you can treat any 1 on a "
+                  "damage die of such a spell as a 2."]},
+    "elemental-adept-xphb": {
+        "damage_type_choice": {"options": ["acid", "cold", "fire", "lightning", "thunder"],
+                               "distinct_across_repeats": True},
+        "notes": ["Energy Mastery damage type: {choice}. Spells you cast ignore Resistance to it, and you can treat any 1 "
+                  "on a damage die of such a spell as a 2."]},
+    "strike-of-the-giants-bgg": {
+        "variant_choice": {
+            "suffix": "giant-type", "label": "Giant Strike", "description": "Choose the giant strike this feat grants.",
+            "options": [
+                {"id": "cloud", "label": "Cloud Strike", "note": "Extra 1d4 thunder damage; a creature must succeed on a Wisdom save or you become invisible to it until the start of your next turn or until immediately after you make an attack roll or cast a spell."},
+                {"id": "fire", "label": "Fire Strike", "note": "Extra 1d10 fire damage."},
+                {"id": "frost", "label": "Frost Strike", "note": "Extra 1d6 cold damage; a creature must succeed on a Constitution save or its speed is reduced to 0 until the start of your next turn."},
+                {"id": "hill", "label": "Hill Strike", "note": "Extra 1d6 damage of the weapon's type; a creature must succeed on a Strength save or have the prone condition."},
+                {"id": "stone", "label": "Stone Strike", "note": "Extra 1d6 force damage; a creature must succeed on a Strength save or be pushed 10 feet from you in a straight line."},
+                {"id": "storm", "label": "Storm Strike", "note": "Extra 1d6 lightning damage; a creature must succeed on a Constitution save or have disadvantage on attack rolls until the start of your next turn."},
+            ]},
+        "notes": ["{choice}: once per turn, when you hit with a melee weapon attack or a thrown ranged weapon attack, "
+                  "you can imbue the attack. Save DC {8 + pb + max(str_mod, con_mod)} (Strength or Constitution)."],
+        "resources": [{"name": "Strike of the Giants", "uses": "pb", "recharge": "long",
+                       "note": "{choice}, once per turn on a melee or thrown weapon hit."}]},
+})
+FEAT_EFFECT_QUOTES.update({
+    "dragonscarred-frhof": "choose Acid, Cold, Fire, Lightning, or Poison. You have Resistance to the chosen damage type.",
+    "boon-of-energy-resistance-xphb": (
+        "You gain Resistance to two of the following damage types of your choice: Acid, Cold, Fire, Lightning, Necrotic, "
+        "Poison, Psychic, Radiant, or Thunder. Whenever you finish a Long Rest, you can change your choices.",
+        "(8 plus your Constitution modifier and Proficiency Bonus) or take damage equal to 2d12 plus your Constitution modifier"),
+    "portal-jumper-au": (
+        "You have Resistance to one of the following damage types: Necrotic, Psychic, or Radiant (choose when you select this feat).",
+        "You can use this benefit a number of times equal to your Proficiency Bonus but only once per turn, and you regain "
+        "all expended uses when you finish a Long Rest."),
+    "spell-resistant-au": (
+        "You have Resistance to one of the following damage types (choose when you gain this feat): Necrotic, Psychic, Radiant, or Thunder.",
+        "you can roll 1d6 and add the number rolled to the save's total",
+        "You can use this benefit a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest."),
+    "scion-of-the-outer-planes-sato": (
+        "Your choice gives you resistance to a damage type and the ability to cast a cantrip, as specified in the table.",
+        "Chaotic Outer Plane Poison", "Evil Outer Plane Necrotic", "Good Outer Plane Radiant", "Lawful Outer Plane Force",
+        "The Outlands Psychic"),
+    "elemental-adept-phb": (
+        "choose one of the following damage types: acid, cold, fire, lightning, or thunder.",
+        "Spells you cast ignore resistance to damage of the chosen type.",
+        "Each time you do so, you must choose a different damage type."),
+    "elemental-adept-xphb": (
+        "Choose one of the following damage types: Acid, Cold, Fire, Lightning, or Thunder.",
+        "Spells you cast ignore Resistance to damage of the chosen type.",
+        "you must choose a different damage type each time for Energy Mastery."),
+    "strike-of-the-giants-bgg": (
+        "choose one of the benefits listed below.",
+        "The target takes an extra 1d4 thunder damage.", "The target takes an extra 1d10 fire damage.",
+        "The target takes an extra 1d6 cold damage.", "The target takes an extra 1d6 damage of the weapon's type.",
+        "The target takes an extra 1d6 force damage.", "The target takes an extra 1d6 lightning damage.",
+        "The saving throw DC for these effects equals 8 + your proficiency bonus + your Strength or Constitution modifier.",
+        "You can use this feat a number of times equal to your proficiency bonus, and you regain all expended uses when you finish a long rest."),
 })
 
 # Feats not classified yet. Each slice removes the ones it covers (by adding them to FEAT_EFFECTS);
