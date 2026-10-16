@@ -290,7 +290,10 @@ TAIL_EFFECTS.update({
     "potent-dragonmark-efa": {
         "notes": ["Dragonmark Preparation: the spells of your Spells of the Mark list are always prepared.",
                   "Dragonmark Spellcasting: one extra spell slot of level {min(5, (level+1)//2)} (half your level rounded up, "
-                  "at most 5) for spells your Dragonmark feat and this feat give; regained on a Short or Long Rest."]},
+                  "at most 5) for spells your Dragonmark feat and this feat give; regained on a Short or Long Rest."],
+        "resources": [_res("Dragonmark Spell Slot", 1, "short-or-long",
+                           "One extra spell slot of level {min(5, (level+1)//2)} (half your character level rounded up, at "
+                           "most 5), only for spells prepared through your Dragonmark feat or Dragonmark Preparation.")]},
     "purple-dragon-commandant-frhof": {
         "notes": ["Encourage Ally (Bonus Action): an ally you see within 30 feet gains 2d6 + {inc_mod} Temporary Hit Points.",
                   "Last Stand: Advantage on attack rolls while you are Bloodied."],

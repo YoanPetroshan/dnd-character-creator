@@ -51,7 +51,7 @@ ABS = ("STR", "DEX", "CON", "INT", "WIS", "CHA")
 FE10_ENTRIES = tuple(tail.TAIL_EFFECTS) + tuple(tail.COMPLETION)
 WITH_RESOURCES = tuple(i for i in FE10_ENTRIES if fed.FEAT_EFFECTS[i].get("resources"))
 # Scan-kind "resource" feats whose uses live in spell-grant tables or in a per-rest choice (decision F-D8 / F-D7): notes only.
-NOTES_ONLY_RESOURCE_SCAN = {"potent-dragonmark-efa", "rune-shaper-bgg"}
+NOTES_ONLY_RESOURCE_SCAN = {"rune-shaper-bgg"}  # FX6: Potent Dragonmark now carries its extra slot as a resource
 
 
 @pytest.fixture(scope="module")
@@ -184,8 +184,8 @@ def test_resource_entries_use_only_the_implemented_vocabulary():
             assert set(res) <= {"name", "uses", "recharge", "note", "die", "dc"}, index
             assert res["uses"] in ("pb", "inc_mod") or isinstance(res["uses"], int), (index, res)
             assert res["recharge"] in ("long", "short", "short-or-long"), (index, res)
-    assert seen == 74
-    assert len(WITH_RESOURCES) == 69
+    assert seen == 75
+    assert len(WITH_RESOURCES) == 70
 
 
 @pytest.mark.parametrize("index", sorted(i for i, e in tail.TAIL_EFFECTS.items() if e.get("data_only")))
@@ -434,3 +434,13 @@ def test_resolve_stays_fast_with_many_resource_feats(catalog):
             result = resolve(draft, catalog)
         assert (time.perf_counter() - t) / 10 < 0.05
         assert len(result["derived"]["featResources"]) >= 4
+
+
+@pytest.mark.parametrize("level,slot", [(4, 2), (7, 4), (9, 5), (20, 5)])
+def test_potent_dragonmark_extra_slot_is_a_resource_with_the_computed_level(catalog, level, slot):
+    """FX6. "The spell slot's level is half your level (round up), to a maximum of level 5. You regain the expended
+    slot when you finish a Short Rest or Long Rest." One slot, so uses 1."""
+    r = _grant(catalog, "potent-dragonmark-efa", level=level)
+    res = next(x for x in r["derived"]["featResources"] if x["name"] == "Dragonmark Spell Slot")
+    assert (res["uses"], res["recharge"]) == (1, "short-or-long")
+    assert f"spell slot of level {slot} " in res["details"]["note"]
