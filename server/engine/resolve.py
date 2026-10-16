@@ -5747,11 +5747,12 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         saves = {ab: value + aura for ab, value in saves.items()}
     class_levels = {rc["cls_id"]: rc["level"] for rc in resolved_classes if rc["cls"]}
     jack, remarkable = features_mod.half_proficiency(effects)
-    # F-D9: XPHB Jack of All Trades covers only checks that use a skill proficiency you lack (never Initiative),
-    # XPHB Remarkable Athlete grants Advantage on Initiative and Athletics instead of a half Proficiency Bonus.
+    # F-D9 (FX refinement): XPHB Jack of All Trades covers only checks that use a skill proficiency you lack
+    # (never Initiative). Remarkable Athlete is left as it was in every ruleset: only the SRD feature id is
+    # mapped, and the XPHB Champion never carried the effect.
     initiative_jack, initiative_remarkable = jack, remarkable
     if ruleset == "2024":
-        initiative_jack = initiative_remarkable = remarkable = False
+        initiative_jack = False
     poe_expertise = [sel for c in choices if c["id"] in poe_priors for sel in c["selected"] if sel in poe_priors[c["id"]]]
     expertise_all = list(dict.fromkeys(
         _feat_expertise_skills(resolved_feats) + _expertise_selected_values(choices) + poe_expertise))

@@ -1,4 +1,4 @@
-"""F-D9 (FE12): Jack of All Trades and Remarkable Athlete under ruleset 2024 only.
+"""F-D9 (FE12, refined in FX): Jack of All Trades off Initiative under ruleset 2024 only.
 
 Governing XPHB texts (catalog ``features``, tags stripped):
 
@@ -10,8 +10,8 @@ Governing XPHB texts (catalog ``features``, tags stripped):
 Rule matrix:
   * 2024 Jack of All Trades: half PB (rounded down) on skill checks of skills the character lacks; NOT on
     Initiative (a plain Dexterity check, no skill proficiency) -> initiative = DEX modifier.
-  * 2024 Remarkable Athlete: no proficiency-bonus clause at all (Advantage instead), so no half PB on any
-    Strength / Dexterity / Constitution skill and none on Initiative.
+  * Remarkable Athlete: unchanged in every ruleset (FX refinement). The XPHB Champion text has no proficiency-bonus
+    clause, but only the SRD id `remarkable-athlete` is mapped, so the SRD / 2014 `champion` keeps its half PB.
   * mixed and 2014 keep the 2014 (SRD) texts: Jack of All Trades adds half PB to every check without the
     proficiency bonus, Remarkable Athlete half PB (rounded up) to STR / DEX / CON checks; both reach Initiative.
   * The skill list of a proficient skill is untouched everywhere (full PB, Expertise double)."""
@@ -92,11 +92,14 @@ def test_2024_jack_of_all_trades_leaves_proficient_skills_at_full_bonus(catalog)
     assert r["derived"]["skills"][prof] == _res(catalog, "bard", 1, "2024")["derived"]["skills"][prof]
 
 
-def test_2024_remarkable_athlete_adds_no_half_bonus_anywhere(catalog):
+def test_2024_remarkable_athlete_of_the_srd_champion_is_left_alone(catalog):
+    # FX (4): only the Jack of All Trades initiative bonus is dropped under 2024. The SRD / 2014 `champion`
+    # subclass keeps its own Remarkable Athlete half bonus in every ruleset (the XPHB Champion never had it;
+    # only the SRD id `remarkable-athlete` is mapped).
     r = _res(catalog, "fighter", 7, "2024", "champion")
     plain = _res(catalog, "fighter", 7, "2024")
-    assert r["derived"]["initiative"] == _dex_mod(r)
-    assert r["derived"]["skills"] == plain["derived"]["skills"]
+    assert r["derived"]["initiative"] == _dex_mod(r) + 2
+    assert r["derived"]["skills"]["skill-acrobatics"] == plain["derived"]["skills"]["skill-acrobatics"] + 2
 
 
 @pytest.mark.parametrize("ruleset", ["mixed", "2014"])
