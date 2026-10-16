@@ -869,8 +869,8 @@ _ATTACK_EFFECTS = {
                  "(once per short or long rest)."}]},
     "poisoner-tce": {"attack_notes": [
         {"when": {"weapon": True},
-         "text": "Poisoner: apply a poison dose as a bonus action; a creature damaged by it fails a DC 14 Constitution "
-                 "save and takes 2d8 poison damage and is poisoned until the end of your next turn."}]},
+         "text": "Poisoner: apply a poison dose as a bonus action; a creature damaged by it must succeed on a DC 14 "
+                 "Constitution save or take 2d8 poison damage and become poisoned until the end of your next turn."}]},
     "poisoner-xphb": {"attack_notes": [
         {"when": {"weapon": True},
          "text": "Poisoner: apply a poison dose as a Bonus Action; a creature damaged by it must succeed on a DC "

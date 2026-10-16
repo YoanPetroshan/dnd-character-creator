@@ -575,6 +575,9 @@ def test_orcish_fury_row_note_names_the_extra_die(catalog):
 def test_poisoner_tce_fixed_dc_and_xphb_uses_the_increased_ability(catalog):
     t = _res(catalog, [("fighter", 4)], ["poisoner-tce"], added=["dagger"])
     assert _has(t, "dagger", "DC 14 Constitution save")
+    # FX2: the creature must SUCCEED on the save, or take the damage (the note once said it fails)
+    assert _has(t, "dagger", "must succeed on a DC 14 Constitution save or take 2d8 poison damage")
+    assert not _has(t, "dagger", "fails a DC 14")
     x = _res(catalog, [("fighter", 4)], ["poisoner-xphb"], ruleset="2024", base={"DEX": 14, "INT": 14},
              added=["dagger"], picks={"class:fighter:4:asi:feat:poisoner-xphb:ability-bonus": ["int"]})
     pb = x["derived"]["proficiencyBonus"]
