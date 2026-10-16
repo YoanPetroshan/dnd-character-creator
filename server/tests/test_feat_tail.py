@@ -168,7 +168,7 @@ def test_every_quote_of_every_entry_matches_the_catalog(catalog):
 
 def test_every_tail_entry_with_text_has_a_quote_and_only_known_vocabulary():
     for index, entry in tail.TAIL_EFFECTS.items():
-        assert set(entry) <= {"notes", "resources", "data_only"}, index
+        assert set(entry) <= {"notes", "resources", "data_only", "modifies"}, index
         assert index in tail.TAIL_QUOTES, index
         assert entry.get("notes") or entry.get("data_only"), index
         assert not (entry.get("data_only") and len(entry) > 1), index

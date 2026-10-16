@@ -75,7 +75,7 @@ FEAT_EFFECT_KEYS: frozenset[str] = frozenset({
     "senses_additive", "prof_or_expertise", "lacks_expertise", "resist_choice",
     "resist_by_variant", "damage_type_choice", "variant_choice", "weapon_proficiency_choice", "mastery_choice",
     "option_picks", "unarmed", "offhand", "finesse_items", "attack_notes", "resources", "notes",
-    "data_only",
+    "data_only", "modifies",
 })
 
 SCAN_KINDS: frozenset[str] = frozenset(

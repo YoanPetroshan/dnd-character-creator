@@ -305,10 +305,49 @@ def _variant_note(inst: dict) -> str | None:
     return next((o["note"] for o in spec["options"] if o["label"] == inst["pick_text"]), None)
 
 
+def apply_modifies(insts: list[dict]) -> list[dict]:
+    """FX3: cross-feat modifications. An entry's ``modifies`` is ``{target feat index: patch}`` and applies only while
+    that target feat is also held. A patch has ``replace`` (``[[old, new], ...]`` applied to the target's notes and
+    resource notes) and ``recharge`` (``{resource name: recharge}``). The patch is data, written from the modifying
+    feat's own sentence (Greater Aberrant Mark: Aberrant Fortitude rolls 1d6 and recharges on a Short or Long Rest;
+    the other Greater marks: the mark's Intuition die is a 1d6). Returns the list unchanged when nothing applies."""
+    held = {inst["index"] for inst in insts}
+    patches = [(target, patch) for inst in insts for target, patch in (inst["effect"].get("modifies") or {}).items()
+               if target in held]
+    if not patches:
+        return insts
+    out = []
+    for inst in insts:
+        mine = [patch for target, patch in patches if target == inst["index"]]
+        if not mine:
+            out.append(inst)
+            continue
+        effect = dict(inst["effect"])
+        for patch in mine:
+            def sub(text):
+                for old, new in patch.get("replace", []):
+                    text = text.replace(old, new)
+                return text
+            if effect.get("notes"):
+                effect["notes"] = [sub(t) for t in effect["notes"]]
+            resources = []
+            for res in effect.get("resources") or []:
+                res = dict(res)
+                if res.get("note"):
+                    res["note"] = sub(res["note"])
+                if res["name"] in patch.get("recharge", {}):
+                    res["recharge"] = patch["recharge"][res["name"]]
+                resources.append(res)
+            if resources:
+                effect["resources"] = resources
+        out.append({**inst, "effect": effect})
+    return out
+
+
 def notes(insts: list[dict], numbers: dict) -> dict[str, list[str]]:
     """{instance prefix: formatted notes} for the instances that have any."""
     out = {}
-    for inst in insts:
+    for inst in apply_modifies(insts):
         texts = list(inst["effect"].get("notes") or [])
         variant = _variant_note(inst)
         if variant:
@@ -328,7 +367,7 @@ def resources(insts: list[dict], numbers: dict) -> list[dict]:
     ``source.kind == "feat"``. Uses are an int or ``"pb"`` (the Proficiency Bonus). One entry per
     feat instance (the id is scoped by the instance prefix, so a repeatable feat never collides)."""
     out = []
-    for inst in insts:
+    for inst in apply_modifies(insts):
         for res in inst["effect"].get("resources") or []:
             uses, pending = res["uses"], False
             if uses == "pb":

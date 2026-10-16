@@ -198,6 +198,8 @@ TAIL_EFFECTS.update({
         "notes": ["Improved Fortitude: Aberrant Fortitude rolls 1d6 instead of 1d4 and is regained on a Short or Long Rest.",
                   "Mark of Inspiration: when you cast a cantrip, roll one or two unexpended Hit Point Dice; you gain that "
                   "many Temporary Hit Points + {con_mod} and one creature within 30 feet takes that much Force damage; the dice are expended."],
+        "modifies": {"aberrant-dragonmark-efa": {"replace": [["1d4", "1d6"]],
+                                                 "recharge": {"Aberrant Fortitude": "short-or-long"}}},
         "resources": [_res("Mark of Inspiration", "pb", "long")]},
     "greater-mark-of-handling-efa": {
         "notes": ["Improved Intuition: Wild Intuition rolls 1d6 instead of 1d4.",
@@ -937,3 +939,10 @@ COMPLETION_QUOTES: dict[str, str | tuple[str, ...]] = {
     "transmuted-anatomy-au": ("You have Advantage on saving throws against effects that would compel you to shape-shift against your will.",
                               "You can use this benefit a number of times equal to your Proficiency"),
 }
+
+# FX3: the twelve Greater Marks each say "When you use the <Intuition> benefit of your Mark of X feat, you can roll 1d6
+# instead of 1d4" (pinned by the quotes above). Their entries carry a ``modifies`` patch for the held base mark, whose
+# Intuition note then reads 1d6. Greater Aberrant Mark's own patch (Aberrant Fortitude) is written out above.
+for _index, _entry in TAIL_EFFECTS.items():
+    if _index.startswith("greater-mark-of-") and _index.endswith("-efa"):
+        _entry["modifies"] = {_index.replace("greater-", "", 1): {"replace": [["1d4", "1d6"]]}}
