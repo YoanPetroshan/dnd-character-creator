@@ -52,7 +52,7 @@ warnings (Phase 3c).
 from __future__ import annotations
 
 import re
-
+from functools import lru_cache
 from dataclasses import dataclass, field
 
 from catalog import feat_effects_data, reference_data
@@ -788,15 +788,41 @@ def _subclass_visible(catalog: Catalog, sub: dict, sources=None, ruleset: str = 
     return is_2024 if ruleset == "2024" else not is_2024
 
 
+_VISIBLE_SPELLS: dict = {}
+
+
+def _visible_spell_ids(catalog: Catalog, sources, ruleset: str):
+    """FX1: ids of the spells `_spell_visible` accepts, built once per (catalog, sources, ruleset) instead of
+    once per `_spell_filter_options` call (6 per 2024 Bard 20 resolve over ~936 spells). The entry keeps a
+    reference to the spells dict and its size, so a patched or reloaded catalog never reads a stale set.
+    Returns None (caller falls back to per-spell checks) for unhashable `sources`."""
+    try:
+        key = (id(catalog.spells), len(catalog.spells), tuple(sources) if sources else (), ruleset)
+        hash(key)
+    except TypeError:
+        return None
+    hit = _VISIBLE_SPELLS.get(key)
+    if hit is not None and hit[0] is catalog.spells:
+        return hit[1]
+    ids = frozenset(sp["index"] for sp in catalog.spells.values() if _spell_visible(catalog, sp, sources, ruleset))
+    if len(_VISIBLE_SPELLS) >= 16:
+        _VISIBLE_SPELLS.clear()
+    _VISIBLE_SPELLS[key] = (catalog.spells, ids)
+    return ids
+
+
 def _spell_filter_options(catalog: Catalog, flt: dict, sources=None, ruleset: str = "mixed", keep=()) -> list[dict]:
     """Catalog spells matching a parsed feat spell filter (see
     official_source._parse_spell_filter), sorted by (level, name), as
     reference options. Spells in `keep` (already-selected ids) stay offered
     even when the ruleset/sources would hide them."""
+    visible = _visible_spell_ids(catalog, sources, ruleset)
     matches = []
     for sp in catalog.spells.values():
-        if sp["index"] not in keep and not _spell_visible(catalog, sp, sources, ruleset):
-            continue
+        if sp["index"] not in keep:
+            shown = _spell_visible(catalog, sp, sources, ruleset) if visible is None else sp["index"] in visible
+            if not shown:
+                continue
         if "level" in flt and sp["level"] not in flt["level"]:
             continue
         if "class" in flt and not any(c["index"] in flt["class"] for c in sp.get("classes", [])):
@@ -1275,9 +1301,21 @@ def _source_allowed(record: dict, sources) -> bool:
     source must be in the allowed list (case-insensitive)."""
     if not sources:
         return True
-    allowed_sources = {s.lower() for s in sources if isinstance(s, str)}
     source = record.get("source") or ""
-    return not (source and source.upper() != "SRD" and source.lower() not in allowed_sources)
+    if not source or source.upper() == "SRD":
+        return True
+    try:
+        allowed_sources = _lowered_sources(tuple(sources))
+    except TypeError:  # unhashable junk in a hand-edited draft: no cache
+        allowed_sources = {s.lower() for s in sources if isinstance(s, str)}
+    return source.lower() in allowed_sources
+
+
+@lru_cache(maxsize=64)
+def _lowered_sources(sources: tuple) -> frozenset:
+    """FX1: the lowered allowed-source set, built once per distinct `sources` tuple (it used to be rebuilt on
+    every `_source_allowed` call, ~100k calls per 2024 Bard 20 resolve)."""
+    return frozenset(s.lower() for s in sources if isinstance(s, str))
 
 
 def _feat_source_allowed(feat: dict, sources) -> bool:
