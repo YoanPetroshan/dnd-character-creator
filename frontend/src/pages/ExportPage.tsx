@@ -183,8 +183,9 @@ export function ExportPage() {
         <div>
           <h2>Таланти</h2>
           <ul>
-            {resolution.sheet.feats!.map((f) => (
-              <li key={f.id}>
+            {resolution.sheet.feats!.map((f, i) => (
+              // a repeatable feat (Elemental Adept, Magic Initiate, Skilled) appears once per pick with the same id
+              <li key={`${f.id}:${f.origin}:${f.level ?? ""}:${i}`}>
                 {f.name}
                 {f.choice && f.choice.length > 0 && `: ${f.choice.join(", ")}`}
                 {f.notes && f.notes.length > 0 && ` — ${f.notes.join("; ")}`}
