@@ -316,3 +316,38 @@ def test_range_problem_is_unchanged(catalog):
 def test_a_feat_less_draft_is_identical(catalog):
     r = resolve(_draft(_fighter(8, {_asi("fighter", 4): ["str-plus-2"]}), {"STR": 15}), catalog)
     assert _scores(r)["STR"] == 17
+
+
+# ---------------------------------------------------------------- FX7: a fixed increase lost to the cap is reported
+
+
+def _fx7(r, needle):
+    return [p for p in r["pruned"] if needle in p["reason"]]
+
+
+def test_fixed_origin_increase_at_the_cap_is_reported_as_pruned(catalog):
+    """Actor (XPHB, fixed +1 Charisma) as Variant Human's free feat with CHA 20: ignored, and now said so."""
+    species = {"id": "human-phb", "subspeciesId": "human-phb-variant-phb", "choices": {VH: ["feat:actor-xphb"]}}
+    r = resolve(_draft(_fighter(1, {}), {"CHA": 20}, species=species), catalog)
+    assert _scores(r)["CHA"] == 20
+    hits = _fx7(r, "CHA is already at maximum (20) and the +1 increase was ignored")
+    assert len(hits) == 1 and hits[0]["reason"].startswith("Actor")
+    assert r["problems"] == []
+    r = resolve(_draft(_fighter(1, {}), {"CHA": 19}, species=species), catalog)
+    assert _scores(r)["CHA"] == 20 and not _fx7(r, "already at maximum")
+
+
+def test_fixed_asi_feat_increase_at_the_cap_is_reported_as_pruned(catalog):
+    """Keen Mind (PHB, fixed +1 Intelligence) taken at Fighter 4 with INT 20."""
+    cid = _asi("fighter", 4)
+    r = resolve(_draft(_fighter(4, {cid: ["feat:keen-mind-phb"]}), {"INT": 20}), catalog)
+    assert _scores(r)["INT"] == 20
+    hits = _fx7(r, "INT is already at maximum (20) and the increase was ignored")
+    assert len(hits) == 1 and hits[0]["choiceId"] == cid and hits[0]["reason"].startswith("Keen Mind")
+    r = resolve(_draft(_fighter(4, {cid: ["feat:keen-mind-phb"]}), {"INT": 19}), catalog)
+    assert _scores(r)["INT"] == 20 and not _fx7(r, "already at maximum")
+
+
+def test_feats_without_a_fixed_increase_add_no_pruned_entry(catalog):
+    r = resolve(_draft(_fighter(4, {_asi("fighter", 4): ["feat:alert-xphb"]}), {"STR": 20}, ruleset="2024"), catalog)
+    assert not _fx7(r, "already at maximum")

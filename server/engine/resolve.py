@@ -4765,11 +4765,19 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             origin_running[ab_key] = origin_running.get(ab_key, 10) + applied
         return applied
 
+    fixed_clamped_notes: list[dict] = []  # FX7: fixed increases that did not fit under the cap (non-blocking `pruned`)
+
     def _apply_origin_fixed(feat: dict) -> None:
-        applied_fixed_deltas_by_instance[_feat_instance_key(feat)] = [
-            (ab_key, _apply_origin_delta(feat, ab_key, delta))
-            for ab_key, delta in _feat_ability_bonuses([feat]).items()
-        ]
+        applied_list = []
+        for ab_key, delta in _feat_ability_bonuses([feat]).items():
+            applied = _apply_origin_delta(feat, ab_key, delta)
+            applied_list.append((ab_key, applied))
+            if delta > 0 and applied < delta:
+                fixed_clamped_notes.append({
+                    "choiceId": feat.get("_species_origin") or f"feat:{feat['index']}",
+                    "reason": f"{feat['name']}: {ab_key} is already at maximum ({_feat_ability_cap(feat)}) "
+                              f"and the +{delta} increase was ignored."})
+        applied_fixed_deltas_by_instance[_feat_instance_key(feat)] = applied_list
 
     # Phase 4c-ii Task 2: a FOURTH source into this same early pass — a
     # background-granted feat's own ability_bonus_options CHOICE (as
@@ -5008,6 +5016,13 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # for an ASI feat at its cap), never the raw one.
     for skipped_cid in cap_skipped_asi_feat_cids:
         applied_fixed_deltas_by_instance[_feat_instance_key(asi_feats_by_cid[skipped_cid])] = []
+        skipped_feat = asi_feats_by_cid[skipped_cid]
+        if _feat_ability_bonuses([skipped_feat]):  # FX7: a fixed increase was dropped at the cap (the chosen card says so itself)
+            fixed_names = ", ".join(_feat_ability_bonuses([skipped_feat]))
+            fixed_clamped_notes.append({
+                "choiceId": skipped_cid,
+                "reason": f"{skipped_feat['name']}: {fixed_names} is already at maximum "
+                          f"({_feat_ability_cap(skipped_feat)}) and the increase was ignored."})
     problems += _feat_prerequisite_problems(
         resolved_feats, total_level, final_scores, use_feat_prereqs, background_chosen_ability_deltas_by_instance,
         applied_fixed_deltas_by_instance,
@@ -5213,6 +5228,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         for choice_id, selected in all_selections.items()
         if selected and choice_id not in current_template_ids
     ]
+    pruned += fixed_clamped_notes
     # A stored feat pick at an ASI slot that is not among that slot's options
     # (structurally ineligible there, e.g. an Epic Boon below level 19) is
     # ignored; say so instead of leaving the card silently pending.
