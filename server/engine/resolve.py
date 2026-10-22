@@ -1837,6 +1837,10 @@ def _feat_choice_templates(feats: list[dict], origin: str | None = None, items: 
             if tpl:
                 templates.append(tpl)
 
+        replacement_tpl = class_choices_2024.feat_replacement_language_template(feat, cid_prefix, feat_level)  # RP3
+        if replacement_tpl and not language_envelope:
+            templates.append(replacement_tpl)
+
         for i, prof_envelope in enumerate(feat.get("proficiency_choices", []) or []):
             cid = f"{cid_prefix}:proficiency-choice-{i}"
             source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}

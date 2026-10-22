@@ -127,8 +127,8 @@ TAIL_EFFECTS.update({
                   "Siphon Life: Reaction when an enemy within 120 feet is reduced to 0 Hit Points: regain 50 Hit Points."],
         "resources": [_res("Siphon Life", 1, "short-or-long", "Regain 50 Hit Points.")]},
     "cult-of-the-dragon-initiate-frhof": {
-        "notes": ["Dragon's Tongue: you know Draconic; if you already know it, choose any other language instead (the "
-                  "app lists Draconic only, so add the replacement language by hand).",
+        "notes": ["Dragon's Tongue: you know Draconic; if you already know it when you select this feat, you instead learn "
+                  "one language of your choice (the Dragon's Tongue language card appears in that case).",
                   "Dragon's Terror (Magic action): a creature you see within 30 feet makes a Wisdom save, DC {8+wis_mod+pb}, "
                   "or is Frightened until the end of your next turn; the target is then immune for 24 hours.",
                   "Inspired by Fear: when you frighten a creature you are the source of fear for, gain Heroic Inspiration if you lack it."],

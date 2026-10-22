@@ -524,6 +524,19 @@ FEAT_SKILL_PICK_COUNT_OVERRIDES = {"echoing-soul-rhw": 2}
 # from LANGUAGE_NAMES (the 2024 rare table, C6b-2).
 FEAT_FIXED_LANGUAGE_OVERRIDES = {"harper-agent-frhof": ["thieves-cant"]}
 
+# RP3 (A1): a feat whose fixed language becomes "one language of your choice" when the character already knows it.
+# index -> {language, label, quote} (`quote` is pinned against the catalog feat text). The replacement pool is the
+# PHB 2024 Standard + Rare tables (decision E2): the feat text names "the language tables in the Player's Handbook
+# or Chapter 2 of this book" and the catalog has no FRHoF-specific language table.
+FEAT_LANGUAGE_REPLACEMENT = {
+    "cult-of-the-dragon-initiate-frhof": {
+        "language": "draconic",
+        "label": "Dragon's Tongue",
+        "quote": ("If you already know Draconic when you select this feat, you instead learn one language "
+                  "of your choice from the language tables in the Player's Handbook or Chapter 2 of this book."),
+    },
+}
+
 
 def ruleset_for_feat(raw: dict) -> str:
     return "2024" if raw.get("source") in RULESET_2024_SOURCES else "2014"

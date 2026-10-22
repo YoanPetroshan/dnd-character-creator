@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 
 from catalog.reference_data import (
+    FEAT_LANGUAGE_REPLACEMENT,
     CLASS_LANGUAGES_2024, CLASS_OPTION_CHOICES_2024, EXPERTISE_2024, INVOCATION_EFFECTS, INVOCATION_EFFECTS_2024, LANGUAGES_2024_RARE, LANGUAGES_2024_STANDARD, PRIMAL_KNOWLEDGE_2024,
     SKILL_NAMES, SRD_CARDS_REPLACED_2024,
 )
@@ -167,6 +168,51 @@ def origin_language_templates(bg: dict | None, bg_id: str | None, ruleset: str) 
     }]
 
 
+# ---- RP3 (A1): replacement language of a feat whose fixed language may already be known ----------------------------
+
+def is_feat_replacement_language_card(c: dict) -> bool:
+    """The `<feat cid prefix>:languages` card of a FEAT_LANGUAGE_REPLACEMENT feat (Cult of the Dragon Initiate)."""
+    return (c["source"]["kind"] == "feat" and c["source"].get("id") in FEAT_LANGUAGE_REPLACEMENT
+            and c["id"].endswith(":languages"))
+
+
+def feat_replacement_language_template(feat: dict, cid_prefix: str, feat_level: int | None = None) -> dict | None:
+    """The conditional card: "If you already know <language> when you select this feat, you instead learn one
+    language of your choice". Built for every holder; gate_languages removes it when the language is not known at
+    the feat's position. Options: the PHB 2024 Standard + Rare tables (decision E2)."""
+    rule = FEAT_LANGUAGE_REPLACEMENT.get(feat.get("index"))
+    if not rule:
+        return None
+    source = {"kind": "feat", "id": feat["index"], "label": feat["name"]}
+    if feat_level is not None:
+        source["level"] = feat_level
+    return {
+        "id": f"{cid_prefix}:languages",
+        "source": source,
+        "label": f"{feat['name']}: {rule['label']}",
+        "description": (f"You already know {rule['language'].capitalize()}, so you learn one language of your "
+                        "choice instead."),
+        "count": 1,
+        "options": [{"id": l["index"], "label": l["name"]} for l in LANGUAGES_2024_STANDARD + LANGUAGES_2024_RARE],
+    }
+
+
+_CLASS_CID_PREFIX_RE = re.compile(r"^class:([^:]+):")
+
+
+def _feat_card_position(c: dict, class_order) -> tuple[int, int]:
+    """Position of a feat card: ASI feats sit at `class:<cls>:<lvl>:...`, Lessons of the First Ones feats at
+    `class:<cls>:invocation:...` (level in `source.level`); origin feats at (-1, 0)."""
+    m = _CLASS_CID_PREFIX_RE.match(c["id"])
+    if not m:
+        return (-1, 0)
+    pos = card_position(c, class_order)
+    if pos is not None and pos != (-1, 0):
+        return pos
+    order = list(class_order)
+    return (order.index(m.group(1)) if m.group(1) in order else len(order), c["source"].get("level") or 0)
+
+
 def gate_languages(choices: list[dict], fixed_languages, class_order: list[str] = (), positioned_fixed=()) -> list[dict]:
     """Disable ("already known") and drop stored picks of languages the character already knows.
     Priority: `fixed_languages` (species / background / origin feats / Common), picks of every other
@@ -175,31 +221,104 @@ def gate_languages(choices: list[dict], fixed_languages, class_order: list[str] 
     F3a-5: `positioned_fixed` = [((class position, class level), language)] are fixed grants (class
     features, Lessons / ASI feats) and ASI feat language picks counted only for cards at or after
     their position, so an earlier pick wins and the later duplicate is blamed.
-    Mutates `choices` by index; returns non-blocking `pruned` entries in `choices` order."""
+    RP3: a FEAT_LANGUAGE_REPLACEMENT feat card (Cult of the Dragon Initiate) exists only while the feat's fixed
+    language is already known at the feat's position, not counting the feat's own grant (origin feats: fixed
+    species / background languages and origin card picks of species / background; Lessons / ASI feats: also
+    everything earlier in the build). Otherwise the card is removed and a stored pick is reported.
+    Mutates `choices`; returns non-blocking `pruned` entries in `choices` order."""
+    repl = [i for i, c in enumerate(choices) if is_feat_replacement_language_card(c)]
     idxs = [i for i, c in enumerate(choices) if is_class_language_card(c) or is_origin_language_card(c)]
-    if not idxs:
+    if not idxs and not repl:
         return []
     known: set[str] = set(fixed_languages)
+    pick_known: set[str] = set()  # picks of species / background / origin feat cards (not the replacement card)
     positioned = list(positioned_fixed)
     for c in choices:
         if (c["source"]["kind"] in ("background", "species", "feat") and c["id"].endswith(":languages")
-                and not is_origin_language_card(c)):
+                and not is_origin_language_card(c) and not is_feat_replacement_language_card(c)):
             pos = card_position(c, class_order) if c["source"]["kind"] == "feat" else (-1, 0)
             if pos is None or pos == (-1, 0):
                 known.update(c["selected"])
+                pick_known.update(c["selected"])
             else:
                 positioned += [(pos, lang) for lang in c["selected"]]
+
+    pruned_by_index: dict[int, dict] = {}
+    removed: set[int] = set()
+
+    def own_language(c):
+        return FEAT_LANGUAGE_REPLACEMENT[c["source"]["id"]]["language"]
+
+    def known_without_own(c, here):
+        """Languages known at `here`, with the feat's own fixed grant taken out once."""
+        fixed = list(fixed_languages)
+        pos_fixed = list(positioned)
+        lang = own_language(c)
+        if here == (-1, 0):
+            if lang in fixed:
+                fixed.remove(lang)
+        elif (here, lang) in pos_fixed:
+            pos_fixed.remove((here, lang))
+        # origin picks of species / background / other feat cards count; the origin card and earlier cards are
+        # added by the caller for positioned feats
+        return set(fixed) | pick_known | {l for p, l in pos_fixed if p <= here}
+
+    def settle_replacement(i, extra_known):
+        c = choices[i]
+        here = _feat_card_position(c, class_order)
+        lang = own_language(c)
+        known_before = known_without_own(c, here) | extra_known
+        if lang not in known_before:
+            if c["selected"]:
+                labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
+                names = ", ".join(labels.get(d, d) for d in c["selected"])
+                pruned_by_index[i] = {
+                    "choiceId": c["id"],
+                    "reason": (f"'{c['label']}': {names} no longer applies because you do not already know "
+                               f"{lang.capitalize()}; the language selection was ignored."),
+                }
+            removed.add(i)
+            return
+        known_here = known | known_before | {l for p, l in positioned if p <= here}
+        options = [o if o.get("disabled") or o["id"] not in known_here
+                   else {**o, "disabled": True, "disabledReason": "already known"} for o in c["options"]]
+        enabled = {o["id"] for o in options if not o.get("disabled")}
+        kept = [s for s in c["selected"] if s in enabled][: c["count"]]
+        dropped = [s for s in c["selected"] if s not in kept]
+        if dropped:
+            labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
+            pruned_by_index[i] = {
+                "choiceId": c["id"],
+                "reason": f"'{c['label']}': {', '.join(labels.get(d, d) for d in dropped)} is already known; "
+                          "the language selection was ignored.",
+            }
+        choices[i] = {**c, "options": options, "selected": kept,
+                      "status": "resolved" if len(kept) == c["count"] else "pending"}
+
+    # origin-position replacement cards first: their picks have the priority of every other origin feat card
+    for i in repl:
+        if _feat_card_position(choices[i], class_order) == (-1, 0):
+            settle_replacement(i, set())
+            if i not in removed:
+                known.update(choices[i]["selected"])
+    later_repl = [i for i in repl if i not in removed and _feat_card_position(choices[i], class_order) != (-1, 0)]
 
     def pos_of(i):
         c = choices[i]
         if is_origin_language_card(c):
             return (-1, 0)
+        if is_feat_replacement_language_card(c):
+            return _feat_card_position(c, class_order)
         src = c["source"]
         cid = src.get("id")
         return (class_order.index(cid) if cid in class_order else len(class_order), src.get("level") or 0)
 
-    pruned_by_index: dict[int, dict] = {}
-    for i in sorted(idxs, key=lambda i: (*pos_of(i), i)):
+    for i in sorted(idxs + later_repl, key=lambda i: (*pos_of(i), i)):
+        if i in later_repl:
+            settle_replacement(i, set(known))
+            if i not in removed:
+                known.update(choices[i]["selected"])
+            continue
         c = choices[i]
         here = pos_of(i)
         known_here = known | {lang for pos, lang in positioned if pos <= here}
@@ -221,7 +340,10 @@ def gate_languages(choices: list[dict], fixed_languages, class_order: list[str] 
         choices[i] = {**c, "options": options, "selected": kept,
                       "status": "resolved" if len(kept) == c["count"] else "pending"}
         known.update(kept)
-    return [pruned_by_index[i] for i in sorted(pruned_by_index)]
+    out = [pruned_by_index[i] for i in sorted(pruned_by_index)]
+    if removed:
+        choices[:] = [c for i, c in enumerate(choices) if i not in removed]
+    return out
 
 
 # ---- C6b-2: Barbarian Primal Knowledge -------------------------------------------------------
