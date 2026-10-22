@@ -266,6 +266,96 @@ CLASS_FEATURE_EFFECTS: dict[str, dict] = {
     "fast-movement": {"speed_bonus_unless_heavy_armor": 10},
 }
 
+# RP2 (B2): fixed numeric effects of XPHB class and subclass features, ruleset "2024" only. Keyed by the
+# imported XPHB feature record id; `engine/features.xphb_effects_2024` applies an entry when the character's level in
+# the record's class has reached the record's own `level` (and, for a subclass feature, the record's subclass is the
+# selected one). An entry whose record is not in the catalog (SRD-only) gives nothing. `quotes` are verbatim
+# sentences of the record's text (pinned by tests/test_xphb_feature_effects_2024.py); the other keys are the
+# CLASS_FEATURE_EFFECTS keys plus:
+#   supersedes          SRD feature id whose CLASS_FEATURE_EFFECTS entry this one replaces (not stacks with) once
+#                       the XPHB record is found (Primal Champion: the SRD effect caps at 24).
+#   senses_additive     {sense: ft}: "If you already have Darkvision, its range increases by 60 feet" - added to
+#                       the final range of that sense, else the sense itself.
+#   sense_range         {sense: ft}: at least this range (Blindsight 30).
+#   climb_equals_walk / swim_equals_walk   "a Climb / Swim Speed equal to your Speed".
+#   speed_bonus_flat    ft added to the walking speed with no condition.
+#   speed_bonus_unless_heavy_armor   same key as Fast Movement.
+#   resist              [damage types]
+#   skills / proficiencies   skill ids / tool ids granted.
+# Conditional wording (while raging, in the aura, while an Emanation or form is active) is not an effect: see
+# CLASS_FEATURE_NOTES_ONLY_2024.
+CLASS_FEATURE_EFFECTS_2024: dict[str, dict] = {
+    "xphb-monk-20-body-and-mind": {
+        "quotes": ("Your Dexterity and Wisdom scores increase by 4, to a maximum of 25.",),
+        "ability_bonus": {"DEX": 4, "WIS": 4}, "ability_cap": 25},
+    "xphb-barbarian-20-primal-champion": {
+        "quotes": ("Your Strength and Constitution scores increase by 4, to a maximum of 25.",),
+        "ability_bonus": {"STR": 4, "CON": 4}, "ability_cap": 25, "supersedes": "primal-champion"},
+    # "3, and ... 1 whenever you gain another Sorcerer level" = the Sorcerer level (the feature is level 3). The
+    # text says "armor", not "armor or a Shield" (compare the Monk's), so a shield is allowed.
+    "draconic-xphb-3-draconic-resilience": {
+        "quotes": ("Your Hit Point maximum increases by 3, and it increases by 1 whenever you gain another Sorcerer level.",
+                   "While you aren't wearing armor, your base Armor Class equals 10 plus your Dexterity and Charisma modifiers."),
+        "hp_per_class_level": 1, "ac_formula": {"base": 10, "abilities": ["DEX", "CHA"], "allows_shield": True}},
+    # The record states no armor or shield condition at all; a body armor already replaces every formula in
+    # engine/equipment.armor_class_from_gear, and nothing forbids a shield.
+    "dance-xphb-3-unarmored-defense": {
+        "quotes": ("Your base Armor Class equals 10 plus your Dexterity and Charisma modifiers.",),
+        "ac_formula": {"base": 10, "abilities": ["DEX", "CHA"], "allows_shield": True}},
+    "shadow-xphb-3-darkvision": {
+        "quotes": ("You gain Darkvision with a range of 60 feet. If you already have Darkvision, its range increases by 60 feet.",),
+        "senses_additive": {"darkvision": 60}},
+    "gloom-stalker-xphb-3-umbral-sight": {
+        "quotes": ("You gain Darkvision with a range of 60 feet. If you already have Darkvision when you gain this feature, "
+                   "its range increases by 60 feet.",),
+        "senses_additive": {"darkvision": 60}},
+    "thief-xphb-3-second-story-work": {
+        "quotes": ("You gain a Climb Speed equal to your Speed.",), "climb_equals_walk": True},
+    "sea-xphb-6-aquatic-affinity": {
+        "quotes": ("In addition, you gain a Swim Speed equal to your Speed.",), "swim_equals_walk": True},
+    "war-xphb-17-avatar-of-battle": {
+        "quotes": ("You gain Resistance to Bludgeoning, Piercing, and Slashing damage.",),
+        "resist": ["bludgeoning", "piercing", "slashing"]},
+    "psi-warrior-xphb-10-guarded-mind": {
+        "quotes": ("You have Resistance to Psychic damage.",), "resist": ["psychic"]},
+    "aberrant-xphb-6-psychic-defenses": {
+        "quotes": ("You have Resistance to Psychic damage,",), "resist": ["psychic"]},
+    "great-old-one-xphb-10-thought-shield": {
+        "quotes": ("You also have Resistance to Psychic damage,",), "resist": ["psychic"]},
+    "celestial-xphb-6-radiant-soul": {
+        "quotes": ("You have Resistance to Radiant damage.",), "resist": ["radiant"]},
+    # The ally clause of the same record ("the ally's Speed increases by 10 feet until the end of their next turn")
+    # stays text only.
+    "glory-xphb-7-aura-of-alacrity": {
+        "quotes": ("Your Speed increases by 10 feet.",), "speed_bonus_flat": 10},
+    "mercy-xphb-3-implements-of-mercy": {
+        "quotes": ("You gain proficiency in the Insight and Medicine skills and proficiency with the Herbalism Kit.",),
+        "skills": ["skill-insight", "skill-medicine"], "proficiencies": ["herbalism-kit"]},
+    # Not on the plan's list, same kind (unconditional, fixed numbers, XPHB class feature).
+    "xphb-ranger-6-roving": {
+        "quotes": ("Your Speed increases by 10 feet while you aren't wearing Heavy armor. You also have a Climb Speed "
+                   "and a Swim Speed equal to your Speed.",),
+        "speed_bonus_unless_heavy_armor": 10, "climb_equals_walk": True, "swim_equals_walk": True},
+    "xphb-ranger-18-feral-senses": {
+        "quotes": ("grants you Blindsight with a range of 30 feet.",), "sense_range": {"blindsight": 30}},
+}
+
+# XPHB features with fixed-looking numbers that are NOT effects because the text makes them conditional or a
+# per-rest / per-activation choice (record id -> the verbatim conditional wording, pinned by tests). They stay in
+# the feature text on the sheet.
+CLASS_FEATURE_NOTES_ONLY_2024: dict[str, str] = {
+    "elements-xphb-11-stride-of-the-elements": "While your Elemental Attunement is active",
+    "elements-xphb-17-elemental-epitome": "While your Elemental Attunement is active",
+    "wild-heart-xphb-14-power-of-the-wilds": "While your Rage is active, you have a Fly Speed equal to your Speed",
+    "wild-heart-xphb-6-aspect-of-the-wilds": "Whenever you finish a Long Rest, you can change your choice.",
+    "sea-xphb-10-stormborn": "Your Wrath of the Sea confers two more benefits while active",
+    "stars-xphb-14-full-of-stars": "While in your Starry Form",
+    "zealot-xphb-14-rage-of-the-gods": "While in this form, you gain the benefits below.",
+    "ancients-xphb-7-aura-of-warding": "while in your Aura of Protection",
+    "land-xphb-10-natures-ward": "associated with your current land choice",
+    "fiend-xphb-10-fiendish-resilience": "whenever you finish a Short or Long Rest",
+}
+
 # The 13 PHB/XPHB damage types, alphabetical (Rage resistance lists).
 DAMAGE_TYPES = ["acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing",
                 "poison", "psychic", "radiant", "slashing", "thunder"]

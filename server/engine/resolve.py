@@ -5051,9 +5051,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
 
     # Primal Champion et al.: fixed ability-score feature bonuses, applied
     # after ASIs and prerequisite checks (the 24 cap is theirs alone).
-    final_scores = features_mod.apply_ability_bonuses(
-        final_scores, features_mod.active_effects(_class_feature_list(catalog, resolved_classes)),
-    )
+    # RP2: under 2024 the XPHB fixed-effect table (Body and Mind, Primal Champion cap 25, ...) joins the SRD one.
+    xphb_effects = features_mod.xphb_effects_2024(catalog, resolved_classes, ruleset)
+    ability_effects = features_mod.class_effects(_class_feature_list(catalog, resolved_classes), xphb_effects)
+    pruned_ability_notes = features_mod.ability_bonus_losses(final_scores, ability_effects)
+    final_scores = features_mod.apply_ability_bonuses(final_scores, ability_effects)
     modifiers = derived_mod.ability_modifiers(final_scores)
     # Prof bonus is confirmed class-agnostic at a given level (per the
     # design spec's empirical check), so any resolved class's level table
@@ -5249,7 +5251,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         for choice_id, selected in all_selections.items()
         if selected and choice_id not in current_template_ids
     ]
-    pruned += background_clamped_notes + fixed_clamped_notes
+    pruned += background_clamped_notes + fixed_clamped_notes + pruned_ability_notes
     # A stored feat pick at an ASI slot that is not among that slot's options
     # (structurally ineligible there, e.g. an Epic Boon below level 19) is
     # ignored; say so instead of leaving the card silently pending.
@@ -5751,6 +5753,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     invocation_effects = features_mod.invocation_effects(
         choices, {rc["cls_id"]: rc["level"] for rc in resolved_classes if rc["cls"]}, catalog)
     proficient_skills.update(features_mod.invocation_skills(invocation_effects))
+    proficient_skills.update(features_mod.class_skill_proficiencies(xphb_effects))  # RP2 Mercy
+    for prof_id in features_mod.class_other_proficiencies(xphb_effects):
+        _categorize_proficiency(prof_id)
     poe_priors = _prof_or_expertise_priors(
         choices, resolved_feats, fixed_origin_skills, [rc["cls_id"] for rc in resolved_classes if rc["cls"]])  # FE6
     pruned += _gate_distinct_choices(choices, [rc["cls_id"] for rc in resolved_classes if rc["cls"]])  # FE7
@@ -5811,7 +5816,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                     })
         hp_class_entries.append({"hit_die": rc_hit_die, "level": rc["level"], "hp_rolls": rc_hp_rolls})
     class_feature_list = _class_feature_list(catalog, resolved_classes, choices, resolved_feats)
-    effects = features_mod.active_effects(class_feature_list) + invocation_effects
+    effects = features_mod.class_effects(class_feature_list, xphb_effects) + invocation_effects
     # R5: Diamond Soul / Slippery Mind grants (the latter depends on the ruleset).
     for ab in features_mod.save_proficiencies(effects, [idx for _, _, idx in class_feature_list], ruleset):
         if ab not in proficient_save_abilities:
@@ -5849,11 +5854,15 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     fast = features_mod.speed_bonus_unless_heavy(effects, equipped_items)  # R5: Fast Movement
     if speeds and fast:
         speeds = _raise_walk_speed(speeds, fast)
+    if speeds and features_mod.speed_bonus_flat(effects):  # RP2 Glory 7 Aura of Alacrity
+        speeds = _raise_walk_speed(speeds, features_mod.speed_bonus_flat(effects))
     feat_inst = feat_effects_mod.instances(resolved_feats, feat_effects_data.FEAT_EFFECTS, choices)  # FE1
     if speeds and feat_effects_mod.walk_bonus(feat_inst):  # Mobile, Speedy, Boon of Speed, ... (walk only)
         speeds = _raise_walk_speed(speeds, feat_effects_mod.walk_bonus(feat_inst))
     if speeds.get("walk") and features_mod.swim_equals_walk(effects):  # C7b Gift of the Depths
         speeds = {**speeds, "swim": max(speeds.get("swim", 0), speeds["walk"])}
+    if speeds.get("walk") and features_mod.climb_equals_walk(effects):  # RP2 Thief, Roving
+        speeds = {**speeds, "climb": max(speeds.get("climb", 0), speeds["walk"])}
     if speeds.get("walk") and feat_effects_mod.climb_equals_walk(feat_inst):  # FE1 Athlete (XPHB)
         speeds = {**speeds, "climb": max(speeds.get("climb", 0), speeds["walk"])}
     feat_init_bonus, feat_init_pb = feat_effects_mod.initiative_parts(feat_inst)
@@ -5957,6 +5966,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             damage = ((catalog.traits.get(sel) or {}).get("trait_specific") or {}).get("damage_type")
             if damage:
                 chosen_resistances.append(damage["index"])
+    chosen_resistances += features_mod.class_resistances(effects)  # RP2
     chosen_resistances += feat_effects_mod.resistances(  # FE7: resistance picks of the held feats (Scion follows its plane)
         feat_effects_mod.instances(resolved_feats, feat_effects_data.FEAT_EFFECTS, choices))
     damage_modifiers = _species_damage_modifiers(race, subrace, resolved_feats, chosen_resistances)
@@ -5969,6 +5979,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         if sense_range > senses.get(sense_kind, 0):
             senses[sense_kind] = sense_range
     senses = feat_effects_mod.add_senses(senses, feat_inst)  # FE4 Keenness of the Stone Giant (adds to the final range)
+    senses = features_mod.class_senses(senses, effects)  # RP2 Darkvision +60, Blindsight 30
     innate_spells = (_species_innate_spells(race, subrace, catalog, species_variant)
                      + _species_trait_spell_choices(race, subrace, catalog, choices)
                      + _feat_innate_spells(resolved_feats, catalog, choices)

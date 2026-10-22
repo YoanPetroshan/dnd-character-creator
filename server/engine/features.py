@@ -15,11 +15,36 @@ RULESET_SAVE_PROFICIENCIES: dict[str, dict[str, list[str]]] = {
 }
 
 
-def active_effects(class_features: list[tuple[str, int, str]]) -> list[tuple[str, int, dict]]:
+def xphb_effects_2024(catalog, resolved_classes: list[dict], ruleset: str) -> list[tuple[str, int, dict]]:
+    """RP2: the CLASS_FEATURE_EFFECTS_2024 entries that apply (ruleset "2024" only): the XPHB record is in the
+    catalog, the character's level in its class has reached the record's own level and, for a subclass feature, the
+    record's subclass is the selected one. Same triple shape as `active_effects`; each effect also carries
+    `feature_id` and `feature_name`."""
+    if ruleset != "2024":
+        return []
+    out = []
+    for fid, entry in reference_data.CLASS_FEATURE_EFFECTS_2024.items():
+        rec = catalog.features.get(fid)
+        if not rec:
+            continue
+        cls_id = (rec.get("class") or {}).get("index")
+        sub_id = (rec.get("subclass") or {}).get("index")
+        for rc in resolved_classes:
+            if rc.get("cls") and rc.get("cls_id") == cls_id and rc["level"] >= (rec.get("level") or 1) \
+                    and (not sub_id or rc.get("subclass_id") == sub_id):
+                out.append((cls_id, rc["level"], {**entry, "feature_id": fid, "feature_name": rec["name"]}))
+                break
+    return out
+
+
+def active_effects(class_features: list[tuple[str, int, str]], skip=()) -> list[tuple[str, int, dict]]:
     """class_features: (class_id, class_level, feature_index) for every
-    feature the character has. Returns (class_id, class_level, effect)."""
+    feature the character has. Returns (class_id, class_level, effect).
+    `skip` (RP2): SRD feature ids replaced by an XPHB entry (Primal Champion)."""
     out = []
     for cls_id, lvl, idx in class_features:
+        if idx in skip:
+            continue
         eff = reference_data.CLASS_FEATURE_EFFECTS.get(idx)
         if eff:
             out.append((cls_id, lvl, eff))
@@ -50,6 +75,34 @@ def hp_bonus(effects, class_levels: dict[str, int]) -> int:
 def half_proficiency(effects) -> tuple[bool, bool]:
     kinds = {e["half_proficiency"] for _, _, e in effects if "half_proficiency" in e}
     return "floor" in kinds, "ceil" in kinds
+
+
+def superseded_ids(xphb_effects) -> set[str]:
+    return {e["supersedes"] for _, _, e in xphb_effects if "supersedes" in e}
+
+
+def class_effects(class_features, xphb_effects) -> list[tuple[str, int, dict]]:
+    """SRD effects (minus the ones an XPHB entry replaces) plus the XPHB entries."""
+    return active_effects(class_features, skip=superseded_ids(xphb_effects)) + list(xphb_effects)
+
+
+def ability_bonus_losses(scores: dict[str, int], effects) -> list[dict]:
+    """RP2: the part of an XPHB ability increase that the cap cut off, for the non-blocking `pruned` note."""
+    out, running = [], dict(scores)
+    for _, _, e in effects:
+        cap = e.get("ability_cap")
+        if "feature_id" not in e:
+            continue
+        for ab, bonus in (e.get("ability_bonus") or {}).items():
+            cur = running.get(ab, 10)
+            applied = max(cur, min(cur + bonus, cap)) - cur if cap else bonus
+            running[ab] = cur + applied
+            if applied < bonus:
+                reason = (f"{e['feature_name']}: {ab} is already at maximum ({cap}) and the increase was ignored."
+                          if applied == 0 else
+                          f"{e['feature_name']}: {ab} is capped at {cap}; only +{applied} of +{bonus} applied.")
+                out.append({"choiceId": f"feature:{e['feature_id']}", "reason": reason})
+    return out
 
 
 def apply_ability_bonuses(scores: dict[str, int], effects) -> dict[str, int]:
@@ -163,3 +216,37 @@ def invocation_innate_entries(effects) -> list[dict]:
              "level": e["innate_spell"]["level"], "uses": e["innate_spell"]["uses"], "ability": e.get("ability", "CHA"),
              "variant": None, "note": e.get("note"), "source_label": e.get("source_label", "Eldritch Invocation")}
             for _, _, e in effects if "innate_spell" in e]
+
+
+def climb_equals_walk(effects) -> bool:
+    return any(e.get("climb_equals_walk") for _, _, e in effects)
+
+
+def speed_bonus_flat(effects) -> int:
+    return sum(e["speed_bonus_flat"] for _, _, e in effects if "speed_bonus_flat" in e)
+
+
+def class_senses(senses: dict[str, int], effects) -> dict[str, int]:
+    """RP2: `sense_range` raises a sense to at least that range; `senses_additive` adds to the final range of the
+    sense (Darkvision: "If you already have Darkvision, its range increases by 60 feet"), else is the range itself.
+    Call after every other source."""
+    out = dict(senses)
+    for _, _, e in effects:
+        for sense, rng in (e.get("sense_range") or {}).items():
+            out[sense] = max(out.get(sense, 0), rng)
+    for _, _, e in effects:
+        for sense, rng in (e.get("senses_additive") or {}).items():
+            out[sense] = out.get(sense, 0) + rng
+    return out
+
+
+def class_resistances(effects) -> list[str]:
+    return [t for _, _, e in effects for t in e.get("resist") or []]
+
+
+def class_skill_proficiencies(effects) -> list[str]:
+    return [s for _, _, e in effects for s in e.get("skills") or [] if "feature_id" in e]
+
+
+def class_other_proficiencies(effects) -> list[str]:
+    return [p for _, _, e in effects for p in e.get("proficiencies") or []]
