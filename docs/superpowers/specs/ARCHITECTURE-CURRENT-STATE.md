@@ -1113,3 +1113,14 @@ Batch of fixes from a read-only review of FE0-FE12. Golden `test_c_series_golden
 - **FX6 Potent Dragonmark.** The extra spell slot is now the feat resource "Dragonmark Spell Slot" (1 use, Short or Long Rest), its note computes the slot level. Catalog text: "The spell slot's level is half your level (round up), to a maximum of level 5. You regain the expended slot when you finish a Short Rest or Long Rest." Level = total character level, `min(5, (level+1)//2)`; the spell slot table is not changed. Feat resources 81 -> 82 (the overview counts are recomputed above).
 - **FX7 Silent clamp.** A fixed +1 (Keen Mind PHB at INT 20, Actor XPHB at CHA 20, via an ASI slot or an origin feat) lost to the cap is now reported as a non-blocking `pruned` entry ("<Feat>: INT is already at maximum (20) and the increase was ignored"; `choiceId` = the ASI card id, or `feat:<index>` / the species origin for an origin feat). The score and the problems list are unchanged.
 - **FX8 Docs.** FE overview counts recomputed and the method stated; the G1-2 Elemental Adept line marked "Superseded (FE7)"; the cap-20 / uncapped background-feat statements marked "Superseded (FE2)"; F-D9 corrected; open questions 18-22 added.
+
+
+## RP1 (X1) 2024 background ability increases capped at 20 (2026-10-22)
+
+Golden `test_c_series_golden.py` untouched and green (not regenerated). Output changes only under ruleset `2024`; mixed and 2014 are unchanged.
+
+- **Rule.** PHB 2024: "None of these increases can raise a score above 20." In `engine/resolve.py`, right after the background choice bundle is applied (species increases are off under 2024, so the step sits on the base scores), each ability's background delta is clamped with `asi.clamped_delta(..., ASI_CAP)`. The lost part is a non-blocking `pruned` entry `{choiceId: background:<id>:ability-bonus, reason: "<Background>: STR is already at maximum (20) and the increase was ignored."}`, appended before the FX7 notes. It is never a problem.
+- **Order.** The clamp runs before origin feats (FE2 clamp), species feats and ASI progression, which therefore read the clamped score and keep their own caps (20, or 30 for Epic Boons). The background card's option list is not disabled (a bundle such as `str-2+dex-1` stays selectable; only the over-cap part is dropped).
+- **Tests.** `tests/test_background_cap_2024.py` (8): 20+2, 19+2, 18+2, +1/+1/+1 with one at 20, two scores over, a later-book background (carouser-abh), mixed / 2014 guards, ASI after the clamp. Seven of them fail without the fix.
+- **Timing** `resolve()` (mean of 10, ms, level 20): mixed Fighter 4.0, Wizard 3.7, Bard 3.7; 2024 Fighter 2.6, Wizard 2.8, Bard 3.9.
+- **Totals.** Server 3984 -> 3992 passed; root 405 passed, 8 skipped; frontend untouched.

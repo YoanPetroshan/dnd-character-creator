@@ -4615,6 +4615,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 species_bonuses[ab_key] = species_bonuses.get(ab_key, 0) + delta
 
     background_bonuses = _background_ability_bonuses(bg)
+    background_clamped_notes: list[dict] = []  # RP1
     background_ability_choice_tpl = _background_ability_bonus_choice_template(bg, bg_id) if background_asi_on else None
     if background_ability_choice_tpl:
         background_choices_raw = background_dict.get("choices") if isinstance(background_dict.get("choices"), dict) else {}
@@ -4628,6 +4629,26 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         for bundle_id in selected_bundles:
             for ab_key, delta in bundle_deltas.get(bundle_id, []):
                 background_bonuses[ab_key] = background_bonuses.get(ab_key, 0) + delta
+
+    # RP1 (X1): PHB 2024 background step: "None of these increases can raise a score above 20." The 2024 species
+    # increase is off, so the background step sits on the base scores. Only the 2024 ruleset clamps (the 2014 rules
+    # have no such sentence); the lost part is a non-blocking `pruned` entry like the FX7 feat clamp.
+    if ruleset == "2024" and background_ability_choice_tpl and background_bonuses:
+        for ab_key in derived_mod.ABILITIES:
+            delta = background_bonuses.get(ab_key, 0)
+            if delta <= 0:
+                continue
+            try:
+                raw_base = int(base_scores.get(ab_key, 10))
+            except (TypeError, ValueError):
+                raw_base = 10
+            applied = asi_mod.clamped_delta(ab_key, delta, {ab_key: raw_base + species_bonuses.get(ab_key, 0)})
+            if applied < delta:
+                background_bonuses[ab_key] = applied
+                background_clamped_notes.append({
+                    "choiceId": background_ability_choice_tpl["id"],
+                    "reason": f"{bg['name']}: {ab_key} is already at maximum ({asi_mod.ASI_CAP}) "
+                              f"and the increase was ignored."})
 
     # Slice 8a: feats a species grants (Human/XPHB's Origin feat, Variant
     # Human's and Custom Lineage's free feat). Resolved BEFORE the ASI walk
@@ -5228,7 +5249,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         for choice_id, selected in all_selections.items()
         if selected and choice_id not in current_template_ids
     ]
-    pruned += fixed_clamped_notes
+    pruned += background_clamped_notes + fixed_clamped_notes
     # A stored feat pick at an ASI slot that is not among that slot's options
     # (structurally ineligible there, e.g. an Epic Boon below level 19) is
     # ignored; say so instead of leaving the card silently pending.

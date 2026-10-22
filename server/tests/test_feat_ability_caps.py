@@ -11,7 +11,7 @@ Rule matrix (what applies) x number x source:
   where the feat sits   ASI slot (the per-level walk skips a delta that does not fit), background / species grant
                         (no per-level gate: the delta is clamped, B2), Custom Lineage and Variant Human half-feats
   what the cap touches  the feat's OWN delta only. ASI combos stay capped at 20 (even for a character holding a
-                        Boon); species and background ability bonuses are not feats and are not clamped.
+                        Boon); species and background ability bonuses are not feats and are not clamped here (RP1 clamps the 2024 background step).
   option state          an option whose ability is at the feat's cap is disabled "already at maximum (N)"
                         (B9), reading the level's running scores (ASI) or the pre-feat scores (origin); a stored
                         pick of such an option is dropped through the generic pass with a `pruned` entry
