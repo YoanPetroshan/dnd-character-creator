@@ -182,6 +182,9 @@ _EXPECT = {
     "wizard5-2024": {"resources": ["Arcane Recovery"], "spellbook": True},
     "bard10-2014": {},  # RP16: SRD Magical Secrets picks (Fireball, Sacred Flame) in the known list
     "bard6-lore-2014": {},  # RPX1: SRD Lore Bard 6, Bonus Proficiencies and Additional Magical Secrets picks
+    # RP22: Wizard 18 under 2014 (Spell Mastery, no Signature Spell) and the SRD Lore Bard 6 under mixed
+    "wizard18-2014": {"resources": ["Arcane Recovery"], "spellbook": True, "spell_mastery": 2, "feature_choice": "Web"},
+    "bard6-lore-mixed": {"feature_choice": "Fireball"},
     "psi-warrior11": {"resources": ["Psionic Energy Dice"], "apa": 3},
     "totem-bear6": {"resources": ["Rage"], "feature_choice": "Bear"},
     "cleric1-thaumaturge-2024": {"feature_choice": "Thaumaturge"},
@@ -204,6 +207,16 @@ _EXPECT = {
                       "bg_items": ["Arrow", "Dice Set", "Quiver"]},
 }
 _EXPECT.update({
+    # RP22: the RP10..RP20 subclass stages under 2024
+    "evoker5-2024": {"resources": ["Arcane Recovery"], "spellbook": True, "feature_choice": "Thunderwave"},
+    "land-druid10-2024": {"resources": ["Wild Shape", "Natural Recovery (Circle Spell)"], "always_prepared": ["Fog Cloud", "Cone of Cold"],
+                          "feature_choice": "Polar"},
+    "cleric7-light-2024": {"resources": ["Channel Divinity", "Warding Flare", "Divine Strike"], "always_prepared": ["Daylight", "Wall of Fire"]},
+    "warlock7-goo-2024": {"resources": ["Eldritch Mind", "Clairvoyant Combatant", "Agonizing Blast"], "tome": True, "devils_sight": True,
+                          "innate": True, "always_prepared": ["Clairvoyance", "Hunger of Hadar"]},
+    "battle-master3-2024": {"resources": ["Superiority Dice"], "masteries": True, "feature_choice": "Ambush"},
+    "fey-wanderer3-2024": {"resources": ["Otherworldly Glamour"], "masteries": True, "always_prepared": ["Charm Person", "Hunter's Mark"],
+                           "feature_choice": "Deception"},
     "magic-initiate-2024": {"innate": True, "feats": ["magic-initiate-xphb"]},
     # FE12: feat effects reach every export (notes, resources, attack-row notes, feat picks)
     "feats-mixed-fighter14": {"feats": ["alert-phb", "tough-phb", "great-weapon-master-phb", "lucky-phb", "observant-phb"],
@@ -259,6 +272,8 @@ def _expected_strings(res) -> list[tuple[str, str]]:
             out.append(("spellbook heading", "Книга със заклинания"))
             out += [("spellbook", s["name"]) for s in cs["spellbook"]]
     out += [("innateSpell", e["name"]) for e in sheet["innateSpells"]]
+    for cs in sheet["spells"]:  # RP22: always-prepared rows (domain / circle / patron spells)
+        out += [("alwaysPrepared", f"{s['name']} (ниво {s['level']})") for s in cs.get("alwaysPrepared") or []]
     if derived["attacksPerAction"] > 1:
         out.append(("attacksPerAction", f"Атаки на действие: {derived['attacksPerAction']}"))
     for a in derived["attacks"]:
@@ -333,6 +348,8 @@ def test_kitchen_sink_fields_are_non_empty_as_expected(catalog, sid):
         assert sum(len(s.get("mysticArcanum") or []) for s in sheet["spells"]) == want["arcanum"]
     if want.get("spellbook"):
         assert any(s.get("spellbook") for s in sheet["spells"])
+    for name in want.get("always_prepared", []):  # RP22: subclass spells (RP17 / RP18) on the class spell card
+        assert any(name == sp["name"] for cs in sheet["spells"] for sp in cs.get("alwaysPrepared") or []), name
     if "expertise" in want:  # C6b-1
         assert len(sheet["expertiseSkills"]) == want["expertise"]
     for lang in want.get("languages", []):  # C6b-2 / C8
@@ -438,6 +455,14 @@ def test_kitchen_sink_2024_stage_lines_reach_every_export(catalog):
                            "Fireball (ниво 3)", "Counterspell (ниво 3)"]),  # RP15: the SRD picks under 2014
         ("bard10-2014", ["Fireball (ниво 3)", "Sacred Flame (ниво 0)"]),  # RP16: Magical Secrets picks in the known list
         ("bard6-lore-2014", ["Fireball (ниво 3)", "Sacred Flame (ниво 0)", "Additional Magical Secrets"]),  # RPX1: not-counted picks
+        ("wizard18-2014", ["Майсторство със заклинания", "Detect Magic (ниво 1)", "Web (ниво 2)"]),  # RP22: Spell Mastery only
+        ("bard6-lore-mixed", ["Fireball (ниво 3)", "Sacred Flame (ниво 0)", "Additional Magical Secrets", "Bonus Proficiencies"]),
+        ("evoker5-2024", ["Evocation Savant", "Thunderwave", "Scorching Ray", "Книга със заклинания"]),  # RP17
+        ("land-druid10-2024", ["Circle of the Land Spells", "Polar", "Cone of Cold (ниво 5)", "Natural Recovery (Circle Spell)"]),  # RP17 / RP11
+        ("cleric7-light-2024", ["Warding Flare", "Daylight (ниво 3)", "Divine Strike"]),  # RP11 / RP13
+        ("warlock7-goo-2024", ["Clairvoyant Combatant", "Eldritch Mind", "Hunger of Hadar (ниво 3)", "Pact of the Tome"]),  # RP11 / RP18
+        ("battle-master3-2024", ["Superiority Dice", "Ambush", "Student of War", "Alchemist's Supplies"]),  # RP13
+        ("fey-wanderer3-2024", ["Otherworldly Glamour", "Hunter's Mark (ниво 1)", "Deception"]),  # RP13 / RP12
         ("ranger9-2024", ["Elvish", "Dwarvish", "Deft Explorer"]),
         ("barbarian3-2024", ["Primal Knowledge"]),
         ("fighter4-2024", ["Javelin x8", "Fighting Style"]),

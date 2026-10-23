@@ -32,6 +32,15 @@ CONTAINERS = [
     ("sheet.feats[]", "SheetFeat"),
     ("sheet.spells[]", "SheetClassSpells"),
     ("sheet.innateSpells[]", "SheetInnateSpell"),
+    # RP22: nested containers the RP series extended (pack contents, subclass spell rows, mastery rows)
+    ("sheet.equipment", "SheetEquipment"),
+    ("sheet.equipment.granted[]", "SheetEquipmentEntry"),
+    ("sheet.equipment.chosen[]", "SheetEquipmentEntry"),
+    ("sheet.equipment.added[]", "SheetAddedEquipmentEntry"),
+    ("sheet.weaponMasteries[]", "WeaponMastery"),
+    ("derived.carryingCapacity", "CarryingCapacity"),
+    ("sheet.spells[].alwaysPrepared[]", "SheetSpellSummary"),
+    ("sheet.spells[].spellbook[]", "SheetSpellSummary"),
 ]
 
 # interface name -> {key: why it is intentionally not typed}. Keep this list short and justified.

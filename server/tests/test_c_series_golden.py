@@ -24,7 +24,8 @@ FE12 appended the feat-holding kitchen-sink cases with ``--append`` (existing ca
 byte for byte; only the new names are added). Use ``--append`` for any later addition.
 
 REBASELINE MODE (RP6 / P0). A slice that deliberately changes mixed / 2014 output (the E11 slices and the
-RPX extras) must not use ``--regenerate``. It adds an entry to ``REBASELINES`` (append-only, empty today):
+RPX extras) must not use ``--regenerate``. It adds an entry to ``REBASELINES`` (append-only; the entries so far are
+RP7, RPF, RP15, RP16, RPX1, RPX2 and RPX3, see the constant below):
 
     REBASELINES["RP7"] = {"cases": ["mixed/*/monk*", "2014/*/monk*"],      # fnmatch over case names
                           "paths": [r"^result[.]choices[[]class:monk:1:prof-choice-1[]]"],  # regexes over paths
@@ -89,7 +90,7 @@ MULTICLASS = {
 STRIP: tuple[str, ...] = ("derived.featResources",)
 
 # RP6 / P0: append-only record of deliberate mixed / 2014 changes, see the module docstring. slice id ->
-# {"cases": [fnmatch over case names], "paths": [regexes over normalized paths], "why": one line}. Empty on purpose.
+# {"cases": [fnmatch over case names], "paths": [regexes over normalized paths], "why": one line}. Append-only; one entry per deliberate change.
 REBASELINES: dict[str, dict] = {
     # RP7 / E11c: the SRD Monk "one type of artisan's tools or one musical instrument" is now a card (the nested
     # choice is flattened), so the primary-Monk cases gain the card, the filler's first-option pick, and that tool in

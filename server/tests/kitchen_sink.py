@@ -65,6 +65,15 @@ KITCHEN_SINK: dict[str, dict] = {
     "bard6-lore-2014": _sub("bard", 6, "2014", sub="lore", marks=("classes",), overrides={
         "class:bard:3:feature:bonus-proficiencies": ["skill-arcana", "skill-history", "skill-nature"],
         "class:bard:6:feature:additional-magical-secrets": ["fireball", "sacred-flame"]}),
+    # RP22: Wizard 18 under 2014 (Spell Mastery only; Signature Spell is level 20) and the SRD Lore Bard 6 under mixed
+    # (RPX1 under another ruleset: Bonus Proficiencies and Additional Magical Secrets). New non-2024 golden cases (--append).
+    "wizard18-2014": _sub("wizard", 18, "2014", marks=("classes",), overrides={
+        "class:wizard:spellbook": ["shield", "magic-missile", "detect-magic", "web", "haste", "fireball", "counterspell", "fly"],
+        "class:wizard:spells-known": ["magic-missile", "web", "haste"],
+        "class:wizard:18:spell-mastery-1": ["detect-magic"], "class:wizard:18:spell-mastery-2": ["web"]}),
+    "bard6-lore-mixed": _sub("bard", 6, "mixed", sub="lore", marks=("classes",), overrides={
+        "class:bard:3:feature:bonus-proficiencies": ["skill-arcana", "skill-history", "skill-nature"],
+        "class:bard:6:feature:additional-magical-secrets": ["fireball", "sacred-flame"]}),
     "psi-warrior11": _sub("fighter", 11, "mixed", sub="psi-warrior-tce", marks=("classes",)),
     "totem-bear6": _sub("barbarian", 6, "mixed", sub="totem-warrior-phb", marks=("classes",), overrides={
         "class:barbarian:3:feature:totem-warrior-phb-3-totem-spirit": ["totem-warrior-phb-3-totem-spirit--bear"],
@@ -89,6 +98,20 @@ KITCHEN_SINK: dict[str, dict] = {
     "fighter4-2024": _sub("fighter", 4, "2024", marks=("classes", "official"), origin=_XPHB_ORIGIN),
     # RPF: a Magic Initiate origin feat whose dependent spell cards (stored by cid prefix, see _store) are filled
     "magic-initiate-2024": _sub("fighter", 1, "2024", marks=("classes", "official", "spells"), origin=("human-xphb", "acolyte-xphb")),
+    # RP22: the RP10..RP20 subclass stages under 2024 (Human / Soldier origin)
+    "evoker5-2024": _sub("wizard", 5, "2024", sub="evoker-xphb", marks=("classes", "official", "spells"), origin=_XPHB_ORIGIN, overrides={
+        "class:wizard:3:feature:evoker-xphb-3-evocation-savant": ["magic-missile-xphb", "thunderwave-xphb", "scorching-ray-xphb"]}),
+    "land-druid10-2024": _sub("druid", 10, "2024", sub="land-xphb", marks=("classes", "official", "spells"), origin=_XPHB_ORIGIN, overrides={
+        "class:druid:3:feature:land-xphb-3-circle-of-the-land-spells": ["land-xphb-3-circle-of-the-land-spells--polar"]}),
+    "cleric7-light-2024": _sub("cleric", 7, "2024", sub="light-xphb", marks=("classes", "official", "spells"), origin=_XPHB_ORIGIN),
+    "warlock7-goo-2024": _sub("warlock", 7, "2024", sub="great-old-one-xphb", marks=("classes", "official", "spells"), origin=_XPHB_ORIGIN, overrides={
+        "class:warlock:spells-cantrips": ["eldritch-blast-xphb", "minor-illusion-xphb", "mage-hand-xphb"],
+        _WL_INV_2024: ["opt-pact-of-the-tome-xphb", "opt-agonizing-blast-xphb", "opt-devils-sight-xphb"],
+        "class:warlock:invocation:opt-agonizing-blast-xphb:cantrip": ["eldritch-blast-xphb"]}),
+    "battle-master3-2024": _sub("fighter", 3, "2024", sub="battle-master-xphb", marks=("classes", "official"), origin=_XPHB_ORIGIN,
+                                overrides={"class:fighter:3:feature:battle-master-xphb-3-battle-master": [
+                                    "opt-ambush-xphb", "opt-bait-and-switch-xphb", "opt-commanders-strike-xphb"]}),
+    "fey-wanderer3-2024": _sub("ranger", 3, "2024", sub="fey-wanderer-xphb", marks=("classes", "official", "spells"), origin=_XPHB_ORIGIN),
     # FE12: feat-holding drafts (ASI feat picks as overrides; every feat card is filled with its first option)
     "feats-mixed-fighter14": _sub("fighter", 14, "mixed", marks=("classes", "official"), feats=True, overrides={
         "class:fighter:4:asi": ["feat:alert-phb"], "class:fighter:6:asi": ["feat:tough-phb"],
