@@ -414,9 +414,9 @@ def test_mma_duplicate_of_the_sorcerer_srd_metamagic(catalog):
 
 def test_mma_duplicate_of_the_2024_sorcerer_metamagic_by_name(catalog):
     own = {"class:sorcerer:2:feature:xphb-sorcerer-2-metamagic": ["opt-careful-spell-xphb", "opt-quickened-spell-xphb"]}
-    r = run(catalog, "sorcerer", 4, MMA, {"metamagic": ["metamagic-careful-spell"]}, ruleset="2024", class_choices=own)
+    r = run(catalog, "sorcerer", 4, MMA, {"metamagic": ["opt-careful-spell-xphb"]}, ruleset="2024", class_choices=own)  # RP20: XPHB pool
     card = _card(r, cid_of("sorcerer", 4, MMA, "metamagic"))
-    assert _opt(card, "metamagic-careful-spell")["disabled"] and card["selected"] == []
+    assert _opt(card, "opt-careful-spell-xphb")["disabled"] and card["selected"] == []
     assert _card(r, "class:sorcerer:2:feature:xphb-sorcerer-2-metamagic")["selected"] == [
         "opt-careful-spell-xphb", "opt-quickened-spell-xphb"]
 
@@ -468,7 +468,7 @@ def test_every_other_feat_site_emits_the_card(catalog, monkeypatch, site):
         prefix = card + ":alert-xphb"
     cards = [c for c in resolve(draft, catalog)["choices"] if c["id"].endswith(":maneuvers")]
     assert [c["id"] for c in cards] == [prefix + ":maneuvers"], site
-    assert cards[0]["count"] == 1 and len(cards[0]["options"]) == 23
+    assert cards[0]["count"] == 1 and len(cards[0]["options"]) == 20  # RP20: the XPHB Battle Master list under ruleset 2024
 
 
 def test_cards_carry_no_internal_flags(catalog):

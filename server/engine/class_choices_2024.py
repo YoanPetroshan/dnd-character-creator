@@ -664,9 +664,7 @@ def metamagic_templates(catalog, rc: dict, ruleset: str) -> list[dict]:
     feature = catalog.features.get(METAMAGIC_FEATURE)
     progression = optional_feature_progression(catalog, "sorcerer", "MM")
     reached = [lvl for lvl in progression if lvl <= rc["level"]]
-    options = sorted((f for f in catalog.features.values()
-                      if f.get("source") == "XPHB" and "MM" in (f.get("feature_types") or [])),
-                     key=lambda f: f["name"])
+    options = metamagic_records(catalog)
     if not feature or not reached or not options:
         return []
     return [{
@@ -676,9 +674,21 @@ def metamagic_templates(catalog, rc: dict, ruleset: str) -> list[dict]:
         "description": _join(feature.get("desc")),
         "count": progression[max(reached)],
         "count_by_level": True,
-        "options": [{"id": o["index"], "label": f"{o['name']} ({o.get('cost', 1)} SP)",
-                     **({"description": _join(o["desc"])} if o.get("desc") else {})} for o in options],
+        "options": metamagic_options(options),
     }]
+
+
+def metamagic_records(catalog) -> list[dict]:
+    """The XPHB Metamagic records (featureType MM), sorted by name."""
+    return sorted((f for f in catalog.features.values()
+                   if f.get("source") == "XPHB" and "MM" in (f.get("feature_types") or [])), key=lambda f: f["name"])
+
+
+def metamagic_options(records: list[dict]) -> list[dict]:
+    """Card options of XPHB Metamagic records, labelled with their Sorcery Point cost (shared by the Sorcerer card and,
+    RP20, Metamagic Adept's card under ruleset 2024)."""
+    return [{"id": o["index"], "label": f"{o['name']} ({o.get('cost', 1)} SP)",
+             **({"description": _join(o["desc"])} if o.get("desc") else {})} for o in records]
 
 
 def metamagic_details(catalog, choices) -> list[dict]:
@@ -1035,6 +1045,13 @@ def _invocation_unmet_2024(catalog, option_id: str, level: int, selected: set[st
         if len(eligible) < k:
             return "needs another eligible cantrip" if k > 1 else "needs an eligible cantrip"
     return None
+
+
+def invocation_unmet(catalog, option_id: str, level: int, selected: set[str], cantrips: list[str]) -> str | None:
+    """Why an XPHB invocation's prerequisites are not met (None when they are): Warlock `level`, the optional
+    features in `selected`, the damaging / attack-roll `cantrips`. RP20: Eldritch Adept's pick is checked with the
+    Warlock's own picks and cantrips (level 0 and none for a non-Warlock)."""
+    return _invocation_unmet_2024(catalog, option_id, level, selected, cantrips)
 
 
 def gate_invocations(catalog, choice: dict, level: int, cantrips: list[str],

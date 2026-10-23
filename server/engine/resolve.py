@@ -1820,7 +1820,7 @@ def _background_choice_templates(bg: dict, bg_id: str) -> list[dict]:
 
 
 def _feat_choice_templates(feats: list[dict], origin: str | None = None, items: dict | None = None,
-                           catalog: Catalog | None = None) -> list[dict]:
+                           catalog: Catalog | None = None, ruleset: str = "mixed") -> list[dict]:
     """A granted feat's own choice-shaped fields, mirrored from
     _background_choice_templates' proficiency-choice/language blocks above
     (same build_choice_template call, same cid/source/label/description
@@ -1921,7 +1921,7 @@ def _feat_choice_templates(feats: list[dict], origin: str | None = None, items: 
             tpl = build_choice_template(env, f"{cid_prefix}:save-choice-{i}", source, f"{feat['name']}: Saving Throw", description=description)
             if tpl:
                 templates.append(tpl)
-        templates += _feat_extra_templates(feat, cid_prefix, feat_level, items, catalog)  # FE7, FE8, FE9
+        templates += _feat_extra_templates(feat, cid_prefix, feat_level, items, catalog, ruleset)  # FE7, FE8, FE9, RP20
     return templates
 
 
@@ -1940,11 +1940,32 @@ _SRD_METAMAGIC_FEATURE = "metamagic-1"
 _SRD_INVOCATIONS_FEATURE = "eldritch-invocations"
 
 
-def _option_pick_options(catalog: Catalog, kind: str) -> list[dict]:
+_XPHB_BATTLE_MASTER_FEATURE = "battle-master-xphb-3-battle-master"
+
+
+def _option_pick_options(catalog: Catalog, kind: str, ruleset: str = "mixed") -> list[dict]:
     """FE9 (V5-V8): the option pool of an `option_picks` feat. Fighting style: the SRD fighter styles (the TCE styles
     are not imported); maneuver: the Battle Master (PHB) list, i.e. PHB + TCE maneuvers; metamagic: the SRD Metamagic
-    options (Seeking / Transmuted are not imported); invocation: the SRD invocations (prerequisites are enforced
-    late, by `_gate_option_picks`)."""
+    options; invocation: the SRD invocations (prerequisites are enforced late, by `_gate_feat_invocation_prereqs`).
+    RP20 (A3): under ruleset 2024 the 2024 class lists replace them ("the versions of things in this book replace
+    versions from older books"): invocation = the 28 XPHB invocations, metamagic = the 10 XPHB options (with their Sorcery
+    Point cost), maneuver = the 20 maneuvers of the XPHB Battle Master. A catalog without those records keeps the FE9
+    pool. Fighting Initiate keeps the SRD styles (no 2024 style-option records exist)."""
+    if ruleset == "2024":
+        if kind == "invocation":
+            records = class_choices_2024.invocation_records(catalog)
+            if records:
+                return [{"id": r["index"], "label": r["name"], **({"description": _join_desc(r["desc"])} if r.get("desc") else {})}
+                        for r in records]
+        elif kind == "metamagic":
+            records = class_choices_2024.metamagic_records(catalog)
+            if records:
+                return class_choices_2024.metamagic_options(records)
+        elif kind == "maneuver":
+            spec = ((catalog.features.get(_XPHB_BATTLE_MASTER_FEATURE) or {}).get("feature_specific") or {}).get("optional_progression")
+            options = _optional_feature_options(catalog, (spec or {}).get("options") or [])
+            if options:
+                return options
     if kind == "maneuver":
         spec = ((catalog.features.get(_BATTLE_MASTER_FEATURE) or {}).get("feature_specific") or {}).get("optional_progression")
         return _optional_feature_options(catalog, (spec or {}).get("options") or [])
@@ -1977,7 +1998,7 @@ def _option_pick_options(catalog: Catalog, kind: str) -> list[dict]:
 
 
 def _feat_extra_templates(feat: dict, cid_prefix: str, feat_level: int | None = None, items: dict | None = None,
-                          catalog: Catalog | None = None) -> list[dict]:
+                          catalog: Catalog | None = None, ruleset: str = "mixed") -> list[dict]:
     """FE7: the cards a feat's effect entry asks for, under the same `<prefix>:<kind>` cids as its other
     cascaded cards (so the feat-kind merge sites and the page filters route them without change). Called for every
     feat instance by `_feat_choice_templates`, i.e. at all five sites (background, species, Fighting Style,
@@ -2023,7 +2044,7 @@ def _feat_extra_templates(feat: dict, cid_prefix: str, feat_level: int | None = 
                               [{"id": o["id"], "label": o["label"]} for o in spec["options"]]))
     spec = effect.get("option_picks")
     if spec and catalog is not None:
-        options = _option_pick_options(catalog, spec["kind"])
+        options = _option_pick_options(catalog, spec["kind"], ruleset)
         if options:
             n = spec["count"]
             suffix, label, text = _OPTION_PICK_CARDS[spec["kind"]]
@@ -2491,12 +2512,22 @@ def _gate_feat_invocation_prereqs(choices: list[dict], resolved_classes: list[di
             pacts |= {m.group(0)[len("opt-"):-len("-xphb")] for sel in o["selected"]
                       if (m := re.match(r"^opt-pact-of-the-(?:blade|chain|tome)-xphb", sel))}
     cantrips = {sel for o in choices if o["id"] == "class:warlock:spells-cantrips" for sel in o["selected"]}
+    # RP20: the XPHB records carry `prerequisite_2024` (Warlock level, optional feature, damaging / attack cantrip);
+    # the Warlock's own picks (Pacts included) and cantrips (+ Pact of the Tome cantrips) are what the feat's pick is
+    # checked against, a non-Warlock has level 0 and none of them
+    held_2024 = [sel for o in choices if class_choices_2024.is_invocation_card_2024(o) for sel in o["selected"]]
+    cantrips_2024 = sorted(cantrips) + class_choices_2024.tome_picks(choices)["cantrips"]
     pruned = []
     for i in cards:
         c = choices[i]
         unmet, options = {}, []
         for o in c["options"]:
-            reason = None if o.get("disabled") else _invocation_unmet(catalog.features.get(o["id"]) or {}, level, pacts, cantrips)
+            if o.get("disabled"):
+                reason = None
+            elif o["id"].startswith("opt-") and o["id"].endswith("-xphb"):
+                reason = class_choices_2024.invocation_unmet(catalog, o["id"], level, set(held_2024), cantrips_2024)
+            else:
+                reason = _invocation_unmet(catalog.features.get(o["id"]) or {}, level, pacts, cantrips)
             if reason:
                 unmet[o["id"]] = o["label"]
                 o = {**o, "disabled": True, "disabledReason": reason}
@@ -5379,14 +5410,14 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             use_feat_prereqs, held, lessons_resolver.taken_by_cid, lessons_resolver.picked)
         for lessons_feat in lessons_feats:  # the Origin feat's own choices under its origin
             if lessons_feat["_asi_origin"].startswith(f"class:{rc_cls_id}:"):
-                choice_templates += _feat_choice_templates([lessons_feat], origin=lessons_feat["_asi_origin"], items=catalog.items, catalog=catalog)
+                choice_templates += _feat_choice_templates([lessons_feat], origin=lessons_feat["_asi_origin"], items=catalog.items, catalog=catalog, ruleset=ruleset)
                 choice_templates += _feat_spell_choice_templates(
                     [lessons_feat], catalog, origin=lessons_feat["_asi_origin"], raw_selections=rc_class_choices,
                     total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
                 )
         for fs_feat in fs_feats:  # cascaded choices (Blessed / Druidic Warrior cantrips) under the pick's origin
             if fs_feat["_asi_origin"].startswith(f"class:{rc_cls_id}:"):
-                choice_templates += _feat_choice_templates([fs_feat], origin=fs_feat["_asi_origin"], items=catalog.items, catalog=catalog)
+                choice_templates += _feat_choice_templates([fs_feat], origin=fs_feat["_asi_origin"], items=catalog.items, catalog=catalog, ruleset=ruleset)
                 choice_templates += _feat_spell_choice_templates(
                     [fs_feat], catalog, origin=fs_feat["_asi_origin"], raw_selections=rc_class_choices,
                     total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
@@ -5412,7 +5443,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             if asi_feat["_asi_cid"] in rc_blocked_feat_cids:
                 continue
             if asi_feat["_asi_origin"].startswith(f"class:{rc_cls_id}:"):
-                choice_templates += _feat_choice_templates([asi_feat], origin=asi_feat["_asi_origin"], items=catalog.items, catalog=catalog)
+                choice_templates += _feat_choice_templates([asi_feat], origin=asi_feat["_asi_origin"], items=catalog.items, catalog=catalog, ruleset=ruleset)
                 choice_templates += _feat_spell_choice_templates(
                     [asi_feat], catalog, origin=asi_feat["_asi_origin"], raw_selections=rc_class_choices,
                     total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
@@ -5585,7 +5616,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         variant_hints=(bg.get("feat_variant_hints") if bg else None) or {},
         total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
     )
-    choice_templates += _feat_choice_templates(background_feats, items=catalog.items, catalog=catalog)  # ASI-selected feats' templates: built origin-scoped in the per-class loop
+    choice_templates += _feat_choice_templates(background_feats, items=catalog.items, catalog=catalog, ruleset=ruleset)  # ASI-selected feats' templates: built origin-scoped in the per-class loop
     # Phase 4c-ii Task 2: `feat_ability_choice_tpls` was already built (and
     # applied to `feat_bonuses`) EARLY, in the "Final ability scores"
     # section above — appended here, unconditionally, mirroring exactly how
@@ -5597,7 +5628,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choice_templates.append(species_tpl)
     for species_feat in species_feats:
         origin = species_feat["_species_origin"]
-        choice_templates += _feat_choice_templates([species_feat], origin=origin, items=catalog.items, catalog=catalog)
+        choice_templates += _feat_choice_templates([species_feat], origin=origin, items=catalog.items, catalog=catalog, ruleset=ruleset)
         choice_templates += _feat_spell_choice_templates(
             [species_feat], catalog, origin=origin, raw_selections=species_choices_raw, total_level=total_level,
             sources=draft.get("sources"), ruleset=ruleset,
