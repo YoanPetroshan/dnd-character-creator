@@ -153,6 +153,29 @@ REBASELINES: dict[str, dict] = {
         ],
         "why": "SRD Bard Magical Secrets (E11a)",
     },
+    # RPX1 / Extra 1: the SRD College of Lore (the golden's first SRD Bard subclass, Bard 3 / 11 / 20): Bard 3 Bonus
+    # Proficiencies (3 skills, a card at the RP12 position) and Bard 6 Additional Magical Secrets (2 spells of any
+    # class, not counted in Spells Known). Cases: the Bard 3 / 11 / 20 cases; the multiclass Bard 2 has no subclass and
+    # the Bard 10 kitchen sink holds no Lore. Rule matrix: the two new cards (reported once at their roots) and the
+    # filler's picks in the draft; the picked skills in sheet.proficiencies.skills, their derived.skills modifiers;
+    # the Bard 3 / 10 Expertise cards' options (a Lore skill is proficient, so eligible for Expertise); the Cantrips / Spells Known cards' options (a spell picked as an Additional Magical Secret is
+    # disabled there); sheet.spells[bard].known (the two picks); the two Lore rows' picked names in sheet.features.
+    # Stored picks of existing cards, counts and every other card stay as they are.
+    "RPX1": {
+        "cases": ["*/src-*/bard3", "*/src-*/bard11", "*/src-*/bard20"],
+        "paths": [
+            r"^result\.choices\[class:bard:3:feature:bonus-proficiencies\]$",
+            r"^result\.choices\[class:bard:6:feature:additional-magical-secrets\]$",
+            r"^draft\.classes\[0\]\.choices\.class:bard:(3:feature:bonus-proficiencies|6:feature:additional-magical-secrets)$",
+            r"^result\.sheet\.proficiencies\.skills$",
+            r"^result\.derived\.skills\.skill-[a-z-]+$",
+            r"^result\.choices\[class:bard:(3|10):expertise-choice:bard-expertise-[12]\]\.options\[skill-[a-z-]+\]\.(disabled|disabledReason)$",
+            r"^result\.choices\[class:bard:spells-(cantrips|known)\]\.options\[[^\]]+\]\.(disabled|disabledReason)$",
+            r"^result\.sheet\.spells\[\d+\]\.known\[[^\]]+\]$",              # the two picks, one path each
+            r"^result\.sheet\.features\[\d+\]\.choice$",
+        ],
+        "why": "SRD Lore Bard Bonus Proficiencies and Additional Magical Secrets (Extra 1)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -505,7 +528,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16") and STRIP == ("derived.featResources",)
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1") and STRIP == ("derived.featResources",)
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
@@ -562,6 +585,32 @@ def test_rp16_cases_are_the_bard_11_and_20_cases_and_hold_the_magical_secrets_op
         known = next(e for e in res["sheet"]["spells"] if e["classId"] == "bard")["known"]
         assert {"fireball", "sacred-flame"} <= {s["id"] for s in known}, n
         assert not [p for p in res["pruned"] if p["choiceId"] == "class:bard:spells-known"], n
+
+
+def test_rpx1_cases_are_the_lore_bard_3_11_20_cases_and_hold_the_lore_picks():
+    hit = sorted(n for n in _GOLDEN if any(fnmatch.fnmatchcase(n, p) for p in REBASELINES["RPX1"]["cases"]))
+    assert len(hit) == 12 and all(n.endswith(("/bard3", "/bard11", "/bard20")) for n in hit)
+    for n in hit:
+        res = _GOLDEN[n]["result"]
+        bonus = next(c for c in res["choices"] if c["id"] == "class:bard:3:feature:bonus-proficiencies")
+        assert bonus["count"] == 3 and len(bonus["selected"]) == 3 and bonus["status"] == "resolved", n
+        assert set(bonus["selected"]) <= set(res["sheet"]["proficiencies"]["skills"]), n
+        secrets = next((c for c in res["choices"] if c["id"] == "class:bard:6:feature:additional-magical-secrets"), None)
+        if n.endswith("/bard3"):
+            assert secrets is None, n
+            continue
+        known = next(c for c in res["choices"] if c["id"] == "class:bard:spells-known")
+        assert secrets["count"] == 2 and len(secrets["selected"]) == 2 and not set(secrets["selected"]) & set(known["selected"]), n
+        sheet_known = {s["id"] for s in next(e for e in res["sheet"]["spells"] if e["classId"] == "bard")["known"]}
+        assert set(secrets["selected"]) <= sheet_known and len(sheet_known) == known["count"] + 2, n
+        assert not [p for p in res["pruned"] if p["choiceId"] in (secrets["id"], bonus["id"])], n
+    for n in ("ks/src-all/bard6-lore-2014", "ks/src-srd/bard6-lore-2014"):  # appended kitchen sink with real picks
+        res = _GOLDEN[n]["result"]
+        skills = set(res["sheet"]["proficiencies"]["skills"])
+        assert {"skill-arcana", "skill-history", "skill-nature"} <= skills, n
+        known = next(e for e in res["sheet"]["spells"] if e["classId"] == "bard")["known"]
+        assert {"fireball", "sacred-flame"} <= {s["id"] for s in known}, n
+        assert not res["pruned"] or not [p for p in res["pruned"] if "bonus" in p["choiceId"] or "secrets" in p["choiceId"]], n
 
 
 def test_keyed_normalization_and_diff_paths():

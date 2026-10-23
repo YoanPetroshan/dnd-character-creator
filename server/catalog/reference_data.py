@@ -1887,6 +1887,25 @@ SUBCLASS_PICKS_2024: tuple[dict, ...] = (
 
 
 
+# RPX1 (Extra 1): the SRD College of Lore under mixed / 2014 (every ruleset but 2024). Same shape as
+# SUBCLASS_PICKS_2024 (the RP12 positioned proficiency gate and card builder are shared); `feature` is the SRD
+# feature record (`bonus-proficiencies`, Bard 3) and `quote` a verbatim part of its text (pinned by tests).
+SUBCLASS_PICKS_2014: tuple[dict, ...] = (
+    {"subclass": "lore", "class": "bard", "feature": "bonus-proficiencies",
+     "kind": "skills", "pool": "any", "count": 3, "cid": "feature", "label": "Bonus Proficiencies",
+     "quote": "you gain proficiency with three skills of your choice."},
+)
+
+# RPX1: SRD Lore Bard 6 Additional Magical Secrets ("you learn two spells of your choice from any class ... but don't
+# count against the number of bard spells you know"). One card `class:bard:<feature level>:feature:<feature id>`,
+# spells of any class list (cantrips included) of a level the Bard table can cast; the picks do not use Spells Known.
+ADDITIONAL_SECRETS_2014: dict = {
+    "subclass": "lore", "class": "bard", "feature": "additional-magical-secrets", "count": 2,
+    "label": "Additional Magical Secrets",
+    "quote": "you learn two spells of your choice from any class.",
+}
+
+
 # RP13 (F2, E13): editable build-time option cards of XPHB subclass features (ruleset 2024 only), keyed by the
 # imported XPHB feature record id. Card cid `class:<cls>:<lvl>:feature:<feature id>` (level from the record), option
 # ids `<feature id>--<option key>`, count 1, required. The option list is read from the record text: `quotes` are

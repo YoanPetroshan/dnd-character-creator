@@ -60,6 +60,11 @@ KITCHEN_SINK: dict[str, dict] = {
         "class:bard:spells-known": ["cure-wounds", "healing-word", "heroism", "dissonant-whispers", "hold-person",
                                     "invisibility", "suggestion", "hypnotic-pattern", "dimension-door", "polymorph",
                                     "greater-invisibility", "hold-monster", "fireball", "sacred-flame"]}),
+    # RPX1 (Extra 1): SRD Lore Bard 6, Bonus Proficiencies (3 skills) and Additional Magical Secrets (Fireball and the
+    # Cleric cantrip Sacred Flame, outside the 9 known spells)
+    "bard6-lore-2014": _sub("bard", 6, "2014", sub="lore", marks=("classes",), overrides={
+        "class:bard:3:feature:bonus-proficiencies": ["skill-arcana", "skill-history", "skill-nature"],
+        "class:bard:6:feature:additional-magical-secrets": ["fireball", "sacred-flame"]}),
     "psi-warrior11": _sub("fighter", 11, "mixed", sub="psi-warrior-tce", marks=("classes",)),
     "totem-bear6": _sub("barbarian", 6, "mixed", sub="totem-warrior-phb", marks=("classes",), overrides={
         "class:barbarian:3:feature:totem-warrior-phb-3-totem-spirit": ["totem-warrior-phb-3-totem-spirit--bear"],

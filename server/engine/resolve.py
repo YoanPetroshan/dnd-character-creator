@@ -3929,6 +3929,42 @@ def _magical_secrets_options(catalog: Catalog, cls_id: str, max_level: int, sour
     return [{"option_type": "reference", "item": {"index": s["index"], "name": s["name"]}} for s in matches]
 
 
+def _additional_secrets_options(catalog: Catalog, max_level: int, sources=None, ruleset: str = "mixed", keep=()) -> list[dict]:
+    """RPX1 (SRD Lore Bard 6 Additional Magical Secrets): every spell of level 0 .. `max_level` that sits on some class
+    list ("two spells of your choice from any class", the Bard's own included). A spell on no class list is not
+    "from a class"."""
+    matches = [
+        s for s in catalog.spells.values()
+        if s["level"] <= max_level and s.get("classes") and (s["index"] in keep or _spell_visible(catalog, s, sources, ruleset))
+    ]
+    matches.sort(key=lambda s: (s["level"], s["name"]))
+    return [{"option_type": "reference", "item": {"index": s["index"], "name": s["name"]}} for s in matches]
+
+
+def _additional_secrets_templates(catalog: Catalog, rc: dict, spellcasting: dict, sources, ruleset: str, stored) -> list[dict]:
+    """RPX1: the Lore Bard's Additional Magical Secrets card (mixed / 2014): count 2, spells of any class of a level the
+    BARD table can cast (`spellcasting` is the Bard's own level row) and cantrips. The picks are not counted against
+    Spells Known and not part of the RP16 cap; `class_choices_2024.gate_additional_secrets` keeps them apart from the
+    Bard's other spell cards. A stored pick hidden by `sources` stays offered."""
+    if not class_choices_2024.additional_secrets_applies(catalog, rc, ruleset):
+        return []
+    spec = reference_data.ADDITIONAL_SECRETS_2014
+    feature = catalog.features[spec["feature"]]
+    kept = {x for x in stored if isinstance(x, str)} if isinstance(stored, list) else set()
+    cid = class_choices_2024.additional_secrets_cid(catalog)
+    envelope = {"choose": spec["count"], "from": {
+        "option_set_type": "options_array",
+        "options": _additional_secrets_options(catalog, _highest_spell_slot_level(spellcasting), sources, ruleset, kept)}}
+    source = {"kind": "class", "id": rc["cls_id"], "label": rc["cls"]["name"], "level": feature.get("level") or 6}
+    description = (" ".join(feature.get("desc") or [])
+                   + " These picks do not count against the number of spells you know.")
+    tpl = build_choice_template(envelope, cid, source, spec["label"], description=description.strip())
+    if tpl is None:
+        return []
+    _tag_spell_level_groups(catalog, tpl)
+    return [tpl]
+
+
 def _apply_secrets_cap(catalog: Catalog, tpl: dict, cls_id: str, cap: int, stored) -> None:
     """RP16: at most `cap` of the known spells may be off the class's own list (2 per Magical Secrets feature
     reached). Walks the stored picks in order like the generic pass (valid, deduplicated, first `count`); an
@@ -3993,6 +4029,8 @@ def _is_count_variable_choice(tpl: dict) -> bool:
         return True  # Eldritch Invocations known follow the warlock level table
     if tpl["source"]["kind"] == "class" and tpl["id"].startswith(class_choices_2024.DEPENDENT_PREFIX):
         return True  # C7c: invocation dependents (targets, Tome, pact weapon, Lessons feat) follow the spell cards / inventory
+    if class_choices_2024.is_additional_secrets_card(tpl):
+        return True  # RPX1: the offered spell levels follow the Bard table (and the sources filter)
     # C6d: Spell Mastery / Signature Spells picks follow the spellbook and the class level
     return tpl["source"]["kind"] == "class" and tpl["id"].endswith(
         (":spells-cantrips", ":spells-known", ":spellbook", ":spell-mastery-1", ":spell-mastery-2", ":signature-spells"))
@@ -5420,6 +5458,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             )
             class_choices_2024.label_magical_secrets(catalog, spell_templates, rc_cls_id, rc_level, ruleset)
             choice_templates += spell_templates
+            choice_templates += _additional_secrets_templates(  # RPX1: SRD Lore Bard 6
+                catalog, rc, spell_dict, draft.get("sources"), ruleset, rc["class_choices"].get(class_choices_2024.additional_secrets_cid(catalog)))
             if rc_cls_id == "warlock":  # C7c: target cantrips, Pact of the Tome, pact weapon
                 kept_tome = {x for cid_ in (class_choices_2024.dependent_cid(class_choices_2024.TOME_ID, k) for k in ("cantrips", "rituals"))
                              for x in (rc["class_choices"].get(cid_) if isinstance(rc["class_choices"].get(cid_), list) else [])
@@ -5788,7 +5828,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             "classId": rc_cls_id,
             **({"mysticArcanum": arcanum} if rc_cls_id == "warlock" else {}),
             "cantrips": _spell_summaries(rc_cantrip_choice),
-            "known": _spell_summaries(rc_known_spells_choice),
+            "known": _spell_summaries(rc_known_spells_choice) + (  # RPX1: Additional Magical Secrets (not counted in Spells Known)
+                _spell_summaries(next((c for c in choices if class_choices_2024.is_additional_secrets_card(c)), None))
+                if rc_cls_id == "bard" else []),
             **({"spellbook": _spell_summaries(next((c for c in choices if c["id"] == "class:wizard:spellbook"), None))}
                if rc_cls_id == "wizard" else {}),
             **wizard_pick_keys,
@@ -5843,6 +5885,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     warnings += gear.warnings
     pruned += gear.pruned
 
+    pruned += class_choices_2024.gate_additional_secrets(choices, catalog)  # RPX1: SRD Lore Bard 6, apart from the other spell cards
     # Derived stats.
     pruned += _gate_duplicate_skill_picks(choices, [rc["cls_id"] for rc in resolved_classes if rc["cls"]])  # RPF
     proficient_skills: set[str] = set()

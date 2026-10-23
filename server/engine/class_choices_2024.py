@@ -12,7 +12,7 @@ from engine import subclass_options_2024
 from catalog.reference_data import (
     FEAT_LANGUAGE_REPLACEMENT,
     CLASS_LANGUAGES_2024, CLASS_OPTION_CHOICES_2024, EXPERTISE_2024, INVOCATION_EFFECTS, INVOCATION_EFFECTS_2024, LANGUAGES_2024_RARE, LANGUAGES_2024_STANDARD, PRIMAL_KNOWLEDGE_2024,
-    SKILL_NAMES, SRD_CARDS_REPLACED_2024, SUBCLASS_PICKS_2024, TOOLS,
+    ADDITIONAL_SECRETS_2014, SKILL_NAMES, SRD_CARDS_REPLACED_2024, SUBCLASS_PICKS_2014, SUBCLASS_PICKS_2024, TOOLS,
 )
 
 
@@ -491,8 +491,14 @@ def pick_spec_for_card(c: dict) -> dict | None:
     m = _PICK_CID_RE.match(c["id"])
     if not m:
         return None
-    return next((spec for spec in SUBCLASS_PICKS_2024
+    return next((spec for spec in SUBCLASS_PICKS_2024 + SUBCLASS_PICKS_2014  # RPX1: the SRD Lore pick (other feature ids)
                  if spec["class"] == m.group(1) and spec["cid"] == m.group(2) and spec["feature"] == m.group(3)), None)
+
+
+def _is_srd_pick_card(c: dict) -> bool:
+    """RPX1: a card built from `SUBCLASS_PICKS_2014` (the SRD Lore pick), not an XPHB one."""
+    spec = pick_spec_for_card(c)
+    return spec is not None and spec in SUBCLASS_PICKS_2014
 
 
 def is_positioned_proficiency_card(c: dict) -> bool:
@@ -527,15 +533,16 @@ def _pick_options(catalog, spec: dict) -> list[dict]:
 
 
 def subclass_pick_templates(catalog, rc: dict, ruleset: str) -> list[dict]:
-    """RP12: the proficiency pick cards of the class's selected XPHB subclass (`SUBCLASS_PICKS_2024`), ruleset 2024
-    only. A card needs its XPHB feature record and the class level at that record's level, so an SRD-only catalog,
+    """RP12: the proficiency pick cards of the class's selected XPHB subclass (`SUBCLASS_PICKS_2024`), ruleset 2024;
+    RPX1: under mixed / 2014 the SRD ones (`SUBCLASS_PICKS_2014`). A card needs its XPHB feature record and the class level at that record's level, so an SRD-only catalog,
     a missing subclass or a 2014 twin gives nothing. The Iron Mind card is always built here; resolve() removes it
     when the Wisdom save is not yet proficient at its position (the feature then grants Wisdom outright)."""
     sub_id, cls_id = rc.get("subclass_id"), rc.get("cls_id")
-    if ruleset != "2024" or not sub_id or not rc.get("cls"):
+    if not sub_id or not rc.get("cls"):
         return []
+    # RPX1: outside 2024 the SRD subclass picks (SUBCLASS_PICKS_2014, Lore Bonus Proficiencies) take the place of the XPHB ones
     out = []
-    for spec in SUBCLASS_PICKS_2024:
+    for spec in (SUBCLASS_PICKS_2024 if ruleset == "2024" else SUBCLASS_PICKS_2014):
         if spec["subclass"] != sub_id or spec["class"] != cls_id:
             continue
         feature = catalog.features.get(spec["feature"])
@@ -554,6 +561,59 @@ def subclass_pick_templates(catalog, rc: dict, ruleset: str) -> list[dict]:
             "options": options,
         })
     return out
+
+
+# ---- RPX1: SRD Lore Bard 6 Additional Magical Secrets (mixed / 2014) -------------------------------------------------
+
+def additional_secrets_cid(catalog=None) -> str:
+    spec = ADDITIONAL_SECRETS_2014
+    level = ((catalog.features.get(spec["feature"]) or {}).get("level") if catalog is not None else None) or 6
+    return f"class:{spec['class']}:{level}:feature:{spec['feature']}"
+
+
+def is_additional_secrets_card(c: dict) -> bool:
+    spec = ADDITIONAL_SECRETS_2014
+    return (c["source"]["kind"] == "class" and c["id"].startswith(f"class:{spec['class']}:")
+            and c["id"].endswith(f":feature:{spec['feature']}"))
+
+
+def additional_secrets_applies(catalog, rc: dict, ruleset: str) -> bool:
+    """The Lore Bard (SRD subclass) at or above the feature's level, ruleset mixed / 2014, with the feature record."""
+    spec = ADDITIONAL_SECRETS_2014
+    feature = catalog.features.get(spec["feature"])
+    return bool(ruleset != "2024" and feature and rc.get("cls_id") == spec["class"] and rc.get("cls")
+                and rc.get("subclass_id") == spec["subclass"] and rc["level"] >= (feature.get("level") or 1))
+
+
+def gate_additional_secrets(choices: list[dict], catalog) -> list[dict]:
+    """RPX1: the Additional Magical Secrets picks may not repeat a spell of the Bard's Cantrips / Spells Known cards
+    (the earlier cards win). Options held there are disabled "already known" and a stored duplicate is dropped
+    with a non-blocking `pruned` entry; then the spells kept here are disabled on those two cards ("Additional Magical
+    Secrets"). The picks do not use Spells Known slots and are not part of the RP16 cap. Returns the pruned entries."""
+    spec = ADDITIONAL_SECRETS_2014
+    secrets = next((i for i, c in enumerate(choices) if is_additional_secrets_card(c)), None)
+    if secrets is None:
+        return []
+    others = [i for i, c in enumerate(choices) if c["source"]["kind"] == "class" and c["id"] in (
+        f"class:{spec['class']}:spells-cantrips", f"class:{spec['class']}:spells-known")]
+    held = {s for i in others for s in choices[i]["selected"]}
+    c = choices[secrets]
+    pruned: list[dict] = []
+    options = [o if o.get("disabled") or o["id"] not in held else {**o, "disabled": True, "disabledReason": "already known"}
+               for o in c["options"]]
+    kept = [s for s in c["selected"] if s not in held]
+    dropped = [s for s in c["selected"] if s in held]
+    if dropped:
+        names = ", ".join((catalog.spells.get(d) or {}).get("name", d) for d in dropped)
+        pruned.append({"choiceId": c["id"], "reason": f"'{c['label']}': {names} is already known on the Bard's spell cards and was ignored."})
+    choices[secrets] = {**c, "options": options, "selected": kept, "status": "resolved" if len(kept) == c["count"] else "pending"}
+    taken = set(kept)
+    for i in others:
+        o_card = choices[i]
+        opts = [o if o.get("disabled") or o["id"] not in taken
+                else {**o, "disabled": True, "disabledReason": f"chosen as {spec['label']}"} for o in o_card["options"]]
+        choices[i] = {**o_card, "options": opts}
+    return pruned
 
 
 def gate_positioned_card(choices: list[dict], card_id: str, prior: set[str]) -> list[dict]:
@@ -1319,7 +1379,9 @@ def mark_unavailable(choices: list[dict], ruleset: str) -> list[dict]:
     out = []
     for c in choices:
         in_scope = (is_new_2024_class_card(c) if ruleset == "2024"
-                    else c["source"]["kind"] == "class" and bool(_WIZARD_PICK_CARD_RE.match(c["id"])))
+                    else c["source"]["kind"] == "class" and (bool(_WIZARD_PICK_CARD_RE.match(c["id"]))
+                                                             or _is_srd_pick_card(c)  # RPX1: SRD Lore picks
+                                                             or is_additional_secrets_card(c)))
         if (c["status"] == "pending" and c["count"] > 0 and in_scope
                 and not any(not o.get("disabled") for o in c["options"])):
             reason = ("Nothing can be chosen here with the current character: " +
