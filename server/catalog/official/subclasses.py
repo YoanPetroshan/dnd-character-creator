@@ -389,6 +389,42 @@ def _subclass_spells_by_variant(raw: dict, class_id: str, is_2024: bool, resolve
     return out
 
 
+def _subclass_innate_spells(raw: dict, resolve_spell) -> list[dict]:
+    """RP18: the `innate` part of an XPHB subclass's single `additionalSpells` block as one record per spell
+    {"level": class level or None ("_": every level of the feature), "spell": catalog id, "kind", "uses", "ability",
+    "resource"}. kind "ritual" (`{"ritual": [...]}`), "daily" (`{"daily": {"1" | "cha": [...]}}`, uses = the key),
+    "resource" (`{"resource": {"1": [...]}}`, resource = the block's `resourceName`) or "plain" (a bare list); `ability`
+    is the block's upper-cased `ability`. What a record MEANS (free cast, always prepared, the use rule) is
+    `reference_data.SUBCLASS_INNATE_2024`; an unresolvable spell is dropped."""
+    blocks = raw.get("additionalSpells") or []
+    if len(blocks) != 1 or not isinstance(blocks[0], dict) or not isinstance(blocks[0].get("innate"), dict):
+        return []
+    block = blocks[0]
+    ability = str(block["ability"]).upper() if isinstance(block.get("ability"), str) else None
+    out: list[dict] = []
+
+    def add(level, names, kind, uses=None):
+        for name in names if isinstance(names, list) else []:
+            if not isinstance(name, str):
+                continue
+            base = slug(_clean_spell_name(name))
+            spell_id = resolve_spell(base + "-xphb") or resolve_spell(base)
+            if spell_id:
+                out.append({"level": level, "spell": spell_id, "kind": kind, "uses": uses, "ability": ability,
+                            "resource": block.get("resourceName") if kind == "resource" else None})
+
+    for level_key, value in block["innate"].items():
+        level = int(level_key) if str(level_key).isdigit() else None
+        if isinstance(value, list):
+            add(level, value, "plain")
+        elif isinstance(value, dict):
+            add(level, value.get("ritual"), "ritual")
+            for kind in ("daily", "resource"):
+                for uses, names in (value.get(kind) or {}).items():
+                    add(level, names, kind, str(uses))
+    return sorted(out, key=lambda e: (e["level"] if e["level"] is not None else 0))
+
+
 def unresolved_spell_refs(raw_subs, resolve_spell) -> list[str]:
     """Spell names the converter would drop because the catalog has no such
     spell, over every in-scope non-SRD subclass (empty on real data)."""
@@ -647,6 +683,9 @@ def convert_subclasses(raw_subs, raw_feats, srd_subclass_ids, resolve_spell, raw
             by_variant = _subclass_spells_by_variant(raw, cls_ref["index"], True, resolve_spell)
             if by_variant:
                 record["spells_by_variant"] = by_variant
+            innate = _subclass_innate_spells(raw, resolve_spell) if raw.get("source") == "XPHB" else []  # RP18
+            if innate:
+                record["innate_spells"] = innate
         third = _third_caster_block(raw)
         if third:
             record["spellcasting"] = third

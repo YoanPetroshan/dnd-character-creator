@@ -67,6 +67,7 @@ from . import asi as asi_mod
 from . import attacks as attacks_mod
 from . import class_choices_2024
 from . import subclass_options_2024
+from . import subclass_innate_2024
 from . import subclass_spells_2024
 from . import class_resources as class_resources_mod
 from . import derived as derived_mod
@@ -2602,7 +2603,7 @@ def _gate_duplicate_picks(choices: list[dict], catalog: Catalog, class_order: li
 
 
 def _subclass_spell_ids(catalog: Catalog, cls_id: str, subclass_id: str | None, class_level: int,
-                        feature_ids: set[str], mode: str, variant: str | None = None) -> list[str]:
+                        feature_ids: set[str], mode: str, variant: str | None = None, ruleset: str = "mixed") -> list[str]:
     """Spells from the subclass's `spells` list whose prerequisites (class
     level, and for Circle of the Land the chosen terrain feature) are met,
     for entries behaving as `mode` ("always" prepared / "expanded" list). An
@@ -2631,6 +2632,8 @@ def _subclass_spell_ids(catalog: Catalog, cls_id: str, subclass_id: str | None, 
                 ok = False
         if ok:
             out.append(spell_id)
+    if mode == "always" and ruleset == "2024":  # RP18: the "prepared" innate entries (Great Old One Eldritch Hex)
+        out += [sid for sid in subclass_innate_2024.prepared_spell_ids(catalog, sub_record, cls_id, class_level) if sid not in out]
     return out
 
 
@@ -5473,7 +5476,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             ]
             land_variant = subclass_options_2024.picked_variant(catalog, rc, rc["class_choices"])  # RP17 Circle of the Land
             sub_always = {sid: f"{sub_name}" for sid in
-                          _subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc_level, raw_feature_ids, "always", land_variant)}
+                          _subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc_level, raw_feature_ids, "always", land_variant, ruleset)}
             options_fn = lambda flt, keep: _spell_filter_options(catalog, flt, draft.get("sources"), ruleset, keep)  # noqa: E731
             if subclass_spells_2024.improved_illusions_applies(catalog, rc, ruleset):
                 # RP17: a Minor Illusion pick on the Cantrips card is allowed (Improved Illusions then adds a cantrip);
@@ -5509,7 +5512,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                              for x in (rc["class_choices"].get(cid_) if isinstance(rc["class_choices"].get(cid_), list) else [])
                              if isinstance(x, str)}
                 owned_spells = set(class_always) | set(
-                    _subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc_level, raw_feature_ids, "always"))
+                    _subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc_level, raw_feature_ids, "always", ruleset=ruleset))
                 choice_templates += class_choices_2024.invocation_dependent_templates(
                     catalog, rc, ruleset, spell_templates,
                     lambda flt: _spell_filter_options(catalog, flt, draft.get("sources"), ruleset, kept_tome), owned_spells)
@@ -5853,7 +5856,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc_known_spells_choice = next((c for c in choices if c["id"] == f"class:{rc_cls_id}:spells-known"), None)
         feature_ids = {idx for cid_, lvl_, idx in _class_feature_list(catalog, [rc], choices)}
         always_ids = _subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc["level"], feature_ids, "always",
-                                         subclass_options_2024.picked_variant(catalog, rc, selections_now))
+                                         subclass_options_2024.picked_variant(catalog, rc, selections_now), ruleset)
         if ruleset == "2024" and subclass_spells_2024.improved_illusions_applies(catalog, rc, ruleset):
             # RP17: Minor Illusion known elsewhere (the Improved Illusions card exists) is not listed twice
             known_elsewhere = any((found := subclass_spells_2024.spec_for_card(c)) and found[1]["kind"] == "cantrip"
@@ -6426,7 +6429,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                      + _feat_innate_spells(resolved_feats, catalog, choices, feat_effects_mod.innate_patches(feat_inst, feat_numbers))
                      + [{**_innate_entry_to_sheet(e, catalog), "source": e["source_label"],
                          **({"note": e["note"]} if e.get("note") else {})}
-                        for e in features_mod.invocation_innate_entries(invocation_effects)])
+                        for e in features_mod.invocation_innate_entries(invocation_effects)]
+                     + [{**_innate_entry_to_sheet(e, catalog), "source": e["source_label"],  # RP18
+                         **({"note": e["note"]} if e.get("note") else {})}
+                        for e in subclass_innate_2024.innate_entries(catalog, resolved_classes, ruleset, modifiers)])
 
     refs_by_class = {
         rc["cls_id"]: _cumulative_feature_refs(catalog, rc["cls_id"], rc["subclass_id"], rc["level"])

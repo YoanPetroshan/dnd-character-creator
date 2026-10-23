@@ -2091,6 +2091,67 @@ SUBCLASS_SPELL_PICKS_2024: dict[str, dict] = {
                    "You always have the chosen spells prepared,")},
 }
 
+# RP18 (F4): innate spells of the XPHB subclasses, ruleset "2024" only. Keyed by the XPHB feature record that grants the
+# spell (its own `level` is the first class level). The catalog subclass record's `innate_spells` (converter) says which
+# spell exists at which level; this table says what the text means and carries the verbatim quotes (pinned by
+# tests/test_subclass_innate_2024.py).
+#   mode        "innate": a sheet.innateSpells entry (source = the subclass name); "prepared": the spells are always
+#               prepared (Great Old One Eldritch Hex: "You always have the Hex spell prepared." - not a free cast)
+#   spells      spell slugs without the -xphb suffix
+#   uses        the use rule as shown on the sheet; {cha_min1} = max(1, Charisma modifier)
+#   ability     the casting ability; ability_from "text" (the feature states it), "data" (the 5etools block's `ability`)
+#               or "class" (the feature says nothing: the class's spellcasting ability, checked by test)
+# The RP11 resource rows (Steps of the Fey, Mantle of Majesty, Telekinetic Master, The Third Eye) stay the trackers.
+SUBCLASS_INNATE_2024: dict[str, dict] = {
+    "wild-heart-xphb-3-animal-speaker": {
+        "class": "barbarian", "subclass": "wild-heart-xphb", "mode": "innate", "spells": ("beast-sense", "speak-with-animals"),
+        "uses": "ritual only", "ability": "WIS", "ability_from": "text", "note": None,
+        "quotes": ("You can cast the Beast Sense and Speak with Animals spells but only as Rituals. Wisdom is your "
+                   "spellcasting ability for them.",)},
+    "wild-heart-xphb-10-nature-speaker": {
+        "class": "barbarian", "subclass": "wild-heart-xphb", "mode": "innate", "spells": ("commune-with-nature",),
+        "uses": "ritual only", "ability": "WIS", "ability_from": "text", "note": None,
+        "quotes": ("You can cast the Commune with Nature spell but only as a Ritual. Wisdom is your spellcasting ability "
+                   "for it.",)},
+    "glamour-xphb-6-mantle-of-majesty": {
+        "class": "bard", "subclass": "glamour-xphb", "mode": "innate", "spells": ("command",),
+        "uses": "1/long rest", "ability": "CHA", "ability_from": "class",
+        "note": "Cast as a Bonus Action without a spell slot, then again as a Bonus Action for 1 minute; regain the use by "
+                "expending a level 3+ spell slot.",
+        "quotes": ("As a Bonus Action, you cast Command without expending a spell slot,",
+                   "Once you use this feature, you can't use it again until you finish a Long Rest. You can also restore "
+                   "your use of it by expending a level 3+ spell slot (no action required).")},
+    "psi-warrior-xphb-18-telekinetic-master": {
+        "class": "fighter", "subclass": "psi-warrior-xphb", "mode": "innate", "spells": ("telekinesis",),
+        "uses": "1/long rest", "ability": "INT", "ability_from": "text",
+        "note": "No spell slot or components; regain the use by expending a Psionic Energy Die.",
+        "quotes": ("You always have the Telekinesis spell prepared. With this feature, you can cast it without a spell slot "
+                   "or components, and your spellcasting ability for it is Intelligence.",
+                   "Once you cast the spell with this feature, you can't do so in this way again until you finish a Long "
+                   "Rest unless you expend a Psionic Energy Die (no action required) to restore your use of it.")},
+    "shadow-xphb-3-darkness": {
+        "class": "monk", "subclass": "shadow-xphb", "mode": "innate", "spells": ("darkness",),
+        "uses": "1 Focus Point", "ability": "WIS", "ability_from": "data",
+        "note": "No spell components; you can see within the area.",
+        "quotes": ("You can expend 1 Focus Point to cast the Darkness spell without spell components. You can see within "
+                   "the spell's area when you cast it with this feature.",)},
+    "archfey-xphb-3-steps-of-the-fey": {
+        "class": "warlock", "subclass": "archfey-xphb", "mode": "innate", "spells": ("misty-step",),
+        "uses": "{cha_min1}/long rest", "ability": "CHA", "ability_from": "class",
+        "note": "No spell slot; when you cast it you can add a Steps of the Fey effect.",
+        "quotes": ("You can cast Misty Step without expending a spell slot a number of times equal to your Charisma "
+                   "modifier (minimum of once), and you regain all expended uses when you finish a Long Rest.",)},
+    "diviner-xphb-10-the-third-eye": {
+        "class": "wizard", "subclass": "diviner-xphb", "mode": "innate", "spells": ("see-invisibility",),
+        "uses": "1/short or long rest", "ability": "INT", "ability_from": "class",
+        "note": "The Third Eye: choose this benefit as a Bonus Action; it lasts until you start a Short or Long Rest.",
+        "quotes": ("See Invisibility. You can cast See Invisibility without expending a spell slot.",
+                   "You can't use this feature again until you finish a Short or Long Rest.")},
+    "great-old-one-xphb-10-eldritch-hex": {
+        "class": "warlock", "subclass": "great-old-one-xphb", "mode": "prepared", "spells": ("hex",),
+        "quotes": ("You always have the Hex spell prepared.",)},
+}
+
 # C6d: XPHB Wizard spell picks that are "always prepared" (ruleset 2024 only), keyed by the choice-id
 # tail. Texts (XPHB, read from catalog.features):
 #   Spell Mastery (18)   "Choose a level 1 and a level 2 spell in your spellbook that have a casting time of an
