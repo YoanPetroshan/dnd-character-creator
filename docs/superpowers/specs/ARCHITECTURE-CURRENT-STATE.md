@@ -1210,3 +1210,16 @@ wrote 231 cases, 752291 bytes
 - **Tests.** `tests/test_srd_monk_tool_choice.py` (19, rule matrix in the docstring), 2 added in `test_c_series_golden.py`, 1 test edited there (the old "REBASELINES is empty" pin).
 - **Timing** (`resolve()`, mean of 20, ms, level 20): mixed Fighter 3.1, Wizard 3.2, Monk 2.3; 2024 Fighter 2.0, Wizard 3.2, Monk 1.6 (limit 50).
 - **Totals.** Server suite 4098 -> 4118 passed, root suite 405 passed / 8 skipped; frontend untouched.
+
+## RP8 (D) 2024 pack contents and carried weight (2026-10-23)
+
+Ruleset 2024 only; mixed / 2014 are byte-identical (`test_c_series_golden.py` green, not regenerated). Source: PHB 2024 ch. 6, "Equipment Packs" table and the per-pack item lists; stored as item ids and numbers, no sentences.
+
+- **Data.** `reference_data.PACKS_2024 = {pack id: {"weight": lb, "contents": [(item id, qty), ...]}}` for the 7 packs (Burglar's 42, Diplomat's 39, Dungeoneer's 55, Entertainer's 58.5, Explorer's 55, Priest's 29, Scholar's 22 lb). All 29 member ids exist in the catalog (test). The table weight wins over the member sum (Explorer's: the SRD rope weighs 10 lb, so the member sum is 60, the table says 55; the test documents it). Pack cost differs from the SRD record (Priest's 33 GP vs 19) and is not shown anywhere, so it is untouched.
+- **Engine.** `resolve._with_pack_contents` (ruleset 2024 only) adds `contents: [{itemId, name, qty}]` to granted, chosen and added entries of a pack id; members missing from the catalog are skipped. The pack stays one inventory item. `derived.equipment_weight(entries, items, weights=None)` / `carrying_summary(..., weights=None)`: `weights` overrides the catalog weight; resolve passes the table weights under 2024 only, so `carryingCapacity.carried` counts the pack (it was 0 for every pack in every ruleset).
+- **Exports / frontend.** `export_fields.pack_contents_suffix(entry)` gives " (съдържа: Backpack, Oil x2, ...)"; Markdown and PDF print it after the pack bullet; YAML keeps `contents` as part of the equipment entry. `types.ts` `SheetEquipmentEntry.contents?`; `EquipmentPage` prints the same line (plain text, no CSS) for granted, chosen and added entries. No new top-level sheet / derived key.
+- **Kitchen sinks / deliberate test changes.** `test_export_fields._EXPECT["fighter4-2024"]` gains `"pack": "dungeoneers-pack"` (contents present and printed in Markdown). `test_f3a_fixes` Ranger A + Soldier carried weight moves 35 -> 90 (Explorer's Pack 55 lb now counts); test renamed `..._carried_weight_is_90`. Any 2024 character holding a pack now carries 7-58.5 lb more.
+- **Tests.** `tests/test_packs_2024.py` (17: table, member ids, SRD weight difference, per-pack contents and weight, qty 2, mixed / 2014 unchanged, Fighter package A +55, override only when given, degrade with missing members, suffix text, MD / PDF / YAML). Without the resolve wiring 11 of them fail.
+- **Timing** (`resolve()`, mean of 20, ms, level 20 with an Explorer's Pack): mixed Fighter 3.2, Wizard 3.3; 2024 Fighter 2.1, Wizard 2.7 (limit 50).
+- **Totals.** Server suite 4118 -> 4135 passed, root 405 passed / 8 skipped, `npm run build` green.
+- **Known gap closed.** The "2024 pack contents differ" limit (item 8 of the open list) now holds for ruleset 2024; mixed / 2014 still show SRD packs with weight 0 and no contents (Extras RPX2).

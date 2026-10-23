@@ -14,6 +14,11 @@ const CATEGORIES = [
   { value: "mounts-and-vehicles", label: "Превозни средства" },
 ];
 
+/** RP8: the items of a 2024 equipment pack, one plain line ("Backpack, Oil ×2"). */
+function contentsText(contents: { name: string; qty: number }[]): string {
+  return contents.map((c) => (c.qty !== 1 ? `${c.name} ×${c.qty}` : c.name)).join(", ");
+}
+
 export function EquipmentPage() {
   const { draft, dispatch } = useDraft();
   const { resolution, loading, error, retry } = useResolutionContext();
@@ -57,6 +62,7 @@ export function EquipmentPage() {
             {sheetEquipment.granted.map((g, i) => (
               <li key={`${g.itemId}-${i}`}>
                 {g.name} ×{g.qty}
+                {g.contents && g.contents.length > 0 && ` (съдържа: ${contentsText(g.contents)})`}
               </li>
             ))}
           </ul>
@@ -71,6 +77,7 @@ export function EquipmentPage() {
               <li key={`${c.itemId}-${i}`}>
                 {c.name}
                 {c.qty !== 1 ? ` ×${c.qty}` : ""}
+                {c.contents && c.contents.length > 0 && ` (съдържа: ${contentsText(c.contents)})`}
               </li>
             ))}
           </ul>
@@ -194,6 +201,7 @@ export function EquipmentPage() {
             <li key={entry.itemId}>
               <span>
                 {entry.name} ×{entry.qty}
+                {entry.contents && entry.contents.length > 0 && ` (съдържа: ${contentsText(entry.contents)})`}
               </span>
               <label>
                 <input

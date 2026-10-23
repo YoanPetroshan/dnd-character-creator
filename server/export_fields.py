@@ -154,6 +154,16 @@ def resource_line(r: dict) -> str:
     return f"{r['name']}: {core}" if core else r["name"]
 
 
+def pack_contents_suffix(entry: dict) -> str:
+    """RP8: " (съдържа: Backpack, Oil x2, ...)" for a 2024 equipment-pack entry, else "".
+    Markdown and PDF both print exactly this text after the entry."""
+    contents = entry.get("contents") or []
+    if not contents:
+        return ""
+    parts = [c["name"] + (f" x{c['qty']}" if c.get("qty", 1) != 1 else "") for c in contents]
+    return " (съдържа: " + ", ".join(parts) + ")"
+
+
 def worn_wielded_line(sheet: dict) -> str | None:
     """G2: one plain line for the Equipment block, only when the draft sets worn/wielded.
     Markdown and PDF both print exactly this text."""

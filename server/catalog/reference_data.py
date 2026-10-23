@@ -405,6 +405,38 @@ CLASS_2024_EQUIPMENT_ITEM_MAP = {
     "robe": ("robes", 1),
     "druidic focus": ("quarterstaff", 1),
 }
+# RP8 (D): 2024 equipment packs. Source: Player's Handbook (2024) ch. 6, the "Equipment Packs" table (weight in
+# lb.) and the per-pack item lists. Stored as numbers and catalog item ids only. The pack stays ONE inventory item
+# (the catalog pack records are the SRD 2014 ones: weight None, other contents); under ruleset 2024 resolve() adds
+# `contents` to its entries and carried weight uses the table weight. Differences from the SRD items are documented
+# in ARCHITECTURE (e.g. the SRD rope weighs 10 lb, the 2024 pack total counts 5 lb of it; Priest's costs 33 GP
+# here and 19 GP in the SRD record, cost is not shown).
+PACKS_2024 = {
+    "burglars-pack": {"weight": 42, "contents": [
+        ("backpack", 1), ("ball-bearings-bag-of-1000", 1), ("bell", 1), ("candle", 10), ("crowbar", 1),
+        ("lantern-hooded", 1), ("oil-flask", 7), ("rations-1-day", 5), ("rope-hempen-50-feet", 1),
+        ("tinderbox", 1), ("waterskin", 1)]},
+    "diplomats-pack": {"weight": 39, "contents": [
+        ("chest", 1), ("clothes-fine", 1), ("ink-1-ounce-bottle", 1), ("ink-pen", 5), ("lamp", 1),
+        ("case-map-or-scroll", 2), ("oil-flask", 4), ("paper-one-sheet", 5), ("parchment-one-sheet", 5),
+        ("perfume-vial", 1), ("tinderbox", 1)]},
+    "dungeoneers-pack": {"weight": 55, "contents": [
+        ("backpack", 1), ("caltrops", 1), ("crowbar", 1), ("oil-flask", 2), ("rations-1-day", 10),
+        ("rope-hempen-50-feet", 1), ("tinderbox", 1), ("torch", 10), ("waterskin", 1)]},
+    "entertainers-pack": {"weight": 58.5, "contents": [
+        ("backpack", 1), ("bedroll", 1), ("bell", 1), ("lantern-bullseye", 1), ("clothes-costume", 3),
+        ("mirror-steel", 1), ("oil-flask", 8), ("rations-1-day", 9), ("tinderbox", 1), ("waterskin", 1)]},
+    "explorers-pack": {"weight": 55, "contents": [
+        ("backpack", 1), ("bedroll", 1), ("oil-flask", 2), ("rations-1-day", 10), ("rope-hempen-50-feet", 1),
+        ("tinderbox", 1), ("torch", 10), ("waterskin", 1)]},
+    "priests-pack": {"weight": 29, "contents": [
+        ("backpack", 1), ("blanket", 1), ("holy-water-flask", 1), ("lamp", 1), ("rations-1-day", 7),
+        ("robes", 1), ("tinderbox", 1)]},
+    "scholars-pack": {"weight": 22, "contents": [
+        ("backpack", 1), ("book", 1), ("ink-1-ounce-bottle", 1), ("ink-pen", 1), ("lamp", 1),
+        ("oil-flask", 10), ("parchment-one-sheet", 10), ("tinderbox", 1)]},
+}
+
 # Monk A: "Artisan's Tools or Musical Instrument chosen for the tool proficiency above". The option
 # member id is this sentinel; resolve() replaces it by the item of the Monk's tool proficiency pick.
 MONK_TOOL_SENTINEL = "monk-tool"

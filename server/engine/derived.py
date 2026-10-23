@@ -136,21 +136,24 @@ def carrying_capacity(str_score: int, size: str | None) -> int | float:
     return int(value) if value == int(value) else value
 
 
-def equipment_weight(entries: list[dict], items: dict) -> int | float:
+def equipment_weight(entries: list[dict], items: dict, weights: dict | None = None) -> int | float:
     """Sum of quantity x weight (pounds) over {itemId, qty} entries. Unknown
-    items, missing weights and non-numeric quantities count as 0."""
+    items, missing weights and non-numeric quantities count as 0. `weights` ({item id: lb}, RP8) overrides
+    the catalog weight of those items (the 2024 pack table weights)."""
     total = 0.0
     for entry in entries:
         item = items.get(entry.get("itemId"))
         qty = entry.get("qty", 1)
         if not item or isinstance(qty, bool) or not isinstance(qty, (int, float)) or qty < 0:
             continue
-        total += qty * (item.get("weight") or 0)
+        weight = (weights or {}).get(entry.get("itemId"), item.get("weight"))
+        total += qty * (weight or 0)
     total = round(total, 2)
     return int(total) if total == int(total) else total
 
 
-def carrying_summary(str_score: int, size: str | None, entries: list[dict], items: dict) -> dict:
+def carrying_summary(str_score: int, size: str | None, entries: list[dict], items: dict,
+                     weights: dict | None = None) -> dict:
     capacity = carrying_capacity(str_score, size)
-    carried = equipment_weight(entries, items)
+    carried = equipment_weight(entries, items, weights)
     return {"capacity": capacity, "pushDragLift": capacity * 2, "carried": carried, "overCapacity": carried > capacity}

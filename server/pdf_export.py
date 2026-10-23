@@ -14,7 +14,7 @@ from pathlib import Path
 from fpdf import FPDF
 
 from catalog.reference_data import ABILITIES, LANGUAGE_NAMES, SKILL_NAMES, proficiency_label
-from export_fields import SPELL_PICK_LINES as _SPELL_PICK_LINES, extra_blocks, worn_wielded_line
+from export_fields import SPELL_PICK_LINES as _SPELL_PICK_LINES, extra_blocks, pack_contents_suffix, worn_wielded_line
 
 _FONT_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
 _LANGUAGE_NAMES = LANGUAGE_NAMES
@@ -189,7 +189,7 @@ def to_pdf(resolution: dict) -> bytes:
         for e in entries:
             qty_tag = f" x{e['qty']}" if e.get("qty", 1) != 1 else ""
             equipped_tag = " (екипиран)" if e.get("equipped") else ""
-            pdf.bullet(f"{e['name']}{qty_tag}{equipped_tag}")
+            pdf.bullet(f"{e['name']}{qty_tag}{equipped_tag}{pack_contents_suffix(e)}")
     line = worn_wielded_line(sheet)
     if line:
         any_equipment = True

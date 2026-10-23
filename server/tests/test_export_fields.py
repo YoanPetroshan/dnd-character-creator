@@ -192,7 +192,9 @@ _EXPECT = {
     "ranger9-2024": {"masteries": True, "expertise": 3, "feature_choice": "Elvish", "languages": ["common", "elvish"]},
     "barbarian3-2024": {"resources": ["Rage"], "feature_choice": "Perception", "masteries": True},
     "fighter4-2024": {"resources": ["Second Wind", "Action Surge"], "masteries": True, "feature_choice": "Archery",
-                      "equip_qty": ("Javelin", 8)},
+                      "equip_qty": ("Javelin", 8),
+                      # RP8: the 2024 kitchen sink now carries its Dungeoneer's Pack contents (deliberate _EXPECT change)
+                      "pack": "dungeoneers-pack"},
 }
 _EXPECT.update({
     # FE12: feat effects reach every export (notes, resources, attack-row notes, feat picks)
@@ -335,6 +337,10 @@ def test_kitchen_sink_fields_are_non_empty_as_expected(catalog, sid):
     if "equip_qty" in want:  # C9b
         name, qty = want["equip_qty"]
         assert any(e["name"] == name and e["qty"] == qty for k in ("granted", "chosen", "added") for e in sheet["equipment"][k])
+    if "pack" in want:  # RP8: ruleset 2024 pack entry with contents, exported to Markdown and the PDF
+        entry = next(e for k in ("granted", "chosen", "added") for e in sheet["equipment"][k] if e["itemId"] == want["pack"])
+        assert entry["contents"]
+        assert export_fields.pack_contents_suffix(entry).strip() in _flat(to_markdown(res))
     if want.get("tome"):  # C7c
         assert sum(len(s.get("pactOfTheTome") or []) for s in sheet["spells"]) == 5
     if want.get("lessons"):

@@ -4230,6 +4230,21 @@ def _chosen_equipment(equipment_choices: list[dict], item_lookup: dict, monk_too
     return result
 
 
+def _with_pack_contents(entries: list[dict], item_lookup: dict) -> list[dict]:
+    """RP8 (ruleset 2024 only): an entry of a PHB 2024 equipment pack gets `contents`
+    ([{itemId, name, qty}], PACKS_2024 order; members missing from the catalog are skipped). The pack stays one item."""
+    out = []
+    for entry in entries:
+        pack = reference_data.PACKS_2024.get(entry.get("itemId"))
+        if pack is None:
+            out.append(entry)
+            continue
+        contents = [{"itemId": i, "name": item_lookup[i]["name"], "qty": q}
+                    for i, q in pack["contents"] if i in item_lookup]
+        out.append({**entry, "contents": contents})
+    return out
+
+
 def _selected_gold_and_narrative_items(equipment_choices: list[dict], monk_tool: str | None = None) -> tuple[int, list[str]]:
     """A small, disclosed second pass over the SAME selected-equipment ids
     _gather_equipped_items/_chosen_equipment already iterate (each
@@ -5538,6 +5553,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     if bg:
         granted_equipment += _fixed_equipment(bg.get("starting_equipment", []), catalog.items)
 
+    if ruleset == "2024":  # RP8: pack contents (the pack stays one item) and table weights
+        granted_equipment = _with_pack_contents(granted_equipment, catalog.items)
+        chosen_equipment = _with_pack_contents(chosen_equipment, catalog.items)
+        added_resolved = _with_pack_contents(added_resolved, catalog.items)
+
     for granted in granted_equipment:
         granted_item = catalog.items.get(granted["itemId"])
         if granted_item:
@@ -5948,6 +5968,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     carrying = derived_mod.carrying_summary(
         final_scores.get("STR", 10), species_size or (race or {}).get("size") or "Medium",
         granted_equipment + chosen_equipment + added_resolved, catalog.items,
+        {k: v["weight"] for k, v in reference_data.PACKS_2024.items()} if ruleset == "2024" else None,
     )
     feat_passive = feat_effects_mod.passive_bonus(feat_inst)  # FE4 Observant (PHB): passive scores only
     derived = {

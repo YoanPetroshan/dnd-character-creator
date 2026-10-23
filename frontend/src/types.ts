@@ -92,6 +92,8 @@ export interface SheetEquipmentEntry {
   itemId: string;
   name: string;
   qty: number;
+  /** RP8: ruleset 2024 only; the items of an equipment pack (the pack stays one entry). */
+  contents?: { itemId: string; name: string; qty: number }[];
 }
 
 export interface SheetAddedEquipmentEntry extends SheetEquipmentEntry {
