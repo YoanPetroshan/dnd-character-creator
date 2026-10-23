@@ -1153,7 +1153,7 @@ def dependent_cid(instance_id: str, kind: str, prefix: str = DEPENDENT_PREFIX) -
 # RP20 (A3b): an Eldritch Adept pick (a feat card `<prefix>:invocation`) can hold the same dependents as the Warlock's
 # card. Their cids are `<feat card cid>:<invocation id>:<kind>`; the C7c builders take the holder as a dict
 # {"prefix": "<card cid>:", "source": <the feat card's source>, "stored": <raw selections>}.
-FEAT_DEPENDENT_RE = re.compile(r"^(.+:invocation):(opt-[a-z0-9-]+-xphb):(cantrip|cantrips|rituals|weapon)$")
+FEAT_DEPENDENT_RE = re.compile(r"^(.+:invocation):(opt-[a-z0-9-]+-xphb):(cantrip|cantrips|rituals|weapon|feat)$")
 
 
 def is_feat_dependent(c: dict) -> bool:

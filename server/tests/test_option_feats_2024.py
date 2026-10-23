@@ -624,3 +624,158 @@ def test_the_feat_may_come_from_another_class_than_the_warlock(catalog):
     assert _card(r, cid_of("fighter", 4, EA, "invocation"))["selected"] == [AGON]
     nowl = resolve(_draft([("fighter", 4, fighter, None)]), catalog)
     assert _card(nowl, cid_of("fighter", 4, EA, "invocation"))["selected"] == []  # no Warlock level, no Agonizing Blast
+
+
+# ================================================================ A3c: Lessons of the First Ones through the feat
+# Rule: XPHB "You have received knowledge from an elder entity of the multiverse, allowing you to gain one Origin feat of
+# your choice." (prerequisite: Warlock level 2). The Eldritch Adept pick is one invocation instance, so one Origin feat.
+# The pick resolves in the F1 walk right after the Eldritch Adept ASI feat (same `seen` map as every other feat), its
+# cid is ``<feat card cid>:opt-lessons-of-the-first-ones-xphb:feat`` and the feat's own choices cascade under
+# ``<that cid>:<feat index>``; the feat is tagged origin "invocation" like the Warlock's own Lessons.
+
+
+def lcid(cls="warlock", level=4):
+    return dep(LESSONS, "feat", cls, level)
+
+
+def wl_lessons(level=5, origin=None, more=None, own=None, **kw):
+    ch = {INV: own if own is not None else [MIND, ARMOR, DEVIL], CANT: ["eldritch-blast-xphb", "minor-illusion-xphb", "mage-hand-xphb"],
+          **({lcid(): [origin]} if origin else {}), **(more or {})}
+    return run(load(), "warlock", level, EA, {"invocation": [LESSONS], "invocation-ability": ["cha"]}, class_choices=ch, **kw)
+
+
+def test_the_lessons_card_offers_origin_feats_for_a_warlock(catalog):
+    r = wl_lessons()
+    card = _card(r, lcid())
+    assert card["count"] == 1 and card["source"] == _card(r, ea())["source"] and card["label"] == "Lessons of the First Ones"
+    ids = {o["id"] for o in card["options"]}
+    assert {"feat:alert-xphb", "feat:magic-initiate-xphb", "feat:skilled-xphb", "feat:tough-xphb"} <= ids
+    assert all(catalog.feats[i[len("feat:"):]]["category"] == "O" for i in ids)
+    assert "feat:grappler-xphb" not in ids and card["status"] == "pending"
+
+
+def test_the_origin_feat_lands_on_the_sheet_and_applies(catalog):
+    base = wl_lessons()
+    r = wl_lessons(origin="feat:alert-xphb")
+    feat = next(f for f in r["sheet"]["feats"] if f["id"] == "alert-xphb")
+    assert feat["origin"] == "invocation" and "alert-xphb" in r["sheet"]["grantedFeats"]
+    assert _card(r, lcid())["status"] == "resolved" and _card(r, lcid())["selected"] == ["feat:alert-xphb"]
+    assert r["derived"]["initiative"] == base["derived"]["initiative"] + 3  # Alert (XPHB): Initiative Proficiency, PB 3 at level 5
+    assert next(f for f in r["sheet"]["feats"] if f["id"] == EA)["origin"] == "asi"
+
+
+def test_the_origin_feat_cascades_its_own_choices(catalog):
+    r = wl_lessons(origin="feat:skilled-xphb")
+    cascade = [c for c in r["choices"] if c["id"].startswith(lcid() + ":")]
+    assert len(cascade) == 1 and cascade[0]["count"] == 3 and cascade[0]["source"]["kind"] == "feat"
+    picks = {cascade[0]["id"]: ["skill-stealth", "skill-arcana", "skill-history"]}
+    r2 = wl_lessons(origin="feat:skilled-xphb", more=picks)
+    assert {"skill-stealth", "skill-arcana", "skill-history"} <= set(r2["sheet"]["proficiencies"]["skills"])
+    assert next(f for f in r2["sheet"]["feats"] if f["id"] == "skilled-xphb")["choice"]
+
+
+def test_a_magic_initiate_pick_cascades_the_spell_cards(catalog):
+    r = wl_lessons(origin="feat:magic-initiate-xphb")
+    variant = next(c for c in r["choices"] if c["id"].endswith(":spell-variant") and c["id"].startswith(lcid()))
+    prefix = variant["id"][: -len(":spell-variant")]
+    assert prefix == f"{lcid()}:magic-initiate-xphb"
+    picks = {variant["id"]: ["cleric-spells"], prefix + ":spell-ability": ["cha"]}
+    r2 = wl_lessons(origin="feat:magic-initiate-xphb", more=picks)
+    for card in [c for c in r2["choices"] if c["id"].startswith(prefix + ":spell-choice-")]:
+        picks[card["id"]] = [o["id"] for o in card["options"] if not o.get("disabled")][: card["count"]]
+    r3 = wl_lessons(origin="feat:magic-initiate-xphb", more=picks)
+    assert len([e for e in r3["sheet"]["innateSpells"] if e.get("featId") == "magic-initiate-xphb"]) == 3
+    # the invocation goes: the whole cascade goes with it, as stale picks
+    r4 = run(catalog, "warlock", 5, EA, {"invocation": [ARMOR], "invocation-ability": ["cha"]},
+             class_choices={INV: [MIND, DEVIL, X.format("fiendish-vigor")], CANT: ["eldritch-blast-xphb"], lcid(): ["feat:magic-initiate-xphb"], **picks})
+    assert not [e for e in r4["sheet"]["innateSpells"] if e.get("featId") == "magic-initiate-xphb"]
+    assert _pruned(r4, variant["id"])
+
+
+def test_changing_the_pick_away_from_lessons_removes_the_feat(catalog):
+    stored = {lcid(): ["feat:alert-xphb"]}
+    r = wl_lessons(more=stored)
+    assert [f for f in r["sheet"]["feats"] if f["id"] == "alert-xphb"]
+    gone = run(catalog, "warlock", 5, EA, {"invocation": [ARMOR], "invocation-ability": ["cha"]},
+               class_choices={INV: [MIND, DEVIL, X.format("fiendish-vigor")], CANT: ["eldritch-blast-xphb"], **stored})
+    assert _card(gone, lcid()) is None and "no longer applies" in _pruned(gone, lcid())
+    assert "alert-xphb" not in [f["id"] for f in gone["sheet"]["feats"]]
+
+
+def test_lessons_through_the_feat_needs_a_warlock_level_2(catalog):
+    wizard = run(catalog, "wizard", 4, EA, {"invocation": [LESSONS]}, class_choices={dep(LESSONS, "feat", "wizard"): ["feat:alert-xphb"]})
+    assert ea_card(wizard)["selected"] == [] and _card(wizard, dep(LESSONS, "feat", "wizard")) is None
+    assert "alert-xphb" not in [f["id"] for f in wizard["sheet"]["feats"]]
+    fighter = {"class:fighter:4:asi": [f"feat:{EA}"], cid_of("fighter", 4, EA, "invocation"): [LESSONS],
+               f"{cid_of('fighter', 4, EA, 'invocation')}:{LESSONS}:feat": ["feat:alert-xphb"]}
+    low = resolve(_draft([("fighter", 4, fighter, None), ("warlock", 1, {}, None)]), catalog)
+    assert "alert-xphb" not in [f["id"] for f in low["sheet"]["feats"]]
+    ok = resolve(_draft([("fighter", 4, fighter, None), ("warlock", 2, {}, None)]), catalog)
+    feat = next(f for f in ok["sheet"]["feats"] if f["id"] == "alert-xphb")
+    assert feat["origin"] == "invocation"  # the Fighter's ASI feat, a Warlock 2 multiclass
+
+
+def test_a_feat_from_the_background_is_already_taken(catalog):
+    d = _draft([("warlock", 5, {INV: [MIND, ARMOR, DEVIL], CANT: ["eldritch-blast-xphb"], "class:warlock:4:asi": [f"feat:{EA}"],
+                                ea(): [LESSONS], lcid(): ["feat:alert-xphb"]}, None)])
+    d["background"]["id"] = "criminal-xphb"  # grants Alert
+    r = resolve(d, catalog)
+    card = _card(r, lcid())
+    assert "already taken" in _opt(card, "feat:alert-xphb")["disabledReason"] and card["selected"] == []
+    assert [f["id"] for f in r["sheet"]["feats"]].count("alert-xphb") == 1
+    assert any(p["id"].startswith("feat-duplicate-alert-xphb") for p in r["problems"])
+
+
+def test_the_warlocks_own_lessons_wins_over_the_feats(catalog):
+    own = {INV: [LESSONS, MIND, ARMOR], "class:warlock:invocation:" + LESSONS + ":feat": ["feat:tough-xphb"]}
+    r = wl_lessons(own=own[INV], more={k: v for k, v in own.items() if k != INV} | {lcid(): ["feat:alert-xphb"]})
+    assert _opt(_card(r, ea()), LESSONS)["disabledReason"] == "already taken (Lessons of the First Ones, Warlock)"
+    assert _card(r, lcid()) is None
+    ids = [f["id"] for f in r["sheet"]["feats"]]
+    assert "tough-xphb" in ids and "alert-xphb" not in ids
+
+
+def test_an_asi_pick_of_the_same_origin_feat_later_is_the_duplicate(catalog):
+    more = {lcid(): ["feat:alert-xphb"], "class:warlock:8:asi": ["feat:alert-xphb"]}
+    r = wl_lessons(level=8, more=more)
+    assert [f["origin"] for f in r["sheet"]["feats"] if f["id"] == "alert-xphb"] == ["invocation"]
+    assert any(p["id"].startswith("feat-duplicate-alert-xphb") for p in r["problems"])
+
+
+def test_a_non_origin_feat_stored_at_the_lessons_card_is_ignored(catalog):
+    r = wl_lessons(origin="feat:grappler-xphb")
+    assert _card(r, lcid())["selected"] == [] and "grappler-xphb" not in [f["id"] for f in r["sheet"]["feats"]]
+
+
+def test_lessons_through_the_feat_outside_2024_has_no_card(catalog):
+    r = run(catalog, "wizard", 4, EA, {"invocation": [LESSONS]}, ruleset="mixed")
+    assert not [c for c in r["choices"] if c["id"].endswith(":feat")]
+
+
+def test_srd_only_catalog_has_no_lessons_card(catalog):
+    bare = copy.copy(catalog)
+    bare.features = {k: v for k, v in catalog.features.items() if not (k.startswith("opt-") and k.endswith("-xphb"))}
+    r = run(bare, "warlock", 5, EA, {"invocation": [LESSONS]})
+    assert not [c for c in r["choices"] if c["id"].endswith(":feat")]
+
+
+def test_the_lessons_pick_is_pending_until_made_and_blocks_export(catalog):
+    from app import _pending_export_problems
+    assert any(lcid() in str(p) for p in _pending_export_problems(wl_lessons()))
+    assert not any(lcid() in str(p) for p in _pending_export_problems(wl_lessons(origin="feat:alert-xphb")))
+
+
+def test_a_blocked_eldritch_adept_takes_its_lessons_feat_with_it(catalog):
+    # prerequisites on and Eldritch Adept made to need Strength 20: the ASI feat is not applied and neither is anything under it
+    patched = copy.copy(catalog)
+    patched.feats = {**catalog.feats, EA: {**catalog.feats[EA], "prerequisite": [{"ability": [{"str": 20}]}]}}
+    fighter = {"class:fighter:4:asi": [f"feat:{EA}"], cid_of("fighter", 4, EA, "invocation"): [LESSONS],
+               f"{cid_of('fighter', 4, EA, 'invocation')}:{LESSONS}:feat": ["feat:alert-xphb"]}
+    d = _draft([("fighter", 4, fighter, None), ("warlock", 2, {}, None)])
+    d["preferences"] = {"usePrerequisites": {"feats": True}}
+    r = resolve(d, patched)
+    assert EA not in [f["id"] for f in r["sheet"]["feats"]] and "alert-xphb" not in [f["id"] for f in r["sheet"]["feats"]]
+    assert "alert-xphb" not in r["sheet"]["grantedFeats"]
+    d["preferences"] = {}
+    free = resolve(d, patched)
+    assert EA in [f["id"] for f in free["sheet"]["feats"]] and "alert-xphb" in [f["id"] for f in free["sheet"]["feats"]]

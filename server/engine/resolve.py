@@ -453,7 +453,8 @@ def _feat_build_position(feat: dict, class_order) -> tuple[int, int] | None:
     if feat.get("_asi_cid"):
         return class_choices_2024.card_position({"id": feat["_asi_cid"], "source": {"kind": "class"}}, order)
     if feat.get("_inv_cid"):
-        return (order.index("warlock") if "warlock" in order else len(order), feat.get("_asi_level") or 2)
+        holder = feat.get("_inv_class") or "warlock"  # RP20: a Lessons pick held through Eldritch Adept sits at that ASI
+        return (order.index(holder) if holder in order else len(order), feat.get("_asi_level") or 2)
     return None
 
 
@@ -1375,7 +1376,7 @@ def _resolve_asi_selected_feats(
     resolved_classes: list[dict], catalog: Catalog, sources=None,
     taken_indices: dict[str, str] | None = None, skipped_duplicates: list[dict] | None = None,
     ruleset: str = "mixed", fighting_style: bool = False,
-    before_level=None, taken_before_cid: dict[str, dict[str, str]] | None = None,
+    before_level=None, taken_before_cid: dict[str, dict[str, str]] | None = None, after_feat=None,
 ) -> tuple[list[dict], dict[str, list[tuple[str, int]]]]:
     """ASI-or-feat Task 3: the ASI-level counterpart to
     _resolve_granted_feats (background grants). Reads each resolved
@@ -1442,7 +1443,9 @@ def _resolve_asi_selected_feats(
     `before_level(rc, upto_level_or_None, seen)` is called before each ASI level (and
     with None after the class's last one) so the cards of levels <= that level resolve
     first against the same `seen` map; `taken_before_cid[cid]` receives a snapshot of
-    `seen` before each ASI level (what its options read for "already taken")."""
+    `seen` before each ASI level (what its options read for "already taken").
+    RP20: `after_feat(rc, level, feat, seen)` is called right after an accepted pick (Eldritch Adept's Lessons of the
+    First Ones resolves its Origin feat there, at the feat's own position)."""
     asi_feat_picks: list[dict] = []
     seen: dict[str, str] = dict(taken_indices or {})
     feat_deltas_by_cid: dict[str, list[tuple[str, int]]] = {}
@@ -1474,6 +1477,8 @@ def _resolve_asi_selected_feats(
             _fi_seen_add(seen, catalog, catalog_feat, class_choices.get(f"{origin}:fighting-style"), ruleset)  # RP4
             feat = {**catalog_feat, "_asi_cid": cid, "_asi_level": lvl, "_asi_origin": origin}
             asi_feat_picks.append(feat)
+            if after_feat:
+                after_feat(rc, lvl, feat, seen)
 
             deltas = [(e["ability_score"]["index"].upper(), e["bonus"]) for e in feat.get("ability_bonuses", [])]
             for ability_tpl, _ in _feat_ability_bonus_choice_templates([feat], origin=origin):
@@ -3853,41 +3858,105 @@ class _LessonsResolver:
             self.picks.append({**feat, "_inv_cid": cid, "_asi_level": LESSONS_LEVEL, "_asi_origin": f"{cid}:{feat['index']}"})
 
 
+class _FeatLessonsResolver:
+    """RP20 (A3c): Lessons of the First Ones held through Eldritch Adept (2024: the feat's one invocation). The Origin
+    feat is resolved in the F1 walk right after the Eldritch Adept ASI feat (`after_feat`), against the same `seen`
+    map, so the LATER holder of a feat is the duplicate. The pick needs Warlock level 2 (the invocation's
+    prerequisite, read at the final level like `_gate_feat_invocation_prereqs`) and yields to a Lessons the Warlock
+    holds itself (the gate disables the same option). The RAW stored selection decides (the late gates never drop a
+    Lessons pick that passes these checks). `slots[feat origin]` = (card cid, rc class id, ASI level)."""
+
+    def __init__(self, catalog: Catalog, ruleset: str, warlock_level: int, class_holds_lessons: bool, skipped_duplicates: list[dict]):
+        self.catalog = catalog
+        self.active = ruleset == "2024" and warlock_level >= 2 and not class_holds_lessons
+        self.ruleset = ruleset
+        self.skipped_duplicates = skipped_duplicates
+        self.picks: list[dict] = []
+        self.slots: dict[str, tuple[str, str, int]] = {}
+        self.taken_by_cid: dict[str, dict[str, str]] = {}
+        self.picked: dict[str, str] = {}
+
+    def __call__(self, rc: dict, lvl: int, feat: dict, seen: dict[str, str]) -> None:
+        spec = fed_option_picks(feat) or {}
+        if not self.active or spec.get("kind") != "invocation":
+            return
+        pool = {o["id"] for o in _option_pick_options(self.catalog, "invocation", self.ruleset)}
+        card = f"{feat['_asi_origin']}:invocation"
+        stored = rc["class_choices"].get(card)
+        first = next((x for x in (stored if isinstance(stored, list) else []) if isinstance(x, str) and x in pool), None)
+        if first != class_choices_2024.LESSONS_ID:
+            return
+        cid = class_choices_2024.dependent_cid(first, "feat", card + ":")
+        self.slots[feat["_asi_origin"]] = (cid, rc["cls_id"], lvl)
+        self.taken_by_cid[cid] = dict(seen)
+        index = _stored_asi_feat_pick(rc["class_choices"], cid)
+        pick = self.catalog.feats.get(index) if index else None
+        if not pick or pick.get("category") != "O":
+            return
+        if _taken_reason(pick, seen):
+            self.skipped_duplicates.append({"feat": pick, "cid": cid, "level": lvl, "cls": rc["cls"]})
+            return
+        _taken_add(seen, [pick])
+        self.picked[cid] = pick["index"]
+        self.picks.append({**pick, "_inv_cid": cid, "_inv_class": rc["cls_id"], "_ea_asi_cid": feat["_asi_cid"], "_asi_level": lvl,
+                           "_asi_origin": f"{cid}:{pick['index']}"})
+
+
+def _feat_lessons_templates(
+    catalog: Catalog, rc: dict, resolver: "_FeatLessonsResolver", asi_feat: dict, card_source: dict, sources, ruleset: str,
+    total_level: int, scores: dict[str, int], use_prerequisites: bool, held: "_HeldFeatState",
+) -> list[dict]:
+    """RP20: the Origin-feat card of an Eldritch Adept pick of Lessons of the First Ones (the resolver registered it);
+    `card_source` is the source of the feat's own `:invocation` card."""
+    slot = resolver.slots.get(asi_feat["_asi_origin"])
+    if not slot:
+        return []
+    cid, _cls, _lvl = slot
+    return [_lessons_card(catalog, rc, cid, class_choices_2024.LESSONS_ID, dict(card_source), sources, ruleset, total_level, scores,
+                          use_prerequisites, held, resolver.taken_by_cid, resolver.picked)]
+
+
 def _lessons_templates(
     catalog: Catalog, rc: dict, slots: list[tuple[str, str]], sources, ruleset: str, total_level: int,
     scores: dict[str, int], use_prerequisites: bool, held: "_HeldFeatState", taken_by_cid: dict[str, dict[str, str]],
     picked: dict[str, str],
 ) -> list[dict]:
     """One Origin-feat card per selected Lessons instance (see above)."""
-    templates = []
-    for cid, inst in slots:
-        feats = [f for f in catalog.feats.values() if f.get("category") == "O" and _feat_offered(f, sources, ruleset)]
-        keep_index = _stored_asi_feat_pick(rc["class_choices"], cid)
-        kept = catalog.feats.get(keep_index) if keep_index else None
-        if kept and kept.get("category") == "O" and all(f["index"] != kept["index"] for f in feats):
-            feats.append({**kept, "_hidden_by_filters": True})
-        others = {catalog.feats[i]["index"]: _feat_name_key(catalog.feats[i]) for c, i in picked.items() if c != cid and i in catalog.feats}
-        options = []
-        for feat, option in _feat_options(feats, ruleset):
-            option.pop("group", None)
-            if feat.get("_hidden_by_filters"):
-                option["hiddenByFilters"] = True
-            reason = (
-                _LESSONS_REASON if feat["index"] in others or _feat_name_key(feat) in others.values() else None
-            ) or _taken_reason(feat, taken_by_cid.get(cid)) or _feat_prerequisite_unmet_reason(
-                feat, total_level, scores, use_prerequisites, held, catalog)
-            if reason:
-                option["disabled"] = True
-                option["disabledReason"] = reason
-            options.append(option)
-        record = catalog.features.get(class_choices_2024.invocation_base_id(inst)) or {}
-        templates.append({
-            "id": cid, "source": {"kind": "class", "id": "warlock", "label": rc["cls"]["name"], "level": LESSONS_LEVEL},
-            "label": class_choices_2024.instance_label(catalog, inst),
-            "description": _join_desc(record.get("desc")) or "Choose an Origin feat.",
-            "count": 1, "options": options,
-        })
-    return templates
+    source = {"kind": "class", "id": "warlock", "label": rc["cls"]["name"], "level": LESSONS_LEVEL}
+    return [_lessons_card(catalog, rc, cid, inst, dict(source), sources, ruleset, total_level, scores, use_prerequisites, held,
+                          taken_by_cid, picked) for cid, inst in slots]
+
+
+def _lessons_card(catalog: Catalog, rc: dict, cid: str, inst: str, source: dict, sources, ruleset: str, total_level: int,
+                  scores: dict[str, int], use_prerequisites: bool, held: "_HeldFeatState", taken_by_cid: dict[str, dict[str, str]],
+                  picked: dict[str, str]) -> dict:
+    """One Origin-feat card for the Lessons instance `inst` held at `cid` (the Warlock's card or, RP20, a feat's)."""
+    feats = [f for f in catalog.feats.values() if f.get("category") == "O" and _feat_offered(f, sources, ruleset)]
+    keep_index = _stored_asi_feat_pick(rc["class_choices"], cid)
+    kept = catalog.feats.get(keep_index) if keep_index else None
+    if kept and kept.get("category") == "O" and all(f["index"] != kept["index"] for f in feats):
+        feats.append({**kept, "_hidden_by_filters": True})
+    others = {catalog.feats[i]["index"]: _feat_name_key(catalog.feats[i]) for c, i in picked.items() if c != cid and i in catalog.feats}
+    options = []
+    for feat, option in _feat_options(feats, ruleset):
+        option.pop("group", None)
+        if feat.get("_hidden_by_filters"):
+            option["hiddenByFilters"] = True
+        reason = (
+            _LESSONS_REASON if feat["index"] in others or _feat_name_key(feat) in others.values() else None
+        ) or _taken_reason(feat, taken_by_cid.get(cid)) or _feat_prerequisite_unmet_reason(
+            feat, total_level, scores, use_prerequisites, held, catalog)
+        if reason:
+            option["disabled"] = True
+            option["disabledReason"] = reason
+        options.append(option)
+    record = catalog.features.get(class_choices_2024.invocation_base_id(inst)) or {}
+    return {
+        "id": cid, "source": source,
+        "label": class_choices_2024.instance_label(catalog, inst),
+        "description": _join_desc(record.get("desc")) or "Choose an Origin feat.",
+        "count": 1, "options": options,
+    }
 
 
 def _envelope_needs_expansion(envelope: dict) -> bool:
@@ -5155,6 +5224,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     skipped_duplicate_lessons: list[dict] = []  # C7c
     lessons_slots_by_class = _lessons_slots(catalog, resolved_classes, ruleset)
     lessons_resolver = _LessonsResolver(lessons_slots_by_class, catalog, skipped_duplicate_lessons)
+    skipped_duplicate_ea_lessons: list[dict] = []  # RP20
+    ea_lessons = _FeatLessonsResolver(
+        catalog, ruleset, next((rc["level"] for rc in resolved_classes if rc["cls_id"] == "warlock" and rc["cls"]), 0),
+        any(lessons_slots_by_class.values()), skipped_duplicate_ea_lessons)
 
     def walk_hook(rc, upto_level, seen):  # one ordered walk: fighting-style cards, Lessons feats, then the ASI picks
         fs_resolver(rc, upto_level, seen)
@@ -5170,10 +5243,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         resolved_classes, catalog, draft.get("sources"),
         taken_indices=walk_seen0,
         skipped_duplicates=skipped_duplicate_asi_feats, ruleset=ruleset, fighting_style=held.fighting_style,
-        before_level=walk_hook, taken_before_cid=asi_taken_before_cid,
+        before_level=walk_hook, taken_before_cid=asi_taken_before_cid, after_feat=ea_lessons,
     )
     fs_feats, fs_taken_by_cid = fs_resolver.picks, fs_resolver.taken_by_cid
-    lessons_feats = lessons_resolver.picks
+    lessons_feats = lessons_resolver.picks + ea_lessons.picks  # RP20: Lessons held through Eldritch Adept follow the Warlock's
     for dup in skipped_srd_styles:  # G1
         problems.append({
             "id": f"fighting-style-duplicate-{dup['option']}-{dup['cid']}",
@@ -5191,7 +5264,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 "id": f"feat-hidden-by-filters-{fs_feat['_fs_cid']}",
                 "message": f"{fs_feat['name']} is outside the current ruleset/sources but stays selected.",
             })
-    for dup in skipped_duplicate_lessons:  # C7c
+    for dup in skipped_duplicate_lessons + skipped_duplicate_ea_lessons:  # C7c, RP20
         problems.append({
             "id": f"feat-duplicate-{dup['feat']['index']}-{dup['cid']}",
             "message": f"{dup['feat']['name']} was already taken, so the pick at {dup['cls']['name']} level {dup['level']} isn't applied.",
@@ -5410,7 +5483,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             catalog, rc, lessons_slots_by_class.get(rc["index"], []), draft.get("sources"), ruleset, total_level, final_scores,
             use_feat_prereqs, held, lessons_resolver.taken_by_cid, lessons_resolver.picked)
         for lessons_feat in lessons_feats:  # the Origin feat's own choices under its origin
-            if lessons_feat["_asi_origin"].startswith(f"class:{rc_cls_id}:"):
+            if lessons_feat["_asi_origin"].startswith(f"class:{rc_cls_id}:") and lessons_feat.get("_ea_asi_cid") not in rc_blocked_feat_cids:
                 choice_templates += _feat_choice_templates([lessons_feat], origin=lessons_feat["_asi_origin"], items=catalog.items, catalog=catalog, ruleset=ruleset)
                 choice_templates += _feat_spell_choice_templates(
                     [lessons_feat], catalog, origin=lessons_feat["_asi_origin"], raw_selections=rc_class_choices,
@@ -5444,7 +5517,13 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             if asi_feat["_asi_cid"] in rc_blocked_feat_cids:
                 continue
             if asi_feat["_asi_origin"].startswith(f"class:{rc_cls_id}:"):
-                choice_templates += _feat_choice_templates([asi_feat], origin=asi_feat["_asi_origin"], items=catalog.items, catalog=catalog, ruleset=ruleset)
+                asi_feat_templates = _feat_choice_templates([asi_feat], origin=asi_feat["_asi_origin"], items=catalog.items, catalog=catalog, ruleset=ruleset)
+                choice_templates += asi_feat_templates
+                ea_card = next((t for t in asi_feat_templates if t["id"] == asi_feat["_asi_origin"] + ":invocation"), None)
+                if ea_card:  # RP20: Eldritch Adept's Lessons of the First Ones has an Origin-feat card
+                    choice_templates += _feat_lessons_templates(
+                        catalog, rc, ea_lessons, asi_feat, ea_card["source"], draft.get("sources"), ruleset, total_level, final_scores,
+                        use_feat_prereqs, held)
                 choice_templates += _feat_spell_choice_templates(
                     [asi_feat], catalog, origin=asi_feat["_asi_origin"], raw_selections=rc_class_choices,
                     total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
@@ -5457,6 +5536,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 ]
 
     asi_selected_feats = [f for f in asi_feat_picks if f["_asi_cid"] not in prerequisite_blocked_asi_feat_cids]
+    lessons_feats = [f for f in lessons_feats if f.get("_ea_asi_cid") not in prerequisite_blocked_asi_feat_cids]  # RP20
     resolved_feats = background_feats + species_feats + fs_feats + lessons_feats + asi_selected_feats
 
     use_prereqs = bool(use_prerequisites_prefs.get("multiclass"))
