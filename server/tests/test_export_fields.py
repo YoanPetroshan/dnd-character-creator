@@ -200,6 +200,7 @@ _EXPECT = {
                       "bg_items": ["Arrow", "Dice Set", "Quiver"]},
 }
 _EXPECT.update({
+    "magic-initiate-2024": {"innate": True, "feats": ["magic-initiate-xphb"]},
     # FE12: feat effects reach every export (notes, resources, attack-row notes, feat picks)
     "feats-mixed-fighter14": {"feats": ["alert-phb", "tough-phb", "great-weapon-master-phb", "lucky-phb", "observant-phb"],
                               "feat_resources": ["Luck Points"], "attack_note": "Great Weapon Master: before you attack",
@@ -442,3 +443,11 @@ def test_kitchen_sink_2024_stage_lines_reach_every_export(catalog):
         doc = yaml.safe_load(to_yaml(res))
         assert doc["proficiencies"]["languages"] == res["sheet"]["proficiencies"]["languages"], sid
         assert doc["equipment"] == res["sheet"]["equipment"], sid
+
+
+def test_magic_initiate_kitchen_sink_has_innate_spells(catalog):
+    """RPF: the kitchen-sink filler stores feat cards by cid prefix like the frontend, so the dependent
+    Magic Initiate spell cards are filled and the spells reach the sheet."""
+    res = _sink("magic-initiate-2024", catalog)
+    assert [c["id"] for c in res["choices"] if c["status"] == "pending"] == []
+    assert len(res["sheet"]["innateSpells"]) >= 3  # two cantrips + one level-1 spell

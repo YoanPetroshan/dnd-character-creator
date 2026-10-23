@@ -70,6 +70,8 @@ KITCHEN_SINK: dict[str, dict] = {
     "ranger9-2024": _sub("ranger", 9, "2024", marks=("classes", "official", "spells"), origin=_XPHB_ORIGIN),
     "barbarian3-2024": _sub("barbarian", 3, "2024", marks=("classes", "official"), origin=_XPHB_ORIGIN),
     "fighter4-2024": _sub("fighter", 4, "2024", marks=("classes", "official"), origin=_XPHB_ORIGIN),
+    # RPF: a Magic Initiate origin feat whose dependent spell cards (stored by cid prefix, see _store) are filled
+    "magic-initiate-2024": _sub("fighter", 1, "2024", marks=("classes", "official", "spells"), origin=("human-xphb", "acolyte-xphb")),
     # FE12: feat-holding drafts (ASI feat picks as overrides; every feat card is filled with its first option)
     "feats-mixed-fighter14": _sub("fighter", 14, "mixed", marks=("classes", "official"), feats=True, overrides={
         "class:fighter:4:asi": ["feat:alert-phb"], "class:fighter:6:asi": ["feat:tough-phb"],
@@ -108,8 +110,18 @@ def base_draft(spec: dict) -> dict:
             "classes": classes}
 
 
-def _store(draft: dict, source: dict) -> dict:
+def _store(draft: dict, source: dict, cid: str = "") -> dict:
+    """Mirror of the frontend routing (ClassPage / SpeciesPage / BackgroundPage filters + DraftContext
+    storedSelection): a feat card is stored by its cid prefix, `class:<id>:` in that class's choices,
+    `species:` in the species choices, every other one in the background choices."""
     kind = source["kind"]
+    if kind == "feat":
+        if cid.startswith("class:"):
+            kind, source = "class", {"id": cid.split(":")[1]}
+        elif cid.startswith("species:"):
+            kind = "species"
+        else:
+            kind = "background"
     if kind == "class":
         return next(c for c in draft["classes"] if c["classId"] == source["id"])["choices"]
     if kind == "background":
@@ -135,7 +147,7 @@ def fill(draft: dict, catalog, overrides: dict, resolve) -> dict:
             ids = [o["id"] for o in c["options"] if not o.get("disabled")]
             picked = [i for i in overrides.get(c["id"], []) if i in ids]
             picked += [i for i in ids if i not in picked]
-            _store(draft, c["source"])[c["id"]] = picked[:c["count"]]
+            _store(draft, c["source"], c["id"])[c["id"]] = picked[:c["count"]]
     raise AssertionError("choices did not settle")
 
 
