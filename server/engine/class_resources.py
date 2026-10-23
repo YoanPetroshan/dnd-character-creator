@@ -458,40 +458,62 @@ def _feature_level(ctx: Ctx, feature_id: str) -> int | None:
 
 
 def _note_vars(ctx: Ctx, rc: dict) -> dict:
-    """Variables for the `{name}` fields of the 2024 note templates (RESOURCE_TAIL_2024 / RESOURCE_NOTES_2024):
-    the class level, the final ability modifiers and the class-specific numbers the XPHB texts name. `dc_*` is the
-    save DC "8 plus your <ability> modifier and Proficiency Bonus"."""
+    """Variables for the `{name}` fields of the 2024 note templates (RESOURCE_TAIL_2024 / RESOURCE_NOTES_2024 and the
+    RP11 subclass tables): the class level, the final ability modifiers and the class-specific numbers the XPHB texts
+    name. `dc_*` is the save DC "8 plus your <ability> modifier and Proficiency Bonus"."""
     level, mods, pb = rc["level"], ctx.modifiers, ctx.prof_bonus
     wis, dex, cha = mods.get("WIS", 0), mods.get("DEX", 0), mods.get("CHA", 0)
+    int_, str_ = mods.get("INT", 0), mods.get("STR", 0)
     spark = 1
     for first, dice in reference_data.DIVINE_SPARK_DICE_2024:
         if level >= first:
             spark = dice
+    zealot = lands = 0
+    for first, dice in reference_data.ZEALOT_WARRIOR_DICE_2024:
+        if level >= first:
+            zealot = dice
+    for first, dice in reference_data.LANDS_AID_DICE_2024:
+        if level >= first:
+            lands = dice
+    cha_min1, int_min1 = max(1, cha), max(1, int_)
     return {"level": level, "half_level": level // 2, "twice_level": 2 * level, "five_level": 5 * level,
-            "wis": wis, "dex": dex, "cha": cha, "wis_min1": max(1, wis), "cha_min1": max(1, cha),
+            "wis": wis, "dex": dex, "cha": cha, "wis_min1": max(1, wis), "cha_min1": cha_min1,
             "dex_level": dex + level, "dc_wis": 8 + pb + wis, "dc_cha": 8 + pb + cha, "dc_dex": 8 + pb + dex,
             "ma_die": (_martial_arts_die(ctx, rc) or "d6") if rc["cls_id"] == "monk" else "d6",
-            "spark_dice": spark}
+            "spark_dice": spark,
+            # RP11
+            "int": int_, "int_min1": int_min1, "dc_str": 8 + pb + str_, "dc_int": 8 + pb + int_, "pb": pb,
+            "level_plus1": level + 1, "third_level": level // 3, "three_level": 3 * level,
+            "half_level_up": (level + 1) // 2, "cha_pb": cha + pb, "moon_ac": 13 + wis, "ward_hp": 2 * level + int_,
+            "zealot_dice": zealot, "lands_aid": lands,
+            "cha_creatures": f"{cha_min1} creature" + ("s" if cha_min1 != 1 else ""),
+            "int_creatures": f"{int_min1} creature" + ("s" if int_min1 != 1 else ""),
+            "cha_dice": f"{cha_min1} " + ("dice" if cha_min1 != 1 else "die")}
+
+
+def _staged(ctx: Ctx, level: int, default, stages):
+    """The value of the last listed (feature id, value) whose XPHB record level the class has reached, else `default`."""
+    value = default
+    for stage_id, stage_value in stages or ():
+        stage_level = _feature_level(ctx, stage_id)
+        if stage_level is not None and level >= stage_level:
+            value = stage_value
+    return value
 
 
 def _render_note(ctx: Ctx, rc: dict, spec: dict) -> str:
     """The note of a 2024 table entry: its template with the variables, the spec's own `vars` (the value of the
     last listed feature record whose level the class has reached, else the default) and the `extras`
-    (feature id, text) whose record level has been reached appended with "; "."""
+    (feature id, template) whose record level has been reached appended with "; "."""
     level = rc["level"]
     values = _note_vars(ctx, rc)
     for name, (default, stages) in (spec.get("vars") or {}).items():
-        value = default
-        for stage_id, stage_value in stages:
-            stage_level = _feature_level(ctx, stage_id)
-            if stage_level is not None and level >= stage_level:
-                value = stage_value
-        values[name] = value
+        values[name] = _staged(ctx, level, default, stages)
     note = spec["note"].format(**values)
     for extra_id, text in spec.get("extras") or ():
         extra_level = _feature_level(ctx, extra_id)
         if extra_level is not None and level >= extra_level:
-            note += "; " + text
+            note += "; " + text.format(**values)
     return note
 
 
@@ -540,6 +562,44 @@ def _attach_notes_2024(ctx: Ctx, rc: dict, resources: list[dict]) -> None:
         details = dict(target.get("details") or {})
         details["note"] = f"{details['note']}; {note}" if details.get("note") else note
         target["details"] = details
+
+
+def _subclass_tail_2024(ctx: Ctx, rc: dict, resources: list[dict]) -> list[dict]:
+    """RP11: XPHB subclass features with a use count, a recharge or numbers that spend a resource
+    (`reference_data.SUBCLASS_TAIL_2024` / `SUBCLASS_NOTES_2024`). Ruleset "2024" only and only for the class's
+    selected subclass; an entry needs its XPHB feature record in the catalog and the class level at that record's
+    level, so an SRD-only catalog gives nothing. New resources (source kind "subclass") are returned; the notes
+    are added to the matching resource of `resources` (the class's own and the R6 subclass entries; an existing
+    note is kept and extended with "; ")."""
+    sub_id = rc.get("subclass_id")
+    if ctx.ruleset != "2024" or not sub_id:
+        return []
+    level = rc["level"]
+    out: list[dict] = []
+    for spec in reference_data.SUBCLASS_TAIL_2024:
+        if spec["subclass"] != sub_id or spec["class"] != rc["cls_id"]:
+            continue
+        first = _feature_level(ctx, spec["feature"])
+        if first is None or level < first:
+            continue
+        values = _note_vars(ctx, rc)
+        uses = spec["uses"]
+        uses = values[uses] if isinstance(uses, str) else _staged(ctx, level, uses, spec.get("uses_stages"))
+        recharge = _staged(ctx, level, spec["recharge"], spec.get("recharge_stages"))
+        out.append(_resource(rc, spec["name"], kind="subclass", uses=uses, recharge=recharge, die=spec.get("die"),
+                             details={"note": _render_note(ctx, rc, spec)}))
+    for spec in reference_data.SUBCLASS_NOTES_2024:
+        if spec["subclass"] != sub_id or spec["class"] != rc["cls_id"]:
+            continue
+        first = _feature_level(ctx, spec["feature"])
+        target = next((r for r in resources if r["id"] == spec["target"]), None)
+        if first is None or level < first or target is None:
+            continue
+        note = _render_note(ctx, rc, spec)
+        details = dict(target.get("details") or {})
+        details["note"] = f"{details['note']}; {note}" if details.get("note") else note
+        target["details"] = details
+    return out
 
 
 def _signature_spells(ctx: Ctx, rc: dict) -> list[dict]:
@@ -681,10 +741,10 @@ def resources_for(catalog, resolved_classes: list[dict], modifiers: dict, prof_b
         mine = builder(ctx, rc) if builder else []
         mine += _tail_2024(ctx, rc)  # R9 / RP10: 2024 only
         _attach_notes_2024(ctx, rc, mine)  # RP10: 2024 only
-        out += mine
         sub_builder = _SUBCLASS_BUILDERS.get(rc.get("subclass_id") or "")
-        if sub_builder:
-            out += sub_builder(ctx, rc)
+        sub = sub_builder(ctx, rc) if sub_builder else []
+        out += mine + sub
+        out += _subclass_tail_2024(ctx, rc, mine + sub)  # RP11: 2024 only, after the class and R6 entries
     # G1: the 2024 Multiclassing chapter has no merge rule and every class text
     # says "this class's Channel Divinity", so 2024 keeps separate per-class pools.
     return out if ruleset == "2024" else _merge_channel_divinity(out)

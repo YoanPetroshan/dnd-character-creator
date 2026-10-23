@@ -119,7 +119,8 @@ def test_xphb_psionic_dice_table_under_2024(catalog, cls, sub, level, expected):
     r = _entry(_res(catalog, [(cls, level, sub)], "2024"), f"{cls}:psionic-energy-dice")
     assert _dice(r) == expected
     assert r["recharge"] == "long"
-    assert r["details"] == {"shortRestRegains": 1}
+    # RP11 (deliberate edit): 2024 power notes (Protective Field, Psychic Whispers, ...) now also sit in `details.note`
+    assert r["details"]["shortRestRegains"] == 1 and set(r["details"]) <= {"shortRestRegains", "note"}
 
 
 @needs_classes
