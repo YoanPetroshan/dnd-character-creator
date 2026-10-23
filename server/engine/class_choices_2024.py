@@ -877,7 +877,7 @@ def label_magical_secrets(catalog, templates: list[dict], cls_id: str | None, cl
             continue
         for opt in tpl["options"]:
             spell = catalog.spells.get(opt["id"])
-            if spell and not any(c["index"] == cls_id for c in spell.get("classes", [])):
+            if spell and not any(c["index"] == cls_id for c in spell.get("classes", [])) and "(Spells of the Mark)" not in opt["label"]:
                 opt["label"] = f"{opt['label']} ({MAGICAL_SECRETS_LABEL})"
 
 

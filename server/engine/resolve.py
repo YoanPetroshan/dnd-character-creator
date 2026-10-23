@@ -74,6 +74,7 @@ from . import derived as derived_mod
 from . import equipment as equipment_mod
 from . import worn as worn_mod
 from . import feat_effects as feat_effects_mod
+from . import feat_spell_tables
 from . import features as features_mod
 from . import sheet_features as sheet_features_mod
 from . import spells as spells_mod
@@ -3978,13 +3979,14 @@ def _additional_secrets_templates(catalog: Catalog, rc: dict, spellcasting: dict
     return [tpl]
 
 
-def _apply_secrets_cap(catalog: Catalog, tpl: dict, cls_id: str, cap: int, stored) -> None:
+def _apply_secrets_cap(catalog: Catalog, tpl: dict, cls_id: str, cap: int, stored, on_list: set[str] = frozenset()) -> None:
     """RP16: at most `cap` of the known spells may be off the class's own list (2 per Magical Secrets feature
     reached). Walks the stored picks in order like the generic pass (valid, deduplicated, first `count`); an
     off-list pick over the cap is disabled, so the generic pass drops it as a non-blocking `pruned` entry and it
-    does not take a count slot. At the cap the other off-list options are disabled. Mutates `tpl`."""
+    does not take a count slot. At the cap the other off-list options are disabled. `on_list` (RP19): the Spells of
+    the Mark spells, which are on the class's list for this character. Mutates `tpl`."""
     def off_list(option_id: str) -> bool:
-        return not any(c["index"] == cls_id for c in (catalog.spells.get(option_id) or {}).get("classes", []))
+        return option_id not in on_list and not any(c["index"] == cls_id for c in (catalog.spells.get(option_id) or {}).get("classes", []))
 
     reason = f"Magical Secrets: {cap} of {cap} used"
     valid = {o["id"] for o in tpl["options"] if not o.get("disabled")}
@@ -4003,6 +4005,18 @@ def _apply_secrets_cap(catalog: Catalog, tpl: dict, cls_id: str, cap: int, store
         if off_list(opt["id"]) and not opt.get("disabled") and (opt["id"] in excess or (used >= cap and opt["id"] not in accepted)):
             opt["disabled"] = True
             opt["disabledReason"] = reason
+
+
+def _feat_mark_spell_ids(catalog: Catalog, feats: list[dict], max_level: int) -> list[str]:
+    """RP19: catalog ids (both editions of a spell, the visibility filter picks one) of the Spells of the Mark tables
+    of the held feats, rows up to `max_level`."""
+    out: list[str] = []
+    for slug_ in feat_spell_tables.mark_spell_slugs(feats, max_level):
+        sid = catalog.resolve_spell_id(slug_)
+        for cand in (sid, catalog.spell_twins.get(sid)):
+            if cand and cand in catalog.spells and cand not in out:
+                out.append(cand)
+    return out
 
 
 def _highest_spell_slot_level(spellcasting: dict) -> int:
@@ -4136,7 +4150,7 @@ def _effective_caster(catalog: Catalog, rc: dict, ruleset: str = "mixed") -> tup
 
 def _wizard_spellbook_template(
     catalog: Catalog, cls: dict, cls_id: str, spellcasting: dict, class_level: int, sources, ruleset: str,
-    source: dict, keep: set[str], stored,
+    source: dict, keep: set[str], stored, mark_ids: list[str] = (),
 ) -> dict:
     """C4: the Wizard's spellbook choice (cid `class:wizard:spellbook`, both
     rulesets). XPHB / PHB: six level 1 spells at Wizard level 1, +2 for every
@@ -4145,16 +4159,43 @@ def _wizard_spellbook_template(
     level-down reports `pruned`, never a blocking problem)."""
     count = 6 + 2 * (class_level - 1)
     max_spell_level = _highest_spell_slot_level(spellcasting)
-    envelope = {"choose": count, "from": {
-        "option_set_type": "options_array",
-        "options": _spell_options_up_to(catalog, cls_id, max_spell_level, sources, ruleset, keep),
-    }}
+    options = _spell_options_up_to(catalog, cls_id, max_spell_level, sources, ruleset, keep)
+    added = _add_mark_options(catalog, options, mark_ids, max_spell_level, sources, ruleset, keep)  # RP19 Spells of the Mark
+    envelope = {"choose": count, "from": {"option_set_type": "options_array", "options": options}}
     level_word = "level 1 spell" if max_spell_level == 1 else f"level-{max_spell_level}-or-lower spell"
     description = (f"Choose {count} {level_word}s for your spellbook (six at level 1, two more for each Wizard level). "
                    "Prepared spells are drawn from the book.")
     tpl = build_choice_template(envelope, f"class:{cls_id}:spellbook", source, "Spellbook", description=description)
     _tag_spell_level_groups(catalog, tpl)
+    _label_mark_options(tpl, added)
     return tpl
+
+
+def _add_mark_options(catalog: Catalog, options: list[dict], mark_ids: list[str], max_level: int, sources, ruleset: str,
+                      keep=()) -> set[str]:
+    """RP19: appends the Spells of the Mark spells (level 1 .. `max_level`, visible under the draft's sources and
+    ruleset or already picked) that the class list does not offer yet to `options`, sorted like the rest. Returns the
+    ids added (the ones to label)."""
+    present = {o["item"]["index"] for o in options}
+    added: set[str] = set()
+    for sid in mark_ids:
+        spell = catalog.spells.get(sid)
+        if not spell or sid in present or not 1 <= spell["level"] <= max_level:
+            continue
+        if sid not in keep and not _spell_visible(catalog, spell, sources, ruleset):
+            continue
+        options.append({"option_type": "reference", "item": {"index": sid, "name": spell["name"]}})
+        present.add(sid)
+        added.add(sid)
+    if added:
+        options.sort(key=lambda o: (catalog.spells[o["item"]["index"]]["level"], o["item"]["name"]))
+    return added
+
+
+def _label_mark_options(tpl: dict, added: set[str]) -> None:
+    for opt in tpl["options"]:
+        if opt["id"] in added:
+            opt["label"] = f"{opt['label']} ({feat_spell_tables.MARK_LABEL})"
 
 
 def _spell_choice_templates(
@@ -4162,7 +4203,7 @@ def _spell_choice_templates(
     expanded_spell_ids: list[str] = (), always_prepared: dict[str, str] | None = None,
     sources=None, ruleset: str = "mixed", class_choices: dict | None = None, list_class_id: str | None = None,
     school_limit: dict | None = None, problems_out: list | None = None, secrets_cap: int = 0,
-    subclass_id: str | None = None,
+    subclass_id: str | None = None, mark_ids: list[str] = (),
 ) -> list[dict]:
     """`sources`/`ruleset` (the draft's) decide which catalog spells are
     offered; spells already selected in `class_choices` stay offered either
@@ -4177,7 +4218,9 @@ def _spell_choice_templates(
     `class_choices_2024.magical_secrets_cap_2014`) adds the other classes' spells and cantrips to the known-spells
     card and limits how many of the picks may come from outside the class's own list. `subclass_id` (RP17, ruleset
     2024): the Wizard's selected subclass; a Savant card (free spellbook spells) is built after the spellbook card and
-    its valid picks join the effective book (prepared card, Spell Mastery, Signature Spells)."""
+    its valid picks join the effective book (prepared card, Spell Mastery, Signature Spells). `mark_ids` (RP19): catalog
+    ids of the held Mark feats' table spells (both editions of a spell); the ones up to this class's highest slot level
+    join the spell list the cards offer, labelled "(Spells of the Mark)"."""
     if not level_row:
         return []
     spellcasting = level_row.get("spellcasting") or {}
@@ -4224,7 +4267,7 @@ def _spell_choice_templates(
     if cls_id == "wizard" and list_id == "wizard" and class_level >= 1 and _highest_spell_slot_level(spellcasting) > 0:
         book_tpl = _wizard_spellbook_template(
             catalog, cls, cls_id, spellcasting, class_level, sources, ruleset, source, _kept(f"class:{cls_id}:spellbook"),
-            (class_choices or {}).get(f"class:{cls_id}:spellbook"),
+            (class_choices or {}).get(f"class:{cls_id}:spellbook"), mark_ids,
         )
         templates.append(book_tpl)
         valid_book = {o["id"] for o in book_tpl["options"]}
@@ -4262,6 +4305,10 @@ def _spell_choice_templates(
         else:
             option_list = _spell_options_up_to(catalog, list_id, max_spell_level, sources, ruleset, _kept(f"class:{cls_id}:spells-known"))
         present = {o["item"]["index"] for o in option_list}
+        mark_added = (_add_mark_options(catalog, option_list, mark_ids, max_spell_level, sources, ruleset,
+                                        _kept(f"class:{cls_id}:spells-known"))
+                      if wizard_book is None else set())  # RP19 Spells of the Mark
+        present |= mark_added
         for sid in (expanded_spell_ids if wizard_book is None else ()):  # e.g. Fiend Expanded Spell List
             spell = catalog.spells[sid]
             if sid not in present and 1 <= spell["level"] <= max_spell_level:
@@ -4288,6 +4335,8 @@ def _spell_choice_templates(
             description += (f" Magical Secrets: up to {secrets_cap} of them may be spells of any class's list, or another "
                             "class's cantrips; they count in this number.")
         tpl = build_choice_template(envelope, cid, source, label, description=description)
+        if tpl is not None and mark_added:
+            _label_mark_options(tpl, mark_added)
         if tpl is None and wizard_book is not None and not wizard_book:
             # build_choice_template returns None for an empty option list; an
             # empty spellbook must still show the (option-less) prepared card.
@@ -4302,7 +4351,7 @@ def _spell_choice_templates(
                 _apply_school_limit(catalog, tpl, school_limit, class_level, cls_id,
                                     (class_choices or {}).get(cid), problems_out)
             if secrets_cap and wizard_book is None and list_id == cls_id:
-                _apply_secrets_cap(catalog, tpl, cls_id, secrets_cap, (class_choices or {}).get(cid))
+                _apply_secrets_cap(catalog, tpl, cls_id, secrets_cap, (class_choices or {}).get(cid), mark_added)
             templates.append(tpl)
 
     return templates + pick_templates
@@ -5502,6 +5551,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 school_limit=SUBCLASS_SPELL_SCHOOL_LIMITS.get(rc["subclass_id"] or "") if list_class_id != rc_cls_id else None,
                 problems_out=problems,
                 secrets_cap=class_choices_2024.magical_secrets_cap_2014(catalog, rc_cls_id, rc_level, ruleset),
+                mark_ids=_feat_mark_spell_ids(catalog, resolved_feats, _highest_spell_slot_level(spell_dict)),
             )
             class_choices_2024.label_magical_secrets(catalog, spell_templates, rc_cls_id, rc_level, ruleset)
             choice_templates += spell_templates
@@ -6427,6 +6477,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     innate_spells = (_species_innate_spells(race, subrace, catalog, species_variant)
                      + _species_trait_spell_choices(race, subrace, catalog, choices)
                      + _feat_innate_spells(resolved_feats, catalog, choices, feat_effects_mod.innate_patches(feat_inst, feat_numbers))
+                     + [{**_innate_entry_to_sheet(e, catalog), "featId": e["featId"], "source": e["source_label"], "note": e["note"]}  # RP19
+                        for e in feat_spell_tables.adept_entries(resolved_feats, feat_spell_tables.highest_slot_level(spell_slots, warlock_slots))]
                      + [{**_innate_entry_to_sheet(e, catalog), "source": e["source_label"],
                          **({"note": e["note"]} if e.get("note") else {})}
                         for e in features_mod.invocation_innate_entries(invocation_effects)]

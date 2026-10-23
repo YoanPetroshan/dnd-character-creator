@@ -133,7 +133,29 @@ def _feat_from_5etools(raw: dict) -> dict | None:
         "innate_spells": feat_innate_spells,
         "spell_choices": feat_spell_choices,
         "spell_variants": feat_spell_variants,
+        # RP19: the spell tables keyed by spell slot level (`sN`), which `_feat_spells_from_5etools` skips.
+        "slot_spells": _feat_slot_spell_table(raw, "prepared"),
+        "expanded_spells": _feat_slot_spell_table(raw, "expanded"),
     }
+
+
+def _feat_slot_spell_table(raw: dict, mechanism: str) -> dict[int, list[str]]:
+    """RP19: the `sN` keys (N = spell slot level) of one additionalSpells mechanism as {N: [spell slug]}.
+    `prepared` carries the eight Unearthed Arcana Arcane Adept tables ("you thereafter always have the spells listed
+    for that level and lower prepared"), `expanded` the twelve Spells of the Mark tables ("added to that feature's
+    spell list"). Only plain spell names convert; the slugs resolve against the catalog at engine time."""
+    table: dict[int, list[str]] = {}
+    for entry in raw.get("additionalSpells") or []:
+        block = entry.get(mechanism) if isinstance(entry, dict) else None
+        if not isinstance(block, dict):
+            continue
+        for key, items in block.items():
+            if not (len(key) > 1 and key[0] == "s" and key[1:].isdigit() and isinstance(items, list)):
+                continue
+            names = [slug(_clean_innate_spell_name(i)) for i in items if isinstance(i, str) and _clean_innate_spell_name(i)]
+            if names:
+                table.setdefault(int(key[1:]), []).extend(n for n in names if n not in table.get(int(key[1:]), []))
+    return table
 
 
 # Rune Shaper lists 14 runes but the rule is "know half your proficiency

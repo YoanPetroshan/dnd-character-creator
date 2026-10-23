@@ -138,8 +138,8 @@ TAIL_EFFECTS.update({
                   "those three types until the start of your next turn."],
         "resources": [_res("Toughened Flesh", 1, "short-or-long")]},
     "divination-adept-au": {
-        "notes": ["Additional Spells (always prepared when you have spell slots of that level): 1 Detect Evil and Good; "
-                  "2 Mind Spike; 3 Clairvoyance; 4 Divination; 5 Scrying; the spells of that level and lower.",
+        "notes": ["Additional Spells: the spells of the Divination Adept Spells table for your highest spell slot level and "
+                  "the lower levels are always prepared (listed in the innate spells).",
                   "Prescient Intervention: Reaction when a creature you see within 60 feet makes a D20 Test: give it "
                   "Advantage or Disadvantage."],
         "resources": [_res("Prescient Intervention", 1, "long", "Also regained when you cast a Divination spell with a spell slot.")]},
@@ -457,7 +457,10 @@ TAIL_QUOTES.update({
 
 # ----------------------------------------------------------------------------------------------- notes only
 def _adept(school: str, table: str, benefit: str) -> dict:
-    return {"notes": [f"Additional Spells (always prepared once you have spell slots of that level, with the lower levels): {table}.",
+    # RP19: the table itself is resolved against the highest spell slot level (innate spells); `table` stays the
+    # reference text of the call sites and is checked against the catalog by tests/test_feat_slot_spells.py
+    return {"notes": [f"Additional Spells: the spells of the {school} Adept Spells table for your highest spell slot level and "
+                      "the lower levels are always prepared (listed in the innate spells).",
                       benefit]}
 
 
@@ -998,3 +1001,11 @@ RP5_ABILITY_FROM: dict[str, tuple[str, str]] = {
 }
 for _index, (_base, _sentence) in RP5_ABILITY_FROM.items():
     TAIL_EFFECTS[_index]["ability_from"] = _base
+
+
+# RP19 (A2): the governing sentences of the slot-keyed spell tables (pinned against the catalog by
+# tests/test_feat_slot_spells.py::test_quote_matches_catalog).
+RP19_QUOTES: dict[str, str] = {
+    "adept": "you thereafter always have the spells listed for that level and lower prepared",
+    "mark": "Spells table are added to that feature's spell list",
+}
