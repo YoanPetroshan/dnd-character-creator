@@ -1456,3 +1456,31 @@ The filler's picks (first enabled option) are Athletics, Deception and History f
 **Timing** (`resolve()`, mean of 50, ms, Bard 20 Lore with both picks): mixed 5.4, 2014 4.4, 2024 4.2 (limit 50; `test_bard_20_lore_resolves_under_50_ms` asserts it too).
 
 **Tests / totals.** Server suite 4623 -> 4665 passed (34 new in `test_lore_bard_2014.py`, 1 new golden pin, 2 new golden cases, export-sweep parametrizations for `bard6-lore-2014`), root suite 405 passed / 8 skipped, `npm run build` green. A first full run failed `test_subclass_picks_2024.py::test_mark_unavailable_covers_the_pick_cards` (my `mark_unavailable` extension also matched the XPHB pick cards outside 2024); fixed by scoping it to the SRD cards (`_is_srd_pick_card`), test unedited.
+
+## RPX2 (Extra 2, D4) SRD packs weigh their contents under mixed / 2014 (2026-10-23)
+
+**Rule.** The SRD 5.1 / PHB 2014 "Equipment Packs" list a cost and the items inside, no weight of their own, so a pack weighs the sum of its contents. The catalog pack records (`burglars-pack` ... `scholars-pack`) carry `contents` ([{item: {index}, quantity}]) and `weight: None`; VERIFIED by script: all 7 have complete contents, every member exists in the catalog with a numeric weight. The only other records with `weight: None` are the 9 mounts and 6 vessels (not carried gear, no `contents`), which stay 0; the catalog has no other container with a missing weight (Backpack 5 lb, Chest 25 lb, Pouch 1 lb are set). `saddle-pack` is a saddle (15 lb), not an equipment pack.
+
+**Sums (lb).** Burglar's 47.5, Diplomat's 36, Dungeoneer's 61.5, Entertainer's 38, Explorer's 59, Priest's 18, Scholar's 10 (2024 keeps the RP8 table: 42 / 39 / 55 / 58.5 / 55 / 29 / 22; the SRD sum is never used under 2024).
+
+**Engine.** `derived.pack_weights_from_contents(items)` returns `{pack id: lb}` for records with `weight` None and non-empty, fully numeric `contents` (a pack with an unknown or weightless member is left out rather than guessed; a record with a weight keeps it). `resolve` passes it as the `weights` override of `carrying_summary` for every ruleset except 2024 (2024 keeps `ITEM_WEIGHTS_2024` + `PACKS_2024`). The catalog item record is untouched and the sheet entries gain no `contents` (not requested; mixed / 2014 still do not list pack contents). No new output key, so `types.ts`, `export_fields.py` and the frontend are untouched.
+
+**Deliberate test changes.** `test_packs_2024.py::test_mixed_and_2014_are_unchanged` (renamed `..._have_no_contents_and_the_srd_sum_weight`) asserted the SRD pack counts 0; it now asserts +59 lb for the Explorer's Pack and still asserts no `contents`. `test_worn_wielded.py::test_drafts_without_worn_or_wielded_resolve_exactly_as_before_g2` (pre-G2 baseline, cases `ks-barbarian20-2014` and `srd-barbarian5-chain-in-pack`) now allows `carryingCapacity.carried` to differ from the baseline by exactly the SRD pack weights of the sheet's granted / chosen / added entries and nothing else. New: `tests/test_packs_srd_weights.py` (22: member data, sums, degrade, added / chosen / granted packs, qty, 2024 unchanged, mounts) and `test_rpx2_every_case_counts_its_srd_pack_weight` in the golden module; 19 of the 22 failed before the engine change.
+
+**Golden rebaseline `RPX2`** (`REBASELINES["RPX2"]`, cases `*`: every one of the 237 golden cases holds an SRD pack, the fixed one or the filler's first package; paths `^result\.derived\.carryingCapacity\.carried$` and `...overCapacity$`, written from the rule matrix). Printed summary of the real run (the dry run printed the same):
+
+```
+rebaseline RPX2 (SRD pack weight = contents sum (Extra 2))
+  matching cases changed: 237 of 237
+    237 changed path(s) match ^result\.derived\.carryingCapacity\.carried$
+      0 changed path(s) match ^result\.derived\.carryingCapacity\.overCapacity$
+wrote 237 cases, 881452 bytes
+```
+
+VERIFIED by diffing the gz before (copy taken before the run) and after with the module's `_norm` / `diff_paths`: all 237 cases changed, in exactly one path each (`result.derived.carryingCapacity.carried`), nothing else; no case over capacity. The append-only `REBASELINES` tuple is now `("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2")`.
+
+**Known gap closed.** RP8's "mixed / 2014 still show SRD packs with weight 0" now holds only for the contents list (not shown), not for the weight.
+
+**Timing** (`resolve()`, mean of 20, ms, level 20 golden drafts): Fighter 20 mixed 4.4 / 2014 2.7 / 2024 2.3; Wizard 20 mixed 3.5 / 2014 2.6 / 2024 5.7 (limit 50).
+
+**Totals.** Server suite 4665 -> 4688 passed, root suite 405 passed / 8 skipped; frontend untouched, no `npm run build`.

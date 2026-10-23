@@ -152,6 +152,30 @@ def equipment_weight(entries: list[dict], items: dict, weights: dict | None = No
     return int(total) if total == int(total) else total
 
 
+def pack_weights_from_contents(items: dict) -> dict:
+    """RPX2: {pack id: lb} for catalog records with `weight` None and `contents` ([{item: {index}, quantity}]): the
+    SRD / PHB 2014 equipment packs list no weight of their own, so a pack weighs the sum of its contents. A record
+    with a weight keeps it; a pack with an unknown, weightless or malformed member is left out (no guessing)."""
+    out = {}
+    for pack_id, rec in items.items():
+        contents = rec.get("contents")
+        if rec.get("weight") is not None or not isinstance(contents, list) or not contents:
+            continue
+        total = 0.0
+        for member in contents:
+            ref = (member.get("item") or {}).get("index") if isinstance(member, dict) else None
+            qty = member.get("quantity") if isinstance(member, dict) else None
+            weight = (items.get(ref) or {}).get("weight")
+            if isinstance(qty, bool) or not isinstance(qty, (int, float)) or isinstance(weight, bool) \
+                    or not isinstance(weight, (int, float)):
+                break
+            total += qty * weight
+        else:
+            total = round(total, 2)
+            out[pack_id] = int(total) if total == int(total) else total
+    return out
+
+
 def carrying_summary(str_score: int, size: str | None, entries: list[dict], items: dict,
                      weights: dict | None = None) -> dict:
     capacity = carrying_capacity(str_score, size)

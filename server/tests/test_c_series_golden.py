@@ -176,6 +176,17 @@ REBASELINES: dict[str, dict] = {
         ],
         "why": "SRD Lore Bard Bonus Proficiencies and Additional Magical Secrets (Extra 1)",
     },
+    # RPX2 / Extra 2: SRD packs weigh the sum of their SRD contents (they weighed 0). Every golden case holds a pack
+    # (fixed grant or the filler's first package), so `cases` is "*". Rule matrix: only the carried total and, where it
+    # crosses the capacity, the over-capacity flag move; nothing else reads weight.
+    "RPX2": {
+        "cases": ["*"],
+        "paths": [
+            r"^result\.derived\.carryingCapacity\.carried$",
+            r"^result\.derived\.carryingCapacity\.overCapacity$",
+        ],
+        "why": "SRD pack weight = contents sum (Extra 2)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -528,7 +539,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1") and STRIP == ("derived.featResources",)
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2") and STRIP == ("derived.featResources",)
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
@@ -611,6 +622,20 @@ def test_rpx1_cases_are_the_lore_bard_3_11_20_cases_and_hold_the_lore_picks():
         known = next(e for e in res["sheet"]["spells"] if e["classId"] == "bard")["known"]
         assert {"fireball", "sacred-flame"} <= {s["id"] for s in known}, n
         assert not res["pruned"] or not [p for p in res["pruned"] if "bonus" in p["choiceId"] or "secrets" in p["choiceId"]], n
+
+
+_SRD_PACK_LB = {"burglars-pack": 47.5, "diplomats-pack": 36, "dungeoneers-pack": 61.5, "entertainers-pack": 38,
+                "explorers-pack": 59, "priests-pack": 18, "scholars-pack": 10}
+
+
+def test_rpx2_every_case_counts_its_srd_pack_weight():
+    """RPX2: every golden case holds an SRD pack and its carried total includes the pack's contents sum."""
+    assert len(REBASELINES["RPX2"]["cases"]) == 1 and REBASELINES["RPX2"]["cases"] == ["*"]
+    for n, entry in _GOLDEN.items():
+        eq = entry["result"]["sheet"]["equipment"]
+        packs = sum(_SRD_PACK_LB.get(e["itemId"], 0) * e.get("qty", 1) for k in ("granted", "chosen", "added") for e in eq[k])
+        assert packs > 0, n
+        assert entry["result"]["derived"]["carryingCapacity"]["carried"] >= packs, n
 
 
 def test_keyed_normalization_and_diff_paths():

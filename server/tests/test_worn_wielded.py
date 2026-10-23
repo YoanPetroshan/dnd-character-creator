@@ -112,6 +112,15 @@ def test_drafts_without_worn_or_wielded_resolve_exactly_as_before_g2(catalog, na
         card = next(c for c in now["choices"] if c["id"] == "class:monk:1:prof-choice-1")
         assert card["status"] == "pending" and len(card["options"]) == 27
         now["choices"] = [c for c in now["choices"] if c is not card]
+    # RPX2: SRD packs now weigh their contents' sum (the pre-G2 baseline counted 0): the carried total may differ by
+    # exactly that and by nothing else.
+    from engine.derived import pack_weights_from_contents
+    pack_lb = pack_weights_from_contents(catalog.items)
+    eq = now["sheet"]["equipment"]
+    packs = sum(pack_lb.get(e["itemId"], 0) * e.get("qty", 1) for k in ("granted", "chosen", "added") for e in eq[k])
+    assert now["derived"]["carryingCapacity"]["carried"] == pytest.approx(baseline["derived"]["carryingCapacity"]["carried"] + packs)
+    now["derived"]["carryingCapacity"]["carried"] = baseline["derived"]["carryingCapacity"]["carried"]
+    now["derived"]["carryingCapacity"]["overCapacity"] = baseline["derived"]["carryingCapacity"]["overCapacity"]
     assert now == baseline
 
 

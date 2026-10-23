@@ -6266,7 +6266,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         final_scores.get("STR", 10), species_size or (race or {}).get("size") or "Medium",
         granted_equipment + chosen_equipment + added_resolved, catalog.items,
         ({**reference_data.ITEM_WEIGHTS_2024, **{k: v["weight"] for k, v in reference_data.PACKS_2024.items()}}
-         if ruleset == "2024" else None),
+         if ruleset == "2024" else derived_mod.pack_weights_from_contents(catalog.items)),  # RPX2: SRD packs = contents sum
     )
     feat_passive = feat_effects_mod.passive_bonus(feat_inst)  # FE4 Observant (PHB): passive scores only
     derived = {

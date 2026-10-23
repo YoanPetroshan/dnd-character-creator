@@ -7,7 +7,7 @@ Rule matrix:
   weight (lb): Burglar's 42 | Diplomat's 39 | Dungeoneer's 55 | Entertainer's 58.5 | Explorer's 55 | Priest's 29 | Scholar's 22
   2024: a pack entry (granted / chosen / added) carries `contents` [{itemId, name, qty}]; the pack stays one item;
         carried weight uses the table weight (the SRD pack records weigh nothing).
-  mixed / 2014: no `contents`, weight unchanged (the SRD pack counts 0). The F0 golden covers it byte for byte.
+  mixed / 2014: no `contents`; the weight is the SRD contents sum since RPX2 (tests/test_packs_srd_weights.py).
   every member id exists in the catalog; an unknown pack member is skipped (degrade).
   exports: YAML keeps `contents`; Markdown and PDF print "(съдържа: ...)" after the pack.
 """
@@ -88,11 +88,11 @@ def test_two_packs_double_the_weight(catalog):
 
 
 @pytest.mark.parametrize("ruleset", ["mixed", "2014"])
-def test_mixed_and_2014_are_unchanged(catalog, ruleset):
+def test_mixed_and_2014_have_no_contents_and_the_srd_sum_weight(catalog, ruleset):
     base = resolve(_draft(ruleset), catalog)
     res = resolve(_draft(ruleset, added=[{"itemId": "explorers-pack", "qty": 1, "equipped": False}]), catalog)
     assert "contents" not in _added(res, "explorers-pack")
-    assert _carried(res) == _carried(base)  # the SRD pack counts 0
+    assert _carried(res) - _carried(base) == 59  # RPX2: the SRD Explorer's Pack weighs its contents' sum (was 0)
     assert not any("contents" in e for k in ("granted", "chosen", "added") for e in res["sheet"]["equipment"][k])
 
 
