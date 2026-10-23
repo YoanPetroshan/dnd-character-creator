@@ -177,6 +177,8 @@ _EXPECT = {
     "warlock7-2024": {"resources": ["Agonizing Blast", "Pact of the Blade"], "tome": True, "lessons": True, "pact_weapon": True,
                       "devils_sight": True, "feature_choice": "Pact of the Tome"},
     "wizard5-2014": {"resources": ["Arcane Recovery"], "spellbook": True},
+    "wizard20-2014": {"resources": ["Arcane Recovery", "Signature Spells"], "spellbook": True, "spell_mastery": 2,
+                      "signature": 2},  # RP15
     "wizard5-2024": {"resources": ["Arcane Recovery"], "spellbook": True},
     "psi-warrior11": {"resources": ["Psionic Energy Dice"], "apa": 3},
     "totem-bear6": {"resources": ["Rage"], "feature_choice": "Bear"},
@@ -430,6 +432,8 @@ def test_kitchen_sink_2024_stage_lines_reach_every_export(catalog):
         ("sorcerer17-2024", ["Sorcery Points", "Innate Sorcery", "Sorcerous Restoration", "Careful Spell (1 SP)"]),
         ("cleric7-2024", ["Divine Strike", "Blessed Strikes"]),
         ("wizard20-2024", ["Майсторство със заклинания", "Burning Hands (ниво 1)", "Scorching Ray (ниво 2)", "Запазени заклинания", "Fireball (ниво 3)", "Scholar"]),
+        ("wizard20-2014", ["Майсторство със заклинания", "Shield (ниво 1)", "Web (ниво 2)", "Запазени заклинания",
+                           "Fireball (ниво 3)", "Counterspell (ниво 3)"]),  # RP15: the SRD picks under 2014
         ("ranger9-2024", ["Elvish", "Dwarvish", "Deft Explorer"]),
         ("barbarian3-2024", ["Primal Knowledge"]),
         ("fighter4-2024", ["Javelin x8", "Fighting Style"]),

@@ -151,8 +151,10 @@ def test_f2b_helper_marks_only_new_2024_cards_with_zero_enabled_options():
     out = class_choices_2024.mark_unavailable(copy.deepcopy(cards), "2024")
     assert [c["status"] for c in out] == ["unavailable"] * 4 + ["pending", "pending", "resolved"]
     assert all(c.get("unavailableReason") for c in out[:4])
-    # other rulesets: untouched
-    assert class_choices_2024.mark_unavailable(copy.deepcopy(cards), "mixed") == cards
+    # other rulesets: untouched, except (RP15) the Wizard Spell Mastery / Signature Spells cards that share the cids
+    mixed = class_choices_2024.mark_unavailable(copy.deepcopy(cards), "mixed")
+    assert [c["status"] for c in mixed] == ["unavailable", "pending", "pending", "pending", "pending", "pending", "resolved"]
+    assert mixed[1:] == cards[1:]
 
 
 # --- Finding 3: Expertise walk order and Skill Expert "lack Expertise" --------------------------------------------

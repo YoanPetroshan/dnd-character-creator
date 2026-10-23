@@ -61,7 +61,7 @@ from catalog.loader import Catalog
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
 from catalog.reference_data import (
     ABILITIES, SPECIFIC_WEAPON_PROFICIENCY_IDS, SRD_TRAIT_EFFECTS, SUBCLASS_PROFICIENCIES, SUBCLASS_EXTRA_FEATURES,
-    SUBCLASS_SPELLCASTING_ABILITY, SUBCLASS_SPELL_SCHOOL_LIMITS, WIZARD_SPELL_PICKS_2024, ruleset_allows, subclass_unlock_level,
+    SUBCLASS_SPELLCASTING_ABILITY, SUBCLASS_SPELL_SCHOOL_LIMITS, wizard_spell_picks, ruleset_allows, subclass_unlock_level,
 )
 from . import asi as asi_mod
 from . import attacks as attacks_mod
@@ -5713,12 +5713,13 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             sid for sid in class_choices_2024.always_prepared_class_spells(catalog, rc_cls_id, rc["level"], "", ruleset)
             if sid not in always_ids]
         wizard_pick_keys: dict[str, list[dict]] = {}
-        if rc_cls_id == "wizard" and ruleset == "2024":
-            for slug_, spec in WIZARD_SPELL_PICKS_2024.items():
+        if rc_cls_id == "wizard":  # C6d (2024) / RP15 (SRD Spell Mastery, not always prepared)
+            for slug_, spec in wizard_spell_picks(ruleset).items():
                 card = next((c for c in choices if c["id"] == class_choices_2024.spell_pick_cid(slug_, spec)), None)
                 if card:
                     wizard_pick_keys.setdefault(spec["sheet_key"], []).extend(_spell_summaries(card))
-            always_ids = always_ids + [s["id"] for picks in wizard_pick_keys.values() for s in picks if s["id"] not in always_ids]
+                    if spec.get("always_prepared", True):
+                        always_ids = always_ids + [s["id"] for s in _spell_summaries(card) if s["id"] not in always_ids]
         if not (rc_cantrip_choice or rc_known_spells_choice or always_ids):
             continue
         rc_caster = _effective_caster(catalog, rc, ruleset)

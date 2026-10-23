@@ -118,10 +118,12 @@ def _order_labels(choices: list[dict]) -> dict[str, tuple[str, list[str]]]:
     return out
 
 
-def _spell_pick_labels(choices: list[dict]) -> dict[tuple[str, str], list[str]]:
-    """{(class id, feature name): spell names} of the Wizard's Spell Mastery / Signature Spells cards (C6d)."""
-    from catalog.reference_data import WIZARD_SPELL_PICKS_2024
-    names = {f"class:wizard:{spec['class_level']}:{slug}": spec["grant"] for slug, spec in WIZARD_SPELL_PICKS_2024.items()}
+def _spell_pick_labels(choices: list[dict], ruleset: str = "2024") -> dict[tuple[str, str], list[str]]:
+    """{(class id, feature name): spell names} of the Wizard's Spell Mastery / Signature Spells cards (C6d; RP15: the
+    SRD feature names "Spell Mastery" / "Signature Spell" outside 2024)."""
+    from catalog.reference_data import wizard_spell_picks
+    names = {f"class:wizard:{spec['class_level']}:{slug}": spec.get("feature_name", spec["grant"])
+             for slug, spec in wizard_spell_picks(ruleset).items()}
     out: dict[tuple[str, str], list[str]] = {}
     for c in choices:
         if c["source"]["kind"] == "class" and c["id"] in names and c["selected"]:
@@ -155,7 +157,7 @@ def build_features(catalog, resolved_classes, refs_by_class, race, race_id, subr
     fs_labels = _fighting_style_labels(choices) if ruleset == "2024" else {}
     mastery_labels = _mastery_labels(choices) if ruleset == "2024" else {}
     order_labels = _order_labels(choices) if ruleset == "2024" else {}
-    spell_pick_labels = _spell_pick_labels(choices) if ruleset == "2024" else {}
+    spell_pick_labels = _spell_pick_labels(choices, ruleset)
 
     for rc in resolved_classes:
         if not rc["cls"] or not rc["cls_id"]:
@@ -188,6 +190,7 @@ def build_features(catalog, resolved_classes, refs_by_class, race, race_id, subr
                 subclass_entries.append(_entry(source, feature["name"], lvl, labels))
             elif not overlay:
                 labels = [_strip_prefix(l, feature["name"]) for l in class_choices.get((cls_id, ref["index"]), [])]
+                labels += spell_pick_labels.get((cls_id, feature["name"]), [])  # RP15: SRD Spell Mastery / Signature Spell
                 class_entries.append(_entry(class_source, feature["name"], lvl, labels))
         if overlay:
             # Choices that belong to an XPHB row, in SRD level order.

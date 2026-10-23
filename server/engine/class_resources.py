@@ -361,8 +361,11 @@ def _wizard(ctx: Ctx, rc: dict) -> list[dict]:
     # Same number in both editions: half the wizard level, rounded up (SRD row equals it at all 20 levels).
     level = rc["level"]
     pool = _class_specific(rc).get("arcane_recovery_levels") if ctx.ruleset != "2024" else None
-    return [_resource(rc, "Arcane Recovery", pool=pool or -(-level // 2), recharge="long",
-                      details={"maxSlotLevel": reference_data.ARCANE_RECOVERY_MAX_SLOT_LEVEL, "onShortRest": True})]
+    out = [_resource(rc, "Arcane Recovery", pool=pool or -(-level // 2), recharge="long",
+                     details={"maxSlotLevel": reference_data.ARCANE_RECOVERY_MAX_SLOT_LEVEL, "onShortRest": True})]
+    if ctx.ruleset != "2024":
+        out += _signature_spells(ctx, rc)  # RP15: SRD Signature Spell (2024 builds it in the tail)
+    return out
 
 
 def _ranger(ctx: Ctx, rc: dict) -> list[dict]:
@@ -637,7 +640,7 @@ def _subclass_option_notes_2024(ctx: Ctx, rc: dict) -> list[dict]:
 
 def _signature_spells(ctx: Ctx, rc: dict) -> list[dict]:
     """Wizard 20 Signature Spells: one cast per picked spell per Short or Long Rest; nothing while unpicked."""
-    sig = reference_data.SIGNATURE_SPELLS_2024
+    sig = reference_data.SIGNATURE_SPELLS_2024 if ctx.ruleset == "2024" else reference_data.SIGNATURE_SPELLS_2014
     first = _feature_level(ctx, sig["feature"])
     if first is None or rc["level"] < first or not isinstance(ctx.choices, list):
         return []
@@ -647,7 +650,8 @@ def _signature_spells(ctx: Ctx, rc: dict) -> list[dict]:
     if not names:
         return []
     return [_resource(rc, "Signature Spells", uses=len(names), recharge=sig["recharge"], details={
-        "note": f"Cast each of {', '.join(names)} once at level 3 without a spell slot"})]
+        "note": f"Cast each of {', '.join(names)} once at {'level 3' if ctx.ruleset == '2024' else '3rd level'} "
+                f"without a spell slot"})]
 
 
 _BUILDERS: dict[str, Callable[[Ctx, dict], list[dict]]] = {

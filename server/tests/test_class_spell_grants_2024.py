@@ -372,12 +372,15 @@ def test_signature_spells_over_the_count_is_pruned_not_a_problem(catalog):
 
 @needs_data
 @pytest.mark.parametrize("ruleset", ["mixed", "2014"])
-def test_no_mastery_or_signature_cards_outside_2024(catalog, ruleset):
+def test_outside_2024_the_cards_are_the_srd_ones_with_the_same_cids(catalog, ruleset):
+    # RP15 (E11b) reversed the C6d "2024 only" rule: the SRD Spell Mastery / Signature Spell use the same cids but
+    # no casting-time condition (tests/test_wizard_picks_2014.py). A book without an eligible spell gives
+    # option-less cards (here the 2014 id "fireball" is level 3 only).
     res = _res(catalog, [("wizard", 20, {BOOK: ["fireball"]})], ruleset=ruleset)
-    for cid in (MASTERY1, MASTERY2, SIGNATURE):
-        assert _card(res, cid) is None
+    assert _card(res, MASTERY1)["options"] == [] and _card(res, MASTERY2)["options"] == []
+    assert [o["id"] for o in _card(res, SIGNATURE)["options"]] == ["fireball"]
     entry = _sheet_spells(res, "wizard")
-    assert "spellMastery" not in entry and "signatureSpells" not in entry
+    assert entry["spellMastery"] == [] and entry["signatureSpells"] == []
 
 
 @needs_data

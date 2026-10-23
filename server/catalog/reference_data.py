@@ -2009,3 +2009,36 @@ WIZARD_SPELL_PICKS_2024: dict[str, dict] = {
                          "casting_time": None, "label": "Signature Spells", "grant": "Signature Spells",
                          "sheet_key": "signatureSpells"},
 }
+
+
+# RP15 (E11b): the SRD (2014) Wizard Spell Mastery / Signature Spell, under mixed and 2014. The cids are the SAME
+# as the 2024 cards (a stored pick survives a ruleset switch). Texts (SRD, read from catalog.features):
+#   Spell Mastery (18)   "Choose a 1st-level wizard spell and a 2nd-level wizard spell that are in your spellbook.
+#                        You can cast those spells at their lowest level without expending a spell slot when you
+#                        have them prepared." - no casting-time condition, and NOT always prepared.
+#   Signature Spell (20) "Choose two 3rd-level wizard spells in your spellbook as your signature spells. You always
+#                        have these spells prepared, they don't count against the number of spells you have
+#                        prepared, and you can cast each of them once at 3rd level without expending a spell slot.
+#                        When you do so, you can't do so again until you finish a short or long rest."
+# Same keys as the 2024 table plus `always_prepared` (2024 entries default True) and `feature_name` (the SRD feature
+# name, the sheet.features row).
+WIZARD_SPELL_PICKS_2014: dict[str, dict] = {
+    "spell-mastery-1": {"feature": "spell-mastery", "class_level": 18, "spell_level": 1, "count": 1,
+                        "casting_time": None, "label": "Spell Mastery (level 1)", "grant": "Spell Mastery",
+                        "sheet_key": "spellMastery", "always_prepared": False, "feature_name": "Spell Mastery"},
+    "spell-mastery-2": {"feature": "spell-mastery", "class_level": 18, "spell_level": 2, "count": 1,
+                        "casting_time": None, "label": "Spell Mastery (level 2)", "grant": "Spell Mastery",
+                        "sheet_key": "spellMastery", "always_prepared": False, "feature_name": "Spell Mastery"},
+    "signature-spells": {"feature": "signature-spell", "class_level": 20, "spell_level": 3, "count": 2,
+                         "casting_time": None, "label": "Signature Spells", "grant": "Signature Spells",
+                         "sheet_key": "signatureSpells", "always_prepared": True, "feature_name": "Signature Spell"},
+}
+
+# Wizard 20 Signature Spell resource (SRD): one cast of each picked spell per short or long rest, at 3rd level.
+SIGNATURE_SPELLS_2014 = {"feature": "signature-spell", "choice": "class:wizard:20:signature-spells",
+                         "recharge": "short-or-long"}
+
+
+def wizard_spell_picks(ruleset: str) -> dict[str, dict]:
+    """The Spell Mastery / Signature Spells spec for a ruleset: the XPHB table under 2024, the SRD one otherwise."""
+    return WIZARD_SPELL_PICKS_2024 if ruleset == "2024" else WIZARD_SPELL_PICKS_2014

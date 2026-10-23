@@ -120,6 +120,24 @@ REBASELINES: dict[str, dict] = {
         ],
         "why": "duplicate skill pick between ordinary class cards (RPF)",
     },
+    # RP15 / E11b: the SRD Wizard Spell Mastery (18) and Signature Spell (20) are cards under mixed and 2014 (same cids
+    # as 2024). Only the Wizard 20 cases hold them. Rule matrix: the three new cards; the filler's picks in the
+    # draft; sheet.spells[wizard].spellMastery / signatureSpells / alwaysPrepared (signature picks are always
+    # prepared; Spell Mastery is not); the resource wizard:signature-spells; the Spell Mastery / Signature Spell
+    # sheet.features rows' picked names; the prepared card's disabled flags (always-prepared signature picks).
+    "RP15": {
+        "cases": ["*/src-*/wizard20"],
+        "paths": [
+            r"^result\.choices\[class:wizard:18:spell-mastery-[12]\]$",           # the new cards, reported once at the root
+            r"^result\.choices\[class:wizard:20:signature-spells\]$",
+            r"^draft\.classes\[0\]\.choices\.class:wizard:(18:spell-mastery-[12]|20:signature-spells)$",  # filler picks
+            r"^result\.sheet\.spells\[\d+\]\.(spellMastery|signatureSpells|alwaysPrepared)$",
+            r"^result\.derived\.classResources\[wizard:signature-spells\]$",
+            r"^result\.sheet\.features\[\d+\]\.choice$",                          # the two rows' picked spell names
+            r"^result\.choices\[class:wizard:spells-known\]\.options\[[^\]]+\]\.(disabled|disabledReason)$",
+        ],
+        "why": "SRD Wizard Spell Mastery / Signature Spell cards (E11b)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -472,7 +490,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF") and STRIP == ("derived.featResources",)
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15") and STRIP == ("derived.featResources",)
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
@@ -497,6 +515,22 @@ def test_rpf_cases_are_the_multiclass_rogue_bard_only_and_hold_no_duplicate_skil
         picks = [s for c in res["choices"] if c["id"].endswith(("prof-choice-0", "prof-choice-1")) and c["source"]["kind"] == "class"
                  for s in c["selected"] if s.startswith("skill-")]
         assert len(picks) == len(set(picks)), n
+
+
+def test_rp15_cases_are_the_wizard_20_cases_and_hold_the_srd_pick_cards():
+    hit = sorted(n for n in _GOLDEN if any(fnmatch.fnmatchcase(n, p) for p in REBASELINES["RP15"]["cases"]))
+    assert len(hit) == 4 and all(n.endswith("/wizard20") for n in hit)
+    for n in hit:  # the golden books hold level 1 / 2 spells only: Mastery is filled, Signature has nothing to offer
+        by_id = {c["id"]: c for c in _GOLDEN[n]["result"]["choices"]}
+        assert by_id["class:wizard:18:spell-mastery-1"]["status"] == "resolved", n
+        assert by_id["class:wizard:20:signature-spells"]["status"] == "unavailable", n
+    for n in ("ks/src-all/wizard20-2014", "ks/src-srd/wizard20-2014"):  # appended kitchen sink with real picks
+        res = _GOLDEN[n]["result"]
+        entry = next(e for e in res["sheet"]["spells"] if e["classId"] == "wizard")
+        assert [s["id"] for s in entry["signatureSpells"]] == ["fireball", "counterspell"]
+        assert [s["id"] for s in entry["spellMastery"]] == ["shield", "web"]
+        assert [s["id"] for s in entry["alwaysPrepared"]] == ["fireball", "counterspell"]
+        assert any(r["id"] == "wizard:signature-spells" and r["uses"] == 2 for r in res["derived"]["classResources"])
 
 
 def test_keyed_normalization_and_diff_paths():

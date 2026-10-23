@@ -48,6 +48,12 @@ KITCHEN_SINK: dict[str, dict] = {
         equip=[{"itemId": "longsword", "qty": 1, "equipped": True}]),
     "wizard5-2014": _sub("wizard", 5, "2014", marks=("classes",)),
     "wizard5-2024": _sub("wizard", 5, "2024", marks=("classes", "official")),
+    # RP15 (E11b): the SRD Spell Mastery (a reaction is allowed) and Signature Spell picks, with a stored prepared list
+    "wizard20-2014": _sub("wizard", 20, "2014", marks=("classes",), overrides={
+        "class:wizard:spellbook": ["shield", "magic-missile", "detect-magic", "web", "haste", "fireball", "counterspell", "fly"],
+        "class:wizard:spells-known": ["magic-missile", "web", "haste"],
+        "class:wizard:18:spell-mastery-1": ["shield"], "class:wizard:18:spell-mastery-2": ["web"],
+        "class:wizard:20:signature-spells": ["fireball", "counterspell"]}),
     "psi-warrior11": _sub("fighter", 11, "mixed", sub="psi-warrior-tce", marks=("classes",)),
     "totem-bear6": _sub("barbarian", 6, "mixed", sub="totem-warrior-phb", marks=("classes",), overrides={
         "class:barbarian:3:feature:totem-warrior-phb-3-totem-spirit": ["totem-warrior-phb-3-totem-spirit--bear"],

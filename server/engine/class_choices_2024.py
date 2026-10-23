@@ -816,19 +816,18 @@ def effective_picks(options, stored, count: int) -> list[str]:
 
 def wizard_spell_pick_templates(catalog, class_level: int, book_ids: list[str], source: dict, ruleset: str,
                                 class_choices: dict | None) -> tuple[list[dict], dict[str, str]]:
-    """Spell Mastery (Wizard 18) and Signature Spells (Wizard 20), ruleset 2024 only.
+    """Spell Mastery (Wizard 18) and Signature Spells (Wizard 20): the XPHB cards under 2024, the SRD ones (RP15,
+    `WIZARD_SPELL_PICKS_2014`: no casting-time condition, Spell Mastery not always prepared) under mixed / 2014.
 
     Returns ([card templates], {spell id: reason}). `book_ids` is the effective spellbook (what the
     spellbook card resolves to). Options are the book spells of the pick's spell level, with the
     casting time condition when the rule has one. The reason map holds the picks the generic pass
     will resolve (valid stored picks), so the prepared card can disable them. An empty book (or no
     spell that fits) gives an option-less pending card. No card without the XPHB feature record."""
-    from catalog.reference_data import WIZARD_SPELL_PICKS_2024
+    from catalog.reference_data import wizard_spell_picks
 
-    if ruleset != "2024":
-        return [], {}
     templates, always = [], {}
-    for slug, spec in WIZARD_SPELL_PICKS_2024.items():
+    for slug, spec in wizard_spell_picks(ruleset).items():
         if class_level < spec["class_level"] or spec["feature"] not in catalog.features:
             continue
         spells = sorted(
@@ -839,7 +838,9 @@ def wizard_spell_pick_templates(catalog, class_level: int, book_ids: list[str], 
         cid = spell_pick_cid(slug, spec)
         condition = f" that have a casting time of {spec['casting_time'].replace('1 ', 'an ')}" if spec["casting_time"] else ""
         description = (f"Choose {spec['count']} level {spec['spell_level']} spell{'s' if spec['count'] != 1 else ''} in your "
-                       f"spellbook{condition}. You always have them prepared.")
+                       f"spellbook{condition}. " + ("You always have them prepared." if spec.get("always_prepared", True)
+                                                    else "You can cast them at their lowest level without a spell "
+                                                         "slot while they are prepared."))
         if not spells:
             description = ("Choose spells for your spellbook first." if not book_ids
                            else f"No spell in your spellbook is eligible (level {spec['spell_level']}{condition}).")
@@ -847,6 +848,8 @@ def wizard_spell_pick_templates(catalog, class_level: int, book_ids: list[str], 
                "description": description, "count": spec["count"],
                "options": [{"id": s["index"], "label": s["name"]} for s in spells]}
         templates.append(tpl)
+        if not spec.get("always_prepared", True):
+            continue  # SRD Spell Mastery: "when you have them prepared", the picks are prepared the normal way
         for sid in effective_picks(tpl["options"], (class_choices or {}).get(cid), spec["count"]):
             always[sid] = spec["grant"]
     return templates, always
@@ -1274,6 +1277,7 @@ def lessons_instances(catalog, rc: dict, ruleset: str) -> list[str]:
 # Spells, the Warlock's invocation dependents) can end up with every option disabled for the current character (no
 # eligible spell, nothing left to learn). Such a card must not block export: its status becomes "unavailable" and
 # `unavailableReason` explains why. SRD / 2014 cards keep their behaviour (they are never touched).
+_WIZARD_PICK_CARD_RE = re.compile(r"^class:wizard:\d+:(?:spell-mastery-\d|signature-spells)$")  # shared with RP15 (2014)
 _NEW_2024_CARD_RE = re.compile(
     r"^class:[a-z-]+:\d+:(?:expertise-choice|languages):|^class:[a-z-]+:\d+:feature:xphb-"
     r"|^class:wizard:\d+:(?:spell-mastery-\d|signature-spells)$")
@@ -1291,12 +1295,13 @@ def is_new_2024_class_card(c: dict) -> bool:
 
 
 def mark_unavailable(choices: list[dict], ruleset: str) -> list[dict]:
-    """Under 2024, pending new-chassis cards with no enabled option become `unavailable` (non-blocking)."""
-    if ruleset != "2024":
-        return choices
+    """Under 2024, pending new-chassis cards with no enabled option become `unavailable` (non-blocking). RP15: outside
+    2024 only the Wizard's Spell Mastery / Signature Spells cards (shared cids) get the same treatment."""
     out = []
     for c in choices:
-        if (c["status"] == "pending" and c["count"] > 0 and is_new_2024_class_card(c)
+        in_scope = (is_new_2024_class_card(c) if ruleset == "2024"
+                    else c["source"]["kind"] == "class" and bool(_WIZARD_PICK_CARD_RE.match(c["id"])))
+        if (c["status"] == "pending" and c["count"] > 0 and in_scope
                 and not any(not o.get("disabled") for o in c["options"])):
             reason = ("Nothing can be chosen here with the current character: " +
                       ("no option is offered yet." if not c["options"] else "every option is unavailable."))
