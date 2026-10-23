@@ -120,3 +120,45 @@ def effects(choices) -> list[tuple[str, int, dict]]:
 
 def note_name(spec: dict, option: dict) -> str:
     return f"{spec['label']}: {option['name']}"
+
+
+# ---- RP17: Circle of the Land (the picked land decides the Circle Spells and Nature's Ward) ----------------------
+
+def picked_variant(catalog, rc: dict, selections) -> str | None:
+    """The `variant` key (catalog `spells_by_variant`) of the option picked on the class's variant card (Circle of the
+    Land), read from a selections dict (the raw class choices or a `{cid: [picks]}` of resolved cards); None when
+    unpicked, not offered at this level, or without the XPHB feature record."""
+    cls_id, sub_id = rc.get("cls_id"), rc.get("subclass_id")
+    if not cls_id or not sub_id or not isinstance(selections, dict):
+        return None
+    for fid, spec in reference_data.SUBCLASS_OPTIONS_2024.items():
+        if spec["class"] != cls_id or spec["subclass"] != sub_id or not any("variant" in o for o in spec["options"].values()):
+            continue
+        record = catalog.features.get(fid)
+        if not record or rc["level"] < (record.get("level") or 1):
+            continue
+        picks = selections.get(f"class:{cls_id}:{record.get('level') or 1}:feature:{fid}")
+        for pick in picks if isinstance(picks, list) else []:
+            key = pick[len(fid) + 2:] if isinstance(pick, str) and pick.startswith(fid + "--") else None
+            if key in spec["options"]:
+                return spec["options"][key]["variant"]
+    return None
+
+
+def ward_effects(catalog, resolved_classes: list[dict], choices) -> list[tuple[str, int, dict]]:
+    """Class-effect triples of Nature's Ward's land-dependent Resistance: the XPHB record is in the catalog, the Druid
+    level has reached the record's own level and the picked land has a table row. The Poisoned immunity is the
+    unconditional `CLASS_FEATURE_EFFECTS_2024` entry and does not depend on the pick."""
+    out = []
+    for cls_id, _lvl, fid, spec, _key, option in selected(choices):
+        ward = spec.get("ward")
+        if not ward or "ward_resist" not in option:
+            continue
+        record = catalog.features.get(ward["feature"])
+        rc = next((r for r in resolved_classes if r.get("cls") and r.get("cls_id") == cls_id), None)
+        if (not record or rc is None or rc.get("subclass_id") != spec["subclass"]
+                or rc["level"] < (record.get("level") or 1)):
+            continue
+        out.append((cls_id, rc["level"], {"resist": [option["ward_resist"]], "feature_id": ward["feature"],
+                                          "feature_name": record["name"]}))
+    return out

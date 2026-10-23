@@ -12,7 +12,7 @@ import { SpellSlotsSummary } from "../components/SpellSlotsSummary";
 type ClassTab = "features" | "spells";
 
 function isSpellChoiceId(choiceId: string): boolean {
-  return choiceId.endsWith(":spells-cantrips") || choiceId.endsWith(":spells-known") || choiceId.endsWith(":spellbook") || choiceId.includes(":mystic-arcanum-") || choiceId.includes(":spell-mastery-") || choiceId.endsWith(":signature-spells") || choiceId.endsWith(":feature:additional-magical-secrets") || choiceId.includes(":opt-pact-of-the-tome-xphb:");
+  return choiceId.endsWith(":spells-cantrips") || choiceId.endsWith(":spells-known") || choiceId.endsWith(":spellbook") || choiceId.includes(":mystic-arcanum-") || choiceId.includes(":spell-mastery-") || choiceId.endsWith(":signature-spells") || choiceId.endsWith(":feature:additional-magical-secrets") || choiceId.includes(":opt-pact-of-the-tome-xphb:") || /:feature:[a-z0-9-]+-(?:savant|improved-illusions|magical-discoveries)$/.test(choiceId);
 }
 
 interface ClassDetail {

@@ -1927,8 +1927,7 @@ ADDITIONAL_SECRETS_2014: dict = {
 # CLASS_FEATURE_EFFECTS_2024), `note` (a note-only subclass resource; `{cha:+d}` style fields come from the
 # class-resource note variables) and `attack_note` (added to every weapon attack row). Deliberately NOT here:
 # Elemental Epitome, Fiendish Resilience, Starry Form and The Third Eye (the pick lasts a turn, a rest or one use,
-# so the feature text stays the note; see CLASS_FEATURE_NOTES_ONLY_2024), Land's Circle Spells type and Nature's
-# Ward (RP17), and the Beast Master stat blocks (not in the data: the card is a label only).
+# so the feature text stays the note; see CLASS_FEATURE_NOTES_ONLY_2024), and the Beast Master stat blocks (not in the data: the card is a label only).
 SUBCLASS_OPTIONS_2024: dict[str, dict] = {
     "hunter-xphb-3-hunters-prey": {
         "class": "ranger", "subclass": "hunter-xphb", "label": "Hunter's Prey",
@@ -2016,6 +2015,80 @@ SUBCLASS_OPTIONS_2024: dict[str, dict] = {
             "gift-6": {"name": "Your skin and hair change color each dawn.",
                        "quote": "6 | Your skin and hair change color each dawn."},
         }},
+    # RP17: Circle of the Land. The picked land decides the Circle Spells (catalog `spells_by_variant`, by `variant`) and
+    # Nature's Ward's damage Resistance (`ward`: the XPHB feature record and, per option, its table row `ward_quote` and
+    # `ward_resist`). "Whenever you finish a Long Rest, choose one type of land" - an editable card.
+    "land-xphb-3-circle-of-the-land-spells": {
+        "class": "druid", "subclass": "land-xphb", "label": "Circle Spells (land type)",
+        "quotes": ("Whenever you finish a Long Rest, choose one type of land: arid, polar, temperate, or tropical.",
+                   "you have the spells listed for your Druid level and lower prepared."),
+        "ward": {"feature": "land-xphb-10-natures-ward",
+                 "quotes": ("you have Resistance to a damage type associated with your current land choice in the "
+                            "Circle Spells feature, as shown in the Nature's Ward table.",)},
+        "options": {
+            "arid": {"name": "Arid", "quote": "Arid Land", "variant": "arid",
+                     "ward_quote": "Arid | Fire", "ward_resist": "fire"},
+            "polar": {"name": "Polar", "quote": "Polar Land", "variant": "polar",
+                      "ward_quote": "Polar | Cold", "ward_resist": "cold"},
+            "temperate": {"name": "Temperate", "quote": "Temperate Land", "variant": "temperate",
+                          "ward_quote": "Temperate | Lightning", "ward_resist": "lightning"},
+            "tropical": {"name": "Tropical", "quote": "Tropical Land", "variant": "tropical",
+                         "ward_quote": "Tropical | Poison", "ward_resist": "poison"},
+        }},
+}
+
+# RP17 (F3, E13): XPHB subclass spell picks other than a named-variant table, ruleset 2024 only. Keyed by the XPHB
+# subclass feature record id; the filters (school, class lists, level lists) and the counts come from the catalog
+# subclass record's `spell_choices` (one entry per spell, with the class level it is gained at), the texts are pinned
+# verbatim by tests.
+#   savant       Wizard 3, "add them to your spellbook for free": count = entries reached (2 at level 3, +1 at every
+#                level that opens a new spell slot level); options = Wizard spells of `school`, levels 1 .. the highest
+#                Wizard slot level (the 2024 spellbook holds level 1+ spells, C4); not counted against the spellbook card.
+#   cantrip      Illusionist 3 Improved Illusions: Minor Illusion is known (the subclass `spells` entry); when it is
+#                already known one other Wizard cantrip, not counted against the cantrips known.
+#   discoveries  Lore Bard 6: two spells of the Cleric / Druid / Wizard lists, cantrips or levels with Bard slots, always
+#                prepared (reason "Magical Discoveries").
+SUBCLASS_SPELL_PICKS_2024: dict[str, dict] = {
+    "abjurer-xphb-3-abjuration-savant": {
+        "kind": "savant", "class": "wizard", "subclass": "abjurer-xphb", "school": "abjuration",
+        "quotes": ("Choose two Wizard spells from the Abjuration school, each of which must be no higher than level 2, "
+                   "and add them to your spellbook for free.",
+                   "whenever you gain access to a new level of spell slots in this class, you can add one Wizard spell "
+                   "from the Abjuration school to your spellbook for free. The chosen spell must be of a level for "
+                   "which you have spell slots.")},
+    "diviner-xphb-3-divination-savant": {
+        "kind": "savant", "class": "wizard", "subclass": "diviner-xphb", "school": "divination",
+        "quotes": ("Choose two Wizard spells from the Divination school, each of which must be no higher than level 2, "
+                   "and add them to your spellbook for free.",
+                   "whenever you gain access to a new level of spell slots in this class, you can add one Wizard spell "
+                   "from the Divination school to your spellbook for free. The chosen spell must be of a level for "
+                   "which you have spell slots.")},
+    "evoker-xphb-3-evocation-savant": {
+        "kind": "savant", "class": "wizard", "subclass": "evoker-xphb", "school": "evocation",
+        "quotes": ("Choose two Wizard spells from the Evocation school, each of which must be no higher than level 2, "
+                   "and add them to your spellbook for free.",
+                   "whenever you gain access to a new level of spell slots in this class, you can add one Wizard spell "
+                   "from the Evocation school to your spellbook for free. The chosen spell must be of a level for "
+                   "which you have spell slots.")},
+    "illusionist-xphb-3-illusion-savant": {
+        "kind": "savant", "class": "wizard", "subclass": "illusionist-xphb", "school": "illusion",
+        "quotes": ("Choose two Wizard spells from the Illusion school, each of which must be no higher than level 2, "
+                   "and add them to your spellbook for free.",
+                   "whenever you gain access to a new level of spell slots in this class, you can add one Wizard spell "
+                   "from the Illusion school to your spellbook for free. The chosen spell must be of a level for "
+                   "which you have spell slots.")},
+    "illusionist-xphb-3-improved-illusions": {
+        "kind": "cantrip", "class": "wizard", "subclass": "illusionist-xphb", "known": "minor-illusion",
+        "quotes": ("You also know the Minor Illusion cantrip. If you already know it, you learn a different Wizard "
+                   "cantrip of your choice. The cantrip doesn't count against your number of cantrips known.",)},
+    "lore-xphb-6-magical-discoveries": {
+        "kind": "discoveries", "class": "bard", "subclass": "lore-xphb", "lists": ("cleric", "druid", "wizard"),
+        "grant": "Magical Discoveries",
+        "quotes": ("You learn two spells of your choice. These spells can come from the Cleric, Druid, or Wizard spell "
+                   "list or any combination thereof",
+                   "A spell you choose must be a cantrip or a spell for which you have spell slots, as shown in the "
+                   "Bard Features table.",
+                   "You always have the chosen spells prepared,")},
 }
 
 # C6d: XPHB Wizard spell picks that are "always prepared" (ruleset 2024 only), keyed by the choice-id

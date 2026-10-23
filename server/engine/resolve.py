@@ -67,6 +67,7 @@ from . import asi as asi_mod
 from . import attacks as attacks_mod
 from . import class_choices_2024
 from . import subclass_options_2024
+from . import subclass_spells_2024
 from . import class_resources as class_resources_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
@@ -2601,18 +2602,20 @@ def _gate_duplicate_picks(choices: list[dict], catalog: Catalog, class_order: li
 
 
 def _subclass_spell_ids(catalog: Catalog, cls_id: str, subclass_id: str | None, class_level: int,
-                        feature_ids: set[str], mode: str) -> list[str]:
+                        feature_ids: set[str], mode: str, variant: str | None = None) -> list[str]:
     """Spells from the subclass's `spells` list whose prerequisites (class
     level, and for Circle of the Land the chosen terrain feature) are met,
     for entries behaving as `mode` ("always" prepared / "expanded" list). An
     entry's own `mode` (imported subclasses, one of which can carry both)
-    wins over `SUBCLASS_SPELL_MODE` (SRD records), default "always"."""
+    wins over `SUBCLASS_SPELL_MODE` (SRD records), default "always". RP17: `variant` (Circle of the Land's picked
+    land) adds the entries of the record's `spells_by_variant[variant]`."""
     from catalog import reference_data
     if not subclass_id:
         return []
     subclass_mode = reference_data.SUBCLASS_SPELL_MODE.get(subclass_id, "always")
     out: list[str] = []
-    for entry in (catalog.subclasses.get(subclass_id) or {}).get("spells") or []:
+    sub_record = catalog.subclasses.get(subclass_id) or {}
+    for entry in (sub_record.get("spells") or []) + ((sub_record.get("spells_by_variant") or {}).get(variant) or [] if variant else []):
         if (entry.get("mode") or subclass_mode) != mode:
             continue
         spell_id = (entry.get("spell") or {}).get("index")
@@ -4038,6 +4041,8 @@ def _is_count_variable_choice(tpl: dict) -> bool:
         return True  # C7c: invocation dependents (targets, Tome, pact weapon, Lessons feat) follow the spell cards / inventory
     if class_choices_2024.is_additional_secrets_card(tpl):
         return True  # RPX1: the offered spell levels follow the Bard table (and the sources filter)
+    if subclass_spells_2024.is_pick_card(tpl):
+        return True  # RP17: Savants (count and spell levels follow the Wizard table), Improved Illusions, Magical Discoveries
     # C6d: Spell Mastery / Signature Spells picks follow the spellbook and the class level
     return tpl["source"]["kind"] == "class" and tpl["id"].endswith(
         (":spells-cantrips", ":spells-known", ":spellbook", ":spell-mastery-1", ":spell-mastery-2", ":signature-spells"))
@@ -4154,6 +4159,7 @@ def _spell_choice_templates(
     expanded_spell_ids: list[str] = (), always_prepared: dict[str, str] | None = None,
     sources=None, ruleset: str = "mixed", class_choices: dict | None = None, list_class_id: str | None = None,
     school_limit: dict | None = None, problems_out: list | None = None, secrets_cap: int = 0,
+    subclass_id: str | None = None,
 ) -> list[dict]:
     """`sources`/`ruleset` (the draft's) decide which catalog spells are
     offered; spells already selected in `class_choices` stay offered either
@@ -4166,7 +4172,9 @@ def _spell_choice_templates(
     `subclass-spell-school-limit-<cls>` problem to `problems_out` when the
     stored picks exceed them. `secrets_cap` (RP16, SRD Bard Magical Secrets under mixed / 2014, from
     `class_choices_2024.magical_secrets_cap_2014`) adds the other classes' spells and cantrips to the known-spells
-    card and limits how many of the picks may come from outside the class's own list."""
+    card and limits how many of the picks may come from outside the class's own list. `subclass_id` (RP17, ruleset
+    2024): the Wizard's selected subclass; a Savant card (free spellbook spells) is built after the spellbook card and
+    its valid picks join the effective book (prepared card, Spell Mastery, Signature Spells)."""
     if not level_row:
         return []
     spellcasting = level_row.get("spellcasting") or {}
@@ -4221,6 +4229,19 @@ def _spell_choice_templates(
         stored_book = list(dict.fromkeys(x for x in stored_book if isinstance(x, str))) if isinstance(stored_book, list) else []
         # Same rule as the generic pass: first `count` valid picks.
         wizard_book = [x for x in stored_book if x in valid_book][: book_tpl["count"]]
+        if ruleset == "2024" and subclass_id:  # RP17: Abjuration / Divination / Evocation / Illusion Savant
+            savant_tpl = subclass_spells_2024.savant_template(
+                catalog, {"cls": cls, "cls_id": cls_id, "level": class_level, "subclass_id": subclass_id}, ruleset,
+                _highest_spell_slot_level(spellcasting), wizard_book,
+                lambda flt, keep: _spell_filter_options(catalog, flt, sources, ruleset, keep), class_choices)
+            if savant_tpl is not None:
+                templates.append(savant_tpl)
+                savant_picks = subclass_spells_2024.effective_savant_picks(savant_tpl, (class_choices or {}).get(savant_tpl["id"]))
+                for opt in book_tpl["options"]:  # the spellbook card may not repeat a free Savant spell
+                    if opt["id"] in savant_picks and not opt.get("disabled"):
+                        opt["disabled"] = True
+                        opt["disabledReason"] = f"chosen as {savant_tpl['label']}"
+                wizard_book = wizard_book + [x for x in savant_picks if x not in wizard_book]
     # C6d (2024): Wizard 18 Spell Mastery / Wizard 20 Signature Spells; their picks are always prepared
     pick_templates: list[dict] = []
     if wizard_book is not None:
@@ -5450,15 +5471,29 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                     catalog, flt, draft.get("sources"), ruleset,
                     {x for x in (rc["class_choices"].get(f"class:{rc_cls_id}:spells-known") or []) if isinstance(x, str)})
             ]
+            land_variant = subclass_options_2024.picked_variant(catalog, rc, rc["class_choices"])  # RP17 Circle of the Land
+            sub_always = {sid: f"{sub_name}" for sid in
+                          _subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc_level, raw_feature_ids, "always", land_variant)}
+            options_fn = lambda flt, keep: _spell_filter_options(catalog, flt, draft.get("sources"), ruleset, keep)  # noqa: E731
+            if subclass_spells_2024.improved_illusions_applies(catalog, rc, ruleset):
+                # RP17: a Minor Illusion pick on the Cantrips card is allowed (Improved Illusions then adds a cantrip);
+                # unpicked, the subclass grant keeps listing it
+                for sid in subclass_spells_2024.minor_illusion_ids(catalog):
+                    sub_always.pop(sid, None)
+                tpl_ = subclass_spells_2024.cantrip_template(catalog, rc, ruleset, options_fn, rc["class_choices"])
+                if tpl_:
+                    choice_templates.append(tpl_)
+            discoveries_tpl, discoveries_always = subclass_spells_2024.discoveries_template(  # RP17 Lore Bard 6
+                catalog, rc, ruleset, _highest_spell_slot_level(spell_dict), {**class_always, **sub_always}, options_fn,
+                rc["class_choices"])
+            if discoveries_tpl:
+                choice_templates.append(discoveries_tpl)
             spell_templates = _spell_choice_templates(
                 catalog, rc_cls, rc_cls_id, {"spellcasting": spell_dict}, modifiers[spell_ability], class_level=rc_level,
                 expanded_spell_ids=_subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc_level, raw_feature_ids, "expanded")
                 + secrets_ids,
-                always_prepared={
-                    **class_always,
-                    **{sid: f"{sub_name}" for sid in
-                       _subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc_level, raw_feature_ids, "always")},
-                },
+                always_prepared={**class_always, **sub_always, **discoveries_always},
+                subclass_id=rc["subclass_id"],
                 sources=draft.get("sources"), ruleset=ruleset, class_choices=rc["class_choices"],
                 list_class_id=list_class_id,
                 school_limit=SUBCLASS_SPELL_SCHOOL_LIMITS.get(rc["subclass_id"] or "") if list_class_id != rc_cls_id else None,
@@ -5783,6 +5818,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # chose.
     narrative_items = list(bg.get("starting_narrative_items", [])) + narrative_items if bg else narrative_items
 
+    def _spell_summary(sid: str) -> dict | None:
+        spell = catalog.spells.get(sid)
+        return {"id": sid, "name": spell["name"], "level": spell["level"]} if spell else None
+
     def _spell_summaries(choice: dict | None) -> list[dict]:
         if not choice:
             return []
@@ -5800,6 +5839,12 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # contributes no entry at all, so this stays [] rather than padding out
     # with empty per-class placeholders.
     spells_summary: list[dict] = []
+    if ruleset == "2024":  # RP17: Improved Illusions applies only when Minor Illusion is known from another source
+        pruned += subclass_spells_2024.gate_improved_illusions(choices, catalog, [
+            e["spellId"] for e in (_species_innate_spells(race, subrace, catalog, species_variant)
+                                   + _species_trait_spell_choices(race, subrace, catalog, choices)
+                                   + _feat_innate_spells(resolved_feats, catalog, choices)) if e.get("spellId")])
+    selections_now = {c["id"]: c["selected"] for c in choices}
     for rc in resolved_classes:
         rc_cls, rc_cls_id = rc["cls"], rc["cls_id"]
         if not (rc_cls and rc_cls_id):
@@ -5807,7 +5852,17 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc_cantrip_choice = next((c for c in choices if c["id"] == f"class:{rc_cls_id}:spells-cantrips"), None)
         rc_known_spells_choice = next((c for c in choices if c["id"] == f"class:{rc_cls_id}:spells-known"), None)
         feature_ids = {idx for cid_, lvl_, idx in _class_feature_list(catalog, [rc], choices)}
-        always_ids = _subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc["level"], feature_ids, "always")
+        always_ids = _subclass_spell_ids(catalog, rc_cls_id, rc["subclass_id"], rc["level"], feature_ids, "always",
+                                         subclass_options_2024.picked_variant(catalog, rc, selections_now))
+        if ruleset == "2024" and subclass_spells_2024.improved_illusions_applies(catalog, rc, ruleset):
+            # RP17: Minor Illusion known elsewhere (the Improved Illusions card exists) is not listed twice
+            known_elsewhere = any((found := subclass_spells_2024.spec_for_card(c)) and found[1]["kind"] == "cantrip"
+                                  for c in choices)
+            if known_elsewhere:
+                always_ids = [sid for sid in always_ids if sid not in subclass_spells_2024.minor_illusion_ids(catalog)]
+        if rc_cls_id == "bard":  # RP17: Lore 6 Magical Discoveries picks are always prepared
+            always_ids = always_ids + [sid for sid in subclass_spells_2024.picked_spells(choices, "discoveries")
+                                       if sid not in always_ids]
         # C6d (2024): class grants (Hunter's Mark, ...) and the Wizard's Spell Mastery / Signature picks
         always_ids = always_ids + [
             sid for sid in class_choices_2024.always_prepared_class_spells(catalog, rc_cls_id, rc["level"], "", ruleset)
@@ -5836,11 +5891,14 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         spells_summary.append({
             "classId": rc_cls_id,
             **({"mysticArcanum": arcanum} if rc_cls_id == "warlock" else {}),
-            "cantrips": _spell_summaries(rc_cantrip_choice),
+            "cantrips": _spell_summaries(rc_cantrip_choice) + (  # RP17: Improved Illusions (not counted in the cantrips known)
+                [s for sid in subclass_spells_2024.picked_spells(choices, "cantrip") if (s := _spell_summary(sid))]
+                if rc_cls_id == "wizard" else []),
             "known": _spell_summaries(rc_known_spells_choice) + (  # RPX1: Additional Magical Secrets (not counted in Spells Known)
                 _spell_summaries(next((c for c in choices if class_choices_2024.is_additional_secrets_card(c)), None))
                 if rc_cls_id == "bard" else []),
-            **({"spellbook": _spell_summaries(next((c for c in choices if c["id"] == "class:wizard:spellbook"), None))}
+            **({"spellbook": _spell_summaries(next((c for c in choices if c["id"] == "class:wizard:spellbook"), None))
+                + [s for sid in subclass_spells_2024.picked_spells(choices, "savant") if (s := _spell_summary(sid))]}  # RP17 Savants
                if rc_cls_id == "wizard" else {}),
             **wizard_pick_keys,
             **({"pactOfTheTome": [s for kind in ("cantrips", "rituals") for s in _spell_summaries(
@@ -6189,7 +6247,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         hp_class_entries.append({"hit_die": rc_hit_die, "level": rc["level"], "hp_rolls": rc_hp_rolls})
     class_feature_list = _class_feature_list(catalog, resolved_classes, choices, resolved_feats)
     effects = (features_mod.class_effects(class_feature_list, xphb_effects) + invocation_effects
-               + subclass_options_2024.effects(choices))  # RP13 Aspect of the Wilds, Elemental Affinity
+               + subclass_options_2024.effects(choices)  # RP13 Aspect of the Wilds, Elemental Affinity
+               + subclass_options_2024.ward_effects(catalog, resolved_classes, choices))  # RP17 Nature's Ward
     # R5: Diamond Soul / Slippery Mind grants (the latter depends on the ruleset).
     for ab in features_mod.save_proficiencies(effects, [idx for _, _, idx in class_feature_list], ruleset):
         if ab not in proficient_save_abilities:

@@ -114,7 +114,7 @@ def _srd_only(catalog):
 @needs_data
 def test_quotes_match_catalog(catalog):
     table = reference_data.SUBCLASS_OPTIONS_2024
-    assert set(table) == set(FEATURE.values())
+    assert set(table) == set(FEATURE.values()) | {"land-xphb-3-circle-of-the-land-spells"}  # RP17 added the Land card
     for fid, spec in table.items():
         rec = catalog.features[fid]
         text = rec["name"] + "\n" + "\n".join(rec["desc"])

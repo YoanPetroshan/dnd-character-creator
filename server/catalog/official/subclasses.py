@@ -300,19 +300,13 @@ def _spell_level_key(key: str, class_id: str):
     return None
 
 
-def _subclass_spell_entries(raw: dict, class_id: str, is_2024: bool, resolve_spell, unresolved=None) -> list[dict]:
-    """SRD-shaped `spells` entries of a subclass: the string spell lists of
-    `prepared`/`known` (mode "always") and `expanded` (mode "expanded"), keyed
-    by class level. Skipped: object values ({all}, {choose}, {"_": ...}),
-    innate/daily/ritual blocks, and every block of a subclass with several
-    named blocks (Land, Divine Soul, Genie, Giant, Arcane Archer)."""
-    blocks = raw.get("additionalSpells") or []
-    if len(blocks) != 1 or not isinstance(blocks[0], dict):
-        return []
+def _block_spell_entries(block: dict, class_id: str, is_2024: bool, resolve_spell, unresolved=None) -> list[dict]:
+    """SRD-shaped `spells` entries of ONE `additionalSpells` block (the string spell lists of `prepared` / `known`
+    as mode "always" and `expanded` as mode "expanded", keyed by class level); object values are skipped."""
     entries: list[dict] = []
     seen: set[str] = set()
     for key, mode in _SPELL_BLOCK_MODES:
-        by_level = blocks[0].get(key)
+        by_level = block.get(key)
         if not isinstance(by_level, dict):
             continue
         rows = []
@@ -337,6 +331,62 @@ def _subclass_spell_entries(raw: dict, class_id: str, is_2024: bool, resolve_spe
                 entries.append({"prerequisites": [{"type": "level", "index": f"{class_id}-{level}"}],
                                 "spell": {"index": spell_id}, "mode": mode})
     return entries
+
+
+def _subclass_spell_entries(raw: dict, class_id: str, is_2024: bool, resolve_spell, unresolved=None) -> list[dict]:
+    """SRD-shaped `spells` entries of a subclass: the string spell lists of
+    `prepared`/`known` (mode "always") and `expanded` (mode "expanded"), keyed
+    by class level. Skipped: object values ({all}, {choose}, {"_": ...}),
+    innate/daily/ritual blocks, and every block of a subclass with several
+    named blocks (Land, Divine Soul, Genie, Giant, Arcane Archer; RP17: the
+    named blocks of an XPHB subclass go to `_subclass_spells_by_variant`)."""
+    blocks = raw.get("additionalSpells") or []
+    if len(blocks) != 1 or not isinstance(blocks[0], dict):
+        return []
+    return _block_spell_entries(blocks[0], class_id, is_2024, resolve_spell, unresolved)
+
+
+def _subclass_spell_choices(raw: dict) -> list[dict]:
+    """RP17: the `{choose: "<5etools spell query>"}` items of an XPHB subclass's single `known` / `prepared` block as
+    [{"level": class level, "mode": "known" | "prepared", "filter": parsed query}], one entry per item (count
+    ignored: the Savants list one item per spell), in document order. The filters of the four Wizard Savants
+    (school, levels, class list) and Lore's Magical Discoveries; an unparsable filter is dropped. Other subclasses: []."""
+    from .feats import _parse_spell_filter
+
+    blocks = raw.get("additionalSpells") or []
+    if len(blocks) != 1 or not isinstance(blocks[0], dict):
+        return []
+    out: list[dict] = []
+    for mode in ("known", "prepared"):
+        by_level = blocks[0].get(mode)
+        if not isinstance(by_level, dict):
+            continue
+        for level_key, items in by_level.items():
+            if not str(level_key).isdigit() or not isinstance(items, list):
+                continue
+            for item in items:
+                if isinstance(item, dict) and isinstance(item.get("choose"), str):
+                    parsed = _parse_spell_filter(item["choose"])
+                    if parsed:
+                        out.append({"level": int(level_key), "mode": mode, "filter": parsed})
+    return sorted(out, key=lambda e: e["level"])
+
+
+def _subclass_spells_by_variant(raw: dict, class_id: str, is_2024: bool, resolve_spell) -> dict[str, list[dict]]:
+    """RP17: an XPHB subclass with several NAMED blocks (Circle of the Land: "Arid Land" ...) as {variant key:
+    spells entries}; the key is the slugged name without a trailing " Land" ("arid"). The entries have the shape of
+    `spells` (class-level prerequisite, mode "always"); the engine adds the entries of the picked variant."""
+    blocks = raw.get("additionalSpells") or []
+    if len(blocks) < 2 or not all(isinstance(b, dict) and isinstance(b.get("name"), str) for b in blocks):
+        return {}
+    out: dict[str, list[dict]] = {}
+    for block in blocks:
+        name = block["name"]
+        key = slug(name[: -len(" Land")] if name.endswith(" Land") else name)
+        entries = _block_spell_entries(block, class_id, is_2024, resolve_spell)
+        if entries:
+            out[key] = entries
+    return out
 
 
 def unresolved_spell_refs(raw_subs, resolve_spell) -> list[str]:
@@ -590,6 +640,13 @@ def convert_subclasses(raw_subs, raw_feats, srd_subclass_ids, resolve_spell, raw
             "ruleset": ruleset_for_edition(raw), "desc": [],
             "spells": _subclass_spell_entries(raw, cls_ref["index"], ruleset_for_edition(raw) == "2024", resolve_spell),
         }
+        if record["ruleset"] == "2024":  # RP17: additive keys, XPHB subclasses only
+            choices = _subclass_spell_choices(raw)
+            if choices:
+                record["spell_choices"] = choices
+            by_variant = _subclass_spells_by_variant(raw, cls_ref["index"], True, resolve_spell)
+            if by_variant:
+                record["spells_by_variant"] = by_variant
         third = _third_caster_block(raw)
         if third:
             record["spellcasting"] = third
