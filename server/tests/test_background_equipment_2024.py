@@ -348,7 +348,8 @@ def test_changing_the_proficiency_pick_changes_the_item(catalog):
 def test_wayfarer_gaming_set_is_a_nested_card_with_the_catalog_sets(catalog):
     res = _pick_a("wayfarer-xphb", catalog)
     nested = _card(res, _ecid("wayfarer-xphb") + ":0")
-    assert nested is not None and [o["id"] for o in nested["options"]] == ["dice-set", "playing-card-set"]
+    assert nested is not None and [o["id"] for o in nested["options"]] == [
+        "dice-set", "dragonchess-set", "playing-card-set", "three-dragon-ante-set"]  # RPX4: all four PHB sets
     res = _pick_a("wayfarer-xphb", catalog, nested={0: "dice-set"})
     assert _chosen(res)["dagger"] == 2 and _chosen(res)["pouch"] == 2 and _chosen(res)["dice-set"] == 1
     assert res["sheet"]["startingGold"] == 16
@@ -476,7 +477,7 @@ def test_srd_only_catalog_has_no_2024_key_and_resolves(monkeypatch, tmp_path):
 @needs_data
 def test_patched_catalog_without_gaming_sets_drops_only_the_option_that_needs_them(catalog):
     patched = load()
-    for k in ("dice-set", "playing-card-set"):
+    for k in ("dice-set", "dragonchess-set", "playing-card-set", "three-dragon-ante-set"):
         patched.items.pop(k)
     res = resolve(_draft("wayfarer-xphb"), patched)
     card = _card(res, _ecid("wayfarer-xphb"))

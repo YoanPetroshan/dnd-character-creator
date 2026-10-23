@@ -249,13 +249,16 @@ def _item_in_category(item: dict, category: str) -> bool | None:
     return None
 
 
+_PHB_GAMING_SET_IDS = frozenset(i for i, *_ in reference_data.PHB_GAMING_SETS)
+
+
 def equipment_category_options(category: str, items: dict[str, dict]) -> list[dict] | None:
     """[{id, label}] for every catalog item in the category, or None when the
     category is not recognised or matches nothing."""
     options = []
     for item in items.values():
-        if item.get("source", "SRD") != "SRD":
-            continue  # imported sourcebook items never change a starting-equipment option set
+        if item.get("source", "SRD") != "SRD" and not (category == "gaming-sets" and item["index"] in _PHB_GAMING_SET_IDS):
+            continue  # imported sourcebook items never change a starting-equipment option set (RPX4: except the PHB gaming sets)
         member = _item_in_category(item, category)
         if member is None:
             return None

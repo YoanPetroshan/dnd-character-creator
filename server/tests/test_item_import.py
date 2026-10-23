@@ -90,7 +90,7 @@ def test_convert_skips_srd_names_twins_and_resolves_ids():
 @needs_items
 def test_real_items_are_imported_and_srd_wins(catalog):
     imported = {i for i, it in catalog.items.items() if it.get("source") != "SRD"}
-    assert imported == IMPORTED
+    assert imported == IMPORTED | {"dragonchess-set", "three-dragon-ante-set"}  # RPX4: PHB gaming sets, always present
     assert "light-crossbow" not in catalog.items and "crossbow-light" in catalog.items
     assert catalog.items["longsword"]["source"] == "SRD" and catalog.items["longsword"]["damage"]["damage_dice"] == "1d8"
     assert catalog.items["chain-mail"]["armor_class"]["base"] == 16

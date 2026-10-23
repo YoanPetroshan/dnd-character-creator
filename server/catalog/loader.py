@@ -175,6 +175,36 @@ def _merge_official_subclasses(catalog: Catalog) -> None:
     catalog.subclass_twins = subclass_twins_from(raw_subs, set(catalog.subclasses))
 
 
+def _add_phb_gaming_sets(items: dict) -> None:
+    """RPX4: adds the PHB gaming sets the SRD list lacks (Dragonchess, Three-Dragon Ante) right after the SRD set they
+    sort next to, so the four read alphabetically like the PHB table. Existing records are never replaced."""
+    from . import reference_data
+
+    srd_desc = (items.get("dice-set") or {}).get("desc")
+    new = {}
+    for index, name, gp, weight in reference_data.PHB_GAMING_SETS:
+        if index in items:
+            continue
+        new[index] = {
+            "index": index, "name": name,
+            "equipment_category": {"index": "tools", "name": "Tools", "url": "/api/2014/equipment-categories/tools"},
+            "tool_category": "Gaming Sets", "cost": {"quantity": gp, "unit": "gp"}, "weight": weight,
+            "desc": list(srd_desc) if srd_desc else ["A gaming set. Proficiency with it applies to one type of game."],
+            "url": f"/api/2014/equipment/{index}", "source": "PHB", "ruleset": "2014",
+        }
+    if not new:
+        return
+    after = {"dice-set": "dragonchess-set", "playing-card-set": "three-dragon-ante-set"}
+    ordered = {}
+    for key, value in items.items():
+        ordered[key] = value
+        if after.get(key) in new:
+            ordered[after[key]] = new.pop(after[key])
+    ordered.update(new)  # a catalog without the anchor items: at the end
+    items.clear()
+    items.update(ordered)
+
+
 def _merge_official_items(catalog: Catalog) -> None:
     """Tags the SRD items and merges the mundane non-SRD weapons and armor of
     `items-base.json`. SRD records win a key clash."""
@@ -186,6 +216,7 @@ def _merge_official_items(catalog: Catalog) -> None:
     for item in catalog.items.values():
         item.setdefault("source", "SRD")
         item.setdefault("ruleset", "2014")
+    _add_phb_gaming_sets(catalog.items)
     raw_items = load_raw_base_items(items_base_file())
     for index, item in convert_items(raw_items, set(catalog.items)).items():
         catalog.items.setdefault(index, item)

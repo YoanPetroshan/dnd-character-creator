@@ -2908,7 +2908,7 @@ def test_any_gaming_set_wildcard_tool_choice_on_a_background_offers_only_gaming_
     prof_cid = next(cid for cid in cids if cid.startswith("background:noble-phb:") and "proficiency-choice" in cid)
     choice = next(c for c in resolution["choices"] if c["id"] == prof_cid)
     assert choice["count"] == 1
-    assert {o["id"] for o in choice["options"]} == {"dice-set", "playing-card-set"}
+    assert {o["id"] for o in choice["options"]} == {"dice-set", "dragonchess-set", "playing-card-set", "three-dragon-ante-set"}  # RPX4
 
     draft["background"]["choices"][prof_cid] = ["dice-set"]
     resolution2 = resolve(draft, catalog)

@@ -101,7 +101,7 @@ def test_backgrounds_contains_the_bundled_srd_acolyte():
 
 def test_items_indexed_by_srd_index_covers_all_categories():
     catalog = load()
-    assert len(catalog.items) == 237 + (5 if items_base_file() else 0)  # Slice 11c: 5 sourcebook items
+    assert len(catalog.items) == 237 + 2 + (5 if items_base_file() else 0)  # Slice 11c: 5 sourcebook items; RPX4: +2 PHB gaming sets
     assert catalog.items["chain-mail"]["armor_category"] == "Heavy"
     assert catalog.items["longbow"]["weapon_category"] == "Martial"
     assert catalog.items["dungeoneers-pack"]["equipment_category"]["index"] == "adventuring-gear"

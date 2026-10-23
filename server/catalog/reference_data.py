@@ -113,7 +113,9 @@ TOOLS: list[dict[str, str]] = [
     {"index": "weavers-tools", "name": "Weaver's Tools", "category": "Artisan's Tools"},
     {"index": "woodcarvers-tools", "name": "Woodcarver's Tools", "category": "Artisan's Tools"},
     {"index": "dice-set", "name": "Dice Set", "category": "Gaming Sets"},
+    {"index": "dragonchess-set", "name": "Dragonchess Set", "category": "Gaming Sets"},   # RPX4: PHB, not in the SRD
     {"index": "playing-card-set", "name": "Playing Card Set", "category": "Gaming Sets"},
+    {"index": "three-dragon-ante-set", "name": "Three-Dragon Ante Set", "category": "Gaming Sets"},  # RPX4
     {"index": "bagpipes", "name": "Bagpipes", "category": "Musical Instrument"},
     {"index": "drum", "name": "Drum", "category": "Musical Instrument"},
     {"index": "dulcimer", "name": "Dulcimer", "category": "Musical Instrument"},
@@ -126,6 +128,16 @@ TOOLS: list[dict[str, str]] = [
     {"index": "viol", "name": "Viol", "category": "Musical Instrument"},
     {"index": "navigators-tools", "name": "Navigator's Tools", "category": "Other Tools"},
     {"index": "thieves-tools", "name": "Thieves' Tools", "category": "Other Tools"},
+]
+
+# RPX4 (Extra 4): the two PHB gaming sets the SRD equipment list lacks (the SRD has Dice Set and Playing Card Set).
+# Source: Player's Handbook (2014) ch. 5, "Tools" table, Gaming set rows: Dragonchess set 1 gp, 1/2 lb.; Three-Dragon
+# Ante set 1 gp, no weight. The PHB 2024 table has the same four sets. The local 5etools data has no gaming-set item
+# record, so the catalog gets these through `loader._merge_official_items` (ids = the TOOLS indexes above). Tuples:
+# (index, name, cost gp, weight lb).
+PHB_GAMING_SETS: list[tuple[str, str, int, float]] = [
+    ("dragonchess-set", "Dragonchess Set", 1, 0.5),
+    ("three-dragon-ante-set", "Three-Dragon Ante Set", 1, 0),
 ]
 
 # The level each class first grants its subclass-defining feature (e.g.
