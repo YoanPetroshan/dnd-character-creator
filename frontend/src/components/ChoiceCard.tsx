@@ -11,7 +11,7 @@ interface ChoiceCardProps {
 
 /** Id of the first pending choice in a page's list, if any. */
 export function firstPendingId(choices: Choice[]): string | undefined {
-  return choices.find((c) => c.status === "pending")?.id;
+  return (choices.find((c) => c.status === "pending" && !c.optional) ?? choices.find((c) => c.status === "pending"))?.id;
 }
 
 export function ChoiceCard({ choice, onToggle, defaultExpanded = false }: ChoiceCardProps) {
@@ -25,7 +25,7 @@ export function ChoiceCard({ choice, onToggle, defaultExpanded = false }: Choice
         onClick={() => setExpanded((e) => !e)}
         aria-expanded={expanded}
       >
-        {choice.status === "pending" && (
+        {choice.status === "pending" && !choice.optional && (
           <span className="choice-card__pending-dot" aria-label="pending choice">
             !
           </span>

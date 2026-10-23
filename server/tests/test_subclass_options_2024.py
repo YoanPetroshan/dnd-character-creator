@@ -202,6 +202,23 @@ def test_feywild_gifts_card(catalog):
 
 
 @needs_data
+def test_feywild_gifts_is_optional_and_does_not_block_export_while_unpicked(catalog):
+    """RPF: the gift is a cosmetic table pick ("Choose it ... or determine it randomly"): it stays selectable but
+    an unpicked card is flagged `optional` and the export gate skips it; every other card is unchanged."""
+    from app import _pending_export_problems
+    res = _one(catalog, GIFTS)
+    card = _card(res, GIFTS)
+    assert card["status"] == "pending" and card["optional"] is True and card["selected"] == []
+    assert not any(GIFTS in p["id"] for p in _pending_export_problems(res))
+    picked = _card(_one(catalog, GIFTS, "gift-2"), GIFTS)
+    assert picked["selected"] == [f"{FEATURE[GIFTS]}--gift-2"] and picked["status"] == "resolved"
+    for cid in (PREY, TACTICS, ASPECT, AFFINITY, COMPANION):  # the others stay required and blocking
+        other = _one(catalog, cid)
+        assert "optional" not in _card(other, cid)
+        assert any(cid in p["id"] for p in _pending_export_problems(other)), cid
+
+
+@needs_data
 @pytest.mark.parametrize("cid", list(FEATURE))
 def test_card_absent_below_level_without_subclass_and_under_mixed(catalog, cid):
     assert _card(_one(catalog, cid, level=LEVEL[cid] - 1), cid) is None

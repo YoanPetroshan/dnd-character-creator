@@ -46,6 +46,8 @@ export interface Choice {
   granted?: { id: string; label: string }[];
   /** Set with status "unavailable": why nothing can be chosen. */
   unavailableReason?: string;
+  /** RPF: a cosmetic pick (Feywild Gifts); stays selectable, an unpicked card never blocks export. */
+  optional?: boolean;
 }
 
 export interface Problem {
@@ -174,7 +176,7 @@ export interface SheetDamageModifiers {
 export interface SheetInnateSpell {
   spellId: string | null;
   name: string;
-  level: number;
+  level: number | null;
   uses: string;
   ability: Ability | null;
   variant: string | null;

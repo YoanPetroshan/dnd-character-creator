@@ -74,6 +74,7 @@ def templates(catalog, rc: dict, ruleset: str) -> list[dict]:
             "description": _join(record.get("desc")),
             "count": 1,
             "options": options,
+            **({"optional": True} if spec.get("optional") else {}),  # RPF: does not block export while unpicked
         })
     return out
 

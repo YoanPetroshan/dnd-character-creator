@@ -1969,6 +1969,7 @@ SUBCLASS_OPTIONS_2024: dict[str, dict] = {
         }},
     "fey-wanderer-xphb-3-fey-wanderer-spells": {
         "class": "ranger", "subclass": "fey-wanderer-xphb", "label": "Feywild Gifts",
+        "optional": True,  # RPF: a cosmetic table pick; an unpicked card does not block export
         "quotes": ("You also possess a fey blessing. Choose it from the Feywild Gifts table or determine it randomly.",),
         "options": {
             "gift-1": {"name": "Illusory butterflies flutter around you while you take a Short or Long Rest.",

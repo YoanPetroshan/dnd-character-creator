@@ -57,7 +57,7 @@ export function StepNav() {
     return (
       problems +
       resolution.choices.filter(
-        (c) => kinds.includes(c.source.kind) && (!step.cidFilter || step.cidFilter(c.id)) && c.status === "pending"
+        (c) => kinds.includes(c.source.kind) && (!step.cidFilter || step.cidFilter(c.id)) && c.status === "pending" && !c.optional
       ).length
     );
   }

@@ -39,7 +39,7 @@ export function ExportPage() {
   // Must mirror server/app.py `_pending_export_problems`: equipment choices
   // never block export.
   const allPending = resolution.choices.filter((c) => c.status === "pending");
-  const pendingChoices = allPending.filter((c) => c.source.kind !== "equipment");
+  const pendingChoices = allPending.filter((c) => c.source.kind !== "equipment" && !c.optional); // RPF: optional cards never block
   const pendingEquipment = allPending.filter((c) => c.source.kind === "equipment");
   // Also mirrors the server gate: a character needs a class, species and background.
   const missingParts = [

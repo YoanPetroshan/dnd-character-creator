@@ -287,7 +287,8 @@ def _pending_export_problems(resolution: dict) -> list[dict]:
     return missing + [
         {"id": f"unresolved-choice-{c['id']}", "message": f"'{c['label']}' isn't fully chosen yet."}
         for c in resolution["choices"]
-        if c["status"] == "pending" and c["source"]["kind"] != "equipment"
+        if c["status"] == "pending" and c["source"]["kind"] != "equipment" and not c.get("optional")
+        # RPF: an `optional` card (cosmetic table pick, e.g. Feywild Gifts) stays selectable but never blocks.
         # Equipment choices are excluded from this gate until a frontend
         # exists that can resolve them (Phase 2b) — otherwise every
         # character the currently-shipped UI builds would be permanently
