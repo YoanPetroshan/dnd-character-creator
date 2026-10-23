@@ -142,11 +142,13 @@ def test_lessons_pick_is_pruned_with_its_invocation(catalog):
 
 
 @needs_data
-def test_a_repeat_instance_needs_the_base_instance(catalog):
+def test_a_repeat_instance_without_the_base_instance_becomes_the_base(catalog):
+    # RP21 (open question 5, D3): the stored picks follow the instance; this used to drop the repeat and its feat
     r = _res(catalog, 2, [_l(2)], extra={tcid(_l(2), "feat"): ["feat:alert-xphb"]})
     assert _card(r, tcid(_l(2), "feat")) is None
-    assert "alert-xphb" not in [f["id"] for f in r["sheet"]["feats"]]
-    assert _card(r, INV)["selected"] == []
+    assert _card(r, INV)["selected"] == [_l()]
+    assert _card(r, tcid(_l(), "feat"))["selected"] == ["feat:alert-xphb"]
+    assert "alert-xphb" in [f["id"] for f in r["sheet"]["feats"]]
 
 
 @needs_data

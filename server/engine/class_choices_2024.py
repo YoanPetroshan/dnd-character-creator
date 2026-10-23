@@ -1188,6 +1188,53 @@ def raw_invocation_instances(catalog, rc: dict, ruleset: str) -> list[str]:
     return [s for s in picks if s in kept][:tpl["count"]]  # F3a-9: structure first, then the count cut
 
 
+def renumber_invocation_instances(catalog, rc: dict, ruleset: str, class_choices: dict) -> dict:
+    """RP21 (open question 5, decision D3): the stored picks FOLLOW the repeat instances. The instances of one
+    repeatable invocation (`<id>`, `<id>~2`, ...) are interchangeable, so when the base (or a middle) instance is
+    missing from the stored invocation list, the remaining ones close the gap: `~2` becomes the base, `~3` becomes
+    `~2`, in list position, and every dependent key of an instance (`class:warlock:invocation:<instance>:...`: the
+    target cantrip, the Lessons feat and its cascade) moves with it. The keys of an instance that is renumbered
+    away are dropped (the removed base's target does not become the next instance's).
+
+    Only valid instance ids count (the card's offered options: `~k` up to the Warlock's invocation count), so an
+    instance beyond the count is never renumbered into range. Only the stored removal renumbers: what the late
+    prerequisite gate drops keeps its place. Returns `class_choices` itself when nothing changes (ruleset other than
+    2024, no card, no gap); otherwise a shallow copy. Never mutates its input."""
+    tpls = invocation_templates(catalog, rc, ruleset)
+    stored = class_choices.get(INVOCATION_CID)
+    if not tpls or not isinstance(stored, list):
+        return class_choices
+    valid = {o["id"] for o in tpls[0]["options"]}
+    mapping: dict[str, str] = {}  # old instance id -> new instance id, for the instances that move
+    scope: set[str] = set()  # every instance id of a renumbered base (their dependent keys are rebuilt)
+    for base in dict.fromkeys(invocation_base_id(s) for s in stored if isinstance(s, str) and "~" in s):
+        ks = sorted({invocation_instance(s) for s in stored if isinstance(s, str) and s in valid and invocation_base_id(s) == base})
+        if ks == list(range(1, len(ks) + 1)):
+            continue
+        name = lambda k: base if k == 1 else f"{base}~{k}"  # noqa: E731
+        scope |= {o for o in valid if invocation_base_id(o) == base}
+        mapping.update({name(k): name(i) for i, k in enumerate(ks, 1) if k != i})
+    if not mapping:
+        return class_choices
+    out: dict = {}
+    moved: dict = {}
+    for key, value in class_choices.items():
+        if key == INVOCATION_CID:
+            out[key] = [mapping.get(s, s) if isinstance(s, str) else s for s in value]
+            continue
+        m = _DEPENDENT_RE.match(key)
+        if m and m.group(1) in scope:
+            if m.group(1) in mapping:  # the instance moves: its keys (cascades included) follow it
+                moved[f"{DEPENDENT_PREFIX}{mapping[m.group(1)]}:{key[m.end():]}"] = value
+            elif m.group(1) not in mapping.values():  # stays where it is
+                out[key] = value
+            # else: the key belongs to an instance renumbered away (stale), dropped
+            continue
+        out[key] = value
+    out.update(moved)
+    return out
+
+
 def _structure_ok(catalog, option_id: str, level: int, kept: set[str]) -> bool:
     rec = catalog.features.get(invocation_base_id(option_id)) or {}
     if ((rec.get("prerequisite_2024") or {}).get("level") or 0) > level:

@@ -5110,6 +5110,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     elif ruleset not in RULESETS:
         warnings.append({"id": "ruleset-invalid", "message": f"Unknown ruleset '{ruleset}'; using mixed."})
         ruleset = "mixed"
+    if ruleset == "2024":  # RP21: the stored invocation picks follow their repeat instance (`<id>~k`) when the base goes
+        for rc in resolved_classes:
+            if rc["cls_id"] == "warlock" and rc["cls"]:
+                rc["class_choices"] = class_choices_2024.renumber_invocation_instances(catalog, rc, ruleset, rc["class_choices"])
     species_asi_on, background_asi_on, asi_warnings = _asi_policy(ruleset, race, subrace, bg)
     warnings += asi_warnings
     species_bonuses = _species_ability_bonuses(race, subrace) if species_asi_on else {}

@@ -156,14 +156,14 @@ def test_repeat_instances_need_previous(catalog):
     card = _card(_res(catalog, 5, cantrips=c))
     assert _opt(card, AGON + "~2")["disabled"] and "Agonizing Blast first" in _opt(card, AGON + "~2")["disabledReason"]
     r = _res(catalog, 5, picks=[AGON + "~2", TOME], cantrips=c)
-    assert _card(r)["selected"] == [TOME]
+    assert _card(r)["selected"] == [AGON, TOME]  # RP21: the stored repeat follows the missing base (renumbered)
     r = _res(catalog, 5, picks=[AGON, AGON + "~2", TOME], cantrips=c)
     assert _card(r)["selected"] == [AGON, AGON + "~2", TOME]
     # F3a-2a: three instances need three eligible cantrips
     r = _res(catalog, 5, picks=[AGON, AGON + "~2", AGON + "~3"], cantrips=c + ["poison-spray-xphb"])
     assert _card(r)["selected"] == [AGON, AGON + "~2", AGON + "~3"]
-    r = _res(catalog, 5, picks=[AGON + "~3", AGON + "~2"], cantrips=c)  # base missing: whole chain falls
-    assert _card(r)["selected"] == []
+    r = _res(catalog, 5, picks=[AGON + "~3", AGON + "~2"], cantrips=c)  # RP21: base missing, the instances close the gap
+    assert _card(r)["selected"] == [AGON + "~2", AGON]
 
 
 @needs_data
