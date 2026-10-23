@@ -4107,8 +4107,12 @@ def test_grappler_own_chosen_bonus_cannot_satisfy_its_own_prerequisite_at_an_asi
     assert on["sheet"]["abilities"]["STR"] == 11
     assert not any(c["source"]["kind"] == "feat" for c in on["choices"])  # a blocked pick cascades nothing
     assert "feat-prerequisite-unmet-grappler-xphb" in [p["id"] for p in on["problems"]]
-    # The stale sub-choice selection is surfaced as pruned, not silently kept.
-    assert [p["choiceId"] for p in on["pruned"]] == ["class:fighter:4:asi:feat:grappler-xphb:ability-bonus"]
+    # The stale sub-choice selection is surfaced as pruned, not silently kept. RPF 8: the stored ASI pick whose option
+    # (Grappler) is offered but disabled by its prerequisite is also reported, with the option's own reason.
+    assert sorted(p["choiceId"] for p in on["pruned"]) == [
+        "class:fighter:4:asi", "class:fighter:4:asi:feat:grappler-xphb:ability-bonus"]
+    asi_note = next(p for p in on["pruned"] if p["choiceId"] == "class:fighter:4:asi")
+    assert "Grappler" in asi_note["reason"] and "not available" in asi_note["reason"]
     off = resolve(_fighter_acolyte_human_draft(
         sources=_SRD_AND_XPHB, abilities={"method": "manual", "base": base},
         classes=[{"classId": "fighter", "level": 4, "choices": dict(choices)}],

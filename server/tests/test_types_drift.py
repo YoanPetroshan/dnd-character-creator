@@ -165,3 +165,14 @@ def test_attack_ability_type_allows_the_pact_weapon_charisma_row():
     attack = text[text.index("export interface Attack "):]
     attack = attack[:attack.index("\n}")]
     assert re.search(r'ability: "STR" \| "DEX" \| "CHA";', attack)
+
+
+def test_innate_spell_level_and_choice_optional_are_typed_as_the_server_emits_them():
+    # RPF 9: an innate spell without a catalog record has `level: None`; RPF 7: `optional` on Choice.
+    text = TYPES_TS.read_text(encoding="utf-8")
+    spell = text[text.index("export interface SheetInnateSpell "):]
+    spell = spell[:spell.index("\n}")]
+    assert re.search(r"level: number \| null;", spell)
+    choice = text[text.index("export interface Choice "):]
+    choice = choice[:choice.index("\n}")]
+    assert re.search(r"optional\?: boolean;", choice)
