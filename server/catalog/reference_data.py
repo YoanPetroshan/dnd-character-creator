@@ -297,11 +297,13 @@ CLASS_FEATURE_EFFECTS_2024: dict[str, dict] = {
         "quotes": ("Your Hit Point maximum increases by 3, and it increases by 1 whenever you gain another Sorcerer level.",
                    "While you aren't wearing armor, your base Armor Class equals 10 plus your Dexterity and Charisma modifiers."),
         "hp_per_class_level": 1, "ac_formula": {"base": 10, "abilities": ["DEX", "CHA"], "allows_shield": True}},
-    # The record states no armor or shield condition at all; a body armor already replaces every formula in
-    # engine/equipment.armor_class_from_gear, and nothing forbids a shield.
+    # The record is a child of Dazzling Footwork, whose parent sentence is the condition: "While you aren't wearing
+    # armor or wielding a Shield, you gain the following benefits." A shield therefore removes the formula.
     "dance-xphb-3-unarmored-defense": {
         "quotes": ("Your base Armor Class equals 10 plus your Dexterity and Charisma modifiers.",),
-        "ac_formula": {"base": 10, "abilities": ["DEX", "CHA"], "allows_shield": True}},
+        "parent_quotes": {"dance-xphb-3-dazzling-footwork":
+                          "While you aren't wearing armor or wielding a Shield, you gain the following benefits."},
+        "ac_formula": {"base": 10, "abilities": ["DEX", "CHA"], "allows_shield": False}},
     "shadow-xphb-3-darkvision": {
         "quotes": ("You gain Darkvision with a range of 60 feet. If you already have Darkvision, its range increases by 60 feet.",),
         "senses_additive": {"darkvision": 60}},
@@ -332,6 +334,17 @@ CLASS_FEATURE_EFFECTS_2024: dict[str, dict] = {
         "quotes": ("You gain proficiency in the Insight and Medicine skills and proficiency with the Herbalism Kit.",),
         "skills": ["skill-insight", "skill-medicine"], "proficiencies": ["herbalism-kit"]},
     # Not on the plan's list, same kind (unconditional, fixed numbers, XPHB class feature).
+    # RPF: unconditional condition immunities ("You are immune to ..."). The conditional ones stay text: Aura of
+    # Courage / Aura of Devotion (in your Aura), Mindless Rage (while Rage is active). Nature's Ward's damage
+    # Resistance depends on the land choice and stays in NOTES_ONLY wording below; only the Poisoned sentence is here.
+    "archfey-xphb-10-beguiling-defenses": {
+        "quotes": ("You are immune to the Charmed condition.",), "condition_immune": ["charmed"]},
+    "land-xphb-10-natures-ward": {
+        "quotes": ("You are immune to the Poisoned condition,",), "condition_immune": ["poisoned"]},
+    # RPF: "When you roll Initiative, you can add your Wisdom modifier to the roll." (no use limit)
+    "gloom-stalker-xphb-3-dread-ambusher": {
+        "quotes": ("Initiative Bonus. When you roll Initiative, you can add your Wisdom modifier to the roll.",),
+        "initiative_ability": "WIS"},
     "xphb-ranger-6-roving": {
         "quotes": ("Your Speed increases by 10 feet while you aren't wearing Heavy armor. You also have a Climb Speed "
                    "and a Swim Speed equal to your Speed.",),
@@ -352,7 +365,6 @@ CLASS_FEATURE_NOTES_ONLY_2024: dict[str, str] = {
     "stars-xphb-3-starry-form": "Whenever you assume your starry form, choose which of the following constellations",
     "zealot-xphb-14-rage-of-the-gods": "While in this form, you gain the benefits below.",
     "ancients-xphb-7-aura-of-warding": "while in your Aura of Protection",
-    "land-xphb-10-natures-ward": "associated with your current land choice",
     "fiend-xphb-10-fiendish-resilience": "whenever you finish a Short or Long Rest",
 }
 

@@ -244,6 +244,16 @@ def class_resistances(effects) -> list[str]:
     return [t for _, _, e in effects for t in e.get("resist") or []]
 
 
+def class_condition_immunities(effects) -> list[str]:
+    """RPF: unconditional condition immunities of XPHB class / subclass features (Archfey, Nature's Ward)."""
+    return [c for _, _, e in effects for c in e.get("condition_immune") or []]
+
+
+def class_initiative_bonus(effects, modifiers: dict[str, int]) -> int:
+    """RPF: Gloom Stalker Dread Ambusher adds the Wisdom modifier to Initiative (never negative)."""
+    return sum(max(0, modifiers.get(e["initiative_ability"], 0)) for _, _, e in effects if e.get("initiative_ability"))
+
+
 def class_skill_proficiencies(effects) -> list[str]:
     return [s for _, _, e in effects for s in e.get("skills") or [] if "feature_id" in e]
 

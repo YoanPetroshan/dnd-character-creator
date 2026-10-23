@@ -6,7 +6,8 @@ Rule matrix (every row 2024; the same draft under mixed is unchanged):
   Monk 20 Body and Mind        "Your Dexterity and Wisdom scores increase by 4, to a maximum of 25." (+ a pruned note when lost)
   Barbarian 20 Primal Champion "Your Strength and Constitution scores increase by 4, to a maximum of 25." (replaces the SRD cap 24)
   Draconic (XPHB) Sorcerer 3+  HP +3, +1 per further Sorcerer level (= Sorcerer level); unarmored AC 10 + DEX + CHA
-  Dance Unarmored Defense      base AC 10 + DEX + CHA (record states no armor or shield condition)
+  Dance Unarmored Defense      base AC 10 + DEX + CHA; the parent Dazzling Footwork says no armor and no Shield (RPF)
+  Archfey 10, Land 10          Charmed / Poisoned immunity (RPF); Gloom Stalker 3 adds WIS (min 0) to Initiative (RPF)
   Shadow / Gloom Stalker       Darkvision 60, or +60 when the character already has Darkvision
   Thief 3 climb, Sea 6 swim    equal to Speed
   Glory 7                      Speed +10 (unconditional)
@@ -30,7 +31,8 @@ pytestmark = pytest.mark.skipif(not (has_official() and has_official_classes()),
 ABS = ("STR", "DEX", "CON", "INT", "WIS", "CHA")
 EFFECT_KEYS = {"quotes", "ability_bonus", "ability_cap", "supersedes", "hp_per_class_level", "ac_formula",
                "senses_additive", "sense_range", "climb_equals_walk", "swim_equals_walk", "speed_bonus_flat",
-               "speed_bonus_unless_heavy_armor", "resist", "skills", "proficiencies"}
+               "speed_bonus_unless_heavy_armor", "resist", "skills", "proficiencies", "parent_quotes",
+               "condition_immune", "initiative_ability"}
 
 
 @pytest.fixture(scope="module")
@@ -162,11 +164,51 @@ def test_draconic_with_barbarian_takes_the_best_formula_not_the_sum(catalog):
 
 def test_dance_unarmored_defense(catalog):
     sc = {"DEX": 14, "CHA": 16}
-    assert _res(catalog, [("bard", 3, "dance-xphb")], sc)["derived"]["armorClass"] == 15
-    assert _res(catalog, [("bard", 3, "dance-xphb")], sc, added=["shield"])["derived"]["armorClass"] == 17
-    assert _res(catalog, [("bard", 3, "dance-xphb")], sc, added=["chain-mail"])["derived"]["armorClass"] == 16
-    m = _res(catalog, [("bard", 3, "dance-xphb")], sc, ruleset="mixed")["derived"]["armorClass"]
-    assert m == _res(catalog, [("bard", 3)], sc, ruleset="mixed")["derived"]["armorClass"]  # mixed: no formula
+    dance = [("bard", 3, "dance-xphb")]
+    assert _res(catalog, dance, sc)["derived"]["armorClass"] == 15  # 10 + DEX 2 + CHA 3
+    # Parent Dazzling Footwork: "aren't wearing armor or wielding a Shield" - a shield removes the formula.
+    assert _res(catalog, dance, sc, added=["shield"])["derived"]["armorClass"] == 10 + 2 + 2
+    assert _res(catalog, dance, sc, added=["chain-mail"])["derived"]["armorClass"] == 16
+    m = _res(catalog, [("bard", 3)], sc, ruleset="mixed")["derived"]["armorClass"]
+    assert _res(catalog, dance, sc, ruleset="mixed")["derived"]["armorClass"] == m  # mixed: no formula
+
+
+def test_dance_parent_sentence_is_pinned(catalog):
+    entry = reference_data.CLASS_FEATURE_EFFECTS_2024["dance-xphb-3-unarmored-defense"]
+    assert entry["ac_formula"]["allows_shield"] is False
+    for pid, quote in entry["parent_quotes"].items():
+        assert quote in " ".join(catalog.features[pid]["desc"])
+
+
+def test_archfey_beguiling_defenses_charmed_immunity(catalog):
+    fid = "archfey-xphb-10-beguiling-defenses"
+    assert "You are immune to the Charmed condition." in " ".join(catalog.features[fid]["desc"])
+    wl = lambda lvl, rs="2024": _res(catalog, [("warlock", lvl, "archfey-xphb")], ruleset=rs)["sheet"]["conditionImmunities"]
+    assert "charmed" in wl(10)
+    assert "charmed" not in wl(9)
+    assert "charmed" not in wl(10, "mixed")
+    assert "charmed" not in _res(catalog, [("warlock", 10, "fiend-xphb")])["sheet"]["conditionImmunities"]
+
+
+def test_land_natures_ward_poisoned_immunity(catalog):
+    imm = lambda lvl, rs="2024": _res(catalog, [("druid", lvl, "land-xphb")], ruleset=rs)["sheet"]["conditionImmunities"]
+    assert "poisoned" in imm(10) and "poisoned" not in imm(9) and "poisoned" not in imm(10, "mixed")
+
+
+def test_conditional_immunities_stay_notes(catalog):
+    # Aura of Courage / Devotion (in your Aura), Mindless Rage (while raging) are not sheet immunities.
+    assert _res(catalog, [("paladin", 10, "devotion-xphb")])["sheet"]["conditionImmunities"] == []
+    assert _res(catalog, [("barbarian", 6, "berserker-xphb")])["sheet"]["conditionImmunities"] == []
+
+
+def test_gloom_stalker_dread_ambusher_initiative(catalog):
+    ini = lambda sc, lvl=3, rs="2024", sub="gloom-stalker-xphb": _res(
+        catalog, [("ranger", lvl, sub)], sc, ruleset=rs)["derived"]["initiative"]
+    assert ini({"DEX": 14, "WIS": 16}) == 2 + 3
+    assert ini({"DEX": 14, "WIS": 8}) == 2  # never negative
+    assert ini({"DEX": 14, "WIS": 16}, rs="mixed") == 2
+    assert ini({"DEX": 14, "WIS": 16}, sub="hunter-xphb") == 2
+    assert ini({"DEX": 14, "WIS": 16}, lvl=2, sub=None) == 2
 
 
 # ------------------------------------------------------------------ senses

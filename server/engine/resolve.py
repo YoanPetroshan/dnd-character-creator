@@ -6144,7 +6144,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         ) + feat_effects_mod.ac_bonus(feat_inst, gear.hands, equipped_items),  # FE4 (needs equipment.wielded)
         "speed": base_speed,  # walking speed; `speeds` carries every mode
         "speeds": speeds,
-        "initiative": derived_mod.initiative(modifiers, prof_bonus, initiative_jack, initiative_remarkable, feat_init_bonus, feat_init_pb),
+        "initiative": derived_mod.initiative(modifiers, prof_bonus, initiative_jack, initiative_remarkable,
+                                         feat_init_bonus + features_mod.class_initiative_bonus(effects, modifiers), feat_init_pb),
         "savingThrows": saves,
         "skills": skills,
         "passivePerception": derived_mod.passive_perception(skills) + feat_passive.get("skill-perception", 0),
@@ -6200,6 +6201,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         feat_effects_mod.instances(resolved_feats, feat_effects_data.FEAT_EFFECTS, choices))
     damage_modifiers = _species_damage_modifiers(race, subrace, resolved_feats, chosen_resistances)
     condition_immunities = _species_condition_immunities(race, subrace, resolved_feats)
+    for cond in features_mod.class_condition_immunities(effects):  # RPF Archfey 10, Nature's Ward
+        if cond not in condition_immunities:
+            condition_immunities.append(cond)
     senses = _species_senses(race, subrace, catalog, species_variant)
     for sense_kind, sense_range in _feat_senses(resolved_feats).items():
         if sense_range > senses.get(sense_kind, 0):
