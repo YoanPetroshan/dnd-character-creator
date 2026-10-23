@@ -172,6 +172,31 @@ def selected_invocation_ids(choices: list[dict]) -> list[tuple[str, str]]:
     return [(cls, sel.split("~", 1)[0]) for cls, sel in selected_invocation_instances(choices)]
 
 
+def selected_feat_invocation_ids(choices: list[dict]) -> list[str]:
+    """RP20: the invocation ids picked through Eldritch Adept (feat cards `<prefix>:invocation`)."""
+    return [sel for c in choices if c["source"]["kind"] == "feat" and c["id"].endswith(":invocation") for sel in c["selected"]]
+
+
+def feat_tome_entries(choices: list[dict]) -> list[dict]:
+    """RP20: Pact of the Tome picked through Eldritch Adept: "While the book is on your person, you have the chosen spells
+    prepared, and they function as Warlock spells for you." One raw innate entry (catalog shape, plus `source_label`) per
+    cantrip / ritual, cast with the feat's own spellcasting ability (its `-ability` card, None while unpicked)."""
+    by_id = {c["id"]: c for c in choices}
+    out = []
+    for c in choices:
+        m = class_choices_2024.FEAT_DEPENDENT_RE.match(c["id"]) if c["source"]["kind"] == "feat" else None
+        if not (m and m.group(2) == class_choices_2024.TOME_ID and m.group(3) in ("cantrips", "rituals")):
+            continue
+        ability = ((by_id.get(m.group(1) + "-ability") or {}).get("selected") or [None])[0]
+        for spell in c["selected"]:
+            out.append({"spell_id": spell, "name": spell.removesuffix("-xphb").replace("-", " ").title(),
+                        "level": 0 if m.group(3) == "cantrips" else 1, "uses": "always prepared",
+                        "ability": ability.upper() if ability else None, "variant": None,
+                        "note": "Pact of the Tome (Book of Shadows): prepared while the book is on your person",
+                        "source_label": c["source"]["label"]})
+    return out
+
+
 def invocation_effects(choices: list[dict], class_levels: dict[str, int], catalog=None) -> list[tuple[str, int, dict]]:
     """Same triple shape as `active_effects`, so ac_formulas() etc. read both. `catalog` (C7b) lets XPHB
     invocations merge the innate spells / senses their record carries."""

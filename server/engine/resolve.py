@@ -2472,7 +2472,8 @@ def _gate_invocation_choices(choices: list[dict], resolved_classes: list[dict], 
         if class_choices_2024.is_invocation_card_2024(c):  # C7a: prerequisites incl. Pacts inside the card
             cantrips = [sel for o in choices if o["id"] == f"class:{cls_id}:spells-cantrips" for sel in o["selected"]]
             choices[i], more = class_choices_2024.gate_invocations(
-                catalog, c, level, cantrips, class_choices_2024.tome_picks(choices)["cantrips"])  # C7c: Tome cantrips count
+                catalog, c, level, cantrips, class_choices_2024.tome_picks(choices)["cantrips"],  # C7c: Tome cantrips count
+                class_choices_2024.feat_tome_picks(choices)["cantrips"])  # RP20: so do those of a Tome held through Eldritch Adept
             pruned += more
             continue
         pacts = {sel for o in choices if o["source"].get("id") == cls_id and ":feature:" in o["id"] for sel in o["selected"]}
@@ -4085,8 +4086,8 @@ def _is_count_variable_choice(tpl: dict) -> bool:
         return True  # C2: Weapon Mastery count follows the class table (FE8: and the feat card's proficiency gate)
     if tpl["source"]["kind"] == "class" and ":invocations:" in tpl["id"]:
         return True  # Eldritch Invocations known follow the warlock level table
-    if tpl["source"]["kind"] == "class" and tpl["id"].startswith(class_choices_2024.DEPENDENT_PREFIX):
-        return True  # C7c: invocation dependents (targets, Tome, pact weapon, Lessons feat) follow the spell cards / inventory
+    if class_choices_2024.is_dependent_choice(tpl):
+        return True  # C7c: invocation dependents (targets, Tome, pact weapon, Lessons feat) follow the spell cards / inventory; RP20: also the Eldritch Adept's
     if class_choices_2024.is_additional_secrets_card(tpl):
         return True  # RPX1: the offered spell levels follow the Bard table (and the sources filter)
     if subclass_spells_2024.is_pick_card(tpl):
@@ -5527,6 +5528,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # spell counts), which isn't final until EVERY class's ASI progression
     # has run — hence this is a SECOND loop over resolved_classes, not
     # merged into the loop above.
+    warlock_spell_ctx: tuple[list[str], set[str]] | None = None  # RP20: (known cantrips, spells the Warlock owns) for Eldritch Adept
     for rc in resolved_classes:
         rc_cls, rc_cls_id, rc_level, rc_level_row = rc["cls"], rc["cls_id"], rc["level"], rc.get("level_row")
         if not (rc_cls and rc_cls_id):
@@ -5597,6 +5599,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 choice_templates += class_choices_2024.invocation_dependent_templates(
                     catalog, rc, ruleset, spell_templates,
                     lambda flt: _spell_filter_options(catalog, flt, draft.get("sources"), ruleset, kept_tome), owned_spells)
+                known_, prepared_ = class_choices_2024.warlock_spell_picks(spell_templates, rc["class_choices"])
+                warlock_spell_ctx = (known_, owned_spells | set(known_) | set(prepared_))
 
     asi_levels = primary.get("asi_levels", []) if primary else []
     level_row = primary.get("level_row") if primary else None
@@ -5697,6 +5701,17 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     all_selections.update(species.get("choices") or {})
     all_selections.update(equipment_choices_raw or {})
 
+    # RP20 (A3b): the dependents of an Eldritch Adept pick (target cantrips, Pact of the Tome, Pact of the Blade) under
+    # ruleset 2024: the C7c builders with the feat card as the holder. Built here because every feat card exists now
+    # and the target options are the Warlock's known cantrips.
+    warlock_level = next((rc["level"] for rc in resolved_classes if rc["cls_id"] == "warlock" and rc["cls"]), 0)
+    feat_inv_holders = class_choices_2024.feat_invocation_holders(catalog, choice_templates, all_selections, warlock_level, ruleset)
+    if feat_inv_holders:
+        known_cantrips, owned_by_warlock = warlock_spell_ctx or ([], set())
+        choice_templates += class_choices_2024.feat_dependent_templates(
+            catalog, feat_inv_holders, known_cantrips, owned_by_warlock,
+            lambda flt, kept: _spell_filter_options(catalog, flt, draft.get("sources"), ruleset, kept))
+
     # A selection stored in the Draft for a choice id that no longer
     # exists among the CURRENTLY reachable choice_templates (because the
     # player leveled down or cleared a subclass selection) is stale — it
@@ -5784,7 +5799,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 if _is_mastery_choice(tpl):  # F1: here only options the class filter / catalog no longer offers
                     where = "this class" if tpl["source"]["kind"] == "class" else "this feat"
                     reason = f"'{tpl['label']}': {names} is not an available weapon for {where} and was ignored."
-                elif tpl["source"]["kind"] == "class" and tpl["id"].startswith(class_choices_2024.DEPENDENT_PREFIX):
+                elif class_choices_2024.is_dependent_choice(tpl):
                     names = ", ".join(
                         (catalog.spells.get(d) or catalog.items.get(d) or catalog.feats.get(d[len("feat:"):]) or {}).get("name", d)
                         for d in dropped)  # C7c
@@ -6264,6 +6279,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choices, catalog, [rc["cls_id"] for rc in resolved_classes if rc["cls"]],
         {cid for slots in srd_fs_slots_by_class.values() for cid, _l, _i in slots},
         {cid for slots in fs_slots_by_class.values() for cid, _l, _i in slots})
+    pruned += class_choices_2024.prune_feat_invocation_dependents(choices)  # RP20: dependents of a pick the gates removed
     invocation_effects = features_mod.invocation_effects(
         choices, {rc["cls_id"]: rc["level"] for rc in resolved_classes if rc["cls"]}, catalog)
     proficient_skills.update(features_mod.invocation_skills(invocation_effects))
@@ -6405,7 +6421,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         attacks = attacks + [attacks_mod.unarmed_strike(modifiers, prof_bonus, martial_arts_die, feat_unarmed, monk=is_monk)]
     attacks = class_resources_mod.annotate_attacks(attacks, class_resources, equipped_items)
     if pact_weapon_id:  # C7c: Thirsting Blade, Eldritch Smite, ... notes on the pact weapon's row
-        pact_notes = class_choices_2024.pact_weapon_row_notes(sel for _cls, sel in features_mod.selected_invocation_ids(choices))
+        pact_notes = class_choices_2024.pact_weapon_row_notes(
+            [sel for _cls, sel in features_mod.selected_invocation_ids(choices)] + features_mod.selected_feat_invocation_ids(choices))
         attacks = [{**a, "notes": a["notes"] + [n for n in pact_notes if n not in a["notes"]]} if a["itemId"] == pact_weapon_id else a
                    for a in attacks]
     attacks = feat_effects_mod.annotate_attacks(attacks, equipped_items, feat_inst, feat_numbers)  # FE5 (F-D2 notes)
@@ -6512,7 +6529,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                         for e in feat_spell_tables.adept_entries(resolved_feats, feat_spell_tables.highest_slot_level(spell_slots, warlock_slots))]
                      + [{**_innate_entry_to_sheet(e, catalog), "source": e["source_label"],
                          **({"note": e["note"]} if e.get("note") else {})}
-                        for e in features_mod.invocation_innate_entries(invocation_effects)]
+                        for e in features_mod.invocation_innate_entries(invocation_effects) + features_mod.feat_tome_entries(choices)]
                      + [{**_innate_entry_to_sheet(e, catalog), "source": e["source_label"],  # RP18
                          **({"note": e["note"]} if e.get("note") else {})}
                         for e in subclass_innate_2024.innate_entries(catalog, resolved_classes, ruleset, modifiers)])

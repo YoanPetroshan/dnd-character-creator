@@ -394,7 +394,8 @@ def _warlock(ctx: Ctx, rc: dict) -> list[dict]:
             suffix = f" ({k})" if k > 1 else ""
             eff = class_choices_2024.invocation_effect(ctx.catalog, sel) or {}
             bonus = eff.get("resource_bonus")
-            target = class_choices_2024.instance_target(ctx.choices, inst)  # C7c: the picked cantrip
+            target = class_choices_2024.instance_target(  # C7c: the picked cantrip (RP20: the feat card is the holder)
+                ctx.choices, inst, c["id"] + ":" if feat_pick else class_choices_2024.DEPENDENT_PREFIX)
             target_spell = (ctx.catalog.spells.get(target) or {}) if target else {}
             if bonus:
                 if bonus.get("spell"):

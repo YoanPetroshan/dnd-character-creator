@@ -377,3 +377,250 @@ def test_resolve_stays_fast_with_all_four_feats(catalog, ruleset):
     for _ in range(10):
         resolve(d, catalog)
     assert (time.perf_counter() - start) / 10 * 1000 < 50
+
+
+# ================================================================ A3b: dependents of a feat-held invocation
+# Rule (XPHB texts, quoted in ``test_xphb_option_text_matches_catalog``): Agonizing Blast / Eldritch Spear "Choose one of
+# your known Warlock cantrips that deals damage"; Repelling Blast "... that requires an attack roll"; Pact of the Tome
+# "choose three cantrips, and choose two level 1 spells that have the Ritual tag"; Pact of the Blade "a Simple or Martial
+# Melee weapon of your choice with which you bond". The C7c builders run with the Eldritch Adept card as the holder:
+# cids ``<feat card cid>:<invocation>:<kind>``, source = the feat's own source.
+
+
+def ea(cls="warlock", level=4):
+    return cid_of(cls, level, EA, "invocation")
+
+
+def dep(inst, kind, cls="warlock", level=4):
+    return f"{ea(cls, level)}:{inst}:{kind}"
+
+
+def wl(level, pick, own=None, cantrips=("eldritch-blast-xphb", "minor-illusion-xphb", "mage-hand-xphb"), more=None, ability="cha", **kw):
+    ch = {INV: own if own is not None else [MIND, ARMOR, DEVIL], CANT: list(cantrips), **(more or {})}
+    picks = {"invocation": [pick], "invocation-ability": [ability]}
+    return run(catalog_(), "warlock", level, EA, picks, class_choices=ch, **kw)
+
+
+_CATALOG = []
+
+
+def catalog_():
+    if not _CATALOG:
+        _CATALOG.append(load())
+    return _CATALOG[0]
+
+
+def test_target_card_for_a_feat_held_agonizing_blast(catalog):
+    r = wl(5, AGON)
+    card = _card(r, dep(AGON, "cantrip"))
+    assert card["count"] == 1 and card["status"] == "pending" and card["source"] == _card(r, ea())["source"]
+    assert card["label"] == "Agonizing Blast: Cantrip"
+    assert {o["id"] for o in card["options"]} == {"eldritch-blast-xphb", "minor-illusion-xphb", "mage-hand-xphb"}
+    assert not _opt(card, "eldritch-blast-xphb").get("disabled")
+    assert _opt(card, "minor-illusion-xphb")["disabledReason"] == "does not deal damage"
+    done = wl(5, AGON, more={dep(AGON, "cantrip"): ["eldritch-blast-xphb"]})
+    assert _card(done, dep(AGON, "cantrip"))["status"] == "resolved"
+    res = next(x for x in done["derived"]["classResources"] if x["name"] == "Agonizing Blast")
+    assert res["details"]["spell"] == "eldritch-blast-xphb" and "Eldritch Blast" in res["details"]["note"]
+    assert res["bonus"] == 3  # the Warlock's CHA 16 + Human 1 -> +3
+
+
+def test_target_cards_for_spear_and_repelling_blast(catalog):
+    spear = wl(5, SPEAR, more={dep(SPEAR, "cantrip"): ["eldritch-blast-xphb"]})
+    card = _card(spear, dep(SPEAR, "cantrip"))
+    assert card["selected"] == ["eldritch-blast-xphb"]
+    note = next(x for x in spear["derived"]["classResources"] if x["name"] == "Eldritch Spear")["details"]["note"]
+    assert note == "Eldritch Blast: range 120 ft + 150 ft (30 x Warlock level 5) = 270 ft."
+    assert _opt(card, "mage-hand-xphb")["disabledReason"] == "does not deal damage"
+    rep = wl(5, REPEL, more={dep(REPEL, "cantrip"): ["eldritch-blast-xphb"]})
+    assert _card(rep, dep(REPEL, "cantrip"))["selected"] == ["eldritch-blast-xphb"]
+    assert _opt(_card(rep, dep(REPEL, "cantrip")), "mage-hand-xphb")["disabledReason"] == "does not require an attack roll"
+    note = next(x for x in rep["derived"]["classResources"] if x["name"] == "Repelling Blast")["details"]["note"]
+    assert "Eldritch Blast" in note and "push it up to 10 feet" in note
+
+
+def test_a_stored_target_pick_that_is_no_longer_valid_is_pruned_not_over_selected(catalog):
+    r = wl(5, AGON, more={dep(AGON, "cantrip"): ["minor-illusion-xphb"]})
+    assert _card(r, dep(AGON, "cantrip"))["selected"] == []
+    assert "no longer available" in _pruned(r, dep(AGON, "cantrip"))
+    assert not [p for p in r["problems"] if "over-selected" in p["id"]]
+
+
+def test_dependents_go_when_the_feat_pick_changes_or_the_feat_goes(catalog):
+    stored = {dep(AGON, "cantrip"): ["eldritch-blast-xphb"]}
+    swapped = wl(5, ARMOR, more=stored)
+    assert _card(swapped, dep(AGON, "cantrip")) is None
+    assert dep(AGON, "cantrip") in {p["choiceId"] for p in swapped["pruned"]}
+    # the feat is no longer picked at the ASI: the whole cascade is stale
+    ch = {INV: [MIND, ARMOR, DEVIL], CANT: ["eldritch-blast-xphb", "minor-illusion-xphb", "mage-hand-xphb"],
+          ea(): [AGON], **stored}
+    gone = resolve(_draft([("warlock", 5, ch, None)]), load())
+    assert _card(gone, ea()) is None and _card(gone, dep(AGON, "cantrip")) is None
+    assert dep(AGON, "cantrip") in {p["choiceId"] for p in gone["pruned"]}
+
+
+def test_a_feat_pick_dropped_by_the_gate_takes_its_target_card_with_it(catalog):
+    # no damaging cantrip at all: the pick is unmet, so there is no target card either
+    r = wl(5, AGON, cantrips=("minor-illusion-xphb", "mage-hand-xphb", "prestidigitation-xphb"))
+    assert _card(r, ea())["selected"] == [] and _card(r, dep(AGON, "cantrip")) is None
+
+
+def test_the_warlock_and_the_feat_do_not_share_a_target_card(catalog):
+    r = wl(5, SPEAR, own=[AGON, MIND, ARMOR],
+           more={dep(SPEAR, "cantrip"): ["eldritch-blast-xphb"],
+                 "class:warlock:invocation:" + AGON + ":cantrip": ["eldritch-blast-xphb"]})
+    own = _card(r, "class:warlock:invocation:" + AGON + ":cantrip")
+    feat = _card(r, dep(SPEAR, "cantrip"))
+    assert own["selected"] == ["eldritch-blast-xphb"] and feat["selected"] == ["eldritch-blast-xphb"]
+    assert own["source"]["kind"] == "class" and feat["source"]["kind"] == "feat"
+
+
+def test_duplicate_of_the_warlock_agonizing_blast_is_still_blocked(catalog):
+    r = wl(5, AGON, own=[AGON, MIND, ARMOR], more={"class:warlock:invocation:" + AGON + ":cantrip": ["eldritch-blast-xphb"]})
+    card = _card(r, ea())
+    assert _opt(card, AGON)["disabledReason"] == "already taken (Agonizing Blast, Warlock)" and card["selected"] == []
+    assert _card(r, dep(AGON, "cantrip")) is None
+
+
+# ---- Pact of the Tome through the feat (any class)
+
+
+def test_pact_of_the_tome_cards_for_a_wizard(catalog):
+    r = run(catalog, "wizard", 4, EA, {"invocation": [TOME], "invocation-ability": ["int"]})
+    cantrips, rituals = _card(r, dep(TOME, "cantrips", "wizard")), _card(r, dep(TOME, "rituals", "wizard"))
+    assert (cantrips["count"], rituals["count"]) == (3, 2) and cantrips["status"] == rituals["status"] == "pending"
+    assert cantrips["source"]["kind"] == "feat"
+    assert all(catalog.spells[o["id"]]["level"] == 0 for o in cantrips["options"])
+    assert all(catalog.spells[o["id"]]["level"] == 1 and catalog.spells[o["id"]].get("ritual") for o in rituals["options"])
+    assert {"fire-bolt-xphb", "light-xphb"} <= {o["id"] for o in cantrips["options"]}  # any class's list
+    picks = {dep(TOME, "cantrips", "wizard"): ["fire-bolt-xphb", "light-xphb", "guidance-xphb"],
+             dep(TOME, "rituals", "wizard"): ["detect-magic-xphb", "identify-xphb"]}
+    done = run(catalog, "wizard", 4, EA, {"invocation": [TOME], "invocation-ability": ["int"]}, class_choices=picks)
+    spells = {s["spellId"]: s for s in done["sheet"]["innateSpells"] if s["source"] == "Eldritch Adept"}
+    assert {"fire-bolt-xphb", "light-xphb", "guidance-xphb", "detect-magic-xphb", "identify-xphb"} <= set(spells)
+    assert spells["detect-magic-xphb"]["ability"] == "INT" and spells["detect-magic-xphb"]["uses"] == "always prepared"
+    assert "Pact of the Tome" in spells["fire-bolt-xphb"]["note"]
+
+
+def test_tome_cards_only_for_the_selected_feat_pick(catalog):
+    none = run(catalog, "wizard", 4, EA, {"invocation": [CHAIN]})
+    assert not [c["id"] for c in none["choices"] if "pact-of-the-tome" in c["id"]]
+
+
+def test_feat_tome_cantrips_count_for_the_warlocks_prerequisite(catalog):
+    own = [MIND, AGON, ARMOR]
+    cants = ("minor-illusion-xphb", "mage-hand-xphb", "prestidigitation-xphb")
+    without = wl(5, ARMOR, own=own, cantrips=cants)
+    assert _card(without, INV)["selected"] == [MIND, ARMOR]  # Agonizing Blast needs a damaging cantrip
+    tome = {dep(TOME, "cantrips"): ["fire-bolt-xphb", "light-xphb", "guidance-xphb"]}
+    with_tome = wl(5, TOME, own=own, cantrips=cants, more=tome)
+    assert _card(with_tome, INV)["selected"] == own and _card(with_tome, ea())["selected"] == [TOME]
+
+
+def test_duplicate_of_the_warlock_tome_is_blocked(catalog):
+    r = wl(5, TOME, own=[TOME, MIND, ARMOR])
+    assert _card(r, ea())["selected"] == [] and _card(r, dep(TOME, "cantrips")) is None
+    assert _card(r, "class:warlock:invocation:" + TOME + ":cantrips") is not None
+
+
+# ---- Pact of the Blade through the feat
+
+
+def test_pact_of_the_blade_weapon_card_and_attack_row(catalog):
+    r = run(catalog, "wizard", 4, EA, {"invocation": [BLADE], "invocation-ability": ["cha"]})
+    card = _card(r, dep(BLADE, "weapon", "wizard"))
+    assert card["count"] == 1 and card["source"]["kind"] == "feat"
+    assert {"longsword", "dagger", "greatsword"} <= {o["id"] for o in card["options"]}
+    assert all(catalog.items[o["id"]]["weapon_range"] == "Melee" for o in card["options"])
+    done = run(catalog, "wizard", 4, EA, {"invocation": [BLADE], "invocation-ability": ["cha"]},
+               class_choices={dep(BLADE, "weapon", "wizard"): ["longsword"]})
+    (row,) = [a for a in done["derived"]["attacks"] if a["itemId"] == "longsword"]
+    assert row["ability"] == "CHA" and any("Pact weapon" in n for n in row["notes"])
+    plain = run(catalog, "wizard", 4, EA, {"invocation": [BLADE]}, class_choices={dep(BLADE, "weapon", "wizard"): ["longsword"]},
+                ruleset="mixed")
+    assert not [a for a in plain["derived"]["attacks"] if a["itemId"] == "longsword"]
+
+
+def test_thirsting_blade_through_the_feat_adds_its_row_note(catalog):
+    r = wl(5, THIRST, own=[BLADE, MIND, ARMOR], more={"class:warlock:invocation:" + BLADE + ":weapon": ["longsword"]})
+    assert _card(r, ea())["selected"] == [THIRST]
+    (row,) = [a for a in r["derived"]["attacks"] if a["itemId"] == "longsword"]
+    assert any("Thirsting" in n or "Extra Attack" in n for n in row["notes"])
+
+
+# ---- sites, rulesets, identity, degrade, timing
+
+
+def test_dependents_at_the_background_site(catalog, monkeypatch):
+    monkeypatch.setitem(fed.FEAT_EFFECTS, "alert-xphb", {**fed.FEAT_EFFECTS["alert-xphb"], "option_picks": {"kind": "invocation", "count": 1}})
+    d = _draft([("wizard", 1, {}, None)])
+    d["background"]["id"] = "criminal-xphb"
+    card = "feat:alert-xphb:invocation"
+    d["classes"][0]["choices"] = {card: [TOME], f"{card}:{TOME}:cantrips": ["fire-bolt-xphb", "light-xphb", "guidance-xphb"]}
+    r = resolve(d, catalog)
+    assert _card(r, card)["selected"] == [TOME]
+    assert _card(r, f"{card}:{TOME}:cantrips")["selected"] == ["fire-bolt-xphb", "light-xphb", "guidance-xphb"]
+    assert _card(r, f"{card}:{TOME}:rituals")["status"] == "pending"
+
+
+@pytest.mark.parametrize("ruleset", ["mixed", "2014"])
+def test_no_dependents_outside_2024(catalog, ruleset):
+    r = run(catalog, "wizard", 4, EA, {"invocation": [TOME]}, ruleset=ruleset)
+    assert not [c["id"] for c in r["choices"] if c["id"].startswith(ea("wizard") + ":")]
+
+
+def test_srd_only_catalog_has_no_dependents(catalog):
+    bare = copy.copy(catalog)
+    bare.features = {k: v for k, v in catalog.features.items() if not (k.startswith("opt-") and k.endswith("-xphb"))}
+    r = run(bare, "wizard", 4, EA, {"invocation": [TOME]})
+    assert not [c["id"] for c in r["choices"] if c["id"].startswith(ea("wizard") + ":")]
+
+
+def test_dependents_with_a_pending_target_block_export(catalog):
+    from app import _pending_export_problems
+    r = wl(5, AGON)
+    assert any(dep(AGON, "cantrip") in str(p) for p in _pending_export_problems(r))
+
+
+def test_a_target_card_with_no_enabled_option_does_not_block_export(catalog):
+    # Eldritch Spear needs a damaging cantrip with range 10+; with only Toll-the-Dead-like short ranges the pick is dropped
+    r = wl(5, SPEAR, cantrips=("minor-illusion-xphb", "mage-hand-xphb", "eldritch-blast-xphb"))
+    assert _card(r, dep(SPEAR, "cantrip"))["status"] == "pending"
+    cards = [c for c in r["choices"] if c["id"].startswith(ea() + ":")]
+    assert cards and all(c["status"] in ("pending", "resolved", "unavailable") for c in cards)
+
+
+def test_warlock_20_with_all_four_feats_stays_fast(catalog):
+    ch = {INV: [AGON, SPEAR, REPEL, BLADE, THIRST, MIND, ARMOR, DEVIL, X.format("fiendish-vigor"), X.format("mask-of-many-faces")],
+          CANT: ["eldritch-blast-xphb", "fire-bolt-xphb", "minor-illusion-xphb", "mage-hand-xphb"],
+          "class:warlock:4:asi": [f"feat:{EA}"], "class:warlock:8:asi": [f"feat:{MA}"],
+          "class:warlock:12:asi": [f"feat:{MMA}"], "class:warlock:16:asi": [f"feat:{FI}"]}
+    ch[ea()] = [CHAIN]
+    for ruleset in ("mixed", "2024"):
+        d = _draft([("warlock", 20, ch, None)], ruleset=ruleset)
+        resolve(d, catalog)
+        start = time.perf_counter()
+        for _ in range(10):
+            resolve(d, catalog)
+        assert (time.perf_counter() - start) / 10 * 1000 < 50
+
+
+def test_a_tome_card_without_any_ritual_spell_is_unavailable_not_blocking(catalog):
+    bare = copy.copy(catalog)
+    bare.spells = {k: v for k, v in catalog.spells.items() if not v.get("ritual")}
+    r = run(bare, "wizard", 4, EA, {"invocation": [TOME]})
+    rituals = _card(r, dep(TOME, "rituals", "wizard"))
+    assert rituals["status"] == "unavailable" and rituals["options"] == []
+
+
+def test_the_feat_may_come_from_another_class_than_the_warlock(catalog):
+    fighter = {"class:fighter:4:asi": [f"feat:{EA}"], cid_of("fighter", 4, EA, "invocation"): [AGON],
+               cid_of("fighter", 4, EA, "invocation-ability"): ["cha"]}
+    warlock = {INV: [MIND, ARMOR, DEVIL], CANT: ["eldritch-blast-xphb", "minor-illusion-xphb", "mage-hand-xphb"]}
+    d = _draft([("fighter", 4, fighter, None), ("warlock", 5, warlock, None)])
+    r = resolve(d, catalog)
+    card = _card(r, f"{cid_of('fighter', 4, EA, 'invocation')}:{AGON}:cantrip")
+    assert card and not _opt(card, "eldritch-blast-xphb").get("disabled") and _opt(card, "minor-illusion-xphb").get("disabled")
+    assert _card(r, cid_of("fighter", 4, EA, "invocation"))["selected"] == [AGON]
+    nowl = resolve(_draft([("fighter", 4, fighter, None)]), catalog)
+    assert _card(nowl, cid_of("fighter", 4, EA, "invocation"))["selected"] == []  # no Warlock level, no Agonizing Blast
