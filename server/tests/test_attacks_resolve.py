@@ -47,7 +47,7 @@ def test_paladin_chain_mail_strength_warning_and_stealth(catalog):
     assert "armor-strength-chain-mail" in _ids(r)
     assert not [i for i in _ids(r) if i.startswith("armor-not-proficient")]
     assert r["derived"]["stealthDisadvantage"] is True
-    assert r["derived"]["speed"] == 30  # not reduced
+    assert r["derived"]["speed"] == 20  # W1: STR 12 < 13, speed reduced by 10 ft
     r = resolve(_draft([_cls("paladin")], {"STR": 12}), catalog)  # STR 13
     assert "armor-strength-chain-mail" not in _ids(r)
 

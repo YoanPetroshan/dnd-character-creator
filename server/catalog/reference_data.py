@@ -501,6 +501,13 @@ SRD_TRAIT_EFFECTS: dict[str, dict] = {
     "darkvision": {"senses": {"darkvision": 60}},
     "dwarven-resilience": {"resist": ["poison"]},
     "dwarven-toughness": {"hp_per_level": 1},
+    # W1 (F1): the official (5etools) dwarves carry the same sentence under synthetic trait ids; each entry is pinned
+    # by TRAIT_EFFECT_QUOTES against the catalog text (tests/test_w1_dwarven_toughness_heavy_armor.py also scans the
+    # whole trait catalog for the sentence, so a new book cannot add an unmapped one).
+    "dwarf-xphb-trait-2": {"hp_per_level": 1},
+    "dwarf-phb-hill-phb-trait-0": {"hp_per_level": 1},
+    "dwarf-(kaladesh)-psk-trait-6": {"hp_per_level": 1},
+    "human-(innistrad)-psi-stensia-psi-trait-1": {"hp_per_level": 2},  # Stensia "Tough": 2, and 2 per level
     "hellish-resistance": {"resist": ["fire"]},
     "infernal-legacy": {"innate_spells": [
         {"name": "Thaumaturgy", "spell_id": "thaumaturgy", "level": 1, "uses": "at-will", "ability": "CHA", "variant": None},
@@ -509,6 +516,23 @@ SRD_TRAIT_EFFECTS: dict[str, dict] = {
     ]},
     "high-elf-cantrip": {"spell_ability": "INT"},
 }
+
+# W1 quote pins for the hp_per_level entries above (catalog text, tags stripped).
+TRAIT_EFFECT_QUOTES: dict[str, str] = {
+    "dwarven-toughness": "maximum increases by 1, and it increases by 1 every time you gain a level.",
+    "dwarf-xphb-trait-2": "maximum increases by 1, and it increases by 1 again whenever you gain a level.",
+    "dwarf-phb-hill-phb-trait-0": "maximum increases by 1, and it increases by 1 every time you gain a level.",
+    "dwarf-(kaladesh)-psk-trait-6": "maximum increases by 1, and it increases by 1 every time you gain a level.",
+    "human-(innistrad)-psi-stensia-psi-trait-1": "maximum increases by 2, and it increases by 2 every time you gain a level.",
+}
+
+# W1 (F3): "Your speed is not reduced by wearing heavy armor." Traits (official races) and the SRD dwarf, whose SRD
+# record has no such trait (the sentence is in the SRD Dwarf Speed text), pinned by race id. Dwarf (XPHB) has none.
+HEAVY_ARMOR_SPEED_EXEMPT_TRAITS: dict[str, str] = {
+    "dwarf-phb-trait-2": "Your speed is not reduced by wearing heavy armor.",
+    "dwarf-(kaladesh)-psk-trait-3": "Your speed is not reduced by wearing heavy armor.",
+}
+HEAVY_ARMOR_SPEED_EXEMPT_RACES: dict[str, str] = {"dwarf": "Your speed is not reduced by wearing heavy armor."}
 
 
 # Fixed proficiency grants of a subclass (the SRD feature text is prose only).

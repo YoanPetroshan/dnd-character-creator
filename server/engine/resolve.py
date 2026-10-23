@@ -60,7 +60,7 @@ from catalog.choices import build_choice_template, build_equipment_choice, pack_
 from catalog.loader import Catalog
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
 from catalog.reference_data import (
-    ABILITIES, SPECIFIC_WEAPON_PROFICIENCY_IDS, SRD_TRAIT_EFFECTS, SUBCLASS_PROFICIENCIES, SUBCLASS_EXTRA_FEATURES,
+    ABILITIES, HEAVY_ARMOR_SPEED_EXEMPT_RACES, HEAVY_ARMOR_SPEED_EXEMPT_TRAITS, SPECIFIC_WEAPON_PROFICIENCY_IDS, SRD_TRAIT_EFFECTS, SUBCLASS_PROFICIENCIES, SUBCLASS_EXTRA_FEATURES,
     SUBCLASS_SPELLCASTING_ABILITY, SUBCLASS_SPELL_SCHOOL_LIMITS, wizard_spell_picks, ruleset_allows, subclass_unlock_level,
 )
 from . import asi as asi_mod
@@ -4136,6 +4136,25 @@ def _raise_walk_speed(speeds: dict[str, int], bonus: int) -> dict[str, int]:
     return {**speeds, "walk": speeds["walk"] + bonus}
 
 
+def _heavy_armor_speed_penalty(speeds: dict[str, int], penalty: int) -> dict[str, int]:
+    """W1: armor below its Strength requirement reduces the walking speed by 10 ft (floor 0); other modes keep their value."""
+    if not penalty or "walk" not in speeds:
+        return speeds
+    return {**speeds, "walk": max(0, speeds["walk"] - penalty)}
+
+
+def _heavy_armor_speed_exempt(race: dict | None, subrace: dict | None) -> bool:
+    """W1: "Your speed is not reduced by wearing heavy armor." -- a pinned trait of the race / subrace (dwarf-phb,
+    Kaladesh) or the SRD dwarf race (reference_data.HEAVY_ARMOR_SPEED_EXEMPT_*). Dwarf (XPHB) has none."""
+    if race and race.get("index") in HEAVY_ARMOR_SPEED_EXEMPT_RACES:
+        return True
+    for src in (race, subrace):
+        for ref in list((src or {}).get("traits", [])) + list((src or {}).get("racial_traits", [])):
+            if ref["index"] in HEAVY_ARMOR_SPEED_EXEMPT_TRAITS:
+                return True
+    return False
+
+
 def _is_mastery_choice(tpl: dict) -> bool:
     """C2 class Weapon Mastery cards and (FE8) Weapon Master (XPHB)'s feat card share the `:weapon-mastery` suffix."""
     return tpl["source"]["kind"] in ("class", "feat") and tpl["id"].endswith(":weapon-mastery")
@@ -6478,6 +6497,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     feat_inst = feat_effects_mod.instances(resolved_feats, feat_effects_data.FEAT_EFFECTS, choices)  # FE1
     if speeds and feat_effects_mod.walk_bonus(feat_inst):  # Mobile, Speedy, Boon of Speed, ... (walk only)
         speeds = _raise_walk_speed(speeds, feat_effects_mod.walk_bonus(feat_inst))
+    speed_exempt = _heavy_armor_speed_exempt(race, subrace)  # W1
+    speeds = _heavy_armor_speed_penalty(  # W1: after every walk bonus, before the "equal to your walking speed" modes
+        speeds, 0 if speed_exempt else equipment_mod.armor_speed_penalty(equipped_items, final_scores))
     if speeds.get("walk") and features_mod.swim_equals_walk(effects):  # C7b Gift of the Depths
         speeds = {**speeds, "swim": max(speeds.get("swim", 0), speeds["walk"])}
     if speeds.get("walk") and features_mod.climb_equals_walk(effects):  # RP2 Thief, Roving
@@ -6513,7 +6535,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     weapon_masteries = _weapon_masteries(choices, catalog)
     attacks = attacks_mod.annotate_mastery(attacks, weapon_masteries)  # C2
     armor_problems, stealth_disadvantage = equipment_mod.armor_warnings(
-        equipped_items, final_scores, weapon_proficiencies, feat_effects_mod.medium_armor_stealth_ok(feat_inst))  # FE4
+        equipped_items, final_scores, weapon_proficiencies, feat_effects_mod.medium_armor_stealth_ok(feat_inst), speed_exempt)  # FE4, W1
     warnings += armor_problems
     carrying = derived_mod.carrying_summary(
         final_scores.get("STR", 10), species_size or (race or {}).get("size") or "Medium",

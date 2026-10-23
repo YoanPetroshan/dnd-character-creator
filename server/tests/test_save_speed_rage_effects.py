@@ -157,7 +157,7 @@ def test_fast_movement_levels_and_armor(catalog):
     assert _res(catalog, [("barbarian", 5)])["derived"]["speed"] == 40
     assert _res(catalog, [("barbarian", 5)], added=["hide-armor"])["derived"]["speed"] == 40  # Medium
     assert _res(catalog, [("barbarian", 5)], added=["shield"])["derived"]["speed"] == 40
-    heavy = _res(catalog, [("barbarian", 5)], added=["chain-mail"])
+    heavy = _res(catalog, [("barbarian", 5)], added=["chain-mail"], base={"STR": 13})  # W1: STR meets the requirement
     assert heavy["derived"]["speed"] == 30
     assert heavy["derived"]["speeds"]["walk"] == 30
 
@@ -171,7 +171,7 @@ def test_fast_movement_stacks_with_unarmored_movement(catalog):
     # Monk 2: +10 only without armor and shield; Barbarian 5: +10 unless Heavy armor
     assert _res(catalog, [("barbarian", 5), ("monk", 2)])["derived"]["speed"] == 50
     assert _res(catalog, [("barbarian", 5), ("monk", 2)], added=["hide-armor"])["derived"]["speed"] == 40
-    assert _res(catalog, [("barbarian", 5), ("monk", 2)], added=["chain-mail"])["derived"]["speed"] == 30
+    assert _res(catalog, [("barbarian", 5), ("monk", 2)], added=["chain-mail"], base={"STR": 13})["derived"]["speed"] == 30
     assert _res(catalog, [("barbarian", 4), ("monk", 2)])["derived"]["speed"] == 40
 
 
@@ -185,7 +185,7 @@ def test_speed_bonuses_raise_only_the_walking_speed(catalog):
         got = _res(catalog, classes, species="triton-mpmm")["derived"]
         assert got["speeds"]["walk"] == walk and got["speed"] == walk, classes
         assert got["speeds"]["swim"] == 30, classes
-    heavy = _res(catalog, [("barbarian", 5)], species="triton-mpmm", added=["chain-mail"])["derived"]["speeds"]
+    heavy = _res(catalog, [("barbarian", 5)], species="triton-mpmm", added=["chain-mail"], base={"STR": 13})["derived"]["speeds"]
     assert heavy["walk"] == 30 and heavy["swim"] == 30
 
 

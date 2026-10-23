@@ -46,13 +46,27 @@ def armor_class_from_gear(
 _ARMOR_PROFICIENCY = {"Light": "light-armor", "Medium": "medium-armor", "Heavy": "heavy-armor"}
 
 
+def armor_speed_penalty(equipped_items: list[dict], scores: dict) -> int:
+    """W1: 10 ft when any worn body armor lists a Strength score above the wearer's (PHB 2014 and 2024: "that
+    armor reduces the wearer's speed by 10 feet unless the wearer has a Strength score equal to or higher than the
+    listed score"). Taken once even for several suits; shields have no requirement."""
+    strength = scores.get("STR", 10)
+    for item in equipped_items:
+        if (item.get("equipment_category", {}).get("index") == "armor" and item.get("armor_category") != "Shield"
+                and (item.get("str_minimum") or 0) > strength):
+            return 10
+    return 0
+
+
 def armor_warnings(
     equipped_items: list[dict], scores: dict, proficiency_ids, medium_armor_stealth_ok: bool = False,
+    speed_exempt: bool = False,
 ) -> tuple[list[dict], bool]:
     """Non-blocking warnings for worn armor and whether any of it imposes
     disadvantage on Stealth. Shields need `shields`; body armor needs its
     category proficiency or `all-armor`. Only the warning is raised for a
-    Strength shortfall; speed (-10 ft) is not applied to derived stats. `medium_armor_stealth_ok`
+    Strength shortfall (W1: the -10 ft speed is applied by resolve(), not here; `speed_exempt` -- a dwarf whose
+    speed is not reduced by heavy armor -- drops the warning, since nothing happens). `medium_armor_stealth_ok`
     (Medium Armor Master, PHB) drops the Stealth disadvantage of Medium armor."""
     armor, seen = [], set()
     for item in equipped_items:
@@ -72,10 +86,10 @@ def armor_warnings(
                 "message": f"Not proficient with {name}: disadvantage on STR/DEX ability checks, saves and attack rolls, and no spellcasting while it is worn.",
             })
         minimum = item.get("str_minimum") or 0
-        if minimum > scores.get("STR", 10):
+        if minimum > scores.get("STR", 10) and not speed_exempt:
             warnings.append({
                 "id": f"armor-strength-{index}",
-                "message": f"{name} needs Strength {minimum}; below that, speed is reduced by 10 ft (not applied to the sheet).",
+                "message": f"{name} needs Strength {minimum}; below that, speed is reduced by 10 ft.",
             })
     if sum(1 for i in armor if i.get("armor_category") != "Shield") > 1:
         warnings.append({"id": "armor-multiple-body", "message": "More than one suit of body armor is equipped; only one can be worn."})

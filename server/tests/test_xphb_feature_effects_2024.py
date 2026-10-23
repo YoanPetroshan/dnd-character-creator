@@ -264,15 +264,15 @@ def test_sea_swim(catalog):
 def test_glory_speed_plus_10_even_in_heavy_armor(catalog):
     base = _speeds(_res(catalog, [("paladin", 6, "glory-xphb")]))["walk"]
     assert _speeds(_res(catalog, [("paladin", 7, "glory-xphb")]))["walk"] == base + 10
-    assert _speeds(_res(catalog, [("paladin", 7, "glory-xphb")], added=["chain-mail"]))["walk"] == base + 10
-    assert _speeds(_res(catalog, [("paladin", 7, "glory-xphb")], ruleset="mixed"))["walk"] == base
+    assert _speeds(_res(catalog, [("paladin", 7, "glory-xphb")], added=["chain-mail"], base={"STR": 13}))["walk"] == base + 10
+    assert _speeds(_res(catalog, [("paladin", 7, "glory-xphb")], ruleset="mixed", base={"STR": 13}))["walk"] == base  # (mixed kit holds chain mail)
 
 
 def test_roving(catalog):
     base = _speeds(_res(catalog, [("ranger", 5)]))["walk"]
     r = _speeds(_res(catalog, [("ranger", 6)]))
     assert (r["walk"], r["climb"], r["swim"]) == (base + 10,) * 3
-    h = _speeds(_res(catalog, [("ranger", 6)], added=["plate-armor"]))
+    h = _speeds(_res(catalog, [("ranger", 6)], added=["plate-armor"], base={"STR": 15}))
     assert h["walk"] == base and h["climb"] == base and h["swim"] == base
     assert "climb" not in _speeds(_res(catalog, [("ranger", 6)], ruleset="mixed"))
 

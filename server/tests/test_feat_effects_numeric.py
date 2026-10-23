@@ -260,7 +260,7 @@ def test_mobile_with_unarmored_movement_and_fast_movement(catalog):
     monk = _res(catalog, [("monk", 6)], ["mobile-phb"], base={})
     # Monk 6 Unarmored Movement +15, Mobile +10 (the ASI slot at 4 is the feat).
     assert _d(monk)["speed"] == 30 + 15 + 10
-    armored = _res(catalog, [("monk", 6)], ["mobile-phb"], added=["chain-mail"])
+    armored = _res(catalog, [("monk", 6)], ["mobile-phb"], added=["chain-mail"], base={"STR": 13})
     assert _d(armored)["speed"] == 30 + 10        # no Unarmored Movement in armor, Mobile still applies
     barb = _res(catalog, [("barbarian", 5)], ["mobile-phb"])
     assert _d(barb)["speed"] == 30 + 10 + 10      # Fast Movement +10 and Mobile +10
