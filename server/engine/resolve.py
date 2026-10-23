@@ -1333,6 +1333,26 @@ def _feat_offered(feat: dict, sources, ruleset: str = "mixed") -> bool:
     return _source_allowed(feat, sources) and ruleset_allows(feat, "feat", ruleset)
 
 
+def _fi_seen_add(seen: dict[str, str], catalog: Catalog, feat: dict, stored, ruleset: str) -> None:
+    """RP4 (A4): under ruleset 2024 a held Fighting Initiate style joins `seen` as `name:<style>` at the feat's
+    position, so a LATER Fighting Style feat card / ASI pick of the same-named FS feat is the duplicate (first holder
+    wins). Only a valid stored pick of the six fighter styles counts; mixed / 2014 are untouched (FE9 `pruned` path)."""
+    if ruleset != "2024" or not isinstance(stored, list):
+        return
+    spec = (fed_option_picks(feat) or {})
+    if spec.get("kind") != "fighting-style":
+        return
+    options = _srd_style_options(catalog, _FIGHTER_STYLE_FEATURE)
+    pick = next((x for x in stored if isinstance(x, str) and x in options), None)
+    if pick:
+        seen.setdefault("name:" + options[pick], f"{options[pick].title()}, Fighting Initiate")
+
+
+def fed_option_picks(feat: dict) -> dict | None:
+    from catalog import feat_effects_data
+    return (feat_effects_data.FEAT_EFFECTS.get(feat.get("index")) or {}).get("option_picks")
+
+
 def _resolve_asi_selected_feats(
     resolved_classes: list[dict], catalog: Catalog, sources=None,
     taken_indices: dict[str, str] | None = None, skipped_duplicates: list[dict] | None = None,
@@ -1433,6 +1453,7 @@ def _resolve_asi_selected_feats(
                 continue
             _taken_add(seen, [catalog_feat])
             origin = f"{cid}:feat:{catalog_feat['index']}"
+            _fi_seen_add(seen, catalog, catalog_feat, class_choices.get(f"{origin}:fighting-style"), ruleset)  # RP4
             feat = {**catalog_feat, "_asi_cid": cid, "_asi_level": lvl, "_asi_origin": origin}
             asi_feat_picks.append(feat)
 
@@ -4713,12 +4734,15 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         fs_resolver(rc, upto_level, seen)
         lessons_resolver(rc, upto_level, seen)
     skipped_duplicate_asi_feats: list[dict] = []
+    walk_seen0 = _taken_add({}, background_feats + species_feats)
+    for sf in species_feats:  # RP4: an origin Fighting Initiate style is held before every class card
+        _fi_seen_add(walk_seen0, catalog, sf, species_choices_raw.get(f"{sf['_species_origin']}:fighting-style"), ruleset)
     asi_taken_before_cid: dict[str, dict[str, str]] = {}
     # F1: fighting-style cards and ASI picks resolve in one pass, ordered by (class
     # index, class level); the later pick is the duplicate.
     asi_feat_picks, asi_feat_deltas_by_cid = _resolve_asi_selected_feats(
         resolved_classes, catalog, draft.get("sources"),
-        taken_indices=_taken_add({}, background_feats + species_feats),
+        taken_indices=walk_seen0,
         skipped_duplicates=skipped_duplicate_asi_feats, ruleset=ruleset, fighting_style=held.fighting_style,
         before_level=walk_hook, taken_before_cid=asi_taken_before_cid,
     )
