@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
 import { ClassResourcesList } from "../components/ClassResourcesList";
+import { SheetTraitsSummary } from "../components/SheetTraitsSummary";
 import { SpellSlotsSummary } from "../components/SpellSlotsSummary";
 
 const EXPORT_FORMATS = {
@@ -134,6 +135,7 @@ export function ExportPage() {
           </ul>
         </div>
       )}
+      <SheetTraitsSummary sheet={resolution.sheet} />
       {((resolution.derived.attacks?.length ?? 0) > 0 || (resolution.derived.attacksPerAction ?? 1) > 1) && (
         <div>
           <h2>Attacks</h2>

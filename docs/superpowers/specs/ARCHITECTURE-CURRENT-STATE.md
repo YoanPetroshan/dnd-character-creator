@@ -170,6 +170,8 @@ Spell slots are tracked in the Resolution for the first time as of Phase 3b-ii (
 
 ## Known gaps / things a fresh reader should NOT assume are bugs
 
+- **CLOSED by RP14 (2026-10-23):** the SPA now renders `sheet.senses`, `damageModifiers`, `conditionImmunities` and `innateSpells` (Export page, `SheetTraitsSummary`). Statements elsewhere that the SPA shows none of them are superseded; the Species and Class pages still show no such block.
+
 - **Added by FE12 (2026-10-12), feat known gaps:** TCE fighting styles (Blind Fighting, Interception, Thrown, Unarmed, Superior Technique) and Seeking / Transmuted Spell metamagic are not imported, XPHB invocations are not in Eldritch Adept's pool; the FE11 spell-grant tail (Arcane Adept tables, Potent Dragonmark slot, Rune Shaper, Boon of Magic School Mastery, Magic Connoisseur list) is notes only; details in the FE overview and "Open design questions" 13-17.
 
 - **Added by F3b (2026-10-11), the 2024 chassis known gaps:** Wild Shape forms (a count and note only), per-attack options (Brutal Strike, Cunning Strike, Tactical Master, Eldritch Smite and Lifedrinker damage on rows are notes, not attack-row options), the E11 2014 counterparts, the E12 background placeholder items, the E13 subclass build-time choices; details in "Open design questions".
@@ -1311,3 +1313,15 @@ Ruleset 2024 only (decision D2); mixed / 2014 are byte-identical (`test_c_series
 - **Surfaces.** No new output keys (`types.ts`, `export_fields.py` and the frontend untouched, no `npm run build`; drift tests green with an empty `UNTYPED_ALLOWLIST`): cards use `choices[]`, notes `derived.classResources[].details.note` (printed by `export_fields.resource_line`), effects `sheet.senses`, `derived.speeds`, `sheet.damageModifiers`.
 - **Timing** (`resolve()`, mean of 20, ms, mixed / 2024): Fighter 20 3.2 / 2.9, Wizard 20 3.2 / 3.2, Bard 20 3.6 / 4.4; Hunter 7 1.3 / 1.6, Wild Heart 6 1.0 / 1.1, Draconic 6 1.5 / 1.7 (limit 50; the tests assert it too).
 - **Tests / totals.** `tests/test_subclass_options_2024.py` (52). Server suite 4448 -> 4500 passed (F0 golden green, not regenerated), root suite 405 passed / 8 skipped; frontend untouched.
+
+## RP14 (X3) SPA shows senses, damage modifiers and innate spells (2026-10-23)
+
+Frontend only; no server, `types.ts` or `export_fields.py` change (the types were already present).
+
+- **Component.** `frontend/src/components/SheetTraitsSummary.tsx`, rendered by `ExportPage` right after the problems/choices blocks and before Attacks. Plain `<div><h2/><ul>` blocks, no CSS, each absent when empty.
+  - "Сетива": `<sense name> <n> фута` per `sheet.senses` entry, names from the same table as `server/export_fields.py` (`_SENSE_NAMES`, incl. `devilsSight`).
+  - "Съпротиви и имунитети": "Устойчивост / Имунитет / Уязвимост към щета: ..." per `damageModifiers` list plus "Имунитет към състояния: ..." from `conditionImmunities` (same labels and `title` formatting as the exports' "Съпротиви и имунитети" block).
+  - "Вродени заклинания": `name (uses[, от ниво N]) - note [source]`, the Markdown line plus the origin label (`source`, e.g. Eldritch Invocation) which the Markdown line omits.
+- **Placement decision.** Only the Export page (the sheet preview). The Species/Class pages were left alone because senses and resistances come from many sources (species, subclass, invocations, feats) and the plan names the Export preview.
+- **Verification.** `npm run build` green. Browser, 375 px, Vite + Flask, draft in `localStorage["dnd-builder-draft-v2"]`: Tiefling (PHB) / Draconic (XPHB) Sorcerer 6 shows darkvision 60, resistances Fire and Acid, innate Hellish Rebuke (1/day, from level 3) and Darkness (1/day, from level 5); Warlock 17 (Devil's Sight, Mask of Many Faces, Armor of Shadows) shows devil's sight 120 and four at-will invocation spells with the source label. `scrollWidth` was 375 in both, no console errors. No frontend test setup exists (no test runner in `package.json`), so no frontend test was added.
+- **Totals.** Server 4500 passed, root 405 passed / 8 skipped (unchanged, no server code touched).
