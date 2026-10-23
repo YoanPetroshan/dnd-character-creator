@@ -199,7 +199,8 @@ def test_resource_order_follows_the_class(catalog):
     # R9 appends the 2024 tail (Wild Companion note, Wild Resurgence) after the class's own entries
     assert names == ["Wild Shape", "Primal Strike", "Wild Companion", "Wild Resurgence"]
     names = [r["name"] for r in _res(catalog, [_cleric(7)])["derived"]["classResources"] if r["classId"] == "cleric"]
-    assert names == ["Channel Divinity", "Divine Strike"]
+    # RP10: the note-only Sear Undead (Cleric 5) joins the tail (deliberate change)
+    assert names == ["Channel Divinity", "Divine Strike", "Sear Undead"]
 
 
 @needs_data

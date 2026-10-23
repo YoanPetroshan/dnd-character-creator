@@ -457,11 +457,49 @@ def _feature_level(ctx: Ctx, feature_id: str) -> int | None:
     return (feature.get("level") or 1) if feature else None
 
 
+def _note_vars(ctx: Ctx, rc: dict) -> dict:
+    """Variables for the `{name}` fields of the 2024 note templates (RESOURCE_TAIL_2024 / RESOURCE_NOTES_2024):
+    the class level, the final ability modifiers and the class-specific numbers the XPHB texts name. `dc_*` is the
+    save DC "8 plus your <ability> modifier and Proficiency Bonus"."""
+    level, mods, pb = rc["level"], ctx.modifiers, ctx.prof_bonus
+    wis, dex, cha = mods.get("WIS", 0), mods.get("DEX", 0), mods.get("CHA", 0)
+    spark = 1
+    for first, dice in reference_data.DIVINE_SPARK_DICE_2024:
+        if level >= first:
+            spark = dice
+    return {"level": level, "half_level": level // 2, "twice_level": 2 * level, "five_level": 5 * level,
+            "wis": wis, "dex": dex, "cha": cha, "wis_min1": max(1, wis), "cha_min1": max(1, cha),
+            "dex_level": dex + level, "dc_wis": 8 + pb + wis, "dc_cha": 8 + pb + cha, "dc_dex": 8 + pb + dex,
+            "ma_die": (_martial_arts_die(ctx, rc) or "d6") if rc["cls_id"] == "monk" else "d6",
+            "spark_dice": spark}
+
+
+def _render_note(ctx: Ctx, rc: dict, spec: dict) -> str:
+    """The note of a 2024 table entry: its template with the variables, the spec's own `vars` (the value of the
+    last listed feature record whose level the class has reached, else the default) and the `extras`
+    (feature id, text) whose record level has been reached appended with "; "."""
+    level = rc["level"]
+    values = _note_vars(ctx, rc)
+    for name, (default, stages) in (spec.get("vars") or {}).items():
+        value = default
+        for stage_id, stage_value in stages:
+            stage_level = _feature_level(ctx, stage_id)
+            if stage_level is not None and level >= stage_level:
+                value = stage_value
+        values[name] = value
+    note = spec["note"].format(**values)
+    for extra_id, text in spec.get("extras") or ():
+        extra_level = _feature_level(ctx, extra_id)
+        if extra_level is not None and level >= extra_level:
+            note += "; " + text
+    return note
+
+
 def _tail_2024(ctx: Ctx, rc: dict) -> list[dict]:
-    """R9 (decision E14): XPHB class features with a use count or recharge that no class table carries
-    (`reference_data.RESOURCE_TAIL_2024`), plus Wizard Signature Spells from the picked spells. Ruleset "2024"
-    only; an entry needs its XPHB feature record in the catalog and the class level at that record's level, so an
-    SRD-only catalog gives nothing. Appended after the class's own entries (Sorcery Points stay first)."""
+    """R9 (decision E14) and RP10: XPHB class features with a use count, a recharge or numbers that no class table
+    carries (`reference_data.RESOURCE_TAIL_2024`), plus Wizard Signature Spells from the picked spells. Ruleset
+    "2024" only; an entry needs its XPHB feature record in the catalog and the class level at that record's level,
+    so an SRD-only catalog gives nothing. Appended after the class's own entries (Sorcery Points stay first)."""
     if ctx.ruleset != "2024":
         return []
     level, cls_id = rc["level"], rc["cls_id"]
@@ -472,22 +510,36 @@ def _tail_2024(ctx: Ctx, rc: dict) -> list[dict]:
         first = _feature_level(ctx, spec["feature"])
         if first is None or level < first:
             continue
-        wis = max(1, ctx.modifiers.get("WIS", 0))
-        note = spec["note"].format(half_level=level // 2, wis_min1=wis)
-        for extra_id, text in spec.get("extras") or ():
-            extra_level = _feature_level(ctx, extra_id)
-            if extra_level is not None and level >= extra_level:
-                note += "; " + text
+        note = _render_note(ctx, rc, spec)
         details = {"note": note}
         if spec.get("heal_martial_arts"):
             die = _martial_arts_die(ctx, rc)
             if die:
                 details["heal"] = f"1{die}+{level}"
-        uses = wis if spec["uses"] == "wis_min1" else spec["uses"]
+        uses = max(1, ctx.modifiers.get("WIS", 0)) if spec["uses"] == "wis_min1" else spec["uses"]
         out.append(_resource(rc, spec["name"], uses=uses, recharge=spec["recharge"], details=details))
     if cls_id == "wizard":
         out += _signature_spells(ctx, rc)
     return out
+
+
+def _attach_notes_2024(ctx: Ctx, rc: dict, resources: list[dict]) -> None:
+    """RP10: add the `reference_data.RESOURCE_NOTES_2024` sentences to the class's existing resources (mutates the
+    given list's dicts). Ruleset "2024" only; skipped when the target resource or the feature record is missing or
+    the class level is below the record's level. An existing note is kept and extended with "; "."""
+    if ctx.ruleset != "2024":
+        return
+    for spec in reference_data.RESOURCE_NOTES_2024:
+        if spec["class"] != rc["cls_id"]:
+            continue
+        first = _feature_level(ctx, spec["feature"])
+        target = next((r for r in resources if r["id"] == spec["target"]), None)
+        if first is None or rc["level"] < first or target is None:
+            continue
+        note = _render_note(ctx, rc, spec)
+        details = dict(target.get("details") or {})
+        details["note"] = f"{details['note']}; {note}" if details.get("note") else note
+        target["details"] = details
 
 
 def _signature_spells(ctx: Ctx, rc: dict) -> list[dict]:
@@ -626,9 +678,10 @@ def resources_for(catalog, resolved_classes: list[dict], modifiers: dict, prof_b
         if not rc.get("cls"):
             continue
         builder = _BUILDERS.get(rc["cls_id"])
-        if builder:
-            out += builder(ctx, rc)
-        out += _tail_2024(ctx, rc)  # R9: 2024 only
+        mine = builder(ctx, rc) if builder else []
+        mine += _tail_2024(ctx, rc)  # R9 / RP10: 2024 only
+        _attach_notes_2024(ctx, rc, mine)  # RP10: 2024 only
+        out += mine
         sub_builder = _SUBCLASS_BUILDERS.get(rc.get("subclass_id") or "")
         if sub_builder:
             out += sub_builder(ctx, rc)

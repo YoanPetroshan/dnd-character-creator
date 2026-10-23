@@ -796,7 +796,161 @@ RESOURCE_TAIL_2024: tuple[dict, ...] = (
     # of Rage in this way, you can't do so again until you finish a Long Rest."
     {"class": "barbarian", "feature": "xphb-barbarian-15-persistent-rage", "name": "Persistent Rage", "uses": 1,
      "recharge": "long", "note": "When you roll Initiative, regain all expended uses of Rage"},
+    # ---- RP10 (B1): note-only entries (uses None, no recharge) whose text gives numbers or a use rule. `quotes`
+    # are (feature id, verbatim substring of the record's name + desc) pairs pinned by test. Note templates use
+    # the variables of `class_resources._note_vars` (level, twice_level, five_level, wis, dex, cha, wis_min1,
+    # cha_min1, dex_level, dc_wis / dc_cha / dc_dex = 8 + Proficiency Bonus + modifier, ma_die, spark_dice) and the
+    # entry's own `vars`: name -> (default, ((feature id, value), ...)), the value of the last feature record
+    # whose level the class has reached. Each note is one sentence with the computed number.
+    {"class": "barbarian", "feature": "xphb-barbarian-9-brutal-strike", "name": "Brutal Strike", "uses": None,
+     "recharge": None,
+     "note": "If you use Reckless Attack you can forgo Advantage on one Strength attack roll; if it hits, the "
+             "target takes an extra {brutal_die} damage and you cause {brutal_effects}: Forceful Blow (pushed 15 "
+             "feet, then you move up to half your Speed), Hamstring Blow (Speed reduced by 15 feet until the start "
+             "of your next turn)",
+     "vars": {"brutal_die": ("1d10", (("xphb-barbarian-17-improved-brutal-strike", "2d10"),)),
+              "brutal_effects": ("one effect", (("xphb-barbarian-17-improved-brutal-strike", "two different effects"),))},
+     "extras": (("xphb-barbarian-13-improved-brutal-strike",
+                 "also Staggering Blow (Disadvantage on its next saving throw, no Opportunity Attacks) and "
+                 "Sundering Blow (+5 to the next attack roll by another creature against it)"),),
+     "quotes": (("xphb-barbarian-9-brutal-strike", "the target takes an extra 1d10 damage"),
+                ("xphb-barbarian-9-brutal-strike", "The target is pushed 15 feet straight away from you."),
+                ("xphb-barbarian-9-brutal-strike", "The target's Speed is reduced by 15 feet"),
+                ("xphb-barbarian-13-improved-brutal-strike", "Staggering Blow"),
+                ("xphb-barbarian-13-improved-brutal-strike", "gains a +5 bonus to the roll"),
+                ("xphb-barbarian-17-improved-brutal-strike", "The extra damage of your Brutal Strike increases to 2d10."),
+                ("xphb-barbarian-17-improved-brutal-strike", "you can use two different Brutal Strike effects"))},
+    {"class": "barbarian", "feature": "xphb-barbarian-11-relentless-rage", "name": "Relentless Rage", "uses": None,
+     "recharge": None,
+     "note": "If you drop to 0 Hit Points while raging and don't die outright: DC 10 Constitution saving throw (+5 "
+             "for each use after the first, resetting to 10 after a Short or Long Rest); on a success your Hit "
+             "Points become {twice_level}",
+     "quotes": (("xphb-barbarian-11-relentless-rage", "you can make a DC 10 Constitution saving throw"),
+                ("xphb-barbarian-11-relentless-rage", "a number equal to twice your Barbarian level"),
+                ("xphb-barbarian-11-relentless-rage", "Each time you use this feature after the first, the DC increases by 5."),
+                ("xphb-barbarian-11-relentless-rage", "When you finish a Short or Long Rest, the DC resets to 10."))},
+    {"class": "cleric", "feature": "xphb-cleric-5-sear-undead", "name": "Sear Undead", "uses": None, "recharge": None,
+     "note": "Whenever you use Turn Undead you can roll {wis_min1}d8 (Wisdom modifier, minimum 1); each Undead that "
+             "fails its saving throw takes that much Radiant damage, which doesn't end the turn effect",
+     "quotes": (("xphb-cleric-5-sear-undead", "a number of d8s equal to your Wisdom modifier (minimum of 1d8)"),
+                ("xphb-cleric-5-sear-undead", "takes Radiant damage equal to the roll's total"))},
+    {"class": "monk", "feature": "xphb-monk-3-deflect-attacks", "name": "Deflect Attacks", "uses": None,
+     "recharge": None,
+     "note": "Reaction when an attack hits you: reduce its damage by 1d10{dex_level:+d} (1d10 + Dexterity modifier "
+             "+ Monk level); at 0 damage, 1 Focus Point to redirect 2{ma_die}{dex:+d} damage (Dexterity save, DC "
+             "{dc_wis})",
+     "extras": (("xphb-monk-13-deflect-energy", "works against attacks of any damage type (Deflect Energy)"),),
+     "quotes": (("xphb-monk-3-deflect-attacks", "The reduction equals 1d10 plus your Dexterity modifier and Monk level."),
+                ("xphb-monk-3-deflect-attacks", "you can expend 1 Focus Point to redirect"),
+                ("xphb-monk-3-deflect-attacks", "damage equal to two rolls of your Martial Arts die plus your Dexterity modifier"),
+                ("xphb-monk-13-deflect-energy", "any damage type"))},
+    {"class": "monk", "feature": "xphb-monk-4-slow-fall", "name": "Slow Fall", "uses": None, "recharge": None,
+     "note": "Reaction when you fall: reduce the fall damage by {five_level} (5 x Monk level)",
+     "quotes": (("xphb-monk-4-slow-fall", "an amount equal to five times your Monk level"),)},
+    {"class": "monk", "feature": "xphb-monk-5-stunning-strike", "name": "Stunning Strike", "uses": None,
+     "recharge": None,
+     "note": "Once per turn on a hit with a Monk weapon or Unarmed Strike, expend 1 Focus Point: Constitution save "
+             "(DC {dc_wis}) or Stunned until the start of your next turn; on a success its Speed is halved",
+     "quotes": (("xphb-monk-5-stunning-strike", "Once per turn when you hit a creature with a Monk weapon or an Unarmed Strike"),
+                ("xphb-monk-5-stunning-strike", "you can expend 1 Focus Point to attempt a stunning strike"),
+                ("xphb-monk-5-stunning-strike", "the target's Speed is halved until the start of your next turn"))},
+    {"class": "monk", "feature": "xphb-monk-10-heightened-focus", "name": "Heightened Focus", "uses": None,
+     "recharge": None,
+     "note": "Flurry of Blows makes three Unarmed Strikes; Patient Defense gives Temporary Hit Points equal to two "
+             "rolls of your Martial Arts die (2{ma_die}); Step of the Wind can carry a willing Large or smaller "
+             "creature within 5 feet",
+     "quotes": (("xphb-monk-10-heightened-focus", "make three Unarmed Strikes with it instead of two"),
+                ("xphb-monk-10-heightened-focus", "a number of Temporary Hit Points equal to two rolls of your Martial Arts die"),
+                ("xphb-monk-10-heightened-focus", "a willing creature within 5 feet of yourself that is Large or smaller"))},
+    {"class": "monk", "feature": "xphb-monk-18-superior-defense", "name": "Superior Defense", "uses": None,
+     "recharge": None,
+     "note": "At the start of your turn, expend 3 Focus Points: Resistance to all damage except Force damage for 1 "
+             "minute or until you have the Incapacitated condition",
+     "quotes": (("xphb-monk-18-superior-defense", "you can expend 3 Focus Points to bolster yourself against harm for 1 minute"),
+                ("xphb-monk-18-superior-defense", "Resistance to all damage except Force damage"))},
+    {"class": "paladin", "feature": "xphb-paladin-9-abjure-foes", "name": "Abjure Foes", "uses": None,
+     "recharge": None,
+     "note": "Magic action, expend one Channel Divinity use: up to {cha_min1} creatures (Charisma modifier, minimum "
+             "1) you can see within 60 feet make a Wisdom saving throw (DC {dc_cha}) or have the Frightened "
+             "condition for 1 minute or until they take any damage",
+     "quotes": (("xphb-paladin-9-abjure-foes", "expend one use of this class's Channel Divinity"),
+                ("xphb-paladin-9-abjure-foes", "a number of creatures equal to your Charisma modifier (minimum of one creature)"),
+                ("xphb-paladin-9-abjure-foes", "have the Frightened condition for 1 minute or until it takes any damage"))},
+    {"class": "rogue", "feature": "xphb-rogue-5-cunning-strike", "name": "Cunning Strike", "uses": None,
+     "recharge": None,
+     "note": "When you deal Sneak Attack damage you can add {cunning_effects}, forgoing the dice shown for each: "
+             "Poison 1d6 (Constitution save, needs a Poisoner's Kit), Trip 1d6 (Dexterity save, Large or "
+             "smaller), Withdraw 1d6; save DC {dc_dex}",
+     "vars": {"cunning_effects": ("one effect", (("xphb-rogue-11-improved-cunning-strike", "up to two effects"),))},
+     "extras": (("xphb-rogue-14-devious-strikes",
+                 "Devious Strikes add Daze 2d6, Obscure 3d6 and Knock Out 6d6 (Constitution or Dexterity save)"),),
+     "quotes": (("xphb-rogue-5-cunning-strike", "the DC equals 8 plus your Dexterity modifier and Proficiency Bonus"),
+                ("xphb-rogue-5-poison-(cost:-1d6)", "Poison (Cost: 1d6)"),
+                ("xphb-rogue-5-trip-(cost:-1d6)", "Trip (Cost: 1d6)"),
+                ("xphb-rogue-5-withdraw-(cost:-1d6)", "Withdraw (Cost: 1d6)"),
+                ("xphb-rogue-5-poison-(cost:-1d6)", "you must have a Poisoner's Kit on your person"),
+                ("xphb-rogue-11-improved-cunning-strike", "up to two Cunning Strike effects"),
+                ("xphb-rogue-14-daze-(cost:-2d6)", "Daze (Cost: 2d6)"),
+                ("xphb-rogue-14-obscure-(cost:-3d6)", "Obscure (Cost: 3d6)"),
+                ("xphb-rogue-14-knock-out-(cost:-6d6)", "Knock Out (Cost: 6d6)"))},
 )
+
+# RP10 (B1): a sentence added to the `details.note` of an EXISTING 2024 class resource (`target` = its id), when
+# the XPHB record `feature` is in the catalog and the class level has reached its level; `extras` and `vars` as
+# above. Entries for the same target join with "; " after any note the resource already has.
+RESOURCE_NOTES_2024: tuple[dict, ...] = (
+    {"class": "bard", "target": "bard:bardic-inspiration", "feature": "xphb-bard-18-superior-inspiration",
+     "note": "Superior Inspiration: when you roll Initiative, you regain expended uses until you have two if you "
+             "have fewer than that",
+     "quotes": (("xphb-bard-18-superior-inspiration",
+                 "you regain expended uses of Bardic Inspiration until you have two if you have fewer than that"),)},
+    {"class": "cleric", "target": "cleric:channel-divinity", "feature": "xphb-cleric-2-divine-spark",
+     "note": "Divine Spark (Magic action, 30 feet): {spark_dice}d8{wis:+d} to restore Hit Points or force a "
+             "Constitution save for that much Necrotic or Radiant damage (half on a success); Turn Undead (Magic "
+             "action): Wisdom save, Undead within 30 feet are Frightened and Incapacitated for 1 minute; save DC "
+             "{dc_wis}",
+     "quotes": (("xphb-cleric-2-divine-spark", "Roll 1d8 and add your Wisdom modifier."),
+                ("xphb-cleric-2-divine-spark", "On a successful save, the creature takes half as much damage"),
+                ("xphb-cleric-2-turn-undead", "Each Undead of your choice within 30 feet of you must make a Wisdom saving throw"),
+                ("xphb-cleric-2-turn-undead", "it has the Frightened and Incapacitated conditions for 1 minute"),
+                ("xphb-cleric-2-channel-divinity", "the DC equals the spell save DC from this class's Spellcasting feature"))},
+    {"class": "druid", "target": "druid:wild-shape", "feature": "xphb-druid-20-archdruid",
+     "note": "Evergreen Wild Shape: whenever you roll Initiative and have no uses left, you regain one expended use",
+     "quotes": (("xphb-druid-20-archdruid",
+                 "Whenever you roll Initiative and have no uses of Wild Shape left, you regain one expended use of it."),)},
+    {"class": "fighter", "target": "fighter:indomitable", "feature": "xphb-fighter-9-indomitable",
+     "note": "If you fail a saving throw, reroll it with a bonus of +{level} (your Fighter level); you must use the "
+             "new roll",
+     "quotes": (("xphb-fighter-9-indomitable", "you can reroll it with a bonus equal to your Fighter level"),
+                ("xphb-fighter-9-indomitable", "You must use the new roll"))},
+    {"class": "fighter", "target": "fighter:second-wind", "feature": "xphb-fighter-2-tactical-mind",
+     "note": "Tactical Mind: when you fail an ability check, expend a use to add 1d10 to it instead of regaining Hit "
+             "Points; if the check still fails, the use isn't expended",
+     "quotes": (("xphb-fighter-2-tactical-mind", "you can expend a use of your Second Wind"),
+                ("xphb-fighter-2-tactical-mind", "you roll 1d10 and add the number rolled to the ability check"),
+                ("xphb-fighter-2-tactical-mind", "If the check still fails, this use of Second Wind isn't expended."))},
+    {"class": "monk", "target": "monk:focus-points", "feature": "xphb-monk-15-perfect-focus",
+     "note": "Perfect Focus: when you roll Initiative and don't use Uncanny Metabolism, you regain expended Focus "
+             "Points until you have 4 if you have 3 or fewer",
+     "quotes": (("xphb-monk-15-perfect-focus",
+                 "When you roll Initiative and don't use Uncanny Metabolism, you regain expended Focus Points until you have 4 if you have 3 or fewer."),)},
+    {"class": "paladin", "target": "paladin:lay-on-hands", "feature": "xphb-paladin-1-lay-on-hands",
+     "note": "Expend 5 Hit Points from the pool to remove the Poisoned condition from the creature (those points "
+             "don't also restore Hit Points)",
+     "extras": (("xphb-paladin-14-restoring-touch",
+                 "Restoring Touch: 5 Hit Points of the pool per condition removed (Blinded, Charmed, Deafened, "
+                 "Frightened, Paralyzed or Stunned)"),),
+     "quotes": (("xphb-paladin-1-lay-on-hands", "expend 5 Hit Points from the pool of healing power to remove the Poisoned condition"),
+                ("xphb-paladin-14-restoring-touch", "You must expend 5 Hit Points from the healing pool of Lay On Hands for each of these conditions you remove"),
+                ("xphb-paladin-14-restoring-touch", "Blinded, Charmed, Deafened, Frightened, Paralyzed, or Stunned"))},
+    {"class": "ranger", "target": "ranger:favored-enemy-hunter-s-mark", "feature": "xphb-ranger-20-foe-slayer",
+     "note": "Foe Slayer: the damage die of your Hunter's Mark is a d10 rather than a d6",
+     "quotes": (("xphb-ranger-20-foe-slayer", "The damage die of your Hunter's Mark is a d10 rather than a d6."),)},
+)
+
+# Cleric Divine Spark: "You roll an additional d8 when you reach Cleric levels 7 (2d8), 13 (3d8), and 18 (4d8)."
+# (class level, dice), pinned against xphb-cleric-2-divine-spark; 1d8 below level 7.
+DIVINE_SPARK_DICE_2024 = ((7, 2), (13, 3), (18, 4))
 
 # Wizard Signature Spells (XPHB, level 20), built from the picked spells, not from a table row: "Choose two level
 # 3 spells in your spellbook as your signature spells. You always have these spells prepared, and you can cast
