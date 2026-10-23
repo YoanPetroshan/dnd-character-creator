@@ -1,5 +1,7 @@
 # Plan: the remaining program (RP), covering open questions 13-16 and 21, notes-only features, E11, E12, E13, the 2024 packs and final consolidation
 
+**Status (2026-10-23, RP22): executed in full.** RP1-RP21, RPF and RPX1-RPX4 are committed and RP22 closed the program; the slice-by-slice record, commit hashes, the golden rebaseline history, the reconciled open questions and the final known gaps are in `docs/superpowers/specs/ARCHITECTURE-CURRENT-STATE.md` ("RP overview", "Open design questions", "Known gaps after RP22"); section 7 became `docs/superpowers/specs/REAL-DEVICE-CHECKLIST.md`. Deviations from this plan are listed in the slice sections (e.g. the RP22 kitchen sinks are named after what was built: `wizard20-2014` instead of `wizard18-2014` in RP15, plus `wizard18-2014`, `bard6-lore-mixed`, `evoker5-2024`, `land-druid10-2024`, `cleric7-light-2024`, `warlock7-goo-2024`, `battle-master3-2024`, `fey-wanderer3-2024` in RP22).
+
 Opus planner, 2026-10-22. Suggested file: `docs/superpowers/plans/2026-10-22-remaining-program.md`.
 
 I only read code and data and changed nothing. My checks ran as stdin scripts (`.venv/bin/python -`), not as scratch files. Numbers marked **verified** come from those runs against the real catalog. **VERIFY** means the executor re-checks by script before writing the test. If a script and this plan disagree, the script wins and the deviation goes into the slice's ARCHITECTURE section.
