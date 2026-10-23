@@ -1185,3 +1185,28 @@ Tests only. `server/tests/test_c_series_golden.py` gains `--rebaseline <SLICE> [
 - **`--dry-run`** prints every changed path per case (marking `DISALLOWED` ones) and writes nothing, and does not raise on violations.
 - **Tests (9 new, same file).** A synthetic two-case golden in `tmp_path` through the module-level `GOLDEN` override, with a fake resolver and filler (no catalog involved): expected path passes and writes only the matching case; unexpected path fails and leaves the file untouched; an unmatched case changing fails; dry run writes nothing; warning for an unchanged matching case; inserted card at a keyed path; unknown slice; `REBASELINES == {}` and `STRIP` pinned; normalization and `diff_paths` unit test.
 - **Totals.** Server suite 4089 -> 4098 passed (F0 golden green, not regenerated), root suite 405 passed / 8 skipped; frontend untouched.
+
+## RP7 (E11c) SRD Monk tool or instrument choice (2026-10-23)
+
+First slice that deliberately changes mixed / 2014 output, through the RP6 `--rebaseline` policy (never `--regenerate`). Rule: the SRD Monk Proficiencies line "Choose one type of artisan's tools or one musical instrument" (`catalog.classes["monk"]["proficiency_choices"][1]["desc"]`, pinned by test) is now a card under mixed and 2014. Tests first (13 of 19 failed before the change), then the implementation.
+
+- **Cause and fix.** That envelope holds two nested `option_type: "choice"` options (artisan's tools / musical instrument), which `build_choice_options` skipped, so the card never resolved. `choices.build_choice_template` now passes `flatten_nested=True` to `build_choice_options` for `type: "proficiencies"` envelopes only; the bare option builder and every other envelope type keep skipping a nested choice. `_flatten_nested_tool_choice` turns each nested list into flat `{id, label, group}` entries, `group` being the catalog tool category (`reference_data.TOOLS`: "Artisan's Tools", "Musical Instrument", already typed as `ChoiceOption.group` and rendered by `ChoicePicker`). Cid `class:monk:1:prof-choice-1` (the same as the 2024 card, so a pick survives a ruleset switch), label "Tool Proficiencies", count 1, order after `prof-choice-0`. The pick reaches `sheet.proficiencies.tools`. A secondary Monk has no card (unchanged). The 2024 card is unchanged (27 options, no `group`).
+- **Verified.** The Monk is the only class / background / race / subrace / trait proficiency envelope with a nested choice (test); equipment nested choices go through `build_equipment_choice` and are untouched.
+- **Deviation from the plan text.** The SRD nested artisan's list has 19 entries, not 17: it also lists Disguise Kit and Forgery Kit. The catalog tool table does not class them as artisan's tools (they are "Other Tools" in the books), so they are not offered: 17 + 10 = 27, the same ids and order as the 2024 card. Pinned by test.
+- **Rebaseline.** `REBASELINES["RP7"]`: cases `*/src-*/monk[0-9]*` and `ks/src-*/monk14` (the multiclass Barbarian 3 / Monk 2 has Monk as the secondary class and is not matched); paths (written from the rule matrix: the new card, the filler's pick in the draft, the picked tool): `^result\.choices\[class:monk:1:prof-choice-1\]$`, `^draft\.classes\[0\]\.choices\.class:monk:1:prof-choice-1$`, `^result\.sheet\.proficiencies\.tools$`. The dry run showed exactly these three paths per case and no disallowed path; no `sheet.features` row changed. Printed summary of the real run (same as the dry run's header):
+
+```
+rebaseline RP7 (SRD Monk tool or instrument choice (E11c))
+  matching cases changed: 18 of 231
+     18 changed path(s) match ^result\.choices\[class:monk:1:prof-choice-1\]$
+     18 changed path(s) match ^draft\.classes\[0\]\.choices\.class:monk:1:prof-choice-1$
+     18 changed path(s) match ^result\.sheet\.proficiencies\.tools$
+wrote 231 cases, 752291 bytes
+```
+
+  The 18 cases: monk 1 / 3 / 11 / 20 under mixed and 2014, each with `src-all` and `src-srd` (16), plus `ks/src-all/monk14` and `ks/src-srd/monk14`. The other 213 cases are byte-identical. `test_c_series_golden.py` pins `REBASELINES` as append-only (`("RP7",)`) and that the 18 matched cases hold the resolved card while the multiclass case has none.
+- **Second golden.** `tests/golden/g2_resolve_baseline.json.gz` (guard of `test_worn_wielded.py`, not covered by `--rebaseline`) holds the unfilled `ks-monk14` draft; its only difference is the new pending card. The test asserts that card (pending, 27 options) and removes it before the comparison; the gz is unchanged.
+- **Not changed.** No new output keys (`group` is already in `types.ts`; `export_fields.py`, the frontend and `npm run build` untouched). 2024 output is byte-identical.
+- **Tests.** `tests/test_srd_monk_tool_choice.py` (19, rule matrix in the docstring), 2 added in `test_c_series_golden.py`, 1 test edited there (the old "REBASELINES is empty" pin).
+- **Timing** (`resolve()`, mean of 20, ms, level 20): mixed Fighter 3.1, Wizard 3.2, Monk 2.3; 2024 Fighter 2.0, Wizard 3.2, Monk 1.6 (limit 50).
+- **Totals.** Server suite 4098 -> 4118 passed, root suite 405 passed / 8 skipped; frontend untouched.

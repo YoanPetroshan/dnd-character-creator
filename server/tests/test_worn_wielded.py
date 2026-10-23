@@ -106,6 +106,12 @@ def test_drafts_without_worn_or_wielded_resolve_exactly_as_before_g2(catalog, na
             pytest.skip(reason)
     baseline = json.load(gzip.open(GOLDEN, "rt"))[name]
     now = strip_g2(json.loads(json.dumps(resolve(golden_cases()[name], catalog))))
+    if name == "ks-monk14":
+        # RP7 (E11c): the SRD Monk tool/instrument card is new under mixed / 2014. This pre-G2 baseline draft holds
+        # no pick, so the card is the ONLY difference; it must be pending with its 27 options, then it is removed.
+        card = next(c for c in now["choices"] if c["id"] == "class:monk:1:prof-choice-1")
+        assert card["status"] == "pending" and len(card["options"]) == 27
+        now["choices"] = [c for c in now["choices"] if c is not card]
     assert now == baseline
 
 

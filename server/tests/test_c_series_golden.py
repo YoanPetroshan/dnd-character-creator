@@ -90,7 +90,20 @@ STRIP: tuple[str, ...] = ("derived.featResources",)
 
 # RP6 / P0: append-only record of deliberate mixed / 2014 changes, see the module docstring. slice id ->
 # {"cases": [fnmatch over case names], "paths": [regexes over normalized paths], "why": one line}. Empty on purpose.
-REBASELINES: dict[str, dict] = {}
+REBASELINES: dict[str, dict] = {
+    # RP7 / E11c: the SRD Monk "one type of artisan's tools or one musical instrument" is now a card (the nested
+    # choice is flattened), so the primary-Monk cases gain the card, the filler's first-option pick, and that tool in
+    # the proficiencies. The multiclass Barbarian 3 / Monk 2 (Monk is secondary) must not move.
+    "RP7": {
+        "cases": ["*/src-*/monk[0-9]*", "ks/src-*/monk14"],
+        "paths": [
+            r"^result\.choices\[class:monk:1:prof-choice-1\]$",            # the new card, reported once at its root
+            r"^draft\.classes\[0\]\.choices\.class:monk:1:prof-choice-1$",   # the filler's pick, in the draft (Monk first)
+            r"^result\.sheet\.proficiencies\.tools$",                      # the picked tool
+        ],
+        "why": "SRD Monk tool or instrument choice (E11c)",
+    },
+}
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
                                ("spells", official.has_official_spells)) if not ok()]
@@ -440,8 +453,23 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
         _run("nope", {}, _table(["*"], []))
 
 
-def test_rebaselines_constant_is_empty_and_real_golden_untouched():
-    assert REBASELINES == {} and STRIP == ("derived.featResources",)
+def test_rebaselines_constant_is_append_only_and_strip_unchanged():
+    """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
+    assert tuple(REBASELINES) == ("RP7",) and STRIP == ("derived.featResources",)
+    rp7 = REBASELINES["RP7"]
+    assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
+
+
+def test_rp7_cases_are_the_primary_monk_cases_only():
+    """The multiclass Barbarian 3 / Monk 2 (Monk secondary) is not matched, so it must stay byte-identical."""
+    names = sorted(_GOLDEN)
+    hit = [n for n in names if any(fnmatch.fnmatchcase(n, p) for p in REBASELINES["RP7"]["cases"])]
+    assert len(hit) == 18 and not [n for n in hit if "multi-" in n]
+    for n in hit:  # every matched case carries the new card with the filler's pick (the rebaselined content)
+        assert any(c["id"] == "class:monk:1:prof-choice-1" and c["status"] == "resolved" for c in _GOLDEN[n]["result"]["choices"])
+    for n in names:
+        if "multi-barbarian3-monk2" in n:
+            assert not any(c["id"] == "class:monk:1:prof-choice-1" for c in _GOLDEN[n]["result"]["choices"])
 
 
 def test_keyed_normalization_and_diff_paths():

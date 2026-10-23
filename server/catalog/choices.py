@@ -98,16 +98,36 @@ def _bundle_quantities(items: list[dict]) -> dict[str, int]:
             if sub.get("option_type") == "counted_reference" and sub.get("count", 1) != 1}
 
 
-def build_choice_options(from_field: dict, keep_counts: bool = False) -> list[dict] | None:
+def _flatten_nested_tool_choice(opt: dict) -> list[dict]:
+    """RP7 (E11c): the options of one nested `option_type: "choice"` of a PROFICIENCY envelope (the SRD Monk's
+    "artisan's tools" / "musical instrument" alternatives) as flat {id, label, group} entries. `group` is the
+    catalog tool category; a member the catalog tool table does not know is dropped (the SRD data lists Disguise Kit
+    and Forgery Kit among the artisan's tools, the tool table does not class them so)."""
+    tools = {t["index"]: t for t in reference_data.TOOLS}
+    out = []
+    for sub in ((opt.get("choice") or {}).get("from") or {}).get("options", []):
+        item = sub.get("item") if sub.get("option_type") == "reference" else None
+        tool = tools.get(item["index"]) if item else None
+        if tool is not None:
+            out.append({"id": tool["index"], "label": item["name"], "group": tool["category"]})
+    return out
+
+
+def build_choice_options(from_field: dict, keep_counts: bool = False, flatten_nested: bool = False) -> list[dict] | None:
     """Returns [{id, label}] for this option set, or None if it can't be
     resolved from bundled Phase 1 data (equipment_category, or a
     resource_list type other than languages). `keep_counts` (C9b, decision E8) adds
-    `quantities: {item id: n}` to a bundle option that has counts other than 1."""
+    `quantities: {item id: n}` to a bundle option that has counts other than 1.
+    `flatten_nested` (RP7, set by build_choice_template for proficiency envelopes only) flattens a nested
+    `option_type: "choice"` into the option list; otherwise such an option is skipped as before."""
     set_type = from_field.get("option_set_type")
 
     if set_type == "options_array":
         options = []
         for opt in from_field.get("options", []):
+            if opt.get("option_type") == "choice" and flatten_nested:
+                options.extend(o for o in _flatten_nested_tool_choice(opt) if all(o["id"] != e["id"] for e in options))
+                continue
             if opt.get("option_type") == "multiple":
                 bundle = _bundle_label_and_id(opt.get("items", []))
                 if bundle is None:
@@ -165,7 +185,8 @@ def build_choice_template(
     Returns a Choice template WITHOUT 'selected'/'status' — the engine adds
     those once it has the Draft's actual selections — or None if the option
     set can't be resolved from bundled Phase 1 data."""
-    options = build_choice_options(envelope.get("from", {}), keep_counts=bool(envelope.get("keep_counts")))
+    options = build_choice_options(envelope.get("from", {}), keep_counts=bool(envelope.get("keep_counts")),
+                                   flatten_nested=envelope.get("type") == "proficiencies")
     if options is None:
         return None
     desc = description if description is not None else envelope.get("desc")
