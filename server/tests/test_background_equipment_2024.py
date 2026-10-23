@@ -259,7 +259,7 @@ def test_bundle_quantities_pouches_torches_oil_daggers(catalog):
 @needs_data
 @pytest.mark.parametrize("bg_id", ["soldier-xphb", "guard-xphb", "noble-xphb", "artisan-xphb", "entertainer-xphb",
                                    "house-deneith-heir-efa", "house-tharashk-heir-efa", "house-thuranni-heir-efa",
-                                   "house-agent-efa", "house-cannith-heir-efa", "haunted-one-rhw", "mist-wanderer-rhw",
+                                   "house-agent-efa", "house-cannith-heir-efa", "haunted-one-rhw", "carouser-abh", "mist-wanderer-rhw",
                                    "spellfire-initiate-frhof", "spirit-medium-rhw"])
 def test_same_as_above_members_are_the_sentinel(catalog, bg_id):
     assert SENTINEL in [r for r, _ in _summary(catalog, bg_id)]
@@ -268,7 +268,7 @@ def test_same_as_above_members_are_the_sentinel(catalog, bg_id):
 
 
 @needs_data
-@pytest.mark.parametrize("bg_id,category", [("wayfarer-xphb", "gaming-sets"), ("carouser-abh", "gaming-sets")])
+@pytest.mark.parametrize("bg_id,category", [("wayfarer-xphb", "gaming-sets")])
 def test_no_matching_proficiency_pick_gives_a_nested_category_pick(catalog, bg_id, category):
     assert SENTINEL not in [r for r, _ in _summary(catalog, bg_id)]
     nested = [m for m in _a_members(catalog, bg_id) if m["option_type"] == "choice"]
@@ -380,9 +380,14 @@ def test_mulhorandi_gold_and_shadowmasters_spikes(catalog):
 
 
 @needs_data
-def test_carouser_gaming_set_is_a_nested_pick_because_the_data_has_no_proficiency_card(catalog):
-    res = _pick_a("carouser-abh", catalog, nested={0: "dice-set"})
+def test_carouser_gaming_set_is_a_pick_card_and_the_equipment_follows_it(catalog):
+    """RPF: Carouser's raw `{"gaming set": true}` is a pick ("Choose one kind of Gaming Set"), so the RP9 sentinel
+    resolves the "same as above" item from the proficiency card (no nested workaround card)."""
+    res = _pick_a("carouser-abh", catalog, prof={_pcid("carouser-abh"): ["dice-set"]})
     assert _chosen(res)["dice-set"] == 1 and _chosen(res)["bottle-glass"] == 1
+    assert "dice-set" in res["sheet"]["proficiencies"]["tools"]
+    other = _pick_a("carouser-abh", catalog, prof={_pcid("carouser-abh"): ["playing-card-set"]})
+    assert _chosen(other)["playing-card-set"] == 1 and "dice-set" not in _chosen(other)
 
 
 @needs_data

@@ -139,7 +139,7 @@ def _proficiencies_from_5etools(race_raw: dict) -> list[dict]:
             profs.append({"index": index, "name": name, "url": ""})
 
     for tool_key, granted in (race_raw.get("toolProficiencies") or [{}])[0].items():
-        if granted is True:
+        if granted is True and tool_key not in _GENERIC_TOOL_KEYS:  # RPF: not a real tool, a pick (see the envelope)
             index = slug(tool_key)
             profs.append({"index": index, "name": _tool_display_name(tool_key), "url": ""})
 
@@ -299,6 +299,11 @@ def _background_tool_choice_option_from_5etools(name: str) -> list[dict]:
 # + tool_category filter races' wildcards already use, pointed at
 # reference_data.TOOLS' existing "Gaming Sets" category — no changes to
 # catalog/choices.py needed.
+# RPF: a generic category name stored as a fixed grant (`{"gaming set": true}`, only Carouser/ABH in the data, whose
+# text says "Choose one kind of Gaming Set"). It is not a tool: it becomes a one-pick card of that category.
+_GENERIC_TOOL_KEYS = {"gaming set": "Gaming Sets"}
+
+
 _TOOL_WILDCARD_KEY_CATEGORY = {
     "any": None,
     "anyArtisansTool": "Artisan's Tools",
@@ -332,6 +337,12 @@ def _background_tool_choice_envelopes_from_5etools(tool_entry: dict) -> list[dic
     matched (same ordering races' version uses) cannot drop a choice
     either way."""
     envelopes = []
+    for key, category in _GENERIC_TOOL_KEYS.items():
+        if tool_entry.get(key) is True:
+            envelopes.append({"choose": 1, "type": "proficiencies",
+                              "from": {"option_set_type": "any_tool", "tool_category": category}})
+    if envelopes:
+        return envelopes
     for key, category in _TOOL_WILDCARD_KEY_CATEGORY.items():
         n = tool_entry.get(key)
         if isinstance(n, int) and not isinstance(n, bool):
