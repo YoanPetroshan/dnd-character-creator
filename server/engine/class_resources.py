@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from typing import Callable
 
 from catalog import reference_data
-from engine import class_choices_2024
+from engine import class_choices_2024, subclass_options_2024
 
 UNLIMITED_ROW_VALUE = 9999  # SRD level rows store "unlimited" as 9999 (Barbarian 20 rages)
 
@@ -618,6 +618,23 @@ def _subclass_pick_notes_2024(ctx: Ctx, rc: dict) -> list[dict]:
     return out
 
 
+def _subclass_option_notes_2024(ctx: Ctx, rc: dict) -> list[dict]:
+    """RP13: a note-only subclass resource per picked option that carries a `note` (Hunter's Prey, Defensive Tactics,
+    Elemental Affinity with the Charisma modifier). Ruleset "2024" only and only for the selected subclass of this
+    class entry; the picked options come from the resolved cards, so an option the card no longer offers gives
+    nothing."""
+    sub_id = rc.get("subclass_id")
+    if ctx.ruleset != "2024" or not sub_id:
+        return []
+    out = []
+    for cls_id, _level, _fid, spec, _key, option in subclass_options_2024.selected(ctx.choices):
+        if cls_id != rc["cls_id"] or spec["subclass"] != sub_id or "note" not in option:
+            continue
+        out.append(_resource(rc, subclass_options_2024.note_name(spec, option), kind="subclass",
+                             details={"note": option["note"].format(**_note_vars(ctx, rc))}))
+    return out
+
+
 def _signature_spells(ctx: Ctx, rc: dict) -> list[dict]:
     """Wizard 20 Signature Spells: one cast per picked spell per Short or Long Rest; nothing while unpicked."""
     sig = reference_data.SIGNATURE_SPELLS_2024
@@ -762,6 +779,7 @@ def resources_for(catalog, resolved_classes: list[dict], modifiers: dict, prof_b
         out += mine + sub
         out += _subclass_tail_2024(ctx, rc, mine + sub)  # RP11: 2024 only, after the class and R6 entries
         out += _subclass_pick_notes_2024(ctx, rc)  # RP12: 2024 only
+        out += _subclass_option_notes_2024(ctx, rc)  # RP13: 2024 only
     # G1: the 2024 Multiclassing chapter has no merge rule and every class text
     # says "this class's Channel Divinity", so 2024 keeps separate per-class pools.
     return out if ruleset == "2024" else _merge_channel_divinity(out)
@@ -783,6 +801,17 @@ def _merge_channel_divinity(resources: list[dict]) -> list[dict]:
             for r in resources if r["name"] != "Channel Divinity" or r["classId"] == best["classId"]]
 
 
+def _picked_attack_notes(by_id: dict) -> list[tuple[dict, dict]]:
+    """RP13: the (spec, option) pairs whose note-only resource exists and whose option adds an attack-row note."""
+    out = []
+    for spec in reference_data.SUBCLASS_OPTIONS_2024.values():
+        for option in spec["options"].values():
+            rid = f"{spec['class']}:{_slug(subclass_options_2024.note_name(spec, option))}"
+            if "attack_note" in option and rid in by_id:
+                out.append((spec, option))
+    return out
+
+
 def annotate_attacks(attacks: list[dict], resources: list[dict], items: list[dict]) -> list[dict]:
     """D5: attack-row notes from class resources. A Barbarian's Rage adds
     "Rage: +N damage" to melee rows that use Strength (PHB: melee weapon attack
@@ -795,7 +824,8 @@ def annotate_attacks(attacks: list[dict], resources: list[dict], items: list[dic
     sneak = (by_id.get("rogue:sneak-attack") or {}).get("dice")
     strikes = [(r["name"], r["dice"], r["details"]["damageTypes"].lower())
                for r in (by_id.get("cleric:divine-strike"), by_id.get("druid:primal-strike")) if r]  # C6c-2
-    if not rage and not sneak and not strikes:
+    prey = [spec_option["attack_note"] for spec, spec_option in _picked_attack_notes(by_id)]  # RP13 Colossus Slayer
+    if not rage and not sneak and not strikes and not prey:
         return attacks
     weapons = {i["index"]: i for i in items}
     out = []
@@ -811,5 +841,6 @@ def annotate_attacks(attacks: list[dict], resources: list[dict], items: list[dic
                 notes.append(f"Sneak Attack {sneak}")
             for name, dice, types in strikes:
                 notes.append(f"{name}: +{dice} {types} (once per turn)")
+            notes += prey
         out.append({**a, "notes": notes})
     return out

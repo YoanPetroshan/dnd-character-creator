@@ -347,9 +347,9 @@ CLASS_FEATURE_NOTES_ONLY_2024: dict[str, str] = {
     "elements-xphb-11-stride-of-the-elements": "While your Elemental Attunement is active",
     "elements-xphb-17-elemental-epitome": "While your Elemental Attunement is active",
     "wild-heart-xphb-14-power-of-the-wilds": "While your Rage is active, you have a Fly Speed equal to your Speed",
-    "wild-heart-xphb-6-aspect-of-the-wilds": "Whenever you finish a Long Rest, you can change your choice.",
     "sea-xphb-10-stormborn": "Your Wrath of the Sea confers two more benefits while active",
     "stars-xphb-14-full-of-stars": "While in your Starry Form",
+    "stars-xphb-3-starry-form": "Whenever you assume your starry form, choose which of the following constellations",
     "zealot-xphb-14-rage-of-the-gods": "While in this form, you gain the benefits below.",
     "ancients-xphb-7-aura-of-warding": "while in your Aura of Protection",
     "land-xphb-10-natures-ward": "associated with your current land choice",
@@ -1869,6 +1869,106 @@ SUBCLASS_PICKS_2024: tuple[dict, ...] = (
      "quote": "If you already have this proficiency, you instead gain proficiency in Intelligence or Charisma saving throws (your choice)."},
 )
 
+
+
+# RP13 (F2, E13): editable build-time option cards of XPHB subclass features (ruleset 2024 only), keyed by the
+# imported XPHB feature record id. Card cid `class:<cls>:<lvl>:feature:<feature id>` (level from the record), option
+# ids `<feature id>--<option key>`, count 1, required. The option list is read from the record text: `quotes` are
+# verbatim sentences of the record (pinned by tests), and an option marked `line` has its own "Name. text" line in
+# the record (its description). Per option: `name` (label), `quote` (verbatim, pinned), and the effect keys the
+# engine reads: `senses_additive`, `climb_equals_walk`, `swim_equals_walk`, `resist` (the class-effect keys of
+# CLASS_FEATURE_EFFECTS_2024), `note` (a note-only subclass resource; `{cha:+d}` style fields come from the
+# class-resource note variables) and `attack_note` (added to every weapon attack row). Deliberately NOT here:
+# Elemental Epitome, Fiendish Resilience, Starry Form and The Third Eye (the pick lasts a turn, a rest or one use,
+# so the feature text stays the note; see CLASS_FEATURE_NOTES_ONLY_2024), Land's Circle Spells type and Nature's
+# Ward (RP17), and the Beast Master stat blocks (not in the data: the card is a label only).
+SUBCLASS_OPTIONS_2024: dict[str, dict] = {
+    "hunter-xphb-3-hunters-prey": {
+        "class": "ranger", "subclass": "hunter-xphb", "label": "Hunter's Prey",
+        "quotes": ("You gain one of the following feature options of your choice. Whenever you finish a Short or Long "
+                   "Rest, you can replace the chosen option with the other one.",),
+        "options": {
+            "colossus-slayer": {
+                "name": "Colossus Slayer", "line": True,
+                "quote": "Colossus Slayer. Your tenacity can wear down even the most resilient foes. When you hit a "
+                         "creature with a weapon, the weapon deals an extra 1d8 damage to the target if it's missing "
+                         "any of its Hit Points. You can deal this extra damage only once per turn.",
+                "note": "Once per turn, a weapon hit deals an extra 1d8 damage if the target is missing any of its Hit Points",
+                "attack_note": "Colossus Slayer: +1d8 once per turn if the target is missing any Hit Points"},
+            "horde-breaker": {
+                "name": "Horde Breaker", "line": True,
+                "quote": "Horde Breaker. Once on each of your turns when you make an attack with a weapon, you can make "
+                         "another attack with the same weapon against a different creature that is within 5 feet of "
+                         "the original target, that is within the weapon's range, and that you haven't attacked this turn.",
+                "note": "Once on each of your turns, make another attack with the same weapon against a different "
+                        "creature within 5 feet of the original target"},
+        }},
+    "hunter-xphb-7-defensive-tactics": {
+        "class": "ranger", "subclass": "hunter-xphb", "label": "Defensive Tactics",
+        "quotes": ("You gain one of the following feature options of your choice. Whenever you finish a Short or Long "
+                   "Rest, you can replace the chosen option with the other one.",),
+        "options": {
+            "escape-the-horde": {
+                "name": "Escape the Horde", "line": True,
+                "quote": "Escape the Horde. Opportunity Attacks have Disadvantage against you.",
+                "note": "Opportunity Attacks have Disadvantage against you"},
+            "multiattack-defense": {
+                "name": "Multiattack Defense", "line": True,
+                "quote": "Multiattack Defense. When a creature hits you with an attack roll, that creature has "
+                         "Disadvantage on all other attack rolls against you this turn.",
+                "note": "When a creature hits you with an attack roll, it has Disadvantage on all other attack rolls "
+                        "against you this turn"},
+        }},
+    "wild-heart-xphb-6-aspect-of-the-wilds": {
+        "class": "barbarian", "subclass": "wild-heart-xphb", "label": "Aspect of the Wilds",
+        "quotes": ("You gain one of the following options of your choice. Whenever you finish a Long Rest, you can "
+                   "change your choice.",),
+        "options": {
+            "owl": {"name": "Owl", "line": True,
+                    "quote": "Owl. You have Darkvision with a range of 60 feet. If you already have Darkvision, its "
+                             "range increases by 60 feet.",
+                    "senses_additive": {"darkvision": 60}},
+            "panther": {"name": "Panther", "line": True,
+                        "quote": "Panther. You have a Climb Speed equal to your Speed.", "climb_equals_walk": True},
+            "salmon": {"name": "Salmon", "line": True,
+                       "quote": "Salmon. You have a Swim Speed equal to your Speed.", "swim_equals_walk": True},
+        }},
+    "draconic-xphb-6-elemental-affinity": {
+        "class": "sorcerer", "subclass": "draconic-xphb", "label": "Elemental Affinity",
+        "quotes": ("Choose one of those types: Acid, Cold, Fire, Lightning, or Poison.",
+                   "You have Resistance to that damage type, and when you cast a spell that deals damage of that "
+                   "type, you can add your Charisma modifier to one damage roll of that spell."),
+        "options": {
+            t: {"name": t.title(), "resist": [t],
+                "note": f"Add your Charisma modifier ({{cha:+d}}) to one damage roll of a {t} damage spell"}
+            for t in ("acid", "cold", "fire", "lightning", "poison")},
+    },
+    "beast-master-xphb-3-primal-companion": {
+        "class": "ranger", "subclass": "beast-master-xphb", "label": "Primal Companion",
+        "quotes": ("Choose its stat block: Beast of the Land, Beast of the Sea, or Beast of the Sky.",),
+        "options": {
+            "beast-of-the-land": {"name": "Beast of the Land"},
+            "beast-of-the-sea": {"name": "Beast of the Sea"},
+            "beast-of-the-sky": {"name": "Beast of the Sky"},
+        }},
+    "fey-wanderer-xphb-3-fey-wanderer-spells": {
+        "class": "ranger", "subclass": "fey-wanderer-xphb", "label": "Feywild Gifts",
+        "quotes": ("You also possess a fey blessing. Choose it from the Feywild Gifts table or determine it randomly.",),
+        "options": {
+            "gift-1": {"name": "Illusory butterflies flutter around you while you take a Short or Long Rest.",
+                       "quote": "1 | Illusory butterflies flutter around you while you take a Short or Long Rest."},
+            "gift-2": {"name": "Flowers bloom from your hair each dawn.",
+                       "quote": "2 | Flowers bloom from your hair each dawn."},
+            "gift-3": {"name": "You faintly smell of cinnamon, lavender, nutmeg, or another comforting herb or spice.",
+                       "quote": "3 | You faintly smell of cinnamon, lavender, nutmeg, or another comforting herb or spice."},
+            "gift-4": {"name": "Your shadow dances while no one is looking directly at it.",
+                       "quote": "4 | Your shadow dances while no one is looking directly at it."},
+            "gift-5": {"name": "Horns or antlers sprout from your head.",
+                       "quote": "5 | Horns or antlers sprout from your head."},
+            "gift-6": {"name": "Your skin and hair change color each dawn.",
+                       "quote": "6 | Your skin and hair change color each dawn."},
+        }},
+}
 
 # C6d: XPHB Wizard spell picks that are "always prepared" (ruleset 2024 only), keyed by the choice-id
 # tail. Texts (XPHB, read from catalog.features):

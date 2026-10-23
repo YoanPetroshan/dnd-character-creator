@@ -66,6 +66,7 @@ from catalog.reference_data import (
 from . import asi as asi_mod
 from . import attacks as attacks_mod
 from . import class_choices_2024
+from . import subclass_options_2024
 from . import class_resources as class_resources_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
@@ -5152,6 +5153,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choice_templates += class_choices_2024.language_templates(catalog, rc, ruleset)  # C6b-2
         choice_templates += class_choices_2024.primal_knowledge_templates(catalog, rc, ruleset)  # C6b-2
         choice_templates += class_choices_2024.subclass_pick_templates(catalog, rc, ruleset)  # RP12
+        choice_templates += subclass_options_2024.templates(catalog, rc, ruleset)  # RP13
         choice_templates += class_choices_2024.metamagic_templates(catalog, rc, ruleset)  # C6c-1
         choice_templates += class_choices_2024.invocation_templates(catalog, rc, ruleset)  # C7a
         for tpl in choice_templates:  # G1: SRD style options already held (feat or earlier SRD style)
@@ -6038,7 +6040,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                     })
         hp_class_entries.append({"hit_die": rc_hit_die, "level": rc["level"], "hp_rolls": rc_hp_rolls})
     class_feature_list = _class_feature_list(catalog, resolved_classes, choices, resolved_feats)
-    effects = features_mod.class_effects(class_feature_list, xphb_effects) + invocation_effects
+    effects = (features_mod.class_effects(class_feature_list, xphb_effects) + invocation_effects
+               + subclass_options_2024.effects(choices))  # RP13 Aspect of the Wilds, Elemental Affinity
     # R5: Diamond Soul / Slippery Mind grants (the latter depends on the ruleset).
     for ab in features_mod.save_proficiencies(effects, [idx for _, _, idx in class_feature_list], ruleset):
         if ab not in proficient_save_abilities:

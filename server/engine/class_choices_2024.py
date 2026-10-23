@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 
+from engine import subclass_options_2024
 from catalog.reference_data import (
     FEAT_LANGUAGE_REPLACEMENT,
     CLASS_LANGUAGES_2024, CLASS_OPTION_CHOICES_2024, EXPERTISE_2024, INVOCATION_EFFECTS, INVOCATION_EFFECTS_2024, LANGUAGES_2024_RARE, LANGUAGES_2024_STANDARD, PRIMAL_KNOWLEDGE_2024,
@@ -1278,10 +1279,15 @@ _NEW_2024_CARD_RE = re.compile(
     r"|^class:wizard:\d+:(?:spell-mastery-\d|signature-spells)$")
 
 
+def _is_subclass_option_card(c: dict) -> bool:
+    return subclass_options_2024.spec_for_card(c) is not None
+
+
 def is_new_2024_class_card(c: dict) -> bool:
     return c["source"]["kind"] == "class" and bool(
         _NEW_2024_CARD_RE.match(c["id"]) or c["id"].startswith(DEPENDENT_PREFIX)
-        or pick_spec_for_card(c) is not None)  # RP12: subclass proficiency picks
+        or pick_spec_for_card(c) is not None  # RP12: subclass proficiency picks
+        or _is_subclass_option_card(c))  # RP13: subclass option cards
 
 
 def mark_unavailable(choices: list[dict], ruleset: str) -> list[dict]:
