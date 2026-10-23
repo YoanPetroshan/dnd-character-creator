@@ -687,7 +687,16 @@ def _feat_spell_ability(feat: dict, ability, choices: list[dict], feats=(), _fol
       choice, else the dict unchanged (pending).
     - {"sameAsFeat": ref}: the ability of the OTHER held feat `ref` (e.g.
       Magic Connoisseur follows Magic Initiate); None if that feat isn't held.
-    Anything else (a fixed "CHA", None) passes through."""
+    Anything else (a fixed "CHA", None) passes through.
+    RP5: a feat whose effect entry has ``ability_from`` (Adept of the Robes, Outlands Envoy, Warlike Familiar, Magic
+    Connoisseur) takes the ability chosen for that base feat while the base feat is held."""
+    base = feat_effects_mod.ability_from(feat_effects_data.FEAT_EFFECTS.get(feat.get("index")))
+    if base and _follow:
+        other = next((f for f in feats if f["index"] == base), None)
+        first = next((e["ability"] for e in ((other or {}).get("innate_spells") or []) + ((other or {}).get("spell_choices") or [])
+                      if e.get("ability") is not None), None)
+        if other is not None and first is not None:
+            return _feat_spell_ability(other, first, choices, feats, _follow=False)
     if isinstance(ability, dict) and ability.get("choose"):
         choice = next((c for c in choices if c["id"] == f"{_feat_cid_prefix(feat)}:spell-ability"), None)
         if choice and choice.get("selected"):
@@ -715,7 +724,7 @@ def _feat_spell_ability(feat: dict, ability, choices: list[dict], feats=(), _fol
     return {"choose": [o["id"].upper() for o in choice["options"]]}
 
 
-def _feat_innate_spells(feats: list[dict], catalog: Catalog, choices: list[dict]) -> list[dict]:
+def _feat_innate_spells(feats: list[dict], catalog: Catalog, choices: list[dict], patches: dict | None = None) -> list[dict]:
     """Sheet innate-spell entries granted by feats (fixed names), each
     tagged with its featId. Not filtered by character level, matching
     the race behaviour."""
@@ -736,6 +745,11 @@ def _feat_innate_spells(feats: list[dict], catalog: Catalog, choices: list[dict]
             sheet_entry["variant"] = None
             sheet_entry["ability"] = _feat_spell_ability(feat, entry["ability"], choices, feats)
             sheet_entry["featId"] = feat["index"]
+            patch = (patches or {}).get((feat["index"], entry["spell_id"]))  # RP5 cross-feat modifications
+            if patch:
+                sheet_entry["uses"] = patch.get("uses", sheet_entry["uses"])
+                if patch.get("note"):
+                    sheet_entry["note"] = patch["note"]
             out.append(sheet_entry)
         for i, sc in enumerate(feat.get("spell_choices", []) or []):
             if not applies(sc.get("variant")):
@@ -5273,6 +5287,14 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 for option_id in parent_selected[: tpl["count"]]:
                     expanded_templates.extend(option_deps.get(option_id, []))
         choice_templates = expanded_templates
+    # RP5: a feat that reuses another held feat's spellcasting ability has no ability card of its own; a stored pick on it
+    # becomes a non-blocking `pruned` entry through the stale-selection pass below.
+    held_feat_indexes = {f["index"] for f in resolved_feats}
+    no_own_ability_card = {
+        f"{_feat_cid_prefix(f)}:spell-ability" for f in resolved_feats
+        if feat_effects_mod.ability_from(feat_effects_data.FEAT_EFFECTS.get(f["index"])) in held_feat_indexes}
+    if no_own_ability_card:
+        choice_templates = [tpl for tpl in choice_templates if tpl["id"] not in no_own_ability_card]
     current_template_ids = {tpl["id"] for tpl in choice_templates}
     pruned = subclass_pruned + [
         {"choiceId": choice_id, "reason": f"'{choice_id}' no longer applies to the current character and was ignored."}
@@ -6010,7 +6032,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     senses = features_mod.class_senses(senses, effects)  # RP2 Darkvision +60, Blindsight 30
     innate_spells = (_species_innate_spells(race, subrace, catalog, species_variant)
                      + _species_trait_spell_choices(race, subrace, catalog, choices)
-                     + _feat_innate_spells(resolved_feats, catalog, choices)
+                     + _feat_innate_spells(resolved_feats, catalog, choices, feat_effects_mod.innate_patches(feat_inst, feat_numbers))
                      + [{**_innate_entry_to_sheet(e, catalog), "source": e["source_label"],
                          **({"note": e["note"]} if e.get("note") else {})}
                         for e in features_mod.invocation_innate_entries(invocation_effects)])

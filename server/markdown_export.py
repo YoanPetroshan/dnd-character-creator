@@ -252,7 +252,8 @@ def to_markdown(resolution: dict) -> str:
         lines.append("## Вродени заклинания")
         for e in innate:
             level = f", от ниво {e['level']}" if e.get("level") else ""
-            lines.append(f"- {e['name']} ({e.get('uses', '')}{level})")
+            note = f" - {e['note']}" if e.get("note") else ""  # RP5
+            lines.append(f"- {e['name']} ({e.get('uses', '')}{level}){note}")
         lines.append("")
 
     for kind, text in extra_blocks(resolution):

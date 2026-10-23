@@ -253,7 +253,8 @@ def to_pdf(resolution: dict) -> bytes:
         pdf.h2("Вродени заклинания")
         for e in innate:
             level = f", от ниво {e['level']}" if e.get("level") else ""
-            pdf.bullet(f"{e['name']} ({e.get('uses', '')}{level})")
+            note = f" - {e['note']}" if e.get("note") else ""  # RP5
+            pdf.bullet(f"{e['name']} ({e.get('uses', '')}{level}){note}")
 
     for kind, text in extra_blocks(resolution):
         {"h2": pdf.h2, "h3": pdf.h3, "bullet": pdf.bullet, "body": pdf.body}[kind](text)

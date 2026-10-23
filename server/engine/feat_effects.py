@@ -344,6 +344,27 @@ def apply_modifies(insts: list[dict]) -> list[dict]:
     return out
 
 
+def innate_patches(insts: list[dict], numbers: dict) -> dict[tuple[str, str], dict]:
+    """RP5 (open question 21): ``{(target feat index, spell id): {"uses": str, "note": str}}`` from the ``innate`` part of
+    a ``modifies`` patch (``{spell id: {"uses": "<text with {pb}>", "note": "<text>"}}``), only while the target feat is
+    also held. ``{pb}`` is the Proficiency Bonus. Greater Mark of Healing: Cure Wounds PB times per Long Rest;
+    Greater Mark of Making / Shadow: the level 3 version note."""
+    held = {inst["index"] for inst in insts}
+    out: dict[tuple[str, str], dict] = {}
+    for inst in insts:
+        for target, patch in (inst["effect"].get("modifies") or {}).items():
+            if target not in held:
+                continue
+            for spell_id, change in (patch.get("innate") or {}).items():
+                out[(target, spell_id)] = {key: text.replace("{pb}", str(numbers["pb"])) for key, text in change.items()}
+    return out
+
+
+def ability_from(effect: dict | None) -> str | None:
+    """RP5: the base feat index whose chosen spellcasting ability this feat reuses (``ability_from`` in its entry)."""
+    return (effect or {}).get("ability_from")
+
+
 def notes(insts: list[dict], numbers: dict) -> dict[str, list[str]]:
     """{instance prefix: formatted notes} for the instances that have any."""
     out = {}

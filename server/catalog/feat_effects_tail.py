@@ -719,7 +719,9 @@ TAIL_EFFECTS.update({
     "otherworldly-familiar-au": {
         "notes": ["Otherworldly Power: when you cast Find Familiar, imbue it until you cast it again: Resistance to Necrotic, "
                   "Poison, Psychic, Radiant or Thunder damage (your choice), and it can move through creatures and objects as Difficult Terrain."]},
-    "outlands-envoy-sato": {"data_only": True},
+    "outlands-envoy-sato": {
+        "notes": ["Crossroads Emissary: Misty Step and Tongues, each cast once without a slot per Long Rest; Tongues needs no "
+                  "material components. The spellcasting ability is the one chosen for Scion of the Outer Planes."]},
     "protection-xphb": {
         "notes": ["Reaction when a creature you see attacks a target other than you within 5 feet of you: interpose your "
                   "Shield to impose Disadvantage on that attack roll and all other attack rolls against the target until the "
@@ -949,3 +951,50 @@ COMPLETION_QUOTES: dict[str, str | tuple[str, ...]] = {
 for _index, _entry in TAIL_EFFECTS.items():
     if _index.startswith("greater-mark-of-") and _index.endswith("-efa"):
         _entry["modifies"] = {_index.replace("greater-", "", 1): {"replace": [["1d4", "1d6"]]}}
+
+# RP5 (open question 21): cross-feat modifications that carry a number or a spell level.
+# ``innate`` part of ``modifies``: {target feat index: {"innate": {spell id: {"uses": text with {pb}, "note": text}}}}, applied
+# to the target's innate spell entry only while the target is held (``feat_effects.innate_patches``). The base Healing Touch
+# Cure Wounds is "1/day"; the Greater Mark changes it to Proficiency Bonus times per Long Rest (one entry, not two).
+RP5_INNATE_QUOTES: dict[str, str] = {
+    "greater-mark-of-healing-efa": ("You can now use the Healing Touch benefit of your Mark of Healing feat to cast Cure Wounds "
+                                    "without using a spell slot a number of times equal to your Proficiency Bonus, and you "
+                                    "regain all expended uses when you finish a Long Rest."),
+    "greater-mark-of-making-efa": ("When you use the Spellsmith benefit of your Mark of Making feat to cast Magic Weapon "
+                                   "without a spell slot, you cast the spell as its level 3 version."),
+    "greater-mark-of-shadow-efa": ("When you use the Shape Shadows benefit of your Mark of Shadow feat to cast Invisibility "
+                                   "without a spell slot, you cast the spell as its level 3 version."),
+}
+RP5_HEALING_DICE_QUOTE = "you can treat any 1 or 2 on a roll as a 3"
+_RP5_INNATE = {
+    "greater-mark-of-healing-efa": ("mark-of-healing-efa", "cure-wounds", "{pb}/long rest",
+                                    "Improved Healing: treat a 1 or 2 on a healing die as a 3."),
+    "greater-mark-of-making-efa": ("mark-of-making-efa", "magic-weapon", None,
+                                   "Improved Making: cast as its level 3 version."),
+    "greater-mark-of-shadow-efa": ("mark-of-shadow-efa", "invisibility", None,
+                                   "Improved Shadow: cast as its level 3 version."),
+}
+for _index, (_target, _spell, _uses, _note) in _RP5_INNATE.items():
+    _change = {"note": _note}
+    if _uses:
+        _change["uses"] = _uses
+    TAIL_EFFECTS[_index]["modifies"][_target]["innate"] = {_spell: _change}
+
+# ``ability_from``: the dependent feat's spellcasting ability is the one chosen for the base feat, so it has no ability
+# card of its own while the base is held. {dependent: (base, sentence)}; sentences pinned against the catalog.
+RP5_ABILITY_FROM: dict[str, tuple[str, str]] = {
+    "adept-of-the-black-robes-dsotdq": ("initiate-of-high-sorcery-dsotdq",
+        "The spell's spellcasting ability is the one chosen when you gained the Initiate of High Sorcery feat."),
+    "adept-of-the-red-robes-dsotdq": ("initiate-of-high-sorcery-dsotdq",
+        "The spell's spellcasting ability is the one chosen when you gained the Initiate of High Sorcery feat."),
+    "adept-of-the-white-robes-dsotdq": ("initiate-of-high-sorcery-dsotdq",
+        "The spell's spellcasting ability is the one chosen when you gained the Initiate of High Sorcery feat."),
+    "outlands-envoy-sato": ("scion-of-the-outer-planes-sato",
+        "The spells' spellcasting ability is the one chosen when you gained the Scion of the Outer Planes feat."),
+    "warlike-familiar-au": ("familiar-friend-au",
+        "Your spellcasting ability for this spell is the one chosen for the Faithful Companion benefit of your Familiar Friend feat."),
+    "magic-connoisseur-au": ("magic-initiate-xphb",
+        "The spellcasting ability for these spells is the same as the spellcasting ability chosen for your Magic Initiate feat's spells."),
+}
+for _index, (_base, _sentence) in RP5_ABILITY_FROM.items():
+    TAIL_EFFECTS[_index]["ability_from"] = _base
