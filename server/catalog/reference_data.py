@@ -423,6 +423,10 @@ CLASS_2024_EQUIPMENT_ITEM_MAP = {
 # `contents` to its entries and carried weight uses the table weight. Differences from the SRD items are documented
 # in ARCHITECTURE (e.g. the SRD rope weighs 10 lb, the 2024 pack total counts 5 lb of it; Priest's costs 33 GP
 # here and 19 GP in the SRD record, cost is not shown).
+# RPF: PHB 2024 ch. 6 weights that differ from the SRD catalog records, for items the 2024 packages, backgrounds and
+# packs use or sell (all other gear, weapon, armor and tool weights were compared and are equal). lb.
+ITEM_WEIGHTS_2024 = {"rope-hempen-50-feet": 5, "warhammer": 5}
+
 PACKS_2024 = {
     "burglars-pack": {"weight": 42, "contents": [
         ("backpack", 1), ("ball-bearings-bag-of-1000", 1), ("bell", 1), ("candle", 10), ("crowbar", 1),
