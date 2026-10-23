@@ -437,6 +437,23 @@ PACKS_2024 = {
         ("oil-flask", 10), ("parchment-one-sheet", 10), ("tinderbox", 1)]},
 }
 
+# RP9 (C, E12): 2024 background starting equipment. Keys are the lower-cased 5etools item names that are not a plain
+# catalog item name; values are (catalog item id, count per unit, label). Source: the `Equipment:` line of each
+# ruleset-2024 background record ("Robe", "20 Arrows", "20 Bolts", "Iron Spikes"). `arrow` and `crossbow-bolt` are
+# already 20-packs (F3a-6) and `spike-iron` weighs 5 lb (the 10-pack), so "20 Arrows" is ONE unit of each.
+BACKGROUND_2024_EQUIPMENT_ITEM_MAP = {
+    "robe": ("robes", 1, "Robes"),
+    "arrows (20)": ("arrow", 1, "Arrows (20)"),
+    "bolts (20)": ("crossbow-bolt", 1, "Bolts (20)"),
+    "iron spikes": ("spike-iron", 1, "Iron Spikes"),
+}
+# Names with NO catalog item at all (a catalog gap, not a placeholder): a narrative item. The plain 5etools "map"
+# would match the catalog "Case, map or scroll" by word subset, which is a different item.
+BACKGROUND_2024_NARRATIVE_ITEMS = {"map": "Map"}
+# The option member that stands for "the tool of this background's own tool proficiency pick" ("Gaming Set (same
+# as above)"); resolve() replaces it by that item, or shows its label as a narrative item while it is unpicked.
+BACKGROUND_TOOL_SENTINEL = "background-tool"
+
 # Monk A: "Artisan's Tools or Musical Instrument chosen for the tool proficiency above". The option
 # member id is this sentinel; resolve() replaces it by the item of the Monk's tool proficiency pick.
 MONK_TOOL_SENTINEL = "monk-tool"

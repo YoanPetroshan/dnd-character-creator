@@ -194,7 +194,10 @@ _EXPECT = {
     "fighter4-2024": {"resources": ["Second Wind", "Action Surge"], "masteries": True, "feature_choice": "Archery",
                       "equip_qty": ("Javelin", 8),
                       # RP8: the 2024 kitchen sink now carries its Dungeoneer's Pack contents (deliberate _EXPECT change)
-                      "pack": "dungeoneers-pack"},
+                      "pack": "dungeoneers-pack",
+                      # RP9: the Soldier (XPHB) background package A is now real items: the 20-pack Arrow and the Dice Set that
+                      # is the background's own tool proficiency pick (deliberate _EXPECT change)
+                      "bg_items": ["Arrow", "Dice Set", "Quiver"]},
 }
 _EXPECT.update({
     # FE12: feat effects reach every export (notes, resources, attack-row notes, feat picks)
@@ -337,6 +340,10 @@ def test_kitchen_sink_fields_are_non_empty_as_expected(catalog, sid):
     if "equip_qty" in want:  # C9b
         name, qty = want["equip_qty"]
         assert any(e["name"] == name and e["qty"] == qty for k in ("granted", "chosen", "added") for e in sheet["equipment"][k])
+    if "bg_items" in want:  # RP9: background package A as inventory items, not narrative placeholders
+        names = {e["name"] for k in ("granted", "chosen", "added") for e in sheet["equipment"][k]}
+        assert set(want["bg_items"]) <= names
+        assert not any("Gaming Set" in n or "Arrows (20)" in n for n in sheet["equipment"]["narrativeItems"])
     if "pack" in want:  # RP8: ruleset 2024 pack entry with contents, exported to Markdown and the PDF
         entry = next(e for k in ("granted", "chosen", "added") for e in sheet["equipment"][k] if e["itemId"] == want["pack"])
         assert entry["contents"]

@@ -214,6 +214,10 @@ def _item_in_category(item: dict, category: str) -> bool | None:
         return (item.get("gear_category") or {}).get("index") == category
     if category == "musical-instruments":
         return item.get("tool_category") == "Musical Instrument"
+    if category == "gaming-sets":  # RP9: 2024 background gaming set / artisan's tools picks
+        return item.get("tool_category") == "Gaming Sets"
+    if category == "artisans-tools":
+        return item.get("tool_category") == "Artisan's Tools"
     weapon_sets = {
         "simple-weapons": ("Simple", None), "martial-weapons": ("Martial", None),
         "simple-melee-weapons": ("Simple", "Melee"), "martial-melee-weapons": ("Martial", "Melee"),
@@ -308,6 +312,9 @@ def build_equipment_choice(
                 slot_index += 1
                 nested_category = _equipment_category_index(nested.get("from", {}))
                 nested_options = equipment_category_options(nested_category, items) if nested_category else None
+                only = (nested.get("from") or {}).get("only")  # RP9: e.g. "Arcane Focus (Crystal or Wand)"
+                if nested_options is not None and only:
+                    nested_options = [o for o in nested_options if o["id"] in only] or None
                 if nested_options is None:
                     resolvable = False
                     continue

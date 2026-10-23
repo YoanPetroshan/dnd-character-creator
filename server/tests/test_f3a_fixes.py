@@ -293,7 +293,7 @@ def test_f5_origin_pick_before_a_later_lessons_feat_keeps_its_language(catalog):
 # --- Finding 6: "Arrows (20)" is ONE catalog `arrow` item (already a 20-pack) ----------------------------------------
 
 @needs_data
-def test_f6_ranger_package_a_arrows_are_one_pack_and_the_carried_weight_is_90(catalog):
+def test_f6_ranger_package_a_arrows_are_one_pack_and_the_carried_weight_is_91(catalog):
     cid = "class:ranger:1:equipment-choice-0"
     d = _draft([("ranger", 1, None, {})])
     base = resolve(d, catalog)
@@ -305,7 +305,8 @@ def test_f6_ranger_package_a_arrows_are_one_pack_and_the_carried_weight_is_90(ca
     res = resolve(d, catalog)
     assert next(e for e in res["sheet"]["equipment"]["chosen"] if e["itemId"] == "arrow")["qty"] == 1
     # RP8 (deliberate): 35 lb of gear plus the 2024 Explorer's Pack table weight (55 lb); it was 35 when packs counted 0
-    assert res["derived"]["carryingCapacity"]["carried"] == 35 + 55
+    # RP9 (deliberate): Soldier A's "20 Arrows" is now the real catalog `arrow` pack (+1 lb; it was a narrative placeholder)
+    assert res["derived"]["carryingCapacity"]["carried"] == 35 + 55 + 1
 
 
 def test_f6_arrow_and_bolt_catalog_items_are_packs_of_twenty(catalog):

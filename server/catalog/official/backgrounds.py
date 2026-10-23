@@ -5,6 +5,7 @@ from pathlib import Path
 import json
 from catalog.reference_data import ruleset_for_edition
 from .common import _ability_bonus_options_from_5etools_weighted_pair, slug
+from .background_equipment import starting_equipment_options_2024_from_5etools
 from .equipment import _fixed_starting_equipment_from_5etools, _starting_equipment_options_from_5etools
 from .feats import _feat_variant_hints_from_5etools
 from .languages import _language_grants_from_5etools
@@ -231,11 +232,17 @@ def _background_from_5etools(raw: dict) -> dict | None:
     fixed_equipment, fixed_gold, fixed_narrative_items = _fixed_starting_equipment_from_5etools(raw)
     feats, feat_options, feat_refs = _feats_from_5etools(raw)
 
+    proficiency_choices = _proficiency_choices_from_5etools(raw)
+    ruleset = ruleset_for_edition(raw)
+    # RP9 (C, E12): additive 2024 starting-equipment envelope (real items and quantities); the old key is untouched.
+    extra_2024 = ({"starting_equipment_options_2024": starting_equipment_options_2024_from_5etools(raw, proficiency_choices)}
+                  if ruleset == "2024" else {})
+
     return {
         "index": index,
         "name": raw["name"],
         "starting_proficiencies": _proficiencies_from_5etools(raw),
-        "starting_proficiency_choices": _proficiency_choices_from_5etools(raw),
+        "starting_proficiency_choices": proficiency_choices,
         "language_options": language_options,
         "languages": fixed_languages,
         "starting_equipment": fixed_equipment,
@@ -245,7 +252,8 @@ def _background_from_5etools(raw: dict) -> dict | None:
         "feature": {"name": "", "desc": []},  # not read mechanically by resolve.py today, see docstring above
         "ability_bonus_options": _ability_bonus_options_from_5etools_weighted_pair(raw.get("ability", [])),
         "source": raw.get("source", ""),
-        "ruleset": ruleset_for_edition(raw),
+        "ruleset": ruleset,
+        **extra_2024,
         "feats": feats,
         "feat_options": feat_options,
         # Finding 1 of the final whole-branch review (2026-09-28): a
