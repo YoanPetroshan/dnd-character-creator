@@ -112,15 +112,35 @@ def test_drafts_without_worn_or_wielded_resolve_exactly_as_before_g2(catalog, na
         card = next(c for c in now["choices"] if c["id"] == "class:monk:1:prof-choice-1")
         assert card["status"] == "pending" and len(card["options"]) == 27
         now["choices"] = [c for c in now["choices"] if c is not card]
-    # RPX2: SRD packs now weigh their contents' sum (the pre-G2 baseline counted 0): the carried total may differ by
-    # exactly that and by nothing else.
+    # RPX2: SRD packs now weigh their contents' sum (the pre-G2 baseline counted 0). RPX3: the counts of the equipment
+    # text are real quantities (two handaxes, five javelins; ammunition stays one pack; the Ranger's fixed 20 arrows
+    # is one pack). `carried` may differ from the baseline by exactly those, and the quantity fields / "Nx " labels they
+    # touch are neutralised on both sides; everything else must be identical.
+    import re
     from engine.derived import pack_weights_from_contents
     pack_lb = pack_weights_from_contents(catalog.items)
-    eq = now["sheet"]["equipment"]
-    packs = sum(pack_lb.get(e["itemId"], 0) * e.get("qty", 1) for k in ("granted", "chosen", "added") for e in eq[k])
-    assert now["derived"]["carryingCapacity"]["carried"] == pytest.approx(baseline["derived"]["carryingCapacity"]["carried"] + packs)
-    now["derived"]["carryingCapacity"]["carried"] = baseline["derived"]["carryingCapacity"]["carried"]
-    now["derived"]["carryingCapacity"]["overCapacity"] = baseline["derived"]["carryingCapacity"]["overCapacity"]
+
+    def slots(res):
+        return [e for k in ("granted", "chosen", "added") for e in res["sheet"]["equipment"][k]]
+
+    base_entries = {k: {e["itemId"]: e for e in baseline["sheet"]["equipment"][k]} for k in ("granted", "chosen")}
+    delta = sum(pack_lb.get(e["itemId"], 0) * e.get("qty", 1) for e in slots(now))
+    for k in ("granted", "chosen"):
+        for e in now["sheet"]["equipment"][k]:
+            old = base_entries[k].get(e["itemId"])
+            assert old is not None, e
+            delta += (catalog.items[e["itemId"]].get("weight") or 0) * (e.get("qty", 1) - old.get("qty", 1))
+    assert now["derived"]["carryingCapacity"]["carried"] == pytest.approx(baseline["derived"]["carryingCapacity"]["carried"] + delta)
+    for res in (now, baseline):
+        res["derived"]["carryingCapacity"]["carried"] = res["derived"]["carryingCapacity"]["overCapacity"] = None
+        for k in ("granted", "chosen"):
+            for e in res["sheet"]["equipment"][k]:
+                e["qty"] = None
+        for card in res["choices"]:
+            for o in card.get("options", []):
+                if "quantities" in o:
+                    o.pop("quantities")
+                o["label"] = re.sub(r"^\d+x ", "", o["label"]) if card["id"].endswith(tuple(f"equipment-choice-{i}" for i in range(9))) else o["label"]
     assert now == baseline
 
 

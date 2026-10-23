@@ -56,7 +56,7 @@ from functools import lru_cache
 from dataclasses import dataclass, field
 
 from catalog import feat_effects_data, reference_data
-from catalog.choices import build_choice_template, build_equipment_choice
+from catalog.choices import build_choice_template, build_equipment_choice, pack_quantities, pack_units
 from catalog.loader import Catalog
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
 from catalog.reference_data import (
@@ -3881,6 +3881,7 @@ def _equipment_choice_templates(
         source = {"kind": "equipment", "id": source_id, "label": source_label}
         if source_kind == "class":
             source["level"] = 1
+        envelope = {**envelope, "keep_counts": True}  # RPX3: the counts of the rules text, in every ruleset (was 2024 only)
         if items is not None and _envelope_needs_expansion(envelope):
             tpl, dependents = build_equipment_choice(envelope, cid, source, "Starting Equipment", items)
             if tpl and dependents:
@@ -3890,6 +3891,12 @@ def _equipment_choice_templates(
         if not tpl:
             dropped_envelopes += 1
             continue
+        if items is not None:  # RPX3: "20 arrows" is one catalog arrow pack
+            for option in tpl["options"]:
+                if option.get("quantities"):
+                    option["quantities"] = pack_quantities(option["quantities"], items)
+                    if not option["quantities"]:
+                        del option["quantities"]
         original_option_count = len((envelope.get("from") or {}).get("options", []))
         if original_option_count and len(tpl["options"]) < original_option_count:
             tpl["description"] = (tpl["description"] + " (Note: one or more of the original options for this choice aren't available yet and have been left out.)").strip()
@@ -4440,7 +4447,9 @@ def _fixed_equipment(entries: list[dict], item_lookup: dict) -> list[dict]:
         item = item_lookup.get(item_id) if item_id else None
         if not item:
             continue
-        result.append({"itemId": item_id, "name": item["name"], "qty": entry.get("quantity", 1)})
+        qty = entry.get("quantity", 1)
+        result.append({"itemId": item_id, "name": item["name"],
+                       "qty": pack_units(item, qty) if isinstance(qty, int) and not isinstance(qty, bool) else qty})  # RPX3
     return result
 
 

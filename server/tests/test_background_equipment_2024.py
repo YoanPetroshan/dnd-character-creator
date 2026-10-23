@@ -410,13 +410,14 @@ def test_an_unpicked_package_gives_nothing_and_a_pending_card(catalog):
 
 @needs_data
 @pytest.mark.parametrize("ruleset", ["mixed", "2014"])
-def test_mixed_and_2014_keep_the_old_envelope_with_qty_one(catalog, ruleset):
+def test_mixed_and_2014_keep_the_old_envelope_with_the_text_counts(catalog, ruleset):
     res = _pick_a("acolyte-xphb", catalog, ruleset=ruleset)
     card = _card(res, _ecid("acolyte-xphb"))
     a = next(o for o in card["options"] if not o["id"].endswith("gp-50"))
-    assert "unlisted-holy-symbol" in a["id"] and "unlisted-robe" in a["id"] and "quantities" not in a
+    assert "unlisted-holy-symbol" in a["id"] and "unlisted-robe" in a["id"]
+    assert a["quantities"] == {"parchment-one-sheet": 10}  # RPX3: the old envelope keeps the text count under mixed
     assert _card(res, _ecid("acolyte-xphb") + ":0") is None
-    assert _chosen(res) == {"calligraphers-supplies": 1, "book": 1, "parchment-one-sheet": 1}
+    assert _chosen(res) == {"calligraphers-supplies": 1, "book": 1, "parchment-one-sheet": 10}
     assert set(res["sheet"]["equipment"]["narrativeItems"]) == {"Holy Symbol", "Robe"}
     assert res["sheet"]["startingGold"] == 8
 

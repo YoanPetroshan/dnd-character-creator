@@ -187,6 +187,24 @@ REBASELINES: dict[str, dict] = {
         ],
         "why": "SRD pack weight = contents sum (Extra 2)",
     },
+    # RPX3 / Extra 3: the counts of the SRD starting-equipment text are real quantities under mixed / 2014 (two
+    # handaxes, five javelins, two shortswords; "20 arrows" stays ONE catalog arrow pack; the Ranger's fixed 20 arrows
+    # become that one pack). Cases: the primary Barbarian, Fighter, Paladin and Ranger (the classes with a counted
+    # option or the fixed arrows) in every golden family, including the kitchen sinks with those primaries. The
+    # multiclass Wizard 1 / Fighter 1 (Fighter secondary: no starting equipment) must not move. Rule matrix: the
+    # option's quantities and its "Nx " label on the four cards, the sheet entries' qty (Ranger granted arrow, the
+    # chosen counted items when the filler's pick is the counted option), the carried total / capacity flag.
+    "RPX3": {
+        "cases": ["*/src-*/barbarian*", "*/src-*/fighter*", "*/src-*/paladin*", "*/src-*/ranger*",
+                  "*/src-*/feats-mixed-fighter14", "*/src-*/psi-warrior11", "*/src-*/totem-bear6",
+                  "*/src-*/multi-barbarian3-monk2"],
+        "paths": [
+            r"^result\.choices\[class:(barbarian:1:equipment-choice-1|fighter:1:equipment-choice-2|paladin:1:equipment-choice-1|ranger:1:equipment-choice-1)\]\.options\[(handaxe|javelin|shortsword)\]\.(label|quantities)",
+            r"^result\.sheet\.equipment\.(granted|chosen)\[\d+\]\.qty$",
+            r"^result\.derived\.carryingCapacity\.(carried|overCapacity)$",
+        ],
+        "why": "SRD bundle quantities from the equipment text (Extra 3)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -539,7 +557,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2") and STRIP == ("derived.featResources",)
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3") and STRIP == ("derived.featResources",)
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
@@ -636,6 +654,33 @@ def test_rpx2_every_case_counts_its_srd_pack_weight():
         packs = sum(_SRD_PACK_LB.get(e["itemId"], 0) * e.get("qty", 1) for k in ("granted", "chosen", "added") for e in eq[k])
         assert packs > 0, n
         assert entry["result"]["derived"]["carryingCapacity"]["carried"] >= packs, n
+
+
+def test_rpx3_cases_hold_the_text_counts_and_no_ammunition_stack():
+    """RPX3: 77 cases (primary Barbarian / Fighter / Paladin / Ranger families); the counted options carry their
+    quantities, a picked counted option is in the inventory with that qty, the Ranger's fixed arrows are ONE pack,
+    and no case anywhere holds an ammunition stack of 20 (a 400-arrow inventory)."""
+    hit = sorted(n for n in _GOLDEN if any(fnmatch.fnmatchcase(n, p) for p in REBASELINES["RPX3"]["cases"]))
+    assert len(hit) == 77 and not [n for n in hit if "wizard1-fighter1" in n]
+    expect = {"class:barbarian:1:equipment-choice-1": ("handaxe", 2), "class:fighter:1:equipment-choice-2": ("handaxe", 2),
+              "class:paladin:1:equipment-choice-1": ("javelin", 5), "class:ranger:1:equipment-choice-1": ("shortsword", 2)}
+    for n in hit:
+        res = _GOLDEN[n]["result"]
+        for c in res["choices"]:
+            if c["id"] in expect:
+                item, qty = expect[c["id"]]
+                opt = next(o for o in c["options"] if o["id"] == item or o["id"].endswith("+" + item) or item in o["id"].split("+"))
+                assert opt["quantities"] == {item: qty}, (n, c["id"])
+                if c["selected"] == [opt["id"]]:
+                    chosen = {e["itemId"]: e["qty"] for e in res["sheet"]["equipment"]["chosen"]}
+                    assert chosen[item] == qty, n
+        if "/ranger" in n:
+            assert {e["itemId"]: e["qty"] for e in res["sheet"]["equipment"]["granted"]}["arrow"] == 1, n
+    for n, entry in _GOLDEN.items():
+        for k in ("granted", "chosen", "added"):
+            for e in entry["result"]["sheet"]["equipment"][k]:
+                if e["itemId"] in ("arrow", "crossbow-bolt", "sling-bullet", "blowgun-needle"):
+                    assert e["qty"] == 1, (n, e)
 
 
 def test_keyed_normalization_and_diff_paths():

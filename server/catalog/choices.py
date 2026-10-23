@@ -98,6 +98,22 @@ def _bundle_quantities(items: list[dict]) -> dict[str, int]:
             if sub.get("option_type") == "counted_reference" and sub.get("count", 1) != 1}
 
 
+def pack_units(item: dict | None, count: int) -> int:
+    """RPX3: units of a catalog item for a counted phrase of the rules text. Ammunition records are already packs
+    (arrow / crossbow bolt / sling bullet 20, blowgun needle 50: `quantity` on the item), so "20 arrows" is ONE unit
+    of the catalog `arrow` (F3a-6, the same rule as the 2024 packages); a count that is not a multiple rounds up."""
+    pack = (item or {}).get("quantity")
+    if isinstance(pack, int) and not isinstance(pack, bool) and pack > 1:
+        return max(1, -(-count // pack))
+    return count
+
+
+def pack_quantities(quantities: dict[str, int], items: dict) -> dict[str, int]:
+    """`quantities` with the ammunition packs converted by `pack_units`; entries that become 1 are dropped."""
+    out = {i: pack_units(items.get(i), n) for i, n in quantities.items()}
+    return {i: n for i, n in out.items() if n != 1}
+
+
 def _flatten_nested_tool_choice(opt: dict) -> list[dict]:
     """RP7 (E11c): the options of one nested `option_type: "choice"` of a PROFICIENCY envelope (the SRD Monk's
     "artisan's tools" / "musical instrument" alternatives) as flat {id, label, group} entries. `group` is the
@@ -139,13 +155,16 @@ def build_choice_options(from_field: dict, keep_counts: bool = False, flatten_ne
             label = _option_label(opt)
             if label is None:
                 continue
+            if keep_counts and opt.get("option_type") == "counted_reference" and opt.get("count", 1) != 1:
+                label = f"{opt['count']}x {label}"  # RPX3: same label as the expanded path ("2x Handaxe")
             if opt.get("option_type") == "ability_bonus":
                 option_id = opt["ability_score"]["index"]
                 options.append({"id": option_id, "label": label})
                 continue
             item = opt.get("item") or opt.get("of")
             option_id = item["index"] if item else label.lower().replace(" ", "-")
-            options.append({"id": option_id, "label": label})
+            single = _bundle_quantities([opt]) if keep_counts else {}  # RPX3: "two handaxes" is one counted option
+            options.append({"id": option_id, "label": label, **({"quantities": single} if single else {})})
         return options if options else None
 
     if set_type == "resource_list":

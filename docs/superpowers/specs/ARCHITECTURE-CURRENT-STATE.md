@@ -1484,3 +1484,30 @@ VERIFIED by diffing the gz before (copy taken before the run) and after with the
 **Timing** (`resolve()`, mean of 20, ms, level 20 golden drafts): Fighter 20 mixed 4.4 / 2014 2.7 / 2024 2.3; Wizard 20 mixed 3.5 / 2014 2.6 / 2024 5.7 (limit 50).
 
 **Totals.** Server suite 4665 -> 4688 passed, root suite 405 passed / 8 skipped; frontend untouched, no `npm run build`.
+
+## RPX3 (Extra 3, D4) Counts of the starting-equipment text are real quantities under mixed / 2014 (2026-10-23)
+
+**Data check (VERIFIED by script over the 12 SRD classes and every background).** The SRD / 5etools data keeps the counts: `counted_reference.count` in the class envelopes (Barbarian "two handaxes" 2, Fighter "two handaxes" 2, "20 arrows" 20, "20 bolts" 20, Paladin "five javelins" 5, Ranger "two shortswords" 2, Rogue "20 arrows", Cleric / Sorcerer / Warlock "20 bolts") and `quantity` on the fixed `starting_equipment` entries (Barbarian 4 javelins, Monk 10 darts, Rogue / Sorcerer / Warlock 2 daggers, Ranger 20 arrows). The converter never dropped them; the engine did: `keep_counts` (C9b) was set only on the 2024 envelopes, so `quantities` was missing for every other bundle, and a single counted option ("two handaxes" is a plain `counted_reference`, not a `multiple`) never got quantities even with the flag. Bard, Druid and Wizard have no counted phrase. The SRD Acolyte has none either (its SRD record has no incense / prayer book); the counts under mixed come from the 5etools backgrounds (e.g. Criminal XPHB: 2 daggers, 2 pouches; 27 backgrounds, the same counts RP9 reads for 2024), whose option labels already said "2x Pouch" while the inventory held one.
+
+**Ammunition is one pack (the one real trap).** The catalog `arrow` / `crossbow-bolt` / `sling-bullet` (20) and `blowgun-needle` (50) are already packs (item `quantity`, F3a-6; the 2024 packages map "Arrows (20)" to ONE arrow). Applying "20 arrows" literally would give qty 20 (400 arrows, 20 lb). `catalog.choices.pack_units(item, count)` converts a counted phrase of a packed item to pack units (rounds up, never below 1) and `pack_quantities` drops quantities that become 1; so the Fighter's, Rogue's, Cleric's, Sorcerer's and Warlock's ammunition bundles stay qty 1. The same rule fixes the Ranger's FIXED arrows (`_fixed_equipment`), which were granted with qty 20 under mixed / 2014 (an existing defect of the same family, outside the strict "bundle" wording; deviation noted in the report).
+
+**Engine.** `resolve._equipment_choice_templates` sets `keep_counts` on every envelope in every ruleset (it was set only on the 2024 ones; 2024 output is identical), then runs `pack_quantities` over the option quantities. `choices.build_choice_options` gives a single counted option `quantities` and the label "Nx Name" like the expanded path already did ("2x Handaxe", was "Handaxe"). Option ids and card ids are unchanged (quantities were never part of an id), so stored picks survive. `_chosen_equipment` already reads `quantities` (C9b). Result: Barbarian / Fighter "two handaxes" qty 2 (+4 lb), Paladin five javelins qty 5 (+10 lb), Ranger two shortswords qty 2 (+4 lb), the Ranger's fixed arrow qty 1 (was 20, -19 lb), backgrounds as above. No new output key (`ChoiceOption.quantities?` exists), so `types.ts`, `export_fields.py` and the frontend are untouched.
+
+**Deliberate test changes.** `test_class_equipment_2024.py::test_mixed_and_2014_keep_the_srd_packages_with_qty_one` (renamed `..._with_the_text_counts`): asserted that no mixed option has `quantities`; it now asserts exactly one, the Fighter "two handaxes" (`{"handaxe": 2}`), no ammunition quantity and no `keep_counts` in the data. `test_background_equipment_2024.py::test_mixed_and_2014_keep_the_old_envelope_with_qty_one` (renamed `..._with_the_text_counts`): Acolyte XPHB under mixed now has `quantities {"parchment-one-sheet": 10}` and 10 parchment in the inventory (was 1). `test_worn_wielded.py` pre-G2 baseline test: besides the RPX2 pack weights, `carried` may differ by exactly the quantity deltas times the item weights, and the touched `quantities` / `qty` / "Nx " label fields are neutralised on both sides; everything else must be identical. New: `tests/test_srd_bundle_quantities.py` (44; 23 failed before the engine change) and `test_rpx3_cases_hold_the_text_counts_and_no_ammunition_stack` in the golden module.
+
+**Golden rebaseline `RPX3`** (`REBASELINES["RPX3"]`; cases `*/src-*/barbarian*`, `fighter*`, `paladin*`, `ranger*`, `feats-mixed-fighter14`, `psi-warrior11`, `totem-bear6`, `multi-barbarian3-monk2`; paths written from the rule matrix: the four cards' option `label` / `quantities`, `sheet.equipment.(granted|chosen)[n].qty`, `carryingCapacity.(carried|overCapacity)`). Printed summary of the real run (the dry run printed the same, no WARNING lines):
+
+```
+rebaseline RPX3 (SRD bundle quantities from the equipment text (Extra 3))
+  matching cases changed: 77 of 237
+     96 changed path(s) match ^result\.choices\[class:(barbarian:1:equipment-choice-1|fighter:1:equipment-choice-2|paladin:1:equipment-choice-1|ranger:1:equipment-choice-1)\]\.options\[(handaxe|javelin|shortsword)\]\.(label|quantities)
+     74 changed path(s) match ^result\.sheet\.equipment\.(granted|chosen)\[\d+\]\.qty$
+     58 changed path(s) match ^result\.derived\.carryingCapacity\.(carried|overCapacity)$
+wrote 237 cases, 882146 bytes
+```
+
+VERIFIED by diffing the gz before (copy taken before the run) and after with `_norm` / `diff_paths`: exactly these 77 cases moved (the 22 case-name families listed by the patterns, each in the 2014 / mixed x all-sources / SRD-only variants where it exists), every path matches the allowlist, no other case moved (`multi-wizard1-fighter1`, whose Fighter is secondary, is byte-identical). The append-only tuple is now `("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3")`.
+
+**Timing** (`resolve()`, mean of 20, ms): Fighter 20 mixed 4.5 / 2014 2.7 / 2024 2.3; Wizard 20 mixed 3.5 / 2014 2.7 / 2024 6.1 (limit 50).
+
+**Totals.** Server suite 4688 -> 4733 passed, root suite 405 passed / 8 skipped; frontend untouched, no `npm run build`.

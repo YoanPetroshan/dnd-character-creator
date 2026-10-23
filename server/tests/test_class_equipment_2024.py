@@ -403,10 +403,14 @@ def test_carried_quantity_reaches_the_inventory_weight(catalog):
 
 @needs_data
 @pytest.mark.parametrize("ruleset", ["mixed", "2014"])
-def test_mixed_and_2014_keep_the_srd_packages_with_qty_one(catalog, ruleset):
+def test_mixed_and_2014_keep_the_srd_packages_with_the_text_counts(catalog, ruleset):
     res = resolve(_draft("fighter", ruleset=ruleset), catalog)
     card = _card(res, "class:fighter:1:equipment-choice-0")
-    assert card is not None and not any("quantities" in o for c in res["choices"] for o in c["options"])
+    assert card is not None
+    # RPX3: the SRD envelopes carry the counts of the text under mixed / 2014 too (Fighter: two handaxes); the
+    # ammunition packs ("20 arrows") stay one unit and the SRD data itself carries no keep_counts flag.
+    quantified = {(c["id"], o["id"]): o["quantities"] for c in res["choices"] for o in c["options"] if "quantities" in o}
+    assert quantified == {("class:fighter:1:equipment-choice-2", "handaxe"): {"handaxe": 2}}
     assert _card(res, "class:fighter:1:equipment-choice-3") is not None  # the four SRD Fighter envelopes
     srd = catalog.classes["fighter"]["starting_equipment_options"]
     assert all("keep_counts" not in e for e in srd)
