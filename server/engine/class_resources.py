@@ -602,6 +602,22 @@ def _subclass_tail_2024(ctx: Ctx, rc: dict, resources: list[dict]) -> list[dict]
     return out
 
 
+def _subclass_pick_notes_2024(ctx: Ctx, rc: dict) -> list[dict]:
+    """RP12: the number that rides on a 2024 subclass proficiency pick (Fey Wanderer's Otherworldly Glamour: the
+    Wisdom bonus to Charisma checks), as a note-only subclass resource (`SUBCLASS_PICKS_2024[*]["note"]`). Ruleset
+    "2024" only and only for the selected subclass; needs the XPHB feature record at or below the class level."""
+    sub_id = rc.get("subclass_id")
+    if ctx.ruleset != "2024" or not sub_id:
+        return []
+    out = []
+    for spec in reference_data.SUBCLASS_PICKS_2024:
+        first = _feature_level(ctx, spec["feature"])
+        if "note" not in spec or spec["subclass"] != sub_id or spec["class"] != rc["cls_id"] or first is None or rc["level"] < first:
+            continue
+        out.append(_resource(rc, spec["label"], kind="subclass", details={"note": _render_note(ctx, rc, spec)}))
+    return out
+
+
 def _signature_spells(ctx: Ctx, rc: dict) -> list[dict]:
     """Wizard 20 Signature Spells: one cast per picked spell per Short or Long Rest; nothing while unpicked."""
     sig = reference_data.SIGNATURE_SPELLS_2024
@@ -745,6 +761,7 @@ def resources_for(catalog, resolved_classes: list[dict], modifiers: dict, prof_b
         sub = sub_builder(ctx, rc) if sub_builder else []
         out += mine + sub
         out += _subclass_tail_2024(ctx, rc, mine + sub)  # RP11: 2024 only, after the class and R6 entries
+        out += _subclass_pick_notes_2024(ctx, rc)  # RP12: 2024 only
     # G1: the 2024 Multiclassing chapter has no merge rule and every class text
     # says "this class's Channel Divinity", so 2024 keeps separate per-class pools.
     return out if ruleset == "2024" else _merge_channel_divinity(out)

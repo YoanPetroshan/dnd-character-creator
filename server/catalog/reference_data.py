@@ -485,7 +485,7 @@ SRD_TRAIT_EFFECTS: dict[str, dict] = {
 
 # Fixed proficiency grants of a subclass (the SRD feature text is prose only).
 # Only subclasses whose grant is a fixed list belong here; Lore Bard's three
-# free skills are a choice and are not modelled.
+# free skills are a choice (RP12: SUBCLASS_PICKS_2024, ruleset 2024).
 SUBCLASS_PROFICIENCIES: dict[str, list[str]] = {
     "life": ["heavy-armor"],  # Life Domain: Bonus Proficiency
     # Slice 11b.5, read off the imported feature text (fixed lists only; skill
@@ -1834,6 +1834,40 @@ CLASS_LANGUAGES_2024: dict[str, dict] = {
 PRIMAL_KNOWLEDGE_2024: dict[str, object] = {
     "feature": "xphb-barbarian-3-primal-knowledge", "class": "barbarian", "level": 3,
 }
+
+
+# RP12 (F1, E13): subclass proficiency picks, ruleset "2024" only. Each entry names the XPHB subclass feature record
+# (its own `level` is the first level of the card; the class and subclass come from the record too) and what is
+# picked. `kind`: "skills" (`pool`: "any" = the 18 skills, "class-level-1:<class>" = the skills of that class's 2024
+# level 1 list, or an explicit skill-id tuple), "tool" (`pool`: "artisans-tools"), "save" (`fixed` = the saving throw
+# the feature grants outright, `alternatives` = the saves offered instead when `fixed` is already proficient at the
+# card's position). `cid`: "feature" -> `class:<cls>:<lvl>:feature:<fid>`, "tool-choice" ->
+# `class:<cls>:<lvl>:tool-choice:<fid>` (a feature with two picks needs two cids; both attach to the feature's
+# sheet row). `quote` is a verbatim sentence of the record (pinned by tests); `note` (+ `quote`) becomes a note-only
+# class resource of the subclass.
+SUBCLASS_PICKS_2024: tuple[dict, ...] = (
+    {"subclass": "lore-xphb", "class": "bard", "feature": "lore-xphb-3-bonus-proficiencies",
+     "kind": "skills", "pool": "any", "count": 3, "cid": "feature", "label": "Bonus Proficiencies",
+     "quote": "You gain proficiency with three skills of your choice."},
+    {"subclass": "battle-master-xphb", "class": "fighter", "feature": "battle-master-xphb-3-student-of-war",
+     "kind": "tool", "pool": "artisans-tools", "count": 1, "cid": "tool-choice",
+     "label": "Student of War: Artisan's Tools",
+     "quote": "You gain proficiency with one type of Artisan's Tools of your choice"},
+    {"subclass": "battle-master-xphb", "class": "fighter", "feature": "battle-master-xphb-3-student-of-war",
+     "kind": "skills", "pool": "class-level-1:fighter", "count": 1, "cid": "feature",
+     "label": "Student of War: Skill",
+     "quote": "one skill of your choice from the skills available to Fighters at level 1"},
+    {"subclass": "fey-wanderer-xphb", "class": "ranger", "feature": "fey-wanderer-xphb-3-otherworldly-glamour",
+     "kind": "skills", "pool": ("skill-deception", "skill-performance", "skill-persuasion"), "count": 1,
+     "cid": "feature", "label": "Otherworldly Glamour",
+     "quote": "You also gain proficiency in one of these skills of your choice: Deception, Performance, or Persuasion.",
+     "note": "Whenever you make a Charisma check, add +{wis_min1} (your Wisdom modifier, minimum +1)",
+     "note_quote": "Whenever you make a Charisma check, you gain a bonus to the check equal to your Wisdom modifier (minimum of +1)."},
+    {"subclass": "gloom-stalker-xphb", "class": "ranger", "feature": "gloom-stalker-xphb-7-iron-mind",
+     "kind": "save", "fixed": "WIS", "alternatives": ("INT", "CHA"), "count": 1, "cid": "feature",
+     "label": "Iron Mind",
+     "quote": "If you already have this proficiency, you instead gain proficiency in Intelligence or Charisma saving throws (your choice)."},
+)
 
 
 # C6d: XPHB Wizard spell picks that are "always prepared" (ruleset 2024 only), keyed by the choice-id

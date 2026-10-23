@@ -11,7 +11,7 @@ import re
 from catalog.reference_data import (
     FEAT_LANGUAGE_REPLACEMENT,
     CLASS_LANGUAGES_2024, CLASS_OPTION_CHOICES_2024, EXPERTISE_2024, INVOCATION_EFFECTS, INVOCATION_EFFECTS_2024, LANGUAGES_2024_RARE, LANGUAGES_2024_STANDARD, PRIMAL_KNOWLEDGE_2024,
-    SKILL_NAMES, SRD_CARDS_REPLACED_2024,
+    SKILL_NAMES, SRD_CARDS_REPLACED_2024, SUBCLASS_PICKS_2024, TOOLS,
 )
 
 
@@ -356,6 +356,20 @@ def is_primal_knowledge_card(c: dict) -> bool:
     return c["id"] == primal_knowledge_cid() and c["source"]["kind"] == "class"
 
 
+def _level_1_skills(cls_record: dict | None) -> list[str]:
+    """The skills of a class record's first skill proficiency choice (the 2024 chassis record lists its level 1
+    skills there)."""
+    skills: list[str] = []
+    for choice in (cls_record or {}).get("proficiency_choices") or []:
+        for opt in (choice.get("from") or {}).get("options", []):
+            idx = (opt.get("item") or {}).get("index", "")
+            if idx in SKILL_NAMES and idx not in skills:
+                skills.append(idx)
+        if skills:
+            break
+    return skills
+
+
 def primal_knowledge_templates(catalog, rc: dict, ruleset: str) -> list[dict]:
     """Barbarian level 3+ (ruleset 2024): one skill from the Barbarian level 1 skill list, taken
     from the 2024 chassis record. No card without the XPHB feature or the chassis overlay."""
@@ -365,14 +379,7 @@ def primal_knowledge_templates(catalog, rc: dict, ruleset: str) -> list[dict]:
     barbarian = (getattr(catalog, "classes_2024", None) or {}).get("barbarian")
     if not feature or not barbarian or rc["level"] < PRIMAL_KNOWLEDGE_2024["level"]:
         return []
-    skills: list[str] = []
-    for choice in barbarian.get("proficiency_choices") or []:
-        for opt in (choice.get("from") or {}).get("options", []):
-            idx = (opt.get("item") or {}).get("index", "")
-            if idx in SKILL_NAMES and idx not in skills:
-                skills.append(idx)
-        if skills:
-            break
+    skills = _level_1_skills(barbarian)
     if not skills:
         return []
     return [{
@@ -402,30 +409,44 @@ def card_position(c: dict, class_order) -> tuple[int, int] | None:
     return (order.index(m.group(1)) if m.group(1) in order else len(order), int(m.group(2)))
 
 
-def gate_after_primal_knowledge(choices: list[dict], class_order, skill: str | None) -> list[dict]:
-    """F3a-4: skill proficiency picks that come AFTER Barbarian 3 see Primal Knowledge's skill as already
-    proficient: the option is disabled and a stored pick of it is dropped (the later pick is the duplicate).
+_MULTICLASS_PROF_CID_RE = re.compile(r"^class:([^:]+):multiclass-prof-choice-\d+$")
+
+
+def proficiency_position(c: dict, class_order) -> tuple[int, int] | None:
+    """`card_position`, plus RP12: a multiclass proficiency card (`class:<cls>:multiclass-prof-choice-N`, no level in
+    its cid) is gained when the class is entered, so it sits at (class position, 1)."""
+    m = _MULTICLASS_PROF_CID_RE.match(c["id"]) if c["source"]["kind"] == "class" else None
+    if m:
+        order = list(class_order)
+        return (order.index(m.group(1)) if m.group(1) in order else len(order), 1)
+    return card_position(c, class_order)
+
+
+def gate_after_positioned_pick(choices: list[dict], class_order, pos: tuple[int, int], granted: set[str],
+                               source_name: str) -> list[dict]:
+    """F3a-4, generalised by RP12: proficiency picks (skills and tools) that come AFTER a positioned pick (Primal
+    Knowledge, a subclass pick) see its proficiencies as already held: the option is disabled and a stored pick of
+    it is dropped (the later pick is the duplicate). Positioned cards themselves are walked in order by the caller.
     Returns the pruned entries."""
-    if not skill or PRIMAL_KNOWLEDGE_2024["class"] not in list(class_order):
-        return []
-    pk_pos = (list(class_order).index(PRIMAL_KNOWLEDGE_2024["class"]), PRIMAL_KNOWLEDGE_2024["level"])
     pruned: list[dict] = []
     for i, c in enumerate(choices):
-        if c["source"]["kind"] not in ("class", "feat") or is_primal_knowledge_card(c):
+        if c["source"]["kind"] not in ("class", "feat") or is_positioned_proficiency_card(c):
             continue
         if c.get("profOrExpertise"):  # FE6: Keen Mind / Observant turn an already proficient skill into Expertise
             continue
-        if not ("proficiency-choice" in c["id"] or ":prof-choice-" in c["id"]) or "expertise-choice" in c["id"]:
+        if not ("proficiency-choice" in c["id"] or "prof-choice-" in c["id"]) or "expertise-choice" in c["id"]:
             continue
-        pos = card_position(c, class_order)
-        if pos is None or pos <= pk_pos or not any(o["id"] == skill for o in c["options"]):
+        here = proficiency_position(c, class_order)
+        hit = [o["id"] for o in c["options"] if o["id"] in granted]
+        if here is None or here <= pos or not hit:
             continue
-        options = [o if o["id"] != skill or o.get("disabled") else {**o, "disabled": True, "disabledReason": "already proficient"}
+        options = [o if o["id"] not in granted or o.get("disabled") else {**o, "disabled": True, "disabledReason": "already proficient"}
                    for o in c["options"]]
-        kept = [s for s in c["selected"] if s != skill]
+        kept = [s for s in c["selected"] if s not in granted]
         if len(kept) != len(c["selected"]):
-            name = next((o.get("label", skill) for o in c["options"] if o["id"] == skill), skill)
-            pruned.append({"choiceId": c["id"], "reason": f"'{c['label']}': {name} is already proficient (Primal Knowledge); the selection was ignored."})
+            labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
+            names = ", ".join(labels.get(s, s) for s in c["selected"] if s in granted)
+            pruned.append({"choiceId": c["id"], "reason": f"'{c['label']}': {names} is already proficient ({source_name}); the selection was ignored."})
         choices[i] = {**c, "options": options, "selected": kept, "status": "resolved" if len(kept) == c["count"] else "pending"}
     return pruned
 
@@ -453,6 +474,104 @@ def gate_primal_knowledge(choices: list[dict], proficient_skills: set[str]) -> l
                            "reason": f"'{c['label']}': {names} is already a proficient skill; the selection was ignored."})
         choices[i] = {**c, "options": options, "selected": kept,
                       "status": "resolved" if len(kept) == c["count"] else "pending"}
+    return pruned
+
+
+# ---- RP12: subclass proficiency picks (Lore, Student of War, Otherworldly Glamour, Iron Mind) -------------------------
+
+_PICK_CID_RE = re.compile(r"^class:([^:]+):\d+:(feature|tool-choice):(.+)$")
+_SAVE_NAMES = {"STR": "Strength", "DEX": "Dexterity", "CON": "Constitution", "INT": "Intelligence", "WIS": "Wisdom", "CHA": "Charisma"}
+
+
+def pick_spec_for_card(c: dict) -> dict | None:
+    """The `SUBCLASS_PICKS_2024` entry a class card was built from (matched on class, cid kind and feature id), or None."""
+    if c["source"]["kind"] != "class":
+        return None
+    m = _PICK_CID_RE.match(c["id"])
+    if not m:
+        return None
+    return next((spec for spec in SUBCLASS_PICKS_2024
+                 if spec["class"] == m.group(1) and spec["cid"] == m.group(2) and spec["feature"] == m.group(3)), None)
+
+
+def is_positioned_proficiency_card(c: dict) -> bool:
+    """The skill / tool picks whose position in the build matters: Primal Knowledge (C6b-2) and the RP12 subclass
+    skill and tool picks. They are walked in (class order, class level) order and see everything gained before them;
+    later cards see them. (The Iron Mind save pick is gated separately, against saving throws.)"""
+    if is_primal_knowledge_card(c):
+        return True
+    spec = pick_spec_for_card(c)
+    return spec is not None and spec["kind"] in ("skills", "tool")
+
+
+def is_save_pick_card(c: dict) -> bool:
+    spec = pick_spec_for_card(c)
+    return spec is not None and spec["kind"] == "save"
+
+
+def _pick_options(catalog, spec: dict) -> list[dict]:
+    kind = spec["kind"]
+    if kind == "tool":
+        return [{"id": t["index"], "label": t["name"]} for t in TOOLS if t["category"] == "Artisan's Tools"]
+    if kind == "save":
+        return [{"id": a.lower(), "label": _SAVE_NAMES[a]} for a in spec["alternatives"]]
+    pool = spec["pool"]
+    if pool == "any":
+        skills = list(SKILL_NAMES)
+    elif isinstance(pool, tuple):
+        skills = list(pool)
+    else:  # "class-level-1:<class id>"
+        skills = _level_1_skills((getattr(catalog, "classes_2024", None) or {}).get(pool.split(":", 1)[1]))
+    return [{"id": sk, "label": SKILL_NAMES[sk]} for sk in skills]
+
+
+def subclass_pick_templates(catalog, rc: dict, ruleset: str) -> list[dict]:
+    """RP12: the proficiency pick cards of the class's selected XPHB subclass (`SUBCLASS_PICKS_2024`), ruleset 2024
+    only. A card needs its XPHB feature record and the class level at that record's level, so an SRD-only catalog,
+    a missing subclass or a 2014 twin gives nothing. The Iron Mind card is always built here; resolve() removes it
+    when the Wisdom save is not yet proficient at its position (the feature then grants Wisdom outright)."""
+    sub_id, cls_id = rc.get("subclass_id"), rc.get("cls_id")
+    if ruleset != "2024" or not sub_id or not rc.get("cls"):
+        return []
+    out = []
+    for spec in SUBCLASS_PICKS_2024:
+        if spec["subclass"] != sub_id or spec["class"] != cls_id:
+            continue
+        feature = catalog.features.get(spec["feature"])
+        if not feature or rc["level"] < (feature.get("level") or 1):
+            continue
+        options = _pick_options(catalog, spec)
+        if not options:
+            continue
+        level = feature.get("level") or 1
+        out.append({
+            "id": f"class:{cls_id}:{level}:{spec['cid']}:{spec['feature']}",
+            "source": {"kind": "class", "id": cls_id, "label": rc["cls"]["name"], "level": level},
+            "label": spec["label"],
+            "description": _join(feature.get("desc")),
+            "count": spec["count"],
+            "options": options,
+        })
+    return out
+
+
+def gate_positioned_card(choices: list[dict], card_id: str, prior: set[str]) -> list[dict]:
+    """RP12: the generic form of `gate_primal_knowledge` for a positioned pick (skills, tools or saves): options in
+    `prior` (everything gained at or before the card's position) are disabled "already proficient" and stored picks
+    of them are dropped with a `pruned` entry. Returns the pruned entries."""
+    pruned: list[dict] = []
+    for i, c in enumerate(choices):
+        if c["id"] != card_id:
+            continue
+        options = [o if o.get("disabled") or o["id"] not in prior
+                   else {**o, "disabled": True, "disabledReason": "already proficient"} for o in c["options"]]
+        kept = [s for s in c["selected"] if s not in prior]
+        dropped = [s for s in c["selected"] if s in prior]
+        if dropped:
+            labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
+            names = ", ".join(labels.get(d, d) for d in dropped)
+            pruned.append({"choiceId": c["id"], "reason": f"'{c['label']}': {names} is already proficient; the selection was ignored."})
+        choices[i] = {**c, "options": options, "selected": kept, "status": "resolved" if len(kept) == c["count"] else "pending"}
     return pruned
 
 
@@ -1160,7 +1279,9 @@ _NEW_2024_CARD_RE = re.compile(
 
 
 def is_new_2024_class_card(c: dict) -> bool:
-    return c["source"]["kind"] == "class" and bool(_NEW_2024_CARD_RE.match(c["id"]) or c["id"].startswith(DEPENDENT_PREFIX))
+    return c["source"]["kind"] == "class" and bool(
+        _NEW_2024_CARD_RE.match(c["id"]) or c["id"].startswith(DEPENDENT_PREFIX)
+        or pick_spec_for_card(c) is not None)  # RP12: subclass proficiency picks
 
 
 def mark_unavailable(choices: list[dict], ruleset: str) -> list[dict]:

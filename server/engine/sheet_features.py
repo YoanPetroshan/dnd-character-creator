@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import re
 
-_CLASS_CHOICE_ID = re.compile(r"^class:([^:]+):\d+:(?:feature|expertise-choice|enemy-type|terrain-type|invocations|languages):(.+)$")
+_CLASS_CHOICE_ID = re.compile(r"^class:([^:]+):\d+:(?:feature|tool-choice|expertise-choice|enemy-type|terrain-type|invocations|languages):(.+)$")
 
 
 def _labels(choice: dict) -> list[str]:

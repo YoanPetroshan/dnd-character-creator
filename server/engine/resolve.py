@@ -2163,6 +2163,145 @@ def _prof_or_expertise_priors(choices: list[dict], resolved_feats: list[dict], f
     return priors
 
 
+def _proficiency_grants(choices: list[dict], catalog: Catalog, resolved_classes: list[dict], resolved_feats: list[dict],
+                        bg: dict | None, race: dict | None, subrace: dict | None, xphb_effects, class_order: list[str],
+                        ) -> list[tuple[tuple[int, int], str]]:
+    """RP12: the FIXED skill / tool proficiency grants of the build as (position, proficiency id): origin sources
+    (background, species traits, origin feats) at (-1, 0); a class's fixed proficiencies at (class position, 1); a
+    subclass's fixed grants (`SUBCLASS_PROFICIENCIES`) at (class position, 3) (every 2024 subclass starts at 3);
+    ASI and Lessons feats at their build position; the RP2 XPHB effects (Mercy) at their feature record's level."""
+    origin = (-1, 0)
+    grants: list[tuple[tuple[int, int], str]] = []
+    if bg:
+        grants += [(origin, p["index"]) for p in bg.get("starting_proficiencies", [])]
+    if race:
+        for ref in list(race.get("traits", [])) + (list(subrace.get("racial_traits", [])) if subrace else []):
+            trait = catalog.traits.get(ref["index"])
+            if trait:
+                grants += [(origin, p["index"]) for p in trait.get("proficiencies", [])]
+    for f in resolved_feats:
+        pos = _feat_build_position(f, class_order) or origin
+        grants += [(pos, p) for p in _feat_proficiency_ids([f])]
+    for rc in resolved_classes:
+        if not rc["cls"] or rc["cls_id"] not in class_order:
+            continue
+        at = class_order.index(rc["cls_id"])
+        fixed = rc["cls"].get("proficiencies", []) if at == 0 else rc["cls"].get("multi_classing", {}).get("proficiencies", [])
+        grants += [((at, 1), p["index"]) for p in fixed]
+        grants += [((at, 3), p) for p in SUBCLASS_PROFICIENCIES.get(rc["subclass_id"], [])]
+    for cls_id, _lvl, effect in xphb_effects:
+        if cls_id in class_order:
+            level = (catalog.features.get(effect.get("feature_id")) or {}).get("level") or 1
+            grants += [((class_order.index(cls_id), level), p)
+                       for p in list(effect.get("skills") or []) + list(effect.get("proficiencies") or [])]
+    return grants
+
+
+def _gate_positioned_proficiencies(choices: list[dict], catalog: Catalog, resolved_classes: list[dict],
+                                   resolved_feats: list[dict], bg: dict | None, race: dict | None,
+                                   subrace: dict | None, xphb_effects, class_order: list[str]) -> list[dict]:
+    """C6b-2 + F3a-4, generalised by RP12 into "positioned proficiency picks": Primal Knowledge and the subclass skill
+    / tool picks (Lore, Student of War, Otherworldly Glamour). They are walked in (class order, class level) order.
+    Each pick sees everything gained at or before its position (fixed grants, other cards, ASI feats, earlier
+    positioned picks): such options are disabled "already proficient" and a stored duplicate is dropped with a
+    `pruned` entry. The picks that come later then see its choice the same way
+    (`class_choices_2024.gate_after_positioned_pick`). A grant that comes later never converts a pick. Mutates
+    `choices`; returns the pruned entries."""
+    cards = [c for c in choices if class_choices_2024.is_positioned_proficiency_card(c)]
+    if not cards:
+        return []
+    last = (len(class_order) + 1, 0)
+    grants = _proficiency_grants(choices, catalog, resolved_classes, resolved_feats, bg, race, subrace, xphb_effects, class_order)
+    pruned: list[dict] = []
+    held: set[str] = set()  # the (kept) picks of the positioned cards walked so far
+    for card in sorted(cards, key=lambda c: (class_choices_2024.proficiency_position(c, class_order) or last, c["id"])):
+        pos = class_choices_2024.proficiency_position(card, class_order) or last
+        prior = {pid for at, pid in grants if at <= pos} | held
+        for c in choices:
+            if (c["source"]["kind"] not in ("class", "species", "background", "feat") or "expertise-choice" in c["id"]
+                    or class_choices_2024.is_positioned_proficiency_card(c)):
+                continue
+            at = class_choices_2024.proficiency_position(c, class_order)
+            if at is None or at > pos:
+                continue
+            is_prof_card = "prof-choice-" in c["id"] or "proficiency-choice" in c["id"]
+            prior.update(s for s in c["selected"] if s.startswith("skill-") or is_prof_card)
+        if class_choices_2024.is_primal_knowledge_card(card):
+            pruned += class_choices_2024.gate_primal_knowledge(choices, prior)
+            name = "Primal Knowledge"
+        else:
+            pruned += class_choices_2024.gate_positioned_card(choices, card["id"], prior)
+            name = catalog.features[class_choices_2024.pick_spec_for_card(card)["feature"]]["name"]
+        picked = set(next(c for c in choices if c["id"] == card["id"])["selected"])
+        held |= picked
+        if picked:
+            pruned += class_choices_2024.gate_after_positioned_pick(choices, class_order, pos, picked, name)
+    return pruned
+
+
+def _save_grant_positions(catalog: Catalog, resolved_feats: list[dict], choices: list[dict], class_feature_list,
+                          xphb_effects, ruleset: str, class_order: list[str], class_saves: list[str],
+                          ) -> list[tuple[tuple[int, int], str]]:
+    """RP12: every saving throw proficiency of the build as (position, ability): the first class's saves at (0, 1),
+    origin / ASI feats and Resilient-style `save-choice` cards at their position, class features (Diamond Soul,
+    Slippery Mind ...) at their feature record's level."""
+    origin = (-1, 0)
+    out = [((0, 1), ab) for ab in class_saves]
+    for f in resolved_feats:
+        out += [(_feat_build_position(f, class_order) or origin, ab) for ab in f.get("saving_throw_proficiencies", [])]
+    for c in choices:
+        if c["source"]["kind"] == "feat" and ":save-choice-" in c["id"]:
+            pos = class_choices_2024.proficiency_position(c, class_order) or origin
+            out += [(pos, a.upper()) for a in c["selected"]]
+    for cls_id, lvl, idx in class_feature_list:
+        if cls_id not in class_order:
+            continue
+        granted = features_mod.save_proficiencies(features_mod.active_effects([(cls_id, lvl, idx)]), [idx], ruleset)
+        level = (catalog.features.get(idx) or {}).get("level") or lvl
+        out += [((class_order.index(cls_id), level), ab) for ab in granted]
+    for cls_id, _lvl, effect in xphb_effects:
+        if cls_id in class_order and effect.get("save_proficiency"):
+            level = (catalog.features.get(effect.get("feature_id")) or {}).get("level") or 1
+            grant = effect["save_proficiency"]
+            out += [((class_order.index(cls_id), level), ab) for ab in (ABILITIES if grant == "all" else grant)]
+    return out
+
+
+def _gate_save_picks(choices: list[dict], catalog: Catalog, resolved_classes: list[dict], resolved_feats: list[dict],
+                     class_feature_list, xphb_effects, ruleset: str, class_saves: list[str],
+                     proficient_save_abilities: list[str]) -> list[dict]:
+    """RP12 Gloom Stalker 7 Iron Mind: "You gain proficiency in Wisdom saving throws. If you already have this
+    proficiency, you instead gain proficiency in Intelligence or Charisma saving throws (your choice)." "Already" =
+    gained at or before the card's position (class order, class level). Without it the card is removed and Wisdom is
+    added outright (a stored pick is reported); with it the card stays, the saves already held are disabled and the
+    pick is added to `proficient_save_abilities` (mutated). Returns the pruned entries."""
+    cards = [c for c in choices if class_choices_2024.is_save_pick_card(c)]
+    if not cards:
+        return []
+    class_order = [rc["cls_id"] for rc in resolved_classes if rc["cls"]]
+    grants = _save_grant_positions(catalog, resolved_feats, choices, class_feature_list, xphb_effects, ruleset,
+                                   class_order, class_saves)
+    pruned: list[dict] = []
+    for card in cards:
+        spec = class_choices_2024.pick_spec_for_card(card)
+        pos = class_choices_2024.proficiency_position(card, class_order)
+        prior = {ab for at, ab in grants if at <= pos}
+        if spec["fixed"] not in prior:
+            choices[:] = [c for c in choices if c["id"] != card["id"]]
+            if card["selected"]:
+                pruned.append({"choiceId": card["id"], "reason": (
+                    f"'{card['label']}': the Wisdom saving throw is not proficient yet, so Iron Mind grants it "
+                    f"outright and the stored selection was ignored.")})
+            if spec["fixed"] not in proficient_save_abilities:
+                proficient_save_abilities.append(spec["fixed"])
+            continue
+        pruned += class_choices_2024.gate_positioned_card(choices, card["id"], {ab.lower() for ab in prior})
+        for sel in next(c for c in choices if c["id"] == card["id"])["selected"]:
+            if sel.upper() not in proficient_save_abilities:
+                proficient_save_abilities.append(sel.upper())
+    return pruned
+
+
 def _gate_expertise_choices(
     choices: list[dict], proficient_skills: set[str], fixed_expertise=(), class_order: list[str] = (),
     ruleset: str = "mixed", poe_priors: dict[str, set[str]] | None = None,
@@ -5012,6 +5151,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choice_templates += class_choices_2024.expertise_templates(catalog, rc, ruleset)  # C6b-1
         choice_templates += class_choices_2024.language_templates(catalog, rc, ruleset)  # C6b-2
         choice_templates += class_choices_2024.primal_knowledge_templates(catalog, rc, ruleset)  # C6b-2
+        choice_templates += class_choices_2024.subclass_pick_templates(catalog, rc, ruleset)  # RP12
         choice_templates += class_choices_2024.metamagic_templates(catalog, rc, ruleset)  # C6c-1
         choice_templates += class_choices_2024.invocation_templates(catalog, rc, ruleset)  # C7a
         for tpl in choice_templates:  # G1: SRD style options already held (feat or earlier SRD style)
@@ -5621,7 +5761,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         # Expertise picks are not proficiency grants (they must already be
         # proficient), so they never feed this set.
         if (c["source"]["kind"] in ("class", "species", "background", "feat") and "expertise-choice" not in c["id"]
-                and not class_choices_2024.is_primal_knowledge_card(c)):  # C6b-2: gated against the others below
+                and not class_choices_2024.is_positioned_proficiency_card(c)):  # C6b-2 / RP12: gated against the others below
             proficient_skills.update(s for s in c["selected"] if s.startswith("skill-"))
     fixed_origin_skills: set[str] = set()  # F3a-4: grants that predate every class level
     if bg:
@@ -5644,28 +5784,14 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     proficient_skills.update(p for p in feat_proficiency_ids if p.startswith("skill-"))
     fixed_origin_skills.update(p for f in resolved_feats if not f.get("_asi_cid")
                                for p in _feat_proficiency_ids([f]) if p.startswith("skill-"))
-    # C6b-2 + F3a-4: Primal Knowledge (Barbarian 3) yields only to proficiencies gained at or before it; the skill
-    # picks that come later see its skill as already proficient instead.
+    # C6b-2 + F3a-4 + RP12: the positioned picks (Primal Knowledge, the subclass skill / tool picks) yield only to
+    # proficiencies gained at or before them; the picks that come later see theirs as already proficient instead.
     pk_class_order = [rc["cls_id"] for rc in resolved_classes if rc["cls"]]
-    pk_pos = (pk_class_order.index("barbarian"), 3) if "barbarian" in pk_class_order else None
-    proficient_before_pk = proficient_skills
-    if pk_pos is not None:
-        proficient_before_pk = set(fixed_origin_skills)  # background + species + (origin) feat grants
-        for c in choices:
-            pos = class_choices_2024.card_position(c, pk_class_order)
-            if (c["source"]["kind"] in ("class", "species", "background", "feat") and "expertise-choice" not in c["id"]
-                    and not class_choices_2024.is_primal_knowledge_card(c) and pos is not None and pos <= pk_pos):
-                proficient_before_pk.update(s for s in c["selected"] if s.startswith("skill-"))
-        for f in resolved_feats:  # ASI feats sit at their ASI level
-            if f.get("_asi_cid") and (class_choices_2024.card_position(
-                    {"id": f["_asi_cid"], "source": {"kind": "class"}}, pk_class_order) or (99, 0)) <= pk_pos:
-                proficient_before_pk.update(p for p in _feat_proficiency_ids([f]) if p.startswith("skill-"))
-    pruned += class_choices_2024.gate_primal_knowledge(choices, proficient_before_pk)  # C6b-2
+    pruned += _gate_positioned_proficiencies(
+        choices, catalog, resolved_classes, resolved_feats, bg, race, subrace, xphb_effects, pk_class_order)
     for c in choices:
-        if class_choices_2024.is_primal_knowledge_card(c):
+        if class_choices_2024.is_positioned_proficiency_card(c):
             proficient_skills.update(s for s in c["selected"] if s.startswith("skill-"))
-            if pk_pos is not None and c["selected"]:
-                pruned += class_choices_2024.gate_after_primal_knowledge(choices, pk_class_order, c["selected"][0])
 
     proficient_armor: set[str] = set()
     proficient_weapons: set[str] = set()
@@ -5768,8 +5894,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # colon is what actually matches both, confirmed against every cid
     # pattern generated in this file).
     for c in choices:
-        if c["source"]["kind"] == "class" and "prof-choice-" in c["id"]:
-            for s in c["selected"]:
+        if c["source"]["kind"] == "class" and ("prof-choice-" in c["id"] or class_choices_2024.is_positioned_proficiency_card(c)):
+            for s in c["selected"]:  # RP12: Student of War's Artisan's Tools pick is positioned like the Monk's level 1 pick
                 if not s.startswith("skill-"):
                     _categorize_proficiency(s)
         elif c["source"]["kind"] == "species" and "proficiency-choice" in c["id"]:
@@ -5917,6 +6043,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     for ab in features_mod.save_proficiencies(effects, [idx for _, _, idx in class_feature_list], ruleset):
         if ab not in proficient_save_abilities:
             proficient_save_abilities.append(ab)
+    pruned += _gate_save_picks(  # RP12 Iron Mind
+        choices, catalog, resolved_classes, resolved_feats, class_feature_list, xphb_effects, ruleset,
+        [st["index"].upper() for st in (cls.get("saving_throws", []) if cls else [])], proficient_save_abilities)
     saves = derived_mod.saving_throws(modifiers, proficient_save_abilities, prof_bonus)
     aura = features_mod.save_bonus(effects, modifiers)  # R5: Aura of Protection
     if aura:
