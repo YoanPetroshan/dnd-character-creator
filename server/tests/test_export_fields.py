@@ -180,6 +180,7 @@ _EXPECT = {
     "wizard20-2014": {"resources": ["Arcane Recovery", "Signature Spells"], "spellbook": True, "spell_mastery": 2,
                       "signature": 2},  # RP15
     "wizard5-2024": {"resources": ["Arcane Recovery"], "spellbook": True},
+    "bard10-2014": {},  # RP16: SRD Magical Secrets picks (Fireball, Sacred Flame) in the known list
     "psi-warrior11": {"resources": ["Psionic Energy Dice"], "apa": 3},
     "totem-bear6": {"resources": ["Rage"], "feature_choice": "Bear"},
     "cleric1-thaumaturge-2024": {"feature_choice": "Thaumaturge"},
@@ -434,6 +435,7 @@ def test_kitchen_sink_2024_stage_lines_reach_every_export(catalog):
         ("wizard20-2024", ["Майсторство със заклинания", "Burning Hands (ниво 1)", "Scorching Ray (ниво 2)", "Запазени заклинания", "Fireball (ниво 3)", "Scholar"]),
         ("wizard20-2014", ["Майсторство със заклинания", "Shield (ниво 1)", "Web (ниво 2)", "Запазени заклинания",
                            "Fireball (ниво 3)", "Counterspell (ниво 3)"]),  # RP15: the SRD picks under 2014
+        ("bard10-2014", ["Fireball (ниво 3)", "Sacred Flame (ниво 0)"]),  # RP16: Magical Secrets picks in the known list
         ("ranger9-2024", ["Elvish", "Dwarvish", "Deft Explorer"]),
         ("barbarian3-2024", ["Primal Knowledge"]),
         ("fighter4-2024", ["Javelin x8", "Fighting Style"]),

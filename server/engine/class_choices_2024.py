@@ -751,6 +751,8 @@ def dice_at_level(dice_by_level: dict[int, str], level: int) -> str | None:
 # ---- C6d: class spell grants (always prepared, Magical Secrets, Spell Mastery, Signature Spells) ----
 
 MAGICAL_SECRETS_LABEL = "Magical Secrets"
+MAGICAL_SECRETS_2014_FEATURES = ("magical-secrets-1", "magical-secrets-2", "magical-secrets-3")  # SRD Bard 10 / 14 / 18
+MAGICAL_SECRETS_2014_PICKS = 2  # per feature: "Choose two spells from any class"
 
 
 def class_spell_grants(catalog, cls_id: str | None, ruleset: str) -> dict:
@@ -788,10 +790,27 @@ def magical_secrets_filters(catalog, cls_id: str | None, class_level: int, max_s
     return out
 
 
+def magical_secrets_cap_2014(catalog, cls_id: str | None, class_level: int, ruleset: str) -> int:
+    """RP16: how many known spells of the SRD Bard may come from other classes' lists under mixed / 2014. Each
+    Magical Secrets feature reached (`magical-secrets-1/2/3`, Bard 10 / 14 / 18) gives two ("Choose two spells from
+    any class ... You learn two additional spells from any class at 14th level and again at 18th level"). 0 outside
+    the Bard, under 2024 (the XPHB `expanded` grants above) and without the SRD feature records."""
+    if ruleset == "2024" or cls_id != "bard":
+        return 0
+    reached = 0
+    for fid in MAGICAL_SECRETS_2014_FEATURES:
+        feature = catalog.features.get(fid)
+        if feature and (feature.get("class") or {}).get("index") == "bard" and feature.get("level", 99) <= class_level:
+            reached += 1
+    return MAGICAL_SECRETS_2014_PICKS * reached
+
+
 def label_magical_secrets(catalog, templates: list[dict], cls_id: str | None, class_level: int, ruleset: str) -> None:
     """Marks the options of the class's prepared-spells card that are not on its own spell list
-    ("Fireball (Magical Secrets)"). Mutates the templates; no-op without an expanded grant."""
-    if not magical_secrets_filters(catalog, cls_id, class_level, 9, ruleset):
+    ("Fireball (Magical Secrets)"). Mutates the templates; no-op without an expanded grant (2024) or the SRD
+    Magical Secrets feature (mixed / 2014, RP16)."""
+    if not (magical_secrets_filters(catalog, cls_id, class_level, 9, ruleset)
+            or magical_secrets_cap_2014(catalog, cls_id, class_level, ruleset)):
         return
     for tpl in templates:
         if tpl["id"] != f"class:{cls_id}:spells-known":

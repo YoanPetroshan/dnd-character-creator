@@ -3917,6 +3917,45 @@ def _spell_options_up_to(catalog: Catalog, cls_id: str, max_level: int, sources=
     return [{"option_type": "reference", "item": {"index": s["index"], "name": s["name"]}} for s in matches]
 
 
+def _magical_secrets_options(catalog: Catalog, cls_id: str, max_level: int, sources=None, ruleset: str = "mixed", keep=()) -> list[dict]:
+    """RP16 (SRD Bard Magical Secrets): every spell of level 0 .. `max_level` that sits on some class list but not
+    on `cls_id`'s own (the own list is offered anyway; its cantrips live on the Cantrips card). A spell on no class
+    list is not "from any class"."""
+    matches = [
+        s for s in catalog.spells.values()
+        if s["level"] <= max_level and s.get("classes") and not any(c["index"] == cls_id for c in s["classes"])
+        and (s["index"] in keep or _spell_visible(catalog, s, sources, ruleset))
+    ]
+    return [{"option_type": "reference", "item": {"index": s["index"], "name": s["name"]}} for s in matches]
+
+
+def _apply_secrets_cap(catalog: Catalog, tpl: dict, cls_id: str, cap: int, stored) -> None:
+    """RP16: at most `cap` of the known spells may be off the class's own list (2 per Magical Secrets feature
+    reached). Walks the stored picks in order like the generic pass (valid, deduplicated, first `count`); an
+    off-list pick over the cap is disabled, so the generic pass drops it as a non-blocking `pruned` entry and it
+    does not take a count slot. At the cap the other off-list options are disabled. Mutates `tpl`."""
+    def off_list(option_id: str) -> bool:
+        return not any(c["index"] == cls_id for c in (catalog.spells.get(option_id) or {}).get("classes", []))
+
+    reason = f"Magical Secrets: {cap} of {cap} used"
+    valid = {o["id"] for o in tpl["options"] if not o.get("disabled")}
+    stored_ids = [x for x in dict.fromkeys(stored if isinstance(stored, list) else []) if isinstance(x, str) and x in valid]
+    accepted, used, excess = [], 0, []
+    for x in stored_ids:
+        if len(accepted) >= tpl["count"]:
+            break
+        if off_list(x):
+            if used >= cap:
+                excess.append(x)
+                continue
+            used += 1
+        accepted.append(x)
+    for opt in tpl["options"]:
+        if off_list(opt["id"]) and not opt.get("disabled") and (opt["id"] in excess or (used >= cap and opt["id"] not in accepted)):
+            opt["disabled"] = True
+            opt["disabledReason"] = reason
+
+
 def _highest_spell_slot_level(spellcasting: dict) -> int:
     highest = 0
     for n in range(1, 10):
@@ -4069,7 +4108,7 @@ def _spell_choice_templates(
     catalog: Catalog, cls: dict, cls_id: str, level_row: dict | None, ability_modifier: int, class_level: int,
     expanded_spell_ids: list[str] = (), always_prepared: dict[str, str] | None = None,
     sources=None, ruleset: str = "mixed", class_choices: dict | None = None, list_class_id: str | None = None,
-    school_limit: dict | None = None, problems_out: list | None = None,
+    school_limit: dict | None = None, problems_out: list | None = None, secrets_cap: int = 0,
 ) -> list[dict]:
     """`sources`/`ruleset` (the draft's) decide which catalog spells are
     offered; spells already selected in `class_choices` stay offered either
@@ -4080,7 +4119,9 @@ def _spell_choice_templates(
     known-spells card into `school` / `any-school` groups, locks the outside
     options once the stored picks use up the free slots, and appends a
     `subclass-spell-school-limit-<cls>` problem to `problems_out` when the
-    stored picks exceed them."""
+    stored picks exceed them. `secrets_cap` (RP16, SRD Bard Magical Secrets under mixed / 2014, from
+    `class_choices_2024.magical_secrets_cap_2014`) adds the other classes' spells and cantrips to the known-spells
+    card and limits how many of the picks may come from outside the class's own list."""
     if not level_row:
         return []
     spellcasting = level_row.get("spellcasting") or {}
@@ -4156,6 +4197,10 @@ def _spell_choice_templates(
             spell = catalog.spells[sid]
             if sid not in present and 1 <= spell["level"] <= max_spell_level:
                 option_list.append({"option_type": "reference", "item": {"index": sid, "name": spell["name"]}})
+        if secrets_cap and wizard_book is None and list_id == cls_id:  # RP16: SRD Magical Secrets (levels 10 / 14 / 18)
+            option_list += [o for o in _magical_secrets_options(
+                catalog, cls_id, max_spell_level, sources, ruleset, _kept(f"class:{cls_id}:spells-known"))
+                if o["item"]["index"] not in present]
         option_list.sort(key=lambda o: (catalog.spells[o["item"]["index"]]["level"], o["item"]["name"]))
         envelope = {"choose": known_count, "from": {
             "option_set_type": "options_array",
@@ -4170,6 +4215,9 @@ def _spell_choice_templates(
         if wizard_book is not None:
             description = (f"Choose {known_count} {level_word}{'s' if known_count != 1 else ''} to {verb} from your spellbook."
                            if wizard_book else "Choose spells for your spellbook first.")
+        if secrets_cap and wizard_book is None and list_id == cls_id:
+            description += (f" Magical Secrets: up to {secrets_cap} of them may be spells of any class's list, or another "
+                            "class's cantrips; they count in this number.")
         tpl = build_choice_template(envelope, cid, source, label, description=description)
         if tpl is None and wizard_book is not None and not wizard_book:
             # build_choice_template returns None for an empty option list; an
@@ -4184,6 +4232,8 @@ def _spell_choice_templates(
             if school_limit:
                 _apply_school_limit(catalog, tpl, school_limit, class_level, cls_id,
                                     (class_choices or {}).get(cid), problems_out)
+            if secrets_cap and wizard_book is None and list_id == cls_id:
+                _apply_secrets_cap(catalog, tpl, cls_id, secrets_cap, (class_choices or {}).get(cid))
             templates.append(tpl)
 
     return templates + pick_templates
@@ -5366,6 +5416,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 list_class_id=list_class_id,
                 school_limit=SUBCLASS_SPELL_SCHOOL_LIMITS.get(rc["subclass_id"] or "") if list_class_id != rc_cls_id else None,
                 problems_out=problems,
+                secrets_cap=class_choices_2024.magical_secrets_cap_2014(catalog, rc_cls_id, rc_level, ruleset),
             )
             class_choices_2024.label_magical_secrets(catalog, spell_templates, rc_cls_id, rc_level, ruleset)
             choice_templates += spell_templates

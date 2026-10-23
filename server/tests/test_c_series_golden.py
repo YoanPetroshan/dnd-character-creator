@@ -138,6 +138,21 @@ REBASELINES: dict[str, dict] = {
         ],
         "why": "SRD Wizard Spell Mastery / Signature Spell cards (E11b)",
     },
+    # RP16 / E11a: SRD Bard Magical Secrets (10 / 14 / 18). The Bard known-spells card also offers every other class's
+    # spells up to the highest slot level plus their cantrips, labelled "(Magical Secrets)", and its description names
+    # the cap. Only the Bard 11 and 20 cases hold the feature (Bard 1 / 3 are below 10; the multiclass Bard is 2).
+    # Rule matrix: the added options (reported once at their roots), a changed option's label / group / disabled flag,
+    # the description. The stored picks (the old list's first spells), the count, the selection and every other card
+    # stay as they are.
+    "RP16": {
+        "cases": ["*/src-*/bard11", "*/src-*/bard20"],
+        "paths": [
+            r"^result\.choices\[class:bard:spells-known\]\.options\[[^\]]+\]$",       # an added option, at its root
+            r"^result\.choices\[class:bard:spells-known\]\.options\[[^\]]+\]\.(label|group|disabled|disabledReason)$",
+            r"^result\.choices\[class:bard:spells-known\]\.description$",
+        ],
+        "why": "SRD Bard Magical Secrets (E11a)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -490,7 +505,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15") and STRIP == ("derived.featResources",)
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16") and STRIP == ("derived.featResources",)
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
@@ -531,6 +546,22 @@ def test_rp15_cases_are_the_wizard_20_cases_and_hold_the_srd_pick_cards():
         assert [s["id"] for s in entry["spellMastery"]] == ["shield", "web"]
         assert [s["id"] for s in entry["alwaysPrepared"]] == ["fireball", "counterspell"]
         assert any(r["id"] == "wizard:signature-spells" and r["uses"] == 2 for r in res["derived"]["classResources"])
+
+
+def test_rp16_cases_are_the_bard_11_and_20_cases_and_hold_the_magical_secrets_options():
+    hit = sorted(n for n in _GOLDEN if any(fnmatch.fnmatchcase(n, p) for p in REBASELINES["RP16"]["cases"]))
+    assert len(hit) == 8 and all(n.endswith(("/bard11", "/bard20")) for n in hit)
+    for n in hit:  # the stored picks are the old list's first spells: none from another class, all kept
+        card = next(c for c in _GOLDEN[n]["result"]["choices"] if c["id"] == "class:bard:spells-known")
+        labelled = [o for o in card["options"] if o["label"].endswith("(Magical Secrets)")]
+        assert labelled and any(o["id"] == "fire-bolt" for o in labelled) and "Magical Secrets" in card["description"], n
+        assert not set(card["selected"]) & {o["id"] for o in labelled}, n
+        assert len(card["selected"]) == card["count"], n
+    for n in ("ks/src-all/bard10-2014", "ks/src-srd/bard10-2014"):  # appended kitchen sink with real picks
+        res = _GOLDEN[n]["result"]
+        known = next(e for e in res["sheet"]["spells"] if e["classId"] == "bard")["known"]
+        assert {"fireball", "sacred-flame"} <= {s["id"] for s in known}, n
+        assert not [p for p in res["pruned"] if p["choiceId"] == "class:bard:spells-known"], n
 
 
 def test_keyed_normalization_and_diff_paths():

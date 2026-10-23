@@ -1384,3 +1384,37 @@ The 4 cases: `mixed` and `2014`, each `src-all` and `src-srd`, `wizard20`. Verif
 **Timing** (`resolve()`, mean of 20, ms, Wizard 20 with all picks): mixed 3.4, 2014 2.5, 2024 2.8 (limit 50).
 
 **Totals.** Server suite 4536 -> 4582 passed (38 new in `test_wizard_picks_2014.py`, 2 new golden cases, 1 new golden pin, 2 export-sweep parametrizations, minus nothing: the two edited tests keep their counts), root suite 405 passed / 8 skipped; frontend untouched.
+
+## RP16 (E11a) SRD Bard Magical Secrets under mixed / 2014 (2026-10-23)
+
+Third slice that deliberately changes mixed / 2014 output, through the `--rebaseline` policy (never `--regenerate`). Tests first (21 of 33 new tests failed before the wiring), then the implementation.
+
+**Rules (SRD, `catalog.features`, pinned verbatim by test).** `magical-secrets-1/2/3` (Bard 10 / 14 / 18, all three carry the same text): "Choose two spells from any class, including this one. A spell you choose must be of a level you can cast, as shown on the Bard table, or a cantrip. The chosen spells count as bard spells for you and are included in the number in the Spells Known column of the Bard table. You learn two additional spells from any class at 14th level and again at 18th level." The Lore Bard's Additional Magical Secrets (level 6, "don't count against the number of bard spells you know") is RPX1, not this slice.
+
+- **Card.** The existing `class:bard:spells-known` card (same cid, so picks survive a ruleset switch) gains, from Bard 10, every spell that sits on some class list but not on the Bard's, of level 1 .. the highest Bard slot level (`_magical_secrets_options`, ruleset / sources aware, a stored pick hidden by `sources` stays offered), plus the other classes' cantrips. The Bard's own cantrips stay on the Cantrips card. Options are labelled "<Spell> (Magical Secrets)" (`class_choices_2024.label_magical_secrets`, now also active for the SRD feature), groups stay `spell-level-N` (the other-class cantrips are `spell-level-0`, shown first under "Трикове"). A spell that is on no class list is not "from a class" and is not offered. The description gains " Magical Secrets: up to N of them may be spells of any class's list, or another class's cantrips; they count in this number."
+- **Decided point (cantrips count).** "included in the number in the Spells Known column": the card count is unchanged (Bard 10: 14) and a cantrip taken this way uses one of the known slots (tested: 13 own spells + Fire Bolt fills 14, the next pick is `pruned` over the count). It lists in `sheet.spells[bard].known` with level 0.
+- **Cap** (`_apply_secrets_cap`, the `_apply_school_limit` pattern): picks off the Bard list <= `class_choices_2024.magical_secrets_cap_2014` = 2 x the SRD features reached (10: 2, 14: 4, 18: 6; 0 for non-Bards, under 2024 and when the catalog lacks the feature records). At the cap the other off-list options are disabled "Magical Secrets: N of N used"; a stored off-list pick over the cap is disabled too, so the generic pass drops it as a non-blocking `pruned` entry (`:spells-known` is already count-variable) and it does not take a count slot (the cap walks the stored picks in order, like the generic pass). Level-down 14 -> 10 keeps two, below 10 drops all. No new problem, never blocks export.
+- **Approximation (as in C6d).** No level-up history: the rule says each feature's two spells are chosen when it is gained (and at the level they could be cast); the engine only counts the total off-list picks against the features reached, so the per-feature spell-level limit is not enforced and a pick may later be swapped by editing the card.
+- **Scope.** Bard class level (multiclass: the Bard's own level and Bard table; the other class's card is untouched, tested with Bard 10 / Wizard 3 and Wizard 8 / Bard 6). 2024 keeps its XPHB `expanded` mechanism and tests unchanged. `resolve()` only wires `secrets_cap=` into `_spell_choice_templates`.
+- **Surfaces.** No new keys, `types.ts` / exports / frontend untouched (`npm run build` not needed). Phone check by reading the existing picker (`ChoicePicker`): a filter box appears above 20 options and matches the label, so "Fire Bolt" or "(Magical Secrets)" filters; level headings come from the `spell-level-N` groups; disabled options are hidden behind "Показване на недостъпните (N)". Option counts of the card, mixed all sources: Bard 10 405, Bard 20 528 (2014 497, 2024 462 already before this slice); `sources ["srd"]` Bard 10 228.
+
+**Golden rebaseline `RP16`** (`REBASELINES["RP16"]`, cases `*/src-*/bard11` and `*/src-*/bard20`; paths written from the rule matrix before the dry run: an added option at its root, a changed option's label / group / disabled / disabledReason, the card description). VERIFIED by the dry run and by diffing the gz at HEAD against the working tree with `_norm` / `diff_paths`: exactly these 8 cases moved, every path matches the allowlist, no `draft` path moved (the stored picks are the old list's first spells), the other 225 cases are byte-identical. The stored golden picks are not changed, so no label / flag path fired (0 matches, kept in the allowlist because the rule produces them for a stored Magical Secrets pick; the new kitchen sink covers that). Printed summary of the real run (the dry run printed the same):
+
+```
+rebaseline RP16 (SRD Bard Magical Secrets (E11a))
+  matching cases changed: 8 of 233
+   2068 changed path(s) match ^result\.choices\[class:bard:spells-known\]\.options\[[^\]]+\]$
+      0 changed path(s) match ^result\.choices\[class:bard:spells-known\]\.options\[[^\]]+\]\.(label|group|disabled|disabledReason)$
+      8 changed path(s) match ^result\.choices\[class:bard:spells-known\]\.description$
+wrote 233 cases, 813015 bytes
+```
+
+The 8 cases: `mixed` and `2014`, each `src-all` and `src-srd`, `bard11` and `bard20`. Then `--append` added the kitchen sink `bard10-2014` (Fireball and Sacred Flame as the two Magical Secrets picks, 12 ordinary Bard spells): `ks/src-all/bard10-2014`, `ks/src-srd/bard10-2014` (235 cases). The append-only `REBASELINES` tuple is now `("RP7", "RPF", "RP15", "RP16")`; `test_rp16_cases_are_the_bard_11_and_20_cases_and_hold_the_magical_secrets_options` pins the case set and content.
+
+**Edited existing tests (intended reversal of "2024 only").** `test_class_spell_grants_2024.py::test_magical_secrets_is_2024_only_and_bard_only` became `test_magical_secrets_xphb_grants_are_2024_only_and_bard_only` (no XPHB id outside 2024, the SRD Spiritual Weapon is now labelled under mixed / 2014, non-Bards unchanged). `test_export_fields.py`: `_EXPECT` and the stage-lines spot check gained `bard10-2014`.
+
+**Tests.** `tests/test_magical_secrets_2014.py` (33, rule matrix in the docstring): text pins, offered (cantrips, slot levels, class-less spells, sources, kept hidden pick), count, cap at 10 / 13 / 14 / 17 / 18 / 20, prune cascades, sheet, scope (non-Bard, multiclass), degrade without the SRD features, 2024 unchanged, timing.
+
+**Timing** (`resolve()`, mean of 50, ms, Bard 20): mixed 4.7, 2014 3.9, 2024 3.9 (limit 50).
+
+**Totals.** Server suite 4582 -> 4623 passed (33 new in `test_magical_secrets_2014.py`, 1 new golden pin, 2 new golden cases, export-sweep parametrizations for `bard10-2014`; the edited test keeps its count), root suite 405 passed / 8 skipped; frontend untouched.

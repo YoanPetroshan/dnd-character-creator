@@ -229,11 +229,13 @@ def test_a_magical_secrets_pick_resolves_into_the_sheet_and_is_pruned_below_leve
 
 
 @needs_data
-def test_magical_secrets_is_2024_only_and_bard_only(catalog):
+def test_magical_secrets_xphb_grants_are_2024_only_and_bard_only(catalog):
+    # RP16: mixed / 2014 now have the SRD Magical Secrets (test_magical_secrets_2014.py, SRD ids, cap, cantrips);
+    # what stays 2024-only is the XPHB grant: no XPHB spell id is offered outside 2024, and non-Bards never get it.
     for ruleset in ("mixed", "2014"):
         card = _card(_res(catalog, [("bard", 11, {})], ruleset=ruleset), BARD_KNOWN)
-        assert all("Magical Secrets" not in o["label"] for o in card["options"])
-        assert _option(card, "spiritual-weapon") is None and _option(card, "spiritual-weapon-xphb") is None
+        assert _option(card, "spiritual-weapon-xphb") is None
+        assert _option(card, "spiritual-weapon")["label"] == "Spiritual Weapon (Magical Secrets)"
     card = _card(_res(catalog, [("cleric", 11, {})]), "class:cleric:spells-known")
     assert all("Magical Secrets" not in o["label"] for o in card["options"])
 

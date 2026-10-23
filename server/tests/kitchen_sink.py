@@ -54,6 +54,12 @@ KITCHEN_SINK: dict[str, dict] = {
         "class:wizard:spells-known": ["magic-missile", "web", "haste"],
         "class:wizard:18:spell-mastery-1": ["shield"], "class:wizard:18:spell-mastery-2": ["web"],
         "class:wizard:20:signature-spells": ["fireball", "counterspell"]}),
+    # RP16 (E11a): SRD Bard 10 with Magical Secrets: Fireball (Wizard) and Sacred Flame (a Cleric cantrip that takes a
+    # known slot), 12 ordinary Bard spells (the card needs 14)
+    "bard10-2014": _sub("bard", 10, "2014", marks=("classes",), overrides={
+        "class:bard:spells-known": ["cure-wounds", "healing-word", "heroism", "dissonant-whispers", "hold-person",
+                                    "invisibility", "suggestion", "hypnotic-pattern", "dimension-door", "polymorph",
+                                    "greater-invisibility", "hold-monster", "fireball", "sacred-flame"]}),
     "psi-warrior11": _sub("fighter", 11, "mixed", sub="psi-warrior-tce", marks=("classes",)),
     "totem-bear6": _sub("barbarian", 6, "mixed", sub="totem-warrior-phb", marks=("classes",), overrides={
         "class:barbarian:3:feature:totem-warrior-phb-3-totem-spirit": ["totem-warrior-phb-3-totem-spirit--bear"],
