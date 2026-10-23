@@ -103,6 +103,23 @@ REBASELINES: dict[str, dict] = {
         ],
         "why": "SRD Monk tool or instrument choice (E11c)",
     },
+    # RPF: PHB "you can't gain the same proficiency twice": the later of two ordinary skill pick cards loses a
+    # duplicate. Only the golden's multiclass Rogue 3 / Bard 2 holds one (the Bard multiclass skill card, entered
+    # second, was filled with Acrobatics like the Rogue's card). The filler re-picks the first enabled skill
+    # (Animal Handling), so: the Bard multiclass card (options disabled "already proficient", the new pick, the draft
+    # pick), the skill list, the new skill's modifier and its option in the Rogue's expertise card (a skill that
+    # is now proficient becomes eligible for Expertise) move, nothing else.
+    "RPF": {
+        "cases": ["*/src-*/multi-rogue3-bard2"],
+        "paths": [
+            r"^draft\.classes\[1\]\.choices\.class:bard:multiclass-prof-choice-0\[0\]$",   # the filler's new pick
+            r"^result\.choices\[class:bard:multiclass-prof-choice-0\]",                       # options disabled, selected
+            r"^result\.choices\[class:rogue:1:expertise-choice:rogue-expertise-1\]\.options\[skill-animal-handling\]\.(disabled|disabledReason)$",
+            r"^result\.sheet\.proficiencies\.skills$",                                         # the replacement skill
+            r"^result\.derived\.skills\.skill-animal-handling$",                                # its modifier
+        ],
+        "why": "duplicate skill pick between ordinary class cards (RPF)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -455,7 +472,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7",) and STRIP == ("derived.featResources",)
+    assert tuple(REBASELINES) == ("RP7", "RPF") and STRIP == ("derived.featResources",)
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
@@ -470,6 +487,16 @@ def test_rp7_cases_are_the_primary_monk_cases_only():
     for n in names:
         if "multi-barbarian3-monk2" in n:
             assert not any(c["id"] == "class:monk:1:prof-choice-1" for c in _GOLDEN[n]["result"]["choices"])
+
+
+def test_rpf_cases_are_the_multiclass_rogue_bard_only_and_hold_no_duplicate_skill_pick():
+    hit = [n for n in _GOLDEN if any(fnmatch.fnmatchcase(n, p) for p in REBASELINES["RPF"]["cases"])]
+    assert len(hit) == 4 and all("multi-rogue3-bard2" in n for n in hit)
+    for n in hit:
+        res = _GOLDEN[n]["result"]
+        picks = [s for c in res["choices"] if c["id"].endswith(("prof-choice-0", "prof-choice-1")) and c["source"]["kind"] == "class"
+                 for s in c["selected"] if s.startswith("skill-")]
+        assert len(picks) == len(set(picks)), n
 
 
 def test_keyed_normalization_and_diff_paths():

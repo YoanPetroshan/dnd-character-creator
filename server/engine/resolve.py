@@ -2198,6 +2198,41 @@ def _proficiency_grants(choices: list[dict], catalog: Catalog, resolved_classes:
     return grants
 
 
+def _gate_duplicate_skill_picks(choices: list[dict], class_order: list[str]) -> list[dict]:
+    """RPF (PHB: you can't gain the same proficiency twice, pick another): generic skill duplicates between the
+    ordinary class / species / multiclass proficiency pick cards, all rulesets. The cards are walked in (class order,
+    class level) order, origin (species) first and a multiclass card at (its class, 1); a card keeps the skills held
+    by the cards before it out of its options ("already proficient") and drops a stored duplicate with a
+    non-blocking `pruned` entry. Skill ids only; expertise, Keen Mind style (`profOrExpertise`) and the positioned
+    subclass picks have their own gates. Mutates `choices`; returns the pruned entries."""
+    last = (len(class_order) + 1, 0)
+
+    def eligible(c: dict) -> bool:
+        return (c["source"]["kind"] in ("class", "species") and "expertise-choice" not in c["id"]
+                and ("prof-choice-" in c["id"] or "proficiency-choice" in c["id"])
+                and not c.get("profOrExpertise") and not class_choices_2024.is_positioned_proficiency_card(c)
+                and any(o["id"].startswith("skill-") for o in c["options"]))
+
+    cards = sorted((c for c in choices if eligible(c)),
+                   key=lambda c: (class_choices_2024.proficiency_position(c, class_order) or last, c["id"]))
+    pruned: list[dict] = []
+    held: set[str] = set()
+    for card in cards:
+        i = next(n for n, c in enumerate(choices) if c["id"] == card["id"])
+        c = choices[i]
+        dup = [s for s in c["selected"] if s in held]
+        options = [o if o.get("disabled") or o["id"] not in held
+                   else {**o, "disabled": True, "disabledReason": "already proficient"} for o in c["options"]]
+        kept = [s for s in c["selected"] if s not in held]
+        if dup:
+            labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
+            pruned.append({"choiceId": c["id"], "reason": (
+                f"'{c['label']}': {', '.join(labels.get(d, d) for d in dup)} is already proficient; the selection was ignored.")})
+        choices[i] = {**c, "options": options, "selected": kept, "status": "resolved" if len(kept) == c["count"] else "pending"}
+        held.update(s for s in kept if s.startswith("skill-"))
+    return pruned
+
+
 def _gate_positioned_proficiencies(choices: list[dict], catalog: Catalog, resolved_classes: list[dict],
                                    resolved_feats: list[dict], bg: dict | None, race: dict | None,
                                    subrace: dict | None, xphb_effects, class_order: list[str]) -> list[dict]:
@@ -5572,6 +5607,14 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                     "reason": (f"'{tpl['label']}': {', '.join(_pick_name(g) for g in gone)} is no longer offered "
                                f"and was ignored."),
                 })
+            if tpl["source"]["kind"] == "class" and _ASI_CID_RE.match(tpl["id"]):
+                # RPF: a stored ASI pick whose option is offered but disabled (cap 20 after a ruleset / species switch,
+                # a feat prerequisite) is reported with the option's own reason instead of leaving the card pending silently.
+                for o in tpl["options"]:
+                    if o.get("disabled") and o["id"] in raw_selected:
+                        pruned.append({"choiceId": tpl["id"], "reason": (
+                            f"'{tpl['label']}': {o['label']} is not available ({o.get('disabledReason', 'not available')}) "
+                            f"and was ignored.")})
             if tpl["source"]["kind"] == "feat" and tpl["id"].endswith(":ability-bonus"):
                 # FE2 (B9): a stored pick of an option closed by the feat's ability cap is reported, not lost silently.
                 closed = [o for o in tpl["options"] if o.get("disabled") and o["id"] in raw_selected]
@@ -5749,6 +5792,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     pruned += gear.pruned
 
     # Derived stats.
+    pruned += _gate_duplicate_skill_picks(choices, [rc["cls_id"] for rc in resolved_classes if rc["cls"]])  # RPF
     proficient_skills: set[str] = set()
     for c in choices:
         # "background" added here (Phase 4b Task 2): a background's own
