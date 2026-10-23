@@ -23,15 +23,38 @@ on purpose (only after the user agreed that mixed/2014 output may change), run f
 FE12 appended the feat-holding kitchen-sink cases with ``--append`` (existing cases asserted unchanged and rewritten
 byte for byte; only the new names are added). Use ``--append`` for any later addition.
 
+REBASELINE MODE (RP6 / P0). A slice that deliberately changes mixed / 2014 output (the E11 slices and the
+RPX extras) must not use ``--regenerate``. It adds an entry to ``REBASELINES`` (append-only, empty today):
+
+    REBASELINES["RP7"] = {"cases": ["mixed/*/monk*", "2014/*/monk*"],      # fnmatch over case names
+                          "paths": [r"^result[.]choices[[]class:monk:1:prof-choice-1[]]"],  # regexes over paths
+                          "why": "SRD Monk tool or instrument choice"}
+
+The ``paths`` allowlist is written from the slice's rule matrix, never copied from the dry-run output. Then, from
+``server/``:
+
+    ../.venv/bin/python tests/test_c_series_golden.py --rebaseline RP7 --dry-run   # prints the diff, writes nothing
+    ../.venv/bin/python tests/test_c_series_golden.py --rebaseline RP7             # writes the gz, prints the summary
+
+Cases NOT matching ``cases`` must re-resolve to their stored result (written back unchanged). For matching cases
+``ks.fill`` fills only the cards that are now ``pending`` (existing picks stay), the draft is re-resolved, and
+``{draft, result}`` old vs new is diffed on normalized paths: lists of dicts that all carry a unique ``id`` become dicts
+keyed by id (path ``result.choices[<id>].options[<id>]``), so an inserted card does not shift every index. Every changed
+path must match a ``paths`` regex or the run fails; a matching case with no diff prints a warning (pattern too wide).
+Cases are never deleted (new ones come only through ``--append``). Paste the printed summary into the slice's
+ARCHITECTURE section and name the rebaseline in the commit message. ``STRIP`` is applied to both sides of the compare.
+
 The file was first written from the engine at commit 81fce17 (before any C-series work). The
 whole module skips when the local 5etools data (classes, official, spells) is absent.
 """
 from __future__ import annotations
 
 import copy
+import fnmatch
 import gzip
 import json
 import pathlib
+import re
 import sys
 
 import pytest
@@ -64,6 +87,10 @@ MULTICLASS = {
 # "derived.featResources": FE3 additive key (feat resources, e.g. Lucky), always [] for the feat-less golden
 # drafts; user-approved feat-effects series (decision F-D1). Both sides are stripped, nothing else changes.
 STRIP: tuple[str, ...] = ("derived.featResources",)
+
+# RP6 / P0: append-only record of deliberate mixed / 2014 changes, see the module docstring. slice id ->
+# {"cases": [fnmatch over case names], "paths": [regexes over normalized paths], "why": one line}. Empty on purpose.
+REBASELINES: dict[str, dict] = {}
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
                                ("spells", official.has_official_spells)) if not ok()]
@@ -179,6 +206,131 @@ def append_new_cases() -> None:
     print(f"kept {len(before)} existing cases unchanged, added {len(added)}: {added}")
 
 
+class RebaselineError(AssertionError):
+    """A rebaseline broke its allowlist (or an unmatched case moved)."""
+
+
+def _keyed(node):
+    """Normalize: lists of dicts that each carry a unique string `id` become dicts keyed by it."""
+    if isinstance(node, dict):
+        return {k: _keyed(v) for k, v in node.items()}
+    if isinstance(node, list):
+        if node and all(isinstance(x, dict) and isinstance(x.get("id"), str) for x in node):
+            ids = [x["id"] for x in node]
+            if len(set(ids)) == len(ids):
+                return {_KeyedId(x["id"]): _keyed(x) for x in node}
+        return [_keyed(x) for x in node]
+    return node
+
+
+class _KeyedId(str):
+    """A dict key that came from an `id` (rendered `[id]` in paths, not `.id`)."""
+
+
+def _join(path: str, key) -> str:
+    return f"{path}[{key}]" if isinstance(key, _KeyedId) else f"{path}.{key}" if path else str(key)
+
+
+def diff_paths(old, new, path: str = "") -> list[str]:
+    """Dotted paths where `old` and `new` differ (an added / removed subtree is reported once, at its root)."""
+    if isinstance(old, dict) and isinstance(new, dict):
+        out = []
+        for k in sorted(set(old) | set(new), key=str):
+            sub = _join(path, k)
+            if k not in old or k not in new:
+                out.append(sub)
+            else:
+                out += diff_paths(old[k], new[k], sub)
+        return out
+    if isinstance(old, list) and isinstance(new, list) and len(old) == len(new):
+        out = []
+        for i, (a, b) in enumerate(zip(old, new)):
+            out += diff_paths(a, b, f"{path}[{i}]")
+        return out
+    return [] if old == new else [path]
+
+
+def _norm(entry: dict) -> dict:
+    return _keyed({"draft": entry["draft"], "result": strip(entry["result"])})
+
+
+def _write_golden(data: dict) -> None:
+    with gzip.open(GOLDEN, "wt", compresslevel=9) as f:
+        json.dump(data, f, sort_keys=True, separators=(",", ":"))
+
+
+def rebaseline(slice_id: str, *, dry_run: bool = False, catalog=None, rebaselines: dict | None = None,
+               resolver=None, filler=None, overrides_for=None, out=print) -> dict:
+    """RP6 / P0: re-resolve the golden under a slice's allowlist (see the module docstring).
+
+    Returns {"changed": {case: [paths]}, "violations": {case: [paths]}, "warnings": [case], "counts": {regex: n}}.
+    Outside `dry_run` a violation raises `RebaselineError` before anything is written."""
+    table = REBASELINES if rebaselines is None else rebaselines
+    if slice_id not in table:
+        raise KeyError(f"unknown rebaseline slice {slice_id!r}: add it to REBASELINES first")
+    spec = table[slice_id]
+    patterns, allowed = spec["cases"], [re.compile(p) for p in spec["paths"]]
+    resolver = resolver or resolve
+    filler = filler or ks.fill
+    if catalog is None:
+        catalog = load()
+    if overrides_for is None:
+        drafts = case_drafts(catalog)
+        overrides_for = lambda name: drafts[name][1] if name in drafts else {}  # noqa: E731
+    old = _load_golden()
+    new, changed, violations, warnings = {}, {}, {}, []
+    counts = {p.pattern: 0 for p in allowed}
+    for name, entry in old.items():
+        matched = any(fnmatch.fnmatchcase(name, pat) for pat in patterns)
+        if not matched:
+            now = strip(json.loads(json.dumps(resolver(copy.deepcopy(entry["draft"]), catalog))))
+            if now != strip(entry["result"]):
+                bad = diff_paths(_norm(entry), _keyed({"draft": entry["draft"], "result": now}))
+                violations[name] = bad or ["<unmatched case changed>"]
+            new[name] = entry  # unmatched cases are written back untouched
+            continue
+        draft = filler(copy.deepcopy(entry["draft"]), catalog, overrides_for(name), resolver)
+        fresh = {"draft": draft, "result": json.loads(json.dumps(resolver(copy.deepcopy(draft), catalog)))}
+        paths = diff_paths(_norm(entry), _norm(fresh))
+        new[name] = fresh if paths else entry
+        if not paths:
+            warnings.append(name)
+            continue
+        changed[name] = paths
+        for pth in paths:
+            hit = [p for p in allowed if p.search(pth)]
+            if not hit:
+                violations.setdefault(name, []).append(pth)
+            for p in hit[:1]:
+                counts[p.pattern] += 1
+    assert set(new) == set(old), "a rebaseline never deletes or adds cases (use --append)"
+    out(f"rebaseline {slice_id} ({spec.get('why', '')}){' [dry run]' if dry_run else ''}")
+    out(f"  matching cases changed: {len(changed)} of {len(old)}")
+    for p, n in counts.items():
+        out(f"  {n:5d} changed path(s) match {p}")
+    for name in warnings:
+        out(f"  WARNING: {name} matches `cases` but did not change (pattern too wide?)")
+    for name, paths in changed.items():
+        if dry_run:
+            out(f"  {name}")
+            for pth in paths:
+                out(f"      {'DISALLOWED ' if pth in violations.get(name, []) else ''}{pth}")
+    for name, paths in violations.items():
+        out(f"  VIOLATION {name}: {len(paths)} path(s) outside the allowlist, e.g. {paths[:3]}")
+    report = {"changed": changed, "violations": violations, "warnings": warnings, "counts": counts}
+    if dry_run:
+        return report
+    if violations:
+        raise RebaselineError(f"rebaseline {slice_id}: paths outside the allowlist or unmatched case changed: "
+                              f"{ {n: p[:3] for n, p in violations.items()} }")
+    if changed:
+        _write_golden(new)
+        out(f"wrote {len(new)} cases, {GOLDEN.stat().st_size} bytes")
+    else:
+        out("nothing changed, golden file not rewritten")
+    return report
+
+
 def _load_golden() -> dict:
     return json.load(gzip.open(GOLDEN, "rt")) if GOLDEN.exists() else {}
 
@@ -200,6 +352,106 @@ def test_golden_file_present_and_covers_every_case():
     assert all(json.loads(json.dumps(v["draft"]))["ruleset"] in RULESETS for v in _GOLDEN.values())
 
 
+# --- RP6 / P0: rebaseline mode, tested on a synthetic two-case golden (the real file is never touched) ---
+
+def _synthetic(tmp_path, monkeypatch):
+    """Two cases in tmp_path; `GOLDEN` is overridden at module level. Fake resolver: result = hp + choice cards."""
+    path = tmp_path / "synthetic.json.gz"
+    monkeypatch.setitem(globals(), "GOLDEN", path)
+    fighter, wizard = ({"hp": 10, "cards": ["a", "b"]}, {"hp": 6, "cards": ["a"]})
+    entries = {}
+    for name, d in (("mixed/x/fighter", fighter), ("mixed/x/wizard", wizard)):
+        entries[name] = {"draft": d, "result": _fake(d, {})}
+    _write_golden(entries)
+    return path
+
+
+def _fake(draft, flags):
+    cards = [{"id": c, "status": "done", "options": [{"id": "o1"}, {"id": "o2"}]} for c in draft["cards"]]
+    if flags.get("insert"):
+        cards.insert(0, {"id": "new", "status": "pending", "options": []})
+    bump = flags.get("hp", 0) if not flags.get("fighter_only") or "b" in draft["cards"] else 0
+    return {"hp": draft["hp"] + bump, "choices": cards, "derived": {"featResources": [1]}}
+
+
+def _run(slice_id, flags, table, **kw):
+    log = []
+    rep = rebaseline(slice_id, catalog=object(), rebaselines=table, overrides_for=lambda n: {},
+                     resolver=lambda d, c: _fake(d, flags), filler=lambda d, *a: d, out=log.append, **kw)
+    return rep, "\n".join(log)
+
+
+def _table(cases, paths):
+    return {"T": {"cases": cases, "paths": paths, "why": "synthetic"}}
+
+
+def test_rebaseline_expected_path_passes_and_writes(tmp_path, monkeypatch):
+    path = _synthetic(tmp_path, monkeypatch)
+    before = json.load(gzip.open(path, "rt"))
+    rep, log = _run("T", {"hp": 1, "fighter_only": True}, _table(["*/fighter"], [r"^result[.]hp$"]))
+    after = json.load(gzip.open(path, "rt"))
+    assert rep["changed"] == {"mixed/x/fighter": ["result.hp"]} and not rep["violations"]
+    assert after["mixed/x/fighter"]["result"]["hp"] == 11 and after["mixed/x/wizard"] == before["mixed/x/wizard"]
+    assert "1 changed path(s) match ^result[.]hp$" in log
+
+
+def test_rebaseline_unexpected_path_fails_and_leaves_file(tmp_path, monkeypatch):
+    path = _synthetic(tmp_path, monkeypatch)
+    raw = path.read_bytes()
+    with pytest.raises(RebaselineError):
+        _run("T", {"hp": 1, "insert": True, "fighter_only": True}, _table(["*/fighter"], [r"^result[.]hp$"]))
+    assert path.read_bytes() == raw
+
+
+def test_rebaseline_unmatched_case_changing_fails(tmp_path, monkeypatch):
+    path = _synthetic(tmp_path, monkeypatch)
+    raw = path.read_bytes()
+    with pytest.raises(RebaselineError, match="wizard"):
+        _run("T", {"hp": 1}, _table(["*/fighter"], [r"^result[.]hp$"]))  # wizard also moves but is not listed
+    assert path.read_bytes() == raw
+
+
+def test_rebaseline_dry_run_writes_nothing_and_prints_diff(tmp_path, monkeypatch):
+    path = _synthetic(tmp_path, monkeypatch)
+    raw = path.read_bytes()
+    rep, log = _run("T", {"hp": 1, "fighter_only": True}, _table(["*/fighter"], [r"^nothing$"]), dry_run=True)  # no raise on violations
+    assert path.read_bytes() == raw
+    assert "DISALLOWED result.hp" in log and "[dry run]" in log and "mixed/x/fighter" in rep["violations"]
+
+
+def test_rebaseline_warns_when_a_matching_case_does_not_change(tmp_path, monkeypatch):
+    _synthetic(tmp_path, monkeypatch)
+    rep, log = _run("T", {}, _table(["mixed/*"], [r"^result"]))
+    assert sorted(rep["warnings"]) == ["mixed/x/fighter", "mixed/x/wizard"] and "WARNING" in log
+    assert "not rewritten" in log
+
+
+def test_rebaseline_inserted_card_lands_at_a_keyed_path(tmp_path, monkeypatch):
+    _synthetic(tmp_path, monkeypatch)
+    rep, _ = _run("T", {"insert": True}, _table(["mixed/*"], [r"^result[.]choices\[new\]$"]), dry_run=True)
+    # one path per case, not a shifted index for every following card
+    assert rep["changed"] == {"mixed/x/fighter": ["result.choices[new]"], "mixed/x/wizard": ["result.choices[new]"]}
+    assert not rep["violations"]
+
+
+def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
+    _synthetic(tmp_path, monkeypatch)
+    with pytest.raises(KeyError):
+        _run("nope", {}, _table(["*"], []))
+
+
+def test_rebaselines_constant_is_empty_and_real_golden_untouched():
+    assert REBASELINES == {} and STRIP == ("derived.featResources",)
+
+
+def test_keyed_normalization_and_diff_paths():
+    a = _keyed({"choices": [{"id": "x", "v": 1}, {"id": "y", "v": 2}], "plain": [1, 2]})
+    b = _keyed({"choices": [{"id": "n", "v": 0}, {"id": "x", "v": 1}, {"id": "y", "v": 3}], "plain": [1, 2]})
+    assert diff_paths(a, b) == ["choices[n]", "choices[y].v"]
+    dup = _keyed({"c": [{"id": "x"}, {"id": "x"}]})  # non-unique ids stay a list
+    assert isinstance(dup["c"], list)
+
+
 @pytest.mark.parametrize("name", sorted(_GOLDEN))
 def test_mixed_and_2014_resolve_is_unchanged(catalog, name):
     entry = _GOLDEN[name]
@@ -208,9 +460,17 @@ def test_mixed_and_2014_resolve_is_unchanged(catalog, name):
 
 
 if __name__ == "__main__":
-    if "--append" in sys.argv:
+    if "--rebaseline" in sys.argv:
+        i = sys.argv.index("--rebaseline")
+        if i + 1 >= len(sys.argv):
+            sys.exit("--rebaseline needs a slice id (a key of REBASELINES)")
+        try:
+            rebaseline(sys.argv[i + 1], dry_run="--dry-run" in sys.argv)
+        except (KeyError, RebaselineError) as e:
+            sys.exit(str(e))
+    elif "--append" in sys.argv:
         append_new_cases()
     elif "--regenerate" in sys.argv:
         regenerate()
     else:
-        sys.exit("pass --append (add new cases only) or --regenerate (rewrite everything) to change the golden file")
+        sys.exit("pass --append (add new cases only), --rebaseline <SLICE> [--dry-run] or --regenerate (rewrite everything) to change the golden file")
