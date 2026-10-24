@@ -88,19 +88,19 @@ class _SheetPDF(FPDF):
 
     def h1(self, text: str) -> None:
         self.set_font("DejaVu", "B", 18)
-        self.cell(0, 10, text, new_x="LMARGIN", new_y="NEXT")
+        self.multi_cell(0, 10, text, new_x="LMARGIN", new_y="NEXT")  # multi_cell wraps a long name; cell would run off the page
 
     def h2(self, text: str) -> None:
         self.ln(2)
         self.set_font("DejaVu", "B", 13)
-        self.cell(0, 8, text, new_x="LMARGIN", new_y="NEXT")
+        self.multi_cell(0, 8, text, new_x="LMARGIN", new_y="NEXT")
         self.set_draw_color(180, 180, 180)
         self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
         self.ln(2)
 
     def h3(self, text: str) -> None:
         self.set_font("DejaVu", "B", 11)
-        self.cell(0, 6, text, new_x="LMARGIN", new_y="NEXT")
+        self.multi_cell(0, 6, text, new_x="LMARGIN", new_y="NEXT")
 
     def body(self, text: str) -> None:
         self.set_font("DejaVu", "", 11)

@@ -194,6 +194,11 @@ def extra_blocks(resolution: dict) -> list[tuple[str, str]]:
         blocks.append(("h2", "Движение"))
         blocks.append(("body", ", ".join(f"{_MODE_NAMES.get(m, m)} {v} фута" for m, v in speeds.items())))
 
+    size = (sheet.get("species") or {}).get("size")
+    if size:
+        blocks.append(("h2", "Размер"))
+        blocks.append(("body", str(size)))
+
     senses = sheet.get("senses") or {}
     if senses:
         blocks.append(("h2", "Сетива"))
@@ -265,7 +270,8 @@ def extra_blocks(resolution: dict) -> list[tuple[str, str]]:
     if carrying:
         blocks.append(("h2", "Носимост"))
         over = " (претоварен)" if carrying.get("overCapacity") else ""
-        blocks.append(("body", f"{carrying['carried']}/{carrying['capacity']} lb{over}"))
+        lift = f", тласкане/влачене/вдигане {carrying['pushDragLift']} lb" if carrying.get("pushDragLift") else ""
+        blocks.append(("body", f"{carrying['carried']}/{carrying['capacity']} lb{over}{lift}"))
     if derived.get("stealthDisadvantage"):
         blocks.append(("h2", "Броня"))
         blocks.append(("body", "Недостатък при Скритост (носена броня)."))
