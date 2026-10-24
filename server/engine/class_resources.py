@@ -503,7 +503,11 @@ def _note_vars(ctx: Ctx, rc: dict) -> dict:
             "dc_con": 8 + pb + con, "echo_ac": 14 + pb,
             # W8c
             "wis_level_min1": max(1, wis + level), "five_plus_wis": 5 + wis,
-            "wails": f"{(((level + 1) // 2) + 1) // 2}d6"}
+            "wails": f"{(((level + 1) // 2) + 1) // 2}d6",
+            # W8d
+            "half_level_min1": max(1, level // 2), "three_plus_cha": 3 + cha, "cha_min0": max(0, cha),
+            "level_plus_pb": level + pb, "two_pb": 2 * pb, "one_plus_cha_min1": 1 + max(1, cha),
+            "level_plus_cha": level + cha, "half_level_plus_cha": level // 2 + cha}
 
 
 def _staged(ctx: Ctx, level: int, default, stages):

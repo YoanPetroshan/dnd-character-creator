@@ -83,6 +83,9 @@ KITCHEN_SINK: dict[str, dict] = {
     # W8c: Oath of the Watchers Paladin 20 under 2014 (Aura of the Sentinel, Vigilant Rebuke, Mortal Bulwark, the Abjure the
     # Extraplanar and Watcher's Will sentences on Channel Divinity); non-2024, so part of the golden via --append
     "watchers-paladin20-2014": _sub("paladin", 20, "2014", sub="watchers-tce", marks=("classes",)),
+    # W8d: a Celestial Warlock 14 under mixed (Healing Light pool of d6s, Radiant Soul, Celestial Resilience, Searing
+    # Vengeance); non-2024, so part of the golden via --append
+    "celestial-warlock14-mixed": _sub("warlock", 14, "mixed", sub="celestial-xge", marks=("classes",)),
     "psi-warrior11": _sub("fighter", 11, "mixed", sub="psi-warrior-tce", marks=("classes",)),
     "totem-bear6": _sub("barbarian", 6, "mixed", sub="totem-warrior-phb", marks=("classes",), overrides={
         "class:barbarian:3:feature:totem-warrior-phb-3-totem-spirit": ["totem-warrior-phb-3-totem-spirit--bear"],

@@ -750,7 +750,7 @@ def test_w6_cases_hold_the_2014_class_feature_tail():
               "warlock:eldritch-master"}
     for n, entry in _GOLDEN.items():
         ids = {r["id"] for r in entry["result"]["derived"]["classResources"]}
-        if n not in hit and "/whispers-bard14" not in n and "/watchers-paladin20" not in n:  # W8a / W8c appended sinks: a Bard 14 holds Song of Rest, a Paladin 20 Divine Smite and Cleansing Touch
+        if n not in hit and "/whispers-bard14" not in n and "/watchers-paladin20" not in n and "/celestial-warlock14" not in n:  # W8a / W8c / W8d appended sinks: a Bard 14 holds Song of Rest, a Paladin 20 Divine Smite and Cleansing Touch, a Warlock 14 Mystic Arcanum
             assert not ids & w6_ids, n
     for n in hit:
         ids = {r["id"] for r in _GOLDEN[n]["result"]["derived"]["classResources"]}
@@ -811,6 +811,17 @@ def test_w8c_no_rebaseline_and_the_watchers_sink_guards_the_book_tail():
         assert {"paladin:aura-of-the-sentinel", "paladin:vigilant-rebuke", "paladin:mortal-bulwark"} <= set(res), n
         assert "Watcher's Will" in res["paladin:channel-divinity"]["details"]["note"], n
         assert "within 30 feet of you gain a bonus to initiative" in res["paladin:aura-of-the-sentinel"]["details"]["note"], n
+
+
+def test_w8d_no_rebaseline_and_the_celestial_sink_guards_the_book_tail():
+    """W8d: no golden case moved (Draconic, Fiend and Evocation are the primary SRD subclasses; the book-subclass sinks
+    hold no modelled feature), so there is no REBASELINES entry; the Celestial Warlock 14 sink was appended instead."""
+    assert "W8d" not in REBASELINES
+    for n in ("ks/src-all/celestial-warlock14-mixed", "ks/src-srd/celestial-warlock14-mixed"):
+        res = {r["id"]: r for r in _GOLDEN[n]["result"]["derived"]["classResources"]}
+        assert {"warlock:healing-light", "warlock:radiant-soul", "warlock:celestial-resilience", "warlock:searing-vengeance"} <= set(res), n
+        assert res["warlock:healing-light"]["uses"] == 15 and res["warlock:healing-light"]["die"] == "d6", n
+        assert res["warlock:searing-vengeance"]["recharge"] == "long", n
 
 
 def test_keyed_normalization_and_diff_paths():

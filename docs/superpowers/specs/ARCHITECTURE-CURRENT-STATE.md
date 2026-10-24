@@ -2323,6 +2323,195 @@ First commit of W8 part 2 (the catalog holds 108 non-SRD 2014 subclasses; part 1
 - **Uncertain.** (1) The ki save DC is applied to three ki features whose subclass text gives no DC (Arms of the Astral Self, Touch of the Long Death, Searing Sunburst; Breath of the Dragon and Aspect of the Wyrm name "your ki save DC" themselves), following the W7 Quivering Palm precedent and the Ki record's "Some of your ki features require your target to make a saving throw" rule. (2) Avenging Angel's frightened save names no DC in the text, so none is printed. (3) The Paladin Channel Divinity sentences are long for a note, as the W8b Cleric ones were.
 
 
+### W8d: Sorcerer, Warlock and Wizard (2026-10-24)
+
+Second commit of W8 part 2 and the last of W8 (28 non-SRD 2014 subclasses: 8 Sorcerer, 8 Warlock, 12 Wizard; with W8a-W8c that is all 108). Same machinery as W8a-W8c: the two book tuples are extended (`_W8D_TAIL` / `_W8D_NOTES` concatenated to `SUBCLASS_TAIL_2014_BOOKS` / `SUBCLASS_NOTES_2014_BOOKS`, same helpers). Rulesets mixed / 2014 only, only the selected imported book subclass, source kind "subclass"; 2024 output is byte-identical (pinned by the independence test). Same rule as W8c for what is modelled and skipped. Tests first (`tests/test_subclass_features_2014_w8d.py`, 328, rule matrix in the docstring); with the two W8d concatenations removed 242 of them fail, the remaining 86 are the negative and gate tests.
+
+- **Data.** 81 resources (`SUBCLASS_TAIL_2014_BOOKS` now 235), 1 sentence (`SUBCLASS_NOTES_2014_BOOKS` now 61) and 2 extras that ride along. Two more level tables that live only in the text are pinned in `BOOK_TABLE_PINS_2014` (Tentacle of the Deeps / Guardian Coil dice 1d8 and 2d8 from 10; Portent d20s two, three from 14 through Greater Portent). New `_note_vars`: `half_level_min1`, `three_plus_cha`, `cha_min0`, `level_plus_pb`, `two_pb`, `one_plus_cha_min1`, `level_plus_cha`, `half_level_plus_cha`.
+- **Sorcerer (26 resources, 1 sentence).** Aberrant Mind: Telepathic Speech (CHA modifier (min 1) miles, Sorcerer level minutes), Revelation in Flesh (14; 1+ sorcery points), Warping Implosion (18; 1, long or 5 sp; 3d10, spell DC), Psionic Sorcery (a sentence on Sorcery Points after the W6 / W7 ones). Clockwork Soul: Restore Balance (PB, long), Bastion of Law (1 to 5 sp, d8s), Trance of Order (1, long or 5 sp), Clockwork Cavalcade (1, long or 7 sp; 100 hit points). Divine Soul: Favored by the Gods (1, short or long; `dice` 2d4), Empowered Healing (1 sp), Unearthly Recovery (1, long). Lunar: Lunar Embodiment (1, long), Lunar Boons (PB, long), Waxing and Waning (1 sp), Lunar Phenomenon (3d8, 3d10, spell DC, 5 sp). Pyromancer: Heart of Fire (half the level, min 1), Pyromancer's Fury (the level). Shadow: Eyes of the Dark (120 feet, 2 sp), Strength of the Grave (1, long; DC 5 + damage), Hound of Ill Omen (3 sp, half the level temporary hit points), Umbral Form (6 sp). Storm: Heart of the Storm (half the level), Storm's Fury (the level, spell DC), Wind Soul (1, short or long; 3 + CHA modifier creatures). Wild Magic: Tides of Chaos (1, long), Wild Magic Surge (d20 on a 1), Bend Luck (2 sp, 1d4).
+- **Warlock (25 resources).** Archfey: Fey Presence (1, short or long; 10-foot cube, spell DC), Misty Escape (1, short or long), Beguiling Defenses (spell DC), Dark Delirium (1, short or long). Celestial: Healing Light (`uses` 1 + Warlock level, `die` d6, long; CHA modifier (min 1) dice per use), Radiant Soul, Celestial Resilience (level + CHA modifier, half the level + CHA modifier), Searing Vengeance (1, long; 2d8 + CHA modifier). Fathomless: Tentacle of the Deeps (PB, long; `dice` 1d8 / 2d8 from 10), Guardian Coil, Grasping Tentacles (1, long; level temporary hit points), Fathomless Plunge (1, short or long). Genie: Bottled Respite (1, long; 2 x PB hours, vessel AC = spell DC, hit points level + PB; Sanctuary Vessel as an extra from 10), Genie's Wrath (PB damage), Elemental Gift (PB, long), Limited Wish (1 use, "1d4 long rests" so no recharge value). Great Old One: Entropic Ward (1, short or long). Hexblade: Hexblade's Curse (1, short or long; PB damage, level + CHA modifier hit points), Accursed Specter (1, long; half the level). Undead: Form of Dread (PB, long; 1d10 + level), Necrotic Husk (1, no recharge value; 2d10 + level), Spirit Projection (1, long). Undying: Among the Dead (spell DC), Defy Death (1, long; 1d8 + CON modifier), Indestructible Life (1, short or long; 1d8 + level).
+- **Wizard (30 resources).** Abjuration: Arcane Ward (1, long; maximum 2 x level + INT modifier), Improved Abjuration (+PB). Bladesinging: Bladesong (PB, long; AC and concentration +INT modifier, min 1), Song of Defense (5 x slot level), Song of Victory. Chronurgy: Chronal Shift (2, long), Temporal Awareness (INT modifier initiative), Momentary Stasis (INT modifier (min 1), long; spell DC), Arcane Abeyance (1, short or long). Conjuration: Benign Transposition (1, long). Divination: Portent (two d20s, three from 14, long), The Third Eye (1, short or long). Enchantment: Hypnotic Gaze, Instinctive Charm (spell DC), Alter Memories (1 + CHA modifier hours). Graviturgy: Violent Attraction (INT modifier (min 1), long), Event Horizon (1, long; 2d10, spell DC). Illusion: Illusory Self (1, short or long). Necromancy: Grim Harvest (twice / three times the spell level), Undead Thralls (level, PB), Command Undead (spell DC). Scribes: Awakened Spellbook (1, long), Manifest Mind (1, long; PB casts per day), Master Scrivener, One with the Word (1, long). Transmutation: Shapechanger (1, short or long), Master Transmuter (1, long). War Magic: Arcane Deflection (Deflecting Shroud half the level as an extra from 14), Tactical Wit, Power Surge (INT modifier (min 1) surges, half the level).
+- **Scan (all 166 feature records of the 28 Sorcerer, Warlock and Wizard book subclasses; "phrase" = the use / number words the regex found, `-` = none). 84 feature records modelled (81 resources + 1 sentence + 2 extras; Greater Portent is folded into the Portent table, and the Genie's Vessel record hosts two entries), 82 skipped (of which 2 are DEFERRED picks):**
+
+| class | subclass | feature | L | src | phrase | decision |
+|---|---|---|---|---|---|---|
+| sorcerer | aberrant-mind-tce | 1-aberrant-mind | 1 | TCE | d6, use | skip: subclass intro (flavor text) |
+| sorcerer | aberrant-mind-tce | 1-psionic-spells | 1 | TCE | number of | skip: spell list (granted spells, no use limit or number) |
+| sorcerer | aberrant-mind-tce | 1-telepathic-speech | 1 | TCE | 30 feet, number of, equal to, minimum, use | MODELLED: resource `sorcerer:telepathic-speech` |
+| sorcerer | aberrant-mind-tce | 6-psionic-sorcery | 6 | TCE | expend, number of, equal to | MODELLED: sentence on `sorcerer:sorcery-points` (Psionic Sorcery) |
+| sorcerer | aberrant-mind-tce | 6-psychic-defenses | 6 | TCE | - | skip: passive resistance and advantage, no number |
+| sorcerer | aberrant-mind-tce | 14-revelation-in-flesh | 14 | TCE | 10 minutes, 60 feet, equal to, 5 feet | MODELLED: resource `sorcerer:revelation-in-flesh` |
+| sorcerer | aberrant-mind-tce | 18-warping-implosion | 18 | TCE | 120 feet, 30 feet, dc, 3d10, use, finish a long rest | MODELLED: resource `sorcerer:warping-implosion` |
+| sorcerer | clockwork-soul-tce | 1-clockwork-magic | 1 | TCE | number of, d6 | skip: spell list (granted spells, no use limit or number) |
+| sorcerer | clockwork-soul-tce | 1-clockwork-soul | 1 | TCE | - | skip: subclass intro (flavor text) |
+| sorcerer | clockwork-soul-tce | 1-restore-balance | 1 | TCE | 60 feet, d20, use, number of, equal to, proficiency bonus | MODELLED: resource `sorcerer:restore-balance` |
+| sorcerer | clockwork-soul-tce | 6-bastion-of-law | 6 | TCE | expend, 5 sorcery points, 30 feet, finish a long rest, use, number of | MODELLED: resource `sorcerer:bastion-of-law` |
+| sorcerer | clockwork-soul-tce | 14-trance-of-order | 14 | TCE | 1 minute, d20, use, finish a long rest, 5 sorcery points | MODELLED: resource `sorcerer:trance-of-order` |
+| sorcerer | clockwork-soul-tce | 18-clockwork-cavalcade | 18 | TCE | number of, use, finish a long rest, 7 sorcery points | MODELLED: resource `sorcerer:clockwork-cavalcade` |
+| sorcerer | divine-soul-xge | 1-divine-magic | 1 | XGE | number of | skip: DEFERRED pick: the cleric spell access and the affinity pick (good / evil / law / chaos / neutrality) need pick wiring |
+| sorcerer | divine-soul-xge | 1-divine-soul | 1 | XGE | - | skip: subclass intro (flavor text) |
+| sorcerer | divine-soul-xge | 1-favored-by-the-gods | 1 | XGE | 2d4, use, finish a short or long rest | MODELLED: resource `sorcerer:favored-by-the-gods` |
+| sorcerer | divine-soul-xge | 6-empowered-healing | 6 | XGE | 5 feet, number of, 1 sorcery point, use, once per | MODELLED: resource `sorcerer:empowered-healing` |
+| sorcerer | divine-soul-xge | 14-otherworldly-wings | 14 | XGE | use, 30 feet | skip: passive flying speed 30 feet, no cost or limit |
+| sorcerer | divine-soul-xge | 18-unearthly-recovery | 18 | XGE | number of, equal to, half your, use, finish a long rest | MODELLED: resource `sorcerer:unearthly-recovery` |
+| sorcerer | lunar-dsotdq | 1-lunar-embodiment | 1 | DSotDQ | number of, finish a long rest, expend | MODELLED: resource `sorcerer:lunar-embodiment` |
+| sorcerer | lunar-dsotdq | 1-lunar-sorcery | 1 | DSotDQ | - | skip: subclass intro (flavor text) |
+| sorcerer | lunar-dsotdq | 1-moon-fire | 1 | DSotDQ | number of, 5 feet | skip: a cantrip (sacred flame), spells are not numbers here |
+| sorcerer | lunar-dsotdq | 6-lunar-boons | 6 | DSotDQ | use, minimum, number of, equal to, proficiency bonus, expend | MODELLED: resource `sorcerer:lunar-boons` |
+| sorcerer | lunar-dsotdq | 6-waxing-and-waning | 6 | DSotDQ | 1 sorcery point, expend, finish a long rest | MODELLED: resource `sorcerer:waxing-and-waning` |
+| sorcerer | lunar-dsotdq | 14-lunar-empowerment | 14 | DSotDQ | use, 10 feet | skip: phase-dependent passive benefits (light radius, advantage, resistance), no cost or limit |
+| sorcerer | lunar-dsotdq | 18-lunar-phenomenon | 18 | DSotDQ | use, 30 feet, dc, 3d8, 3d10, 60 feet | MODELLED: resource `sorcerer:lunar-phenomenon` |
+| sorcerer | pyromancer-psk | 1-heart-of-fire | 1 | PSK | 10 feet, equal to, half your, minimum | MODELLED: resource `sorcerer:heart-of-fire` |
+| sorcerer | pyromancer-psk | 1-pyromancer-(psk) | 1 | PSK | - | skip: subclass intro (flavor text) |
+| sorcerer | pyromancer-psk | 6-fire-in-the-veins | 6 | PSK | - | skip: passive resistance, no number |
+| sorcerer | pyromancer-psk | 14-pyromancers-fury | 14 | PSK | use | MODELLED: resource `sorcerer:pyromancer-s-fury` |
+| sorcerer | pyromancer-psk | 18-fiery-soul | 18 | PSK | - | skip: passive immunity, no number |
+| sorcerer | shadow-xge | 1-eyes-of-the-dark | 1 | XGE | 120 feet, number of, 2 sorcery points, expend | MODELLED: resource `sorcerer:eyes-of-the-dark` |
+| sorcerer | shadow-xge | 1-shadow-magic | 1 | XGE | d6, once per | skip: subclass intro (flavor text) |
+| sorcerer | shadow-xge | 1-strength-of-the-grave | 1 | XGE | dc, use, finish a long rest | MODELLED: resource `sorcerer:strength-of-the-grave` |
+| sorcerer | shadow-xge | 6-hound-of-ill-omen | 6 | XGE | 3 sorcery points, 120 feet, number of, equal to, half your, 30 feet | MODELLED: resource `sorcerer:hound-of-ill-omen` |
+| sorcerer | shadow-xge | 14-shadow-walk | 14 | XGE | 120 feet | skip: at-will bonus-action teleport (120 feet), no cost or limit |
+| sorcerer | shadow-xge | 18-umbral-form | 18 | XGE | 6 sorcery points, 1 minute | MODELLED: resource `sorcerer:umbral-form` |
+| sorcerer | storm-xge | 1-storm-sorcery | 1 | XGE | - | skip: subclass intro (flavor text) |
+| sorcerer | storm-xge | 1-tempestuous-magic | 1 | XGE | use, 10 feet | skip: free 10-foot flight with each spell, no cost or limit |
+| sorcerer | storm-xge | 1-wind-speaker | 1 | XGE | - | skip: a language, no number |
+| sorcerer | storm-xge | 6-heart-of-the-storm | 6 | XGE | 10 feet, equal to, half your | MODELLED: resource `sorcerer:heart-of-the-storm` |
+| sorcerer | storm-xge | 6-storm-guide | 6 | XGE | use | skip: weather control ranges only, no cost or limit |
+| sorcerer | storm-xge | 14-storms-fury | 14 | XGE | use, dc, 20 feet | MODELLED: resource `sorcerer:storm-s-fury` |
+| sorcerer | storm-xge | 18-wind-soul | 18 | XGE | 60 feet, 30 feet, 1 hour, number of, equal to, finish a short or long rest | MODELLED: resource `sorcerer:wind-soul` |
+| sorcerer | wild-phb | 1-tides-of-chaos | 1 | PHB | finish a long rest, use | MODELLED: resource `sorcerer:tides-of-chaos` |
+| sorcerer | wild-phb | 1-wild-magic | 1 | PHB | - | skip: subclass intro (flavor text) |
+| sorcerer | wild-phb | 1-wild-magic-surge | 1 | PHB | d20, once per, d100, 5 feet, 1 minute, d10 | MODELLED: resource `sorcerer:wild-magic-surge` |
+| sorcerer | wild-phb | 6-bend-luck | 6 | PHB | use, 2 sorcery points, 1d4 | MODELLED: resource `sorcerer:bend-luck` |
+| sorcerer | wild-phb | 14-controlled-chaos | 14 | PHB | use | skip: roll twice on the surge table, no number |
+| sorcerer | wild-phb | 18-spell-bombardment | 18 | PHB | use, once per | skip: extra die once per turn, no character number |
+| warlock | archfey-phb | 1-fey-presence | 1 | PHB | dc, use, finish a short or long rest | MODELLED: resource `warlock:fey-presence` |
+| warlock | archfey-phb | 1-the-archfey | 1 | PHB | - | skip: subclass intro (flavor text and the expanded spell list, granted spells) |
+| warlock | archfey-phb | 6-misty-escape | 6 | PHB | use, 60 feet, finish a short or long rest | MODELLED: resource `warlock:misty-escape` |
+| warlock | archfey-phb | 10-beguiling-defenses | 10 | PHB | use, dc, 1 minute | MODELLED: resource `warlock:beguiling-defenses` |
+| warlock | archfey-phb | 14-dark-delirium | 14 | PHB | 60 feet, dc, 1 minute, finish a short or long rest, use | MODELLED: resource `warlock:dark-delirium` |
+| warlock | celestial-xge | 1-bonus-cantrips | 1 | XGE | number of | skip: two cantrips, no number |
+| warlock | celestial-xge | 1-healing-light | 1 | XGE | number of, 60 feet, minimum, equal to, expend, finish a long rest | MODELLED: resource `warlock:healing-light` |
+| warlock | celestial-xge | 1-the-celestial | 1 | XGE | - | skip: subclass intro (flavor text and the expanded spell list, granted spells) |
+| warlock | celestial-xge | 6-radiant-soul | 6 | XGE | - | MODELLED: resource `warlock:radiant-soul` |
+| warlock | celestial-xge | 10-celestial-resilience | 10 | XGE | finish a short or long rest, equal to, half your | MODELLED: resource `warlock:celestial-resilience` |
+| warlock | celestial-xge | 14-searing-vengeance | 14 | XGE | equal to, half your, 30 feet, 2d8, use, finish a long rest | MODELLED: resource `warlock:searing-vengeance` |
+| warlock | fathomless-tce | 1-gift-of-the-sea | 1 | TCE | 40 feet | skip: passive swimming speed 40 feet |
+| warlock | fathomless-tce | 1-tentacle-of-the-deeps | 1 | TCE | 60 feet, 1 minute, use, 10 feet, 1d8, 2d8 | MODELLED: resource `warlock:tentacle-of-the-deeps` |
+| warlock | fathomless-tce | 1-the-fathomless | 1 | TCE | - | skip: subclass intro (flavor text and the expanded spell list, granted spells) |
+| warlock | fathomless-tce | 6-guardian-coil | 6 | TCE | 10 feet, use, 1d8, 2d8 | MODELLED: resource `warlock:guardian-coil` |
+| warlock | fathomless-tce | 6-oceanic-soul | 6 | TCE | - | skip: passive resistance and language rule, no number |
+| warlock | fathomless-tce | 10-grasping-tentacles | 10 | TCE | number of, finish a long rest, equal to | MODELLED: resource `warlock:grasping-tentacles` |
+| warlock | fathomless-tce | 14-fathomless-plunge | 14 | TCE | 30 feet, use, finish a short or long rest | MODELLED: resource `warlock:fathomless-plunge` |
+| warlock | genie-tce | 1-genies-vessel | 1 | TCE | use, d6, 20 feet, number of, equal to, proficiency bonus | MODELLED: resource `warlock:bottled-respite`; MODELLED: resource `warlock:genie-s-wrath`; Bottled Respite and Genie's Wrath are two entries of this record (the vessel itself is flavor) |
+| warlock | genie-tce | 1-the-genie | 1 | TCE | d4 | skip: subclass intro (flavor text and the expanded spell list, granted spells) |
+| warlock | genie-tce | 6-elemental-gift | 6 | TCE | 30 feet, 10 minutes, use, number of, equal to, proficiency bonus | MODELLED: resource `warlock:elemental-gift` |
+| warlock | genie-tce | 10-sanctuary-vessel | 10 | TCE | 30 feet, number of, 10 minutes, short rest, proficiency bonus | MODELLED: extra on `warlock:bottled-respite` |
+| warlock | genie-tce | 14-limited-wish | 14 | TCE | use, 1d4, long rest | MODELLED: resource `warlock:limited-wish` |
+| warlock | great-old-one-phb | 1-awakened-mind | 1 | PHB | 30 feet | skip: at-will telepathy 30 feet, no cost or limit |
+| warlock | great-old-one-phb | 1-the-great-old-one | 1 | PHB | - | skip: subclass intro (flavor text and the expanded spell list, granted spells) |
+| warlock | great-old-one-phb | 6-entropic-ward | 6 | PHB | use, finish a short or long rest | MODELLED: resource `warlock:entropic-ward` |
+| warlock | great-old-one-phb | 10-thought-shield | 10 | PHB | - | skip: passive resistance and reflected psychic damage, no number |
+| warlock | great-old-one-phb | 14-create-thrall | 14 | PHB | use | skip: charm of an incapacitated humanoid, no number or limit |
+| warlock | hexblade-xge | 1-hex-warrior | 1 | XGE | finish a long rest, use | skip: proficiencies and a weapon pick on each long rest (pick: the weapon is not tracked) |
+| warlock | hexblade-xge | 1-hexblades-curse | 1 | XGE | 30 feet, 1 minute, proficiency bonus, d20, equal to, minimum | MODELLED: resource `warlock:hexblade-s-curse` |
+| warlock | hexblade-xge | 1-the-hexblade | 1 | XGE | - | skip: subclass intro (flavor text and the expanded spell list, granted spells) |
+| warlock | hexblade-xge | 6-accursed-specter | 6 | XGE | equal to, half your, minimum, long rest, use, finish a long rest | MODELLED: resource `warlock:accursed-specter` |
+| warlock | hexblade-xge | 10-armor-of-hexes | 10 | XGE | use, d6 | skip: reaction d6 on a 4 or higher with no limit or character number |
+| warlock | hexblade-xge | 14-master-of-hexes | 14 | XGE | 30 feet | skip: moving the curse within 30 feet, no number or limit |
+| warlock | undead-vrgr | 1-form-of-dread | 1 | VRGR | 1 minute, equal to, 1d10, number of, proficiency bonus, expend | MODELLED: resource `warlock:form-of-dread` |
+| warlock | undead-vrgr | 1-the-undead | 1 | VRGR | - | skip: subclass intro (flavor text and the expanded spell list, granted spells) |
+| warlock | undead-vrgr | 6-grave-touched | 6 | VRGR | - | skip: damage type swap and one extra die in Form of Dread, no character number |
+| warlock | undead-vrgr | 10-necrotic-husk | 10 | VRGR | use, 30 feet, equal to, 2d10, 1d4, long rest | MODELLED: resource `warlock:necrotic-husk` |
+| warlock | undead-vrgr | 14-spirit-projection | 14 | VRGR | 1 hour, equal to, 1d10, use, finish a long rest | MODELLED: resource `warlock:spirit-projection` |
+| warlock | undying-scag | 1-among-the-dead | 1 | SCAG | dc, 24 hours | MODELLED: resource `warlock:among-the-dead` |
+| warlock | undying-scag | 1-the-undying | 1 | SCAG | - | skip: subclass intro (flavor text and the expanded spell list, granted spells) |
+| warlock | undying-scag | 6-defy-death | 6 | SCAG | equal to, 1d8, minimum, use, finish a long rest | MODELLED: resource `warlock:defy-death` |
+| warlock | undying-scag | 10-undying-nature | 10 | SCAG | long rest | skip: passive: no food, drink or sleep, slower aging |
+| warlock | undying-scag | 14-indestructible-life | 14 | SCAG | use, equal to, 1d8, finish a short or long rest | MODELLED: resource `warlock:indestructible-life` |
+| wizard | abjuration-phb | 2-abjuration-savant | 2 | PHB | - | skip: halved copy cost, no use limit |
+| wizard | abjuration-phb | 2-arcane-ward | 2 | PHB | use, finish a long rest, equal to, number of | MODELLED: resource `wizard:arcane-ward` |
+| wizard | abjuration-phb | 2-school-of-abjuration | 2 | PHB | - | skip: subclass intro (flavor text) |
+| wizard | abjuration-phb | 6-projected-ward | 6 | PHB | 30 feet, use | skip: reaction using the Arcane Ward (30 feet), no number of its own |
+| wizard | abjuration-phb | 10-improved-abjuration | 10 | PHB | proficiency bonus | MODELLED: resource `wizard:improved-abjuration` |
+| wizard | abjuration-phb | 14-spell-resistance | 14 | PHB | - | skip: passive advantage and resistance, no number |
+| wizard | bladesinging-tce | 2-bladesinger-styles | 2 | TCE | use | skip: flavor text |
+| wizard | bladesinging-tce | 2-bladesinging | 2 | TCE | - | skip: subclass intro (flavor text) |
+| wizard | bladesinging-tce | 2-bladesong | 2 | TCE | use, 1 minute, equal to, minimum, 10 feet, number of | MODELLED: resource `wizard:bladesong` |
+| wizard | bladesinging-tce | 2-training-in-war-and-song-(bladesinging) | 2 | TCE | - | skip: proficiencies and a weapon pick (derived elsewhere) |
+| wizard | bladesinging-tce | 6-extra-attack | 6 | TCE | - | skip: attack count (derived elsewhere), no number |
+| wizard | bladesinging-tce | 10-song-of-defense | 10 | TCE | use, expend, equal to | MODELLED: resource `wizard:song-of-defense` |
+| wizard | bladesinging-tce | 14-song-of-victory | 14 | TCE | minimum | MODELLED: resource `wizard:song-of-victory` |
+| wizard | chronurgy-egw | 2-chronal-shift | 2 | EGW | 30 feet, use, expend, finish a long rest | MODELLED: resource `wizard:chronal-shift` |
+| wizard | chronurgy-egw | 2-chronurgy-magic | 2 | EGW | - | skip: subclass intro (flavor text) |
+| wizard | chronurgy-egw | 2-temporal-awareness | 2 | EGW | - | MODELLED: resource `wizard:temporal-awareness` |
+| wizard | chronurgy-egw | 6-momentary-stasis | 6 | EGW | 60 feet, dc, use, number of, equal to, minimum | MODELLED: resource `wizard:momentary-stasis` |
+| wizard | chronurgy-egw | 10-arcane-abeyance | 10 | EGW | 1 hour, use, dc, finish a short or long rest | MODELLED: resource `wizard:arcane-abeyance` |
+| wizard | chronurgy-egw | 14-convergent-future | 14 | EGW | 60 feet, use, minimum, long rest | skip: reaction paid with a level of exhaustion, no use count or character number |
+| wizard | conjuration-phb | 2-conjuration-savant | 2 | PHB | - | skip: halved copy cost, no use limit |
+| wizard | conjuration-phb | 2-minor-conjuration | 2 | PHB | use, 10 feet, 3 feet, 5 feet, 1 hour | skip: at-will action with ranges and a size limit only, no cost or limit |
+| wizard | conjuration-phb | 2-school-of-conjuration | 2 | PHB | - | skip: subclass intro (flavor text) |
+| wizard | conjuration-phb | 6-benign-transposition | 6 | PHB | use, 30 feet, finish a long rest | MODELLED: resource `wizard:benign-transposition` |
+| wizard | conjuration-phb | 10-focused-conjuration | 10 | PHB | - | skip: passive concentration rule, no number |
+| wizard | conjuration-phb | 14-durable-summons | 14 | PHB | - | skip: passive flat 30 temporary hit points on summoned creatures, no cost or limit |
+| wizard | divination-phb | 2-divination-savant | 2 | PHB | - | skip: halved copy cost, no use limit |
+| wizard | divination-phb | 2-portent | 2 | PHB | finish a long rest, once per | MODELLED: resource `wizard:portent` |
+| wizard | divination-phb | 2-school-of-divination | 2 | PHB | - | skip: subclass intro (flavor text) |
+| wizard | divination-phb | 6-expert-divination | 6 | PHB | expend | skip: slot regain rule (below the spell, at most 5th level), no use limit |
+| wizard | divination-phb | 10-the-third-eye | 10 | PHB | use, long rest, 60 feet, 10 feet | MODELLED: resource `wizard:the-third-eye` |
+| wizard | divination-phb | 14-greater-portent | 14 | PHB | - | MODELLED: table value on `wizard:portent` (three d20s and uses from level 14, pinned in `PORTENT_DICE_2014`) |
+| wizard | enchantment-phb | 2-enchantment-savant | 2 | PHB | - | skip: halved copy cost, no use limit |
+| wizard | enchantment-phb | 2-hypnotic-gaze | 2 | PHB | 5 feet, dc, use, finish a long rest | MODELLED: resource `wizard:hypnotic-gaze` |
+| wizard | enchantment-phb | 2-school-of-enchantment | 2 | PHB | - | skip: subclass intro (flavor text) |
+| wizard | enchantment-phb | 6-instinctive-charm | 6 | PHB | 30 feet, use, dc, finish a long rest | MODELLED: resource `wizard:instinctive-charm` |
+| wizard | enchantment-phb | 10-split-enchantment | 10 | PHB | - | skip: a second target, no number |
+| wizard | enchantment-phb | 14-alter-memories | 14 | PHB | use, dc, number of, equal to, minimum | MODELLED: resource `wizard:alter-memories` |
+| wizard | graviturgy-egw | 2-adjust-density | 2 | EGW | 30 feet, 1 minute, 10 feet | skip: at-will action with ranges, a size limit and speed changes only, no cost or limit |
+| wizard | graviturgy-egw | 2-graviturgy-magic | 2 | EGW | - | skip: subclass intro (flavor text) |
+| wizard | graviturgy-egw | 6-gravity-well | 6 | EGW | 5 feet | skip: 5-foot move per spell, no cost or limit |
+| wizard | graviturgy-egw | 10-violent-attraction | 10 | EGW | 60 feet, use, 1d10, 2d10, number of, equal to | MODELLED: resource `wizard:violent-attraction` |
+| wizard | graviturgy-egw | 14-event-horizon | 14 | EGW | 1 minute, 30 feet, dc, 2d10, use, finish a long rest | MODELLED: resource `wizard:event-horizon` |
+| wizard | illusion-phb | 2-illusion-savant | 2 | PHB | - | skip: halved copy cost, no use limit |
+| wizard | illusion-phb | 2-improved-minor-illusion | 2 | PHB | number of | skip: a cantrip, no number |
+| wizard | illusion-phb | 2-school-of-illusion | 2 | PHB | use | skip: subclass intro (flavor text) |
+| wizard | illusion-phb | 6-malleable-illusions | 6 | PHB | 1 minute, use | skip: an action to change an illusion, no number or limit |
+| wizard | illusion-phb | 10-illusory-self | 10 | PHB | use, finish a short or long rest | MODELLED: resource `wizard:illusory-self` |
+| wizard | illusion-phb | 14-illusory-reality | 14 | PHB | 1 minute | skip: bonus action for 1 minute with no cost or limit |
+| wizard | necromancy-phb | 2-grim-harvest | 2 | PHB | once per, equal to | MODELLED: resource `wizard:grim-harvest` |
+| wizard | necromancy-phb | 2-necromancy-savant | 2 | PHB | - | skip: halved copy cost, no use limit |
+| wizard | necromancy-phb | 2-school-of-necromancy | 2 | PHB | - | skip: subclass intro (flavor text) |
+| wizard | necromancy-phb | 6-undead-thralls | 6 | PHB | equal to, proficiency bonus | MODELLED: resource `wizard:undead-thralls` |
+| wizard | necromancy-phb | 10-inured-to-undeath | 10 | PHB | - | skip: passive resistance, no number |
+| wizard | necromancy-phb | 14-command-undead | 14 | PHB | use, 60 feet, dc | MODELLED: resource `wizard:command-undead` |
+| wizard | scribes-tce | 2-awakened-spellbook | 2 | TCE | use, expend, 10 minutes, finish a long rest, short rest | MODELLED: resource `wizard:awakened-spellbook` |
+| wizard | scribes-tce | 2-order-of-scribes | 2 | TCE | - | skip: subclass intro (flavor text) |
+| wizard | scribes-tce | 2-wizardly-quill | 2 | TCE | 2 minutes, use, 5 feet | skip: at-will quill (2 minutes per spell level to copy), no cost or limit |
+| wizard | scribes-tce | 6-manifest-mind | 6 | TCE | 60 feet, number of, equal to, proficiency bonus, expend, finish a long rest | MODELLED: resource `wizard:manifest-mind` |
+| wizard | scribes-tce | 10-master-scrivener | 10 | TCE | finish a long rest, 5 feet, long rest, use | MODELLED: resource `wizard:master-scrivener` |
+| wizard | scribes-tce | 14-one-with-the-word | 14 | TCE | 3d6, equal to, 1d6, long rest, number of, use | MODELLED: resource `wizard:one-with-the-word` |
+| wizard | transmutation-phb | 2-minor-alchemy | 2 | PHB | 10 minutes, 1 hour | skip: downtime procedure (10 minutes per cubic foot), no use limit |
+| wizard | transmutation-phb | 2-school-of-transmutation | 2 | PHB | - | skip: subclass intro (flavor text) |
+| wizard | transmutation-phb | 2-transmutation-savant | 2 | PHB | - | skip: halved copy cost, no use limit |
+| wizard | transmutation-phb | 6-transmuters-stone | 6 | PHB | 8 hours, 60 feet, 10 feet | skip: DEFERRED pick: the stone benefit (darkvision, speed, Constitution save proficiency or a resistance) is chosen at creation and needs pick wiring |
+| wizard | transmutation-phb | 10-shapechanger | 10 | PHB | expend, finish a short or long rest | MODELLED: resource `wizard:shapechanger` |
+| wizard | transmutation-phb | 14-master-transmuter | 14 | PHB | use, finish a long rest, 10 minutes, expend, 3d10, minimum | MODELLED: resource `wizard:master-transmuter` |
+| wizard | war-xge | 2-arcane-deflection | 2 | XGE | use | MODELLED: resource `wizard:arcane-deflection` |
+| wizard | war-xge | 2-tactical-wit | 2 | XGE | equal to | MODELLED: resource `wizard:tactical-wit` |
+| wizard | war-xge | 2-war-magic | 2 | XGE | - | skip: subclass intro (flavor text) |
+| wizard | war-xge | 6-power-surge | 6 | XGE | number of, equal to, minimum, finish a long rest, short rest, once per | MODELLED: resource `wizard:power-surge` |
+| wizard | war-xge | 10-durable-magic | 10 | XGE | - | skip: passive +2 AC and saves while concentrating, no cost or limit |
+| wizard | war-xge | 14-deflecting-shroud | 14 | XGE | use, 60 feet, equal to, half your | MODELLED: extra on `wizard:arcane-deflection` |
+
+  Skip reasons in short: subclass intros, expanded spell lists and spell tables (flavor or granted elsewhere); halved spellbook copy costs (the five Savant features); passive resistances, immunities, flat speeds and flat bonuses with no cost, limit or character-derived number (Psychic Defenses, Fire in the Veins, Fiery Soul, Otherworldly Wings, Gift of the Sea, Oceanic Soul, Thought Shield, Undying Nature, Inured to Undeath, Spell Resistance, Durable Summons, Durable Magic, Lunar Empowerment); at-will actions with only ranges or durations (Shadow Walk, Tempestuous Magic, Storm Guide, Minor Conjuration, Adjust Density, Gravity Well, Illusory Reality, Awakened Mind); no number (Wild Magic's Controlled Chaos and Spell Bombardment, Create Thrall, Armor of Hexes, Master of Hexes, Grave Touched, Projected Ward, Expert Divination, Split Enchantment); proficiencies, cantrips and languages; downtime (Minor Alchemy, Wizardly Quill); Convergent Future (cost is a level of exhaustion, no count).
+- **Deferred (picks, not guessed).** (1) Divine Soul Divine Magic (the cleric spell access and the affinity pick). (2) Transmuter's Stone (the stone benefit is chosen at creation). (3) Hex Warrior's weapon pick and the Lunar Embodiment phase pick (the phase is not tracked: Lunar Embodiment, Lunar Boons and Waxing and Waning describe all three). (4) The patron expanded spell lists stay with the existing spell logic.
+- **Surfaces.** No new output keys; `types.ts`, `export_fields.py` and the frontend are untouched (no `npm run build`).
+- **Golden: no rebaseline.** The golden's primary Sorcerer, Warlock and Wizard cases hold the SRD subclasses (Draconic, Fiend, Evocation) and no existing sink holds a book subclass of these classes, so no case moved: the full golden-driven tests pass against the unchanged stored results. No `REBASELINES` entry. `--append` added the kitchen sink `celestial-warlock14-mixed` (Celestial Warlock 14, mixed; `ks/src-all` and `ks/src-srd`): 249 -> 251 cases, the 249 existing cases byte-identical (checked by loading the gz before and after); `_EXPECT` of `test_export_fields` lists Healing Light, Radiant Soul, Celestial Resilience and Searing Vengeance so Markdown / PDF / YAML carry them.
+- **Edited tests (deliberate).** `test_c_series_golden` only (the W6 sweep exempts the appended Warlock 14 sink, which legitimately holds Mystic Arcanum; a W8d guard test).
+- **Timing** (`resolve()`, mean of 20, ms, level 20, mixed / 2014): Lunar Sorcerer 3.5 / 2.6, Shadow Sorcerer 3.5 / 2.6, Genie Warlock 3.5 / 2.7, Celestial Warlock 3.5 / 2.8, Undead Warlock 3.5 / 2.7, Scribes Wizard 3.5 / 2.7, Graviturgy Wizard 3.9 / 2.6, War Magic Wizard 3.5 / 2.6 (limit 50; also asserted).
+- **Totals.** Server suite 6734 -> 7070 passed (328 new + 1 golden test + the 2 new sink cases through the parametrized sweeps), root suite 405 passed / 8 skipped, frontend untouched. W8 as a whole (a-d): all 108 non-SRD 2014 subclasses scanned (341 feature records in part 1, 383 in part 2: 217 + 166), the book tables hold 235 resources and 61 sentences (part 2 added 152 resources and 21 sentences; W8c and W8d together also 10 extras).
+- **Uncertain.** (1) Limited Wish and Necrotic Husk are rolled in long rests (1d4); they are one-use resources without a recharge value, like W8a's Fanatical Focus. (2) Form of Dread's Wisdom save names no DC in the text, so none is printed. (3) Manifest Mind has two limits in the text (conjuring once per long rest, PB casts per day); the resource tracks the conjuring and the note states the casts. (4) Power Surge is a note-only entry because its pool resets to one, not to the maximum, on a long rest.
+
+
 ## W7 (F4) The 2014 SRD subclass use-limit tail (2026-10-24)
 
 Rulesets mixed / 2014 only and the 12 SRD subclass ids only (the 117 book subclass features are W8); 2024 output is byte-identical (the 2014 subclass tables are never read under "2024", also for a held SRD subclass, pinned by a test that empties them). Tests first (`tests/test_subclass_features_2014_w7.py`, 130, rule matrix in the docstring); with the `_subclass_tail_2014` call removed 90 of them fail, with the ruleset gate removed the 2024 independence test fails.
