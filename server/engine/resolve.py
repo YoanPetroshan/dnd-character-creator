@@ -70,6 +70,7 @@ from . import subclass_options_2024
 from . import subclass_innate_2024
 from . import subclass_spells_2024
 from . import class_resources as class_resources_mod
+from . import species_resources as species_resources_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
 from . import worn as worn_mod
@@ -6598,6 +6599,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "attacksPerAction": class_resources_mod.attacks_per_action(resolved_classes),
         "classResources": class_resources,
         "featResources": feat_effects_mod.resources(feat_inst, feat_numbers),  # FE3
+        "speciesResources": species_resources_mod.resources(  # W5a
+            catalog, race, race_id, subrace, species_variant, sum(class_levels.values()), prof_bonus, modifiers, base_speed),
         "carryingCapacity": carrying,
         "stealthDisadvantage": stealth_disadvantage,
     }

@@ -317,6 +317,13 @@ export interface FeatResource extends ResourceCore {
   source: { kind: "feat"; id: string; label: string };
 }
 
+/** W5a: a resource a species trait grants (Breath Weapon, Adrenaline Rush, ...): the class resource shape with `traitId`. */
+export interface SpeciesResource extends ResourceCore {
+  speciesId: string;
+  traitId: string;
+  source: { kind: "species"; id: string; label: string };
+}
+
 export interface Derived {
   abilityModifiers: Record<Ability, number>;
   proficiencyBonus: number;
@@ -341,6 +348,8 @@ export interface Derived {
   classResources?: ClassResource[];
   /** FE3: resources granted by feats; optional because older stored resolutions lack it. */
   featResources?: FeatResource[];
+  /** W5a: resources granted by species traits; optional because older stored resolutions lack it. */
+  speciesResources?: SpeciesResource[];
   /** Attacks per Attack action (R2): 1 + the largest Extra Attack, never stacked. Optional: older stored resolutions lack it. */
   attacksPerAction?: number;
   carryingCapacity?: CarryingCapacity;

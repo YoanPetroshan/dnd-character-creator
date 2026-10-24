@@ -28,7 +28,7 @@ DERIVED_FIELDS: list[tuple[str, object]] = [
     ("armorClass", None), ("speed", None), ("speeds", {}), ("savingThrows", {}), ("skills", {}),
     ("initiative", None), ("passivePerception", None), ("passiveInsight", None), ("passiveInvestigation", None),
     ("spellSlots", {}), ("warlockSpellSlots", {}), ("slotGrantingClasses", []),
-    ("attacks", []), ("attacksPerAction", 1), ("classResources", []), ("featResources", []), ("carryingCapacity", None), ("stealthDisadvantage", False),
+    ("attacks", []), ("attacksPerAction", 1), ("classResources", []), ("featResources", []), ("speciesResources", []), ("carryingCapacity", None), ("stealthDisadvantage", False),
 ]
 SHEET_TAIL_FIELDS: list[tuple[str, object]] = [
     ("proficiencies", {}), ("expertiseSkills", []), ("senses", {}), ("damageModifiers", {}),
@@ -253,6 +253,12 @@ def extra_blocks(resolution: dict) -> list[tuple[str, str]]:
     if feat_resources:
         blocks.append(("h2", "Ресурси от таланти"))
         for r in feat_resources:
+            blocks.append(("bullet", resource_line(r)))
+
+    species_resources = derived.get("speciesResources") or []  # W5a: same line as a class resource
+    if species_resources:
+        blocks.append(("h2", "Ресурси от расата"))
+        for r in species_resources:
             blocks.append(("bullet", resource_line(r)))
 
     carrying = derived.get("carryingCapacity")

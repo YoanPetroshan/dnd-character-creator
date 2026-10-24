@@ -526,6 +526,131 @@ TRAIT_EFFECT_QUOTES: dict[str, str] = {
     "human-(innistrad)-psi-stensia-psi-trait-1": "maximum increases by 2, and it increases by 2 every time you gain a level.",
 }
 
+# W5a (F2): species traits (ruleset "2024" species records only) with a use count, a rest rule or numbers, keyed by
+# catalog trait id. `engine/species_resources.py` builds `derived.speciesResources` from it. Fields: `race` (species
+# id), `name`, `uses` (int, "pb" or None = note only), `recharge`, `level` (character level the trait is gained at,
+# default 1), `dc` (ability whose modifier joins 8 + PB), `dice_by_level` ((level, dice), ...), `die`, `heal` (template),
+# `save`, `shape`, `damage_type` ("ancestry" = the picked Draconic Ancestry), `note` (template over pb, two_pb, level,
+# dice, dc, damage_type, speed, con_mod) and `quotes`: verbatim substrings of the catalog trait text (tags stripped;
+# tests/test_w5a_species_resources.py pins every one). Breath Weapon-like traits are resources, not attack rows (D-2).
+SPECIES_RESOURCES: dict[str, dict] = {
+    "dragonborn-xphb-trait-1": {
+        "race": "dragonborn-xphb", "name": "Breath Weapon", "uses": "pb", "recharge": "long", "dc": "CON", "save": "DEX",
+        "shape": "15-foot Cone or 30-foot Line (5 feet wide)", "damage_type": "ancestry",
+        "dice_by_level": ((1, "1d10"), (5, "2d10"), (11, "3d10"), (17, "4d10")),
+        "note": "Replaces one of your attacks in the Attack action: {shape}, Dexterity save, {dice} {damage_type} "
+                "damage on a failed save and half as much on a success",
+        "quotes": ("you can replace one of your attacks with an exhalation of magical energy in either a 15-foot Cone "
+                   "or a 30-foot Line that is 5 feet wide",
+                   "Dexterity saving throw (8 plus your Constitution modifier and Proficiency Bonus)",
+                   "takes 1d10 damage of the type determined by your Draconic Ancestry trait",
+                   "levels 5 (2d10), 11 (3d10), and 17 (4d10)",
+                   "a number of times equal to your Proficiency Bonus, and you regain all expended uses when you "
+                   "finish a Long Rest")},
+    "dragonborn-xphb-trait-4": {
+        "race": "dragonborn-xphb", "name": "Draconic Flight", "uses": 1, "recharge": "long", "level": 5,
+        "note": "Bonus Action, 10 minutes: spectral wings give a Fly Speed equal to your Speed{speed_part}",
+        "quotes": ("When you reach character level 5", "you have a Fly Speed equal to your Speed",
+                   "wings on your back that last for 10 minutes",
+                   "you can't use it again until you finish a Long Rest")},
+    "dwarf-xphb-trait-3": {
+        "race": "dwarf-xphb", "name": "Stonecunning", "uses": "pb", "recharge": "long",
+        "note": "Bonus Action, 10 minutes: Tremorsense with a range of 60 feet while on or touching a stone surface",
+        "quotes": ("you gain Tremorsense with a range of 60 feet for 10 minutes",
+                   "a number of times equal to your Proficiency Bonus, and you regain all expended uses when you "
+                   "finish a Long Rest")},
+    "goliath-xphb-trait-0": {
+        "race": "goliath-xphb", "name": "Giant Ancestry", "uses": "pb", "recharge": "long", "giant_ancestry": True,
+        "note": "{ancestry}",
+        "quotes": ("you can use the chosen benefit a number of times equal to your Proficiency Bonus, and you regain "
+                   "all expended uses when you finish a Long Rest",)},
+    "goliath-xphb-trait-1": {
+        "race": "goliath-xphb", "name": "Large Form", "uses": 1, "recharge": "long", "level": 5,
+        "note": "Bonus Action, 10 minutes: your size becomes Large, Advantage on Strength checks, Speed +10 feet",
+        "quotes": ("Starting at character level 5", "change your size to Large as a Bonus Action",
+                   "lasts for 10 minutes", "Advantage on Strength checks, and your Speed increases by 10 feet",
+                   "you can't use it again until you finish a Long Rest")},
+    "orc-xphb-trait-0": {
+        "race": "orc-xphb", "name": "Adrenaline Rush", "uses": "pb", "recharge": "short-or-long",
+        "note": "Take the Dash action as a Bonus Action and gain {pb} Temporary Hit Points",
+        "quotes": ("You can take the Dash action as a Bonus Action",
+                   "you gain a number of Temporary Hit Points equal to your Proficiency Bonus",
+                   "a number of times equal to your Proficiency Bonus, and you regain all expended uses when you "
+                   "finish a Short or Long Rest")},
+    "orc-xphb-trait-2": {
+        "race": "orc-xphb", "name": "Relentless Endurance", "uses": 1, "recharge": "long",
+        "note": "When reduced to 0 Hit Points but not killed outright, drop to 1 Hit Point instead",
+        "quotes": ("you can drop to 1 Hit Point instead",
+                   "you can't do so again until you finish a Long Rest")},
+    "aasimar-xphb-trait-2": {
+        "race": "aasimar-xphb", "name": "Healing Hands", "uses": 1, "recharge": "long", "heal": "{pb}d4",
+        "note": "Magic action, touch: the creature regains Hit Points equal to the total of {pb}d4",
+        "quotes": ("roll a number of d4s equal to your Proficiency Bonus",
+                   "regains a number of Hit Points equal to the total rolled",
+                   "you can't use it again until you finish a Long Rest")},
+    "aasimar-xphb-trait-4": {
+        "race": "aasimar-xphb", "name": "Celestial Revelation", "uses": 1, "recharge": "long", "level": 3,
+        "note": "Bonus Action, 1 minute: once on each of your turns, extra damage equal to {pb} (Necrotic for "
+                "Necrotic Shroud, Radiant for Heavenly Wings and Inner Radiance)",
+        "quotes": ("When you reach character level 3", "The transformation lasts for 1 minute",
+                   "The extra damage equals your Proficiency Bonus",
+                   "Necrotic for Necrotic Shroud or Radiant for Heavenly Wings and Inner Radiance",
+                   "you can't do so again until you finish a Long Rest")},
+    "halfling-xphb-trait-2": {
+        "race": "halfling-xphb", "name": "Luck", "uses": None, "recharge": None,
+        "note": "When you roll a 1 on the d20 of a D20 Test, reroll the die and use the new roll",
+        "quotes": ("When you roll a 1 on the d20 of a D20 Test, you can reroll the die, and you must use the new roll",)},
+    "human-xphb-trait-0": {
+        "race": "human-xphb", "name": "Resourceful", "uses": None, "recharge": "long",
+        "note": "You gain Heroic Inspiration whenever you finish a Long Rest",
+        "quotes": ("You gain Heroic Inspiration whenever you finish a Long Rest",)},
+    "lupin-rhw-trait-2": {
+        "race": "lupin-rhw", "name": "Howl", "uses": "pb", "recharge": "long", "dc": "CON", "save": "WIS",
+        "note": "Bonus Action: creatures of your choice within 15 feet make a Wisdom save or have Disadvantage on "
+                "attack rolls and saving throws until the start of your next turn",
+        "quotes": ("Each creature of your choice within 15 feet of you must succeed on a Wisdom saving throw "
+                   "(DC 8 plus your Constitution modifier and Proficiency Bonus)",
+                   "a number of times equal to your Proficiency Bonus, and you regain all expended uses when you "
+                   "finish a Long Rest")},
+    "reborn-rhw-trait-2": {
+        "race": "reborn-rhw", "name": "Knowledge from a Past Life", "uses": "pb", "recharge": "long", "die": "1d6",
+        "note": "When you fail an ability check, add 1d6 to the d20",
+        "quotes": ("you can roll 1d6 and add the number rolled to the d20",
+                   "a number of times equal to your Proficiency Bonus, and you regain all expended uses when you "
+                   "finish a Long Rest")},
+    "shifter-efa-trait-2": {
+        "race": "shifter-efa", "name": "Shifting", "uses": "pb", "recharge": "long",
+        "note": "Bonus Action, 1 minute: gain {two_pb} Temporary Hit Points (2 times your Proficiency Bonus) and one "
+                "shifting option",
+        "quotes": ("This transformation lasts for 1 minute",
+                   "Temporary Hit Points equal to 2 times your Proficiency Bonus",
+                   "You can shift a number of times equal to your Proficiency Bonus, and you regain all expended "
+                   "uses when you finish a Long Rest")},
+    "khoravar-efa-trait-3": {
+        "race": "khoravar-efa", "name": "Lethargy Resilience", "uses": 1, "recharge": None,
+        "note": "When you fail a save to avoid or end Unconscious you can succeed instead; after using it, you can't "
+                "do so again until you finish 1d4 Long Rests",
+        "quotes": ("you can succeed instead",
+                   "you can't do so again until you finish 1d4 Long Rests")},
+}
+
+# W5a: Giant Ancestry (Goliath, XPHB) boons by species variant id. The catalog trait text drops the list, so the
+# `quote` is pinned against the raw 5etools race entry instead (tests/test_w5a_species_resources.py).
+GIANT_ANCESTRY_2024: dict[str, dict] = {
+    "cloud-giant-ancestry": {"name": "Cloud's Jaunt", "note": "Bonus Action: teleport up to 30 feet to an unoccupied space you can see",
+                             "quote": "you magically teleport up to 30 feet to an unoccupied space you can see"},
+    "fire-giant-ancestry": {"name": "Fire's Burn", "note": "when you hit a target with an attack roll and deal damage, also deal 1d10 Fire damage to it",
+                            "quote": "you can also deal 1d10 Fire damage to that target"},
+    "frost-giant-ancestry": {"name": "Frost's Chill", "note": "when you hit a target with an attack roll and deal damage, also deal 1d6 Cold damage and reduce its Speed by 10 feet until the start of your next turn",
+                             "quote": "you can also deal 1d6 Cold damage to that target and reduce its Speed by 10 feet until the start of your next turn"},
+    "hill-giant-ancestry": {"name": "Hill's Tumble", "note": "when you hit a Large or smaller creature with an attack roll and deal damage, give it the Prone condition",
+                            "quote": "you can give that target the Prone condition"},
+    "stone-giant-ancestry": {"name": "Stone's Endurance", "note": "Reaction when you take damage: roll 1d12 + your Constitution modifier ({con_mod:+d}) and reduce the damage by that total",
+                             "quote": "roll 1d12. Add your Constitution modifier to the number rolled and reduce the damage by that total"},
+    "storm-giant-ancestry": {"name": "Storm's Thunder", "note": "Reaction when you take damage from a creature within 60 feet: deal 1d8 Thunder damage to it",
+                             "quote": "you can take a Reaction to deal 1d8 Thunder damage to that creature"},
+}
+
 # W1 (F3): "Your speed is not reduced by wearing heavy armor." Traits (official races) and the SRD dwarf, whose SRD
 # record has no such trait (the sentence is in the SRD Dwarf Speed text), pinned by race id. Dwarf (XPHB) has none.
 HEAVY_ARMOR_SPEED_EXEMPT_TRAITS: dict[str, str] = {

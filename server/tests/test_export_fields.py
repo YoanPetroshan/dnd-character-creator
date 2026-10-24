@@ -218,6 +218,10 @@ _EXPECT.update({
     "fey-wanderer3-2024": {"resources": ["Otherworldly Glamour"], "masteries": True, "always_prepared": ["Charm Person", "Hunter's Mark"],
                            "feature_choice": "Deception"},
     "magic-initiate-2024": {"innate": True, "feats": ["magic-initiate-xphb"]},
+    # W5a: species trait resources reach every export
+    "dragonborn11-2024": {"species_resources": ["Breath Weapon", "Draconic Flight"]},
+    "orc5-2024": {"species_resources": ["Adrenaline Rush", "Relentless Endurance"], "resources": ["Rage"]},
+    "goliath5-2024": {"species_resources": ["Giant Ancestry", "Large Form"]},
     # FE12: feat effects reach every export (notes, resources, attack-row notes, feat picks)
     "feats-mixed-fighter14": {"feats": ["alert-phb", "tough-phb", "great-weapon-master-phb", "lucky-phb", "observant-phb"],
                               "feat_resources": ["Luck Points"], "attack_note": "Great Weapon Master: before you attack",
@@ -263,6 +267,7 @@ def _expected_strings(res) -> list[tuple[str, str]]:
     for r in derived["classResources"]:
         out += [("resourceDetail", frag) for frag in export_fields.resource_detail_parts(r.get("details"))]
     out += [("featResource", r["name"]) for r in derived.get("featResources", [])]  # FE3
+    out += [("speciesResource", r["name"]) for r in derived.get("speciesResources", [])]  # W5a
     out += [("featNote", note) for f in sheet["feats"] for note in f.get("notes", [])]  # FE3
     out += [("weaponMastery", m["name"]) for m in sheet["weaponMasteries"]]
     for cs in sheet["spells"]:
@@ -387,6 +392,7 @@ def test_kitchen_sink_fields_are_non_empty_as_expected(catalog, sid):
     for feat in want.get("feats", []):
         assert feat in ids, feat
     assert {r["name"] for r in derived["featResources"]} >= set(want.get("feat_resources", []))
+    assert {r["name"] for r in derived["speciesResources"]} >= set(want.get("species_resources", []))  # W5a
     if "elemental_adept" in want:
         picks = [f["choice"][0] for f in sheet["feats"] if f["id"] == "elemental-adept-phb"]
         assert len(picks) == want["elemental_adept"] and len(set(picks)) == len(picks)

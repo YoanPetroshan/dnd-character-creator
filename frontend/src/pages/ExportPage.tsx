@@ -181,6 +181,12 @@ export function ExportPage() {
           <ClassResourcesList resources={resolution.derived.featResources!} />
         </div>
       )}
+      {(resolution.derived.speciesResources?.length ?? 0) > 0 && (
+        <div>
+          <h2>Ресурси от расата</h2>
+          <ClassResourcesList resources={resolution.derived.speciesResources!} />
+        </div>
+      )}
       {(resolution.sheet.feats?.length ?? 0) > 0 && (
         <div>
           <h2>Таланти</h2>

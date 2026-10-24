@@ -112,6 +112,11 @@ KITCHEN_SINK: dict[str, dict] = {
                                 overrides={"class:fighter:3:feature:battle-master-xphb-3-battle-master": [
                                     "opt-ambush-xphb", "opt-bait-and-switch-xphb", "opt-commanders-strike-xphb"]}),
     "fey-wanderer3-2024": _sub("ranger", 3, "2024", sub="fey-wanderer-xphb", marks=("classes", "official", "spells"), origin=_XPHB_ORIGIN),
+    # W5a: species trait resources (2024 only, so not part of the golden): Breath Weapon + Draconic Flight, Adrenaline Rush
+    # + Relentless Endurance, Giant Ancestry + Large Form
+    "dragonborn11-2024": _sub("fighter", 11, "2024", marks=("classes", "official"), origin=("dragonborn-xphb", "soldier-xphb")),
+    "orc5-2024": _sub("barbarian", 5, "2024", marks=("classes", "official"), origin=("orc-xphb", "soldier-xphb")),
+    "goliath5-2024": _sub("fighter", 5, "2024", marks=("classes", "official"), origin=("goliath-xphb", "soldier-xphb")),
     # FE12: feat-holding drafts (ASI feat picks as overrides; every feat card is filled with its first option)
     "feats-mixed-fighter14": _sub("fighter", 14, "mixed", marks=("classes", "official"), feats=True, overrides={
         "class:fighter:4:asi": ["feat:alert-phb"], "class:fighter:6:asi": ["feat:tough-phb"],

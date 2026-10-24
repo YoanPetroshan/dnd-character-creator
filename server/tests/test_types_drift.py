@@ -28,6 +28,7 @@ CONTAINERS = [
     ("derived.attacks[]", "Attack"),
     ("derived.classResources[]", "ClassResource"),
     ("derived.featResources[]", "FeatResource"),
+    ("derived.speciesResources[]", "SpeciesResource"),
     ("sheet.features[]", "SheetFeature"),
     ("sheet.feats[]", "SheetFeat"),
     ("sheet.spells[]", "SheetClassSpells"),

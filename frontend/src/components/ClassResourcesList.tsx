@@ -1,4 +1,4 @@
-import type { ClassResource, FeatResource } from "../types";
+import type { ClassResource, FeatResource, SpeciesResource } from "../types";
 
 const RECHARGE: Record<string, string> = {
   long: "дълга почивка",
@@ -56,7 +56,7 @@ function detailParts(d: Record<string, unknown> | undefined): string[] {
   return parts;
 }
 
-export function describeResource(r: ClassResource | FeatResource): string {
+export function describeResource(r: ClassResource | FeatResource | SpeciesResource): string {
   const parts: string[] = [];
   if (r.unlimited) parts.push("без ограничение");
   else if (r.uses != null) parts.push(String(r.uses));
@@ -81,7 +81,7 @@ export function describeResource(r: ClassResource | FeatResource): string {
 }
 
 /** A plain list of class resources; renders nothing when there are none. */
-export function ClassResourcesList({ resources }: { resources: (ClassResource | FeatResource)[] }) {
+export function ClassResourcesList({ resources }: { resources: (ClassResource | FeatResource | SpeciesResource)[] }) {
   if (resources.length === 0) return null;
   return (
     <ul>

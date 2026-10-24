@@ -85,6 +85,7 @@ def strip_g2(res: dict) -> dict:
     for a in res["derived"].get("attacks", []):
         a.pop("wielded", None)
     res["derived"].pop("featResources", None)  # FE3 additive key (feat-less baseline drafts: always [])
+    res["derived"].pop("speciesResources", None)  # W5a additive key (empty for the baseline drafts)
     return res
 
 

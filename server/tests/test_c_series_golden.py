@@ -87,7 +87,8 @@ MULTICLASS = {
 # list element. Empty on purpose; adding to it needs the user's agreement and a note here.
 # "derived.featResources": FE3 additive key (feat resources, e.g. Lucky), always [] for the feat-less golden
 # drafts; user-approved feat-effects series (decision F-D1). Both sides are stripped, nothing else changes.
-STRIP: tuple[str, ...] = ("derived.featResources",)
+# "derived.speciesResources": W5a additive key (species trait resources), always [] for the golden drafts (SRD Human).
+STRIP: tuple[str, ...] = ("derived.featResources", "derived.speciesResources")
 
 # RP6 / P0: append-only record of deliberate mixed / 2014 changes, see the module docstring. slice id ->
 # {"cases": [fnmatch over case names], "paths": [regexes over normalized paths], "why": one line}. Append-only; one entry per deliberate change.
@@ -558,7 +559,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3") and STRIP == ("derived.featResources",)
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3") and STRIP == ("derived.featResources", "derived.speciesResources")
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
