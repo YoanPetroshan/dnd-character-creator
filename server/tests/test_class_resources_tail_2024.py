@@ -132,7 +132,11 @@ def test_resource_appears_at_the_feature_level_with_the_text_numbers(catalog, cl
 @pytest.mark.parametrize("ruleset", ["mixed", "2014"])
 def test_nothing_outside_ruleset_2024(catalog, ruleset, cls, rid, first, uses, recharge):
     res = _res(catalog, [(cls, 20)], ruleset)
-    assert rid not in _ids(res)
+    if rid in ("cleric:divine-intervention", "rogue:stroke-of-luck"):
+        # W6: the SRD feature of the same name has its own 2014 entry (same id); it must not carry the 2024 text
+        assert _entry(res, rid)["details"]["note"] != _entry(_res(catalog, [(cls, 20)], "2024"), rid)["details"]["note"]
+    else:
+        assert rid not in _ids(res)
     assert not [i for i in _ids(res) if i in {"druid:wild-companion", "wizard:signature-spells"}]
 
 

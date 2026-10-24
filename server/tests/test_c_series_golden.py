@@ -207,6 +207,31 @@ REBASELINES: dict[str, dict] = {
         ],
         "why": "SRD bundle quantities from the equipment text (Extra 3)",
     },
+    # W6 / F4: the 2014 SRD class-feature use-limit tail (`RESOURCE_TAIL_2014` / `RESOURCE_NOTES_2014`). Rule matrix:
+    # a class case moves when its level has reached a modelled SRD feature record: Barbarian 11 / 20 (Brutal Critical 9,
+    # Relentless Rage 11), Bard 3 / 11 / 20 (Song of Rest 2, Superior Inspiration 20), Cleric 3 / 11 / 20 (Channel
+    # Divinity 2, Divine Intervention 10), Druid 3 / 11 / 20 (Wild Shape 2), Monk 3 / 11 / 20 (Ki 2, Deflect Missiles 3 ...),
+    # every Paladin level (Lay on Hands 1, Divine Smite 2, Channel Divinity 3, Cleansing Touch 14), Ranger / Rogue /
+    # Sorcerer 20 (Foe Slayer, Stroke of Luck, Sorcerous Restoration), Warlock 11 / 20 (Mystic Arcanum 11, Eldritch
+    # Master 20); the multiclass Rogue 3 / Bard 2 (Song of Rest) and Barbarian 3 / Monk 2 (Ki note); the kitchen sinks
+    # of those classes at or above those levels. Level 1 / 3 of the other classes, Fighter, Wizard and the remaining
+    # multiclass cases must not move. Rule matrix for paths: new resources (reported once at their roots), notes added
+    # to the existing resources, and the whole list when it was empty before (Ranger 20, Warlock without picks).
+    "W6": {
+        "cases": ["*/src-*/barbarian11", "*/src-*/barbarian20", "*/src-*/bard3", "*/src-*/bard11", "*/src-*/bard20",
+                  "*/src-*/cleric3", "*/src-*/cleric11", "*/src-*/cleric20", "*/src-*/druid3", "*/src-*/druid11",
+                  "*/src-*/druid20", "*/src-*/monk3", "*/src-*/monk11", "*/src-*/monk20", "*/src-*/paladin*",
+                  "*/src-*/ranger20", "*/src-*/rogue20", "*/src-*/sorcerer20", "*/src-*/warlock11",
+                  "*/src-*/warlock20", "*/src-*/multi-rogue3-bard2", "*/src-*/multi-barbarian3-monk2",
+                  "ks/src-*/barbarian20-2014", "ks/src-*/bard10-2014", "ks/src-*/bard6-lore-*", "ks/src-*/cleric6",
+                  "ks/src-*/monk14", "ks/src-*/paladin6", "ks/src-*/warlock17"],
+        "paths": [
+            r"^result\.derived\.classResources\[(barbarian:(brutal-critical|relentless-rage)|bard:song-of-rest|cleric:divine-intervention|monk:(deflect-missiles|slow-fall|stunning-strike|empty-body)|paladin:(divine-smite|cleansing-touch)|ranger:foe-slayer|rogue:stroke-of-luck|warlock:(mystic-arcanum|eldritch-master))\]$",
+            r"^result\.derived\.classResources\[(bard:bardic-inspiration|cleric:channel-divinity|druid:wild-shape|monk:ki|paladin:(lay-on-hands|channel-divinity)|sorcerer:sorcery-points)\]\.details(\.note)?$",
+            r"^result\.derived\.classResources$",
+        ],
+        "why": "2014 SRD class-feature use-limit tail (W6)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -559,7 +584,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3") and STRIP == ("derived.featResources", "derived.speciesResources")
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6") and STRIP == ("derived.featResources", "derived.speciesResources")
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
@@ -683,6 +708,27 @@ def test_rpx3_cases_hold_the_text_counts_and_no_ammunition_stack():
             for e in entry["result"]["sheet"]["equipment"][k]:
                 if e["itemId"] in ("arrow", "crossbow-bolt", "sling-bullet", "blowgun-needle"):
                     assert e["qty"] == 1, (n, e)
+
+
+def test_w6_cases_hold_the_2014_class_feature_tail():
+    """W6: every matched case carries the SRD tail entries of its class at its level; Fighter, Wizard, the low-level
+    cases and the other multiclass cases do not hold any W6 resource."""
+    hit = sorted(n for n in _GOLDEN if any(fnmatch.fnmatchcase(n, p) for p in REBASELINES["W6"]["cases"]))
+    assert len(hit) == 116
+    w6_ids = {"barbarian:brutal-critical", "barbarian:relentless-rage", "bard:song-of-rest", "cleric:divine-intervention",
+              "monk:deflect-missiles", "monk:slow-fall", "monk:stunning-strike", "monk:empty-body", "paladin:divine-smite",
+              "paladin:cleansing-touch", "ranger:foe-slayer", "rogue:stroke-of-luck", "warlock:mystic-arcanum",
+              "warlock:eldritch-master"}
+    for n, entry in _GOLDEN.items():
+        ids = {r["id"] for r in entry["result"]["derived"]["classResources"]}
+        if n not in hit:
+            assert not ids & w6_ids, n
+    for n in hit:
+        ids = {r["id"] for r in _GOLDEN[n]["result"]["derived"]["classResources"]}
+        if "rogue20" in n:
+            assert "rogue:stroke-of-luck" in ids, n
+        if "warlock20" in n and "src-srd" in n:
+            assert {"warlock:eldritch-master", "warlock:mystic-arcanum"} <= ids, n
 
 
 def test_keyed_normalization_and_diff_paths():

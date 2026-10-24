@@ -1987,6 +1987,207 @@ SUBCLASS_NOTES_2024: tuple[dict, ...] = (
                 ("aberrant-xphb-6-psionic-sorcery", "it requires no Verbal or Somatic components"))},
 )
 
+# ---- W6 (finding F4): the 2014 (SRD) class-feature use-limit tail. The counterpart of RESOURCE_TAIL_2024 /
+# RESOURCE_NOTES_2024 for rulesets "mixed" and "2014": SRD class features (2014 API ids) whose text gives a use count,
+# a rest rule or a number the sheet can compute. `class_resources._tail_2014` builds one resource per entry when the SRD
+# feature record `feature` is in the catalog and the class level has reached that record's level; nothing under ruleset
+# "2024". Spec keys: `class`, `feature`, `name`, optional `uses` / `recharge` / `die` / `dice` / `pool` (a literal, an
+# "@name" variable of `class_resources._note_vars` / `vars` / `level_vars`, or a staged tuple (default, ((feature id,
+# value), ...)): the value of the last listed record whose level the class has reached), `note` (template over the same
+# variables), `vars` (name -> (default, stages)), `level_vars` (name -> ((class level, value), ...) for tables that live
+# only in the text; each is pinned by test), `extras` ((feature id, template) appended with "; "
+# once that record's level is reached) and `quotes` ((feature id, verbatim substring of name + desc) pinned by test).
+# Notes are paraphrases carrying the character's computed numbers. `uses: None` and `recharge: None` = note only (the
+# text has no use count or rest rule).
+RESOURCE_TAIL_2014: tuple[dict, ...] = (
+    # Brutal Critical: "you can roll one additional weapon damage die when determining the extra damage for a critical
+    # hit with a melee attack. This increases to two additional dice at 13th level and three additional dice at 17th
+    # level."
+    {"class": "barbarian", "feature": "brutal-critical-1-die", "name": "Brutal Critical", "uses": None, "recharge": None,
+     "vars": {"crit_extra": ("one additional weapon damage die", (
+         ("brutal-critical-2-dice", "two additional weapon damage dice"),
+         ("brutal-critical-3-dice", "three additional weapon damage dice")))},
+     "note": "On a critical hit with a melee attack, roll {crit_extra} for the extra damage",
+     "quotes": (("brutal-critical-1-die", "you can roll one additional weapon damage die when determining the extra damage for a critical hit with a melee attack"),
+                ("brutal-critical-1-die", "This increases to two additional dice at 13th level and three additional dice at 17th level."))},
+    # Relentless Rage: "If you drop to 0 hit points while you're raging and don't die outright, you can make a DC 10
+    # Constitution saving throw. If you succeed, you drop to 1 hit point instead. Each time you use this feature after
+    # the first, the DC increases by 5. When you finish a short or long rest, the DC resets to 10."
+    {"class": "barbarian", "feature": "relentless-rage", "name": "Relentless Rage", "uses": None, "recharge": None,
+     "note": "If you drop to 0 hit points while raging and don't die outright, make a DC 10 Constitution saving throw; "
+             "on a success you drop to 1 hit point instead. Each use after the first raises the DC by 5 (+5); a short "
+             "or long rest resets to 10",
+     "quotes": (("relentless-rage", "you can make a DC 10 Constitution saving throw. If you succeed, you drop to 1 hit point instead."),
+                ("relentless-rage", "Each time you use this feature after the first, the DC increases by 5. When you finish a short or long rest, the DC resets to 10."))},
+    # Song of Rest: "each of those creatures regains an extra 1d6 hit points. The extra hit points increase when you
+    # reach certain levels in this class: to 1d8 at 9th level, to 1d10 at 13th level, and to 1d12 at 17th level."
+    {"class": "bard", "feature": "song-of-rest-d6", "name": "Song of Rest", "uses": None, "recharge": None,
+     "die": "@rest_die",
+     "vars": {"rest_die": ("d6", (("song-of-rest-d8", "d8"), ("song-of-rest-d10", "d10"), ("song-of-rest-d12", "d12")))},
+     "note": "During a short rest, you and friendly creatures who hear your performance and spend Hit Dice regain an "
+             "extra 1{rest_die} hit points",
+     "quotes": (("song-of-rest-d6", "regain hit points at the end of the short rest by spending one or more Hit Dice, each of those creatures regains an extra 1d6 hit points"),
+                ("song-of-rest-d6", "to 1d8 at 9th level, to 1d10 at 13th level, and to 1d12 at 17th level"))},
+    # Divine Intervention: "roll percentile dice. If you roll a number equal to or lower than your cleric level, your
+    # deity intervenes. ... If your deity intervenes, you can't use this feature again for 7 days. Otherwise, you can use
+    # it again after you finish a long rest. At 20th level, your call for intervention succeeds automatically, no roll
+    # required."
+    {"class": "cleric", "feature": "divine-intervention", "name": "Divine Intervention", "uses": 1, "recharge": "long",
+     "note": "Action: roll percentile dice; your deity intervenes on a roll of {level} or lower (your Cleric level), "
+             "after which you can't use this again for 7 days; otherwise you can use it again after a long rest",
+     "extras": (("divine-intervention-improvement", "your call for intervention succeeds automatically, no roll required"),),
+     "quotes": (("divine-intervention", "roll percentile dice. If you roll a number equal to or lower than your cleric level, your deity intervenes"),
+                ("divine-intervention", "If your deity intervenes, you can't use this feature again for 7 days. Otherwise, you can use it again after you finish a long rest."),
+                ("divine-intervention-improvement", "your call for intervention succeeds automatically, no roll required"))},
+    # Deflect Missiles: "the damage you take from the attack is reduced by 1d10 + your Dexterity modifier + your monk
+    # level. ... you can spend 1 ki point to make a ranged attack with the weapon or piece of ammunition you just caught,
+    # ... a normal range of 20 feet and a long range of 60 feet."
+    {"class": "monk", "feature": "deflect-missiles", "name": "Deflect Missiles", "uses": None, "recharge": None,
+     "note": "Reaction when a ranged weapon attack hits you: reduce the damage by 1d10{dex_level:+d} (1d10 + DEX "
+             "modifier + Monk level); if you reduce it to 0 you can catch the missile and spend 1 ki point to attack "
+             "with it as part of the same reaction (range 20/60 feet)",
+     "quotes": (("deflect-missiles", "the damage you take from the attack is reduced by 1d10 + your Dexterity modifier + your monk level"),
+                ("deflect-missiles", "you can spend 1 ki point to make a ranged attack with the weapon or piece of ammunition you just caught"),
+                ("deflect-missiles", "a normal range of 20 feet and a long range of 60 feet"))},
+    # Slow Fall: "reduce any falling damage you take by an amount equal to five times your monk level."
+    {"class": "monk", "feature": "slow-fall", "name": "Slow Fall", "uses": None, "recharge": None,
+     "note": "Reaction when you fall: reduce the falling damage by {five_level} (5 x Monk level)",
+     "quotes": (("slow-fall", "reduce any falling damage you take by an amount equal to five times your monk level"),)},
+    # Stunning Strike: "you can spend 1 ki point to attempt a stunning strike. The target must succeed on a Constitution
+    # saving throw or be stunned until the end of your next turn." Ki: "Ki save DC = 8 + your proficiency bonus + your
+    # Wisdom modifier".
+    {"class": "monk", "feature": "stunning-strike", "name": "Stunning Strike", "uses": None, "recharge": None,
+     "note": "When you hit with a melee weapon attack, spend 1 ki point: the target makes a Constitution saving throw "
+             "(DC {dc_wis}) or is stunned until the end of your next turn",
+     "quotes": (("stunning-strike", "you can spend 1 ki point to attempt a stunning strike. The target must succeed on a Constitution saving throw or be stunned until the end of your next turn"),
+                ("ki", "Ki save DC = 8 + your proficiency bonus + your Wisdom modifier"))},
+    # Empty Body: "spend 4 ki points to become invisible for 1 minute. During that time, you also have resistance to all
+    # damage but force damage. Additionally, you can spend 8 ki points to cast the astral projection spell, without
+    # needing material components."
+    {"class": "monk", "feature": "empty-body", "name": "Empty Body", "uses": None, "recharge": None,
+     "note": "Action, 4 ki points: invisible for 1 minute with resistance to all damage but force; or 8 ki points to "
+             "cast astral projection without material components (you can't take other creatures)",
+     "quotes": (("empty-body", "spend 4 ki points to become invisible for 1 minute"),
+                ("empty-body", "resistance to all damage but force damage"),
+                ("empty-body", "you can spend 8 ki points to cast the astral projection spell, without needing material components"),
+                ("empty-body", "you can't take any other creatures with you"))},
+    # Divine Smite: "you can expend one spell slot to deal radiant damage to the target, in addition to the weapon's
+    # damage. The extra damage is 2d8 for a 1st-level spell slot, plus 1d8 for each spell level higher than 1st, to a
+    # maximum of 5d8. The damage increases by 1d8 if the target is an undead or a fiend."
+    {"class": "paladin", "feature": "divine-smite", "name": "Divine Smite", "uses": None, "recharge": None,
+     "note": "When you hit with a melee weapon attack, expend a spell slot for extra radiant damage: 2d8 for a 1st-level "
+             "slot, +1d8 per slot level above 1st, maximum 5d8; +1d8 against an undead or a fiend",
+     "extras": (
+         # Improved Divine Smite (11): "Whenever you hit a creature with a melee weapon, the creature takes an extra 1d8
+         # radiant damage. If you also use your Divine Smite with an attack, you add this damage to the extra damage of
+         # your Divine Smite."
+         ("improved-divine-smite", "Improved Divine Smite: every melee weapon hit deals an extra 1d8 radiant damage, "
+          "added to Divine Smite's damage"),),
+     "quotes": (("divine-smite", "you can expend one spell slot to deal radiant damage to the target, in addition to the weapon's damage"),
+                ("divine-smite", "The extra damage is 2d8 for a 1st-level spell slot, plus 1d8 for each spell level higher than 1st, to a maximum of 5d8."),
+                ("divine-smite", "The damage increases by 1d8 if the target is an undead or a fiend."),
+                ("improved-divine-smite", "Whenever you hit a creature with a melee weapon, the creature takes an extra 1d8 radiant damage."))},
+    # Cleansing Touch: "you can use your action to end one spell on yourself or on one willing creature that you touch.
+    # You can use this feature a number of times equal to your Charisma modifier (a minimum of once). You regain
+    # expended uses when you finish a long rest."
+    {"class": "paladin", "feature": "cleansing-touch", "name": "Cleansing Touch", "uses": "@cha_min1", "recharge": "long",
+     "note": "Action: end one spell on yourself or on one willing creature that you touch",
+     "quotes": (("cleansing-touch", "you can use your action to end one spell on yourself or on one willing creature that you touch"),
+                ("cleansing-touch", "a number of times equal to your Charisma modifier (a minimum of once). You regain expended uses when you finish a long rest."))},
+    # Foe Slayer: "Once on each of your turns, you can add your Wisdom modifier to the attack roll or the damage roll of an
+    # attack you make against one of your favored enemies."
+    {"class": "ranger", "feature": "foe-slayer", "name": "Foe Slayer", "uses": None, "recharge": None,
+     "note": "Once on each of your turns, add your Wisdom modifier ({wis:+d}) to the attack roll or the damage roll of "
+             "an attack against one of your favored enemies (before or after the roll)",
+     "quotes": (("foe-slayer", "Once on each of your turns, you can add your Wisdom modifier to the attack roll or the damage roll of an attack you make against one of your favored enemies."),)},
+    # Stroke of Luck: "If your attack misses a target within range, you can turn the miss into a hit. Alternatively, if
+    # you fail an ability check, you can treat the d20 roll as a 20. Once you use this feature, you can't use it again
+    # until you finish a short or long rest."
+    {"class": "rogue", "feature": "stroke-of-luck", "name": "Stroke of Luck", "uses": 1, "recharge": "short-or-long",
+     "note": "If your attack misses a target within range, turn the miss into a hit; or if you fail an ability check, "
+             "treat the d20 roll as a 20",
+     "quotes": (("stroke-of-luck", "If your attack misses a target within range, you can turn the miss into a hit."),
+                ("stroke-of-luck", "if you fail an ability check, you can treat the d20 roll as a 20."),
+                ("stroke-of-luck", "you can't use it again until you finish a short or long rest."))},
+    # Mystic Arcanum: "You can cast your arcanum spell once without expending a spell slot. You must finish a long rest
+    # before you can do so again. At higher levels, you gain more warlock spells ...: one 7th- level spell at 13th level,
+    # one 8th-level spell at 15th level, and one 9th-level spell at 17th level. You regain all uses of your Mystic
+    # Arcanum when you finish a long rest."
+    {"class": "warlock", "feature": "mystic-arcanum-6th-level", "name": "Mystic Arcanum", "recharge": "long",
+     "uses": (1, (("mystic-arcanum-7th-level", 2), ("mystic-arcanum-8th-level", 3), ("mystic-arcanum-9th-level", 4))),
+     "vars": {"arcanum_levels": ("6th", (("mystic-arcanum-7th-level", "6th and 7th"),
+                                         ("mystic-arcanum-8th-level", "6th, 7th and 8th"),
+                                         ("mystic-arcanum-9th-level", "6th, 7th, 8th and 9th")))},
+     "note": "Cast each arcanum spell ({arcanum_levels} level) once without expending a spell slot; regain all uses "
+             "when you finish a long rest",
+     "quotes": (("mystic-arcanum-6th-level", "You can cast your arcanum spell once without expending a spell slot. You must finish a long rest before you can do so again."),
+                ("mystic-arcanum-6th-level", "one 8th-level spell at 15th level, and one 9th-level spell at 17th level. You regain all uses of your Mystic Arcanum when you finish a long rest."))},
+    # Eldritch Master: "You can spend 1 minute entreating your patron for aid to regain all your expended spell slots from
+    # your Pact Magic feature. Once you regain spell slots with this feature, you must finish a long rest before you can
+    # do so again."
+    {"class": "warlock", "feature": "eldritch-master", "name": "Eldritch Master", "uses": 1, "recharge": "long",
+     "note": "Spend 1 minute entreating your patron to regain all your expended Pact Magic spell slots (maximum "
+             "{pact_slots})",
+     "quotes": (("eldritch-master", "You can spend 1 minute entreating your patron for aid to regain all your expended spell slots from your Pact Magic feature."),
+                ("eldritch-master", "you must finish a long rest before you can do so again"))},
+)
+
+# W6: a sentence added to the `details.note` of an EXISTING class resource (`target` = its id), under the same
+# conditions as RESOURCE_TAIL_2014; the notes of one target join with "; " in table order.
+RESOURCE_NOTES_2014: tuple[dict, ...] = (
+    # Superior Inspiration: "when you roll initiative and have no uses of Bardic Inspiration left, you regain one use."
+    {"class": "bard", "target": "bard:bardic-inspiration", "feature": "superior-inspiration",
+     "note": "Superior Inspiration: when you roll initiative with no uses left, you regain one use",
+     "quotes": (("superior-inspiration", "when you roll initiative and have no uses of Bardic Inspiration left, you regain one use"),)},
+    # Channel Divinity (Cleric): "Each undead that can see or hear you within 30 feet of you must make a Wisdom saving
+    # throw. If the creature fails its saving throw, it is turned for 1 minute or until it takes any damage." / "When you
+    # use such an effect from this class, the DC equals your cleric spell save DC."
+    {"class": "cleric", "target": "cleric:channel-divinity", "feature": "channel-divinity-turn-undead",
+     "note": "Turn Undead (action): each undead within 30 feet that can see or hear you makes a Wisdom saving throw or "
+             "is turned for 1 minute or until it takes damage; save DC {dc_wis} (your cleric spell save DC)",
+     "quotes": (("channel-divinity-turn-undead", "Each undead that can see or hear you within 30 feet of you must make a Wisdom saving throw."),
+                ("channel-divinity-turn-undead", "it is turned for 1 minute or until it takes any damage"),
+                ("channel-divinity-1-rest", "the DC equals your cleric spell save DC"))},
+    # Wild Shape: "You can stay in a beast shape for a number of hours equal to half your druid level (rounded down). You
+    # then revert to your normal form unless you expend another use of this feature."
+    {"class": "druid", "target": "druid:wild-shape", "feature": "wild-shape-cr-1-4-or-below-no-flying-or-swim-speed",
+     "note": "A beast shape lasts {half_level} hours (half your Druid level, rounded down) unless you expend another use",
+     "quotes": (("wild-shape-cr-1-4-or-below-no-flying-or-swim-speed", "You can stay in a beast shape for a number of hours equal to half your druid level (rounded down)."),
+                ("wild-shape-cr-1-4-or-below-no-flying-or-swim-speed", "unless you expend another use of this feature"))},
+    # Ki: "You start knowing three such features: Flurry of Blows, Patient Defense, and Step of the Wind." / "you can
+    # spend 1 ki point to make two unarmed strikes as a bonus action" / "You can spend 1 ki point to take the Dodge
+    # action as a bonus action" / "You can spend 1 ki point to take the Disengage or Dash action as a bonus action".
+    {"class": "monk", "target": "monk:ki", "feature": "flurry-of-blows",
+     "note": "Flurry of Blows, Patient Defense and Step of the Wind each cost 1 ki point",
+     "quotes": (("flurry-of-blows", "you can spend 1 ki point to make two unarmed strikes as a bonus action"),
+                ("patient-defense", "You can spend 1 ki point to take the Dodge action as a bonus action"),
+                ("step-of-the-wind", "You can spend 1 ki point to take the Disengage or Dash action as a bonus action"))},
+    # Diamond Soul: "whenever you make a saving throw and fail, you can spend 1 ki point to reroll it and take the second
+    # result."
+    {"class": "monk", "target": "monk:ki", "feature": "diamond-soul",
+     "note": "Diamond Soul: when you fail a saving throw, spend 1 ki point to reroll it and take the second result",
+     "quotes": (("diamond-soul", "whenever you make a saving throw and fail, you can spend 1 ki point to reroll it and take the second result"),)},
+    # Perfect Self: "when you roll for initiative and have no ki points remaining, you regain 4 ki points."
+    {"class": "monk", "target": "monk:ki", "feature": "perfect-self",
+     "note": "Perfect Self: when you roll initiative with no ki points left, you regain 4 ki points",
+     "quotes": (("perfect-self", "when you roll for initiative and have no ki points remaining, you regain 4 ki points"),)},
+    # Lay on Hands: "you can expend 5 hit points from your pool of healing to cure the target of one disease or neutralize
+    # one poison affecting it. ... This feature has no effect on undead and constructs."
+    {"class": "paladin", "target": "paladin:lay-on-hands", "feature": "lay-on-hands",
+     "note": "Expend 5 hit points from the pool to cure one disease or neutralize one poison (separately for each); no "
+             "effect on undead and constructs",
+     "quotes": (("lay-on-hands", "you can expend 5 hit points from your pool of healing to cure the target of one disease or neutralize one poison affecting it"),
+                ("lay-on-hands", "This feature has no effect on undead and constructs."))},
+    # Channel Divinity (Paladin): "When you use such an effect from this class, the DC equals your paladin spell save DC."
+    {"class": "paladin", "target": "paladin:channel-divinity", "feature": "channel-divinity",
+     "note": "Channel Divinity effects that need a saving throw use save DC {dc_cha} (your paladin spell save DC)",
+     "quotes": (("channel-divinity", "the DC equals your paladin spell save DC"),)},
+    # Sorcerous Restoration: "you regain 4 expended sorcery points whenever you finish a short rest."
+    {"class": "sorcerer", "target": "sorcerer:sorcery-points", "feature": "sorcerous-restoration",
+     "note": "Sorcerous Restoration: you regain 4 expended sorcery points whenever you finish a short rest",
+     "quotes": (("sorcerous-restoration", "you regain 4 expended sorcery points whenever you finish a short rest"),)},
+)
+
 # Zealot Warrior of the Gods: "a pool of four d12s ... The pool's maximum number of dice increases by one when you
 # reach Barbarian levels 6 (5 dice), 12 (6 dice), and 17 (7 dice)." (class level, dice), pinned against
 # zealot-xphb-3-warrior-of-the-gods.

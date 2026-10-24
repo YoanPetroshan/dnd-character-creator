@@ -142,7 +142,28 @@ def test_drafts_without_worn_or_wielded_resolve_exactly_as_before_g2(catalog, na
                 if "quantities" in o:
                     o.pop("quantities")
                 o["label"] = re.sub(r"^\d+x ", "", o["label"]) if card["id"].endswith(tuple(f"equipment-choice-{i}" for i in range(9))) else o["label"]
+    _neutralise_class_feature_tails(now, baseline)
     assert now == baseline
+
+
+def _neutralise_class_feature_tails(*results):
+    """W6: the SRD class-feature tail adds resources (RESOURCE_TAIL_2014) and notes on existing ones
+    (RESOURCE_NOTES_2014) that the pre-G2 baseline lacks; both are removed on both sides."""
+    from catalog import reference_data
+    from engine.class_resources import _slug
+    new_ids = {f"{s['class']}:{_slug(s['name'])}" for s in reference_data.RESOURCE_TAIL_2014}
+    targets = {s["target"] for s in reference_data.RESOURCE_NOTES_2014}
+    for res in results:
+        kept = []
+        for r in res["derived"]["classResources"]:
+            if r["id"] in new_ids:
+                continue
+            if r["id"] in targets and r.get("details"):
+                r["details"].pop("note", None)
+                if not r["details"]:
+                    del r["details"]
+            kept.append(r)
+        res["derived"]["classResources"] = kept
 
 
 def test_auto_mode_has_no_worn_or_wielded_state_and_no_wielded_flags(catalog):

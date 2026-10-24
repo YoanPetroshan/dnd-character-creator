@@ -225,7 +225,9 @@ def test_druid_1_has_nothing(catalog):
 def test_druid_srd_wild_shape(catalog, ruleset, level, cr, swim, fly):
     ws = _entry(_res(catalog, [("druid", level)], ruleset), "druid:wild-shape")
     assert ws["uses"] == 2 and ws["recharge"] == "short-or-long" and "unlimited" not in ws
-    assert ws["details"] == {"maxCr": cr, "swim": swim, "fly": fly}
+    details = dict(ws["details"])
+    assert f"lasts {level // 2} hours" in details.pop("note")  # W6: the beast-shape duration note
+    assert details == {"maxCr": cr, "swim": swim, "fly": fly}
 
 
 @pytest.mark.parametrize("ruleset", ["2014", "mixed"])

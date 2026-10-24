@@ -468,6 +468,7 @@ def _note_vars(ctx: Ctx, rc: dict) -> dict:
     level, mods, pb = rc["level"], ctx.modifiers, ctx.prof_bonus
     wis, dex, cha = mods.get("WIS", 0), mods.get("DEX", 0), mods.get("CHA", 0)
     int_, str_ = mods.get("INT", 0), mods.get("STR", 0)
+    con = mods.get("CON", 0)
     spark = 1
     for first, dice in reference_data.DIVINE_SPARK_DICE_2024:
         if level >= first:
@@ -492,7 +493,10 @@ def _note_vars(ctx: Ctx, rc: dict) -> dict:
             "zealot_dice": zealot, "lands_aid": lands,
             "cha_creatures": f"{cha_min1} creature" + ("s" if cha_min1 != 1 else ""),
             "int_creatures": f"{int_min1} creature" + ("s" if int_min1 != 1 else ""),
-            "cha_dice": f"{cha_min1} " + ("dice" if cha_min1 != 1 else "die")}
+            "cha_dice": f"{cha_min1} " + ("dice" if cha_min1 != 1 else "die"),
+            # W6 / W7 (2014)
+            "con": con, "survivor": 5 + con, "blessing": max(1, cha + level),
+            "pact_slots": _pact_slot_count(rc) if rc["cls_id"] == "warlock" else 0}
 
 
 def _staged(ctx: Ctx, level: int, default, stages):
@@ -513,6 +517,8 @@ def _render_note(ctx: Ctx, rc: dict, spec: dict) -> str:
     values = _note_vars(ctx, rc)
     for name, (default, stages) in (spec.get("vars") or {}).items():
         values[name] = _staged(ctx, level, default, stages)
+    for name, table in (spec.get("level_vars") or {}).items():  # W7: tables that live only in the text
+        values[name] = next((v for first, v in reversed(table) if level >= first), None)
     note = spec["note"].format(**values)
     for extra_id, text in spec.get("extras") or ():
         extra_level = _feature_level(ctx, extra_id)
@@ -566,6 +572,76 @@ def _attach_notes_2024(ctx: Ctx, rc: dict, resources: list[dict]) -> None:
         details = dict(target.get("details") or {})
         details["note"] = f"{details['note']}; {note}" if details.get("note") else note
         target["details"] = details
+
+
+def _field_2014(ctx: Ctx, rc: dict, spec: dict, key: str, values: dict):
+    """A W6 / W7 spec field: a literal, an "@name" variable (`_note_vars` / `vars` / `level_vars`) or a staged tuple
+    (default, ((feature id, value), ...))."""
+    raw = spec.get(key)
+    if isinstance(raw, str) and raw.startswith("@"):
+        return values[raw[1:]]
+    if isinstance(raw, tuple):
+        return _staged(ctx, rc["level"], raw[0], raw[1])
+    return raw
+
+
+def _values_2014(ctx: Ctx, rc: dict, spec: dict) -> dict:
+    values = _note_vars(ctx, rc)
+    for name, (default, stages) in (spec.get("vars") or {}).items():
+        values[name] = _staged(ctx, rc["level"], default, stages)
+    for name, table in (spec.get("level_vars") or {}).items():
+        values[name] = next((v for first, v in reversed(table) if rc["level"] >= first), None)
+    return values
+
+
+def _entry_2014(ctx: Ctx, rc: dict, spec: dict, *, kind: str = "class") -> dict:
+    values = _values_2014(ctx, rc, spec)
+    fields = {key: _field_2014(ctx, rc, spec, key, values) for key in ("die", "dice", "pool")}
+    return _resource(rc, spec["name"], kind=kind, uses=_field_2014(ctx, rc, spec, "uses", values),
+                     recharge=_field_2014(ctx, rc, spec, "recharge", values),
+                     details={"note": _render_note(ctx, rc, spec)}, **fields)
+
+
+def _add_note(resources: list[dict], target_id: str, note: str) -> bool:
+    target = next((r for r in resources if r["id"] == target_id), None)
+    if target is None:
+        return False
+    details = dict(target.get("details") or {})
+    details["note"] = f"{details['note']}; {note}" if details.get("note") else note
+    target["details"] = details
+    return True
+
+
+def _tail_2014(ctx: Ctx, rc: dict) -> list[dict]:
+    """W6 (finding F4): SRD class features with a use count, a rest rule or a computed number
+    (`reference_data.RESOURCE_TAIL_2014`). Rulesets "mixed" and "2014" only; an entry needs its SRD feature record in
+    the catalog and the class level at that record's level. Appended after the class's own entries."""
+    if ctx.ruleset == "2024":
+        return []
+    out = []
+    for spec in reference_data.RESOURCE_TAIL_2014:
+        if spec["class"] != rc["cls_id"]:
+            continue
+        first = _feature_level(ctx, spec["feature"])
+        if first is None or rc["level"] < first:
+            continue
+        out.append(_entry_2014(ctx, rc, spec))
+    return out
+
+
+def _attach_notes_2014(ctx: Ctx, rc: dict, resources: list[dict]) -> None:
+    """W6: add the `reference_data.RESOURCE_NOTES_2014` sentences to the class's existing resources. Rulesets "mixed"
+    and "2014" only; skipped when the target resource or the feature record is missing or the class level is below the
+    record's level. An existing note is kept and extended with "; "."""
+    if ctx.ruleset == "2024":
+        return
+    for spec in reference_data.RESOURCE_NOTES_2014:
+        if spec["class"] != rc["cls_id"]:
+            continue
+        first = _feature_level(ctx, spec["feature"])
+        if first is None or rc["level"] < first:
+            continue
+        _add_note(resources, spec["target"], _render_note(ctx, rc, spec))
 
 
 def _subclass_tail_2024(ctx: Ctx, rc: dict, resources: list[dict]) -> list[dict]:
@@ -779,6 +855,8 @@ def resources_for(catalog, resolved_classes: list[dict], modifiers: dict, prof_b
         mine = builder(ctx, rc) if builder else []
         mine += _tail_2024(ctx, rc)  # R9 / RP10: 2024 only
         _attach_notes_2024(ctx, rc, mine)  # RP10: 2024 only
+        mine += _tail_2014(ctx, rc)  # W6: mixed / 2014 only
+        _attach_notes_2014(ctx, rc, mine)  # W6: mixed / 2014 only
         sub_builder = _SUBCLASS_BUILDERS.get(rc.get("subclass_id") or "")
         sub = sub_builder(ctx, rc) if sub_builder else []
         out += mine + sub

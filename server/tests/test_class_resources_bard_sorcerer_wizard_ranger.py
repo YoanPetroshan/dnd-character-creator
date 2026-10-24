@@ -202,7 +202,8 @@ def test_bard_2024_without_tables_uses_srd_numbers(catalog):
 
 def test_multiclass_bard_wizard_gets_one_entry_each_in_class_order(catalog):
     res = _res(catalog, [("bard", 5), ("wizard", 4)], "2014", {"CHA": 16})
-    assert [r["id"] for r in res["derived"]["classResources"]] == ["bard:bardic-inspiration", "wizard:arcane-recovery"]
+    # W6: the bard's own entries (Bardic Inspiration, the SRD Song of Rest) come before the wizard's
+    assert [r["id"] for r in res["derived"]["classResources"]] == ["bard:bardic-inspiration", "bard:song-of-rest", "wizard:arcane-recovery"]
     assert _entry(res, "wizard:arcane-recovery")["pool"] == 2  # wizard level 4, not total 9
 
 

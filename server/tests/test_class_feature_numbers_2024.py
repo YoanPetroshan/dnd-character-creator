@@ -153,7 +153,11 @@ def test_note_only_resource_appears_at_the_feature_level(catalog, cls, rid, firs
 @pytest.mark.parametrize("cls,rid,first", NEW_NOTE_ONLY)
 @pytest.mark.parametrize("ruleset", ["mixed", "2014"])
 def test_nothing_outside_ruleset_2024(catalog, ruleset, cls, rid, first):
-    assert _entry(_res(catalog, [(cls, 20)], ruleset), rid) is None
+    r = _entry(_res(catalog, [(cls, 20)], ruleset), rid)
+    if r is not None:
+        # W6: the SRD class feature of the same name has its own 2014 entry (same id); it must not carry the 2024 text
+        assert rid in ("barbarian:relentless-rage", "monk:slow-fall", "monk:stunning-strike"), rid
+        assert r["details"]["note"] != _note(_res(catalog, [(cls, 20)], "2024"), rid)
 
 
 @needs_data
@@ -256,8 +260,9 @@ def test_attached_note_appears_at_its_feature_level(catalog, cls, rid, first):
 def test_attached_notes_only_under_2024(catalog, ruleset, cls, rid, first):
     res = _res(catalog, [(cls, 20)], ruleset)
     r = _entry(res, rid)
-    if r:  # the resource may exist under the SRD chassis; it must carry no RP10 note
-        assert "note" not in (r.get("details") or {})
+    if r:  # the resource may exist under the SRD chassis; it must carry no RP10 note (W6: its own 2014 note is allowed)
+        n2024 = _note(_res(catalog, [(cls, 20)], "2024"), rid)
+        assert n2024 and n2024 not in ((r.get("details") or {}).get("note") or "")
 
 
 @needs_data
