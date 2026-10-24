@@ -620,6 +620,16 @@ REPEATABLE_FEAT_OVERRIDES = {"elemental-adept-phb"}
 # "You have proficiency in two skills of your choice." The text wins: index -> number of skill picks.
 FEAT_SKILL_PICK_COUNT_OVERRIDES = {"echoing-soul-rhw": 2}
 
+# W4 (F5): a 2024 background record whose `feats` field is missing from the 5etools file although its own entry names
+# the feat. Key = "name|source" lowercased; `grant` is the raw-shaped `feats` list the converter then reads like any
+# other (so the variant hint "Wizard Spells" follows); `quote` is the record's own text (pinned by a test).
+BACKGROUND_FEATS_FROM_TEXT: dict[str, dict] = {
+    "genie touched|frhof": {
+        "grant": [{"magic initiate; wizard|xphb": True}],
+        "quote": "{@feat Magic Initiate|XPHB} (Wizard)",
+    },
+}
+
 # FE6 (B4): 5etools says `languageProficiencies: [{"thieves' cant": true}]` for Harper Agent (FRHoF) and the
 # converter used to drop the unknown key. index -> language ids ("You know Thieves' Cant."). Display names come
 # from LANGUAGE_NAMES (the 2024 rare table, C6b-2).

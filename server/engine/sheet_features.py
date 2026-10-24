@@ -277,7 +277,7 @@ def feats_summary(feats: list[dict], choices: list[dict], notes_by_instance: dic
         entry = {
             "id": feat["index"], "name": feat["name"],
             "origin": "asi" if feat.get("_asi_cid") else "invocation" if feat.get("_inv_cid") else "fighting-style" if feat.get("_fs_cid")
-            else "species" if feat.get("_species_origin") else "background",
+            else "species" if feat.get("_species_origin") and not feat.get("_background_grant") else "background",
             "level": feat.get("_asi_level"),
         }
         if labels:

@@ -1531,11 +1531,11 @@ def is_new_2024_class_card(c: dict) -> bool:
         or subclass_spells_2024.is_pick_card(c))  # RP17: Savants, Improved Illusions, Magical Discoveries
 
 
-_SPECIES_FEAT_CARD_RE = re.compile(r"^species:[^:]+:(?:subspecies:[^:]+:)?feat-\d+$")
+_SPECIES_FEAT_CARD_RE = re.compile(r"^(?:species:[^:]+:(?:subspecies:[^:]+:)?|background:[^:]+:)feat-\d+$")
 
 
 def _is_species_feat_card(c: dict) -> bool:
-    return c["source"]["kind"] == "species" and bool(_SPECIES_FEAT_CARD_RE.match(c["id"]))
+    return c["source"]["kind"] in ("species", "background") and bool(_SPECIES_FEAT_CARD_RE.match(c["id"]))
 
 
 def mark_unavailable(choices: list[dict], ruleset: str) -> list[dict]:

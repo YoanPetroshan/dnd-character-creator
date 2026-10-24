@@ -44,7 +44,7 @@ def _name_key(feat: dict) -> str:
 
 def _origin(feat: dict) -> str:
     return ("asi" if feat.get("_asi_cid") else "invocation" if feat.get("_inv_cid")
-            else "fighting-style" if feat.get("_fs_cid") else "species" if feat.get("_species_origin")
+            else "fighting-style" if feat.get("_fs_cid") else "species" if feat.get("_species_origin") and not feat.get("_background_grant")
             else "background")
 
 

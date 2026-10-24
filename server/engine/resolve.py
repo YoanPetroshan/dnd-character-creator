@@ -170,7 +170,7 @@ def _asi_policy(ruleset: str, race: dict | None, subrace: dict | None, bg: dict 
                     "id": "ruleset-2024-background-no-asi",
                     "message": f"{bg['name']} is a 2014 background and grants no ability score increase under the 2024 rules.",
                 })
-            if not (bg.get("feats") or bg.get("feat_options")):
+            if not (bg.get("feats") or bg.get("feat_options") or bg.get("feat_grants")):
                 warnings.append({
                     "id": "ruleset-2024-background-no-origin-feat",
                     "message": f"{bg['name']} grants no Origin feat, which the 2024 rules expect from a background.",
@@ -2881,10 +2881,18 @@ def _species_feat_grant_slots(race: dict | None, subrace: dict | None, race_id: 
     return slots
 
 
+def _background_feat_grant_slots(bg: dict | None, bg_id: str | None) -> list[tuple[str, dict]]:
+    """W4: [(choice id, {"count", "category"})] for a background's `feat_grants` (Mist Wanderer, Spirit Medium: a
+    Dark Gift feat of your choice). The picks are stored in `background.choices` under `background:<id>:feat-<i>`."""
+    if not (bg and bg_id):
+        return []
+    return [(f"background:{bg_id}:feat-{i}", grant) for i, grant in enumerate(bg.get("feat_grants") or [])]
+
+
 def _species_feat_choice_template(
     race: dict, race_id: str, cid: str, grant: dict, catalog: Catalog, sources, scores: dict[str, int],
     total_level: int, use_prereqs: bool, held: "_HeldFeatState", taken: dict[str, str], ruleset: str = "mixed",
-    keep=(),
+    keep=(), kind: str = "species",
 ) -> dict:
     """One Choice for a species feat grant. A failed prerequisite wins over
     "already taken" as the disabled reason; the check uses the character's
@@ -2903,9 +2911,9 @@ def _species_feat_choice_template(
             option["disabledReason"] = _taken_reason(feat, taken)
         options.append(option)
     count = grant["count"]
-    noun = "an Origin feat" if grant["category"] == "O" else "a feat"
+    noun = {"O": "an Origin feat", "DG": "a Dark Gift feat"}.get(grant["category"], "a feat")
     return {
-        "id": cid, "source": {"kind": "species", "id": race_id, "label": race["name"]},
+        "id": cid, "source": {"kind": kind, "id": race_id, "label": race["name"]},
         "label": "Origin Feat" if grant["category"] == "O" else "Feat",
         "description": f"Choose {noun}." if count == 1 else f"Choose {count} feats.",
         "count": count, "options": options,
@@ -2913,7 +2921,7 @@ def _species_feat_choice_template(
 
 
 def _resolve_species_selected_feats(template: dict, species_choices: dict, catalog: Catalog,
-                                    problems: list[dict]) -> list[dict]:
+                                    problems: list[dict], background_grant: bool = False) -> list[dict]:
     """The feats a species template's stored selection names: deduped, only
     enabled options, capped to the count. Each is a shallow COPY of the
     catalog record tagged `_species_origin = "{choice id}:feat:{index}"`
@@ -2942,8 +2950,10 @@ def _resolve_species_selected_feats(template: dict, species_choices: dict, catal
                 })
             continue
         picked.append(feat)
+    # W4: a background feat grant reuses this machinery; `_background_grant` only changes the sheet's `origin`.
     return [
-        {**feat, "_species_origin": f"{template['id']}:feat:{feat['index']}"} for feat in picked[: template["count"]]
+        {**feat, "_species_origin": f"{template['id']}:feat:{feat['index']}",
+         **({"_background_grant": True} if background_grant else {})} for feat in picked[: template["count"]]
     ]
 
 
@@ -5201,7 +5211,12 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # the character holds from the background alone.
     species_feat_templates: list[dict] = []
     species_feats: list[dict] = []
-    if race:
+    bg_grant_choices_raw = background_dict.get("choices") if isinstance(background_dict.get("choices"), dict) else {}
+    bg_feat_slots = _background_feat_grant_slots(bg, bg_id)
+
+    def _origin_choices_raw(feat: dict) -> dict:  # where a granted feat's cascaded picks are stored
+        return bg_grant_choices_raw if feat.get("_background_grant") else species_choices_raw
+    if race or bg_feat_slots:
         pre_feat_scores = {}
         for ab in derived_mod.ABILITIES:
             try:
@@ -5211,14 +5226,20 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             pre_feat_scores[ab] = raw_base + species_bonuses.get(ab, 0) + background_bonuses.get(ab, 0)
         species_held_snapshot = held.copy()
         taken_feat_indices = _taken_add({}, background_feats)
-        for slot_cid, grant in _species_feat_grant_slots(race, subrace, race_id):
+        # W4: the background's own feat grant cards come first (precedence background -> species -> ASI) and reuse
+        # the species feat card machinery; their feats join `species_feats` (the "origin pick feats" list) tagged
+        # `_background_grant`, so the S2 duplicate map, the ASI pre-walk and the cascaded choices all see them.
+        slots = [(c, g, "background", bg, bg_id, bg_grant_choices_raw) for c, g in bg_feat_slots]
+        if race:
+            slots += [(c, g, "species", race, race_id, species_choices_raw) for c, g in _species_feat_grant_slots(race, subrace, race_id)]
+        for slot_cid, grant, slot_kind, owner, owner_id, owner_raw in slots:
             tpl = _species_feat_choice_template(
-                race, race_id, slot_cid, grant, catalog, draft.get("sources"), pre_feat_scores, total_level,
+                owner, owner_id, slot_cid, grant, catalog, draft.get("sources"), pre_feat_scores, total_level,
                 use_feat_prereqs, species_held_snapshot, taken_feat_indices, ruleset,
-                keep=species_choices_raw.get(slot_cid) if isinstance(species_choices_raw.get(slot_cid), list) else (),
+                keep=owner_raw.get(slot_cid) if isinstance(owner_raw.get(slot_cid), list) else (), kind=slot_kind,
             )
             species_feat_templates.append(tpl)
-            picked = _resolve_species_selected_feats(tpl, species_choices_raw, catalog, problems)
+            picked = _resolve_species_selected_feats(tpl, owner_raw, catalog, problems, background_grant=slot_kind == "background")
             for feat in picked:
                 if not _feat_offered(feat, draft.get("sources"), ruleset):
                     warnings.append({
@@ -5258,7 +5279,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     skipped_duplicate_asi_feats: list[dict] = []
     walk_seen0 = _taken_add({}, background_feats + species_feats)
     for sf in species_feats:  # RP4: an origin Fighting Initiate style is held before every class card
-        _fi_seen_add(walk_seen0, catalog, sf, species_choices_raw.get(f"{sf['_species_origin']}:fighting-style"), ruleset)
+        _fi_seen_add(walk_seen0, catalog, sf, _origin_choices_raw(sf).get(f"{sf['_species_origin']}:fighting-style"), ruleset)
     asi_taken_before_cid: dict[str, dict[str, str]] = {}
     # F1: fighting-style cards and ASI picks resolve in one pass, ordered by (class
     # index, class level); the later pick is the duplicate.
@@ -5423,7 +5444,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             [species_feat], origin=species_feat["_species_origin"], scores=dict(origin_running),
         ):
             species_feat_ability_tpls.append(feat_ability_tpl)
-            _apply_chosen_origin_deltas(source_feat, feat_ability_tpl, species_choices_raw)
+            _apply_chosen_origin_deltas(source_feat, feat_ability_tpl, _origin_choices_raw(species_feat))
 
     final_scores: dict[str, int] = {}
     for ab in derived_mod.ABILITIES:
@@ -5740,7 +5761,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         origin = species_feat["_species_origin"]
         choice_templates += _feat_choice_templates([species_feat], origin=origin, items=catalog.items, catalog=catalog, ruleset=ruleset)
         choice_templates += _feat_spell_choice_templates(
-            [species_feat], catalog, origin=origin, raw_selections=species_choices_raw, total_level=total_level,
+            [species_feat], catalog, origin=origin, raw_selections=_origin_choices_raw(species_feat), total_level=total_level,
             sources=draft.get("sources"), ruleset=ruleset,
         )
     choice_templates += species_feat_ability_tpls

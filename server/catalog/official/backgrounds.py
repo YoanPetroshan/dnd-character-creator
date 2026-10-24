@@ -3,13 +3,14 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
-from catalog.reference_data import ruleset_for_edition
+from catalog.reference_data import BACKGROUND_FEATS_FROM_TEXT, ruleset_for_edition
 from .common import _ability_bonus_options_from_5etools_weighted_pair, slug
 from .background_equipment import starting_equipment_options_2024_from_5etools
 from .equipment import _fixed_starting_equipment_from_5etools, _starting_equipment_options_from_5etools
 from .feats import _feat_variant_hints_from_5etools
 from .languages import _language_grants_from_5etools
 from .proficiencies import _proficiencies_from_5etools, _proficiency_choices_from_5etools
+from .races import _species_feat_grants_from_5etools
 
 
 def _feats_from_5etools(raw: dict) -> tuple[list[str], list[str], list[str]]:
@@ -228,6 +229,9 @@ def _background_from_5etools(raw: dict) -> dict | None:
     source = (raw.get("source") or "unknown").lower()
     name_slug = slug(raw["name"])
     index = f"{name_slug}-{source}"
+    restored = BACKGROUND_FEATS_FROM_TEXT.get(f"{raw['name']}|{raw.get('source', '')}".lower())
+    if restored and not raw.get("feats"):  # W4: the record's text names a feat its data omits
+        raw = {**raw, "feats": restored["grant"]}
     fixed_languages, language_options = _language_grants_from_5etools(raw)
     fixed_equipment, fixed_gold, fixed_narrative_items = _fixed_starting_equipment_from_5etools(raw)
     feats, feat_options, feat_refs = _feats_from_5etools(raw)
@@ -256,6 +260,11 @@ def _background_from_5etools(raw: dict) -> dict | None:
         **extra_2024,
         "feats": feats,
         "feat_options": feat_options,
+        # W4 (F5): a category pick ({"anyFromCategory": ...}) with NO plain feat beside it (Mist Wanderer, Spirit
+        # Medium: "A Dark Gift feat of your choice") -> [{"count", "category"}], like a species feat grant. When a
+        # plain feat is also listed (Haunted One, Investigator: "Survivor or a Dark Gift feat") the plain grant
+        # stands and no pick card is made.
+        "feat_grants": [] if (feats or feat_options) else _species_feat_grants_from_5etools(raw),
         # Finding 1 of the final whole-branch review (2026-09-28): a
         # source-qualified parallel to `feats` — see _feats_from_5etools'
         # own docstring. engine.resolve._resolve_granted_feats tries this
