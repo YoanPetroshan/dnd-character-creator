@@ -750,7 +750,7 @@ def test_w6_cases_hold_the_2014_class_feature_tail():
               "warlock:eldritch-master"}
     for n, entry in _GOLDEN.items():
         ids = {r["id"] for r in entry["result"]["derived"]["classResources"]}
-        if n not in hit and "/whispers-bard14" not in n:  # W8a appended sink: a Bard 14 holds Song of Rest
+        if n not in hit and "/whispers-bard14" not in n and "/watchers-paladin20" not in n:  # W8a / W8c appended sinks: a Bard 14 holds Song of Rest, a Paladin 20 Divine Smite and Cleansing Touch
             assert not ids & w6_ids, n
     for n in hit:
         ids = {r["id"] for r in _GOLDEN[n]["result"]["derived"]["classResources"]}
@@ -799,6 +799,18 @@ def test_w8b_no_rebaseline_and_the_stars_sink_guards_the_book_tail():
         assert {"druid:star-map", "druid:cosmic-omen"} <= set(res), n
         assert "Starry Form" in res["druid:wild-shape"]["details"]["note"], n
         assert res["druid:star-map"]["uses"] == 4 and res["druid:star-map"]["recharge"] == "long", n
+
+
+def test_w8c_no_rebaseline_and_the_watchers_sink_guards_the_book_tail():
+    """W8c: no golden case moved (Open Hand, Devotion, Hunter and Thief are the primary SRD subclasses; the book-subclass
+    sinks hold unmodelled features), so there is no REBASELINES entry; the Oath of the Watchers Paladin 20 sink was
+    appended instead."""
+    assert "W8c" not in REBASELINES
+    for n in ("ks/src-all/watchers-paladin20-2014", "ks/src-srd/watchers-paladin20-2014"):
+        res = {r["id"]: r for r in _GOLDEN[n]["result"]["derived"]["classResources"]}
+        assert {"paladin:aura-of-the-sentinel", "paladin:vigilant-rebuke", "paladin:mortal-bulwark"} <= set(res), n
+        assert "Watcher's Will" in res["paladin:channel-divinity"]["details"]["note"], n
+        assert "within 30 feet of you gain a bonus to initiative" in res["paladin:aura-of-the-sentinel"]["details"]["note"], n
 
 
 def test_keyed_normalization_and_diff_paths():

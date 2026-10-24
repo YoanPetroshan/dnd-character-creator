@@ -195,7 +195,8 @@ def test_every_entry_is_a_non_srd_2014_book_subclass_of_the_three_classes(catalo
     for spec in reference_data.SUBCLASS_TAIL_2014_BOOKS + reference_data.SUBCLASS_NOTES_2014_BOOKS:
         sub = catalog.subclasses[spec["subclass"]]
         assert sub["ruleset"] == "2014" and sub["source"] != "SRD"
-        assert spec["class"] in {"barbarian", "bard", "cleric", "druid", "fighter"}, spec["subclass"]  # part 2 is a later slice
+        assert spec["class"] in {"barbarian", "bard", "cleric", "druid", "fighter", "monk", "paladin", "ranger", "rogue",
+                                 "sorcerer", "warlock", "wizard"}, spec["subclass"]  # W8c / W8d add the rest
 
 
 @needs_data

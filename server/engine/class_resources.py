@@ -500,7 +500,10 @@ def _note_vars(ctx: Ctx, rc: dict) -> dict:
             # W8 (2014 book subclasses)
             "con_min1": max(1, con), "str_min1": max(1, str_), "cha_min2": max(2, cha), "four_level": 4 * level,
             "five_plus_level": 5 + level, "five_plus_twice_level": 5 + 2 * level, "twenty_level": 20 * level,
-            "dc_con": 8 + pb + con, "echo_ac": 14 + pb}
+            "dc_con": 8 + pb + con, "echo_ac": 14 + pb,
+            # W8c
+            "wis_level_min1": max(1, wis + level), "five_plus_wis": 5 + wis,
+            "wails": f"{(((level + 1) // 2) + 1) // 2}d6"}
 
 
 def _staged(ctx: Ctx, level: int, default, stages):

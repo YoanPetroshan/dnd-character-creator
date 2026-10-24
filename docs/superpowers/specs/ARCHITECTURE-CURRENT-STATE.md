@@ -2081,6 +2081,248 @@ Second commit of W8 part 1 (the catalog holds no Artificer; Monk to Wizard are p
 - **Totals.** Server suite 5974 -> 6377 passed (395 new + 1 golden test + the 2 new sink cases through the parametrized sweeps + 1 edited), root suite 405 passed / 8 skipped, frontend untouched.
 - **Uncertain / deferred.** (1) Visions of the Past prints "Wisdom score" instead of a number (resources only see ability modifiers). (2) Blessed Strikes / Divine Strike are both shown for a Cleric of a domain with Divine Strike (no optional-feature pick). (3) The Channel Divinity sentences are long for a note; the merged Channel Divinity of a multiclass keeps only the winning class's note (as in W6). (4) Totem Warrior and the Eldritch Knight / Arcane Archer picks stay feature lines.
 
+### W8c: Monk, Paladin, Ranger and Rogue (2026-10-24)
+
+First commit of W8 part 2 (the catalog holds 108 non-SRD 2014 subclasses; part 1 covered 48, part 2 covers the other 60: W8c the 32 of Monk, Paladin, Ranger and Rogue, W8d Sorcerer, Warlock and Wizard). Same machinery as W8a / W8b: the two book tuples are extended (`_W8C_TAIL` / `_W8C_NOTES` concatenated to `SUBCLASS_TAIL_2014_BOOKS` / `SUBCLASS_NOTES_2014_BOOKS`, same helpers `_w8_res` / `_w8_note` plus `_w8_pcd` for Paladin Channel Divinity sentences). Rulesets mixed / 2014 only, only the selected imported book subclass, source kind "subclass"; 2024 output is byte-identical (pinned by the independence test). Tests first (`tests/test_subclass_features_2014_w8c.py`, 349, rule matrix in the docstring); with the two W8c concatenations removed 274 of them fail, the remaining 75 are the negative and gate tests.
+
+- **Method (rule used for the scan).** MODELLED when the record text has a use limit or rest rule, dice, a save DC, a number computed from the character (ability modifier, PB, level) or a resource cost (ki points, a spell slot, a Psionic Energy die) with a numeric effect, each with a pinned quote. SKIPPED when the text is flavor, a spell list, a proficiency, a pick (deferred) or a passive effect with no cost, limit or character-derived number (ranges, durations and flat speed or AC bonuses alone).
+- **Data.** 71 resources (`SUBCLASS_TAIL_2014_BOOKS` now 154), 20 sentences (`SUBCLASS_NOTES_2014_BOOKS` now 60) and 8 extras that ride along. Seven more level tables that live only in the text are pinned in `BOOK_TABLE_PINS_2014` (Breath of the Dragon rolls, the Four Elements ki cap by level, the Paladin aura range 10 / 30 feet at 18, Drake's Breath, Dreadful Strikes, Planar Warrior and Gathered Swarm dice). New `_note_vars`: `wis_level_min1`, `five_plus_wis`, `wails` (half the Sneak Attack dice rounded up, as `Nd6`).
+- **Monk (25 resources, all under `monk:`).** Ascendant Dragon: Breath of the Dragon (3; PB uses, long rest, two Martial Arts dice, three from 11, ki save DC, 2 ki to use it again, Augment Breath as an extra from 17), Draconic Presence (3; 1, long), Wings Unfurled (6; PB, long), Aspect of the Wyrm (11; 1, long or 3 ki, Explosive Fury as an extra from 17). Astral Self (note-only): Arms (1 ki, two Martial Arts dice), Visage (1 ki), Body (1d10 + WIS modifier, Empowered Arms), Awakened (5 ki, +2 AC). Drunken Master: Tipsy Sway (1 ki), Drunkard's Luck (2 ki). Four Elements: Disciple of the Elements (the ki cap per spell 3 / 4 / 5 / 6 at 5 / 9 / 13 / 17; the discipline picks are not tracked). Kensei: Kensei's Shot (1d4), Deft Strike (1 ki, Martial Arts die), Sharpen the Blade (up to 3 ki). Long Death: Touch of Death (WIS modifier + Monk level temporary hit points, minimum 1), Mastery of Death (1 ki), Touch of the Long Death (1 to 10 ki, 2d10 each, ki DC). Mercy: Hand of Harm, Hand of Healing (1 ki, one Martial Arts die + WIS modifier), Hand of Ultimate Mercy (1, long; 5 ki, 4d10 + WIS modifier). Shadow Arts (2 ki). Sun Soul: Radiant Sun Bolt, Searing Arc Strike (at most half the Monk level in ki), Searing Sunburst (2d6 + 2d6 per ki up to 8d6, ki DC), Sun Shield (5 + WIS modifier radiant). The ki save DC is pinned from the Monk `ki` record (`("ki", "Ki save DC = 8 + ...")`, as W7 did for Quivering Palm) for the four ki features whose subclass text only says "ki save DC" or forces a save while spending ki.
+- **Paladin (15 resources, 16 Channel Divinity sentences).** 1 use, long rest: Undying Sentinel (Ancients 15), Elder Champion (20), Invincible Conqueror (Conquest 20), Exalted Champion (Crown 20), Living Legend (Glory 20, or a 5th-level slot), Dread Lord (Oathbreaker 20; 4d10 psychic, 3d10 + CHA modifier necrotic), Avenging Angel (Vengeance 20), Mortal Bulwark (Watchers 20; spell save DC, or a 5th-level slot); Glorious Defense (Glory 15; CHA modifier (min 1) uses, long rest). Note-only: Aura of Conquest (half the Paladin level psychic damage, 10 feet, 30 from 18), Scornful Rebuke (CHA modifier, min 1), Aura of Hate (CHA modifier, min 1; 10 / 30 feet), Protective Spirit (1d6 + half the level), Aura of the Sentinel (PB initiative; 10 / 30 feet), Vigilant Rebuke (2d8 + CHA modifier). Sentences on `paladin:channel-divinity` after the W6 note (the DC is the one it already names): Nature's Wrath, Turn the Faithless, Conquering Presence, Guided Strike (+10), Champion Challenge, Turn the Tide (1d6 + CHA modifier, min 1), Inspiring Smite (2d8 + level), Peerless Athlete, Control Undead (a CR at or above the level is immune), Dreadful Aspect, Emissary of Peace (+5), Rebuke the Violent, Abjure Enemy, Vow of Enmity, Abjure the Extraplanar, Watcher's Will (CHA modifier, min 1, creatures).
+- **Ranger (19 resources).** Ranger's Companion (Beast Master 3; hit points 4 x the Ranger level or the normal maximum, PB on AC, attacks, damage and saves), Drake Companion (Drakewarden 3; 1, long or a spell slot; Magic Fang and Empowered Bite as extras), Drake's Breath (11; 1, long or a 3rd-level slot, `dice` 8d6 / 10d6 from 15, spell save DC), Reflexive Resistance (15; PB, long), Dreadful Strikes (Fey Wanderer 3; `dice` 1d4 / 1d6 from 11), Otherworldly Glamour (WIS modifier, min 1), Beguiling Twist (spell save DC), Fey Reinforcements (11; 1, long), Misty Wanderer (15; WIS modifier (min 1), long), Dread Ambusher (Gloom Stalker 3; WIS modifier initiative, 1d8), Detect Portal (Horizon Walker 3) and Ethereal Step (7): 1, short or long, Planar Warrior (`dice` 1d8 / 2d8 from 11), Hunter's Sense (Monster Slayer 3; WIS modifier (min 1), long), Slayer's Prey (1d6, Supernatural Defense 1d6 as an extra from 7), Magic-User's Nemesis (11; 1, short or long, spell save DC), Gathered Swarm (Swarmkeeper 3; `dice` 1d6 / 1d8 from 11, spell save DC, Mighty Swarm as an extra), Writhing Tide (7) and Swarming Dispersal (15): PB, long.
+- **Rogue (12 resources, 4 sentences).** Spell Thief (Arcane Trickster 17; 1, long; spell save DC with INT), Death Strike (Assassin 17; DC 8 + DEX modifier + PB), Insightful Fighting (Inquisitive 3; Eye for Weakness 3d6 as an extra from 17), Unerring Eye (13; WIS modifier (min 1), long), Wails from the Grave (Phantom 3; PB, long; `dice` half the Sneak Attack dice rounded up; Death's Friend as an extra from 17), Tokens of the Departed (9; PB soul trinkets), Ghost Walk (13; 1, long), Psychic Blades (Soulknife 3), Psychic Veil (13; 1, long or a die), Rend Mind (17; 1, long or three dice; DC 8 + PB + DEX modifier), Rakish Audacity (Swashbuckler 3; CHA modifier initiative), Master Duelist (17; 1, short or long). The Soulknife `rogue:psionic-energy-dice` resource already exists from R6 (twice PB, d6 to d12, deliberately not duplicated): Psi-Bolstered Knack, Psychic Whispers, Homing Strikes and Psychic Teleportation are sentences on it.
+- **Scan (all 217 feature records of the 32 Monk, Paladin, Ranger and Rogue book subclasses; "phrase" = the use / number words the regex found, `-` = none). 95 feature records modelled (71 resources + 20 sentences + 8 extras, some records host two entries), 122 skipped (of which 6 are DEFERRED picks or stat blocks, plus the kensei weapon picks noted on the Kensei record):**
+
+| class | subclass | feature | L | src | phrase | decision |
+|---|---|---|---|---|---|---|
+| monk | ascendant-dragon-ftd | 3-breath-of-the-dragon | 3 | FTD | 5 feet, dc, equal to, use, number of, proficiency bonus | MODELLED: resource `monk:breath-of-the-dragon` |
+| monk | ascendant-dragon-ftd | 3-draconic-disciple | 3 | FTD | use, finish a long rest | MODELLED: resource `monk:draconic-presence`; Draconic Strike and Tongue of Dragons skipped (no number) |
+| monk | ascendant-dragon-ftd | 3-way-of-the-ascendant-dragon | 3 | FTD | number of, d6 | skip: subclass intro (flavor text) |
+| monk | ascendant-dragon-ftd | 6-wings-unfurled | 6 | FTD | use, equal to, number of, proficiency bonus, expend, finish a long rest | MODELLED: resource `monk:wings-unfurled` |
+| monk | ascendant-dragon-ftd | 11-aspect-of-the-wyrm | 11 | FTD | 10 feet, 1 minute, dc, finish a long rest, expend, 3 ki points | MODELLED: resource `monk:aspect-of-the-wyrm` |
+| monk | ascendant-dragon-ftd | 17-ascendant-aspect | 17 | FTD | use, 1 ki point, 5 feet, equal to, 10 feet, number of | MODELLED: extra on `monk:breath-of-the-dragon`; MODELLED: extra on `monk:aspect-of-the-wyrm`; Blindsight 10 feet skipped (passive sense) |
+| monk | astral-self-tce | 3-arms-of-the-astral-self | 3 | TCE | 1 ki point, 10 feet, equal to, 10 minutes, use, 5 feet | MODELLED: resource `monk:arms-of-the-astral-self` |
+| monk | astral-self-tce | 3-forms-of-your-astral-self | 3 | TCE | - | skip: flavor text |
+| monk | astral-self-tce | 3-way-of-the-astral-self | 3 | TCE | use | skip: subclass intro (flavor text) |
+| monk | astral-self-tce | 6-visage-of-the-astral-self | 6 | TCE | 1 ki point, 10 minutes, 120 feet, 60 feet, 600 feet | MODELLED: resource `monk:visage-of-the-astral-self` |
+| monk | astral-self-tce | 11-body-of-the-astral-self | 11 | TCE | use, 1d10, minimum, equal to | MODELLED: resource `monk:body-of-the-astral-self` |
+| monk | astral-self-tce | 17-awakened-astral-self | 17 | TCE | 5 ki points, 10 minutes, use | MODELLED: resource `monk:awakened-astral-self` |
+| monk | drunken-master-xge | 3-bonus-proficiencies | 3 | XGE | - | skip: proficiencies (derived elsewhere), no number |
+| monk | drunken-master-xge | 3-drunken-technique | 3 | XGE | use, 10 feet | skip: passive: Disengage and +10 feet speed on Flurry of Blows, no cost or limit |
+| monk | drunken-master-xge | 3-way-of-the-drunken-master | 3 | XGE | - | skip: subclass intro (flavor text) |
+| monk | drunken-master-xge | 6-tipsy-sway | 6 | XGE | 5 feet, half your, 1 ki point | MODELLED: resource `monk:tipsy-sway` |
+| monk | drunken-master-xge | 11-drunkards-luck | 11 | XGE | 2 ki points | MODELLED: resource `monk:drunkard-s-luck` |
+| monk | drunken-master-xge | 17-intoxicated-frenzy | 17 | XGE | number of, use | skip: passive attack count (up to five Flurry of Blows attacks), no cost or limit |
+| monk | four-elements-phb | 3-disciple-of-the-elements | 3 | PHB | use, 3 ki points, 2 ki points, number of, 4 ki points | MODELLED: resource `monk:disciple-of-the-elements` |
+| monk | four-elements-phb | 3-elemental-disciplines | 3 | PHB | - | skip: DEFERRED pick: the discipline list needs pick wiring (no discipline is guessed) |
+| monk | four-elements-phb | 3-way-of-the-four-elements | 3 | PHB | - | skip: subclass intro (flavor text) |
+| monk | four-elements-phb | 6-extra-elemental-discipline | 6 | PHB | - | skip: DEFERRED pick: an extra discipline pick (count only) |
+| monk | four-elements-phb | 11-extra-elemental-discipline | 11 | PHB | - | skip: DEFERRED pick: an extra discipline pick (count only) |
+| monk | four-elements-phb | 17-extra-elemental-discipline | 17 | PHB | - | skip: DEFERRED pick: an extra discipline pick (count only) |
+| monk | kensei-xge | 3-path-of-the-kensei | 3 | XGE | use, 1d4 | MODELLED: resource `monk:kensei-s-shot`; skipped on the same record: Agile Parry (+2 AC, no cost or limit), and the kensei weapon / calligraphy picks are DEFERRED (pick wiring) |
+| monk | kensei-xge | 3-way-of-the-kensei | 3 | XGE | - | skip: subclass intro (flavor text) |
+| monk | kensei-xge | 6-one-with-the-blade | 6 | XGE | 1 ki point, equal to, use | MODELLED: resource `monk:deft-strike` |
+| monk | kensei-xge | 11-sharpen-the-blade | 11 | XGE | expend, 3 ki points, number of, 1 minute, use | MODELLED: resource `monk:sharpen-the-blade` |
+| monk | kensei-xge | 17-unerring-accuracy | 17 | XGE | use | skip: reroll once per turn, no number or limit |
+| monk | long-death-scag | 3-touch-of-death | 3 | SCAG | 5 feet, equal to, minimum | MODELLED: resource `monk:touch-of-death` |
+| monk | long-death-scag | 3-way-of-the-long-death | 3 | SCAG | use | skip: subclass intro (flavor text) |
+| monk | long-death-scag | 6-hour-of-reaping | 6 | SCAG | 30 feet | skip: at-will action with a frightened condition; the text gives ranges only, no DC, cost or limit |
+| monk | long-death-scag | 11-mastery-of-death | 11 | SCAG | use, expend, 1 ki point | MODELLED: resource `monk:mastery-of-death` |
+| monk | long-death-scag | 17-touch-of-the-long-death | 17 | SCAG | 5 feet, expend, 10 ki points, 2d10 | MODELLED: resource `monk:touch-of-the-long-death` |
+| monk | mercy-tce | 3-hand-of-harm | 3 | TCE | use, 1 ki point, equal to, once per | MODELLED: resource `monk:hand-of-harm` |
+| monk | mercy-tce | 3-hand-of-healing | 3 | TCE | 1 ki point, number of, equal to, use | MODELLED: resource `monk:hand-of-healing` |
+| monk | mercy-tce | 3-implements-of-mercy | 3 | TCE | d6 | skip: proficiencies and a mask table (flavor) |
+| monk | mercy-tce | 3-way-of-mercy | 3 | TCE | - | skip: subclass intro (flavor text) |
+| monk | mercy-tce | 6-physicians-touch | 6 | TCE | use | skip: conditions ended or applied by Hand of Healing / Hand of Harm, no number |
+| monk | mercy-tce | 11-flurry-of-healing-and-harm | 11 | TCE | use, once per | skip: replaces Flurry of Blows strikes with the Mercy hands without ki, no new number |
+| monk | mercy-tce | 17-hand-of-ultimate-mercy | 17 | TCE | 24 hours, expend, 5 ki points, number of, equal to, 4d10 | MODELLED: resource `monk:hand-of-ultimate-mercy` |
+| monk | shadow-phb | 3-shadow-arts | 3 | PHB | use, 2 ki points | MODELLED: resource `monk:shadow-arts` |
+| monk | shadow-phb | 3-way-of-shadow | 3 | PHB | - | skip: subclass intro (flavor text) |
+| monk | shadow-phb | 6-shadow-step | 6 | PHB | 60 feet | skip: at-will bonus-action teleport (60 feet), no cost or limit |
+| monk | shadow-phb | 11-cloak-of-shadows | 11 | PHB | use | skip: at-will invisibility in dim light, no number |
+| monk | shadow-phb | 17-opportunist | 17 | PHB | 5 feet, use | skip: reaction attack, no number or limit |
+| monk | sun-soul-xge | 3-radiant-sun-bolt | 3 | XGE | use, 30 feet, d4, 1 ki point | MODELLED: resource `monk:radiant-sun-bolt` |
+| monk | sun-soul-xge | 3-way-of-the-sun-soul | 3 | XGE | - | skip: subclass intro (flavor text) |
+| monk | sun-soul-xge | 6-searing-arc-strike | 6 | XGE | 2 ki points, number of, half your | MODELLED: resource `monk:searing-arc-strike` |
+| monk | sun-soul-xge | 11-searing-sunburst | 11 | XGE | 150 feet, 2d6 | MODELLED: resource `monk:searing-sunburst` |
+| monk | sun-soul-xge | 17-sun-shield | 17 | XGE | 30 feet, use | MODELLED: resource `monk:sun-shield` |
+| paladin | ancients-phb | 3-channel-divinity | 3 | PHB | - | skip: header of the Channel Divinity options (each option is its own entry) |
+| paladin | ancients-phb | 3-natures-wrath | 3 | PHB | use, 10 feet | MODELLED: sentence on `paladin:channel-divinity` (Nature's Wrath) |
+| paladin | ancients-phb | 3-oath-of-the-ancients | 3 | PHB | - | skip: subclass intro (flavor text) |
+| paladin | ancients-phb | 3-oath-spells | 3 | PHB | - | skip: spell list (granted spells, no use limit or number) |
+| paladin | ancients-phb | 3-tenets-of-the-ancients | 3 | PHB | - | skip: tenets (flavor text) |
+| paladin | ancients-phb | 3-turn-the-faithless | 3 | PHB | use, 30 feet, 1 minute | MODELLED: sentence on `paladin:channel-divinity` (Turn the Faithless) |
+| paladin | ancients-phb | 7-aura-of-warding | 7 | PHB | 10 feet, 30 feet | skip: passive aura: resistance to spell damage (10 / 30 feet), no character number or limit |
+| paladin | ancients-phb | 15-undying-sentinel | 15 | PHB | use, finish a long rest | MODELLED: resource `paladin:undying-sentinel` |
+| paladin | ancients-phb | 20-elder-champion | 20 | PHB | 1 minute, 10 feet, use, finish a long rest | MODELLED: resource `paladin:elder-champion` |
+| paladin | conquest-xge | 3-channel-divinity | 3 | XGE | - | skip: header of the Channel Divinity options (each option is its own entry) |
+| paladin | conquest-xge | 3-conquering-presence | 3 | XGE | use, 30 feet, 1 minute | MODELLED: sentence on `paladin:channel-divinity` (Conquering Presence) |
+| paladin | conquest-xge | 3-guided-strike | 3 | XGE | use | MODELLED: sentence on `paladin:channel-divinity` (Guided Strike) |
+| paladin | conquest-xge | 3-oath-of-conquest | 3 | XGE | - | skip: subclass intro (flavor text) |
+| paladin | conquest-xge | 3-oath-spells | 3 | XGE | - | skip: spell list (granted spells, no use limit or number) |
+| paladin | conquest-xge | 3-tenets-of-conquest | 3 | XGE | - | skip: tenets (flavor text) |
+| paladin | conquest-xge | 7-aura-of-conquest | 7 | XGE | 10 feet, equal to, half your, 30 feet | MODELLED: resource `paladin:aura-of-conquest` |
+| paladin | conquest-xge | 15-scornful-rebuke | 15 | XGE | equal to, minimum | MODELLED: resource `paladin:scornful-rebuke` |
+| paladin | conquest-xge | 20-invincible-conqueror | 20 | XGE | 1 minute, d20, use, finish a long rest | MODELLED: resource `paladin:invincible-conqueror` |
+| paladin | crown-scag | 3-champion-challenge | 3 | SCAG | 30 feet | MODELLED: sentence on `paladin:channel-divinity` (Champion Challenge) |
+| paladin | crown-scag | 3-channel-divinity | 3 | SCAG | - | skip: header of the Channel Divinity options (each option is its own entry) |
+| paladin | crown-scag | 3-oath-of-the-crown | 3 | SCAG | - | skip: subclass intro (flavor text) |
+| paladin | crown-scag | 3-oath-spells | 3 | SCAG | - | skip: spell list (granted spells, no use limit or number) |
+| paladin | crown-scag | 3-tenets-of-the-crown | 3 | SCAG | - | skip: tenets (flavor text) |
+| paladin | crown-scag | 3-turn-the-tide | 3 | SCAG | 30 feet, equal to, 1d6, minimum | MODELLED: sentence on `paladin:channel-divinity` (Turn the Tide) |
+| paladin | crown-scag | 7-divine-allegiance | 7 | SCAG | 5 feet, use | skip: reaction, no number or limit |
+| paladin | crown-scag | 15-unyielding-spirit | 15 | SCAG | - | skip: advantage on two saves, no number |
+| paladin | crown-scag | 20-exalted-champion | 20 | SCAG | use, 1 hour, 30 feet, finish a long rest | MODELLED: resource `paladin:exalted-champion` |
+| paladin | glory-tce | 3-channel-divinity | 3 | TCE | - | skip: header of the Channel Divinity options (each option is its own entry) |
+| paladin | glory-tce | 3-inspiring-smite | 3 | TCE | use, 30 feet, number of, 2d8 | MODELLED: sentence on `paladin:channel-divinity` (Inspiring Smite) |
+| paladin | glory-tce | 3-oath-of-glory | 3 | TCE | - | skip: subclass intro (flavor text) |
+| paladin | glory-tce | 3-oath-spells | 3 | TCE | - | skip: spell list (granted spells, no use limit or number) |
+| paladin | glory-tce | 3-peerless-athlete | 3 | TCE | use, 10 minutes, 10 feet | MODELLED: sentence on `paladin:channel-divinity` (Peerless Athlete) |
+| paladin | glory-tce | 3-tenets-of-glory | 3 | TCE | - | skip: tenets (flavor text) |
+| paladin | glory-tce | 7-aura-of-alacrity | 7 | TCE | 10 feet, 5 feet | skip: passive aura: +10 feet walking speed (5 / 10 feet), no cost or limit |
+| paladin | glory-tce | 15-glorious-defense | 15 | TCE | 10 feet, use, minimum, number of, equal to, expend | MODELLED: resource `paladin:glorious-defense` |
+| paladin | glory-tce | 20-living-legend | 20 | TCE | 1 minute, use, finish a long rest, expend | MODELLED: resource `paladin:living-legend` |
+| paladin | oathbreaker-dmg | 3-channel-divinity | 3 | DMG | - | skip: header of the Channel Divinity options (each option is its own entry) |
+| paladin | oathbreaker-dmg | 3-control-undead | 3 | DMG | 30 feet, 24 hours, equal to | MODELLED: sentence on `paladin:channel-divinity` (Control Undead) |
+| paladin | oathbreaker-dmg | 3-dreadful-aspect | 3 | DMG | 30 feet, 1 minute | MODELLED: sentence on `paladin:channel-divinity` (Dreadful Aspect) |
+| paladin | oathbreaker-dmg | 3-oathbreaker | 3 | DMG | - | skip: subclass intro (flavor text) |
+| paladin | oathbreaker-dmg | 3-oathbreaker-spells | 3 | DMG | - | skip: spell list (granted spells, no use limit or number) |
+| paladin | oathbreaker-dmg | 7-aura-of-hate | 7 | DMG | 10 feet, equal to, minimum, 30 feet | MODELLED: resource `paladin:aura-of-hate` |
+| paladin | oathbreaker-dmg | 15-supernatural-resistance | 15 | DMG | - | skip: passive resistance, no number |
+| paladin | oathbreaker-dmg | 20-dread-lord | 20 | DMG | 1 minute, 4d10, use, equal to, 3d10, long rest | MODELLED: resource `paladin:dread-lord` |
+| paladin | redemption-xge | 3-channel-divinity | 3 | XGE | - | skip: header of the Channel Divinity options (each option is its own entry) |
+| paladin | redemption-xge | 3-emissary-of-peace | 3 | XGE | use, 10 minutes | MODELLED: sentence on `paladin:channel-divinity` (Emissary of Peace) |
+| paladin | redemption-xge | 3-oath-of-redemption | 3 | XGE | use | skip: subclass intro (flavor text) |
+| paladin | redemption-xge | 3-oath-spells | 3 | XGE | - | skip: spell list (granted spells, no use limit or number) |
+| paladin | redemption-xge | 3-rebuke-the-violent | 3 | XGE | use, 30 feet, equal to | MODELLED: sentence on `paladin:channel-divinity` (Rebuke the Violent) |
+| paladin | redemption-xge | 3-tenets-of-redemption | 3 | XGE | - | skip: tenets (flavor text) |
+| paladin | redemption-xge | 7-aura-of-the-guardian | 7 | XGE | 10 feet, use, 30 feet | skip: reaction that takes the damage of a creature within 10 / 30 feet, no character number or limit |
+| paladin | redemption-xge | 15-protective-spirit | 15 | XGE | equal to, 1d6, half your | MODELLED: resource `paladin:protective-spirit` |
+| paladin | redemption-xge | 20-emissary-of-redemption | 20 | XGE | equal to, finish a long rest | skip: resistance and half-damage retaliation that is spent per creature until a long rest, no character number |
+| paladin | vengeance-phb | 3-abjure-enemy | 3 | PHB | 60 feet, 1 minute | MODELLED: sentence on `paladin:channel-divinity` (Abjure Enemy) |
+| paladin | vengeance-phb | 3-channel-divinity | 3 | PHB | - | skip: header of the Channel Divinity options (each option is its own entry) |
+| paladin | vengeance-phb | 3-oath-of-vengeance | 3 | PHB | - | skip: subclass intro (flavor text) |
+| paladin | vengeance-phb | 3-oath-spells | 3 | PHB | - | skip: spell list (granted spells, no use limit or number) |
+| paladin | vengeance-phb | 3-tenets-of-vengeance | 3 | PHB | - | skip: tenets (flavor text) |
+| paladin | vengeance-phb | 3-vow-of-enmity | 3 | PHB | 10 feet, 1 minute | MODELLED: sentence on `paladin:channel-divinity` (Vow of Enmity) |
+| paladin | vengeance-phb | 7-relentless-avenger | 7 | PHB | half your | skip: half-speed move after an opportunity attack, no number or limit |
+| paladin | vengeance-phb | 15-soul-of-vengeance | 15 | PHB | use | skip: reaction attack, no number or limit |
+| paladin | vengeance-phb | 20-avenging-angel | 20 | PHB | 1 hour, 60 feet, 1 minute, use, finish a long rest | MODELLED: resource `paladin:avenging-angel` |
+| paladin | watchers-tce | 3-abjure-the-extraplanar | 3 | TCE | use, 30 feet, 1 minute | MODELLED: sentence on `paladin:channel-divinity` (Abjure the Extraplanar) |
+| paladin | watchers-tce | 3-channel-divinity | 3 | TCE | - | skip: header of the Channel Divinity options (each option is its own entry) |
+| paladin | watchers-tce | 3-oath-of-the-watchers | 3 | TCE | - | skip: subclass intro (flavor text) |
+| paladin | watchers-tce | 3-oath-spells | 3 | TCE | - | skip: spell list (granted spells, no use limit or number) |
+| paladin | watchers-tce | 3-tenets-of-the-watchers | 3 | TCE | - | skip: tenets (flavor text) |
+| paladin | watchers-tce | 3-watchers-will | 3 | TCE | use, number of, 30 feet, equal to, minimum, 1 minute | MODELLED: sentence on `paladin:channel-divinity` (Watcher's Will) |
+| paladin | watchers-tce | 7-aura-of-the-sentinel | 7 | TCE | 10 feet, equal to, proficiency bonus, 30 feet | MODELLED: resource `paladin:aura-of-the-sentinel` |
+| paladin | watchers-tce | 15-vigilant-rebuke | 15 | TCE | 30 feet, use, 2d8 | MODELLED: resource `paladin:vigilant-rebuke` |
+| paladin | watchers-tce | 20-mortal-bulwark | 20 | TCE | 1 minute, 120 feet, dc, 24 hours, use, finish a long rest | MODELLED: resource `paladin:mortal-bulwark` |
+| ranger | beast-master-phb | 3-beast-master | 3 | PHB | - | skip: subclass intro (flavor text) |
+| ranger | beast-master-phb | 3-primal-companion | 3 | PHB | proficiency bonus, use, expend, 1 minute, finish a long rest, 5 feet | skip: DEFERRED: a stat-block companion (Beast of the Land / Sea / Sky) that uses the proficiency bonus inside the stat block; no use limit or number is in the text |
+| ranger | beast-master-phb | 3-rangers-companion | 3 | PHB | proficiency bonus, short rest, use, 8 hours | MODELLED: resource `ranger:ranger-s-companion` |
+| ranger | beast-master-phb | 7-exceptional-training | 7 | PHB | use | skip: commands and magical attacks, no number |
+| ranger | beast-master-phb | 11-bestial-fury | 11 | PHB | - | skip: two attacks for the beast, no number |
+| ranger | beast-master-phb | 15-share-spells | 15 | PHB | 30 feet | skip: range 30 feet only, no character number |
+| ranger | drakewarden-ftd | 3-draconic-gift | 3 | FTD | - | skip: a cantrip and a language, no number |
+| ranger | drakewarden-ftd | 3-drake-companion | 3 | FTD | 30 feet, proficiency bonus, use, finish a long rest, expend | MODELLED: resource `ranger:drake-companion` |
+| ranger | drakewarden-ftd | 3-drakewarden | 3 | FTD | d6 | skip: subclass intro (flavor text) |
+| ranger | drakewarden-ftd | 7-bond-of-fang-and-scale | 7 | FTD | equal to, use, 1d6 | MODELLED: extra on `ranger:drake-companion`; flying speed, Medium size, mount rules skipped (no number beyond the extra) |
+| ranger | drakewarden-ftd | 11-drakes-breath | 11 | FTD | dc, 8d6, 10d6, use, finish a long rest, expend | MODELLED: resource `ranger:drake-s-breath` |
+| ranger | drakewarden-ftd | 15-perfected-bond | 15 | FTD | 1d6, 2d6, 30 feet, use, number of, equal to | MODELLED: extra on `ranger:drake-companion`; MODELLED: resource `ranger:reflexive-resistance`; Large size skipped |
+| ranger | fey-wanderer-tce | 3-dreadful-strikes | 3 | TCE | 1d4, once per, 1d6 | MODELLED: resource `ranger:dreadful-strikes` |
+| ranger | fey-wanderer-tce | 3-fey-wanderer | 3 | TCE | - | skip: subclass intro (flavor text) |
+| ranger | fey-wanderer-tce | 3-fey-wanderer-magic | 3 | TCE | number of, d6, long rest | skip: spell list (granted spells, no use limit or number) |
+| ranger | fey-wanderer-tce | 3-otherworldly-glamour | 3 | TCE | equal to, minimum | MODELLED: resource `ranger:otherworldly-glamour` |
+| ranger | fey-wanderer-tce | 7-beguiling-twist | 7 | TCE | 120 feet, use, dc, 1 minute | MODELLED: resource `ranger:beguiling-twist` |
+| ranger | fey-wanderer-tce | 11-fey-reinforcements | 11 | TCE | number of, finish a long rest, 1 minute | MODELLED: resource `ranger:fey-reinforcements` |
+| ranger | fey-wanderer-tce | 15-misty-wanderer | 15 | TCE | expend, number of, equal to, minimum, finish a long rest, 5 feet | MODELLED: resource `ranger:misty-wanderer` |
+| ranger | gloom-stalker-xge | 3-dread-ambusher | 3 | XGE | equal to, 10 feet, 1d8 | MODELLED: resource `ranger:dread-ambusher` |
+| ranger | gloom-stalker-xge | 3-gloom-stalker | 3 | XGE | - | skip: subclass intro (flavor text) |
+| ranger | gloom-stalker-xge | 3-gloom-stalker-magic | 3 | XGE | number of | skip: spell list (granted spells, no use limit or number) |
+| ranger | gloom-stalker-xge | 3-umbral-sight | 3 | XGE | 60 feet, 30 feet | skip: passive darkvision (60 feet, +30 feet), no cost or limit |
+| ranger | gloom-stalker-xge | 7-iron-mind | 7 | XGE | - | skip: a saving throw proficiency (derived elsewhere), no number |
+| ranger | gloom-stalker-xge | 11-stalkers-flurry | 11 | XGE | - | skip: once per turn extra attack on a miss, no number |
+| ranger | gloom-stalker-xge | 15-shadowy-dodge | 15 | XGE | use | skip: reaction, no number or limit |
+| ranger | horizon-walker-xge | 3-detect-portal | 3 | XGE | use, finish a short or long rest | MODELLED: resource `ranger:detect-portal` |
+| ranger | horizon-walker-xge | 3-horizon-walker | 3 | XGE | - | skip: subclass intro (flavor text) |
+| ranger | horizon-walker-xge | 3-horizon-walker-magic | 3 | XGE | number of | skip: spell list (granted spells, no use limit or number) |
+| ranger | horizon-walker-xge | 3-planar-warrior | 3 | XGE | 30 feet, 1d8, 2d8 | MODELLED: resource `ranger:planar-warrior` |
+| ranger | horizon-walker-xge | 7-ethereal-step | 7 | XGE | expend, use, finish a short or long rest | MODELLED: resource `ranger:ethereal-step` |
+| ranger | horizon-walker-xge | 11-distant-strike | 11 | XGE | 10 feet | skip: teleport 10 feet before each attack, no cost or limit |
+| ranger | horizon-walker-xge | 15-spectral-defense | 15 | XGE | use | skip: reaction resistance, no number or limit |
+| ranger | monster-slayer-xge | 3-hunters-sense | 3 | XGE | 60 feet, use, number of, equal to, minimum, expend | MODELLED: resource `ranger:hunter-s-sense` |
+| ranger | monster-slayer-xge | 3-monster-slayer | 3 | XGE | - | skip: subclass intro (flavor text) |
+| ranger | monster-slayer-xge | 3-monster-slayer-magic | 3 | XGE | number of | skip: spell list (granted spells, no use limit or number) |
+| ranger | monster-slayer-xge | 3-slayers-prey | 3 | XGE | 60 feet, 1d6, finish a short or long rest | MODELLED: resource `ranger:slayer-s-prey` |
+| ranger | monster-slayer-xge | 7-supernatural-defense | 7 | XGE | 1d6 | MODELLED: extra on `ranger:slayer-s-prey` |
+| ranger | monster-slayer-xge | 11-magic-users-nemesis | 11 | XGE | 60 feet, use, dc, finish a short or long rest | MODELLED: resource `ranger:magic-user-s-nemesis` |
+| ranger | monster-slayer-xge | 15-slayers-counter | 15 | XGE | use | skip: reaction attack, no number or limit |
+| ranger | swarmkeeper-tce | 3-gathered-swarm | 3 | TCE | d4, 1d6, dc, 15 feet, 5 feet | MODELLED: resource `ranger:gathered-swarm` |
+| ranger | swarmkeeper-tce | 3-swarmkeeper | 3 | TCE | - | skip: subclass intro (flavor text) |
+| ranger | swarmkeeper-tce | 3-swarmkeeper-magic | 3 | TCE | number of | skip: spell list (granted spells, no use limit or number) |
+| ranger | swarmkeeper-tce | 7-writhing-tide | 7 | TCE | 10 feet, 1 minute, use, number of, equal to, proficiency bonus | MODELLED: resource `ranger:writhing-tide` |
+| ranger | swarmkeeper-tce | 11-mighty-swarm | 11 | TCE | 1d8 | MODELLED: extra on `ranger:gathered-swarm` |
+| ranger | swarmkeeper-tce | 15-swarming-dispersal | 15 | TCE | use, 30 feet, number of, equal to, proficiency bonus, expend | MODELLED: resource `ranger:swarming-dispersal` |
+| rogue | arcane-trickster-phb | 3-arcane-trickster | 3 | PHB | number of | skip: subclass intro (flavor text) |
+| rogue | arcane-trickster-phb | 3-mage-hand-legerdemain | 3 | PHB | use | skip: mage hand tasks, no number |
+| rogue | arcane-trickster-phb | 3-spellcasting | 3 | PHB | expend, finish a long rest, use, dc | skip: DEFERRED pick: wizard cantrips and spells known (enchantment / illusion restriction) need spell pick wiring |
+| rogue | arcane-trickster-phb | 9-magical-ambush | 9 | PHB | - | skip: disadvantage on saves against a hidden caster, no number |
+| rogue | arcane-trickster-phb | 13-versatile-trickster | 13 | PHB | 5 feet | skip: advantage via the mage hand (5 feet), no number or limit |
+| rogue | arcane-trickster-phb | 17-spell-thief | 17 | PHB | use, dc, 8 hours, finish a long rest | MODELLED: resource `rogue:spell-thief` |
+| rogue | assassin-phb | 3-assassin | 3 | PHB | - | skip: subclass intro (flavor text) |
+| rogue | assassin-phb | 3-assassinate | 3 | PHB | - | skip: advantage and automatic criticals, no number |
+| rogue | assassin-phb | 3-bonus-proficiencies | 3 | PHB | - | skip: tool proficiencies (derived elsewhere) |
+| rogue | assassin-phb | 9-infiltration-expertise | 9 | PHB | - | skip: downtime (seven days, 25 gp), no use limit |
+| rogue | assassin-phb | 13-impostor | 13 | PHB | - | skip: downtime study (three hours), no use limit |
+| rogue | assassin-phb | 17-death-strike | 17 | PHB | dc, proficiency bonus | MODELLED: resource `rogue:death-strike` |
+| rogue | inquisitive-xge | 3-ear-for-deceit | 3 | XGE | d20 | skip: treat a roll of 7 or lower as 8 on Insight checks, a passive roll floor |
+| rogue | inquisitive-xge | 3-eye-for-detail | 3 | XGE | use | skip: bonus-action Perception / Investigation check, no number |
+| rogue | inquisitive-xge | 3-inquisitive | 3 | XGE | - | skip: subclass intro (flavor text) |
+| rogue | inquisitive-xge | 3-insightful-fighting | 3 | XGE | use, 1 minute | MODELLED: resource `rogue:insightful-fighting` |
+| rogue | inquisitive-xge | 9-steady-eye | 9 | XGE | half your | skip: advantage on two checks, no number |
+| rogue | inquisitive-xge | 13-unerring-eye | 13 | XGE | 30 feet, use, number of, equal to, minimum, expend | MODELLED: resource `rogue:unerring-eye` |
+| rogue | inquisitive-xge | 17-eye-for-weakness | 17 | XGE | 3d6 | MODELLED: extra on `rogue:insightful-fighting` |
+| rogue | mastermind-xge | 3-master-of-intrigue | 3 | XGE | 1 minute | skip: proficiencies, languages and mimicry, no number |
+| rogue | mastermind-xge | 3-master-of-tactics | 3 | XGE | use, 30 feet, 5 feet | skip: Help as a bonus action (range 30 feet), no cost or limit |
+| rogue | mastermind-xge | 3-mastermind | 3 | XGE | - | skip: subclass intro (flavor text) |
+| rogue | mastermind-xge | 9-insightful-manipulator | 9 | XGE | 1 minute | skip: DM-told comparison after one minute, no number |
+| rogue | mastermind-xge | 13-misdirection | 13 | XGE | 5 feet, use | skip: reaction, no number or limit |
+| rogue | mastermind-xge | 17-soul-of-deceit | 17 | XGE | - | skip: no number |
+| rogue | phantom-tce | 3-phantom | 3 | TCE | - | skip: subclass intro (flavor text) |
+| rogue | phantom-tce | 3-wails-from-the-grave | 3 | TCE | 30 feet, number of, equal to, use, proficiency bonus, expend | MODELLED: resource `rogue:wails-from-the-grave` |
+| rogue | phantom-tce | 3-whispers-of-the-dead | 3 | TCE | finish a short or long rest, use | skip: a skill or tool proficiency pick on each rest (pick, no number) |
+| rogue | phantom-tce | 9-tokens-of-the-departed | 9 | TCE | 30 feet, number of, equal to, proficiency bonus, use, expend | MODELLED: resource `rogue:tokens-of-the-departed` |
+| rogue | phantom-tce | 13-ghost-walk | 13 | TCE | 10 feet, 1d10, 10 minutes, use, finish a long rest | MODELLED: resource `rogue:ghost-walk` |
+| rogue | phantom-tce | 17-deaths-friend | 17 | TCE | use, long rest | MODELLED: extra on `rogue:wails-from-the-grave` |
+| rogue | scout-xge | 3-scout | 3 | XGE | - | skip: subclass intro (flavor text) |
+| rogue | scout-xge | 3-skirmisher | 3 | XGE | half your, 5 feet | skip: half-speed reaction move, no number or limit |
+| rogue | scout-xge | 3-survivalist | 3 | XGE | proficiency bonus | skip: doubled proficiency bonus on two skills (derived elsewhere) |
+| rogue | scout-xge | 9-superior-mobility | 9 | XGE | 10 feet | skip: passive +10 feet walking speed |
+| rogue | scout-xge | 13-ambush-master | 13 | XGE | - | skip: advantage on initiative, no number |
+| rogue | scout-xge | 17-sudden-strike | 17 | XGE | use | skip: additional bonus-action attack with Sneak Attack, no number |
+| rogue | soulknife-tce | 3-psionic-power | 3 | TCE | d6, number of, equal to, proficiency bonus, expend, use | MODELLED: sentence on `rogue:psionic-energy-dice` (Psi-Bolstered Knack); MODELLED: sentence on `rogue:psionic-energy-dice` (Psychic Whispers) |
+| rogue | soulknife-tce | 3-psychic-blades | 3 | TCE | 60 feet, equal to, 1d6, 1d4 | MODELLED: resource `rogue:psychic-blades` |
+| rogue | soulknife-tce | 3-soulknife | 3 | TCE | use | skip: subclass intro (flavor text) |
+| rogue | soulknife-tce | 9-soul-blades | 9 | TCE | use, expend, number of, equal to | MODELLED: sentence on `rogue:psionic-energy-dice` (Homing Strikes); MODELLED: sentence on `rogue:psionic-energy-dice` (Psychic Teleportation) |
+| rogue | soulknife-tce | 13-psychic-veil | 13 | TCE | 1 hour, use, finish a long rest, expend | MODELLED: resource `rogue:psychic-veil` |
+| rogue | soulknife-tce | 17-rend-mind | 17 | TCE | use, dc, equal to, proficiency bonus, 1 minute, finish a long rest | MODELLED: resource `rogue:rend-mind` |
+| rogue | swashbuckler-xge | 3-fancy-footwork | 3 | XGE | - | skip: no opportunity attacks after a melee attack, no number |
+| rogue | swashbuckler-xge | 3-rakish-audacity | 3 | XGE | equal to, use, 5 feet | MODELLED: resource `rogue:rakish-audacity` |
+| rogue | swashbuckler-xge | 3-swashbuckler | 3 | XGE | - | skip: subclass intro (flavor text) |
+| rogue | swashbuckler-xge | 9-panache | 9 | XGE | 1 minute, 60 feet | skip: a contested Persuasion check with ranges (60 feet) and durations only, no cost or limit |
+| rogue | swashbuckler-xge | 13-elegant-maneuver | 13 | XGE | use | skip: bonus-action advantage on a check, no number |
+| rogue | swashbuckler-xge | 17-master-duelist | 17 | XGE | use, finish a short or long rest | MODELLED: resource `rogue:master-duelist` |
+
+  Skip reasons in short: subclass intros, tenets, oath spell lists and the Channel Divinity headers (flavor or granted elsewhere); no number, cost or limit (Hour of Reaping, Shadow Step, Opportunist, Divine Allegiance, Soul of Vengeance, Stalker's Flurry, Slayer's Counter, Magical Ambush ...); passive numbers without a cost, limit or character-derived value (Aura of Warding, Aura of Alacrity, Aura of the Guardian, Umbral Sight, Superior Mobility, Drunken Technique, Intoxicated Frenzy, Agile Parry); downtime rules (Infiltration Expertise, Impostor); proficiencies and languages; already derived or already modelled (Soulknife's Psionic Energy Dice by R6).
+- **Deferred (picks and stat blocks, not guessed).** (1) Way of the Four Elements: the elemental disciplines (`Elemental Disciplines` and the three Extra Elemental Discipline records) need discipline pick wiring; only the numeric ki cap is modelled. (2) Kensei weapon picks (kensei weapons, calligraphy or painting supplies). (3) Arcane Trickster Spellcasting (wizard cantrips and enchantment / illusion spells). (4) Beast Master Primal Companion (the Beast of the Land / Sea / Sky stat block uses PB inside the stat block, nothing in the text to compute). (5) Fey Wanderer and Phantom skill / tool picks stay feature lines.
+- **Surfaces.** No new output keys; `types.ts`, `export_fields.py` and the frontend are untouched (no `npm run build`).
+- **Golden: no rebaseline.** The golden's primary Monk, Paladin, Ranger and Rogue cases hold the SRD subclasses (Open Hand, Devotion, Hunter, Thief) and the only book-subclass Ranger sink is 2024, so no case moved: the full golden-driven tests pass against the unchanged stored results (a dry run is unnecessary when nothing moves; the `--append` run asserts every stored result re-resolves identically). No `REBASELINES` entry. `--append` added the kitchen sink `watchers-paladin20-2014` (Oath of the Watchers Paladin 20, 2014; `ks/src-all` and `ks/src-srd`): 247 -> 249 cases, the 247 existing cases byte-identical (checked by loading the gz before and after); `_EXPECT` of `test_export_fields` lists it so Markdown / PDF / YAML carry Aura of the Sentinel, Vigilant Rebuke, Mortal Bulwark and the Channel Divinity sentences.
+- **Edited tests (deliberate).** `test_subclass_features_2014_w8a::test_quotes_match_catalog` (a quote may come from a record of the class itself, no subclass, for the Monk `ki` rule), `test_subclass_features_2014_w8b::test_every_entry_is_a_non_srd_2014_book_subclass_of_the_three_classes` (the allowed class set now lists all twelve classes), `test_class_resources_subclass::test_subclass_entries_follow_their_class_entries` (a Soulknife 3 now also holds the note-only Psychic Blades after the R6 die resource), `test_c_series_golden` (the W6 sweep exempts the appended Paladin 20 sink, which legitimately holds Divine Smite and Cleansing Touch; a W8c guard test).
+- **Timing** (`resolve()`, mean of 20, ms, level 20, mixed / 2014): Astral Self Monk 2.6 / 1.9, Ascendant Dragon Monk 2.6 / 1.9, Watchers Paladin 3.1 / 2.4, Oathbreaker Paladin 3.1 / 2.3, Drakewarden Ranger 3.0 / 2.3, Swarmkeeper Ranger 3.1 / 2.3, Soulknife Rogue 2.9 / 1.9, Phantom Rogue 2.8 / 1.9 (limit 50; also asserted).
+- **Totals.** Server suite 6377 -> 6734 passed (349 new + 1 golden test + the 2 new sink cases through the parametrized sweeps + 1 edited), root suite 405 passed / 8 skipped, frontend untouched.
+- **Uncertain.** (1) The ki save DC is applied to three ki features whose subclass text gives no DC (Arms of the Astral Self, Touch of the Long Death, Searing Sunburst; Breath of the Dragon and Aspect of the Wyrm name "your ki save DC" themselves), following the W7 Quivering Palm precedent and the Ki record's "Some of your ki features require your target to make a saving throw" rule. (2) Avenging Angel's frightened save names no DC in the text, so none is printed. (3) The Paladin Channel Divinity sentences are long for a note, as the W8b Cleric ones were.
+
+
 ## W7 (F4) The 2014 SRD subclass use-limit tail (2026-10-24)
 
 Rulesets mixed / 2014 only and the 12 SRD subclass ids only (the 117 book subclass features are W8); 2024 output is byte-identical (the 2014 subclass tables are never read under "2024", also for a held SRD subclass, pinned by a test that empties them). Tests first (`tests/test_subclass_features_2014_w7.py`, 130, rule matrix in the docstring); with the `_subclass_tail_2014` call removed 90 of them fail, with the ruleset gate removed the 2024 independence test fails.

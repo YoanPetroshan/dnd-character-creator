@@ -80,6 +80,9 @@ KITCHEN_SINK: dict[str, dict] = {
     # W8b: a 2014 book subclass with modelled use-limit features (Circle of the Stars Druid 10 under mixed: Star Map, Cosmic
     # Omen, the Starry Form sentence on Wild Shape); non-2024, so part of the golden via --append
     "stars-druid10-mixed": _sub("druid", 10, "mixed", sub="stars-tce", marks=("classes",)),
+    # W8c: Oath of the Watchers Paladin 20 under 2014 (Aura of the Sentinel, Vigilant Rebuke, Mortal Bulwark, the Abjure the
+    # Extraplanar and Watcher's Will sentences on Channel Divinity); non-2024, so part of the golden via --append
+    "watchers-paladin20-2014": _sub("paladin", 20, "2014", sub="watchers-tce", marks=("classes",)),
     "psi-warrior11": _sub("fighter", 11, "mixed", sub="psi-warrior-tce", marks=("classes",)),
     "totem-bear6": _sub("barbarian", 6, "mixed", sub="totem-warrior-phb", marks=("classes",), overrides={
         "class:barbarian:3:feature:totem-warrior-phb-3-totem-spirit": ["totem-warrior-phb-3-totem-spirit--bear"],

@@ -234,7 +234,8 @@ def test_arcane_archer_level_2_has_none(catalog):
 def test_subclass_entries_follow_their_class_entries(catalog):
     res = _res(catalog, [("fighter", 3, "battle-master-phb"), ("rogue", 3, "soulknife-tce")], "mixed")
     ids = [r["id"] for r in res["derived"]["classResources"]]
-    assert ids == ["fighter:second-wind", "fighter:action-surge", "fighter:superiority-dice", "rogue:sneak-attack", "rogue:psionic-energy-dice"]
+    assert ids == ["fighter:second-wind", "fighter:action-surge", "fighter:superiority-dice", "rogue:sneak-attack", "rogue:psionic-energy-dice",
+                   "rogue:psychic-blades"]  # W8c: the Soulknife's note-only Psychic Blades follows the R6 die resource
 
 
 def test_subclass_resources_resolve_under_50_ms(catalog):

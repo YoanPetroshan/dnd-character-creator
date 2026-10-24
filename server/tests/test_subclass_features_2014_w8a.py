@@ -177,7 +177,8 @@ def test_quotes_match_catalog(catalog):
         for fid, quote in spec["quotes"]:
             assert quote in _text(catalog, fid), (spec["feature"], fid, quote)
             other = catalog.features[fid]
-            assert other["subclass"]["index"] == spec["subclass"], (spec["feature"], fid)
+            owner = (other.get("subclass") or {}).get("index")  # W8c: a rule of the class itself (the Monk's Ki save DC) may be quoted
+            assert owner == spec["subclass"] or (owner is None and other["class"]["index"] == spec["class"]), (spec["feature"], fid)
         for extra_id, _t in spec.get("extras") or ():
             assert catalog.features[extra_id]["subclass"]["index"] == spec["subclass"], extra_id
     for name, pins in reference_data.BOOK_TABLE_PINS_2014.items():
