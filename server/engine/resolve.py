@@ -5483,8 +5483,13 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         if isinstance(base_scores.get(ab), int) and not isinstance(base_scores.get(ab), bool) and base_scores[ab] > 20:
             warnings.append({"id": f"ability-above-20-{ab}", "message": f"{ab} base score {base_scores[ab]} is above 20, the usual cap for a character's own score."})
     for ab, score in final_scores.items():
-        if not (1 <= score <= 30) and not any(p["id"] == f"ability-out-of-range-{ab}" for p in problems):  # normalize may have reported the base already
+        if 1 <= score <= 30:
+            continue
+        reported = next((p for p in problems if p["id"] == f"ability-out-of-range-{ab}"), None)  # normalize may have reported the base already
+        if reported is None:
             problems.append({"id": f"ability-out-of-range-{ab}", "message": f"{ab} score {score} is out of the 1-30 range."})
+        elif "final" not in reported["message"]:  # WF: the clamped base plus bonuses still leaves the sheet out of range
+            reported["message"] += f" With the species, background and feat bonuses the final {ab} score is {score}, still outside 1-30."
 
     choice_templates: list[dict] = []
     for rc in resolved_classes:

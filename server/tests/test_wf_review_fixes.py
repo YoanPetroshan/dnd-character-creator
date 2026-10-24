@@ -168,3 +168,19 @@ def test_no_other_trait_is_word_for_word_a_modelled_one(catalog):
     missing = [t for t, tr in catalog.traits.items() if t not in table and norm(tr) in modelled
                and (tr.get("races") or tr.get("subraces"))]
     assert missing == []
+
+
+# ---------------------------------------------------------------- (4) clamped base plus species bonus
+
+def test_clamped_base_plus_species_bonus_message_names_the_final_score(catalog):
+    res = _res(catalog, "half-orc", ruleset="2014", base={"STR": 31})
+    msgs = [p["message"] for p in res["problems"] if p["id"] == "ability-out-of-range-STR"]
+    assert len(msgs) == 1
+    assert res["derived"]["abilityModifiers"]["STR"] == 11 and "32" in msgs[0] and "using 30 instead" in msgs[0]
+    assert "final STR score is 32" in msgs[0]
+
+
+def test_clamped_base_without_bonus_keeps_the_plain_message(catalog):
+    res = _res(catalog, "human-xphb", ruleset="2024", base={"CHA": 99})
+    msgs = [p["message"] for p in res["problems"] if p["id"] == "ability-out-of-range-CHA"]
+    assert len(msgs) == 1 and "final" not in msgs[0] and "using 30 instead" in msgs[0]
