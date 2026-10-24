@@ -233,3 +233,27 @@ def load_catalog():
     if not _CAT:
         _CAT.append(load())
     return _CAT[0]
+
+
+# ---- F9 regression: a species feat grant whose feats are all hidden by `sources` ---------------------------------------
+# Found by FUZZ_N=3000 (seeds 763 and 1366, ruleset mixed, human-xphb with sources that contain no Origin-feat book):
+# the Origin Feat card stayed `pending` with zero options, so fill() never settled and export was blocked forever.
+# It now becomes `unavailable` (non-blocking), like the F3a cards that can never be completed.
+@pytest.mark.parametrize("seed", [763, 1366])
+def test_f9_fuzz_seeds_settle(seed, catalog):
+    settle(gen_draft(seed, catalog), catalog)
+
+
+def test_f9_species_feat_card_hidden_by_sources_is_unavailable(catalog):
+    draft = {"name": "F9", "ruleset": "2024", "sources": ["GGR"],
+             "abilities": {"method": "manual", "base": {"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10}},
+             "species": {"id": "human-xphb", "choices": {}}, "background": {"id": "acolyte", "choices": {}},
+             "equipment": {"choices": {}, "added": [], "skipped": False},
+             "classes": [{"classId": "sorcerer", "level": 5, "choices": {}}, {"classId": "wizard", "level": 10, "choices": {}}]}
+    card = next(c for c in resolve(draft, catalog)["choices"] if c["id"] == "species:human-xphb:feat-0")
+    assert card["options"] == [] and card["status"] == "unavailable" and card["unavailableReason"]
+    settle(draft, catalog)
+    # with the book list unrestricted the card is a normal pending pick again
+    draft["sources"] = []
+    card = next(c for c in resolve(draft, catalog)["choices"] if c["id"] == "species:human-xphb:feat-0")
+    assert card["status"] == "pending" and card["options"]

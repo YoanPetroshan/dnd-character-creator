@@ -1531,6 +1531,13 @@ def is_new_2024_class_card(c: dict) -> bool:
         or subclass_spells_2024.is_pick_card(c))  # RP17: Savants, Improved Illusions, Magical Discoveries
 
 
+_SPECIES_FEAT_CARD_RE = re.compile(r"^species:[^:]+:(?:subspecies:[^:]+:)?feat-\d+$")
+
+
+def _is_species_feat_card(c: dict) -> bool:
+    return c["source"]["kind"] == "species" and bool(_SPECIES_FEAT_CARD_RE.match(c["id"]))
+
+
 def mark_unavailable(choices: list[dict], ruleset: str) -> list[dict]:
     """Under 2024, pending new-chassis cards with no enabled option become `unavailable` (non-blocking). RP15: outside
     2024 only the Wizard's Spell Mastery / Signature Spells cards (shared cids) get the same treatment."""
@@ -1540,7 +1547,12 @@ def mark_unavailable(choices: list[dict], ruleset: str) -> list[dict]:
                     else c["source"]["kind"] == "class" and (bool(_WIZARD_PICK_CARD_RE.match(c["id"]))
                                                              or _is_srd_pick_card(c)  # RPX1: SRD Lore picks
                                                              or is_additional_secrets_card(c)))
-        if (c["status"] == "pending" and c["count"] > 0 and in_scope
+        if (c["status"] == "pending" and c["count"] > 0 and not c["options"] and _is_species_feat_card(c)):
+            # W3 / F9: the draft's `sources` hide every feat the species grant could offer (e.g. the Human
+            # Origin feat with no book that has Origin feats): the card can never be filled, so it must not block.
+            c = {**c, "status": "unavailable",
+                 "unavailableReason": "No feat is offered by the selected sources, so nothing can be chosen here."}
+        elif (c["status"] == "pending" and c["count"] > 0 and in_scope
                 and not any(not o.get("disabled") for o in c["options"])):
             reason = ("Nothing can be chosen here with the current character: " +
                       ("no option is offered yet." if not c["options"] else "every option is unavailable."))
