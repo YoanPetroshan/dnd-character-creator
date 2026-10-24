@@ -144,3 +144,27 @@ def test_2014_magic_initiate_is_not_repeatable_and_has_no_distinct_group(catalog
     res = _res(catalog, "human", ruleset="2014", level=4, background="acolyte",
                class_choices={"class:fighter:4:asi": ["feat:magic-initiate-phb"]})
     assert not any("distinctGroup" in c or "distinctFixed" in c for c in res["choices"])
+
+
+# ---------------------------------------------------------------- (3) the two Lucky duplicates
+
+@pytest.mark.parametrize("species,tid", [("halfling-phb", "halfling-phb-trait-2"), ("kor-psz", "kor-psz-trait-7")])
+def test_lucky_duplicates_are_note_only_resources(catalog, species, tid):
+    res = _res(catalog, species, ruleset="2014", background="acolyte")
+    entry = next(e for e in res["derived"]["speciesResources"] if e["traitId"] == tid)
+    assert entry["name"] == "Lucky" and entry["uses"] is None and entry["recharge"] is None
+    assert "reroll the die" in entry["details"]["note"]
+
+
+def test_no_other_trait_is_word_for_word_a_modelled_one(catalog):
+    from catalog import reference_data as ref
+    import re
+    table = {**ref.SPECIES_RESOURCES, **ref.SPECIES_RESOURCES_2014}
+
+    def norm(t):
+        d = " ".join(t["desc"]) if isinstance(t["desc"], list) else str(t["desc"])
+        return re.sub(r"\s+", " ", re.sub(r"\{@\w+ ([^}|]*)[^}]*\}", r"\1", d)).strip().lower()
+    modelled = {norm(catalog.traits[t]) for t in table if t in catalog.traits}
+    missing = [t for t, tr in catalog.traits.items() if t not in table and norm(tr) in modelled
+               and (tr.get("races") or tr.get("subraces"))]
+    assert missing == []

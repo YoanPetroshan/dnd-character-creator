@@ -313,7 +313,9 @@ def test_every_book_entry_states_its_rest_and_use_rule_in_the_text(catalog):
     for tid in BOOK_IDS:
         spec = ref.SPECIES_RESOURCES_2014[tid]
         text = _plain(catalog.traits[tid]["desc"]).lower()
-        if spec["recharge"] == "long":
+        if spec["recharge"] is None:  # WF: note-only (the Lucky duplicates): no use count, no rest rule
+            assert spec["uses"] is None, tid
+        elif spec["recharge"] == "long":
             assert "long rest" in text, tid
         else:
             assert spec["recharge"] == "short-or-long" and "short" in text and "long rest" in text, tid

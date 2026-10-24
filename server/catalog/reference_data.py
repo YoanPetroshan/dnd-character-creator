@@ -670,6 +670,9 @@ SPECIES_RESOURCES_2014: dict[str, dict] = {
 _PB_LONG = "a number of times equal to your proficiency bonus, and you regain all expended uses when you finish a long rest"
 
 
+_LUCKY_NOTE = "When you roll a 1 on the d20 of an attack roll, ability check or saving throw, reroll the die and use the new roll"
+
+
 def _e(race, name, uses, recharge, note, quotes, **kw):
     return {"race": race, "name": name, "uses": uses, "recharge": recharge, "note": note, "quotes": tuple(quotes), **kw}
 
@@ -852,6 +855,13 @@ SPECIES_RESOURCES_2014.update({
     "hobgoblin-vgm-trait-4": _e("hobgoblin-vgm", "Saving Face", 1, "short-or-long",
         "When you miss with an attack or fail an ability check or saving throw, add a bonus equal to the allies you can see within 30 feet (maximum +5)",
         ("(maximum bonus of +5)", "you can't use it again until you finish a short or long rest")),
+    # --- Halfling (PHB), Kor: WF, word-for-word the SRD Lucky (note only; the PHB text omits "the d20")
+    "halfling-phb-trait-2": _e("halfling-phb", "Lucky", None, None, _LUCKY_NOTE,
+        ("When you roll a 1 on an attack roll, ability check, or saving throw, you can reroll the die and must use "
+         "the new roll",)),
+    "kor-psz-trait-7": _e("kor-psz", "Lucky", None, None, _LUCKY_NOTE,
+        ("When you roll a 1 on the d20 for an attack roll, ability check, or saving throw, you can reroll the die and "
+         "must use the new roll",)),
     # --- Human (Mark of Sentinel), kender, kenku, kobold, leonin, lizardfolk
     "human-phb-mark-of-sentinel-erlw-trait-2": _e("human-phb", "Vigilant Guardian", 1, "long",
         "Reaction when a creature within 5 feet is hit by an attack: swap places with it and take the hit instead",
