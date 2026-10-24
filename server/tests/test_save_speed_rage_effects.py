@@ -177,14 +177,14 @@ def test_fast_movement_stacks_with_unarmored_movement(catalog):
 
 def test_speed_bonuses_raise_only_the_walking_speed(catalog):
     """F1 (6): "Your speed increases by 10 feet" (Fast Movement, Unarmored Movement) is the
-    walking speed. A Triton (walk 30, swim 30) Barbarian 5 / Monk 2 keeps swim 30; the
-    other speed modes are not raised by either feature."""
+    walking speed. WF: a Triton's swim speed is "equal to your walking speed" (stored as true), so it
+    follows the final walk (Fast Movement, Unarmored Movement included); numeric modes are not raised."""
     tri = _res(catalog, [("barbarian", 1)], species="triton-mpmm")["derived"]["speeds"]
     assert tri["walk"] == 30 and tri["swim"] == 30
     for classes, walk in (([("barbarian", 5)], 40), ([("monk", 2)], 40), ([("barbarian", 5), ("monk", 2)], 50)):
         got = _res(catalog, classes, species="triton-mpmm")["derived"]
         assert got["speeds"]["walk"] == walk and got["speed"] == walk, classes
-        assert got["speeds"]["swim"] == 30, classes
+        assert got["speeds"]["swim"] == walk, classes
     heavy = _res(catalog, [("barbarian", 5)], species="triton-mpmm", added=["chain-mail"], base={"STR": 13})["derived"]["speeds"]
     assert heavy["walk"] == 30 and heavy["swim"] == 30
 

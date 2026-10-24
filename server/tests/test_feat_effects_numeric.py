@@ -311,9 +311,10 @@ def test_athlete_keeps_a_faster_existing_climb_speed(catalog):
     assert climb == max(walk, 20)
 
 
-def test_triton_barbarian_with_mobile_swim_stays_and_walk_grows(catalog):
+def test_triton_barbarian_with_mobile_swim_follows_the_walk(catalog):
+    # WF: the Triton swim speed is "equal to your walking speed", so it follows the final walk
     r = _res(catalog, [("barbarian", 5)], ["mobile-phb"], species="triton-mpmm")
-    assert _speeds(r)["walk"] == 30 + 10 + 10 and _speeds(r)["swim"] == 30
+    assert _speeds(r)["walk"] == 30 + 10 + 10 and _speeds(r)["swim"] == 50
 
 
 def test_gift_of_the_depths_swim_includes_the_feat_bonus(catalog):

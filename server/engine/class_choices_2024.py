@@ -1540,7 +1540,9 @@ def _is_species_feat_card(c: dict) -> bool:
 
 def mark_unavailable(choices: list[dict], ruleset: str) -> list[dict]:
     """Under 2024, pending new-chassis cards with no enabled option become `unavailable` (non-blocking). RP15: outside
-    2024 only the Wizard's Spell Mastery / Signature Spells cards (shared cids) get the same treatment."""
+    2024 only the Wizard's Spell Mastery / Signature Spells cards (shared cids) get the same treatment. The W3 rule (a
+    species feat card with no option at all, because the draft's `sources` hide every feat it could offer, becomes
+    `unavailable` and never blocks) applies under EVERY ruleset, mixed and 2014 included."""
     out = []
     for c in choices:
         in_scope = (is_new_2024_class_card(c) if ruleset == "2024"
