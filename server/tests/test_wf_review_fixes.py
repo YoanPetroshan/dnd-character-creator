@@ -70,3 +70,77 @@ def test_equal_mode_floor_zero_and_unaffected_numeric(catalog):
     # a numeric swim (Triton-like numbers are not "equal to walk") keeps its value
     s2 = _res(catalog, "human", added=["chain-mail"], base={"STR": 12})["derived"]["speeds"]
     assert "swim" not in s2
+
+
+# ---------------------------------------------------------------- (2) Magic Initiate: a different list each time
+# XPHB Magic Initiate, entry "Repeatable": "You can take this feat more than once, but you must choose a different
+# spell list each time."  PHB 2014 Magic Initiate has no such sentence and `repeatable` false (not repeatable at all).
+
+MI_QUOTE = "you must choose a different spell list each time"
+MI = "magic-initiate-xphb"
+BG_V = "feat:magic-initiate-xphb:spell-variant"
+SP_V = "species:human-xphb:feat-0:feat:magic-initiate-xphb:spell-variant"
+ASI_V = "class:fighter:4:asi:feat:magic-initiate-xphb:spell-variant"
+SP_PICK = {"species:human-xphb:feat-0": ["feat:magic-initiate-xphb"]}
+
+
+def _card(res, cid):
+    return next((c for c in res["choices"] if c["id"] == cid), None)
+
+
+def _opts(card):
+    return {o["id"]: o for o in card["options"]}
+
+
+def test_quote_pins(catalog):
+    import json
+    assert MI_QUOTE in json.dumps(catalog.feats["magic-initiate-xphb"]["entries"])
+    assert catalog.feats["magic-initiate-xphb"]["repeatable"] is True
+    assert catalog.feats["magic-initiate-phb"]["repeatable"] is False
+    assert "different spell list" not in json.dumps(catalog.feats["magic-initiate-phb"]["entries"])
+
+
+def test_genie_wizard_blocks_wizard_in_species_copy(catalog):
+    res = _res(catalog, "human-xphb", ruleset="2024", level=1, background="genie-touched-frhof",
+               species_choices=SP_PICK, extra={"sources": ["srd", "phb", "xphb", "frhof"]})
+    o = _opts(_card(res, SP_V))
+    assert o["wizard-spells"]["disabled"] and "already chosen for Magic Initiate (1)" in o["wizard-spells"]["disabledReason"]
+    assert not o["cleric-spells"].get("disabled") and not o["druid-spells"].get("disabled")
+    first = _card(res, BG_V)  # the fixed Wizard card itself is not blocked by its own list
+    assert not _opts(first)["wizard-spells"].get("disabled")
+
+
+def test_stored_duplicate_list_is_pruned_with_its_spell_picks(catalog):
+    choices = dict(SP_PICK)
+    choices[SP_V] = ["wizard-spells"]
+    res = _res(catalog, "human-xphb", ruleset="2024", background="genie-touched-frhof", species_choices=choices,
+               extra={"sources": ["srd", "phb", "xphb", "frhof"]})
+    card = _card(res, SP_V)
+    assert card["selected"] == [] and card["status"] == "pending"
+    assert any(p["choiceId"] == SP_V and "already chosen for Magic Initiate (1)" in p["reason"] for p in res["pruned"])
+    assert not [c for c in res["choices"] if c["id"].startswith(SP_V[:-len("spell-variant")] + "spell-choice-")]
+    assert not any(p["choiceId"] == SP_V and p.get("blocking") for p in res["pruned"])
+
+
+def test_species_pick_then_asi_copy_blocks_taken_list(catalog):
+    c = dict(SP_PICK)
+    c[SP_V] = ["cleric-spells"]
+    res = _res(catalog, "human-xphb", ruleset="2024", level=4, background="genie-touched-frhof", species_choices=c,
+               class_choices={"class:fighter:4:asi": ["feat:magic-initiate-xphb"]},
+               extra={"sources": ["srd", "phb", "xphb", "frhof"]})
+    o = _opts(_card(res, ASI_V))
+    assert o["wizard-spells"]["disabled"] and o["cleric-spells"]["disabled"] and not o["druid-spells"].get("disabled")
+    assert "(2)" in o["cleric-spells"]["disabledReason"]
+
+
+def test_single_copy_is_unrestricted(catalog):
+    res = _res(catalog, "human-xphb", ruleset="2024", level=4, background="acolyte",
+               class_choices={"class:fighter:4:asi": ["feat:magic-initiate-xphb"]})
+    o = _opts(_card(res, ASI_V))
+    assert not any(x.get("disabled") for x in o.values()) and len(o) == 3
+
+
+def test_2014_magic_initiate_is_not_repeatable_and_has_no_distinct_group(catalog):
+    res = _res(catalog, "human", ruleset="2014", level=4, background="acolyte",
+               class_choices={"class:fighter:4:asi": ["feat:magic-initiate-phb"]})
+    assert not any("distinctGroup" in c or "distinctFixed" in c for c in res["choices"])

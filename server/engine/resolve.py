@@ -923,11 +923,18 @@ def _feat_spell_choice_templates(
                 fixed = [e["name"] for e in feat.get("innate_spells", []) if e.get("variant") == name]
                 options.append({"id": slug(name), "label": f"{name} ({', '.join(fixed)})" if fixed else name})
             vcid = f"{prefix}:spell-variant"
-            templates.append({
+            variant_card = {
                 "id": vcid, "source": source, "label": f"{feat['name']}: Spell List",
                 "description": "Choose which spell list this feat draws from.",
                 "count": 1, "options": options,
-            })
+            }
+            if feat.get("repeatable") and len(variants) > 1:
+                # WF: XPHB Magic Initiate "You can take this feat more than once, but you must choose a different spell
+                # list each time." A background-fixed list (Genie Touched: Wizard) is held even before it is clicked.
+                variant_card["distinctGroup"] = f"{feat['index']}:spell-variant"
+                if len(options) == 1:
+                    variant_card["distinctFixed"] = [options[0]["id"]]
+            templates.append(variant_card)
             raw = raw_selections.get(vcid)
             raw = [x for x in raw if isinstance(x, str)] if isinstance(raw, list) else []
             valid = {o["id"] for o in options}
@@ -2110,6 +2117,7 @@ def _gate_distinct_choices(choices: list[dict], class_order: list[str] = ()) -> 
         return (1, class_order.index(cls_id) if cls_id in class_order else len(class_order), int(m.group(2)), i)
 
     pruned_by_index: dict[int, dict] = {}
+    dependents: list[str] = []
     held: dict[str, dict[str, int]] = {}  # group -> {option id: instance number}
     count: dict[str, int] = {}
     for i in sorted(indexes, key=walk_key):
@@ -2132,6 +2140,12 @@ def _gate_distinct_choices(choices: list[dict], class_order: list[str] = ()) -> 
                       "status": "resolved" if len(kept) == c["count"] else "pending"}
         for s in kept:
             taken[s] = count[group]
+        for fixed in c.get("distinctFixed", []):  # WF: a list the background fixes is held by this instance
+            taken.setdefault(fixed, count[group])
+        if dropped and c["id"].endswith(":spell-variant"):  # WF: the spell picks of the dropped list go with it
+            dependents.append(c["id"][:-len("spell-variant")] + "spell-choice-")
+    if dependents:
+        choices[:] = [c for c in choices if not any(c["id"].startswith(d) for d in dependents)]
     return [pruned_by_index[i] for i in sorted(pruned_by_index)]
 
 
@@ -6750,7 +6764,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     return {
         "sheet": sheet,
         # F2-C: `count_by_level` is an internal template key (count-variable test), not API shape.
-        "choices": [{k: v for k, v in c.items() if k not in ("count_by_level", "lacksExpertise", "profOrExpertise", "distinctGroup")} for c in choices],
+        "choices": [{k: v for k, v in c.items() if k not in ("count_by_level", "lacksExpertise", "profOrExpertise", "distinctGroup", "distinctFixed")} for c in choices],
         "derived": derived,
         "problems": problems,
         "warnings": warnings,
