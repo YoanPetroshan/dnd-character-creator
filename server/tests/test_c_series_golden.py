@@ -232,6 +232,35 @@ REBASELINES: dict[str, dict] = {
         ],
         "why": "2014 SRD class-feature use-limit tail (W6)",
     },
+    # W7 / F4: the 2014 SRD subclass use-limit tail (`SUBCLASS_TAIL_2014` / `SUBCLASS_NOTES_2014`). The golden's primary
+    # cases hold the first SRD subclass of the class from level 3 (Berserker, Lore, Life, Land, Champion, Open Hand,
+    # Devotion, Hunter, Thief, Draconic, Fiend, Evocation). Rule matrix: a case moves when its level has reached a
+    # modelled SRD subclass feature record: Barbarian 3 / 11 / 20 (Frenzy 3, Intimidating Presence 10), Bard 3 / 11 / 20
+    # (Cutting Words 3), Cleric 3 / 11 / 20 (Disciple of Life 1, Preserve Life 2, Divine Strike 8), Druid 3 / 11 / 20 (Natural
+    # Recovery 2, Nature's Sanctuary 14), Fighter 20 (Survivor 18), Monk 11 / 20 (Wholeness of Body 6, Tranquility 11,
+    # Quivering Palm 17), Paladin 3 / 11 / 20 (Sacred Weapon, Turn the Unholy 3, Holy Nimbus 20), Sorcerer 11 / 20
+    # (Elemental Affinity 6, Draconic Presence 18), Warlock 3 / 11 / 20 (Dark One's Blessing 1, Dark One's Own Luck 6, Hurl
+    # Through Hell 14), Wizard 11 / 20 (Empowered Evocation 10, Overchannel 14); the multiclass Barbarian 3 / Monk 2
+    # (Berserker) and Warlock 5 / Sorcerer 3 (Fiend); the Lore Bard kitchen sinks. Level 1 cases, Monk 3, Sorcerer 3, Wizard
+    # 3, Fighter 3 / 11, Ranger and Rogue (Hunter and Thief have no entry) and the other multiclass cases must not move.
+    # Rule matrix for paths: the new subclass resources (reported once at their roots), the notes added to the five
+    # attached targets, and the whole `classResources` list when it was empty before (a Warlock 3 with no Eldritch
+    # Invocation resource gets Dark One's Blessing as its first entry).
+    "W7": {
+        "cases": ["*/src-*/barbarian3", "*/src-*/barbarian11", "*/src-*/barbarian20", "*/src-*/multi-barbarian3-monk2",
+                  "*/src-*/bard3", "*/src-*/bard11", "*/src-*/bard20", "*/src-*/cleric3", "*/src-*/cleric11",
+                  "*/src-*/cleric20", "*/src-*/druid3", "*/src-*/druid11", "*/src-*/druid20", "*/src-*/fighter20",
+                  "*/src-*/monk11", "*/src-*/monk20", "*/src-*/paladin3", "*/src-*/paladin11", "*/src-*/paladin20",
+                  "*/src-*/sorcerer11", "*/src-*/sorcerer20", "*/src-*/warlock3", "*/src-*/warlock11",
+                  "*/src-*/warlock20", "*/src-*/multi-warlock5-sorcerer3", "*/src-*/wizard11", "*/src-*/wizard20",
+                  "ks/src-*/bard6-lore-*"],
+        "paths": [
+            r"^result\.derived\.classResources\[(barbarian:(frenzy|intimidating-presence)|cleric:(disciple-of-life|divine-strike-life-domain)|druid:(natural-recovery|nature-s-sanctuary)|fighter:survivor|monk:(wholeness-of-body|tranquility)|paladin:holy-nimbus|sorcerer:elemental-affinity|warlock:(dark-one-s-blessing|dark-one-s-own-luck|hurl-through-hell)|wizard:(empowered-evocation|overchannel))\]$",
+            r"^result\.derived\.classResources\[(bard:bardic-inspiration|cleric:channel-divinity|paladin:channel-divinity|monk:ki|sorcerer:sorcery-points)\]\.details(\.note)?$",
+            r"^result\.derived\.classResources$",
+        ],
+        "why": "2014 SRD subclass use-limit tail (W7)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -584,7 +613,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6") and STRIP == ("derived.featResources", "derived.speciesResources")
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7") and STRIP == ("derived.featResources", "derived.speciesResources")
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
@@ -729,6 +758,24 @@ def test_w6_cases_hold_the_2014_class_feature_tail():
             assert "rogue:stroke-of-luck" in ids, n
         if "warlock20" in n and "src-srd" in n:
             assert {"warlock:eldritch-master", "warlock:mystic-arcanum"} <= ids, n
+
+
+def test_w7_cases_hold_the_2014_subclass_tail():
+    """W7: 112 matched cases carry the SRD subclass entries of their class at their level; Hunter, Thief, level 1 and the
+    other cases hold no W7 subclass resource (their subclass entries stay the R6 builders')."""
+    hit = sorted(n for n in _GOLDEN if any(fnmatch.fnmatchcase(n, p) for p in REBASELINES["W7"]["cases"]))
+    assert len(hit) == 112
+    w7_ids = {"barbarian:frenzy", "barbarian:intimidating-presence", "cleric:disciple-of-life",
+              "cleric:divine-strike-life-domain", "druid:natural-recovery", "druid:nature-s-sanctuary", "fighter:survivor",
+              "monk:wholeness-of-body", "monk:tranquility", "paladin:holy-nimbus", "sorcerer:elemental-affinity",
+              "warlock:dark-one-s-blessing", "warlock:dark-one-s-own-luck", "warlock:hurl-through-hell",
+              "wizard:empowered-evocation", "wizard:overchannel"}
+    for n, entry in _GOLDEN.items():
+        ids = {r["id"] for r in entry["result"]["derived"]["classResources"]}
+        if n not in hit:
+            assert not ids & w7_ids, n
+        elif "warlock20" in n and "/multi" not in n:
+            assert {"warlock:dark-one-s-blessing", "warlock:dark-one-s-own-luck", "warlock:hurl-through-hell"} <= ids, n
 
 
 def test_keyed_normalization_and_diff_paths():

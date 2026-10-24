@@ -2188,6 +2188,256 @@ RESOURCE_NOTES_2014: tuple[dict, ...] = (
      "quotes": (("sorcerous-restoration", "you regain 4 expended sorcery points whenever you finish a short rest"),)},
 )
 
+# ---- W7 (finding F4): the 2014 SRD subclass use-limit tail. The counterpart of SUBCLASS_TAIL_2024 / SUBCLASS_NOTES_2024
+# for rulesets "mixed" and "2014" and the 12 SRD subclasses only (berserker, lore, life, land, champion, open-hand,
+# devotion, hunter, thief, draconic, fiend, evocation; the book subclasses are slice W8). Same spec keys as
+# RESOURCE_TAIL_2014 plus `subclass`; `class_resources._subclass_tail_2014` builds one resource per SUBCLASS_TAIL_2014
+# entry (source kind "subclass") and adds each SUBCLASS_NOTES_2014 sentence to the resource `target` of the class.
+# Both need the character's selected subclass, the SRD feature record in the catalog and the class level at its level.
+
+# Life Domain Divine Strike: "you can cause the attack to deal an extra 1d8 radiant damage to the target. When you reach
+# 14th level, the extra damage increases to 2d8." (class level, dice), pinned against `divine-strike` (level 8).
+DIVINE_STRIKE_DICE_2014 = ((8, "1d8"), (14, "2d8"))
+
+SUBCLASS_TAIL_2014: tuple[dict, ...] = (
+    # ---- Berserker (Barbarian)
+    # Frenzy: "for the duration of your rage you can make a single melee weapon attack as a bonus action on each of your
+    # turns after this one. When your rage ends, you suffer one level of exhaustion"
+    {"subclass": "berserker", "class": "barbarian", "feature": "frenzy", "name": "Frenzy", "uses": None, "recharge": None,
+     "note": "While raging you can make a single melee weapon attack as a bonus action on each of your turns after "
+             "this one; when your rage ends you suffer one level of exhaustion",
+     "quotes": (("frenzy", "for the duration of your rage you can make a single melee weapon attack as a bonus action on each of your turns after this one"),
+                ("frenzy", "When your rage ends, you suffer one level of exhaustion"))},
+    # Intimidating Presence: "choose one creature that you can see within 30 feet of you. If the creature can see or hear
+    # you, it must succeed on a Wisdom saving throw (DC equal to 8 + your proficiency bonus + your Charisma modifier) or
+    # be frightened of you until the end of your next turn. ... If the creature succeeds on its saving throw, you can't
+    # use this feature on that creature again for 24 hours."
+    {"subclass": "berserker", "class": "barbarian", "feature": "intimidating-presence", "name": "Intimidating Presence",
+     "uses": None, "recharge": None,
+     "note": "Action: one creature you can see within 30 feet that can see or hear you makes a Wisdom saving throw "
+             "(DC {dc_cha}) or is frightened of you until the end of your next turn (extend it with your action on "
+             "later turns); a creature that succeeds can't be targeted again for 24 hours",
+     "quotes": (("intimidating-presence", "DC equal to 8 + your proficiency bonus + your Charisma modifier"),
+                ("intimidating-presence", "choose one creature that you can see within 30 feet of you"),
+                ("intimidating-presence", "you can't use this feature on that creature again for 24 hours"))},
+    # ---- Life (Cleric)
+    # Disciple of Life: "Whenever you use a spell of 1st level or higher to restore hit points to a creature, the
+    # creature regains additional hit points equal to 2 + the spell's level." / Blessed Healer (6): "When you cast a spell
+    # of 1st level or higher that restores hit points to a creature other than you, you regain hit points equal to 2 +
+    # the spell's level."
+    {"subclass": "life", "class": "cleric", "feature": "disciple-of-life", "name": "Disciple of Life", "uses": None,
+     "recharge": None,
+     "note": "A healing spell of 1st level or higher restores an extra 2 + the spell's level hit points",
+     "extras": (("blessed-healer", "Blessed Healer: when you heal another creature with a spell of 1st level or higher, "
+                 "you regain 2 + the spell's level hit points"),),
+     "quotes": (("disciple-of-life", "the creature regains additional hit points equal to 2 + the spell's level"),
+                ("blessed-healer", "you regain hit points equal to 2 + the spell's level"))},
+    # Divine Strike: "Once on each of your turns when you hit a creature with a weapon attack, you can cause the attack to
+    # deal an extra 1d8 radiant damage to the target. When you reach 14th level, the extra damage increases to 2d8." (the
+    # id differs from the 2024 `cleric:divine-strike`, which drives the attack-row notes.)
+    {"subclass": "life", "class": "cleric", "feature": "divine-strike", "name": "Divine Strike (Life Domain)",
+     "uses": None, "recharge": None, "dice": "@strike_dice", "level_vars": {"strike_dice": DIVINE_STRIKE_DICE_2014},
+     "note": "Once on each of your turns when you hit a creature with a weapon attack, the attack deals an extra "
+             "{strike_dice} radiant damage",
+     "quotes": (("divine-strike", "Once on each of your turns when you hit a creature with a weapon attack, you can cause the attack to deal an extra 1d8 radiant damage to the target."),
+                ("divine-strike", "When you reach 14th level, the extra damage increases to 2d8."))},
+    # ---- Land (Druid)
+    # Natural Recovery: "During a short rest, you choose expended spell slots to recover. The spell slots can have a
+    # combined level that is equal to or less than half your druid level (rounded up), and none of the slots can be 6th
+    # level or higher. You can't use this feature again until you finish a long rest."
+    {"subclass": "land", "class": "druid", "feature": "natural-recovery", "name": "Natural Recovery", "uses": None,
+     "recharge": "long", "pool": "@half_level_up",
+     "note": "During a short rest, recover expended spell slots with a combined level of up to {half_level_up} (half "
+             "your Druid level, rounded up), none of them 6th level or higher; once until you finish a long rest",
+     "quotes": (("natural-recovery", "During a short rest, you choose expended spell slots to recover."),
+                ("natural-recovery", "equal to or less than half your druid level (rounded up), and none of the slots can be 6th level or higher"),
+                ("natural-recovery", "You can't use this feature again until you finish a long rest."))},
+    # Nature's Sanctuary: "When a beast or plant creature attacks you, that creature must make a Wisdom saving throw
+    # against your druid spell save DC. On a failed save, the creature must choose a different target, or the attack
+    # automatically misses. On a successful save, the creature is immune to this effect for 24 hours."
+    {"subclass": "land", "class": "druid", "feature": "natures-sanctuary", "name": "Nature's Sanctuary", "uses": None,
+     "recharge": None,
+     "note": "A beast or plant creature that attacks you makes a Wisdom saving throw (DC {dc_wis}, your druid spell save "
+             "DC); on a failure it must choose a different target or the attack misses; on a success it is immune for "
+             "24 hours",
+     "quotes": (("natures-sanctuary", "that creature must make a Wisdom saving throw against your druid spell save DC"),
+                ("natures-sanctuary", "the creature is immune to this effect for 24 hours"))},
+    # ---- Champion (Fighter)
+    # Survivor: "At the start of each of your turns, you regain hit points equal to 5 + your Constitution modifier if you
+    # have no more than half of your hit points left. You don't gain this benefit if you have 0 hit points."
+    {"subclass": "champion", "class": "fighter", "feature": "survivor", "name": "Survivor", "uses": None, "recharge": None,
+     "note": "At the start of each of your turns, if you have no more than half your hit points left (and more than 0), "
+             "regain {survivor} hit points (5 + CON modifier)",
+     "quotes": (("survivor", "you regain hit points equal to 5 + your Constitution modifier if you have no more than half of your hit points left"),
+                ("survivor", "You don't gain this benefit if you have 0 hit points."))},
+    # ---- Open Hand (Monk)
+    # Wholeness of Body: "As an action, you can regain hit points equal to three times your monk level. You must finish a
+    # long rest before you can use this feature again."
+    {"subclass": "open-hand", "class": "monk", "feature": "wholeness-of-body", "name": "Wholeness of Body", "uses": 1,
+     "recharge": "long",
+     "note": "Action: regain {three_level} hit points (3 x Monk level)",
+     "quotes": (("wholeness-of-body", "you can regain hit points equal to three times your monk level"),
+                ("wholeness-of-body", "You must finish a long rest before you can use this feature again."))},
+    # Tranquility: "At the end of a long rest, you gain the effect of a sanctuary spell that lasts until the start of your
+    # next long rest (the spell can end early as normal). The saving throw DC for the spell equals 8 + your Wisdom
+    # modifier + your proficiency bonus."
+    {"subclass": "open-hand", "class": "monk", "feature": "tranquility", "name": "Tranquility", "uses": None,
+     "recharge": None,
+     "note": "At the end of a long rest you gain the effect of a sanctuary spell until the start of your next long rest "
+             "(it can end early as normal); save DC {dc_wis}",
+     "quotes": (("tranquility", "At the end of a long rest, you gain the effect of a sanctuary spell"),
+                ("tranquility", "The saving throw DC for the spell equals 8 + your Wisdom modifier + your proficiency bonus."))},
+    # ---- Devotion (Paladin)
+    # Holy Nimbus: the catalog text has no rest rule, so none is modelled. "For 1 minute, bright light shines from you in a
+    # 30-foot radius, and dim light shines 30 feet beyond that. Whenever an enemy creature starts its turn in the bright
+    # light, the creature takes 10 radiant damage. In addition, for the duration, you have advantage on saving throws
+    # against spells cast by fiends or undead."
+    {"subclass": "devotion", "class": "paladin", "feature": "holy-nimbus", "name": "Holy Nimbus", "uses": None,
+     "recharge": None,
+     "note": "Action, 1 minute: bright light in a 30-foot radius (dim light 30 feet beyond); an enemy that starts its "
+             "turn in the bright light takes 10 radiant damage; you have advantage on saving throws against spells cast "
+             "by fiends or undead",
+     "quotes": (("holy-nimbus", "bright light shines from you in a 30-foot radius"),
+                ("holy-nimbus", "the creature takes 10 radiant damage"),
+                ("holy-nimbus", "you have advantage on saving throws against spells cast by fiends or undead"))},
+    # ---- Draconic (Sorcerer)
+    # Elemental Affinity: "when you cast a spell that deals damage of the type associated with your draconic ancestry,
+    # you can add your Charisma modifier to one damage roll of that spell. At the same time, you can spend 1 sorcery point
+    # to gain resistance to that damage type for 1 hour."
+    {"subclass": "draconic", "class": "sorcerer", "feature": "elemental-affinity", "name": "Elemental Affinity",
+     "uses": None, "recharge": None,
+     "note": "When you cast a spell that deals damage of your draconic ancestry's type, add your Charisma modifier "
+             "({cha:+d}) to one damage roll of that spell; you can spend 1 sorcery point to gain resistance to that "
+             "damage type for 1 hour",
+     "quotes": (("elemental-affinity", "you can add your Charisma modifier to one damage roll of that spell. At the same time, you can spend 1 sorcery point to gain resistance to that damage type for 1 hour"),)},
+    # ---- Fiend (Warlock)
+    # Dark One's Blessing: "when you reduce a hostile creature to 0 hit points, you gain temporary hit points equal to
+    # your Charisma modifier + your warlock level (minimum of 1)."
+    {"subclass": "fiend", "class": "warlock", "feature": "dark-ones-blessing", "name": "Dark One's Blessing",
+     "uses": None, "recharge": None,
+     "note": "When you reduce a hostile creature to 0 hit points, you gain {blessing} temporary hit points (CHA modifier "
+             "+ Warlock level, minimum 1)",
+     "quotes": (("dark-ones-blessing", "when you reduce a hostile creature to 0 hit points, you gain temporary hit points equal to your Charisma modifier + your warlock level (minimum of 1)"),)},
+    # Dark One's Own Luck: "When you make an ability check or a saving throw, you can use this feature to add a d10 to
+    # your roll. You can do so after seeing the initial roll but before any of the roll's effects occur. Once you use
+    # this feature, you can't use it again until you finish a short or long rest."
+    {"subclass": "fiend", "class": "warlock", "feature": "dark-ones-own-luck", "name": "Dark One's Own Luck", "uses": 1,
+     "recharge": "short-or-long", "die": "d10",
+     "note": "Add a d10 to an ability check or saving throw you make, after seeing the roll but before any of its "
+             "effects occur",
+     "quotes": (("dark-ones-own-luck", "When you make an ability check or a saving throw, you can use this feature to add a d10 to your roll."),
+                ("dark-ones-own-luck", "you can't use it again until you finish a short or long rest."))},
+    # Hurl Through Hell: "when you hit a creature with an attack, you can use this feature to instantly transport the
+    # target through the lower planes. ... At the end of your next turn, the target returns to the space it previously
+    # occupied ... If the target is not a fiend, it takes 10d10 psychic damage ... you can't use it again until you finish
+    # a long rest."
+    {"subclass": "fiend", "class": "warlock", "feature": "hurl-through-hell", "name": "Hurl Through Hell", "uses": 1,
+     "recharge": "long",
+     "note": "When you hit a creature with an attack, banish it through the lower planes: it returns at the end of your "
+             "next turn and, unless it is a fiend, takes 10d10 psychic damage",
+     "quotes": (("hurl-through-hell", "when you hit a creature with an attack, you can use this feature to instantly transport the target through the lower planes"),
+                ("hurl-through-hell", "At the end of your next turn, the target returns to the space it previously occupied"),
+                ("hurl-through-hell", "If the target is not a fiend, it takes 10d10 psychic damage"),
+                ("hurl-through-hell", "you can't use it again until you finish a long rest."))},
+    # ---- Evocation (Wizard)
+    # Empowered Evocation: "you can add your Intelligence modifier to one damage roll of any wizard evocation spell you
+    # cast."
+    {"subclass": "evocation", "class": "wizard", "feature": "empowered-evocation", "name": "Empowered Evocation",
+     "uses": None, "recharge": None,
+     "note": "Add your Intelligence modifier ({int:+d}) to one damage roll of any wizard evocation spell you cast",
+     "quotes": (("empowered-evocation", "you can add your Intelligence modifier to one damage roll of any wizard evocation spell you cast"),)},
+    # Overchannel: "When you cast a wizard spell of 1st through 5th level that deals damage, you can deal maximum damage
+    # with that spell. The first time you do so, you suffer no adverse effect. If you use this feature again before you
+    # finish a long rest, you take 2d12 necrotic damage for each level of the spell, immediately after you cast it. Each
+    # time you use this feature again before finishing a long rest, the necrotic damage per spell level increases by
+    # 1d12. This damage ignores resistance and immunity."
+    {"subclass": "evocation", "class": "wizard", "feature": "overchannel", "name": "Overchannel", "uses": 1,
+     "recharge": "long",
+     "note": "When you cast a wizard spell of 1st through 5th level that deals damage, deal maximum damage with it; the "
+             "first use before a long rest has no adverse effect, each further use deals 2d12 necrotic damage to you per "
+             "spell level (+1d12 per level for every use after that), ignoring resistance and immunity",
+     "quotes": (("overchannel", "you can deal maximum damage with that spell"),
+                ("overchannel", "The first time you do so, you suffer no adverse effect."),
+                ("overchannel", "you take 2d12 necrotic damage for each level of the spell"),
+                ("overchannel", "the necrotic damage per spell level increases by 1d12"),
+                ("overchannel", "This damage ignores resistance and immunity."))},
+)
+
+# W7: a sentence added to the `details.note` of an EXISTING resource of the class (`target` = its id), when the feature
+# spends that resource; same conditions as SUBCLASS_TAIL_2014, joined with "; " after the notes it already has.
+SUBCLASS_NOTES_2014: tuple[dict, ...] = (
+    # Cutting Words: "you can use your reaction to expend one of your uses of Bardic Inspiration, rolling a Bardic
+    # Inspiration die and subtracting the number rolled from the creature's roll."
+    {"subclass": "lore", "class": "bard", "target": "bard:bardic-inspiration", "feature": "cutting-words",
+     "name": "Cutting Words",
+     "note": "Cutting Words (Reaction, 60 feet): expend a use to roll a Bardic Inspiration die and subtract it from a "
+             "creature's attack roll, ability check or damage roll",
+     "quotes": (("cutting-words", "you can use your reaction to expend one of your uses of Bardic Inspiration, rolling a Bardic Inspiration die and subtracting the number rolled from the creature's roll"),
+                ("cutting-words", "within 60 feet of you"))},
+    # Peerless Skill: "when you make an ability check, you can expend one use of Bardic Inspiration. Roll a Bardic
+    # Inspiration die and add the number rolled to your ability check."
+    {"subclass": "lore", "class": "bard", "target": "bard:bardic-inspiration", "feature": "peerless-skill",
+     "name": "Peerless Skill",
+     "note": "Peerless Skill: expend a use to add a Bardic Inspiration die to your own ability check, after the roll but "
+             "before the GM says whether you succeed",
+     "quotes": (("peerless-skill", "you can expend one use of Bardic Inspiration. Roll a Bardic Inspiration die and add the number rolled to your ability check"),)},
+    # Preserve Life: "restore a number of hit points equal to five times your cleric level. Choose any creatures within
+    # 30 feet of you, and divide those hit points among them. This feature can restore a creature to no more than half of
+    # its hit point maximum. You can't use this feature on an undead or a construct."
+    {"subclass": "life", "class": "cleric", "target": "cleric:channel-divinity", "feature": "channel-divinity-preserve-life",
+     "name": "Preserve Life",
+     "note": "Preserve Life (action, 30 feet): restore up to {five_level} hit points (5 x Cleric level) divided among "
+             "creatures, none above half its hit point maximum; not on an undead or a construct",
+     "quotes": (("channel-divinity-preserve-life", "restore a number of hit points equal to five times your cleric level"),
+                ("channel-divinity-preserve-life", "This feature can restore a creature to no more than half of its hit point maximum."),
+                ("channel-divinity-preserve-life", "You can't use this feature on an undead or a construct."))},
+    # Sacred Weapon: "For 1 minute, you add your Charisma modifier to attack rolls made with that weapon (with a minimum
+    # bonus of +1). The weapon also emits bright light in a 20-foot radius ... If the weapon is not already magical, it
+    # becomes magical for the duration."
+    {"subclass": "devotion", "class": "paladin", "target": "paladin:channel-divinity",
+     "feature": "channel-divinity-sacred-weapon", "name": "Sacred Weapon",
+     "note": "Sacred Weapon (action, 1 minute): add {cha_min1:+d} (CHA modifier, minimum +1) to attack rolls with one "
+             "weapon you hold; it emits bright light in a 20-foot radius and becomes magical",
+     "quotes": (("channel-divinity-sacred-weapon", "you add your Charisma modifier to attack rolls made with that weapon (with a minimum bonus of +1)"),
+                ("channel-divinity-sacred-weapon", "For 1 minute"),
+                ("channel-divinity-sacred-weapon", "emits bright light in a 20-foot radius"))},
+    # Turn the Unholy: "Each fiend or undead that can see or hear you within 30 feet of you must make a Wisdom saving
+    # throw. If the creature fails its saving throw, it is turned for 1 minute or until it takes damage."
+    {"subclass": "devotion", "class": "paladin", "target": "paladin:channel-divinity",
+     "feature": "channel-divinity-turn-the-unholy", "name": "Turn the Unholy",
+     "note": "Turn the Unholy (action, 30 feet): each fiend or undead that can see or hear you makes a Wisdom saving "
+             "throw or is turned for 1 minute or until it takes damage",
+     "quotes": (("channel-divinity-turn-the-unholy", "Each fiend or undead that can see or hear you within 30 feet of you must make a Wisdom saving throw."),
+                ("channel-divinity-turn-the-unholy", "it is turned for 1 minute or until it takes damage"))},
+    # Quivering Palm: "When you hit a creature with an unarmed strike, you can spend 3 ki points to start these
+    # imperceptible vibrations, which last for a number of days equal to your monk level. ... When you use this action,
+    # the creature must make a Constitution saving throw. If it fails, it is reduced to 0 hit points. If it succeeds, it
+    # takes 10d10 necrotic damage." The DC is the Ki save DC (Ki: "Ki save DC = 8 + your proficiency bonus + your Wisdom
+    # modifier").
+    {"subclass": "open-hand", "class": "monk", "target": "monk:ki", "feature": "quivering-palm", "name": "Quivering Palm",
+     "note": "Quivering Palm (3 ki points when you hit with an unarmed strike): the vibrations last {level} days (Monk "
+             "level); ending them takes your action and forces a Constitution saving throw (DC {dc_wis}): 0 hit points "
+             "on a failure, 10d10 necrotic damage on a success; one creature at a time",
+     "quotes": (("quivering-palm", "you can spend 3 ki points to start these imperceptible vibrations, which last for a number of days equal to your monk level"),
+                ("quivering-palm", "the creature must make a Constitution saving throw"),
+                ("quivering-palm", "If it succeeds, it takes 10d10 necrotic damage."),
+                ("quivering-palm", "You can have only one creature under the effect of this feature at a time."),
+                ("ki", "Ki save DC = 8 + your proficiency bonus + your Wisdom modifier"))},
+    # Draconic Presence: "As an action, you can spend 5 sorcery points to draw on this power and exude an aura of awe or
+    # fear (your choice) to a distance of 60 feet. For 1 minute or until you lose your concentration ..., each hostile
+    # creature that starts its turn in this aura must succeed on a Wisdom saving throw or be charmed (if you chose awe) or
+    # frightened (if you chose fear) until the aura ends. A creature that succeeds on this saving throw is immune to your
+    # aura for 24 hours."
+    {"subclass": "draconic", "class": "sorcerer", "target": "sorcerer:sorcery-points", "feature": "draconic-presence",
+     "name": "Draconic Presence",
+     "note": "Draconic Presence (action, 5 sorcery points): an aura of awe or fear to 60 feet for 1 minute "
+             "(concentration); a hostile creature that starts its turn in it makes a Wisdom saving throw or is charmed "
+             "or frightened; a creature that succeeds is immune for 24 hours",
+     "quotes": (("draconic-presence", "you can spend 5 sorcery points to draw on this power and exude an aura of awe or fear (your choice) to a distance of 60 feet"),
+                ("draconic-presence", "must succeed on a Wisdom saving throw or be charmed (if you chose awe) or frightened (if you chose fear)"),
+                ("draconic-presence", "A creature that succeeds on this saving throw is immune to your aura for 24 hours."))},
+)
+
 # Zealot Warrior of the Gods: "a pool of four d12s ... The pool's maximum number of dice increases by one when you
 # reach Barbarian levels 6 (5 dice), 12 (6 dice), and 17 (7 dice)." (class level, dice), pinned against
 # zealot-xphb-3-warrior-of-the-gods.

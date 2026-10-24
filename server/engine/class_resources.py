@@ -644,6 +644,34 @@ def _attach_notes_2014(ctx: Ctx, rc: dict, resources: list[dict]) -> None:
         _add_note(resources, spec["target"], _render_note(ctx, rc, spec))
 
 
+def _subclass_tail_2014(ctx: Ctx, rc: dict, resources: list[dict]) -> list[dict]:
+    """W7 (finding F4): SRD subclass features with a use count, a rest rule or a computed number
+    (`reference_data.SUBCLASS_TAIL_2014` / `SUBCLASS_NOTES_2014`). Rulesets "mixed" and "2014" only and only for the
+    class's selected subclass (the entries name the 12 SRD subclass ids); an entry needs its SRD feature record in the
+    catalog and the class level at that record's level. New resources (source kind "subclass") are returned; the notes
+    are added to the matching resource of `resources` (an existing note is kept and extended with "; ")."""
+    sub_id = rc.get("subclass_id")
+    if ctx.ruleset == "2024" or not sub_id:
+        return []
+    level = rc["level"]
+    out: list[dict] = []
+    for spec in reference_data.SUBCLASS_TAIL_2014:
+        if spec["subclass"] != sub_id or spec["class"] != rc["cls_id"]:
+            continue
+        first = _feature_level(ctx, spec["feature"])
+        if first is None or level < first:
+            continue
+        out.append(_entry_2014(ctx, rc, spec, kind="subclass"))
+    for spec in reference_data.SUBCLASS_NOTES_2014:
+        if spec["subclass"] != sub_id or spec["class"] != rc["cls_id"]:
+            continue
+        first = _feature_level(ctx, spec["feature"])
+        if first is None or level < first:
+            continue
+        _add_note(resources, spec["target"], _render_note(ctx, rc, spec))
+    return out
+
+
 def _subclass_tail_2024(ctx: Ctx, rc: dict, resources: list[dict]) -> list[dict]:
     """RP11: XPHB subclass features with a use count, a recharge or numbers that spend a resource
     (`reference_data.SUBCLASS_TAIL_2024` / `SUBCLASS_NOTES_2024`). Ruleset "2024" only and only for the class's
@@ -861,6 +889,7 @@ def resources_for(catalog, resolved_classes: list[dict], modifiers: dict, prof_b
         sub = sub_builder(ctx, rc) if sub_builder else []
         out += mine + sub
         out += _subclass_tail_2024(ctx, rc, mine + sub)  # RP11: 2024 only, after the class and R6 entries
+        out += _subclass_tail_2014(ctx, rc, mine + sub)  # W7: mixed / 2014 only
         out += _subclass_pick_notes_2024(ctx, rc)  # RP12: 2024 only
         out += _subclass_option_notes_2024(ctx, rc)  # RP13: 2024 only
     # G1: the 2024 Multiclassing chapter has no merge rule and every class text
