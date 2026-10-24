@@ -36,6 +36,15 @@ def _selected(choices, choice_id: str) -> str | None:
     return None
 
 
+def _unpicked_note(template: str, srd: bool) -> str:
+    """WF: the note template of an ancestry-typed trait while the ancestry is not picked: the damage type is dropped from
+    the sentence and the player is told what to choose. The SRD Dragonborn also lacks the save and the area."""
+    if srd:
+        template = template.replace("exhale in {shape}, {save} saving throw, ", "exhale destructive energy, ")
+    template = template.replace(" {damage_type} damage", " damage").replace(" ({damage_type})", "")
+    return template + "; choose your Draconic Ancestry to see the damage type" + (", area and save" if srd else "")
+
+
 def resources(catalog, race: dict | None, race_id: str | None, subrace: dict | None, variant: dict | None,
               total_level: int, pb: int, modifiers: dict, walk_speed: int | None, choices=None) -> list[dict]:
     """One entry per table trait the species (race + subrace trait refs) holds at the character's total level.
@@ -69,6 +78,8 @@ def resources(catalog, race: dict | None, race_id: str | None, subrace: dict | N
             if spec.get("save"):
                 details["save"] = spec["save"]
         srd_breath = None
+        unpicked_ancestry = False
+        note_template = spec["note"]
         if spec.get("srd_ancestry"):  # SRD Dragonborn: the picked ancestry subtrait carries the save, area and damage type
             sub_id = _selected(choices, f"species:{race_id}:trait:draconic-ancestry")
             srd_breath = ((catalog.traits.get(sub_id) or {}).get("trait_specific") or {}).get("breath_weapon") if sub_id else None
@@ -94,14 +105,20 @@ def resources(catalog, race: dict | None, race_id: str | None, subrace: dict | N
             elif not picked:  # PHB Dragonborn: the species resistance pick is the ancestry's damage type
                 picked = _selected(choices, f"species:{race_id}:resistance")
             details["damageType"] = picked
-            values["damage_type"] = picked.capitalize() if picked else "the Draconic Ancestry's type (choose the ancestry)"
+            if picked:
+                values["damage_type"] = picked.capitalize()
+            else:
+                unpicked_ancestry = True
+                values["damage_type"] = ""
         if spec.get("heal"):
             details["heal"] = spec["heal"].format(**values)
         if spec.get("giant_ancestry"):
             boon = reference_data.GIANT_ANCESTRY_2024.get((variant or {}).get("id"))
             values["ancestry"] = (f"{boon['name']}: {boon['note'].format(**values)}" if boon
                                   else "choose a Giant Ancestry")
-        details["note"] = spec["note"].format(**values)
+        if unpicked_ancestry:  # WF: no ancestry yet: say so instead of splicing placeholder words into the sentence
+            note_template = _unpicked_note(note_template, bool(spec.get("srd_ancestry") and not srd_breath))
+        details["note"] = note_template.format(**values)
         entry["details"] = details
         out.append(entry)
     return out

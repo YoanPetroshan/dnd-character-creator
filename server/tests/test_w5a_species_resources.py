@@ -119,7 +119,7 @@ def test_dragonborn_breath_weapon_dice_dc_and_uses(catalog, level, dice):
 
 def test_dragonborn_without_ancestry_pick_says_to_choose(catalog):
     bw = _by_name(_res(catalog, "dragonborn-xphb", 1))["Breath Weapon"]
-    assert bw["details"]["damageType"] is None and "choose the ancestry" in bw["details"]["note"]
+    assert bw["details"]["damageType"] is None and "choose your Draconic Ancestry to see the damage type" in bw["details"]["note"]
 
 
 def test_level_gated_traits_appear_at_their_level(catalog):

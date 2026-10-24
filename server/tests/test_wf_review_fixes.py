@@ -184,3 +184,24 @@ def test_clamped_base_without_bonus_keeps_the_plain_message(catalog):
     res = _res(catalog, "human-xphb", ruleset="2024", base={"CHA": 99})
     msgs = [p["message"] for p in res["problems"] if p["id"] == "ability-out-of-range-CHA"]
     assert len(msgs) == 1 and "final" not in msgs[0] and "using 30 instead" in msgs[0]
+
+
+# ---------------------------------------------------------------- (5) Breath Weapon note before the ancestry is picked
+
+@pytest.mark.parametrize("species", ["dragonborn", "dragonborn-phb", "dragonborn-xphb", "dragonborn-(chromatic)-ftd",
+                                     "dragonborn-(gem)-ftd", "dragonborn-(metallic)-ftd"])
+def test_breath_weapon_note_unpicked_reads_well(catalog, species):
+    res = _res(catalog, species, ruleset="2014", level=6)
+    note = next(e for e in res["derived"]["speciesResources"] if e["name"] == "Breath Weapon")["details"]["note"]
+    assert "choose your Draconic Ancestry to see the damage type" in note
+    for bad in ("saving throw (set by", "saving throw saving", "the Draconic Ancestry's type", "(choose the ancestry)",
+                "the area set by", "{", "  "):
+        assert bad not in note, (species, note)
+    assert " damage on a failed save" in note and "d" in note
+
+
+def test_srd_breath_weapon_picked_is_unchanged(catalog):
+    res = _res(catalog, "dragonborn", ruleset="2014", level=6,
+               species_choices={"species:dragonborn:trait:draconic-ancestry": ["draconic-ancestry-red"]})
+    note = next(e for e in res["derived"]["speciesResources"] if e["name"] == "Breath Weapon")["details"]["note"]
+    assert "choose" not in note and "Fire" in note and "3d6" in note

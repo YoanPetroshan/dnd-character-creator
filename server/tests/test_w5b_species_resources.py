@@ -145,7 +145,7 @@ def test_srd_dragonborn_breath_weapon_dice_by_level(catalog, level, dice):
 def test_srd_dragonborn_without_a_pick_says_to_choose_the_ancestry(catalog):
     bw = _by_name(_res(catalog, "dragonborn", 1))["Breath Weapon"]
     assert bw["details"]["damageType"] is None and "shape" not in bw["details"] and "save" not in bw["details"]
-    assert "Draconic Ancestry" in bw["details"]["note"] and "choose the ancestry" in bw["details"]["note"]
+    assert "Draconic Ancestry" in bw["details"]["note"] and "choose your Draconic Ancestry to see the damage type" in bw["details"]["note"]
     assert bw["dc"] == 8 + 0 + 2 and bw["dice"] == "2d6"
 
 
@@ -449,7 +449,7 @@ def test_phb_dragonborn_breath_weapon_takes_its_damage_type_from_the_resistance_
     assert bw["details"]["damageType"] == "fire" and bw["dice"] == "3d6" and bw["dc"] == 8 + con + res["derived"]["proficiencyBonus"]
     assert bw["uses"] == 1 and bw["recharge"] == "short-or-long" and "save" not in bw["details"]
     unpicked = _by_name(_res(catalog, "dragonborn-phb", 1))["Breath Weapon"]
-    assert unpicked["details"]["damageType"] is None and "choose the ancestry" in unpicked["details"]["note"]
+    assert unpicked["details"]["damageType"] is None and "choose your Draconic Ancestry to see the damage type" in unpicked["details"]["note"]
 
 
 def test_leonin_roar_dc_and_aasimar_shroud_dc(catalog):
