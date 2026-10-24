@@ -750,7 +750,7 @@ def test_w6_cases_hold_the_2014_class_feature_tail():
               "warlock:eldritch-master"}
     for n, entry in _GOLDEN.items():
         ids = {r["id"] for r in entry["result"]["derived"]["classResources"]}
-        if n not in hit:
+        if n not in hit and "/whispers-bard14" not in n:  # W8a appended sink: a Bard 14 holds Song of Rest
             assert not ids & w6_ids, n
     for n in hit:
         ids = {r["id"] for r in _GOLDEN[n]["result"]["derived"]["classResources"]}
@@ -772,10 +772,22 @@ def test_w7_cases_hold_the_2014_subclass_tail():
               "wizard:empowered-evocation", "wizard:overchannel"}
     for n, entry in _GOLDEN.items():
         ids = {r["id"] for r in entry["result"]["derived"]["classResources"]}
-        if n not in hit:
+        if n not in hit:  # (the W8a sink holds no SRD subclass entry either)
             assert not ids & w7_ids, n
         elif "warlock20" in n and "/multi" not in n:
             assert {"warlock:dark-one-s-blessing", "warlock:dark-one-s-own-luck", "warlock:hurl-through-hell"} <= ids, n
+
+
+def test_w8a_no_rebaseline_and_the_whispers_sink_guards_the_book_tail():
+    """W8a: no golden case moved (the golden's primary cases hold the SRD subclass; psi-warrior11 and totem-bear6 hold
+    unmodelled book subclasses), so there is no REBASELINES entry; the Whispers Bard 14 kitchen sink was appended
+    instead and holds the book subclass entries."""
+    assert "W8a" not in REBASELINES
+    for n in ("ks/src-all/whispers-bard14-2014", "ks/src-srd/whispers-bard14-2014"):
+        ids = [r["id"] for r in _GOLDEN[n]["result"]["derived"]["classResources"]]
+        assert {"bard:words-of-terror", "bard:mantle-of-whispers", "bard:shadow-lore"} <= set(ids), n
+        bi = next(r for r in _GOLDEN[n]["result"]["derived"]["classResources"] if r["id"] == "bard:bardic-inspiration")
+        assert "Psychic Blades" in bi["details"]["note"], n
 
 
 def test_keyed_normalization_and_diff_paths():

@@ -74,6 +74,9 @@ KITCHEN_SINK: dict[str, dict] = {
     "bard6-lore-mixed": _sub("bard", 6, "mixed", sub="lore", marks=("classes",), overrides={
         "class:bard:3:feature:bonus-proficiencies": ["skill-arcana", "skill-history", "skill-nature"],
         "class:bard:6:feature:additional-magical-secrets": ["fireball", "sacred-flame"]}),
+    # W8a: a 2014 book subclass with modelled use-limit features (Whispers Bard 14: Words of Terror, Mantle of Whispers,
+    # Shadow Lore, Psychic Blades on Bardic Inspiration); non-2024, so part of the golden via --append
+    "whispers-bard14-2014": _sub("bard", 14, "2014", sub="whispers-xge", marks=("classes",)),
     "psi-warrior11": _sub("fighter", 11, "mixed", sub="psi-warrior-tce", marks=("classes",)),
     "totem-bear6": _sub("barbarian", 6, "mixed", sub="totem-warrior-phb", marks=("classes",), overrides={
         "class:barbarian:3:feature:totem-warrior-phb-3-totem-spirit": ["totem-warrior-phb-3-totem-spirit--bear"],

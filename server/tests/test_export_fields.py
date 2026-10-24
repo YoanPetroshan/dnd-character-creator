@@ -185,6 +185,7 @@ _EXPECT = {
     # RP22: Wizard 18 under 2014 (Spell Mastery, no Signature Spell) and the SRD Lore Bard 6 under mixed
     "wizard18-2014": {"resources": ["Arcane Recovery"], "spellbook": True, "spell_mastery": 2, "feature_choice": "Web"},
     "bard6-lore-mixed": {"feature_choice": "Fireball"},
+    "whispers-bard14-2014": {"resources": ["Words of Terror", "Mantle of Whispers", "Shadow Lore", "Bardic Inspiration"]},  # W8a
     "psi-warrior11": {"resources": ["Psionic Energy Dice"], "apa": 3},
     "totem-bear6": {"resources": ["Rage"], "feature_choice": "Bear"},
     "cleric1-thaumaturge-2024": {"feature_choice": "Thaumaturge"},

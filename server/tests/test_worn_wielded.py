@@ -147,13 +147,15 @@ def test_drafts_without_worn_or_wielded_resolve_exactly_as_before_g2(catalog, na
 
 
 def _neutralise_class_feature_tails(*results):
-    """W6 / W7: the SRD class-feature and subclass-feature tails add resources (RESOURCE_TAIL_2014, SUBCLASS_TAIL_2014)
+    """W6 / W7 / W8: the SRD class-feature, subclass-feature and book subclass tails add resources (RESOURCE_TAIL_2014, SUBCLASS_TAIL_2014)
     and notes on existing ones (RESOURCE_NOTES_2014, SUBCLASS_NOTES_2014) that the pre-G2 baseline lacks; both are
     removed on both sides."""
     from catalog import reference_data
     from engine.class_resources import _slug
-    new_ids = {f"{s['class']}:{_slug(s['name'])}" for s in reference_data.RESOURCE_TAIL_2014 + reference_data.SUBCLASS_TAIL_2014}
-    targets = {s["target"] for s in reference_data.RESOURCE_NOTES_2014 + reference_data.SUBCLASS_NOTES_2014}
+    new_ids = {f"{s['class']}:{_slug(s['name'])}" for s in reference_data.RESOURCE_TAIL_2014 + reference_data.SUBCLASS_TAIL_2014
+               + reference_data.SUBCLASS_TAIL_2014_BOOKS}
+    targets = {s["target"] for s in reference_data.RESOURCE_NOTES_2014 + reference_data.SUBCLASS_NOTES_2014
+               + reference_data.SUBCLASS_NOTES_2014_BOOKS}
     for res in results:
         kept = []
         for r in res["derived"]["classResources"]:

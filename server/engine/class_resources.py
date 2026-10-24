@@ -496,7 +496,11 @@ def _note_vars(ctx: Ctx, rc: dict) -> dict:
             "cha_dice": f"{cha_min1} " + ("dice" if cha_min1 != 1 else "die"),
             # W6 / W7 (2014)
             "con": con, "survivor": 5 + con, "blessing": max(1, cha + level),
-            "pact_slots": _pact_slot_count(rc) if rc["cls_id"] == "warlock" else 0}
+            "pact_slots": _pact_slot_count(rc) if rc["cls_id"] == "warlock" else 0,
+            # W8 (2014 book subclasses)
+            "con_min1": max(1, con), "str_min1": max(1, str_), "cha_min2": max(2, cha), "four_level": 4 * level,
+            "five_plus_level": 5 + level, "five_plus_twice_level": 5 + 2 * level, "twenty_level": 20 * level,
+            "dc_con": 8 + pb + con, "echo_ac": 14 + pb}
 
 
 def _staged(ctx: Ctx, level: int, default, stages):
@@ -645,9 +649,10 @@ def _attach_notes_2014(ctx: Ctx, rc: dict, resources: list[dict]) -> None:
 
 
 def _subclass_tail_2014(ctx: Ctx, rc: dict, resources: list[dict]) -> list[dict]:
-    """W7 (finding F4): SRD subclass features with a use count, a rest rule or a computed number
-    (`reference_data.SUBCLASS_TAIL_2014` / `SUBCLASS_NOTES_2014`). Rulesets "mixed" and "2014" only and only for the
-    class's selected subclass (the entries name the 12 SRD subclass ids); an entry needs its SRD feature record in the
+    """W7 / W8 (finding F4): subclass features with a use count, a rest rule or a computed number
+    (`reference_data.SUBCLASS_TAIL_2014` / `SUBCLASS_NOTES_2014` for the 12 SRD subclass ids, `SUBCLASS_TAIL_2014_BOOKS` /
+    `SUBCLASS_NOTES_2014_BOOKS` for the imported book subclass ids). Rulesets "mixed" and "2014" only and only for the
+    class's selected subclass; an entry needs its SRD feature record in the
     catalog and the class level at that record's level. New resources (source kind "subclass") are returned; the notes
     are added to the matching resource of `resources` (an existing note is kept and extended with "; ")."""
     sub_id = rc.get("subclass_id")
@@ -655,14 +660,14 @@ def _subclass_tail_2014(ctx: Ctx, rc: dict, resources: list[dict]) -> list[dict]
         return []
     level = rc["level"]
     out: list[dict] = []
-    for spec in reference_data.SUBCLASS_TAIL_2014:
+    for spec in reference_data.SUBCLASS_TAIL_2014 + reference_data.SUBCLASS_TAIL_2014_BOOKS:  # W7 SRD ids, W8 book ids
         if spec["subclass"] != sub_id or spec["class"] != rc["cls_id"]:
             continue
         first = _feature_level(ctx, spec["feature"])
         if first is None or level < first:
             continue
         out.append(_entry_2014(ctx, rc, spec, kind="subclass"))
-    for spec in reference_data.SUBCLASS_NOTES_2014:
+    for spec in reference_data.SUBCLASS_NOTES_2014 + reference_data.SUBCLASS_NOTES_2014_BOOKS:
         if spec["subclass"] != sub_id or spec["class"] != rc["cls_id"]:
             continue
         first = _feature_level(ctx, spec["feature"])

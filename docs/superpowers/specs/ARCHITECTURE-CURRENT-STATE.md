@@ -1699,6 +1699,109 @@ Docs, tests and checks; no engine or frontend code changed.
 - **Timing** (`resolve()`, mean of 50, ms, fully chosen drafts, mixed / 2024): Fighter 20 4.25 / 3.33 (Battle Master), Monk 20 2.38 / 2.42 (Open Hand), Wizard 20 3.46 / 4.00 (Evoker), Bard 20 4.62 / 5.38 (Lore), Sorcerer 20 3.42 / 3.28 (Draconic), Cleric 20 3.04 / 3.14 (Light), Warlock 20 3.34 (mixed) / 4.98 (2024, Great Old One, 10 invocations: Tome, Blade, Thirsting Blade, 2x Agonizing Blast, Eldritch Spear, Repelling Blast, 2x Lessons, Devil's Sight), Druid 20 Land (2024) 3.18; a Fighter 19 holding 7 resource feats (mixed with Psi Warrior 4.75, 2024 with Battle Master 3.77 and Champion 3.60). The slowest single resolve seen was 10.6 ms (one outlier of Sorcerer 20); no draft is above 6 ms mean, so nothing needed profiling (limit 50, profile threshold 20).
 - **Totals.** Server suite 5088 -> 5132 passed, root suite 405 passed / 8 skipped (`tests/test_chargen_isolation.py` untouched), `npm run build` green.
 
+## W8 (F4) The 2014 non-SRD subclass use-limit tail, part 1: Barbarian and Bard (2026-10-24)
+
+Part 1 of W8 (commit "W8a"; W8b adds Cleric, Druid and Fighter; part 2, Monk to Wizard, is a later slice). The catalog holds no Artificer. Rulesets mixed / 2014 only and only for the selected imported book subclass (`<slug>-<source>`, ruleset 2014, source not SRD); 2024 output is byte-identical (the book tables are never read under "2024", pinned by a test that empties them and compares 2024 resolves of every modelled subclass). Tests first (`tests/test_subclass_features_2014_w8a.py`, 233, rule matrix in the docstring); with the book-table iteration removed 169 of them fail, with the ruleset gate removed the 2024 independence test fails.
+
+- **Data.** `reference_data.SUBCLASS_TAIL_2014_BOOKS` (28 resources) and `SUBCLASS_NOTES_2014_BOOKS` (6 sentences on Bardic Inspiration), the same spec keys as the W7 tables (`subclass`, `class`, `feature`, `name`, `uses` / `recharge` / `die` / `dice` / `pool`, `note`, `vars`, `level_vars`, `extras`, `quotes`); W7's tuples are untouched and `class_resources._subclass_tail_2014` iterates both (`SUBCLASS_TAIL_2014 + SUBCLASS_TAIL_2014_BOOKS`). Eight level tables that live only in the text (Spirit Shield, Elemental Cleaver, Storm Aura desert / sea / tundra, Performance of Creation size, Mantle of Inspiration temporary hit points, Psychic Blades) are pinned in `BOOK_TABLE_PINS_2014` (quote per table). `test_quotes_match_catalog` pins every quote against the name + desc of a record of the named subclass and class, and that the subclass is a non-SRD 2014 one. New `_note_vars`: `con_min1`, `str_min1`, `cha_min2`, `four_level`, `five_plus_level`, `five_plus_twice_level`, `twenty_level`, `dc_con`, `echo_ac` (`str_min1`, `four_level`, `five_plus_level`, `five_plus_twice_level` and `echo_ac` are for W8b).
+- **New resources (first level; uses / recharge).** Barbarian: Ancestral Guardian Spirit Shield (6; `dice` 2d6 / 3d6 / 4d6 at 10 / 14, note-only, Vengeful Ancestors as an extra from 14), Consult the Spirits (10; 1, short or long rest); Battlerager Armor (3), Reckless Abandon (6; CON modifier, minimum 1, temporary hit points), Spiked Retribution (14; 3 piercing), all note-only; Beast Form of the Beast (3; bite 1d8 + PB hit points, claws 1d6, tail 1d8 / d8 AC, note-only), Infectious Fury (10; PB, long rest, DC 8 + CON + PB, 2d12 psychic), Call the Hunt (14; PB, long rest, CON modifier (min 1) creatures, 5 temporary hit points each); Giant Elemental Cleaver (6; `dice` 1d6, 2d6 from 14), Mighty Impel (10; DC 8 + PB + STR); Storm Herald Storm Aura (3; note-only with DC 8 + PB + CON and the desert / sea / tundra numbers of the level, Raging Storm as an extra from 14; the environment pick is not tracked, so all three are listed); Wild Magic Magic Awareness (3; PB, long rest), Wild Surge (3; DC 8 + PB + CON), Bolstering Magic (6; PB, long rest); Zealot Divine Fury (3; 1d6 + half the Barbarian level), Fanatical Focus (6; once per rage, no recharge modelled), Zealous Presence (10; 1, long rest). Bard: Creation Performance of Creation (3; 1, long rest, 20 x level gp, PB hours, Medium / Large / Huge at 3 / 6 / 14, Creative Crescendo CHA modifier (min 2) items as an extra from 14), Animating Performance (6; 1, long rest); Eloquence Universal Speech (6; 1, long rest, CHA modifier (min 1) creatures), Infectious Inspiration (14; CHA modifier (min 1) uses, long rest); Glamour Enthralling Performance (3; 1, short or long rest, DC 8 + PB + CHA), Mantle of Majesty (6; 1, long rest), Unbreakable Majesty (14; 1, short or long rest, DC); Spirits Spirit Session (6; 1, long rest, PB creatures); Whispers Words of Terror (3; 1, short or long rest, DC), Mantle of Whispers (6; 1, short or long rest, +5), Shadow Lore (14; 1, long rest, DC, 8 hours).
+- **Notes on Bardic Inspiration.** Creation Mote of Potential (3; DC 8 + PB + CHA, roll + CHA modifier temporary hit points), Eloquence Unsettling Words (3), Glamour Mantle of Inspiration (3; temporary hit points 5 / 8 / 11 / 14 at 3 / 5 / 10 / 15, CHA modifier creatures), Spirits Tales from Beyond (3; DC), Swords Blade Flourish (3) and Master's Flourish (14), Whispers Psychic Blades (3; 2d6 / 3d6 / 5d6 / 8d6 at 3 / 5 / 10 / 15). They follow the W6 / W7 notes ("; "-joined).
+- **Scan (all 83 feature records of the 15 Barbarian and Bard book subclasses; "phrase" = the use / number words the regex found, `-` = none). 38 modelled (28 resources + 6 notes + 4 extras), 45 skipped:**
+
+| class | subclass | feature | L | src | phrase | decision |
+|---|---|---|---|---|---|---|
+| barbarian | ancestral-guardian-xge | 3-path-of-the-ancestral-guardian | 3 | XGE | - | skip: subclass intro (flavor text) |
+| barbarian | ancestral-guardian-xge | 3-ancestral-protectors | 3 | XGE | - | skip: disadvantage / resistance effect, no number |
+| barbarian | ancestral-guardian-xge | 6-spirit-shield | 6 | XGE | 2d6, 30 feet, 3d6, 4d6 | MODELLED: resource `barbarian:spirit-shield` |
+| barbarian | ancestral-guardian-xge | 10-consult-the-spirits | 10 | XGE | finish a short, long rest, use | MODELLED: resource `barbarian:consult-the-spirits` |
+| barbarian | ancestral-guardian-xge | 14-vengeful-ancestors | 14 | XGE | equal to, use | MODELLED: extra on `barbarian:spirit-shield` |
+| barbarian | battlerager-scag | 3-path-of-the-battlerager | 3 | SCAG | - | skip: subclass intro (flavor text) |
+| barbarian | battlerager-scag | 3-restriction—dwarves-only | 3 | SCAG | - | skip: restriction text |
+| barbarian | battlerager-scag | 3-battlerager-armor | 3 | SCAG | 1d4, 5 feet, use | MODELLED: resource `barbarian:battlerager-armor` |
+| barbarian | battlerager-scag | 6-reckless-abandon | 6 | SCAG | equal to, minimum, use | MODELLED: resource `barbarian:reckless-abandon` |
+| barbarian | battlerager-scag | 10-battlerager-charge | 10 | SCAG | - | skip: bonus-action Dash while raging, no number or use limit |
+| barbarian | battlerager-scag | 14-spiked-retribution | 14 | SCAG | 5 feet | MODELLED: resource `barbarian:spiked-retribution` |
+| barbarian | beast-tce | 3-path-of-the-beast | 3 | TCE | d4 | skip: subclass intro (flavor text) |
+| barbarian | beast-tce | 3-form-of-the-beast | 3 | TCE | 10 feet, 1d6, 1d8, d8 | MODELLED: resource `barbarian:form-of-the-beast` |
+| barbarian | beast-tce | 6-bestial-soul | 6 | TCE | equal to, finish a short, long rest, number of | skip: a per-rest benefit pick (swim / climb / jump) with no use limit; the walking-speed copies are not tracked |
+| barbarian | beast-tce | 10-infectious-fury | 10 | TCE | 2d12, dc, equal to, expend | MODELLED: resource `barbarian:infectious-fury` |
+| barbarian | beast-tce | 14-call-the-hunt | 14 | TCE | 30 feet, d6, equal to, expend | MODELLED: resource `barbarian:call-the-hunt` |
+| barbarian | giant-bgg | 3-path-of-the-giant | 3 | BGG | - | skip: subclass intro (flavor text) |
+| barbarian | giant-bgg | 3-giant-power | 3 | BGG | dc | skip: language and cantrip pick, no number |
+| barbarian | giant-bgg | 3-giants-havoc | 3 | BGG | 5 feet | skip: passive while raging (reach +5, size Large, add the Rage damage to a thrown weapon); no use limit |
+| barbarian | giant-bgg | 6-elemental-cleaver | 6 | BGG | 1d6, 20 feet, 60 feet, use | MODELLED: resource `barbarian:elemental-cleaver` |
+| barbarian | giant-bgg | 10-mighty-impel | 10 | BGG | 30 feet, dc, your proficiency | MODELLED: resource `barbarian:mighty-impel` |
+| barbarian | giant-bgg | 14-demiurgic-colossus | 14 | BGG | 10 feet, 2d6, use | skip: 2d6 pinned in the Elemental Cleaver entry; the size / reach increase is passive |
+| barbarian | storm-herald-xge | 3-path-of-the-storm-herald | 3 | XGE | - | skip: subclass intro (flavor text) |
+| barbarian | storm-herald-xge | 3-storm-aura | 3 | XGE | 10 feet, 1d6, 2d6, 3d6 | MODELLED: resource `barbarian:storm-aura` |
+| barbarian | storm-herald-xge | 6-storm-soul | 6 | XGE | 1 minute, 30 feet | skip: passive resistance and speeds of the unpicked environment; no use limit |
+| barbarian | storm-herald-xge | 10-shielding-storm | 10 | XGE | use | skip: extends Storm Soul resistance to allies; no number |
+| barbarian | storm-herald-xge | 14-raging-storm | 14 | XGE | equal to, use | MODELLED: extra on `barbarian:storm-aura` |
+| barbarian | totem-warrior-phb | 3-path-of-the-totem-warrior | 3 | PHB | - | skip: subclass intro (flavor text) |
+| barbarian | totem-warrior-phb | 3-spirit-seeker | 3 | PHB | - | skip: two ritual spells, no number |
+| barbarian | totem-warrior-phb | 3-totem-spirit | 3 | PHB | 10 feet, 15 feet, 3 feet, 5 feet | skip: a totem pick (card / R-slice option); passive numbers (+10 ft jump), no use limit |
+| barbarian | totem-warrior-phb | 6-aspect-of-the-beast | 6 | PHB | 100 feet, 60 feet | skip: a totem pick; passive numbers (1 mile sight, doubled capacity), no use limit |
+| barbarian | totem-warrior-phb | 10-spirit-walker | 10 | PHB | - | skip: a ritual spell, no number |
+| barbarian | totem-warrior-phb | 14-totemic-attunement | 14 | PHB | 1d12, 20 feet, 5 feet, dc | skip: a totem pick; the Elk DC (8 + STR + PB) exists only for one pick, no pick wiring (deferred) |
+| barbarian | wild-magic-tce | 3-path-of-wild-magic | 3 | TCE | - | skip: subclass intro (flavor text) |
+| barbarian | wild-magic-tce | 3-magic-awareness | 3 | TCE | 60 feet, equal to, expend, finish a long | MODELLED: resource `barbarian:magic-awareness` |
+| barbarian | wild-magic-tce | 3-wild-surge | 3 | TCE | 10 feet, 15 feet, 1d12, 1d6 | MODELLED: resource `barbarian:wild-surge` |
+| barbarian | wild-magic-tce | 6-bolstering-magic | 6 | TCE | 10 minutes, d20, d3, equal to | MODELLED: resource `barbarian:bolstering-magic` |
+| barbarian | wild-magic-tce | 10-unstable-backlash | 10 | TCE | use | skip: no number (rolls the Wild Surge table again) |
+| barbarian | wild-magic-tce | 14-controlled-surge | 14 | TCE | twice | skip: no number |
+| barbarian | zealot-xge | 3-path-of-the-zealot | 3 | XGE | - | skip: subclass intro (flavor text) |
+| barbarian | zealot-xge | 3-divine-fury | 3 | XGE | 1d6, equal to | MODELLED: resource `barbarian:divine-fury` |
+| barbarian | zealot-xge | 3-warrior-of-the-gods | 3 | XGE | - | skip: no use rule or number in the text |
+| barbarian | zealot-xge | 6-fanatical-focus | 6 | XGE | once, use | MODELLED: resource `barbarian:fanatical-focus` |
+| barbarian | zealot-xge | 10-zealous-presence | 10 | XGE | 60 feet, finish a long, once, use | MODELLED: resource `barbarian:zealous-presence` |
+| barbarian | zealot-xge | 14-rage-beyond-death | 14 | XGE | - | skip: no use rule or number in the text |
+| bard | creation-tce | 3-college-of-creation | 3 | TCE | dawn | skip: subclass intro (flavor text) |
+| bard | creation-tce | 3-mote-of-potential | 3 | TCE | 5 feet, dc, equal to, minimum | MODELLED: note on `bard:bardic-inspiration` |
+| bard | creation-tce | 3-performance-of-creation | 3 | TCE | 10 feet, 20 times, equal to, expend | MODELLED: resource `bard:performance-of-creation` |
+| bard | creation-tce | 6-animating-performance | 6 | TCE | 1 hour, 30 feet, expend, finish a long | MODELLED: resource `bard:animating-performance` |
+| bard | creation-tce | 14-creative-crescendo | 14 | TCE | minimum, number of, once, use | MODELLED: extra on `bard:performance-of-creation` |
+| bard | eloquence-tce | 3-college-of-eloquence | 3 | TCE | - | skip: subclass intro (flavor text) |
+| bard | eloquence-tce | 3-silver-tongue | 3 | TCE | d20 | skip: passive roll floor (9 or lower counts as 10), no use limit |
+| bard | eloquence-tce | 3-unsettling-words | 3 | TCE | 60 feet, expend, use | MODELLED: note on `bard:bardic-inspiration` |
+| bard | eloquence-tce | 6-unfailing-inspiration | 6 | TCE | - | skip: no number |
+| bard | eloquence-tce | 6-universal-speech | 6 | TCE | 1 hour, 60 feet, equal to, expend | MODELLED: resource `bard:universal-speech` |
+| bard | eloquence-tce | 14-infectious-inspiration | 14 | TCE | 60 feet, equal to, expend, finish a long | MODELLED: resource `bard:infectious-inspiration` |
+| bard | glamour-xge | 3-college-of-glamour | 3 | XGE | use | skip: subclass intro (flavor text) |
+| bard | glamour-xge | 3-mantle-of-inspiration | 3 | XGE | 60 feet, equal to, expend, minimum | MODELLED: note on `bard:bardic-inspiration` |
+| bard | glamour-xge | 3-enthralling-performance | 3 | XGE | 1 hour, 1 minute, 60 feet, dc | MODELLED: resource `bard:enthralling-performance` |
+| bard | glamour-xge | 6-mantle-of-majesty | 6 | XGE | 1 minute, expend, finish a long, once | MODELLED: resource `bard:mantle-of-majesty` |
+| bard | glamour-xge | 14-unbreakable-majesty | 14 | XGE | 1 minute, dc, finish a short, long rest | MODELLED: resource `bard:unbreakable-majesty` |
+| bard | spirits-vrgr | 3-college-of-spirits | 3 | VRGR | once | skip: subclass intro (flavor text) |
+| bard | spirits-vrgr | 3-guiding-whispers | 3 | VRGR | 60 feet, number of | skip: cantrip (range 60 feet), no use limit |
+| bard | spirits-vrgr | 3-spiritual-focus | 3 | VRGR | d6, equal to, use | skip: fixed d6 bonus from level 6, passive, no use limit |
+| bard | spirits-vrgr | 3-tales-from-beyond | 3 | VRGR | 1 minute, 10 feet, 10 minutes, 30 feet | MODELLED: note on `bard:bardic-inspiration` |
+| bard | spirits-vrgr | 6-spirit-session | 6 | VRGR | equal to, long rest, number of, once | MODELLED: resource `bard:spirit-session` |
+| bard | spirits-vrgr | 14-mystical-connection | 14 | VRGR | twice, use | skip: rolls the Spirit Tales die twice, no number |
+| bard | swords-xge | 3-college-of-swords | 3 | XGE | use | skip: subclass intro (flavor text) |
+| bard | swords-xge | 3-bonus-proficiencies | 3 | XGE | use | skip: proficiencies |
+| bard | swords-xge | 3-fighting-style | 3 | XGE | once | skip: a pick card |
+| bard | swords-xge | 3-blade-flourish | 3 | XGE | 10 feet, 5 feet, equal to, expend | MODELLED: note on `bard:bardic-inspiration` |
+| bard | swords-xge | 6-extra-attack | 6 | XGE | once, twice | skip: already derived (EXTRA_ATTACK_FEATURES) |
+| bard | swords-xge | 14-masters-flourish | 14 | XGE | d6, expend, use | MODELLED: extra note on `bard:bardic-inspiration` |
+| bard | valor-phb | 3-college-of-valor | 3 | PHB | - | skip: subclass intro (flavor text) |
+| bard | valor-phb | 3-bonus-proficiencies | 3 | PHB | - | skip: proficiencies |
+| bard | valor-phb | 3-combat-inspiration | 3 | PHB | use | skip: uses the Bardic Inspiration die of the creature holding it; no new number or use limit |
+| bard | valor-phb | 6-extra-attack | 6 | PHB | once, twice | skip: already derived (EXTRA_ATTACK_FEATURES) |
+| bard | valor-phb | 14-battle-magic | 14 | PHB | use | skip: no number (a bonus-action weapon attack after a spell) |
+| bard | whispers-xge | 3-college-of-whispers | 3 | XGE | use, uses | skip: subclass intro (flavor text) |
+| bard | whispers-xge | 3-psychic-blades | 3 | XGE | 2d6, 3d6, 5d6, 8d6 | MODELLED: note on `bard:bardic-inspiration` |
+| bard | whispers-xge | 3-words-of-terror | 3 | XGE | 1 hour, 1 minute, dc, finish a short | MODELLED: resource `bard:words-of-terror` |
+| bard | whispers-xge | 6-mantle-of-whispers | 6 | XGE | 1 hour, 30 feet, finish a long, finish a short | MODELLED: resource `bard:mantle-of-whispers` |
+| bard | whispers-xge | 14-shadow-lore | 14 | XGE | 30 feet, 8 hours, dc, finish a long | MODELLED: resource `bard:shadow-lore` |
+
+  Skip reasons in short: subclass intros and restrictions (flavor); no number or use limit (Ancestral Protectors, Battlerager Charge, Shielding Storm, Unstable Backlash, Controlled Surge, Unfailing Inspiration, Mystical Connection, Battle Magic); passive numbers without a use limit (Giant's Havoc, Storm Soul, Silver Tongue, Spiritual Focus, Bestial Soul); picks (Totem Warrior: Totem Spirit, Aspect of the Beast, Totemic Attunement; the Elk DC exists only for one pick and the 2014 picks have no note wiring, deferred); already derived (Extra Attack, proficiencies, Fighting Style card); Combat Inspiration only uses the Bardic Inspiration die of the creature holding it.
+- **Surfaces.** No new output keys; `types.ts`, `export_fields.py` and the frontend are untouched (no `npm run build`).
+- **Golden: no rebaseline.** The golden's primary cases hold the first SRD subclass of the class, and the two book-subclass sinks (psi-warrior11, totem-bear6) hold unmodelled features (R6 and picks), so none of the 243 cases moved: every stored result re-resolved identically (the `--append` run asserts it, and the full golden-driven tests pass), no `REBASELINES` entry was added and the gz was not rebaselined. Instead `--append` added the kitchen sink `whispers-bard14-2014` (Bard 14, College of Whispers, 2014; `ks/src-all` and `ks/src-srd`): 243 -> 245 cases, the 243 existing cases byte-identical (checked by loading the gz before and after). It holds Words of Terror, Mantle of Whispers, Shadow Lore and the Psychic Blades note and is listed in `_EXPECT` of `test_export_fields` so Markdown / PDF / YAML carry it.
+- **Edited tests (deliberate).** `test_worn_wielded` (the pre-G2 neutraliser also removes the book resources and notes), `test_c_series_golden` (the W6 sweep exempts the appended Bard 14 sink, which legitimately holds Song of Rest; a W8a guard test).
+- **Timing** (`resolve()`, mean of 20, ms, level 20, mixed): Storm Herald 2.4, Glamour Bard 4.5, Creation Bard 4.5 (limit 50; also asserted for five subclasses under both rulesets).
+- **Totals.** Server suite 5733 -> 5974 passed (233 new + 1 golden test + the 2 new sink cases through the parametrized sweeps), root suite 405 passed / 8 skipped, frontend untouched.
+- **Uncertain / deferred.** (1) Totem Warrior (and any other pick-dependent feature) needs RP13-style 2014 pick notes. (2) Storm Aura lists all three environments because the pick is not read. (3) "Once per rage" Fanatical Focus has no recharge value (a rage is not a rest). (4) The Blessed Strikes / Divine Strike TCE optional-feature swap is not a pick under 2014 (relevant for W8b clerics).
+
 ## W7 (F4) The 2014 SRD subclass use-limit tail (2026-10-24)
 
 Rulesets mixed / 2014 only and the 12 SRD subclass ids only (the 117 book subclass features are W8); 2024 output is byte-identical (the 2014 subclass tables are never read under "2024", also for a held SRD subclass, pinned by a test that empties them). Tests first (`tests/test_subclass_features_2014_w7.py`, 130, rule matrix in the docstring); with the `_subclass_tail_2014` call removed 90 of them fail, with the ruleset gate removed the 2024 independence test fails.
