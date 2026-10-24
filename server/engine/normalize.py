@@ -98,6 +98,9 @@ def normalize_draft(draft) -> tuple[dict, list[dict]]:
         if n is None:
             problems.append({"id": f"ability-invalid-{ab}", "message": f"{ab} score {base[ab]!r} isn't a valid whole number; using 10 instead."})
             n = 10
+        elif not 1 <= n <= 30:  # W2 / F6: a base score outside 1..30 is clamped and reported
+            problems.append({"id": f"ability-out-of-range-{ab}", "message": f"{ab} score {n} is out of the 1-30 range; using {max(1, min(30, n))} instead."})
+            n = max(1, min(30, n))
         base[ab] = n
     abilities["base"] = base
     out["abilities"] = abilities

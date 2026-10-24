@@ -46,9 +46,20 @@ def health():
     return jsonify({"ok": True})
 
 
+def _json_draft() -> dict | None:
+    """The request's JSON body as a draft: an absent / unparseable / null body is an empty draft (as before),
+    any other non-object value (list, string, number, bool) is None, which the callers answer with a 400."""
+    body = request.get_json(silent=True)
+    if body is None:
+        return {}
+    return body if isinstance(body, dict) else None
+
+
 @app.route("/api/resolve", methods=["POST"])
 def api_resolve():
-    draft = request.get_json(silent=True) or {}
+    draft = _json_draft()
+    if draft is None:
+        return jsonify({"error": "draft must be a JSON object"}), 400
     return jsonify(resolve(draft, _catalog))
 
 
@@ -321,7 +332,9 @@ def api_export(fmt: str):
     if entry is None:
         return jsonify({"error": f"unknown export format '{fmt}'"}), 404
     renderer, mimetype, extension = entry
-    draft = request.get_json(silent=True) or {}
+    draft = _json_draft()
+    if draft is None:
+        return jsonify({"error": "draft must be a JSON object"}), 400
     resolution = resolve(draft, _catalog)
     all_problems = resolution["problems"] + _pending_export_problems(resolution)
     if all_problems:

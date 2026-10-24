@@ -5434,8 +5434,11 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             problems.append({"id": f"ability-invalid-{ab}", "message": f"{ab} score {raw!r} isn't a valid number; using 10 instead."})
             base_score = 10
         final_scores[ab] = base_score + species_bonuses.get(ab, 0) + background_bonuses.get(ab, 0) + feat_bonuses.get(ab, 0)
+    for ab in derived_mod.ABILITIES:
+        if isinstance(base_scores.get(ab), int) and not isinstance(base_scores.get(ab), bool) and base_scores[ab] > 20:
+            warnings.append({"id": f"ability-above-20-{ab}", "message": f"{ab} base score {base_scores[ab]} is above 20, the usual cap for a character's own score."})
     for ab, score in final_scores.items():
-        if not (1 <= score <= 30):
+        if not (1 <= score <= 30) and not any(p["id"] == f"ability-out-of-range-{ab}" for p in problems):  # normalize may have reported the base already
             problems.append({"id": f"ability-out-of-range-{ab}", "message": f"{ab} score {score} is out of the 1-30 range."})
 
     choice_templates: list[dict] = []

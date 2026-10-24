@@ -74,6 +74,10 @@ def test_resolve_never_raises_on_malformed_draft(catalog, name):
 @pytest.mark.parametrize("name", sorted(MALFORMED))
 def test_api_resolve_malformed_is_json_not_500(client, name):
     resp = client.post("/api/resolve", json=MALFORMED[name])
+    if isinstance(MALFORMED[name], (list, str, int)):  # W2 / F8: a non-object body is a 400
+        assert resp.status_code == 400
+        assert resp.get_json() == {"error": "draft must be a JSON object"}
+        return
     assert resp.status_code == 200
     assert "problems" in resp.get_json()
 
@@ -150,4 +154,5 @@ def test_unknown_api_route_stays_json_404(client):
 def test_export_with_malformed_draft_is_json(client):
     resp = client.post("/api/export/yaml", json=[1, 2])
     assert resp.is_json
-    assert resp.status_code in (200, 400)
+    assert resp.status_code == 400
+    assert resp.get_json() == {"error": "draft must be a JSON object"}
