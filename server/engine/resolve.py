@@ -581,6 +581,15 @@ def _species_speeds(race: dict | None, subrace: dict | None, variant: dict | Non
     return speeds
 
 
+def _species_equal_walk_modes(race: dict | None, subrace: dict | None) -> list[str]:
+    """WF: the species movement modes stored as `true` ("equal to your walking speed"). `_species_speeds`
+    seeds them with the BASE walk (keeps the key order); resolve() recomputes them from the FINAL walk."""
+    if not race:
+        return []
+    modes = {**(race.get("movement") or {}), **((subrace or {}).get("movement") or {})}
+    return [mode for mode, value in modes.items() if value is True]
+
+
 def _species_innate_spells(race: dict | None, subrace: dict | None, catalog: Catalog,
                            variant: dict | None = None) -> list[dict]:
     """Merges innate_spells from BOTH race and subrace — same race-then-
@@ -6525,6 +6534,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     speed_exempt = _heavy_armor_speed_exempt(race, subrace)  # W1
     speeds = _heavy_armor_speed_penalty(  # W1: after every walk bonus, before the "equal to your walking speed" modes
         speeds, 0 if speed_exempt else equipment_mod.armor_speed_penalty(equipped_items, final_scores))
+    if speeds.get("walk"):  # WF: species "equal to your walking speed" modes follow the FINAL walk (bonuses, penalty)
+        for mode in _species_equal_walk_modes(race, subrace):
+            speeds = {**speeds, mode: speeds["walk"]}
     if speeds.get("walk") and features_mod.swim_equals_walk(effects):  # C7b Gift of the Depths
         speeds = {**speeds, "swim": max(speeds.get("swim", 0), speeds["walk"])}
     if speeds.get("walk") and features_mod.climb_equals_walk(effects):  # RP2 Thief, Roving
