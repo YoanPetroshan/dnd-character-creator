@@ -383,7 +383,7 @@ def test_celestial_numbers(catalog, level, cha):
     res = _res(catalog, "warlock", level, "celestial-xge", abilities={"CHA": cha})
     m = _mod(res, "CHA")
     r = _entry(res, "warlock:healing-light")
-    assert r["uses"] == level + 1 and r["die"] == "d6" and f"at most {max(1, m)} dice" in r["details"]["note"]
+    assert r["uses"] == level + 1 and r["die"] == "d6" and f"at most {max(1, m)} {'die' if max(1, m) == 1 else 'dice'}" in r["details"]["note"]
     if level >= 6:
         assert f"({m:+d})" in _note(res, "warlock:radiant-soul")
     if level >= 10:
@@ -451,7 +451,7 @@ def test_undead_numbers(catalog, level):
 def test_undying_numbers(catalog, level, con):
     res = _res(catalog, "warlock", level, "undying-scag", abilities={"CHA": 16, "CON": con})
     assert f"DC {_dc(res, 'CHA')}" in _note(res, "warlock:among-the-dead") and "24 hours" in _note(res, "warlock:among-the-dead")
-    assert f"1d8 + {max(1, _mod(res, 'CON'))} hit points" in _note(res, "warlock:defy-death")
+    assert f"1d8 {_mod(res, 'CON'):+d} hit points (minimum 1 hit point in total)" in _note(res, "warlock:defy-death")
     if level >= 14:
         assert f"1d8 + {level} hit points" in _note(res, "warlock:indestructible-life")
 
@@ -512,7 +512,7 @@ def test_enchantment_numbers(catalog, cha):
     assert f"DC {_dc(res, 'INT')}" in _note(res, "wizard:hypnotic-gaze") and "5 feet" in _note(res, "wizard:hypnotic-gaze")
     assert f"DC {_dc(res, 'INT')}" in _note(res, "wizard:instinctive-charm") and "30 feet" in _note(res, "wizard:instinctive-charm")
     a = _note(res, "wizard:alter-memories")
-    assert f"DC {_dc(res, 'INT')}" in a and f"loses {1 + max(1, _mod(res, 'CHA'))} hour(s)" in a
+    assert f"DC {_dc(res, 'INT')}" in a and f"loses {max(1, 1 + _mod(res, 'CHA'))} hour(s)" in a
 
 
 @needs_data
@@ -620,3 +620,18 @@ def test_resolve_stays_fast(catalog, ruleset):
         for _ in range(10):
             _res(catalog, cls, 20, sub, ruleset)
         assert (time.perf_counter() - t) / 10 < 0.05, (ruleset, cls, sub)
+
+
+@needs_data
+@pytest.mark.parametrize("cha,hours", [(1, 1), (6, 1), (8, 1), (10, 1), (12, 2), (16, 4)])
+def test_alter_memories_minimum_applies_to_total(catalog, cha, hours):
+    """WG: '1 + your Charisma modifier (minimum of 1)' - the minimum is on the total, so CHA 6 (-2) gives 1, not 2."""
+    res = _res(catalog, "wizard", 14, "enchantment-phb", abilities={"INT": 16, "CHA": cha})
+    assert f"loses {hours} hour(s)" in _note(res, "wizard:alter-memories")
+
+
+@needs_data
+def test_healing_light_dice_wording(catalog):
+    res = _res(catalog, "warlock", 3, "celestial-xge", abilities={"CHA": 8})
+    n = _note(res, "warlock:healing-light")
+    assert "at most 1 die at once" in n and "1 dice" not in n

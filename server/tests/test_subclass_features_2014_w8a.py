@@ -355,7 +355,7 @@ def test_fanatical_focus_and_zealous_presence(catalog):
 def test_performance_of_creation_numbers(catalog, level, size, cha):
     res = _res(catalog, "bard", level, "creation-tce", abilities={"CHA": cha})
     n = _note(res, "bard:performance-of-creation")
-    assert f"{20 * level} gp" in n and f"{_pb(res)} hours" in n and f"{size} or smaller" in n
+    assert (f"{20 * level} gp" in n) == (level < 14) and ("no gp limit" in n) == (level >= 14) and f"{_pb(res)} hours" in n and f"{size} or smaller" in n
     assert ("Creative Crescendo" in n) == (level >= 14)
     if level >= 14:
         assert f"up to {max(2, _mod(res, 'CHA'))} items" in n
@@ -369,7 +369,7 @@ def test_animating_performance_and_mote_of_potential(catalog):
     n = _note(res, "bard:animating-performance")
     assert "1 hour" in n and "30 feet" in n and f"PB {_pb(res)}" in n and "3rd level or higher" in n
     bi = _note(res, "bard:bardic-inspiration")
-    assert f"DC {8 + _pb(res) + _mod(res, 'CHA')}" in bi and f"roll + {max(1, _mod(res, 'CHA'))}" in bi
+    assert f"DC {8 + _pb(res) + _mod(res, 'CHA')}" in bi and f"roll {_mod(res, 'CHA'):+d} (minimum 1 temporary hit point in total)" in bi
     assert "thunder damage" in bi
 
 

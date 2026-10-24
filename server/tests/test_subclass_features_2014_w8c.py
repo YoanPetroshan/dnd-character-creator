@@ -298,7 +298,7 @@ def test_astral_self_numbers(catalog, wis):
     assert "1 ki point" in arms and f"(2{die})" in arms and f"ki save DC {_dc(res, 'WIS')}" in arms and "10 minutes" in arms
     assert "1 ki point" in _note(res, "monk:visage-of-the-astral-self") and "120 feet" in _note(res, "monk:visage-of-the-astral-self")
     body = _note(res, "monk:body-of-the-astral-self")
-    assert f"1d10 + {max(1, _mod(res, 'WIS'))}" in body and f"(1{die})" in body
+    assert f"1d10 {_mod(res, 'WIS'):+d} (minimum reduction 1 in total)" in body and f"(1{die})" in body
     awakened = _note(res, "monk:awakened-astral-self")
     assert "5 ki points" in awakened and "+2 bonus to Armor Class" in awakened and "three attacks" in awakened
 
@@ -403,7 +403,7 @@ def test_charisma_numbers(catalog, cha):
     assert f"DC {_dc(res, 'CHA')}" in _note(res, "paladin:mortal-bulwark") and "120 feet" in _note(res, "paladin:mortal-bulwark")
     assert f"up to {max(1, _mod(res, 'CHA'))} creatures" in _note(res, _CD)
     res = _res(catalog, "paladin", 20, "crown-scag", abilities=c)
-    assert f"1d6 + {max(1, _mod(res, 'CHA'))} hit points" in _note(res, _CD)
+    assert f"1d6 {_mod(res, 'CHA'):+d} hit points (minimum 1" in _note(res, _CD)
 
 
 @needs_data

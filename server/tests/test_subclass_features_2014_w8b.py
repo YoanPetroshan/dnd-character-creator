@@ -318,7 +318,7 @@ def test_preserve_life_pool_is_five_times_the_level(catalog, level):
 @pytest.mark.parametrize("wis", [6, 18])
 def test_balm_of_peace_adds_wisdom(catalog, wis):
     res = _res(catalog, "cleric", 3, "peace-tce", abilities={"WIS": wis})
-    assert f"2d6 + {max(1, _mod(res, 'WIS'))}" in _note(res, _CD)
+    assert f"2d6 {_mod(res, 'WIS'):+d} hit points (minimum 1 hit point in total)" in _note(res, _CD)
 
 
 @needs_data

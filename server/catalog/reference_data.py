@@ -2671,12 +2671,13 @@ SUBCLASS_TAIL_2014_BOOKS: tuple[dict, ...] = (
     # Crescendo (14): "The number of items equals your Charisma modifier (minimum of two items)."
     {"subclass": "creation-tce", "class": "bard", "feature": "creation-tce-3-performance-of-creation",
      "name": "Performance of Creation", "uses": 1, "recharge": "long",
-     "level_vars": {"size": PERFORMANCE_OF_CREATION_SIZE_2014},
-     "note": "Action: create one nonmagical item worth up to {twenty_level} gp (20 x Bard level), {size} or smaller, in an "
+     "level_vars": {"size": PERFORMANCE_OF_CREATION_SIZE_2014,
+                    "gp_cap": ((1, "worth up to {twenty_level} gp (20 x Bard level)"), (14, "of any gp value (no gp limit)"))},
+     "note": "Action: create one nonmagical item {gp_cap}, {size} or smaller, in an "
              "unoccupied space within 10 feet; it disappears after {pb} hours (proficiency bonus); use it again before a "
              "long rest by expending a spell slot of 2nd level or higher; only one such item at a time",
      "extras": (("creation-tce-14-creative-crescendo", "Creative Crescendo: create up to {cha_min2} items at once (Charisma "
-                 "modifier, minimum 2), only one of the maximum size and the rest Small or Tiny, with no gp limit"),),
+                 "modifier, minimum 2), only one of the maximum size and the rest Small or Tiny"),),
      "quotes": (("creation-tce-3-performance-of-creation", "The gp value of the item can't be more than 20 times your bard level"),
                 ("creation-tce-3-performance-of-creation", "The created item disappears after a number of hours equal to your proficiency bonus"),
                 ("creation-tce-3-performance-of-creation", "unless you expend a spell slot of 2nd level or higher to use this feature again"),
@@ -2806,7 +2807,7 @@ SUBCLASS_NOTES_2014_BOOKS: tuple[dict, ...] = (
      "note": "Mote of Potential: when you give a Bardic Inspiration die, a mote orbits the creature; on an ability check "
              "it rolls the die twice and picks one, on an attack roll the target and creatures of your choice within 5 "
              "feet of it make a Constitution saving throw (DC {dc_cha}) or take thunder damage equal to the roll, on a "
-             "saving throw it gains temporary hit points equal to the roll + {cha_min1} (Charisma modifier, minimum 1)",
+             "saving throw it gains temporary hit points equal to the roll {cha:+d} (minimum 1 temporary hit point in total)",
      "quotes": (("creation-tce-3-mote-of-potential", "must succeed on a Constitution saving throw against your spell save DC or take thunder damage equal to the number rolled on the Bardic Inspiration die"),
                 ("creation-tce-3-mote-of-potential", "temporary hit points equal to the number rolled on the Bardic Inspiration die plus your Charisma modifier (minimum of 1 temporary hit point)"),
                 ("creation-tce-3-mote-of-potential", "the creature can roll the Bardic Inspiration die again and choose which roll to use"))},
@@ -3357,7 +3358,7 @@ _W8B_NOTES: tuple[dict, ...] = (
             (None, "You can also cause any of the charmed creatures to drop what they are holding when they fail the saving throw"))),
     _w8_cd("peace-tce", "peace-tce-2-channel-divinity:-balm-of-peace", "Balm of Peace",
            "Balm of Peace (action): move up to your speed without provoking opportunity attacks; each creature you move "
-           "within 5 feet of can regain 2d6 + {wis_min1} hit points (2d6 + Wisdom modifier, minimum 1), once per use",
+           "within 5 feet of can regain 2d6 {wis:+d} hit points (minimum 1 hit point in total), once per use",
            ((None, "restore a number of hit points to that creature equal to 2d6 + your Wisdom modifier (minimum of 1 hit point)"),
             (None, "move up to your speed, without provoking opportunity attacks"),
             (None, "A creature can receive this healing only once whenever you take this action"))),
@@ -3596,8 +3597,8 @@ _W8C_TAIL: tuple[dict, ...] = (
              (None, "all creatures within 600 feet can hear you"))),
     _w8_res("astral-self-tce", "monk", "astral-self-tce-11-body-of-the-astral-self", "Body of the Astral Self", None, None,
             "With both arms and visage summoned, the body appears (no action). Deflect Energy: reaction when you take acid, "
-            "cold, fire, force, lightning or thunder damage, reduce it by 1d10 + {wis_min1} (Wisdom modifier, minimum "
-            "reduction 1). Empowered Arms: once on each of your turns when you hit with the arms, extra damage equal to "
+            "cold, fire, force, lightning or thunder damage, reduce it by 1d10 {wis:+d} (minimum "
+            "reduction 1 in total). Empowered Arms: once on each of your turns when you hit with the arms, extra damage equal to "
             "your Martial Arts die (1{ma_die})",
             ((None, "the damage you take is reduced by 1d10 + your Wisdom modifier (minimum reduction of 1)"),
              (None, "you can deal extra damage to the target equal to your Martial Arts die"))),
@@ -4067,7 +4068,7 @@ _W8C_NOTES: tuple[dict, ...] = (
              (None, "a creature can't willingly move more than 30 feet away from you"))),
     _w8_pcd("crown-scag", "crown-scag-3-turn-the-tide", "Turn the Tide",
             "Turn the Tide (bonus action, 30 feet): each creature of your choice that can hear you and has no more than half "
-            "of its hit points regains 1d6 + {cha_min1} hit points (Charisma modifier, minimum 1)",
+            "of its hit points regains 1d6 {cha:+d} hit points (minimum 1 in total; the book wording is ambiguous, read as a minimum on the total)",
             ((None, "regains hit points equal to 1d6 + your Charisma modifier (minimum of 1) if it has no more than half of its hit points"),)),
     _w8_pcd("glory-tce", "glory-tce-3-inspiring-smite", "Inspiring Smite",
             "Inspiring Smite (bonus action, right after dealing Divine Smite damage): distribute temporary hit points "
@@ -4375,7 +4376,7 @@ _W8D_TAIL: tuple[dict, ...] = (
     # ---- Warlock: The Celestial (XGE)
     _w8_res("celestial-xge", "warlock", "celestial-xge-1-healing-light", "Healing Light", "@level_plus1", "long",
             "A pool of d6s ({level_plus1} = 1 + your Warlock level); bonus action: heal one creature you can see within 60 "
-            "feet by spending dice from the pool (at most {cha_min1} dice at once: your Charisma modifier, minimum one die), "
+            "feet by spending dice from the pool (at most {cha_dice} at once: your Charisma modifier, minimum one die), "
             "restoring the total rolled",
             ((None, "The number of dice in the pool equals 1 + your warlock level"),
              (None, "heal one creature you can see within 60 feet of you"),
@@ -4515,8 +4516,8 @@ _W8D_TAIL: tuple[dict, ...] = (
              (None, "that creature must make a Wisdom saving throw against your spell save DC"),
              (None, "the creature is immune to this effect for 24 hours"))),
     _w8_res("undying-scag", "warlock", "undying-scag-6-defy-death", "Defy Death", 1, "long",
-            "When you succeed on a death saving throw or stabilize a creature with spare the dying, regain 1d8 + "
-            "{con_min1} hit points (1d8 + your Constitution modifier, minimum 1)",
+            "When you succeed on a death saving throw or stabilize a creature with spare the dying, regain 1d8 "
+            "{con:+d} hit points (minimum 1 hit point in total)",
             ((None, "You can regain hit points equal to 1d8 + your Constitution modifier (minimum of 1 hit point)"),
              (None, "Once you use this feature, you can't use it again until you finish a long rest"))),
     _w8_res("undying-scag", "warlock", "undying-scag-14-indestructible-life", "Indestructible Life", 1, "short-or-long",
@@ -4620,7 +4621,7 @@ _W8D_TAIL: tuple[dict, ...] = (
     _w8_res("enchantment-phb", "wizard", "enchantment-phb-14-alter-memories", "Alter Memories", None, None,
             "Once before an enchantment spell that charmed creatures expires, use your action to make a charmed creature "
             "forget time spent charmed: it makes an Intelligence saving throw (DC {dc_int}) or loses {one_plus_cha_min1} "
-            "hour(s) of memories (1 + your Charisma modifier, minimum 1), at most the spell's duration",
+            "hour(s) of memories (1 + your Charisma modifier, minimum 1 in total), at most the spell's duration",
             ((None, "The creature must succeed on an Intelligence saving throw against your wizard spell save DC"),
              (None, "lose a number of hours of its memories equal to 1 + your Charisma modifier (minimum of 1)"))),
     # ---- Wizard: Graviturgy Magic (EGW)

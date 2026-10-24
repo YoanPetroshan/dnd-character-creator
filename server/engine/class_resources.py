@@ -506,7 +506,7 @@ def _note_vars(ctx: Ctx, rc: dict) -> dict:
             "wails": f"{(((level + 1) // 2) + 1) // 2}d6",
             # W8d
             "half_level_min1": max(1, level // 2), "three_plus_cha": 3 + cha, "cha_min0": max(0, cha),
-            "level_plus_pb": level + pb, "two_pb": 2 * pb, "one_plus_cha_min1": 1 + max(1, cha),
+            "level_plus_pb": level + pb, "two_pb": 2 * pb, "one_plus_cha_min1": max(1, 1 + cha),
             "level_plus_cha": level + cha, "half_level_plus_cha": level // 2 + cha}
 
 
@@ -529,7 +529,8 @@ def _render_note(ctx: Ctx, rc: dict, spec: dict) -> str:
     for name, (default, stages) in (spec.get("vars") or {}).items():
         values[name] = _staged(ctx, level, default, stages)
     for name, table in (spec.get("level_vars") or {}).items():  # W7: tables that live only in the text
-        values[name] = next((v for first, v in reversed(table) if level >= first), None)
+        value = next((v for first, v in reversed(table) if level >= first), None)
+        values[name] = value.format(**values) if isinstance(value, str) else value  # WG: a text may use earlier vars
     note = spec["note"].format(**values)
     for extra_id, text in spec.get("extras") or ():
         extra_level = _feature_level(ctx, extra_id)
