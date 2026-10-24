@@ -77,6 +77,9 @@ KITCHEN_SINK: dict[str, dict] = {
     # W8a: a 2014 book subclass with modelled use-limit features (Whispers Bard 14: Words of Terror, Mantle of Whispers,
     # Shadow Lore, Psychic Blades on Bardic Inspiration); non-2024, so part of the golden via --append
     "whispers-bard14-2014": _sub("bard", 14, "2014", sub="whispers-xge", marks=("classes",)),
+    # W8b: a 2014 book subclass with modelled use-limit features (Circle of the Stars Druid 10 under mixed: Star Map, Cosmic
+    # Omen, the Starry Form sentence on Wild Shape); non-2024, so part of the golden via --append
+    "stars-druid10-mixed": _sub("druid", 10, "mixed", sub="stars-tce", marks=("classes",)),
     "psi-warrior11": _sub("fighter", 11, "mixed", sub="psi-warrior-tce", marks=("classes",)),
     "totem-bear6": _sub("barbarian", 6, "mixed", sub="totem-warrior-phb", marks=("classes",), overrides={
         "class:barbarian:3:feature:totem-warrior-phb-3-totem-spirit": ["totem-warrior-phb-3-totem-spirit--bear"],

@@ -790,6 +790,17 @@ def test_w8a_no_rebaseline_and_the_whispers_sink_guards_the_book_tail():
         assert "Psychic Blades" in bi["details"]["note"], n
 
 
+def test_w8b_no_rebaseline_and_the_stars_sink_guards_the_book_tail():
+    """W8b: no golden case moved (Life, Land and Champion are the primary SRD subclasses; the book-subclass sinks hold
+    unmodelled features), so there is no REBASELINES entry; the Circle of the Stars Druid 10 sink was appended instead."""
+    assert "W8b" not in REBASELINES
+    for n in ("ks/src-all/stars-druid10-mixed", "ks/src-srd/stars-druid10-mixed"):
+        res = {r["id"]: r for r in _GOLDEN[n]["result"]["derived"]["classResources"]}
+        assert {"druid:star-map", "druid:cosmic-omen"} <= set(res), n
+        assert "Starry Form" in res["druid:wild-shape"]["details"]["note"], n
+        assert res["druid:star-map"]["uses"] == 4 and res["druid:star-map"]["recharge"] == "long", n
+
+
 def test_keyed_normalization_and_diff_paths():
     a = _keyed({"choices": [{"id": "x", "v": 1}, {"id": "y", "v": 2}], "plain": [1, 2]})
     b = _keyed({"choices": [{"id": "n", "v": 0}, {"id": "x", "v": 1}, {"id": "y", "v": 3}], "plain": [1, 2]})

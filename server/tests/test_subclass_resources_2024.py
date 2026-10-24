@@ -430,7 +430,10 @@ def test_only_ruleset_2024_adds_anything(catalog, ruleset):
 @needs_data
 def test_no_subclass_entry_at_all_without_the_xphb_subclass_under_mixed(catalog):
     res = _res(catalog, "cleric", 20, "light-phb", ruleset="mixed")
-    assert not [r for r in res["derived"]["classResources"] if r["source"]["kind"] == "subclass"]
+    # W8b: the 2014 Light Domain has its own book entries (2014 text), but none of the XPHB ones
+    subs = {r["id"] for r in res["derived"]["classResources"] if r["source"]["kind"] == "subclass"}
+    assert subs == {"cleric:warding-flare", "cleric:corona-of-light"}
+    assert "can't be blinded" in _note(res, "cleric:warding-flare") and _entry(res, "cleric:radiance-of-the-dawn") is None
 
 
 @needs_data

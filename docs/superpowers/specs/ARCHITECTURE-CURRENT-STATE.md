@@ -1802,6 +1802,285 @@ Part 1 of W8 (commit "W8a"; W8b adds Cleric, Druid and Fighter; part 2, Monk to 
 - **Totals.** Server suite 5733 -> 5974 passed (233 new + 1 golden test + the 2 new sink cases through the parametrized sweeps), root suite 405 passed / 8 skipped, frontend untouched.
 - **Uncertain / deferred.** (1) Totem Warrior (and any other pick-dependent feature) needs RP13-style 2014 pick notes. (2) Storm Aura lists all three environments because the pick is not read. (3) "Once per rage" Fanatical Focus has no recharge value (a rage is not a rest). (4) The Blessed Strikes / Divine Strike TCE optional-feature swap is not a pick under 2014 (relevant for W8b clerics).
 
+### W8b: Cleric, Druid and Fighter (2026-10-24)
+
+Second commit of W8 part 1 (the catalog holds no Artificer; Monk to Wizard are part 2, a later slice). Same machinery as W8a: the two book tuples are extended (`_W8B_TAIL` / `_W8B_NOTES` concatenated to `SUBCLASS_TAIL_2014_BOOKS` / `SUBCLASS_NOTES_2014_BOOKS`, built with the small helpers `_w8_res`, `_w8_note`, `_w8_cd`, `_w8_divine_strike` in `reference_data`), no engine change except new `_note_vars` use. Tests first (`tests/test_subclass_features_2014_w8b.py`, 395, rule matrix in the docstring); with only the W8a entries kept 334 of them fail, the 2024 independence test pins the gate.
+
+- **Data.** 55 resources (SUBCLASS_TAIL_2014_BOOKS now 83) and 34 sentences on existing resources (SUBCLASS_NOTES_2014_BOOKS now 40), 12 more records ride along as `extras`. Seven more level tables that live only in the text (Divine Strike dice, Arcane Abjuration banishment CR, Halo of Spores dice, Circle Forms CR and limits, Starry Form dice, Runes Known, Giant's Might dice, Fighting Spirit temporary hit points) are pinned in `BOOK_TABLE_PINS_2014`.
+- **Cleric (31 resources, 25 Channel Divinity sentences).** Warding Flare (Ambition, Light; WIS modifier (min 1) uses, long rest; Improved Flare as an extra), War Priest, Priest of Zeal, Solidarity's Action, Wrath of the Storm, Eyes of the Grave, Sentinel at Death's Door, Embodiment of the Law (same uses), Emboldening Bond and Steps of Night (PB uses), Blessing of the Forge, Eyes of Night, Blaze of Glory (1, long rest), Visions of the Past (Knowledge PHB and PSA; 1, short or long rest), note-only Keeper of Souls, Corona of Light, Dampen Elements, Order's Wrath; Divine Strike (11 domains, `dice` 1d8 / 2d8 from 14, ids `cleric:divine-strike-<domain>-domain`, never `cleric:divine-strike`, so the 2024 attack-row notes are not fed). Channel Divinity sentences on `cleric:channel-divinity` (after the W6 / W7 ones): Invoke Duplicity (+ Improved Duplicity), Cloak of Shadows, Arcane Abjuration (banishment CR 1/2 to 4 at 5 / 8 / 11 / 14 / 17), Touch of Death (5 + twice the level), Artisan's Blessing, Path to the Grave, Knowledge of the Ages, Read Thoughts, Radiance of the Dawn (2d10 + level), Charm Animals and Plants, Order's Demand, Balm of Peace (2d6 + WIS), Preserve Life (5 x level), Oketra's / Rhonas's / War God's Blessing, Feat of Strength, Guided Strike (+10), Destructive Wrath, Consuming Fervor, Twilight Sanctuary (1d6 + level temporary hit points).
+- **Druid (11 resources, 6 Wild Shape sentences).** Balm of the Summer Court (`uses` = Druid level, `die` d6, long rest, half the level spendable), Hidden Paths, Fungal Infestation (WIS), Walker in Dreams, Faithful Summons, Blazing Revival, Spirit Totem (short or long rest; bear 5 + level, unicorn level, Guardian Spirit half level), Halo of Spores (`dice` 1d4 / 1d6 / 1d8 / 1d10, DC), Star Map and Cosmic Omen and Cauterizing Flames (PB uses). Sentences on `druid:wild-shape`: Combat Wild Shape, Circle Forms (CR and limits from the table), Elemental Wild Shape, Symbiotic Entity (+ Spreading Spores DC), Starry Form (1d8 / 2d8 + WIS), Summon Wildfire Spirit (+ Enhanced Bond).
+- **Fighter (13 resources, 3 sentences).** Unwavering Mark (STR modifier uses, half the level), Warding Maneuver (CON), Ferocious Charger (DC 8 + PB + STR), Manifest Echo (AC 14 + PB), Unleash Incarnation (CON uses, Legion of One), Echo Avatar, Shadow Martyr, Reclaim Potential (2d6 + CON), Rune Carver (runes 2 / 3 / 4 / 5, DC 8 + PB + CON, Master of Runes), Giant's Might (PB uses, `dice` 1d6 / 1d8 / 1d10, Runic Juggernaut), Runic Shield, Fighting Spirit (3 uses, 5 / 10 / 15 temporary hit points, Tireless Spirit), Strength before Death. Purple Dragon Knight sentences on Second Wind (Rallying Cry), Action Surge (Inspiring Surge, two allies from 18) and Indomitable (Bulwark). Battle Master, Psi Warrior and Arcane Archer stay with their R6 builders.
+- **Scan (all 258 feature records of the 33 Cleric, Druid and Fighter book subclasses). 101 modelled (55 resources + 34 sentences + 12 extras), 157 skipped:**
+
+| class | subclass | feature | L | src | phrase | decision |
+|---|---|---|---|---|---|---|
+| cleric | ambition-psa | 1-ambition-domain-(psa) | 1 | PSA | expend | skip: subclass intro (flavor text) |
+| cleric | ambition-psa | 1-warding-flare | 1 | PSA | 30 feet, equal to, expend, finish a long | MODELLED: resource `cleric:warding-flare` |
+| cleric | ambition-psa | 2-channel-divinity:-invoke-duplicity | 2 | PSA | 1 minute, 120 feet, 30 feet, 5 feet | MODELLED: note on `cleric:channel-divinity` |
+| cleric | ambition-psa | 6-channel-divinity:-cloak-of-shadows | 6 | PSA | use | MODELLED: note on `cleric:channel-divinity` |
+| cleric | ambition-psa | 8-potent-spellcasting | 8 | PSA | - | skip: no use rule or number in the text |
+| cleric | ambition-psa | 8-blessed-strikes | 8 | TCE | 1d8, once, use | skip: TCE optional feature (replaces Divine Strike / Potent Spellcasting), no optional-feature pick, no use limit |
+| cleric | ambition-psa | 17-improved-duplicity | 17 | PSA | 120 feet, 30 feet, number of, use | MODELLED: extra note on `cleric:channel-divinity` |
+| cleric | arcana-scag | 1-arcana-domain | 1 | SCAG | uses | skip: subclass intro (flavor text) |
+| cleric | arcana-scag | 1-arcane-initiate | 1 | SCAG | - | skip: no use rule or number in the text |
+| cleric | arcana-scag | 2-channel-divinity:-arcane-abjuration | 2 | SCAG | 1 minute, 30 feet, once, spend | MODELLED: note on `cleric:channel-divinity` |
+| cleric | arcana-scag | 6-spell-breaker | 6 | SCAG | equal to, use | skip: ends a spell on a healed ally (spell level limit, no character number or use limit) |
+| cleric | arcana-scag | 8-potent-spellcasting | 8 | SCAG | - | skip: no use rule or number in the text |
+| cleric | arcana-scag | 8-blessed-strikes | 8 | TCE | 1d8, once, use | skip: TCE optional feature (replaces Divine Strike / Potent Spellcasting), no optional-feature pick, no use limit |
+| cleric | arcana-scag | 17-arcane-mastery | 17 | SCAG | - | skip: no use rule or number in the text |
+| cleric | death-dmg | 1-death-domain | 1 | DMG | once, use | skip: subclass intro (flavor text) |
+| cleric | death-dmg | 1-bonus-proficiency | 1 | DMG | - | skip: no use rule or number in the text |
+| cleric | death-dmg | 1-reaper | 1 | DMG | 5 feet | skip: cantrip targeting rule, no number |
+| cleric | death-dmg | 2-channel-divinity:-touch-of-death | 2 | DMG | twice, use | MODELLED: note on `cleric:channel-divinity` |
+| cleric | death-dmg | 6-inescapable-destruction | 6 | DMG | - | skip: no use rule or number in the text |
+| cleric | death-dmg | 8-divine-strike | 8 | DMG | 1d8, 2d8, once, use | MODELLED: resource `cleric:divine-strike-death-domain` |
+| cleric | death-dmg | 8-blessed-strikes | 8 | TCE | 1d8, once, use | skip: TCE optional feature (replaces Divine Strike / Potent Spellcasting), no optional-feature pick, no use limit |
+| cleric | death-dmg | 17-improved-reaper | 17 | DMG | 5 feet | skip: spell targeting rule (1st through 5th level), no use limit |
+| cleric | forge-xge | 1-forge-domain | 1 | XGE | use | skip: subclass intro (flavor text) |
+| cleric | forge-xge | 1-bonus-proficiency | 1 | XGE | - | skip: no use rule or number in the text |
+| cleric | forge-xge | 1-blessing-of-the-forge | 1 | XGE | finish a long, long rest, once, use | MODELLED: resource `cleric:blessing-of-the-forge` |
+| cleric | forge-xge | 2-channel-divinity:-artisans-blessing | 2 | XGE | 5 feet, equal to, use | MODELLED: note on `cleric:channel-divinity` |
+| cleric | forge-xge | 6-soul-of-the-forge | 6 | XGE | - | skip: no use rule or number in the text |
+| cleric | forge-xge | 8-divine-strike | 8 | XGE | 1d8, 2d8, once, use | MODELLED: resource `cleric:divine-strike-forge-domain` |
+| cleric | forge-xge | 8-blessed-strikes | 8 | TCE | 1d8, once, use | skip: TCE optional feature (replaces Divine Strike / Potent Spellcasting), no optional-feature pick, no use limit |
+| cleric | forge-xge | 17-saint-of-forge-and-fire | 17 | XGE | - | skip: no use rule or number in the text |
+| cleric | grave-xge | 1-grave-domain | 1 | XGE | - | skip: subclass intro (flavor text) |
+| cleric | grave-xge | 1-circle-of-mortality | 1 | XGE | 30 feet, number of, use | skip: subclass intro (flavor text) |
+| cleric | grave-xge | 1-eyes-of-the-grave | 1 | XGE | 60 feet, equal to, expend, finish a long | MODELLED: resource `cleric:eyes-of-the-grave` |
+| cleric | grave-xge | 2-channel-divinity:-path-to-the-grave | 2 | XGE | 30 feet, use | MODELLED: note on `cleric:channel-divinity` |
+| cleric | grave-xge | 6-sentinel-at-deaths-door | 6 | XGE | 30 feet, equal to, expend, finish a long | MODELLED: resource `cleric:sentinel-at-death-s-door` |
+| cleric | grave-xge | 8-potent-spellcasting | 8 | XGE | - | skip: no use rule or number in the text |
+| cleric | grave-xge | 8-blessed-strikes | 8 | TCE | 1d8, once, use | skip: TCE optional feature (replaces Divine Strike / Potent Spellcasting), no optional-feature pick, no use limit |
+| cleric | grave-xge | 17-keeper-of-souls | 17 | XGE | 60 feet, equal to, number of, once | MODELLED: resource `cleric:keeper-of-souls` |
+| cleric | knowledge-phb | 1-knowledge-domain | 1 | PHB | - | skip: subclass intro (flavor text) |
+| cleric | knowledge-phb | 1-blessings-of-knowledge | 1 | PHB | uses, your proficiency | skip: languages, skills and doubled proficiency (no use limit) |
+| cleric | knowledge-phb | 2-channel-divinity:-knowledge-of-the-ages | 2 | PHB | 10 minutes, use | MODELLED: note on `cleric:channel-divinity` |
+| cleric | knowledge-phb | 6-channel-divinity:-read-thoughts | 6 | PHB | 1 minute, 60 feet, expend, finish a long | MODELLED: note on `cleric:channel-divinity` |
+| cleric | knowledge-phb | 8-potent-spellcasting | 8 | PHB | - | skip: no use rule or number in the text |
+| cleric | knowledge-phb | 8-blessed-strikes | 8 | TCE | 1d8, once, use | skip: TCE optional feature (replaces Divine Strike / Potent Spellcasting), no optional-feature pick, no use limit |
+| cleric | knowledge-phb | 17-visions-of-the-past | 17 | PHB | 1 minute, equal to, finish a short, long rest | MODELLED: resource `cleric:visions-of-the-past` |
+| cleric | knowledge-psa | 1-knowledge-domain-(psa) | 1 | PSA | - | skip: subclass intro (flavor text) |
+| cleric | knowledge-psa | 1-knowledge-domain | 1 | PHB | - | skip: subclass intro (flavor text) |
+| cleric | knowledge-psa | 1-blessings-of-knowledge | 1 | PHB | uses, your proficiency | skip: languages, skills and doubled proficiency (no use limit) |
+| cleric | knowledge-psa | 2-channel-divinity:-knowledge-of-the-ages | 2 | PHB | 10 minutes, use | MODELLED: note on `cleric:channel-divinity` |
+| cleric | knowledge-psa | 6-channel-divinity:-read-thoughts | 6 | PHB | 1 minute, 60 feet, expend, finish a long | MODELLED: note on `cleric:channel-divinity` |
+| cleric | knowledge-psa | 8-potent-spellcasting | 8 | PHB | - | skip: no use rule or number in the text |
+| cleric | knowledge-psa | 8-blessed-strikes | 8 | TCE | 1d8, once, use | skip: TCE optional feature (replaces Divine Strike / Potent Spellcasting), no optional-feature pick, no use limit |
+| cleric | knowledge-psa | 17-visions-of-the-past | 17 | PHB | 1 minute, equal to, finish a short, long rest | MODELLED: resource `cleric:visions-of-the-past` |
+| cleric | light-phb | 1-light-domain | 1 | PHB | - | skip: subclass intro (flavor text) |
+| cleric | light-phb | 1-bonus-cantrip | 1 | PHB | number of | skip: a cantrip |
+| cleric | light-phb | 1-warding-flare | 1 | PHB | 30 feet, equal to, expend, finish a long | MODELLED: resource `cleric:warding-flare` |
+| cleric | light-phb | 2-channel-divinity:-radiance-of-the-dawn | 2 | PHB | 2d10, 30 feet, equal to, use | MODELLED: note on `cleric:channel-divinity` |
+| cleric | light-phb | 6-improved-flare | 6 | PHB | 30 feet, use | MODELLED: extra on `cleric:warding-flare` |
+| cleric | light-phb | 8-potent-spellcasting | 8 | PHB | - | skip: no use rule or number in the text |
+| cleric | light-phb | 8-blessed-strikes | 8 | TCE | 1d8, once, use | skip: TCE optional feature (replaces Divine Strike / Potent Spellcasting), no optional-feature pick, no use limit |
+| cleric | light-phb | 17-corona-of-light | 17 | PHB | 1 minute, 30 feet, use | MODELLED: resource `cleric:corona-of-light` |
+| cleric | nature-phb | 1-nature-domain | 1 | PHB | - | skip: subclass intro (flavor text) |
+| cleric | nature-phb | 1-acolyte-of-nature | 1 | PHB | number of | skip: a cantrip and a skill pick |
+| cleric | nature-phb | 1-bonus-proficiency | 1 | PHB | - | skip: no use rule or number in the text |
+| cleric | nature-phb | 2-channel-divinity:-charm-animals-and-plants | 2 | PHB | 1 minute, 30 feet, use | MODELLED: note on `cleric:channel-divinity` |
+| cleric | nature-phb | 6-dampen-elements | 6 | PHB | 30 feet, use | MODELLED: resource `cleric:dampen-elements` |
+| cleric | nature-phb | 8-divine-strike | 8 | PHB | 1d8, 2d8, once, use | MODELLED: resource `cleric:divine-strike-nature-domain` |
+| cleric | nature-phb | 8-blessed-strikes | 8 | TCE | 1d8, once, use | skip: TCE optional feature (replaces Divine Strike / Potent Spellcasting), no optional-feature pick, no use limit |
+| cleric | nature-phb | 17-master-of-nature | 17 | PHB | - | skip: no use rule or number in the text |
+| cleric | order-tce | 1-order-domain | 1 | TCE | once, use | skip: subclass intro (flavor text) |
+| cleric | order-tce | 1-bonus-proficiencies | 1 | TCE | - | skip: no use rule or number in the text |
+| cleric | order-tce | 1-voice-of-authority | 1 | TCE | use | skip: no number or use limit (an ally attack after a spell) |
+| cleric | order-tce | 2-channel-divinity:-orders-demand | 2 | TCE | 30 feet, use | MODELLED: note on `cleric:channel-divinity` |
+| cleric | order-tce | 6-embodiment-of-the-law | 6 | TCE | equal to, expend, finish a long, minimum | MODELLED: resource `cleric:embodiment-of-the-law` |
+| cleric | order-tce | 8-divine-strike | 8 | TCE | 1d8, 2d8, once, use | MODELLED: resource `cleric:divine-strike-order-domain` |
+| cleric | order-tce | 8-blessed-strikes | 8 | TCE | 1d8, once, use | skip: TCE optional feature (replaces Divine Strike / Potent Spellcasting), no optional-feature pick, no use limit |
+| cleric | order-tce | 17-orders-wrath | 17 | TCE | 2d8, once | MODELLED: resource `cleric:order-s-wrath` |
+| cleric | peace-tce | 1-peace-domain | 1 | TCE | - | skip: subclass intro (flavor text) |
+| cleric | peace-tce | 1-implement-of-peace | 1 | TCE | - | skip: no use rule or number in the text |
+| cleric | peace-tce | 1-emboldening-bond | 1 | TCE | 10 minutes, 30 feet, d4, equal to | MODELLED: resource `cleric:emboldening-bond` |
+| cleric | peace-tce | 2-channel-divinity:-balm-of-peace | 2 | TCE | 2d6, 5 feet, equal to, minimum | MODELLED: note on `cleric:channel-divinity` |
+| cleric | peace-tce | 6-protective-bond | 6 | TCE | 30 feet, 5 feet, use | skip: 30-foot teleport reaction of bonded creatures, no use limit or number of its own (Emboldening Bond covers the bond) |
+| cleric | peace-tce | 8-potent-spellcasting | 8 | TCE | - | skip: no use rule or number in the text |
+| cleric | peace-tce | 8-blessed-strikes | 8 | TCE | 1d8, once, use | skip: TCE optional feature (replaces Divine Strike / Potent Spellcasting), no optional-feature pick, no use limit |
+| cleric | peace-tce | 17-expansive-bond | 17 | TCE | 60 feet, uses | skip: range doubled to 60 feet, no use limit |
+| cleric | solidarity-psa | 1-solidarity-domain-(psa) | 1 | PSA | - | skip: subclass intro (flavor text) |
+| cleric | solidarity-psa | 1-bonus-proficiency | 1 | PSA | - | skip: no use rule or number in the text |
+| cleric | solidarity-psa | 1-solidaritys-action | 1 | PSA | equal to, expend, finish a long, minimum | MODELLED: resource `cleric:solidarity-s-action` |
+| cleric | solidarity-psa | 2-channel-divinity:-preserve-life | 2 | PSA | 30 feet, equal to, number of, times | MODELLED: note on `cleric:channel-divinity` |
+| cleric | solidarity-psa | 6-oketras-blessing | 6 | PSA | 30 feet, use | MODELLED: note on `cleric:channel-divinity` |
+| cleric | solidarity-psa | 8-divine-strike | 8 | PSA | 1d8, 2d8, once, use | MODELLED: resource `cleric:divine-strike-solidarity-domain` |
+| cleric | solidarity-psa | 8-blessed-strikes | 8 | TCE | 1d8, once, use | skip: TCE optional feature (replaces Divine Strike / Potent Spellcasting), no optional-feature pick, no use limit |
+| cleric | solidarity-psa | 17-supreme-healing | 17 | PSA | 2d6, use | skip: maximum healing dice, no number |
+| cleric | strength-psa | 1-strength-domain-(psa) | 1 | PSA | - | skip: subclass intro (flavor text) |
+| cleric | strength-psa | 1-acolyte-of-strength | 1 | PSA | - | skip: no use rule or number in the text |
+| cleric | strength-psa | 1-bonus-proficiency | 1 | PSA | - | skip: no use rule or number in the text |
+| cleric | strength-psa | 2-channel-divinity:-feat-of-strength | 2 | PSA | use | MODELLED: note on `cleric:channel-divinity` |
+| cleric | strength-psa | 6-rhonass-blessing | 6 | PSA | 30 feet, use | MODELLED: note on `cleric:channel-divinity` |
+| cleric | strength-psa | 8-divine-strike | 8 | PSA | 1d8, 2d8, once, use | MODELLED: resource `cleric:divine-strike-strength-domain` |
+| cleric | strength-psa | 8-blessed-strikes | 8 | TCE | 1d8, once, use | skip: TCE optional feature (replaces Divine Strike / Potent Spellcasting), no optional-feature pick, no use limit |
+| cleric | strength-psa | 17-avatar-of-battle | 17 | PSA | - | skip: no use rule or number in the text |
+| cleric | tempest-phb | 1-tempest-domain | 1 | PHB | - | skip: subclass intro (flavor text) |
+| cleric | tempest-phb | 1-bonus-proficiencies | 1 | PHB | - | skip: no use rule or number in the text |
+| cleric | tempest-phb | 1-wrath-of-the-storm | 1 | PHB | 2d8, 5 feet, equal to, expend | MODELLED: resource `cleric:wrath-of-the-storm` |
+| cleric | tempest-phb | 2-channel-divinity:-destructive-wrath | 2 | PHB | use | MODELLED: note on `cleric:channel-divinity` |
+| cleric | tempest-phb | 6-thunderbolt-strike | 6 | PHB | 10 feet | skip: 10-foot push, passive, no use limit |
+| cleric | tempest-phb | 8-divine-strike | 8 | PHB | 1d8, 2d8, once, use | MODELLED: resource `cleric:divine-strike-tempest-domain` |
+| cleric | tempest-phb | 8-blessed-strikes | 8 | TCE | 1d8, once, use | skip: TCE optional feature (replaces Divine Strike / Potent Spellcasting), no optional-feature pick, no use limit |
+| cleric | tempest-phb | 17-stormborn | 17 | PHB | equal to | skip: fly speed equal to the walking speed, passive |
+| cleric | trickery-phb | 1-trickery-domain | 1 | PHB | - | skip: subclass intro (flavor text) |
+| cleric | trickery-phb | 1-blessing-of-the-trickster | 1 | PHB | 1 hour, use | skip: 1-hour advantage on Stealth, no use limit |
+| cleric | trickery-phb | 2-channel-divinity:-invoke-duplicity | 2 | PHB | 1 minute, 120 feet, 30 feet, 5 feet | MODELLED: note on `cleric:channel-divinity` |
+| cleric | trickery-phb | 6-channel-divinity:-cloak-of-shadows | 6 | PHB | use | MODELLED: note on `cleric:channel-divinity` |
+| cleric | trickery-phb | 8-divine-strike | 8 | PHB | 1d8, 2d8, once, use | MODELLED: resource `cleric:divine-strike-trickery-domain` |
+| cleric | trickery-phb | 8-blessed-strikes | 8 | TCE | 1d8, once, use | skip: TCE optional feature (replaces Divine Strike / Potent Spellcasting), no optional-feature pick, no use limit |
+| cleric | trickery-phb | 17-improved-duplicity | 17 | PHB | 120 feet, 30 feet, number of, use | MODELLED: extra note on `cleric:channel-divinity` |
+| cleric | twilight-tce | 1-twilight-domain | 1 | TCE | - | skip: subclass intro (flavor text) |
+| cleric | twilight-tce | 1-bonus-proficiencies | 1 | TCE | - | skip: no use rule or number in the text |
+| cleric | twilight-tce | 1-eyes-of-night | 1 | TCE | 1 hour, 10 feet, 300 feet, equal to | MODELLED: resource `cleric:eyes-of-night` |
+| cleric | twilight-tce | 1-vigilant-blessing | 1 | TCE | use | skip: advantage on one initiative roll, no number |
+| cleric | twilight-tce | 2-channel-divinity:-twilight-sanctuary | 2 | TCE | 1 minute, 1d6, equal to, use | MODELLED: note on `cleric:channel-divinity` |
+| cleric | twilight-tce | 6-steps-of-night | 6 | TCE | 1 minute, equal to, expend, finish a long | MODELLED: resource `cleric:steps-of-night` |
+| cleric | twilight-tce | 8-divine-strike | 8 | TCE | 1d8, 2d8, once, use | MODELLED: resource `cleric:divine-strike-twilight-domain` |
+| cleric | twilight-tce | 8-blessed-strikes | 8 | TCE | 1d8, once, use | skip: TCE optional feature (replaces Divine Strike / Potent Spellcasting), no optional-feature pick, no use limit |
+| cleric | twilight-tce | 17-twilight-shroud | 17 | TCE | - | skip: no use rule or number in the text |
+| cleric | war-phb | 1-war-domain | 1 | PHB | - | skip: subclass intro (flavor text) |
+| cleric | war-phb | 1-bonus-proficiencies | 1 | PHB | - | skip: no use rule or number in the text |
+| cleric | war-phb | 1-war-priest | 1 | PHB | equal to, expend, finish a long, minimum | MODELLED: resource `cleric:war-priest` |
+| cleric | war-phb | 2-channel-divinity:-guided-strike | 2 | PHB | use | MODELLED: note on `cleric:channel-divinity` |
+| cleric | war-phb | 6-channel-divinity:-war-gods-blessing | 6 | PHB | 30 feet, use | MODELLED: note on `cleric:channel-divinity` |
+| cleric | war-phb | 8-divine-strike | 8 | PHB | 1d8, 2d8, once, use | MODELLED: resource `cleric:divine-strike-war-domain` |
+| cleric | war-phb | 8-blessed-strikes | 8 | TCE | 1d8, once, use | skip: TCE optional feature (replaces Divine Strike / Potent Spellcasting), no optional-feature pick, no use limit |
+| cleric | war-phb | 17-avatar-of-battle | 17 | PHB | - | skip: no use rule or number in the text |
+| cleric | zeal-psa | 1-zeal-domain-(psa) | 1 | PSA | - | skip: subclass intro (flavor text) |
+| cleric | zeal-psa | 1-bonus-proficiencies | 1 | PSA | - | skip: no use rule or number in the text |
+| cleric | zeal-psa | 1-priest-of-zeal | 1 | PSA | equal to, expend, finish a long, minimum | MODELLED: resource `cleric:priest-of-zeal` |
+| cleric | zeal-psa | 2-channel-divinity:-consuming-fervor | 2 | PSA | use | MODELLED: note on `cleric:channel-divinity` |
+| cleric | zeal-psa | 6-resounding-strike | 6 | PSA | 10 feet | skip: 10-foot push, passive, no use limit |
+| cleric | zeal-psa | 8-divine-strike | 8 | PSA | 1d8, 2d8, once, use | MODELLED: resource `cleric:divine-strike-zeal-domain` |
+| cleric | zeal-psa | 8-blessed-strikes | 8 | TCE | 1d8, once, use | skip: TCE optional feature (replaces Divine Strike / Potent Spellcasting), no optional-feature pick, no use limit |
+| cleric | zeal-psa | 17-blaze-of-glory | 17 | PSA | 5d10, finish a long, once, use | MODELLED: resource `cleric:blaze-of-glory` |
+| druid | dreams-xge | 2-circle-of-dreams | 2 | XGE | - | skip: subclass intro (flavor text) |
+| druid | dreams-xge | 2-balm-of-the-summer-court | 2 | XGE | 120 feet, equal to, expend, finish a long | MODELLED: resource `druid:balm-of-the-summer-court` |
+| druid | dreams-xge | 6-hearth-of-moonlight-and-shadow | 6 | XGE | long rest | skip: rest-time 30-foot sphere with a fixed +5 check bonus, no use limit |
+| druid | dreams-xge | 10-hidden-paths | 10 | XGE | 30 feet, 60 feet, equal to, expend | MODELLED: resource `druid:hidden-paths` |
+| druid | dreams-xge | 14-walker-in-dreams | 14 | XGE | expend, finish a long, finish a short, long rest | MODELLED: resource `druid:walker-in-dreams` |
+| druid | moon-phb | 2-circle-of-the-moon | 2 | PHB | - | skip: subclass intro (flavor text) |
+| druid | moon-phb | 2-combat-wild-shape | 2 | PHB | 1d8, expend, regain, use | MODELLED: note on `druid:wild-shape` |
+| druid | moon-phb | 2-circle-forms | 2 | PHB | use | MODELLED: note on `druid:wild-shape` |
+| druid | moon-phb | 6-primal-strike | 6 | PHB | - | skip: no use rule or number in the text |
+| druid | moon-phb | 10-elemental-wild-shape | 10 | PHB | expend, uses | MODELLED: note on `druid:wild-shape` |
+| druid | moon-phb | 14-thousand-forms | 14 | PHB | use | skip: alter self at will, no number |
+| druid | shepherd-xge | 2-circle-of-the-shepherd | 2 | XGE | spend | skip: subclass intro (flavor text) |
+| druid | shepherd-xge | 2-speech-of-the-woods | 2 | XGE | once | skip: language and beast speech, no number |
+| druid | shepherd-xge | 2-spirit-totem | 2 | XGE | 1 minute, 60 feet, equal to, finish a short | MODELLED: resource `druid:spirit-totem` |
+| druid | shepherd-xge | 6-mighty-summoner | 6 | XGE | - | skip: no use rule or number in the text |
+| druid | shepherd-xge | 10-guardian-spirit | 10 | XGE | equal to, number of, regain | MODELLED: extra on `druid:spirit-totem` |
+| druid | shepherd-xge | 14-faithful-summons | 14 | XGE | 1 hour, 20 feet, finish a long, once | MODELLED: resource `druid:faithful-summons` |
+| druid | spores-tce | 2-circle-of-spores | 2 | TCE | - | skip: subclass intro (flavor text) |
+| druid | spores-tce | 2-circle-spells | 2 | TCE | number of, once | skip: spell list |
+| druid | spores-tce | 2-halo-of-spores | 2 | TCE | 10 feet, 1d10, 1d4, 1d6 | MODELLED: resource `druid:halo-of-spores` |
+| druid | spores-tce | 2-symbiotic-entity | 2 | TCE | 10 minutes, 1d6, expend, use | MODELLED: note on `druid:wild-shape` |
+| druid | spores-tce | 6-fungal-infestation | 6 | TCE | 1 hour, 10 feet, equal to, expend | MODELLED: resource `druid:fungal-infestation` |
+| druid | spores-tce | 10-spreading-spores | 10 | TCE | 1 minute, 30 feet, dc, once | MODELLED: extra note on `druid:wild-shape` |
+| druid | spores-tce | 14-fungal-body | 14 | TCE | - | skip: no use rule or number in the text |
+| druid | stars-tce | 2-circle-of-stars | 2 | TCE | - | skip: subclass intro (flavor text) |
+| druid | stars-tce | 2-star-map | 2 | TCE | d6, equal to, expend, finish a long | MODELLED: resource `druid:star-map` |
+| druid | stars-tce | 2-starry-form | 2 | TCE | 10 feet, 10 minutes, expend, use | MODELLED: note on `druid:wild-shape` |
+| druid | stars-tce | 2-archer | 2 | TCE | 1d8, 60 feet, equal to | skip: pinned in the Starry Form note |
+| druid | stars-tce | 2-chalice | 2 | TCE | 1d8, 30 feet, equal to, regain | skip: pinned in the Starry Form note |
+| druid | stars-tce | 2-dragon | 2 | TCE | d20, once | skip: pinned in the Starry Form note |
+| druid | stars-tce | 6-cosmic-omen | 6 | TCE | 30 feet, d6, equal to, expend | MODELLED: resource `druid:cosmic-omen` |
+| druid | stars-tce | 10-twinkling-constellations | 10 | TCE | 1d8, 20 feet, 2d8 | MODELLED: extra note on `druid:wild-shape` |
+| druid | stars-tce | 14-full-of-stars | 14 | TCE | - | skip: no use rule or number in the text |
+| druid | wildfire-tce | 2-circle-of-wildfire | 2 | TCE | times | skip: subclass intro (flavor text) |
+| druid | wildfire-tce | 2-circle-spells | 2 | TCE | number of, once | skip: spell list |
+| druid | wildfire-tce | 2-summon-wildfire-spirit | 2 | TCE | 1 hour, 10 feet, 2d6, 30 feet | MODELLED: note on `druid:wild-shape` |
+| druid | wildfire-tce | 6-enhanced-bond | 6 | TCE | d8, equal to | MODELLED: extra note on `druid:wild-shape` |
+| druid | wildfire-tce | 10-cauterizing-flames | 10 | TCE | 1 minute, 2d10, 30 feet, equal to | MODELLED: resource `druid:cauterizing-flames` |
+| druid | wildfire-tce | 14-blazing-revival | 14 | TCE | 120 feet, finish a long, once, regain | MODELLED: resource `druid:blazing-revival` |
+| fighter | arcane-archer-xge | 3-arcane-archer | 3 | XGE | - | skip: subclass intro (flavor text) |
+| fighter | arcane-archer-xge | 3-arcane-archer-lore | 3 | XGE | dc | skip: proficiency and cantrip pick |
+| fighter | arcane-archer-xge | 3-arcane-shot | 3 | XGE | expend, finish a short, long rest, once | skip: already modelled by R6 (_arcane_archer: 2 uses, short or long rest) |
+| fighter | arcane-archer-xge | 3-arcane-shot-options | 3 | XGE | dc | skip: already modelled by R6 (Arcane Shot options) |
+| fighter | arcane-archer-xge | 7-magic-arrow | 7 | XGE | use | skip: no number or use limit |
+| fighter | arcane-archer-xge | 7-curving-shot | 7 | XGE | 60 feet, use | skip: no number (60 feet) or use limit |
+| fighter | arcane-archer-xge | 7-additional-arcane-shot-option | 7 | XGE | - | skip: no use rule or number in the text |
+| fighter | arcane-archer-xge | 10-additional-arcane-shot-option | 10 | XGE | - | skip: no use rule or number in the text |
+| fighter | arcane-archer-xge | 15-ever-ready-shot | 15 | XGE | regain, use, uses | skip: already modelled by R6 (regain one use on initiative) |
+| fighter | arcane-archer-xge | 15-additional-arcane-shot-option | 15 | XGE | - | skip: no use rule or number in the text |
+| fighter | arcane-archer-xge | 18-additional-arcane-shot-option | 18 | XGE | - | skip: no use rule or number in the text |
+| fighter | battle-master-phb | 3-battle-master | 3 | PHB | times | skip: subclass intro (flavor text) |
+| fighter | battle-master-phb | 3-student-of-war | 3 | PHB | - | skip: no use rule or number in the text |
+| fighter | battle-master-phb | 3-combat-superiority | 3 | PHB | dc, expend, finish a short, long rest | skip: already modelled by R6 (_battle_master: superiority dice, maneuver DC) |
+| fighter | battle-master-phb | 3-maneuvers | 3 | PHB | - | skip: no use rule or number in the text |
+| fighter | battle-master-phb | 3-maneuver-options | 3 | TCE | - | skip: no use rule or number in the text |
+| fighter | battle-master-phb | 7-additional-maneuvers | 7 | PHB | - | skip: no use rule or number in the text |
+| fighter | battle-master-phb | 7-additional-superiority-die | 7 | PHB | - | skip: no use rule or number in the text |
+| fighter | battle-master-phb | 7-know-your-enemy | 7 | PHB | 1 minute, spend | skip: 1-minute observation, no use limit |
+| fighter | battle-master-phb | 10-additional-maneuvers | 10 | PHB | - | skip: no use rule or number in the text |
+| fighter | battle-master-phb | 10-improved-combat-superiority-(d10) | 10 | PHB | - | skip: no use rule or number in the text |
+| fighter | battle-master-phb | 15-additional-maneuvers | 15 | PHB | - | skip: no use rule or number in the text |
+| fighter | battle-master-phb | 15-additional-superiority-die | 15 | PHB | - | skip: no use rule or number in the text |
+| fighter | battle-master-phb | 15-relentless | 15 | PHB | regain | skip: already modelled by R6 (regain one superiority die on initiative) |
+| fighter | battle-master-phb | 18-improved-combat-superiority-(d12) | 18 | PHB | - | skip: no use rule or number in the text |
+| fighter | cavalier-xge | 3-cavalier | 3 | XGE | - | skip: subclass intro (flavor text) |
+| fighter | cavalier-xge | 3-bonus-proficiency | 3 | XGE | - | skip: no use rule or number in the text |
+| fighter | cavalier-xge | 3-born-to-the-saddle | 3 | XGE | 10 feet, 5 feet | skip: passive (advantage, 10 feet, 5 feet of movement) |
+| fighter | cavalier-xge | 3-unwavering-mark | 3 | XGE | 5 feet, equal to, expend, finish a long | MODELLED: resource `fighter:unwavering-mark` |
+| fighter | cavalier-xge | 7-warding-maneuver | 7 | XGE | 1d8, 5 feet, equal to, expend | MODELLED: resource `fighter:warding-maneuver` |
+| fighter | cavalier-xge | 10-hold-the-line | 10 | XGE | 5 feet | skip: opportunity-attack rule, no number or use limit |
+| fighter | cavalier-xge | 15-ferocious-charger | 15 | XGE | 10 feet, dc, once, use | MODELLED: resource `fighter:ferocious-charger` |
+| fighter | cavalier-xge | 18-vigilant-defender | 18 | XGE | once, use | skip: extra opportunity-attack reaction on every other creature's turn, no number |
+| fighter | echo-knight-egw | 3-echo-knight | 3 | EGW | - | skip: subclass intro (flavor text) |
+| fighter | echo-knight-egw | 3-manifest-echo | 3 | EGW | 15 feet, 30 feet, 5 feet, use | MODELLED: resource `fighter:manifest-echo` |
+| fighter | echo-knight-egw | 3-unleash-incarnation | 3 | EGW | equal to, expend, finish a long, minimum | MODELLED: resource `fighter:unleash-incarnation` |
+| fighter | echo-knight-egw | 7-echo-avatar | 7 | EGW | 000 feet, 10 minutes | MODELLED: resource `fighter:echo-avatar` |
+| fighter | echo-knight-egw | 10-shadow-martyr | 10 | EGW | 5 feet, finish a short, long rest, once | MODELLED: resource `fighter:shadow-martyr` |
+| fighter | echo-knight-egw | 15-reclaim-potential | 15 | EGW | 2d6, equal to, expend, finish a long | MODELLED: resource `fighter:reclaim-potential` |
+| fighter | echo-knight-egw | 18-legion-of-one | 18 | EGW | regain, use, uses | MODELLED: extra on `fighter:unleash-incarnation` |
+| fighter | eldritch-knight-phb | 3-eldritch-knight | 3 | PHB | number of, once, use | skip: subclass intro (flavor text) |
+| fighter | eldritch-knight-phb | 3-spellcasting | 3 | PHB | dc, expend, finish a long, regain | skip: spellcasting (modelled elsewhere) |
+| fighter | eldritch-knight-phb | 3-weapon-bond | 3 | PHB | 1 hour, once, short rest | skip: 1-hour ritual, up to two weapons, no use limit |
+| fighter | eldritch-knight-phb | 7-war-magic | 7 | PHB | use | skip: no number (a bonus-action weapon attack after a cantrip) |
+| fighter | eldritch-knight-phb | 10-eldritch-strike | 10 | PHB | - | skip: no use rule or number in the text |
+| fighter | eldritch-knight-phb | 15-arcane-charge | 15 | PHB | 30 feet, use | skip: 30-foot teleport with Action Surge, no use limit of its own |
+| fighter | eldritch-knight-phb | 18-improved-war-magic | 18 | PHB | use | skip: no number |
+| fighter | psi-warrior-tce | 3-psi-warrior | 3 | TCE | - | skip: subclass intro (flavor text) |
+| fighter | psi-warrior-tce | 3-psionic-power | 3 | TCE | 30 feet, d10, d12, d6 | skip: already modelled by R6 (_psionic_dice) |
+| fighter | psi-warrior-tce | 7-telekinetic-adept | 7 | TCE | 10 feet, dc, equal to, expend | skip: already modelled by R6 (Psionic Energy Dice powers) |
+| fighter | psi-warrior-tce | 10-guarded-mind | 10 | TCE | expend | skip: already modelled by R6 |
+| fighter | psi-warrior-tce | 15-bulwark-of-force | 15 | TCE | 1 minute, 30 feet, equal to, expend | skip: already modelled by R6 |
+| fighter | psi-warrior-tce | 18-telekinetic-master | 18 | TCE | expend, finish a long, once | skip: already modelled by R6 |
+| fighter | purple-dragon-knight-scag | 3-purple-dragon-knight-(banneret) | 3 | SCAG | use | skip: subclass intro (flavor text) |
+| fighter | purple-dragon-knight-scag | 3-restriction:-knighthood | 3 | SCAG | use | skip: restriction text |
+| fighter | purple-dragon-knight-scag | 3-rallying-cry | 3 | SCAG | 60 feet, equal to, regain, use | MODELLED: note on `fighter:second-wind` |
+| fighter | purple-dragon-knight-scag | 7-royal-envoy | 7 | SCAG | uses, your proficiency | skip: skill proficiency and doubled Persuasion proficiency |
+| fighter | purple-dragon-knight-scag | 10-inspiring-surge | 10 | SCAG | 60 feet, use | MODELLED: note on `fighter:action-surge` |
+| fighter | purple-dragon-knight-scag | 15-bulwark | 15 | SCAG | 60 feet, use | MODELLED: note on `fighter:indomitable` |
+| fighter | purple-dragon-knight-scag | 18-inspiring-surge | 18 | SCAG | 60 feet | MODELLED: extra note on `fighter:action-surge` |
+| fighter | rune-knight-tce | 3-rune-knight | 3 | TCE | - | skip: subclass intro (flavor text) |
+| fighter | rune-knight-tce | 3-bonus-proficiencies | 3 | TCE | - | skip: no use rule or number in the text |
+| fighter | rune-knight-tce | 3-rune-carver | 3 | TCE | dc, equal to, finish a long, number of | MODELLED: resource `fighter:rune-carver` |
+| fighter | rune-knight-tce | 3-giants-might | 3 | TCE | 1 minute, 1d6, equal to, expend | MODELLED: resource `fighter:giant-s-might` |
+| fighter | rune-knight-tce | 7-runic-shield | 7 | TCE | 60 feet, d20, equal to, expend | MODELLED: resource `fighter:runic-shield` |
+| fighter | rune-knight-tce | 7-additional-rune-known | 7 | TCE | - | skip: no use rule or number in the text |
+| fighter | rune-knight-tce | 10-great-stature | 10 | TCE | 1d8, 3d4, equal to, number of | skip: 3d4 inches of height; the 1d8 is pinned in the Giant's Might dice |
+| fighter | rune-knight-tce | 10-additional-rune-known | 10 | TCE | - | skip: no use rule or number in the text |
+| fighter | rune-knight-tce | 15-master-of-runes | 15 | TCE | expend, finish a short, long rest, once | MODELLED: extra on `fighter:rune-carver` |
+| fighter | rune-knight-tce | 15-additional-rune-known | 15 | TCE | - | skip: no use rule or number in the text |
+| fighter | rune-knight-tce | 18-runic-juggernaut | 18 | TCE | 1d10, 5 feet, use | MODELLED: extra on `fighter:giant-s-might` |
+| fighter | samurai-xge | 3-samurai | 3 | XGE | - | skip: subclass intro (flavor text) |
+| fighter | samurai-xge | 3-bonus-proficiency | 3 | XGE | - | skip: no use rule or number in the text |
+| fighter | samurai-xge | 3-fighting-spirit | 3 | XGE | expend, finish a long, number of, regain | MODELLED: resource `fighter:fighting-spirit` |
+| fighter | samurai-xge | 7-elegant-courtier | 7 | XGE | equal to, uses | skip: passive Wisdom bonus to Persuasion and a saving throw proficiency |
+| fighter | samurai-xge | 10-tireless-spirit | 10 | XGE | regain, use, uses | MODELLED: extra on `fighter:fighting-spirit` |
+| fighter | samurai-xge | 15-rapid-strike | 15 | XGE | once | skip: once per turn trade of advantage, no number |
+| fighter | samurai-xge | 18-strength-before-death | 18 | XGE | finish a long, once, use, uses | MODELLED: resource `fighter:strength-before-death` |
+
+  Skip reasons in short: subclass intros and domain-spell tables (flavor); the 18 TCE Blessed Strikes records (an optional feature that replaces Divine Strike or Potent Spellcasting; there is no optional-feature pick under 2014, so both would be shown, and it has no use limit); passive numbers without a use limit (Thunderbolt Strike, Stormborn, Hearth of Moonlight and Shadow, Elegant Courtier, Royal Envoy); no number (Reaper, Spell Breaker, Voice of Authority, Hold the Line, Vigilant Defender, War Magic, Rapid Strike ...); spell lists, cantrips and proficiencies; already modelled by R6 (Battle Master, Psi Warrior, Arcane Archer).
+- **Surfaces.** No new output keys; `types.ts`, `export_fields.py` and the frontend are untouched (no `npm run build`).
+- **Golden: no rebaseline.** The golden's primary Cleric / Druid / Fighter cases hold Life / Land / Champion and the book-subclass sinks hold unmodelled features, so no case moved (the `--append` run asserts every stored result re-resolves identically and it is byte-compared before / after). No `REBASELINES` entry. `--append` added the kitchen sink `stars-druid10-mixed` (Circle of the Stars Druid 10, mixed; Star Map, Cosmic Omen, the Starry Form sentence on Wild Shape): 245 -> 247 cases, the 245 existing cases byte-identical; `_EXPECT` lists it.
+- **Edited tests (deliberate).** `test_subclass_resources_2024::test_no_subclass_entry_at_all_without_the_xphb_subclass_under_mixed` (the 2014 Light Domain now holds its own Warding Flare and Corona of Light, 2014 text, but still no XPHB entry), `test_c_series_golden` (a W8b guard test).
+- **Timing** (`resolve()`, mean of 20, ms, level 20, mixed / 2014): Twilight Cleric 3.1 / 2.4, Zeal Cleric 3.1 / 2.4, Stars Druid 3.2 / 2.6, Moon Druid 3.2 / 2.4, Rune Knight 3.3 / 2.2, Echo Knight 3.3 / 2.2, Samurai 3.8 / 2.2 (limit 50; also asserted).
+- **Totals.** Server suite 5974 -> 6377 passed (395 new + 1 golden test + the 2 new sink cases through the parametrized sweeps + 1 edited), root suite 405 passed / 8 skipped, frontend untouched.
+- **Uncertain / deferred.** (1) Visions of the Past prints "Wisdom score" instead of a number (resources only see ability modifiers). (2) Blessed Strikes / Divine Strike are both shown for a Cleric of a domain with Divine Strike (no optional-feature pick). (3) The Channel Divinity sentences are long for a note; the merged Channel Divinity of a multiclass keeps only the winning class's note (as in W6). (4) Totem Warrior and the Eldritch Knight / Arcane Archer picks stay feature lines.
+
 ## W7 (F4) The 2014 SRD subclass use-limit tail (2026-10-24)
 
 Rulesets mixed / 2014 only and the 12 SRD subclass ids only (the 117 book subclass features are W8); 2024 output is byte-identical (the 2014 subclass tables are never read under "2024", also for a held SRD subclass, pinned by a test that empties them). Tests first (`tests/test_subclass_features_2014_w7.py`, 130, rule matrix in the docstring); with the `_subclass_tail_2014` call removed 90 of them fail, with the ruleset gate removed the 2024 independence test fails.
