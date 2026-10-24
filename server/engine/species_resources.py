@@ -21,9 +21,26 @@ def _dice_for(table: tuple, level: int) -> str:
     return dice
 
 
+_ABILITY_WORD = {"STR": "Strength", "DEX": "Dexterity", "CON": "Constitution", "INT": "Intelligence", "WIS": "Wisdom",
+                 "CHA": "Charisma"}
+
+
+def _spec_for(tid: str) -> dict | None:
+    return reference_data.SPECIES_RESOURCES.get(tid) or reference_data.SPECIES_RESOURCES_2014.get(tid)
+
+
+def _selected(choices, choice_id: str) -> str | None:
+    for c in choices or []:
+        if c.get("id") == choice_id and c.get("selected"):
+            return c["selected"][0]
+    return None
+
+
 def resources(catalog, race: dict | None, race_id: str | None, subrace: dict | None, variant: dict | None,
-              total_level: int, pb: int, modifiers: dict, walk_speed: int | None) -> list[dict]:
-    """One entry per table trait the species (race + subrace trait refs) holds at the character's total level."""
+              total_level: int, pb: int, modifiers: dict, walk_speed: int | None, choices=None) -> list[dict]:
+    """One entry per table trait the species (race + subrace trait refs) holds at the character's total level.
+    `choices`: the resolved choice cards (the SRD Dragonborn's Draconic Ancestry and the PHB Dragonborn's resistance
+    pick live there, not on a species variant)."""
     if not race or not race_id:
         return []
     refs = list(race.get("traits") or []) + list((subrace or {}).get("racial_traits") or [])
@@ -31,7 +48,7 @@ def resources(catalog, race: dict | None, race_id: str | None, subrace: dict | N
     seen: set[str] = set()
     for ref in refs:
         tid = ref.get("index")
-        spec = reference_data.SPECIES_RESOURCES.get(tid)
+        spec = _spec_for(tid)
         if not spec or tid in seen or spec["race"] != race_id or tid not in catalog.traits:
             continue
         seen.add(tid)
@@ -47,7 +64,21 @@ def resources(catalog, race: dict | None, race_id: str | None, subrace: dict | N
                  "recharge": spec["recharge"]}
         if spec.get("dc"):
             entry["dc"] = 8 + modifiers.get(spec["dc"], 0) + pb
-            details["save"] = spec["save"]
+            if spec.get("save"):
+                details["save"] = spec["save"]
+        srd_breath = None
+        if spec.get("srd_ancestry"):  # SRD Dragonborn: the picked ancestry subtrait carries the save, area and damage type
+            sub_id = _selected(choices, f"species:{race_id}:trait:draconic-ancestry")
+            srd_breath = ((catalog.traits.get(sub_id) or {}).get("trait_specific") or {}).get("breath_weapon") if sub_id else None
+            if srd_breath:
+                save = srd_breath["dc"]["dc_type"]["index"].upper()
+                area = srd_breath["area_of_effect"]
+                details["save"] = save
+                values["save"] = _ABILITY_WORD[save]
+                details["shape"] = values["shape"] = f"a {area['size']}-foot {area['type']}"
+            else:
+                values["save"] = "a saving throw (set by your Draconic Ancestry)"
+                values["shape"] = "the area set by your Draconic Ancestry"
         if spec.get("dice_by_level"):
             entry["dice"] = values["dice"] = _dice_for(spec["dice_by_level"], total_level)
         if spec.get("die"):
@@ -56,6 +87,10 @@ def resources(catalog, race: dict | None, race_id: str | None, subrace: dict | N
             details["shape"] = values["shape"] = spec["shape"]
         if spec.get("damage_type") == "ancestry":
             picked = ((variant or {}).get("resist") or [None])[0]
+            if not picked and srd_breath:
+                picked = srd_breath["damage"][0]["damage_type"]["index"]
+            elif not picked:  # PHB Dragonborn: the species resistance pick is the ancestry's damage type
+                picked = _selected(choices, f"species:{race_id}:resistance")
             details["damageType"] = picked
             values["damage_type"] = picked.capitalize() if picked else "the Draconic Ancestry's type (choose the ancestry)"
         if spec.get("heal"):

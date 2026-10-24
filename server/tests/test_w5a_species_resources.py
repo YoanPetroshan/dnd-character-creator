@@ -178,7 +178,7 @@ def test_human_and_halfling_notes(catalog):
 def test_species_without_table_traits_and_older_rulesets_have_empty_list(catalog):
     assert _res(catalog, "elf-xphb", 5)["derived"]["speciesResources"] == []
     assert _res(catalog, "human", 5, ruleset="2014")["derived"]["speciesResources"] == []
-    assert _res(catalog, "dragonborn", 5, ruleset="2014")["derived"]["speciesResources"] == []  # 2014 record: untouched
+    assert _res(catalog, "elf", 5, ruleset="2014")["derived"]["speciesResources"] == []  # W5b models the 2014 Dragonborn
 
 
 def test_entries_use_the_resource_shape_minus_class_id(catalog):

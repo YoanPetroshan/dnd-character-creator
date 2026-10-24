@@ -6599,8 +6599,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "attacksPerAction": class_resources_mod.attacks_per_action(resolved_classes),
         "classResources": class_resources,
         "featResources": feat_effects_mod.resources(feat_inst, feat_numbers),  # FE3
-        "speciesResources": species_resources_mod.resources(  # W5a
-            catalog, race, race_id, subrace, species_variant, sum(class_levels.values()), prof_bonus, modifiers, base_speed),
+        "speciesResources": species_resources_mod.resources(  # W5a, W5b (choices: SRD Dragonborn ancestry, PHB resistance pick)
+            catalog, race, race_id, subrace, species_variant, sum(class_levels.values()), prof_bonus, modifiers, base_speed,
+            choices),
         "carryingCapacity": carrying,
         "stealthDisadvantage": stealth_disadvantage,
     }

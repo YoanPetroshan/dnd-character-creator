@@ -634,6 +634,35 @@ SPECIES_RESOURCES: dict[str, dict] = {
                    "you can't do so again until you finish 1d4 Long Rests")},
 }
 
+# W5b (F2): the same table shape for the non-2024 (ruleset "2014") species records: the SRD species and the book
+# species (PHB, MPMM, VGM, ...). Commit 1 holds the SRD ones. Extra fields: `srd_ancestry` (the damage type, save and
+# area come from the picked Draconic Ancestry subtrait's `trait_specific.breath_weapon`; the dice progression and the DC
+# are the pinned text). `damage_type: "ancestry"` reads the variant's `resist` or, for the PHB Dragonborn, the species
+# resistance pick. Quotes are verbatim substrings of the catalog trait text (tests/test_w5b_species_resources.py).
+SPECIES_RESOURCES_2014: dict[str, dict] = {
+    "breath-weapon": {
+        "race": "dragonborn", "name": "Breath Weapon", "uses": 1, "recharge": "short-or-long", "dc": "CON",
+        "srd_ancestry": True, "damage_type": "ancestry",
+        "dice_by_level": ((1, "2d6"), (6, "3d6"), (11, "4d6"), (16, "5d6")),
+        "note": "Action: exhale in {shape}, {save} saving throw, {dice} {damage_type} damage on a failed save and half "
+                "as much on a success",
+        "quotes": ("You can use your action to exhale destructive energy",
+                   "The DC for this saving throw equals 8 + your Constitution modifier + your proficiency bonus",
+                   "A creature takes 2d6 damage on a failed save, and half as much damage on a successful one",
+                   "The damage increases to 3d6 at 6th level, 4d6 at 11th level, and 5d6 at 16th level",
+                   "you cannot use it again until you complete a short or long rest")},
+    "relentless-endurance": {
+        "race": "half-orc", "name": "Relentless Endurance", "uses": 1, "recharge": "long",
+        "note": "When reduced to 0 Hit Points but not killed outright, drop to 1 Hit Point instead",
+        "quotes": ("you can drop to 1 hit point instead",
+                   "you cannot use this feature again until you finish a long rest")},
+    "lucky": {
+        "race": "halfling", "name": "Lucky", "uses": None, "recharge": None,
+        "note": "When you roll a 1 on the d20 of an attack roll, ability check or saving throw, reroll the die and use the new roll",
+        "quotes": ("When you roll a 1 on the d20 for an attack roll, ability check, or saving throw, you can reroll the "
+                   "die and must use the new roll",)},
+}
+
 # W5a: Giant Ancestry (Goliath, XPHB) boons by species variant id. The catalog trait text drops the list, so the
 # `quote` is pinned against the raw 5etools race entry instead (tests/test_w5a_species_resources.py).
 GIANT_ANCESTRY_2024: dict[str, dict] = {

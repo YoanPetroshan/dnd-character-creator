@@ -112,6 +112,8 @@ KITCHEN_SINK: dict[str, dict] = {
                                 overrides={"class:fighter:3:feature:battle-master-xphb-3-battle-master": [
                                     "opt-ambush-xphb", "opt-bait-and-switch-xphb", "opt-commanders-strike-xphb"]}),
     "fey-wanderer3-2024": _sub("ranger", 3, "2024", sub="fey-wanderer-xphb", marks=("classes", "official", "spells"), origin=_XPHB_ORIGIN),
+    # W5b: the SRD Dragonborn (2014): Breath Weapon with the picked Draconic Ancestry (non-2024, so part of the golden via --append)
+    "dragonborn6-2014": _sub("fighter", 6, "2014", marks=("classes",), origin=("dragonborn", "acolyte")),
     # W5a: species trait resources (2024 only, so not part of the golden): Breath Weapon + Draconic Flight, Adrenaline Rush
     # + Relentless Endurance, Giant Ancestry + Large Form
     "dragonborn11-2024": _sub("fighter", 11, "2024", marks=("classes", "official"), origin=("dragonborn-xphb", "soldier-xphb")),

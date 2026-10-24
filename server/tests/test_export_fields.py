@@ -222,6 +222,8 @@ _EXPECT.update({
     "dragonborn11-2024": {"species_resources": ["Breath Weapon", "Draconic Flight"]},
     "orc5-2024": {"species_resources": ["Adrenaline Rush", "Relentless Endurance"], "resources": ["Rage"]},
     "goliath5-2024": {"species_resources": ["Giant Ancestry", "Large Form"]},
+    # W5b: the SRD Dragonborn (2014)
+    "dragonborn6-2014": {"species_resources": ["Breath Weapon"]},
     # FE12: feat effects reach every export (notes, resources, attack-row notes, feat picks)
     "feats-mixed-fighter14": {"feats": ["alert-phb", "tough-phb", "great-weapon-master-phb", "lucky-phb", "observant-phb"],
                               "feat_resources": ["Luck Points"], "attack_note": "Great Weapon Master: before you attack",
