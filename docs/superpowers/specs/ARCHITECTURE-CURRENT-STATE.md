@@ -1708,6 +1708,160 @@ Builds on W5a: the same `derived.speciesResources` key, shape, exports and SPA l
 - **Golden.** All 241 existing cases are the SRD Human (verified by script), so mixed / 2014 output does not move and no rebaseline was needed (`derived.speciesResources` is already in `STRIP`). `--append` added two cases for the new kitchen sink `dragonborn6-2014` (SRD Dragonborn, Fighter 6, Acolyte; `ks/src-all` and `ks/src-srd`): 241 -> 243, the 241 existing entries asserted unchanged and rewritten byte for byte. `_EXPECT` in `test_export_fields.py` has the new sink (Breath Weapon in every export).
 - **Tests.** `tests/test_w5b_species_resources.py`: quote pins, structured-data agreement, SRD scan, ten ancestry colors, dice by level at the boundaries, unpicked ancestry, 2014 and mixed rulesets, empty lists for species without table traits, degradation with a patched catalog (missing ancestry trait, missing trait), export block. Verified to fail when the `choices` wiring in `resolve()` is removed (11 failures).
 
+### Commit 2: book species (PHB, MPMM, VGM, FTD, AAG, ...)
+
+- **Scan.** Every non-SRD, non-2024 species record (race trait refs plus the racial traits of its subspecies) whose trait text matches a use / rest pattern (`SCAN_PATTERN` in the test: long / short rest, "expended", "times equal", "can't do so again", "once per", ...) is either in `SPECIES_RESOURCES_2014` or in the test's `SKIPPED_BOOK_TRAITS` with a reason; a new trait that is neither fails the scan, and so does a stale skip entry. 137 traits matched: **56 modelled, 81 skipped**. The full table is below (modelled entries: uses, recharge, extras).
+- **Rule for what is modelled.** Only numbers and rules that the trait text states: PB uses ("a number of times equal to your proficiency bonus ... long rest"), a single use with a short or long rest recharge, dice (Breath Weapon progression, d4 / d6 / d12), DC (8 + PB + the ability the text names), level gates ("Starting at 3rd / 5th level"), and note numbers derived from the character (PB, level, CON modifier, 5 x PB feet). A trait whose casting ability is chosen when selecting the race (Eladrin Fey Step, Kender Taunt) gets no `dc`. The notes paraphrase; every entry's `quotes` are verbatim substrings of the catalog text, pinned per entry.
+- **Breath Weapon-likes (D-2).** PHB Dragonborn: `uses` 1, short or long rest, DC 8 + CON + PB, 2d6 / 3d6 / 4d6 / 5d6 at 1 / 6 / 11 / 16; the damage type is the species resistance pick (the catalog has no ancestry table for the PHB Dragonborn, so no save or area is stated and `details.save` is absent). FTD Chromatic / Gem / Metallic: PB uses, long rest, DC 8 + CON + PB, 1d10 / 2d10 / 3d10 / 4d10 at 1 / 5 / 11 / 17, Dexterity save, damage type from the variant (`resist`), area from the text (30-foot line for Chromatic, 15-foot cone for Gem and Metallic). Metallic Breath Weapon (the second breath at 5th level) has a DC and 1 long-rest use but no dice or save (the options list is missing from the catalog text). None of these is an attack row.
+- **Skipped, by reason.** (a) 56 traits that grant innate spells (Drow Magic, tiefling legacies, Mark of ... magic, genasi, gith, MPMM Fairy / Firbolg / Triton ..., Elf Eladrin DMG Fey Step "cast misty step"): the uses belong to the spell. (b) 9 rest-duration traits (Trance, Astral Trance, Sentry's Rest, Sleepless). (c) Per-turn / per-combat / movement-recharged riders (Hobgoblin Martial Advantage, Bugbear Surprise Attack "once per combat", Tabaxi Feline Agility "until you move 0 feet"): the resource vocabulary is `long`, `short`, `short-or-long` only. (d) Flight (armor wording), Gift of the Aetherborn, Astral Knowledge, Lucky Footwork, Cunning Artisan, Blood Thirst, Black Blood Healing: no use count.
+- **Trait text that is cut in the catalog.** Several traits lose their option lists (Dhampir Vampiric Bite, Aasimar Celestial Revelation, Hobgoblin Fey Gift level 3 options, Eladrin Fey Step seasons, Hexblood Eerie Token actions, Metallic second breath options); the notes say only what remains in the text.
+- **Golden.** Unchanged by this commit (243 cases after commit 1; every golden draft is the SRD Human or the appended SRD Dragonborn); no rebaseline, no `--append` needed. Existing 241 cases verified unchanged by `--append`'s own assertion (run again, 0 added) and `test_c_series_golden.py` (260 passed).
+- **Timings** (`resolve()`, mean of 30, ms, fully chosen drafts, a Dragonborn species at level 20): Fighter 20 mixed 4.29 / 2014 2.64 / 2024 2.94, Wizard 20 mixed 3.73 / 2014 2.65 / 2024 3.42 (all well under 50 ms; the species table lookup is one dict get per trait).
+- **Totals.** Server suite 5301 -> 5438 passed (commit 1: 5340), root suite 405 passed / 8 skipped (`tests/test_chargen_isolation.py` untouched), frontend untouched (no build needed).
+- **Deferred (uncertain, user-owned).** Whether a per-combat / per-turn rider should become a resource kind; whether innate-spell uses should be tracked on the sheet; the Giant Ancestry-style option lists missing from the catalog for the book species.
+
+#### Scan table (W5b commit 2)
+
+| Species | Trait id | Trait | Decision |
+|---|---|---|---|
+| aarakocra-mpmm | `aarakocra-mpmm-trait-0` | Flight | skipped: armor restriction wording, no uses |
+| aarakocra-mpmm | `aarakocra-mpmm-trait-2` | Wind Caller | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| aasimar-dmg | `aasimar-dmg-trait-4` | Celestial Legacy | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| aasimar-mpmm | `aasimar-mpmm-trait-3` | Healing Hands | modelled: 1 use, long rest, heal |
+| aasimar-mpmm | `aasimar-mpmm-trait-5` | Celestial Revelation | modelled: 1 use, long rest, level 3 |
+| aasimar-vgm | `aasimar-vgm-fallen-vgm-trait-0` | Necrotic Shroud | modelled: 1 use, long rest, level 3, DC CHA |
+| aasimar-vgm | `aasimar-vgm-protector-vgm-trait-0` | Radiant Soul | modelled: 1 use, long rest, level 3 |
+| aasimar-vgm | `aasimar-vgm-scourge-vgm-trait-0` | Radiant Consumption | modelled: 1 use, long rest, level 3 |
+| aasimar-vgm | `aasimar-vgm-trait-4` | Healing Hands | modelled: 1 use, long rest, heal |
+| aetherborn-psk | `aetherborn-psk-trait-7` | Gift of the Aetherborn | skipped: hit point maximum penalty over days, no use count |
+| astral-elf-aag | `astral-elf-aag-trait-5` | Starlight Step | modelled: PB uses, long rest |
+| astral-elf-aag | `astral-elf-aag-trait-6` | Astral Trance | skipped: rest-duration rule, no uses |
+| autognome-aag | `autognome-aag-trait-2` | Built for Success | modelled: PB uses, long rest |
+| autognome-aag | `autognome-aag-trait-5` | Sentry's Rest | skipped: rest-duration rule, no uses |
+| bugbear-erlw | `bugbear-erlw-trait-7` | Surprise Attack | skipped: once per combat rider (the resource vocabulary has no per-combat recharge) |
+| bugbear-vgm | `bugbear-vgm-trait-6` | Surprise Attack | skipped: once per combat rider (the resource vocabulary has no per-combat recharge) |
+| deep-gnome-mpmm | `deep-gnome-mpmm-trait-2` | Gift of the Svirfneblin | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| deep-gnome-mpmm | `deep-gnome-mpmm-trait-4` | Svirfneblin Camouflage | modelled: PB uses, long rest |
+| dhampir-rhw | `dhampir-rhw-trait-3` | Vampiric Bite | modelled: PB uses, long rest |
+| dhampir-vrgr | `dhampir-vrgr-trait-5` | Vampiric Bite | modelled: PB uses, long rest |
+| dragonborn-(chromatic)-ftd | `dragonborn-(chromatic)-ftd-trait-1` | Breath Weapon | modelled: PB uses, long rest, DC CON, dice by level |
+| dragonborn-(chromatic)-ftd | `dragonborn-(chromatic)-ftd-trait-3` | Chromatic Warding | modelled: 1 use, long rest, level 5 |
+| dragonborn-(gem)-ftd | `dragonborn-(gem)-ftd-trait-1` | Breath Weapon | modelled: PB uses, long rest, DC CON, dice by level |
+| dragonborn-(gem)-ftd | `dragonborn-(gem)-ftd-trait-4` | Gem Flight | modelled: 1 use, long rest, level 5 |
+| dragonborn-(metallic)-ftd | `dragonborn-(metallic)-ftd-trait-1` | Breath Weapon | modelled: PB uses, long rest, DC CON, dice by level |
+| dragonborn-(metallic)-ftd | `dragonborn-(metallic)-ftd-trait-3` | Metallic Breath Weapon | modelled: 1 use, long rest, level 5, DC CON |
+| dragonborn-phb | `dragonborn-phb-draconblood-egw-trait-1` | Forceful Presence | modelled: 1 use, short or long rest |
+| dragonborn-phb | `dragonborn-phb-ravenite-egw-trait-1` | Vengeful Assault | modelled: 1 use, short or long rest |
+| dragonborn-phb | `dragonborn-phb-trait-3` | Breath Weapon | modelled: 1 use, short or long rest, DC CON, dice by level |
+| duergar-mpmm | `duergar-mpmm-trait-2` | Duergar Magic | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| dwarf-phb-duergar-mtf | `dwarf-phb-duergar-mtf-trait-3` | Duergar Magic | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| dwarf-phb-mark-of-warding-erlw | `dwarf-phb-mark-of-warding-erlw-trait-1` | Wards and Seals | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| eladrin-mpmm | `eladrin-mpmm-trait-4` | Fey Step | modelled: PB uses, long rest |
+| eladrin-mpmm | `eladrin-mpmm-trait-6` | Trance | skipped: rest-duration rule, no uses |
+| elf-(kaladesh)-psk | `elf-(kaladesh)-psk-trait-7` | Trance | skipped: rest-duration rule, no uses |
+| elf-(zendikar)-psz-mul-daya-nation-psz | `elf-(zendikar)-psz-mul-daya-nation-psz-trait-0` | Mul Daya Magic | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| elf-phb | `elf-phb-eladrin-mtf-trait-1` | Fey Step | modelled: 1 use, short or long rest |
+| elf-phb | `elf-phb-shadar-kai-mtf-trait-1` | Blessing of the Raven Queen | modelled: 1 use, long rest |
+| elf-phb | `elf-phb-trait-5` | Trance | skipped: rest-duration rule, no uses |
+| elf-phb-drow-phb | `elf-phb-drow-phb-trait-2` | Drow Magic | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| elf-phb-eladrin-dmg | `elf-phb-eladrin-dmg-trait-1` | Fey Step | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| elf-phb-mark-of-shadow-erlw | `elf-phb-mark-of-shadow-erlw-trait-1` | Shape Shadows | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| elf-phb-pallid-egw | `elf-phb-pallid-egw-trait-1` | Blessing of the Moon Weaver | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| fairy-mpmm | `fairy-mpmm-trait-1` | Fairy Magic | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| fairy-mpmm | `fairy-mpmm-trait-2` | Flight | skipped: armor restriction wording, no uses |
+| fairy-wbtw | `fairy-wbtw-trait-1` | Flight | skipped: armor restriction wording, no uses |
+| fairy-wbtw | `fairy-wbtw-trait-2` | Fairy Magic | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| firbolg-mpmm | `firbolg-mpmm-trait-0` | Firbolg Magic | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| firbolg-mpmm | `firbolg-mpmm-trait-1` | Hidden Step | modelled: PB uses, long rest |
+| firbolg-vgm | `firbolg-vgm-trait-2` | Firbolg Magic | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| firbolg-vgm | `firbolg-vgm-trait-3` | Hidden Step | modelled: 1 use, short or long rest |
+| genasi-eepc-air-eepc | `genasi-eepc-air-eepc-trait-1` | Mingle with the Wind | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| genasi-eepc-earth-eepc | `genasi-eepc-earth-eepc-trait-1` | Merge with Stone | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| genasi-eepc-fire-eepc | `genasi-eepc-fire-eepc-trait-2` | Reach to the Blaze | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| genasi-eepc-water-eepc | `genasi-eepc-water-eepc-trait-3` | Call to the Wave | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| genasi-mpmm-air-mpmm | `genasi-mpmm-air-mpmm-trait-2` | Mingle with the Wind | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| genasi-mpmm-earth-mpmm | `genasi-mpmm-earth-mpmm-trait-1` | Merge with Stone | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| genasi-mpmm-fire-mpmm | `genasi-mpmm-fire-mpmm-trait-1` | Reach to the Blaze | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| genasi-mpmm-water-mpmm | `genasi-mpmm-water-mpmm-trait-3` | Call to the Wave | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| giff-aag | `giff-aag-trait-0` | Astral Spark | modelled: PB uses, long rest |
+| gith-mtf-githyanki-mtf | `gith-mtf-githyanki-mtf-trait-3` | Githyanki Psionics | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| gith-mtf-githzerai-mtf | `gith-mtf-githzerai-mtf-trait-2` | Githzerai Psionics | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| githyanki-mpmm | `githyanki-mpmm-trait-0` | Astral Knowledge | skipped: proficiency swap per long rest, no uses |
+| githyanki-mpmm | `githyanki-mpmm-trait-1` | Githyanki Psionics | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| githzerai-mpmm | `githzerai-mpmm-trait-0` | Githzerai Psionics | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| gnome-phb-mark-of-scribing-erlw | `gnome-phb-mark-of-scribing-erlw-trait-1` | Scribe's Insight | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| goblin-mpmm | `goblin-mpmm-trait-3` | Fury of the Small | modelled: PB uses, long rest |
+| goblin-vgm | `goblin-vgm-trait-3` | Fury of the Small | modelled: 1 use, short or long rest |
+| goliath-mpmm | `goliath-mpmm-trait-2` | Stone's Endurance | modelled: PB uses, long rest |
+| goliath-vgm | `goliath-vgm-trait-3` | Stone's Endurance | modelled: 1 use, short or long rest |
+| hadozee-aag | `hadozee-aag-trait-3` | Hadozee Dodge | modelled: PB uses, long rest |
+| half-elf-phb-variant;-mark-of-detection-erlw | `half-elf-phb-variant;-mark-of-detection-erlw-trait-1` | Magical Detection | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| half-elf-phb-variant;-mark-of-storm-erlw | `half-elf-phb-variant;-mark-of-storm-erlw-trait-2` | Headwinds | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| half-orc-phb | `half-orc-phb-trait-4` | Relentless Endurance | modelled: 1 use, long rest |
+| half-orc-phb-variant;-mark-of-finding-erlw | `half-orc-phb-variant;-mark-of-finding-erlw-trait-2` | Finder's Magic | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| halfling-phb-lotusden-egw | `halfling-phb-lotusden-egw-trait-0` | Child of the Wood | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| halfling-phb-mark-of-healing-erlw | `halfling-phb-mark-of-healing-erlw-trait-1` | Healing Touch | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| halfling-phb-mark-of-hospitality-erlw | `halfling-phb-mark-of-hospitality-erlw-trait-1` | Innkeeper's Magic | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| harengon-mpmm | `harengon-mpmm-trait-3` | Lucky Footwork | skipped: reaction d4 with no use count |
+| harengon-mpmm | `harengon-mpmm-trait-4` | Rabbit Hop | modelled: PB uses, long rest |
+| harengon-wbtw | `harengon-wbtw-trait-3` | Lucky Footwork | skipped: reaction d4 with no use count |
+| harengon-wbtw | `harengon-wbtw-trait-4` | Rabbit Hop | modelled: PB uses, long rest |
+| hexblood-vrgr | `hexblood-vrgr-trait-4` | Eerie Token | modelled: 1 use, long rest |
+| hexblood-vrgr | `hexblood-vrgr-trait-5` | Hex Magic | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| hobgoblin-dmg | `hobgoblin-dmg-trait-0` | Martial Advantage | skipped: once per turn rider, not a resource |
+| hobgoblin-mpmm | `hobgoblin-mpmm-trait-3` | Fey Gift | modelled: PB uses, long rest |
+| hobgoblin-mpmm | `hobgoblin-mpmm-trait-4` | Fortune from the Many | modelled: PB uses, long rest |
+| hobgoblin-vgm | `hobgoblin-vgm-trait-4` | Saving Face | modelled: 1 use, short or long rest |
+| human-phb | `human-phb-mark-of-sentinel-erlw-trait-2` | Vigilant Guardian | modelled: 1 use, long rest |
+| human-phb-mark-of-handling-erlw | `human-phb-mark-of-handling-erlw-trait-1` | Primal Connection | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| human-phb-mark-of-making-erlw | `human-phb-mark-of-making-erlw-trait-2` | Spellsmith | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| human-phb-mark-of-passage-erlw | `human-phb-mark-of-passage-erlw-trait-2` | Magical Passage | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| human-phb-mark-of-sentinel-erlw | `human-phb-mark-of-sentinel-erlw-trait-1` | Guardian's Shield | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| human-phb-variant;-mark-of-finding-erlw | `human-phb-variant;-mark-of-finding-erlw-trait-2` | Finder's Magic | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| kender-dsotdq | `kender-dsotdq-trait-0` | Fearless | modelled: 1 use, long rest |
+| kender-dsotdq | `kender-dsotdq-trait-2` | Taunt | modelled: PB uses, long rest |
+| kenku-mpmm | `kenku-mpmm-trait-2` | Kenku Recall | modelled: PB uses, long rest |
+| kobold-mpmm | `kobold-mpmm-trait-1` | Draconic Cry | modelled: PB uses, long rest |
+| kobold-vgm | `kobold-vgm-trait-3` | Grovel, Cower, and Beg | modelled: 1 use, short or long rest |
+| leonin-mot | `leonin-mot-trait-6` | Daunting Roar | modelled: 1 use, short or long rest, DC CON |
+| lizardfolk-mpmm | `lizardfolk-mpmm-trait-3` | Hungry Jaws | modelled: PB uses, long rest |
+| lizardfolk-vgm | `lizardfolk-vgm-trait-4` | Cunning Artisan | skipped: downtime crafting during a short rest |
+| lizardfolk-vgm | `lizardfolk-vgm-trait-8` | Hungry Jaws | modelled: 1 use, short or long rest |
+| minotaur-(amonkhet)-psa | `minotaur-(amonkhet)-psa-trait-5` | Relentless Endurance | modelled: 1 use, long rest |
+| orc-(ixalan)-psx | `orc-(ixalan)-psx-trait-4` | Relentless Endurance | modelled: 1 use, long rest |
+| orc-mpmm | `orc-mpmm-trait-0` | Adrenaline Rush | modelled: PB uses, long rest |
+| orc-mpmm | `orc-mpmm-trait-3` | Relentless Endurance | modelled: 1 use, long rest |
+| owlin-scc | `owlin-scc-trait-2` | Flight | skipped: armor restriction wording, no uses |
+| reborn-vrgr | `reborn-vrgr-trait-3` | Knowledge from a Past Life | modelled: PB uses, long rest |
+| rimekin-lfl | `rimekin-lfl-trait-0` | Cold Fire Magic | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| sea-elf-mpmm | `sea-elf-mpmm-trait-7` | Trance | skipped: rest-duration rule, no uses |
+| shadar-kai-mpmm | `shadar-kai-mpmm-trait-1` | Blessing of the Raven Queen | modelled: PB uses, long rest |
+| shadar-kai-mpmm | `shadar-kai-mpmm-trait-6` | Trance | skipped: rest-duration rule, no uses |
+| shifter-erlw | `shifter-erlw-trait-5` | Shifting | modelled: 1 use, short or long rest |
+| shifter-mpmm | `shifter-mpmm-trait-2` | Shifting | modelled: PB uses, long rest |
+| tabaxi-mpmm | `tabaxi-mpmm-trait-5` | Feline Agility | skipped: recharges by moving 0 feet, not by a rest |
+| tabaxi-vgm | `tabaxi-vgm-trait-3` | Feline Agility | skipped: recharges by moving 0 feet, not by a rest |
+| thri-kreen-aag | `thri-kreen-aag-trait-5` | Sleepless | skipped: rest-duration rule, no uses |
+| tiefling-phb | `tiefling-phb-trait-4` | Infernal Legacy | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| tiefling-phb-baalzebul-mtf | `tiefling-phb-baalzebul-mtf-trait-0` | Legacy of Maladomini | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| tiefling-phb-dispater-mtf | `tiefling-phb-dispater-mtf-trait-0` | Legacy of Dis | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| tiefling-phb-fierna-mtf | `tiefling-phb-fierna-mtf-trait-0` | Legacy of Phlegethos | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| tiefling-phb-glasya-mtf | `tiefling-phb-glasya-mtf-trait-0` | Legacy of Malbolge | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| tiefling-phb-levistus-mtf | `tiefling-phb-levistus-mtf-trait-0` | Legacy of Stygia | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| tiefling-phb-mammon-mtf | `tiefling-phb-mammon-mtf-trait-0` | Legacy of Minauros | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| tiefling-phb-mephistopheles-mtf | `tiefling-phb-mephistopheles-mtf-trait-0` | Legacy of Cania | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| tiefling-phb-variant;-devils-tongue-scag | `tiefling-phb-variant;-devils-tongue-scag-trait-1` | Devil's Tongue | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| tiefling-phb-variant;-hellfire-scag | `tiefling-phb-variant;-hellfire-scag-trait-1` | Hellfire | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| tiefling-phb-zariel-mtf | `tiefling-phb-zariel-mtf-trait-0` | Legacy of Avernus | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| triton-mpmm | `triton-mpmm-trait-2` | Control Air and Water | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| triton-vgm | `triton-vgm-trait-4` | Control Air and Water | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| vampire-psz | `vampire-psz-trait-3` | Blood Thirst | skipped: no use count |
+| vedalken-ggr | `vedalken-ggr-trait-5` | Partially Amphibious | modelled: 1 use, long rest |
+| verdan-ai | `verdan-ai-trait-3` | Black Blood Healing | skipped: Hit Die reroll, no use count |
+| warforged-erlw | `warforged-erlw-trait-4` | Sentry's Rest | skipped: rest-duration rule, no uses |
+| yuan-ti-mpmm | `yuan-ti-mpmm-trait-4` | Serpentine Spellcasting | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+| yuan-ti-pureblood-vgm | `yuan-ti-pureblood-vgm-trait-3` | Innate Spellcasting | skipped: innate spell grant (its uses belong to the spell, not a species resource) |
+
 ## W5a (F2) Species trait resources: `derived.speciesResources` (2026-10-24)
 
 - **What.** New derived list key `speciesResources`, the class / feat resource shape minus `classId`, plus `speciesId` and `traitId`, `source = {kind: "species", id, label}`, id `species:<raceId>:<slug of trait name>`. Built by the pure `server/engine/species_resources.py` (`resources(catalog, race, race_id, subrace, variant, total_level, pb, modifiers, walk_speed)`), called from `resolve()` next to `featResources`. Data: `SPECIES_RESOURCES` in `catalog/reference_data.py`, keyed by catalog trait id; each entry carries `quotes` (verbatim substrings of the catalog trait text, tags stripped) and a paraphrased `note` template. Only ruleset-2024 species records are listed; the key is `[]` for every other species (the table gates on the species id, not on the draft ruleset, so decision D-1 holds: a 2024 species picked under mixed gets them too; no golden case holds one).

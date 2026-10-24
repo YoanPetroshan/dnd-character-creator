@@ -56,7 +56,9 @@ def resources(catalog, race: dict | None, race_id: str | None, subrace: dict | N
             continue
         con_mod = modifiers.get("CON", 0)
         values = {"pb": pb, "two_pb": 2 * pb, "level": total_level, "con_mod": con_mod,
-                  "speed_part": f" ({walk_speed} feet)" if walk_speed else ""}
+                  "speed_part": f" ({walk_speed} feet)" if walk_speed else "", "hop": 5 * pb,
+                  "half_level_up": (total_level + 1) // 2, "con_temp": max(1, con_mod),
+                  "shift_temp": max(1, total_level + con_mod)}
         details: dict = {}
         entry = {"id": f"species:{race_id}:{_slug(spec['name'])}", "speciesId": race_id, "traitId": tid,
                  "source": {"kind": "species", "id": race_id, "label": race.get("name") or race_id},
