@@ -3017,3 +3017,16 @@ Frontend only (`ChoicePicker.tsx`, a few structural rules appended to `index.css
 - **What.** `waitress==3.0.2` pinned in `server/requirements.txt` (the root requirements include it). `scripts/start.sh` (bash, `set -euo pipefail`, root resolved from the script path): fails with a clear message when `.venv` (waitress) is missing; builds the frontend (`npm ci && npm run build`) when `frontend/dist/index.html` is missing or `--rebuild` is given; then `cd server && exec ../.venv/bin/waitress-serve --listen=${HOST:-127.0.0.1}:${PORT:-8000} --threads=${THREADS:-4} app:app`. It never sets `FLASK_DEBUG`. `scripts/setup.sh` does venv + pip + npm ci + build. `Dockerfile` (node slim builds the frontend; python slim installs requirements, copies `server/`, `chargen/` and the built dist to `frontend/dist`, which is where `app.py` looks) and `.dockerignore`: both UNTESTED (no Docker here). README "Hosting for friends": Tailscale `tailscale serve` (recommended) or Caddy on a VPS, no authentication, 1 MB body limit, drafts in localStorage per origin, Docker untested.
 - **Import guard.** `ALLOWED_THIRD_PARTY` unchanged: nothing in Python imports waitress (only the start script runs its CLI).
 - **Tests.** `server/tests/test_deployment.py`: app is a WSGI callable serving index.html (FRONTEND_DIST tmp dist; SPA serving itself is covered by `test_spa_serving.py`); thread-safety guard: deep hash (`json.dumps(default=str, sort_keys=True)`) of every attribute of the shared `app._catalog` except the lazy `_row_index`, 20 fuzz drafts resolved in 4 threads through the test client, all 200, hash unchanged (no shared-catalog mutation found); `bash -n` and executable bit for both scripts; start.sh has no FLASK_DEBUG; opt-in `RUN_WAITRESS_TEST=1` runs the real start script on a free port and fetches `/` and POSTs `/api/resolve`.
+
+## B5 clean-clone smoke (2026-11-03)
+
+`scripts/smoke_clean_clone.py` (stdlib only) clones HEAD with `git clone --no-local` into a temp dir and runs the app from
+there with a minimal environment (PATH, empty HOME, PYTHONNOUSERSITE=1, no `DND_*`), using the main checkout's `.venv`
+interpreter (cwd = clone/server) and with non-loopback sockets blocked. It asserts: app and `official_dir()` are inside the
+clone, `data_source()=='bundled'`, the pinned catalog counts, a fixed non-SRD draft (Wizard 5, Scribes TCE, Hobgoblin VGM,
+XGE spells, PHB Alert) resolves with no problems, and yaml/markdown/pdf exports return 200 (PDF > 10 KB, fonts load).
+`--frontend` builds the SPA in the clone (symlinked node_modules) and checks `GET /`; `--full-suite` runs `pytest -q -n 4`
+in the clone (0 failures, no official-data skips). It refuses tracked changes. Tests: `server/tests/test_clean_clone_smoke.py`
+(env builder, network blocker, tracked-change guard, a clone missing races.json fails; full run only with `RUN_CLONE_SMOKE=1`).
+Results at B5: default 1.2 s, `--frontend` 2.5 s, `--full-suite` 46 s (7444 passed, 2 skipped, none data-related). No defect found
+in the committed tree.

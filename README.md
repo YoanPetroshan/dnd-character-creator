@@ -83,6 +83,14 @@ the Vite dev origin (`http://localhost:5173`).
 
 ## Test
 
+Clean-clone smoke (proves the committed tree alone runs the app: fresh `git clone` of HEAD, empty `HOME`, no `DND_*`
+variables, network blocked; commit first, it refuses tracked changes):
+
+    .venv/bin/python scripts/smoke_clean_clone.py [--frontend] [--full-suite] [--keep]
+
+It reuses the main checkout's `.venv` (dependencies are not data). A true fresh-venv check needs `pip download` once
+while online, then `pip install --no-index --find-links <dir>`. `RUN_CLONE_SMOKE=1` also runs it from pytest.
+
     # v2 server (the main suite)
     cd server && ../.venv/bin/python -m pytest -q
     # repo-root tests (the chargen package + the import-isolation guard that covers server/ too)
