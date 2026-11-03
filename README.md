@@ -24,11 +24,12 @@ For how the v2 engine works, read
     .venv/bin/pip install -r server/requirements.txt
     cd frontend && npm install
 
-The official 5etools data (the ~150 non-SRD races, backgrounds, feats, spells, subclasses) is vendored in the repo at
-`server/data/official`, so no sync step is needed. Which data the server reads (read at call time):
+The full data ships in the repo: the SRD JSON in `chargen/data/srd/` and the official 5etools data (the ~150 non-SRD
+races, backgrounds, feats, spells, subclasses) in `server/data/official`. A fresh clone runs the whole app with no
+sync step and nothing outside the repository. Which data the server reads (decided at call time):
 `DND_OFFICIAL_DATA=none` gives SRD-only; `DND_OFFICIAL_DATA=<dir>` uses that directory; an explicitly set
 `DND_CAMPAIGN_ROOT` with a non-empty `.data/official` uses that one; otherwise the bundle. The implicit
-`~/.claude/dnd/.data/official` is no longer read. (B3 will document refreshing the bundle.)
+`~/.claude/dnd/.data/official` is not read. Where the data comes from: `DATA-SOURCES.md`.
 
 ## Run
 
@@ -59,16 +60,36 @@ Backend settings: `HOST` (default `127.0.0.1`), `PORT` (default `8000`),
 Python dependencies are pinned in `server/requirements.txt` (the repo-root `requirements.txt` only includes it, so one install covers both suites). The frontend is locked by
 `frontend/package-lock.json`.
 
-**Official data and skips.** The server tests run against the vendored bundle by default, so none of them skip for a data reason. Two skip reasons exist for the case where the data is hidden: tests that need the official
-data, classes or spells (the W12 `needs_official` marker, built from `has_official()`, `has_official_classes()` and
-`has_official_spells()` in `catalog.official_source`) skip with "5etools data not available", and
-older modules skip with "official data not fetched on this machine". Skip markers evaluate at collection time, so set the variable before pytest starts: to run the SRD-only subset, put `env DND_OFFICIAL_DATA=none` in front of the pytest
-command (`DND_CAMPAIGN_ROOT=/nonexistent` no longer hides anything: it now means "use the bundle"). Measured on 2026-11-03: with the bundle 7415+ tests pass; with `DND_OFFICIAL_DATA=none` about 5705 skip and about 1460 pass, with 0 failures and 0 errors. The repo-root suite does not depend on the data: 356 passed,
-8 skipped (ported dead-by-design code).
+**Official data and skips.** The server tests run against the bundled data by default, so none of them skip for a data
+reason: 7434 passed, 0 skipped. To run the SRD-only subset put `env DND_OFFICIAL_DATA=none` in front of the pytest
+command; the tests that need the official data, classes or spells (the W12 `needs_official` marker, built from
+`has_official()`, `has_official_classes()` and `has_official_spells()` in `catalog.official_source`, plus older modules
+with "official data not fetched on this machine") then skip, giving 1479 passed / 5705 skipped, 0 failed:
+
+    cd server && env DND_OFFICIAL_DATA=none ../.venv/bin/python -m pytest -q
+
+Skip markers evaluate at collection time, so the variable must be set before pytest starts.
+`DND_CAMPAIGN_ROOT=/nonexistent` no longer hides anything: it now means "use the bundle" (superseded by
+`DND_OFFICIAL_DATA=none`). The repo-root suite does not depend on the data: 356 passed, 8 skipped (ported dead-by-design code).
 
 **Timing.** The server suite takes about 105 s on the development machine (126 s when another suite runs in parallel); the root suite takes about 5 s. Run either in the background if your tool has a timeout.
 
-**Parallel run (opt-in).** `pytest-xdist` is installed from `server/requirements.txt`. Serial `pytest -q` stays the default (no `-n` in `pytest.ini`); to use all cores run `cd server && ../.venv/bin/python -m pytest -q -n auto` (or `-n 4`). Pass/skip counts are identical to the serial run (7415 passed with the data; 1460 passed / 5705 skipped with `DND_OFFICIAL_DATA=none`). Measured on 2026-11-03 on an 8-CPU Mac: serial about 110 s, `-n 4` about 40 s, `-n auto` (8 workers) about 45 s; with `DND_OFFICIAL_DATA=none` parallel is not faster (serial 10 s, `-n auto` 12 s). The repo-root suite (about 2 s) does not benefit.
+**Parallel run (opt-in).** `pytest-xdist` is installed from `server/requirements.txt`. Serial `pytest -q` stays the default (no `-n` in `pytest.ini`); to use all cores run `cd server && ../.venv/bin/python -m pytest -q -n auto` (or `-n 4`). Pass/skip counts are identical to the serial run (7434 passed with the data; 1479 passed / 5705 skipped with `DND_OFFICIAL_DATA=none`). Measured on 2026-11-03 on an 8-CPU Mac: serial about 110 s, `-n 4` about 40 s, `-n auto` (8 workers) about 45 s; with `DND_OFFICIAL_DATA=none` parallel is not faster (serial 10 s, `-n auto` 12 s). The repo-root suite (about 2 s) does not benefit.
+
+**Refreshing the official data.** The bundle is a frozen byte copy; refresh it only on purpose.
+
+1. Fetch current 5etools data into the local sync folder: `.venv/bin/python -m chargen.sync --official --force`
+   (or skip this step and point step 2 at a `5etools-src` checkout's `data/` directory).
+2. Rebuild the bundle: `cd server && ../.venv/bin/python -m catalog.official.bundle --from <dir>`
+   (`<dir>` is the synced folder, `~/.claude/dnd/.data/official`, or the checkout's data directory).
+   `--check` instead prints what would change and writes nothing.
+3. Run the full server suite and the golden (`tests/test_c_series_golden.py`), then the root suite.
+
+A golden diff after a refresh is EXPECTED (the data changed) and needs its own named `--rebaseline` slice; never use
+`--regenerate`. Commit `server/data/official/**` (including `MANIFEST.json`) and update `DATA-SOURCES.md`.
+Note: the docstrings in `chargen/sync.py` and `chargen/sources.py` that say the official data is "never committed" are
+historical. `chargen/` is not edited here (it must stay byte-identical to its source repo, see
+`tests/test_chargen_isolation.py`), so those sentences were left as they are; the data now ships in `server/data/official`.
 
 **Fuzz.** `server/tests/test_resolve_fuzz.py` runs 60 seeded random drafts by default. For a bigger run set `FUZZ_N`
 (and `FUZZ_SEED0` for the first seed): `FUZZ_N=2000 FUZZ_SEED0=0 .venv/bin/python -m pytest server/tests/test_resolve_fuzz.py -q`.
