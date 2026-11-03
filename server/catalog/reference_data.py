@@ -1057,6 +1057,79 @@ BACKGROUND_FEATS_FROM_TEXT: dict[str, dict] = {
 # from LANGUAGE_NAMES (the 2024 rare table, C6b-2).
 FEAT_FIXED_LANGUAGE_OVERRIDES = {"harper-agent-frhof": ["thieves-cant"]}
 
+# W11: DATA_OVERRIDES, the single registry of every place the converters or tables correct a defect of the raw 5etools
+# data. It is DOCUMENTATION plus a tripwire, not a lookup: nothing reads it at runtime (behavior is unchanged), the
+# code keeps using the tables and functions named in `where`. tests/test_data_overrides.py asserts per entry that the
+# raw record STILL has the defect (a fixed upstream record fails loudly, so the override can be removed) and that the
+# `where` symbol ("module:name") still exists.
+#   what = the correction; where = the code that applies it; raw_record_pin = {file, record, defect} in the synced
+#   official data (path under official_dir() unless noted); reason = why the data is wrong and what wins.
+DATA_OVERRIDES: dict[str, dict] = {
+    "cleric-2024-gold": {
+        "what": "Cleric XPHB starting equipment A: gold is 70 GP from the text-line amount, not the data value",
+        "where": "catalog.official.class_chassis:_class_equipment_options_2024",
+        "raw_record_pin": {"file": "class/class-cleric.json", "record": "class Cleric|XPHB startingEquipment",
+                           "defect": "defaultData A value is 7000 (cp) while the entries line says \"7 GP\""},
+        "reason": "the record's own text line wins over `value`; the class gold is read from the text per option",
+    },
+    "mulhorandi-tomb-raider-gold": {
+        "what": "Mulhorandi Tomb Raider (FRHoF) equipment A keeps its 26 GP, taken from the text line",
+        "where": "catalog.official.background_equipment:_text_gold",
+        "raw_record_pin": {"file": "backgrounds.json", "record": "background Mulhorandi Tomb Raider|FRHoF startingEquipment",
+                           "defect": "the gold is fused into the waterskin displayName \"Waterskin 26 GP\" and no value entry exists"},
+        "reason": "the data lost the gold amount into a display name; the text line states it",
+    },
+    "scribe-item-counts": {
+        "what": "Scribe (XPHB) Oil x3 and Parchment x12 come from the text tokens",
+        "where": "catalog.official.background_equipment:_text_count",
+        "raw_record_pin": {"file": "backgrounds.json", "record": "background Scribe|XPHB startingEquipment A",
+                           "defect": "oil and parchment are bare items without quantity or displayName count"},
+        "reason": "the data lost \"(3 flasks)\" and \"(12 sheets)\"; the text line states them and wins",
+    },
+    "carouser-generic-gaming-set": {
+        "what": "Carouser (ABH) tool proficiency {\"gaming set\": true} becomes a one-pick card of Gaming Sets",
+        "where": "catalog.official.proficiencies:_GENERIC_TOOL_KEYS",
+        "raw_record_pin": {"file": "backgrounds.json", "record": "background Carouser|ABH toolProficiencies",
+                           "defect": "a generic category name stored as a fixed grant: {\"gaming set\": true}"},
+        "reason": "the text says \"Choose one kind of Gaming Set\"; a fixed grant of a category is not a tool",
+    },
+    "elemental-adept-phb-repeatable": {
+        "what": "PHB 2014 Elemental Adept may be taken more than once",
+        "where": "catalog.reference_data:REPEATABLE_FEAT_OVERRIDES",
+        "raw_record_pin": {"file": "feats.json", "record": "feat Elemental Adept|PHB",
+                           "defect": "no `repeatable` flag (the XPHB record has it)"},
+        "reason": "the feat text allows several takes with a different damage type each",
+    },
+    "echoing-soul-skill-count": {
+        "what": "Echoing Soul (RHW) grants two skill proficiencies",
+        "where": "catalog.reference_data:FEAT_SKILL_PICK_COUNT_OVERRIDES",
+        "raw_record_pin": {"file": "feats.json", "record": "feat Echoing Soul|RHW skillProficiencies",
+                           "defect": "[{\"any\": 1}] while the text says \"proficiency in two skills of your choice\""},
+        "reason": "the feat text wins over the structured count",
+    },
+    "harper-agent-thieves-cant": {
+        "what": "Harper Agent (FRHoF) fixed language Thieves' Cant",
+        "where": "catalog.reference_data:FEAT_FIXED_LANGUAGE_OVERRIDES",
+        "raw_record_pin": {"file": "feats.json", "record": "feat Harper Agent|FRHoF languageProficiencies",
+                           "defect": "[{\"thieves' cant\": true}], a key the language converter does not know"},
+        "reason": "the feat text says \"You know Thieves' Cant.\"",
+    },
+    "genie-touched-feat": {
+        "what": "Genie Touched (FRHoF) grants Magic Initiate (Wizard)",
+        "where": "catalog.reference_data:BACKGROUND_FEATS_FROM_TEXT",
+        "raw_record_pin": {"file": "backgrounds.json", "record": "background Genie Touched|FRHoF",
+                           "defect": "no `feats` field although its entries line says \"Magic Initiate|XPHB (Wizard)\""},
+        "reason": "the record's own text names the feat; the table restores the raw-shaped `feats` list",
+    },
+    "pact-of-the-chain-ritual": {
+        "what": "Pact of the Chain (XPHB) Find Familiar is an at-will innate spell",
+        "where": "engine.class_choices_2024:_INNATE_USES_2024",
+        "raw_record_pin": {"file": "optionalfeatures.json", "record": "optionalfeature Pact of the Chain|XPHB additionalSpells",
+                           "defect": "innate frequency key \"ritual\" while the text casts it as a Magic action without a slot"},
+        "reason": "the text says no spell slot is expended, so the engine maps \"ritual\" to at-will",
+    },
+}
+
 # RP3 (A1): a feat whose fixed language becomes "one language of your choice" when the character already knows it.
 # index -> {language, label, quote} (`quote` is pinned against the catalog feat text). The replacement pool is the
 # PHB 2024 Standard + Rare tables (decision E2): the feat text names "the language tables in the Player's Handbook
