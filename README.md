@@ -22,7 +22,7 @@ For how the v2 engine works, read
 
     python3 -m venv .venv
     .venv/bin/pip install -r server/requirements.txt
-    cd frontend && npm install
+    cd frontend && npm install     # or: scripts/setup.sh (venv, deps, frontend build)
 
 The full data ships in the repo: the SRD JSON in `chargen/data/srd/` and the official 5etools data (the ~150 non-SRD
 races, backgrounds, feats, spells, subclasses) in `server/data/official`. A fresh clone runs the whole app with no
@@ -47,6 +47,39 @@ Single origin, as it would be deployed (Flask serves the built frontend and the 
 
 Backend settings: `HOST` (default `127.0.0.1`), `PORT` (default `8000`),
 `FLASK_DEBUG=1` for the debugger.
+
+## Hosting for friends
+
+Run it (builds the frontend on first start; `--rebuild` forces a rebuild; `scripts/setup.sh` does the one-time venv and
+npm setup):
+
+    scripts/start.sh
+
+This starts [waitress](https://docs.pylonsproject.org/projects/waitress/) (a production WSGI server, not the Flask
+dev server; `FLASK_DEBUG` is never set). Settings: `HOST` (default `127.0.0.1`), `PORT` (default `8000`), `THREADS`
+(default `4`), for example `env HOST=0.0.0.0 PORT=9000 scripts/start.sh`.
+
+It is a single origin: Flask serves the built frontend and the API (`/api/*`) from the same port. CORS only matters for
+the Vite dev origin (`http://localhost:5173`).
+
+**HTTPS.** The app speaks plain HTTP; put TLS in front of it:
+
+1. **Tailscale (recommended).** Keep the default `127.0.0.1:8000` and run `tailscale serve --bg 8000` (the exact flags
+   depend on your Tailscale version). You get HTTPS inside your tailnet only; nothing is exposed publicly. Friends join
+   your tailnet (or you share the node) and open the `https://<machine>.<tailnet>.ts.net` URL.
+2. **A VPS or home server behind Caddy.** Run the app on `127.0.0.1:8000` and let Caddy proxy to it with automatic
+   HTTPS (`example.com { reverse_proxy 127.0.0.1:8000 }`).
+
+**Things to know.**
+
+- There is **no authentication**: anyone who can reach the URL can use the app. Request bodies are limited to 1 MB
+  (`MAX_CONTENT_LENGTH`). Do not expose it to the open internet unless that is what you want.
+- Nothing is stored on the server. Each friend's draft lives in their own browser's `localStorage`, **per origin**:
+  changing the host, port or scheme makes the draft "disappear" (it is still under the old origin). Export the draft
+  first.
+- The data ships in the repository, so no sync step is needed on the host.
+- A `Dockerfile` and `.dockerignore` are included, but **untested** (Docker is not installed on the development
+  machine).
 
 ## Test
 
