@@ -46,12 +46,23 @@ def armor_class_from_gear(
 _ARMOR_PROFICIENCY = {"Light": "light-armor", "Medium": "medium-armor", "Heavy": "heavy-armor"}
 
 
-def armor_speed_penalty(equipped_items: list[dict], scores: dict) -> int:
+def counted_body_armor_id(equipped_items: list[dict]) -> str | None:
+    """WH: the suit the engine counts for AC and `slots.current.armor` -- the first body armor in the list."""
+    for item in equipped_items:
+        if item.get("equipment_category", {}).get("index") == "armor" and item.get("armor_category") != "Shield":
+            return item.get("index")
+    return None
+
+
+def armor_speed_penalty(equipped_items: list[dict], scores: dict, counted_body: str | None = None) -> int:
     """W1: 10 ft when any worn body armor lists a Strength score above the wearer's (PHB 2014 and 2024: "that
     armor reduces the wearer's speed by 10 feet unless the wearer has a Strength score equal to or higher than the
-    listed score"). Taken once even for several suits; shields have no requirement."""
+    listed score"). Taken once even for several suits; shields have no requirement. WH: with `counted_body` only that
+    suit is looked at (the one AC uses), so a second, uncounted suit cannot slow the wearer."""
     strength = scores.get("STR", 10)
     for item in equipped_items:
+        if counted_body is not None and item.get("index") != counted_body:
+            continue
         if (item.get("equipment_category", {}).get("index") == "armor" and item.get("armor_category") != "Shield"
                 and (item.get("str_minimum") or 0) > strength):
             return 10
@@ -60,7 +71,7 @@ def armor_speed_penalty(equipped_items: list[dict], scores: dict) -> int:
 
 def armor_warnings(
     equipped_items: list[dict], scores: dict, proficiency_ids, medium_armor_stealth_ok: bool = False,
-    speed_exempt: bool = False,
+    speed_exempt: bool = False, counted_body: str | None = None,
 ) -> tuple[list[dict], bool]:
     """Non-blocking warnings for worn armor and whether any of it imposes
     disadvantage on Stealth. Shields need `shields`; body armor needs its
@@ -86,7 +97,8 @@ def armor_warnings(
                 "message": f"Not proficient with {name}: disadvantage on STR/DEX ability checks, saves and attack rolls, and no spellcasting while it is worn.",
             })
         minimum = item.get("str_minimum") or 0
-        if minimum > scores.get("STR", 10) and not speed_exempt:
+        uncounted = (counted_body is not None and category != "Shield" and index != counted_body)  # WH
+        if minimum > scores.get("STR", 10) and not speed_exempt and not uncounted:
             warnings.append({
                 "id": f"armor-strength-{index}",
                 "message": f"{name} needs Strength {minimum}; below that, speed is reduced by 10 ft.",

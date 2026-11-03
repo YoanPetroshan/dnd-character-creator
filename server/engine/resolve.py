@@ -549,7 +549,8 @@ def _species_senses(race: dict | None, subrace: dict | None, catalog: Catalog, v
 
 def _srd_trait_effects(race: dict | None, subrace: dict | None) -> list[dict]:
     """reference_data.SRD_TRAIT_EFFECTS entries for every trait of the race
-    and subrace (bundled SRD only; official trait ids never match)."""
+    and subrace. Keyed by trait id: the bundled SRD ids plus, since W1, four official
+    trait ids (the Dwarven Toughness variants), so official records can match too."""
     effects = []
     for src in (race, subrace):
         if not src:
@@ -6552,7 +6553,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         speeds = _raise_walk_speed(speeds, feat_effects_mod.walk_bonus(feat_inst))
     speed_exempt = _heavy_armor_speed_exempt(race, subrace)  # W1
     speeds = _heavy_armor_speed_penalty(  # W1: after every walk bonus, before the "equal to your walking speed" modes
-        speeds, 0 if speed_exempt else equipment_mod.armor_speed_penalty(equipped_items, final_scores))
+        speeds, 0 if speed_exempt else equipment_mod.armor_speed_penalty(
+            equipped_items, final_scores, equipment_mod.counted_body_armor_id(equipped_items)))  # WH: the suit AC counts
     if speeds.get("walk"):  # WF: species "equal to your walking speed" modes follow the FINAL walk (bonuses, penalty)
         for mode in _species_equal_walk_modes(race, subrace):
             speeds = {**speeds, mode: speeds["walk"]}
@@ -6591,7 +6593,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     weapon_masteries = _weapon_masteries(choices, catalog)
     attacks = attacks_mod.annotate_mastery(attacks, weapon_masteries)  # C2
     armor_problems, stealth_disadvantage = equipment_mod.armor_warnings(
-        equipped_items, final_scores, weapon_proficiencies, feat_effects_mod.medium_armor_stealth_ok(feat_inst), speed_exempt)  # FE4, W1
+        equipped_items, final_scores, weapon_proficiencies, feat_effects_mod.medium_armor_stealth_ok(feat_inst), speed_exempt,
+        equipment_mod.counted_body_armor_id(equipped_items))  # FE4, W1, WH
     warnings += armor_problems
     carrying = derived_mod.carrying_summary(
         final_scores.get("STR", 10), species_size or (race or {}).get("size") or "Medium",

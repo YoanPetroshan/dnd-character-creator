@@ -320,3 +320,20 @@ def test_warning_is_not_raised_for_the_exempt_dwarf_but_is_for_others(catalog):
     assert "armor-strength-plate-armor" not in ids(_res(catalog, "dwarf", "hill-dwarf", base={"STR": 6}, added=PLATE))
     assert "armor-strength-plate-armor" in ids(_res(catalog, "dwarf-xphb", ruleset="2024", base={"STR": 6}, added=PLATE))
     assert "armor-strength-plate-armor" in ids(_res(catalog, base={"STR": 6}, added=PLATE))
+
+
+# ---------------------------------------------------------------- WH: speed penalty follows the suit AC counts
+
+def test_wh_two_suits_no_pick_penalty_follows_first_suit(catalog):
+    r = _res(catalog, base={"STR": 13}, added=["chain-mail", "plate-armor"])  # human +1: STR 14
+    assert _walk(r) == 30
+    ids = [w["id"] for w in r["warnings"]]
+    assert "armor-strength-plate-armor" not in ids
+    assert "armor-multiple-body" in ids
+    assert r["derived"]["armorClass"] == 16  # chain mail
+
+
+def test_wh_explicit_worn_plate_slows(catalog):
+    r = _res(catalog, base={"STR": 13}, added=["chain-mail", "plate-armor"], worn={"armor": "plate-armor"})
+    assert _walk(r) == 20
+    assert "armor-strength-plate-armor" in [w["id"] for w in r["warnings"]]
