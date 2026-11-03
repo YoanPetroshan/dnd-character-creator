@@ -102,20 +102,20 @@ Python dependencies are pinned in `server/requirements.txt` (the repo-root `requ
 `frontend/package-lock.json`.
 
 **Official data and skips.** The server tests run against the bundled data by default, so none of them skip for a data
-reason: 7434 passed, 0 skipped. To run the SRD-only subset put `env DND_OFFICIAL_DATA=none` in front of the pytest
+reason: 7449 passed, 2 skipped (both opt-in: `RUN_WAITRESS_TEST=1` and `RUN_CLONE_SMOKE=1`). To run the SRD-only subset put `env DND_OFFICIAL_DATA=none` in front of the pytest
 command; the tests that need the official data, classes or spells (the W12 `needs_official` marker, built from
 `has_official()`, `has_official_classes()` and `has_official_spells()` in `catalog.official_source`, plus older modules
-with "official data not fetched on this machine") then skip, giving 1479 passed / 5705 skipped, 0 failed:
+with "official data not fetched on this machine") then skip, giving 1493 passed / 5708 skipped, 0 failed:
 
     cd server && env DND_OFFICIAL_DATA=none ../.venv/bin/python -m pytest -q
 
 Skip markers evaluate at collection time, so the variable must be set before pytest starts.
 `DND_CAMPAIGN_ROOT=/nonexistent` no longer hides anything: it now means "use the bundle" (superseded by
-`DND_OFFICIAL_DATA=none`). The repo-root suite does not depend on the data: 356 passed, 8 skipped (ported dead-by-design code).
+`DND_OFFICIAL_DATA=none`). The repo-root suite does not depend on the data: 356 passed, 8 skipped (ported dead-by-design code). With an empty `HOME` the server suite gives 7448 passed / 3 skipped (the third is the bundle-vs-synced-copy comparison, which needs a real synced copy).
 
-**Timing.** The server suite takes about 105 s on the development machine (126 s when another suite runs in parallel); the root suite takes about 5 s. Run either in the background if your tool has a timeout.
+**Timing.** The wall-clock "resolve() under 50 ms" tests are warm and take the best of N runs (`server/tests/perf_helpers.py`), so a busy machine does not fail them; the bound itself is unchanged. The server suite takes about 105 s on the development machine (126 s when another suite runs in parallel); the root suite takes about 5 s. Run either in the background if your tool has a timeout.
 
-**Parallel run (opt-in).** `pytest-xdist` is installed from `server/requirements.txt`. Serial `pytest -q` stays the default (no `-n` in `pytest.ini`); to use all cores run `cd server && ../.venv/bin/python -m pytest -q -n auto` (or `-n 4`). Pass/skip counts are identical to the serial run (7434 passed with the data; 1479 passed / 5705 skipped with `DND_OFFICIAL_DATA=none`). Measured on 2026-11-03 on an 8-CPU Mac: serial about 110 s, `-n 4` about 40 s, `-n auto` (8 workers) about 45 s; with `DND_OFFICIAL_DATA=none` parallel is not faster (serial 10 s, `-n auto` 12 s). The repo-root suite (about 2 s) does not benefit.
+**Parallel run (opt-in).** `pytest-xdist` is installed from `server/requirements.txt`. Serial `pytest -q` stays the default (no `-n` in `pytest.ini`); to use all cores run `cd server && ../.venv/bin/python -m pytest -q -n auto` (or `-n 4`). Pass/skip counts are identical to the serial run (7449 passed / 2 skipped with the data; 1493 passed / 5708 skipped with `DND_OFFICIAL_DATA=none`). Measured on 2026-11-03 on an 8-CPU Mac: serial about 110 s, `-n 4` about 40 s, `-n auto` (8 workers) about 45 s; with `DND_OFFICIAL_DATA=none` parallel is not faster (serial 10 s, `-n auto` 12 s). The repo-root suite (about 2 s) does not benefit.
 
 **Refreshing the official data.** The bundle is a frozen byte copy; refresh it only on purpose.
 

@@ -14,6 +14,7 @@ import pytest
 import app as app_module
 from app import DIST, app
 from catalog.loader import load
+from catalog.official.paths import has_official, has_official_classes, has_official_spells
 from test_resolve_fuzz import gen_draft
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -44,6 +45,8 @@ def _catalog_hash(cat) -> str:
     return hashlib.sha256(json.dumps(state, default=str, sort_keys=True).encode()).hexdigest()
 
 
+@pytest.mark.skipif(not (has_official() and has_official_classes() and has_official_spells()),
+                    reason="the fuzz draft generator needs the official data (DND_OFFICIAL_DATA=none is SRD-only)")
 def test_concurrent_resolves_do_not_mutate_shared_catalog():
     cat = app_module._catalog
     # warm lazy caches once so the before/after comparison sees a stable shape
