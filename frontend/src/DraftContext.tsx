@@ -351,24 +351,32 @@ export function mergeDraft(stored: unknown): Draft {
   return sanitizeDraft({ ...merged, draftVersion: DRAFT_VERSION });
 }
 
-function loadInitial(): { draft: Draft; notice: string | null } {
+function loadInitial(): { draft: Draft; notice: string | null; unsavedRaw: string | null } {
   let raw: string | null = null;
   try {
     raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { draft: mergeDraft(JSON.parse(raw)), notice: null };
+    if (raw) return { draft: mergeDraft(JSON.parse(raw)), notice: null, unsavedRaw: null };
   } catch (e) {
     // corrupt or inaccessible storage — start fresh, but keep what was there
     if (raw) {
+      let backedUp = true;
       try {
         localStorage.setItem(BACKUP_KEY, raw);
       } catch {
-        // nothing more can be done
+        backedUp = false; // storage near quota: the old text is about to be overwritten
       }
       const why = e instanceof SyntaxError ? "Запазената чернова е повредена." : e instanceof Error ? e.message : "";
-      return { draft: emptyDraft, notice: `${why} Започнато е с празна чернова; старата е запазена в браузъра (${BACKUP_KEY}).` };
+      if (!backedUp) {
+        return {
+          draft: emptyDraft,
+          notice: `${why} Започнато е с празна чернова, а старата НЕ можа да се запази в браузъра (хранилището е пълно). Свали я сега, иначе ще се загуби.`,
+          unsavedRaw: raw,
+        };
+      }
+      return { draft: emptyDraft, notice: `${why} Започнато е с празна чернова; старата е запазена в браузъра (${BACKUP_KEY}).`, unsavedRaw: null };
     }
   }
-  return { draft: emptyDraft, notice: null };
+  return { draft: emptyDraft, notice: null, unsavedRaw: null };
 }
 
 interface DraftContextValue {
@@ -377,6 +385,8 @@ interface DraftContextValue {
   /** One-off message about the boot-time load (unreadable stored draft). */
   notice: string | null;
   dismissNotice: () => void;
+  /** Raw text of an unreadable stored draft whose backup write failed; offered for download. */
+  unsavedRaw: string | null;
   /** The last write to localStorage failed (quota, private mode). */
   storageFailed: boolean;
 }
@@ -402,7 +412,7 @@ export function DraftProvider({ children }: { children: ReactNode }) {
   }, [draft]);
 
   return (
-    <DraftContext.Provider value={{ draft, dispatch, notice, dismissNotice, storageFailed }}>{children}</DraftContext.Provider>
+    <DraftContext.Provider value={{ draft, dispatch, notice, dismissNotice, unsavedRaw: boot.unsavedRaw, storageFailed }}>{children}</DraftContext.Provider>
   );
 }
 

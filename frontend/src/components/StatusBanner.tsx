@@ -6,7 +6,7 @@ import { useResolutionContext } from "../ResolutionContext";
  *  good resolution stays on screen), a draft that could not be stored or
  *  restored, and selections the server dropped. */
 export function StatusBanner() {
-  const { notice, storageFailed, dismissNotice } = useDraft();
+  const { notice, storageFailed, dismissNotice, unsavedRaw } = useDraft();
   const { resolution, error, retry } = useResolutionContext();
   const prunedCount = resolution?.pruned.length ?? 0;
   return (
@@ -23,6 +23,16 @@ export function StatusBanner() {
       {notice && (
         <p className="status-banner" role="status">
           {notice}{" "}
+          {unsavedRaw && (
+            <>
+              <a href={`data:application/json;charset=utf-8,${encodeURIComponent(unsavedRaw)}`} download="dnd-draft-unreadable.json">
+                Свали старата чернова
+              </a>{" "}
+              <button type="button" onClick={() => void navigator.clipboard?.writeText(unsavedRaw).catch(() => undefined)}>
+                Копирай текста
+              </button>{" "}
+            </>
+          )}
           <button type="button" onClick={dismissNotice}>
             Разбрах
           </button>
