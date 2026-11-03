@@ -1,6 +1,6 @@
 """Turns a Resolution (see engine/resolve.py) into a human-readable
 Markdown character sheet. Not a port of the v1 markdown_render.py at the
-repo root — that module is scoped to chargen.build()'s different sheet
+repo root (removed in D-5) — that module is scoped to chargen.build()'s different sheet
 shape (it has fields v2 doesn't compute yet, like HP tracking and
 currency, and skips fields v2 does have). This module reads only
 resolution["sheet"]/["derived"] exactly as engine/resolve.py's resolve()

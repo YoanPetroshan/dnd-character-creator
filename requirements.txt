@@ -1,2 +1,2 @@
-# The v1 root app needs a subset of the v2 server dependencies (flask, flask-cors, PyYAML, pypdf, pytest).
+# The repo-root tests (chargen + import isolation) need a subset of the server dependencies.
 -r server/requirements.txt

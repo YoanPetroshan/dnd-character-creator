@@ -34,20 +34,19 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 # The declared third-party dependencies this repo actually uses, across
-# both the root requirements.txt (this app's v1 code) and server/
-# requirements.txt (v2's Flask backend) — there is no single combined
-# manifest, so this set is the closest thing to one. Everything else must
-# be stdlib or `chargen`.
+# both the root requirements.txt (which only includes server/requirements.txt;
+# the v1 root code was removed in D-5) and server/requirements.txt (v2's Flask
+# backend). Everything else must be stdlib or `chargen`.
 ALLOWED_THIRD_PARTY = {"flask", "flask_cors", "werkzeug", "yaml", "pypdf", "fpdf", "pytest"}
 
 STDLIB_MODULES = set(sys.stdlib_module_names)
 
 _EXCLUDED_DIR_PARTS = {".venv", "venv", "__pycache__", ".git"}
 
-# This app's own first-party, repo-root modules (app.py, storage.py, ...) —
-# these import each other freely; the invariant this test defends is that
-# NONE of them (or chargen) reach out to the source repo's play engine, not
-# that they can't import their own siblings.
+# First-party repo-root modules (none since the v1 root files were removed in
+# D-5, but any new root *.py would be allowed to import its siblings) — the
+# invariant this test defends is that NONE of them (or chargen) reach out to
+# the source repo's play engine.
 LOCAL_MODULES = {p.stem for p in ROOT.glob("*.py")} | {"chargen", "tests"}
 
 # The v2 builder's own first-party packages, all living under server/
@@ -58,7 +57,8 @@ LOCAL_MODULES = {p.stem for p in ROOT.glob("*.py")} | {"chargen", "tests"}
 # the module docstring), so this exemption only applies to imports from
 # inside server/ itself — an `import engine` anywhere else in the repo is
 # still exactly the violation this test is designed to flag.
-SERVER_LOCAL_MODULES = {"catalog", "engine", "export", "export_fields", "markdown_export", "pdf_export", "test_export", "kitchen_sink", "c7c_helpers", "test_feat_tail", "test_types_drift"}
+# "app" is server/app.py (the root app.py was removed in D-5, so it is no longer a LOCAL_MODULES stem).
+SERVER_LOCAL_MODULES = {"app", "catalog", "engine", "export", "export_fields", "markdown_export", "pdf_export", "test_export", "kitchen_sink", "c7c_helpers", "test_feat_tail", "test_types_drift"}
 
 # The one lazy import chargen/cli.py is allowed to keep — see module
 # docstring above and final-review.md's I6/Minor 7.

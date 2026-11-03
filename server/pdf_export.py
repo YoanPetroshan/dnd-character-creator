@@ -1,7 +1,7 @@
 """Turns a Resolution (see engine/resolve.py) into a printable PDF
 character sheet via fpdf2 — a fresh, self-drawn document, NOT a fill of
 v1's official WotC template (repo-root pdf_fill.py / assets/
-character-sheet-template.pdf) — see this plan's Scope note for why.
+character-sheet-template.pdf, removed in D-5) — see this plan's Scope note for why.
 Mirrors markdown_export.py's exact section structure and field
 selection; only the rendering target differs. The two should be kept in
 sync by hand if resolve()'s output shape changes — they are two

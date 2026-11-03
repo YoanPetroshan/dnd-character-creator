@@ -1,3 +1,5 @@
+> **Superseded: the repo-root v1 files this document describes (app.py, storage.py, sheet_derive.py, markdown_render.py, pdf_fill.py, templates/, static/, assets/) were removed in D-5 (2026-11-03); see git history.**
+
 # Character Creator App — Design
 
 **Goal:** A fully standalone application for creating D&D 5e characters, split

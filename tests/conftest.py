@@ -1,19 +1,16 @@
 """Test-wide isolation from the user's real character library.
 
-`storage.py` (this repo's own module, not chargen's) defaults its storage
-root to the real `~/.claude/dnd` -- the same directory the `dnd-app-bg-local`
-play app uses for its live character library (see storage.py's module
-docstring and README.md). A test that forgot to override that root before
-calling `storage.save_yaml()`/`save_markdown()`/`save_pdf()`, or before
-posting to `app.py`'s `/api/chargen/build`, would otherwise write straight
-into that real, shared directory -- exactly the kind of accidental
-production write this fixture exists to prevent in every test in this repo.
+The default storage root is the real `~/.claude/dnd` -- the same directory the
+`dnd-app-bg-local` play app uses for its live character library, and where
+`chargen.sync --official` puts the 5etools data. (The v1 root `storage.py` that
+originally wrote there was removed in D-5; chargen's CLI still resolves paths
+from `DND_CAMPAIGN_ROOT`.) A test that forgot to override that root could write
+into that real, shared directory -- exactly the accidental write this fixture
+prevents in every test in this directory.
 
-Every test in this directory now gets a throwaway campaign root by default:
-this fixture points `DND_CAMPAIGN_ROOT` (the env var `storage.root_dir()`
-reads) at a fresh `tmp_path_factory` directory before each test runs, so
-`storage.characters_dir()` / `char_dir()` resolve under that temp directory
-instead. Tests that manage their own root explicitly (setting the env var
+Every test in this directory gets a throwaway campaign root by default:
+this fixture points `DND_CAMPAIGN_ROOT` at a fresh `tmp_path_factory` directory
+before each test runs. Tests that manage their own root explicitly (setting the env var
 themselves, e.g. via `monkeypatch.setenv` in a fixture) simply set the
 variable again afterwards and win, since this is a plain environment
 variable applied in order.

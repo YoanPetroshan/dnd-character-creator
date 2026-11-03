@@ -1,3 +1,5 @@
+> **Superseded: the repo-root v1 files this document describes (app.py, storage.py, sheet_derive.py, markdown_render.py, pdf_fill.py, templates/, static/, assets/) were removed in D-5 (2026-11-03); see git history.**
+
 # Character Creator App Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

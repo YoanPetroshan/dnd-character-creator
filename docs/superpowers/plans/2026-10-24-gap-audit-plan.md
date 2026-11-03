@@ -8,7 +8,7 @@ The user said: do everything I can verify myself; anything uncertain is DEFERRED
 
 Applied recommended defaults (RAW-backed; reversible; recorded so the user can overrule tomorrow): D-1 species resources also under mixed/2014 via `--rebaseline`; D-2 Breath Weapon-like traits are resources with DC and dice in `details` (not attack rows); D-3 heavy-armor speed penalty applies to derived speed under every ruleset (dwarf exemption per trait text); D-4 manual ability scores clamp to 1..30 with a non-blocking warning above 20.
 
-DEFERRED (do not do without the user): D-5 deleting the legacy v1 root files (app.py, storage.py, sheet_derive.py, markdown_render.py, pdf_fill.py, templates/, static/, their root tests); D-6 adding pytest-xdist; D-7 rate limiting/auth; pushing commits; the real-device check; all user-owned open questions.
+DEFERRED (do not do without the user; D-5 and D-6 were approved and done 2026-11-03, see ARCHITECTURE-CURRENT-STATE.md "D5" / "D6"): D-5 deleting the legacy v1 root files (app.py, storage.py, sheet_derive.py, markdown_render.py, pdf_fill.py, templates/, static/, their root tests); D-6 adding pytest-xdist; D-7 rate limiting/auth; pushing commits; the real-device check; all user-owned open questions.
 
 ## Conventions
 
