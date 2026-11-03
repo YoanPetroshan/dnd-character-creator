@@ -48,6 +48,9 @@ EQUAL_MODES = [
 def test_equal_mode_follows_heavy_armor_penalty(catalog, species, sub, mode):
     base = _res(catalog, species, sub)["derived"]["speeds"]["walk"]
     s = _res(catalog, species, sub, added=["chain-mail"], base={"STR": 12})["derived"]["speeds"]
+    if mode == "fly":  # X1: the species text bans the flying speed in heavy armor, so it is removed, not lowered
+        assert s["walk"] == base - 10 and "fly" not in s, s
+        return
     assert s["walk"] == base - 10 and s[mode] == base - 10, s
 
 

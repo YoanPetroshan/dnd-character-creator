@@ -957,6 +957,35 @@ HEAVY_ARMOR_SPEED_EXEMPT_TRAITS: dict[str, str] = {
 HEAVY_ARMOR_SPEED_EXEMPT_RACES: dict[str, str] = {"dwarf": "Your speed is not reduced by wearing heavy armor."}
 
 
+# X1: a species flying speed the trait text bans in armor. trait id -> the record that holds it (`race`, plus `subrace`
+# for a subspecies trait), the display `name` used in the warning, the armor `categories` that ban it and the sentence
+# (`quote`, pinned against catalog.traits by tests/test_x1_fly_armor.py). Only these nine records say so: the Aarakocra
+# (DMG) record has fly 50 but no Flight trait text, so it is NOT banned. Winged Tiefling (SCAG) says heavy armor only.
+_FLY_MEDIUM_HEAVY = ("Medium", "Heavy")
+FLY_ARMOR_BAN: dict[str, dict] = {
+    "aarakocra-eepc-trait-3": {"race": "aarakocra-eepc", "name": "Aarakocra", "categories": _FLY_MEDIUM_HEAVY,
+                               "quote": "To use this speed, you can't be wearing medium or heavy armor."},
+    "aarakocra-mpmm-trait-0": {"race": "aarakocra-mpmm", "name": "Aarakocra", "categories": _FLY_MEDIUM_HEAVY,
+                               "quote": "You can't use this flying speed if you're wearing medium or heavy armor."},
+    "aven-psa-trait-3": {"race": "aven-psa", "name": "Aven", "categories": _FLY_MEDIUM_HEAVY,
+                         "quote": "You can't use your flying speed while you wear medium or heavy armor."},
+    "aven-psd-trait-3": {"race": "aven-psd", "name": "Aven", "categories": _FLY_MEDIUM_HEAVY,
+                         "quote": "You can't use your flying speed while you wear medium or heavy armor."},
+    "fairy-mpmm-trait-2": {"race": "fairy-mpmm", "name": "Fairy", "categories": _FLY_MEDIUM_HEAVY,
+                           "quote": "You can't use this flying speed if you're wearing medium or heavy armor."},
+    "fairy-wbtw-trait-1": {"race": "fairy-wbtw", "name": "Fairy", "categories": _FLY_MEDIUM_HEAVY,
+                           "quote": "You can't use this flying speed if you're wearing medium or heavy armor."},
+    "owlin-scc-trait-2": {"race": "owlin-scc", "name": "Owlin", "categories": _FLY_MEDIUM_HEAVY,
+                          "quote": "You can't use this flying speed if you're wearing medium or heavy armor."},
+    "siren-psx-trait-3": {"race": "siren-psx", "name": "Siren", "categories": _FLY_MEDIUM_HEAVY,
+                          "quote": "You can't use your flying speed while you wear medium or heavy armor."},
+    "tiefling-phb-variant;-winged-scag-trait-1": {
+        "race": "tiefling-phb", "subrace": "tiefling-phb-variant;-winged-scag", "name": "Winged Tiefling",
+        "categories": ("Heavy",),
+        "quote": "You have a flying speed of 30 feet while you aren't wearing heavy armor."},
+}
+
+
 # Fixed proficiency grants of a subclass (the SRD feature text is prose only).
 # Only subclasses whose grant is a fixed list belong here; Lore Bard's three
 # free skills are a choice (RP12: SUBCLASS_PICKS_2024, ruleset 2024).

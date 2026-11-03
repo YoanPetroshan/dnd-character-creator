@@ -54,6 +54,33 @@ def counted_body_armor_id(equipped_items: list[dict]) -> str | None:
     return None
 
 
+def fly_armor_bans(race: dict | None, subrace: dict | None, equipped_items: list[dict], counted_body: str | None) -> list[dict]:
+    """X1: the `reference_data.FLY_ARMOR_BAN` records the species holds (race + subrace trait refs) whose banned armor
+    category is the counted body armor's (WH: the suit AC uses; a shield alone never counts). Each is a dict with `name`,
+    `categories`. Empty without a counted suit."""
+    from catalog import reference_data
+    if not race or counted_body is None:
+        return []
+    category = next((i.get("armor_category") for i in equipped_items if i.get("index") == counted_body), None)
+    refs = list(race.get("traits") or []) + list((subrace or {}).get("racial_traits") or [])
+    out, seen = [], set()
+    for ref in refs:
+        spec = reference_data.FLY_ARMOR_BAN.get(ref.get("index"))
+        if (not spec or ref["index"] in seen or spec["race"] != race.get("index")
+                or spec.get("subrace") != ((subrace or {}).get("index") if spec.get("subrace") else None)
+                or category not in spec["categories"]):
+            continue
+        seen.add(ref["index"])
+        out.append({"id": f"fly-armor-{spec.get('subrace') or spec['race']}", "name": spec["name"],
+                    "categories": spec["categories"]})
+    return out
+
+
+def fly_armor_warning(ban: dict) -> dict:
+    banned = "medium/heavy" if len(ban["categories"]) > 1 else ban["categories"][0].lower()
+    return {"id": ban["id"], "message": f"{ban['name']} flying speed unusable in {banned} armor."}
+
+
 def armor_speed_penalty(equipped_items: list[dict], scores: dict, counted_body: str | None = None) -> int:
     """W1: 10 ft when any worn body armor lists a Strength score above the wearer's (PHB 2014 and 2024: "that
     armor reduces the wearer's speed by 10 feet unless the wearer has a Strength score equal to or higher than the

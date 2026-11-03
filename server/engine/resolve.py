@@ -6558,6 +6558,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     if speeds.get("walk"):  # WF: species "equal to your walking speed" modes follow the FINAL walk (bonuses, penalty)
         for mode in _species_equal_walk_modes(race, subrace):
             speeds = {**speeds, mode: speeds["walk"]}
+    fly_bans = equipment_mod.fly_armor_bans(  # X1: "can't use this flying speed" in medium / heavy armor (the counted suit)
+        race, subrace, equipped_items, equipment_mod.counted_body_armor_id(equipped_items))
+    if fly_bans:
+        speeds = {mode: value for mode, value in speeds.items() if mode != "fly"}
     if speeds.get("walk") and features_mod.swim_equals_walk(effects):  # C7b Gift of the Depths
         speeds = {**speeds, "swim": max(speeds.get("swim", 0), speeds["walk"])}
     if speeds.get("walk") and features_mod.climb_equals_walk(effects):  # RP2 Thief, Roving
@@ -6596,6 +6600,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         equipped_items, final_scores, weapon_proficiencies, feat_effects_mod.medium_armor_stealth_ok(feat_inst), speed_exempt,
         equipment_mod.counted_body_armor_id(equipped_items))  # FE4, W1, WH
     warnings += armor_problems
+    warnings += [equipment_mod.fly_armor_warning(ban) for ban in fly_bans]  # X1
     carrying = derived_mod.carrying_summary(
         final_scores.get("STR", 10), species_size or (race or {}).get("size") or "Medium",
         granted_equipment + chosen_equipment + added_resolved, catalog.items,

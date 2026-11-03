@@ -239,9 +239,11 @@ def test_2024_ruleset_applies_the_penalty_too(catalog):
 
 
 def test_speeds_other_modes_keep_their_values(catalog):
-    r = _res(catalog, "aarakocra-eepc", base={"STR": 10}, added=PLATE)
-    assert r["derived"]["speeds"]["walk"] == 15
-    assert r["derived"]["speeds"].get("fly") == 50
+    # X1: the Aarakocra's fly 50 is now removed in plate (see test_x1_fly_armor.py); a fixed swim speed shows the same rule
+    r = _res(catalog, "bullywug-dmg", base={"STR": 10}, added=PLATE)
+    assert r["derived"]["speeds"]["walk"] == 10
+    assert r["derived"]["speeds"].get("swim") == 40
+    assert "fly" not in _res(catalog, "aarakocra-eepc", base={"STR": 10}, added=PLATE)["derived"]["speeds"]
 
 
 def test_monk_unarmored_movement_unaffected(catalog):
