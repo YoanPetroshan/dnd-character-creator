@@ -62,14 +62,14 @@ the v1 code needs a subset of the same packages, so one install covers both). Th
 `frontend/package-lock.json`.
 
 **Official data and skips.** Most server tests need the official 5etools data synced (see Setup:
-`python -m chargen.sync --official`). Without it the tests that need it are skipped with the reason
-"official data not fetched on this machine" (`has_official()` from `catalog.official_source`); the SRD-only tests
-still run. To see the skip count on your machine, run `DND_CAMPAIGN_ROOT=/nonexistent` in front of the pytest
+`python -m chargen.sync --official`). Without it the tests that need it are skipped. There are two skip reasons: tests that need the official
+data, classes or spells (the W12 `needs_official` marker, built from `has_official()`, `has_official_classes()` and
+`has_official_spells()` in `catalog.official_source`) skip with the reason "5etools data not available", and
+older modules skip with "official data not fetched on this machine"; the SRD-only tests still run. To see the skip count on your machine, run `DND_CAMPAIGN_ROOT=/nonexistent` in front of the pytest
 command (it hides the synced data) and read the summary line. Measured on 2026-11-03 (W12): with the data 7213 passed; without it 5503 tests skip and 1460 pass, with 0 failures and 0 errors (every test that assumes the data carries a skip marker). The repo-root suite does not depend on the data: 405 passed,
 8 skipped (ported dead-by-design code).
 
-**Timing.** The server suite takes about 100 s on the development machine (it can take several minutes on a loaded
-one); the root suite takes about 5 s. Run either in the background if your tool has a timeout.
+**Timing.** The server suite takes about 105 s on the development machine (126 s when another suite runs in parallel); the root suite takes about 5 s. Run either in the background if your tool has a timeout.
 
 **Fuzz.** `server/tests/test_resolve_fuzz.py` runs 60 seeded random drafts by default. For a bigger run set `FUZZ_N`
 (and `FUZZ_SEED0` for the first seed): `FUZZ_N=2000 FUZZ_SEED0=0 .venv/bin/python -m pytest server/tests/test_resolve_fuzz.py -q`.
