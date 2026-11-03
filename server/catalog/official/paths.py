@@ -1,7 +1,9 @@
-"""The ONLY module of the official-data converters that imports
-`chargen.sources` (see the sys.path note below); every other module of this
-package, and every caller, gets `official_dir` / `has_official` /
-`_repo_root` from here (or via the `catalog.official_source` shim)."""
+"""Where the official-data converters read their files (B2: the vendored
+bundle at server/data/official is the default). The ONLY module of this
+package that imports `chargen.sources` (see the sys.path note below), and only
+for the explicit DND_CAMPAIGN_ROOT branch; every other module and caller gets
+`official_dir` / `has_official` / `data_source` / `_repo_root` from here (or
+via the `catalog.official_source` shim)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -14,7 +16,53 @@ if str(_repo_root) not in sys.path:
     # modules (the v1 root app.py/storage.py are gone since D-5; only `chargen` is needed).
     sys.path.append(str(_repo_root))
 
-from chargen.sources import official_dir, has_official  # noqa: E402,F401  (must follow the sys.path fix above)
+from chargen import sources as _chargen_sources  # noqa: E402  (must follow the sys.path fix above)
+
+BUNDLED_DIR = _repo_root / "server" / "data" / "official"
+"""The vendored raw 5etools files (B1). The default data source."""
+
+
+def _nonempty_dir(d: Path) -> bool:
+    try:
+        return d.is_dir() and any(d.iterdir())
+    except OSError:
+        return False
+
+
+def _resolve() -> tuple[Path, str]:
+    """(directory, source label). Evaluated at CALL time, never cached.
+
+    Order: `DND_OFFICIAL_DATA=none` (SRD-only, a guaranteed-absent path) >
+    `DND_OFFICIAL_DATA=<path>` ("explicit") > `DND_CAMPAIGN_ROOT` explicitly set
+    and its `.data/official` non-empty ("campaign") > the bundle ("bundled").
+    The implicit `~/.claude/dnd/.data/official` is never consulted. (The
+    per-file `DND_5ETOOLS_DATA` override lives in the *_dir()/_file() helpers
+    below and sits above all of this.)"""
+    explicit = os.environ.get("DND_OFFICIAL_DATA", "").strip()
+    if explicit:
+        if explicit.lower() == "none":
+            return BUNDLED_DIR / "__disabled__", "srd-only"
+        return Path(explicit).expanduser(), "explicit"
+    if os.environ.get("DND_CAMPAIGN_ROOT", "").strip():
+        campaign = Path(_chargen_sources.official_dir())
+        if _nonempty_dir(campaign):
+            return campaign, "campaign"
+    return BUNDLED_DIR, "bundled"
+
+
+def official_dir() -> Path:
+    """Directory the official-data converters read (see `_resolve`)."""
+    return _resolve()[0]
+
+
+def data_source() -> str:
+    """'srd-only' | 'explicit' | 'campaign' | 'bundled' (diagnostic)."""
+    return _resolve()[1]
+
+
+def has_official() -> bool:
+    """True when `official_dir()` exists and is non-empty."""
+    return _nonempty_dir(official_dir())
 
 
 def spells_dir() -> Path | None:

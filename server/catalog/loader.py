@@ -233,6 +233,8 @@ def _merge_class_chassis_2024(catalog: Catalog) -> None:
 
 
 def load() -> Catalog:
+    # Official data comes from catalog.official.paths.official_dir(): the vendored
+    # bundle by default, DND_OFFICIAL_DATA=none gives SRD-only (B2).
     from .official_source import (
         load_official_races, load_official_backgrounds, load_official_feats, official_dir,
     )

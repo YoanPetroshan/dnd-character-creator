@@ -1,8 +1,8 @@
 """Converts the wider, multi-sourcebook 5etools-src race/subrace/background
-data (fetched by `python3 -m chargen.sync --official` into
-chargen.sources.official_dir(), never committed to this repo — see that
-module and chargen/sync.py for the fetch/licensing details this module
-inherits without re-litigating) into the SAME dict shape
+data (vendored in this repo at server/data/official since B1/B2; the default
+directory is chosen by catalog.official.paths.official_dir(): bundle unless
+DND_OFFICIAL_DATA / an explicit DND_CAMPAIGN_ROOT says otherwise. The files
+were originally fetched by `python3 -m chargen.sync --official`) into the SAME dict shape
 catalog/loader.py already produces for the bundled 2014 SRD data. This is
 a from-scratch v2-native normalizer — it does NOT reuse chargen.catalog's
 own normalizer (chargen.normalise.race_from_5etools etc.), because that

@@ -43,9 +43,8 @@ def test_carouser_has_a_gaming_set_card_in_every_ruleset(ruleset):
 
 @needs_data
 def test_no_other_background_or_race_has_a_generic_tool_key_as_a_fixed_grant():
-    root = Path.home() / "Documents" / "5etools-src" / "data"
-    if not (root / "backgrounds.json").exists():
-        pytest.skip("5etools source not at the usual path")
+    from catalog.official.paths import official_dir
+    root = official_dir()  # the bundle by default (B2); no machine-specific path
     generic = {"gaming set", "musical instrument", "artisan's tools", "artisan tool", "tool"}
     hits = []
     for name, keys in (("backgrounds.json", ("background",)), ("races.json", ("race", "subrace"))):

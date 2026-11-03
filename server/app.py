@@ -363,7 +363,25 @@ def serve_frontend(path: str):
     return jsonify({"error": "frontend not built"}), 404
 
 
+def _log_data_source() -> None:
+    """One stderr line at start: which catalog data the server will use."""
+    import json
+    import sys
+    from catalog.official.paths import BUNDLED_DIR, data_source, official_dir
+
+    src = data_source()
+    if src == "bundled":
+        try:
+            sha = json.loads((BUNDLED_DIR / "MANIFEST.json").read_text(encoding="utf-8"))["bundle_sha256"][:12]
+        except (OSError, ValueError, KeyError):
+            sha = "no manifest"
+        print(f"catalog data: bundled ({sha})", file=sys.stderr)
+    else:
+        print(f"catalog data: {src} ({official_dir()})", file=sys.stderr)
+
+
 if __name__ == "__main__":
+    _log_data_source()
     app.run(
         host=os.environ.get("HOST", "127.0.0.1"),
         port=int(os.environ.get("PORT", 8000)),

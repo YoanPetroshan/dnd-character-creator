@@ -143,7 +143,8 @@ def test_the_xphb_observant_text_has_no_passive_bonus(catalog):
 
 
 def test_keenness_bonus_senses_in_the_raw_data_agree():
-    root = Path.home() / ".claude/dnd/.data/official"
+    from catalog.official.paths import official_dir
+    root = official_dir()  # the bundle by default (B2)
     raw = [f for f in json.loads((root / "feats.json").read_text())["feat"] if f.get("bonusSenses")]
     assert [(f["name"], f["bonusSenses"]) for f in raw] == [("Keenness of the Stone Giant", [{"darkvision": 60}])]
 
