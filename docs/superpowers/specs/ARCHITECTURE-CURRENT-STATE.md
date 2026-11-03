@@ -3043,7 +3043,7 @@ in the committed tree.
 | B3 | 1eb7b8e | README setup / test / refresh, `DATA-SOURCES.md`, doc test | none |
 | B4 | 5ebfb6c | waitress, `scripts/start.sh`, `scripts/setup.sh`, untested Dockerfile, deployment tests, README hosting | none |
 | B5 | 5827536 | clean-clone smoke script, tests, README | none |
-| B6 | de8b33d + the commit that adds this table | load-robust timing tests, portable `.claude/launch.json`, final counts and gates | none |
+| B6 | de8b33d, 52300c2 | load-robust timing tests, portable `.claude/launch.json`, final counts and gates | none |
 
 ## B6 consolidation (2026-11-03)
 
