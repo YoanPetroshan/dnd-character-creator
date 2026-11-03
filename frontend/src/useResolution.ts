@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { Draft, Resolution } from "./types";
+import { httpErrorMessage } from "./httpErrors";
 
 const DEBOUNCE_MS = 150;
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -43,10 +44,7 @@ export function useResolution(draft: Draft): ResolutionState & { retry: () => vo
             } catch {
               // non-JSON error body
             }
-            if (!detail && (resp.status === 502 || resp.status === 503 || resp.status === 504)) {
-              throw new Error(`Няма връзка със сървъра (${resp.status}).`);
-            }
-            throw new Error(detail || `Сървърът върна грешка ${resp.status}.`);
+            throw new Error(httpErrorMessage(resp.status, detail));
           }
           return (await resp.json()) as Resolution;
         })

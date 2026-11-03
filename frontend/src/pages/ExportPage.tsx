@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
+import { httpErrorMessage } from "../httpErrors";
 import { ClassResourcesList } from "../components/ClassResourcesList";
 import { SheetTraitsSummary } from "../components/SheetTraitsSummary";
 import { SpellSlotsSummary } from "../components/SpellSlotsSummary";
@@ -52,9 +53,9 @@ export function ExportPage() {
         } catch {
           // non-JSON error body
         }
-        throw new Error(
-          body.problems?.map((p) => p.message).join("; ") || body.error || `Експортът не успя (грешка ${resp.status}).`
-        );
+        const problemText = body.problems?.map((p) => p.message).join("; ");
+        if (problemText) throw new Error(`Експортът е отказан, докато има проблеми в черновата: ${problemText}`);
+        throw new Error(`Експортът не успя. ${httpErrorMessage(resp.status, body.error ?? "")}`);
       }
       const blob = await resp.blob();
       const filename = `${(draft.name || "character").replace(/[\\/:*?"<>|]/g, "_")}.${config.extension}`;
