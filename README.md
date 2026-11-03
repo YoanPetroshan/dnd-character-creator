@@ -48,28 +48,41 @@ Single origin, as it would be deployed (Flask serves the built frontend and the 
 Backend settings: `HOST` (default `127.0.0.1`), `PORT` (default `8000`),
 `FLASK_DEBUG=1` for the debugger.
 
-## Testing on a phone
-
-Phone and computer must be on the same Wi-Fi. Find the computer's LAN IP with
-`ipconfig getifaddr en0` (macOS may show a firewall prompt).
-
-- One origin (closest to production): build the frontend, then
-  `cd server && HOST=0.0.0.0 ../.venv/bin/python app.py` and open
-  `http://<LAN-IP>:8000`.
-- Hot reload: run the backend with `HOST=0.0.0.0` as above, then
-  `cd frontend && npm run dev:lan` and open `http://<LAN-IP>:5173`.
-
-The draft lives in the phone browser's `localStorage`, which iOS Safari may evict
-after about a week of inactivity: use "Download draft" on the home page to keep a
-copy, and "Upload draft" to restore it. Exports download through the browser.
-
 ## Test
 
     # v2 server (the main suite)
     cd server && ../.venv/bin/python -m pytest -q
     # repo-root tests (v1 engine + the import-isolation guard that covers server/ too)
-    .venv/bin/python -m pytest -q tests
+    .venv/bin/python -m pytest -q
     # frontend: type-check and build (there is no frontend test runner)
     cd frontend && npm run build
 
-Some server tests only run when the official data has been synced (see Setup).
+Python dependencies are pinned in `server/requirements.txt` (the repo-root `requirements.txt` only includes it:
+the v1 code needs a subset of the same packages, so one install covers both). The frontend is locked by
+`frontend/package-lock.json`.
+
+**Official data and skips.** Most server tests need the official 5etools data synced (see Setup:
+`python -m chargen.sync --official`). Without it the tests that need it are skipped with the reason
+"official data not fetched on this machine" (`has_official()` from `catalog.official_source`); the SRD-only tests
+still run. To see the skip count on your machine, run `DND_CAMPAIGN_ROOT=/nonexistent` in front of the pytest
+command (it hides the synced data) and read the summary line. Measured on 2026-11-03: with the data 7196 passed; without it 5265 tests skip, 1447 pass,
+and 229 tests plus 5 fuzz setup errors fail because they assume the official data without a skip marker (a known
+hygiene gap: run the suite only with the data synced). The repo-root suite does not depend on the data: 405 passed,
+8 skipped (ported dead-by-design code).
+
+**Timing.** The server suite takes about 100 s on the development machine (it can take several minutes on a loaded
+one); the root suite takes about 5 s. Run either in the background if your tool has a timeout.
+
+**Fuzz.** `server/tests/test_resolve_fuzz.py` runs 60 seeded random drafts by default. For a bigger run set `FUZZ_N`
+(and `FUZZ_SEED0` for the first seed): `FUZZ_N=2000 FUZZ_SEED0=0 .venv/bin/python -m pytest server/tests/test_resolve_fuzz.py -q`.
+
+**Golden policy.** `server/tests/test_c_series_golden.py` pins the resolved output of about 250 filled drafts
+under the `mixed` and `2014` rulesets, which must not change by accident. A slice that deliberately changes it adds
+an allowlisted entry to `REBASELINES` and runs `tests/test_c_series_golden.py --rebaseline <SLICE>` (use `--dry-run`
+first); new cases are added only with `--append`; `--regenerate` is never used. Details are in the module docstring.
+
+**Data overrides.** `DATA_OVERRIDES` in `server/catalog/reference_data.py` lists every correction of a 5etools data
+defect; `server/tests/test_data_overrides.py` fails when an upstream record is fixed, so the override can be removed.
+
+More: `docs/superpowers/specs/ARCHITECTURE-CURRENT-STATE.md` (how the engine works, where to find what, known gaps)
+and `docs/superpowers/specs/REAL-DEVICE-CHECKLIST.md` (the manual phone check).
