@@ -8,18 +8,9 @@ import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
 export function SpeciesPage() {
   const { draft, dispatch } = useDraft();
   const [speciesFilter, setSpeciesFilter] = useState("");
-  const { resolution, loading, error, retry } = useResolutionContext();
+  const { resolution, loading } = useResolutionContext();
   const catalog = useCatalogContext();
 
-  if (error)
-    return (
-      <div className="page">
-        <p>Грешка: {error}</p>
-        <button type="button" onClick={retry}>
-          Опитай пак
-        </button>
-      </div>
-    );
 
   const selectedSpeciesId = draft.species.id;
   // A selected species/subspecies the current ruleset/sources hide stays
@@ -104,6 +95,7 @@ export function SpeciesPage() {
         <>
           <h2>Subspecies</h2>
           <select
+            aria-label="Subspecies"
             value={draft.species.subspeciesId ?? ""}
             onChange={(e) => dispatch({ type: "SET_SUBSPECIES", subspeciesId: e.target.value || undefined })}
           >

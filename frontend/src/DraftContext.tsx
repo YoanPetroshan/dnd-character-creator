@@ -1,7 +1,10 @@
-import { createContext, useContext, useReducer, useEffect, type Dispatch, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useReducer, useEffect, useState, type Dispatch, type ReactNode } from "react";
 import type { Ability, ChoiceSourceKind, Draft, Ruleset } from "./types";
 
 const STORAGE_KEY = "dnd-builder-draft-v2";
+/** A stored draft that could not be loaded is copied here before the empty
+ *  default overwrites it, so a newer-version or corrupt draft is not lost. */
+const BACKUP_KEY = "dnd-builder-draft-v2.unreadable-backup";
 
 /** Bump when the draft shape changes incompatibly. Stored/imported drafts
  *  with a NEWER version than this build are rejected rather than guessed at.
@@ -294,6 +297,8 @@ function reducer(state: Draft, action: Action): Draft {
   }
 }
 
+const DRAFT_KEYS = ["draftVersion", "classes", "species", "background", "abilities", "equipment"];
+
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
@@ -335,45 +340,70 @@ function sanitizeDraft(d: Draft): Draft {
  *  newer build never come back undefined. Throws on non-objects or on a
  *  draft written by a newer app version. */
 export function mergeDraft(stored: unknown): Draft {
-  if (!isPlainObject(stored)) throw new Error("This file isn't a character draft.");
+  if (!isPlainObject(stored)) throw new Error("Файлът не е чернова на герой.");
   const v = stored.draftVersion;
   if (typeof v === "number" && v > DRAFT_VERSION) {
-    throw new Error("This draft was saved by a newer version of the app.");
+    throw new Error("Тази чернова е записана от по-нова версия на приложението.");
   }
+  // an arbitrary JSON object (e.g. an exported sheet) is not a draft: demand at least one draft key
+  if (!DRAFT_KEYS.some((k) => k in stored)) throw new Error("Файлът не прилича на чернова на герой.");
   const merged = mergeInto(emptyDraft, stored) as Draft;
   return sanitizeDraft({ ...merged, draftVersion: DRAFT_VERSION });
 }
 
-function loadInitial(): Draft {
+function loadInitial(): { draft: Draft; notice: string | null } {
+  let raw: string | null = null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return mergeDraft(JSON.parse(raw));
-  } catch {
-    // corrupt or inaccessible storage — fall through to a fresh draft
+    raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return { draft: mergeDraft(JSON.parse(raw)), notice: null };
+  } catch (e) {
+    // corrupt or inaccessible storage — start fresh, but keep what was there
+    if (raw) {
+      try {
+        localStorage.setItem(BACKUP_KEY, raw);
+      } catch {
+        // nothing more can be done
+      }
+      const why = e instanceof SyntaxError ? "Запазената чернова е повредена." : e instanceof Error ? e.message : "";
+      return { draft: emptyDraft, notice: `${why} Започнато е с празна чернова; старата е запазена в браузъра (${BACKUP_KEY}).` };
+    }
   }
-  return emptyDraft;
+  return { draft: emptyDraft, notice: null };
 }
 
 interface DraftContextValue {
   draft: Draft;
   dispatch: Dispatch<Action>;
+  /** One-off message about the boot-time load (unreadable stored draft). */
+  notice: string | null;
+  dismissNotice: () => void;
+  /** The last write to localStorage failed (quota, private mode). */
+  storageFailed: boolean;
 }
 
 const DraftContext = createContext<DraftContextValue | null>(null);
 
 export function DraftProvider({ children }: { children: ReactNode }) {
-  const [draft, dispatch] = useReducer(reducer, undefined, loadInitial);
+  const [boot] = useState(loadInitial);
+  const [draft, dispatch] = useReducer(reducer, boot.draft);
+  const [notice, setNotice] = useState<string | null>(boot.notice);
+  const [storageFailed, setStorageFailed] = useState(false);
+  const dismissNotice = useCallback(() => setNotice(null), []);
 
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+      setStorageFailed(false);
     } catch {
       // storage unavailable (private mode, quota) — the draft still works
       // in-memory for this session, it just won't survive a reload
+      setStorageFailed(true);
     }
   }, [draft]);
 
-  return <DraftContext.Provider value={{ draft, dispatch }}>{children}</DraftContext.Provider>;
+  return (
+    <DraftContext.Provider value={{ draft, dispatch, notice, dismissNotice, storageFailed }}>{children}</DraftContext.Provider>
+  );
 }
 
 export function useDraft(): DraftContextValue {

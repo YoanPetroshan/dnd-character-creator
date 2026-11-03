@@ -12,7 +12,7 @@ const RULESET_HELP: Record<Ruleset, string> = {
 
 export function HomePage() {
   const { draft, dispatch } = useDraft();
-  const { resolution, loading, error, retry } = useResolutionContext();
+  const { resolution, loading } = useResolutionContext();
   const catalog = useCatalogContext();
   const fileInput = useRef<HTMLInputElement>(null);
   const [draftMessage, setDraftMessage] = useState<string | null>(null);
@@ -59,7 +59,10 @@ export function HomePage() {
       dispatch({ type: "SET_DRAFT", draft: imported });
       setDraftMessage("Черновата е качена.");
     } catch (e) {
-      setDraftMessage(e instanceof SyntaxError ? "Файлът не е валиден JSON." : e instanceof Error ? e.message : String(e));
+      setDraftMessage(
+        (e instanceof SyntaxError ? "Файлът не е валиден JSON." : e instanceof Error ? e.message : String(e)) +
+          " Текущата чернова не е променена.",
+      );
     } finally {
       if (fileInput.current) fileInput.current.value = "";
     }
@@ -186,17 +189,6 @@ export function HomePage() {
 
       <h2>Resolution (from /api/resolve)</h2>
       {loading && <p>Зареждане…</p>}
-      {error && (
-        <p style={{ color: "red" }}>
-          Грешка: {error}{" "}
-          <button type="button" onClick={retry}>
-            Опитай пак
-          </button>{" "}
-          <button type="button" onClick={resetDraft}>
-            Нулирай чернова
-          </button>
-        </p>
-      )}
       {resolution && (
         <ul>
           {resolution.warnings.map((w) => (

@@ -59,7 +59,7 @@ const EMPTY_STATE: CatalogState = {
 
 async function fetchCatalog(query: string): Promise<CatalogData> {
   const resp = await fetch(`/api/catalog${query}`);
-  if (!resp.ok) throw new Error(`catalog fetch failed: ${resp.status}`);
+  if (!resp.ok) throw new Error(`Каталогът не се зареди (грешка ${resp.status}).`);
   return (await resp.json()) as CatalogData;
 }
 

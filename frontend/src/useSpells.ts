@@ -28,7 +28,7 @@ export interface SpellDetail extends CatalogSpell {
 
 export async function fetchSpellDetail(id: string, signal?: AbortSignal): Promise<SpellDetail> {
   const resp = await fetch(`/api/spells/${encodeURIComponent(id)}`, { signal });
-  if (!resp.ok) throw new Error(`spell fetch failed: ${resp.status}`);
+  if (!resp.ok) throw new Error(`Заклинанието не се зареди (грешка ${resp.status}).`);
   return (await resp.json()) as SpellDetail;
 }
 
@@ -68,7 +68,7 @@ export function useSpells(
       if (sourcesKey) params.set("sources", sourcesKey);
       fetch(`/api/spells?${params.toString()}`)
         .then((resp) => {
-          if (!resp.ok) throw new Error(`spells fetch failed: ${resp.status}`);
+          if (!resp.ok) throw new Error(`Списъкът със заклинания не се зареди (грешка ${resp.status}).`);
           return resp.json() as Promise<{ spells: CatalogSpell[] }>;
         })
         .then((data) => {

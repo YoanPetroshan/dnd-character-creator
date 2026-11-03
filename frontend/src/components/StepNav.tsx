@@ -63,7 +63,7 @@ export function StepNav() {
   }
 
   return (
-    <nav className="step-nav" ref={navRef}>
+    <nav className="step-nav" aria-label="Стъпки" ref={navRef}>
       {STEPS.map((step) => {
         const count = pendingCount(step);
         return (

@@ -59,6 +59,8 @@ export function ChoicePicker({ choice, onToggle }: ChoicePickerProps) {
             type="checkbox"
             checked={selected.has(option.id)}
             disabled={option.disabled}
+            aria-disabled={option.disabled || undefined}
+            aria-describedby={option.disabled && option.disabledReason ? `${choice.id}::${option.id}::why` : undefined}
             onChange={() => onToggle(choice.id, option.id, choice.count)}
           />
           {option.label}
@@ -66,7 +68,7 @@ export function ChoicePicker({ choice, onToggle }: ChoicePickerProps) {
             <span className="choice-picker__reason"> — скрит от текущите филтри</span>
           )}
           {option.disabled && option.disabledReason && (
-            <span className="choice-picker__reason"> — {option.disabledReason}</span>
+            <span className="choice-picker__reason" id={`${choice.id}::${option.id}::why`}> — {option.disabledReason}</span>
           )}
         </label>
       </li>

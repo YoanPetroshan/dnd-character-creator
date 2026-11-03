@@ -1,3 +1,4 @@
+import { CommitNumberInput } from "../components/CommitNumberInput";
 import { StepProblems } from "../components/StepProblems";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
@@ -19,17 +20,8 @@ function rollAbilityScore(): number {
 
 export function AbilitiesPage() {
   const { draft, dispatch } = useDraft();
-  const { resolution, loading, error, retry } = useResolutionContext();
+  const { resolution, loading } = useResolutionContext();
 
-  if (error)
-    return (
-      <div className="page">
-        <p>Грешка: {error}</p>
-        <button type="button" onClick={retry}>
-          Опитай пак
-        </button>
-      </div>
-    );
 
   const { method, base } = draft.abilities;
   const derived = resolution?.derived as { abilityModifiers?: Record<string, number> } | undefined;
@@ -115,7 +107,7 @@ export function AbilitiesPage() {
                 <td>{ability}</td>
                 <td>
                   {method === "standard" && (
-                    <select value={score} onChange={(e) => setStandard(ability, Number(e.target.value))}>
+                    <select aria-label={`${ability}: стойност`} value={score} onChange={(e) => setStandard(ability, Number(e.target.value))}>
                       {!STANDARD_ARRAY.includes(score) && <option value={score}>{score}</option>}
                       {STANDARD_ARRAY.map((v) => (
                         <option key={v} value={v}>
@@ -126,21 +118,23 @@ export function AbilitiesPage() {
                   )}
                   {method === "pointbuy" && (
                     <span className="point-buy-stepper">
-                      <button type="button" disabled={score <= 8} onClick={() => setAbility(ability, score - 1)}>
+                      <button type="button" aria-label={`${ability}: намали`} disabled={score <= 8} onClick={() => setAbility(ability, score - 1)}>
                         −
                       </button>
                       <span className="point-buy-stepper__value">{score}</span>
-                      <button type="button" disabled={!canIncrement} onClick={() => setAbility(ability, score + 1)}>
+                      <button type="button" aria-label={`${ability}: увеличи`} disabled={!canIncrement} onClick={() => setAbility(ability, score + 1)}>
                         +
                       </button>
                     </span>
                   )}
                   {method === "roll" && <span>{score}</span>}
                   {method === "manual" && (
-                    <input
-                      type="number"
+                    <CommitNumberInput
+                      ariaLabel={`${ability}: стойност`}
+                      min={1}
+                      max={30}
                       value={score}
-                      onChange={(e) => setAbility(ability, Number(e.target.value))}
+                      onCommit={(value) => setAbility(ability, value)}
                     />
                   )}
                 </td>

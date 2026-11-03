@@ -21,21 +21,12 @@ function contentsText(contents: { name: string; qty: number }[]): string {
 
 export function EquipmentPage() {
   const { draft, dispatch } = useDraft();
-  const { resolution, loading, error, retry } = useResolutionContext();
+  const { resolution, loading, error } = useResolutionContext();
   const [category, setCategory] = useState("");
   const [query, setQuery] = useState("");
   const items = useItems(category, query, draft.ruleset, draft.sources);
 
-  if (error)
-    return (
-      <div className="page">
-        <p>Грешка: {error}</p>
-        <button type="button" onClick={retry}>
-          Опитай пак
-        </button>
-      </div>
-    );
-  if (!resolution) return <div className="page">Зареждане…</div>;
+  if (!resolution) return <div className="page">{error ? null : "Зареждане…"}</div>;
 
   const equipmentChoices = resolution.choices.filter((c) => c.source.kind === "equipment");
 
@@ -166,8 +157,8 @@ export function EquipmentPage() {
       )}
 
       <h2>Предмети</h2>
-      <input type="text" placeholder="Търсене…" value={query} onChange={(e) => setQuery(e.target.value)} />
-      <select value={category} onChange={(e) => setCategory(e.target.value)}>
+      <input type="search" aria-label="Търсене на предмети" placeholder="Търсене…" value={query} onChange={(e) => setQuery(e.target.value)} />
+      <select aria-label="Категория" value={category} onChange={(e) => setCategory(e.target.value)}>
         {CATEGORIES.map((c) => (
           <option key={c.value} value={c.value}>
             {c.label}
@@ -186,7 +177,7 @@ export function EquipmentPage() {
         {items.items.map((item) => (
           <li key={item.id}>
             <span>{item.name}</span>
-            <button type="button" onClick={() => dispatch({ type: "ADD_ITEM", itemId: item.id })}>
+            <button type="button" aria-label={`Добави ${item.name}`} onClick={() => dispatch({ type: "ADD_ITEM", itemId: item.id })}>
               Add
             </button>
           </li>
@@ -211,7 +202,7 @@ export function EquipmentPage() {
                 />
                 Екипиран
               </label>
-              <button type="button" onClick={() => dispatch({ type: "REMOVE_ITEM", itemId: entry.itemId })}>
+              <button type="button" aria-label={`Премахни ${entry.name}`} onClick={() => dispatch({ type: "REMOVE_ITEM", itemId: entry.itemId })}>
                 Премахни
               </button>
             </li>

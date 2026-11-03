@@ -230,18 +230,9 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
 
 export function ClassPage() {
   const { draft, dispatch } = useDraft();
-  const { resolution, loading, error, retry } = useResolutionContext();
+  const { resolution, loading } = useResolutionContext();
   const catalog = useCatalogContext();
 
-  if (error)
-    return (
-      <div className="page">
-        <p>Грешка: {error}</p>
-        <button type="button" onClick={retry}>
-          Опитай пак
-        </button>
-      </div>
-    );
 
   const takenClassIds = new Set(draft.classes.map((c) => c.classId));
   const primaryClassId = draft.classes[0]?.classId;

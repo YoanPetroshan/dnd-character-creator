@@ -14,27 +14,12 @@ const EXPORT_FORMATS = {
 type ExportFormat = keyof typeof EXPORT_FORMATS;
 
 export function ExportPage() {
-  const { draft, dispatch } = useDraft();
-  const resetDraft = () => {
-    if (window.confirm("Нулиране на черновата? Текущият герой ще бъде изтрит.")) dispatch({ type: "RESET" });
-  };
-  const { resolution, loading, error, retry } = useResolutionContext();
+  const { draft } = useDraft();
+  const { resolution, loading, error } = useResolutionContext();
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportingFormat, setExportingFormat] = useState<ExportFormat | null>(null);
 
-  if (error)
-    return (
-      <div className="page">
-        <p>Грешка: {error}</p>
-        <button type="button" onClick={retry}>
-          Опитай пак
-        </button>{" "}
-        <button type="button" onClick={resetDraft}>
-          Нулирай чернова
-        </button>
-      </div>
-    );
-  if (!resolution) return <div className="page">Зареждане…</div>;
+  if (!resolution) return <div className="page">{error ? null : "Зареждане…"}</div>;
 
   // Must mirror server/app.py `_pending_export_problems`: equipment choices
   // never block export.
@@ -47,7 +32,8 @@ export function ExportPage() {
     !resolution.sheet.species && "Избери species.",
     !resolution.sheet.background && "Избери background.",
   ].filter((m): m is string => typeof m === "string");
-  const canExport = resolution.problems.length === 0 && pendingChoices.length === 0 && missingParts.length === 0;
+  // a failed re-resolve means the data on screen may be stale: do not offer export
+  const canExport = !error && resolution.problems.length === 0 && pendingChoices.length === 0 && missingParts.length === 0;
 
   async function handleExport(format: ExportFormat) {
     const config = EXPORT_FORMATS[format];
@@ -67,7 +53,7 @@ export function ExportPage() {
           // non-JSON error body
         }
         throw new Error(
-          body.problems?.map((p) => p.message).join("; ") ?? body.error ?? `export failed: ${resp.status}`
+          body.problems?.map((p) => p.message).join("; ") || body.error || `Експортът не успя (грешка ${resp.status}).`
         );
       }
       const blob = await resp.blob();
@@ -99,7 +85,9 @@ export function ExportPage() {
       // Revoking immediately can cancel the download in iOS/Android WebViews.
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err) {
-      setExportError(err instanceof Error ? err.message : String(err));
+      setExportError(
+        err instanceof TypeError ? "Няма връзка със сървъра. Експортът не е изтеглен." : err instanceof Error ? err.message : String(err),
+      );
     } finally {
       setExportingFormat(null);
     }
@@ -215,7 +203,7 @@ export function ExportPage() {
         <p>Не всички избори за екипировка са направени ({pendingEquipment.length}) — това не блокира експорта.</p>
       )}
       {canExport && <p>Всичко е готово за експорт.</p>}
-      {exportError && <p style={{ color: "red" }}>{exportError}</p>}
+      {exportError && <p role="alert" style={{ color: "red" }}>{exportError}</p>}
       {(Object.keys(EXPORT_FORMATS) as ExportFormat[]).map((format) => (
         <button
           key={format}

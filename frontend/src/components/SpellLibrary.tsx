@@ -63,8 +63,8 @@ export function SpellLibrary({ classId }: SpellLibraryProps) {
   return (
     <>
       <h2>Списък със заклинания {loading && "…"}</h2>
-      <input type="text" placeholder="Търсене…" value={query} onChange={(e) => setQuery(e.target.value)} />
-      <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value as LevelFilter)}>
+      <input type="search" aria-label="Търсене на заклинания" placeholder="Търсене…" value={query} onChange={(e) => setQuery(e.target.value)} />
+      <select aria-label="Ниво на заклинанията" value={levelFilter} onChange={(e) => setLevelFilter(e.target.value as LevelFilter)}>
         {LEVEL_FILTERS.map((l) => (
           <option key={l.value} value={l.value}>
             {l.label}

@@ -36,6 +36,8 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
     URL.revokeObjectURL(url);
   };
 
+  private retry = () => this.setState({ error: null });
+
   private reset = () => {
     try {
       localStorage.removeItem(STORAGE_KEY);
@@ -52,6 +54,9 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
         <h1>Нещо се обърка</h1>
         <p>Приложението се натъкна на грешка: {this.state.error.message}</p>
         <p>Можеш да запазиш чернова като файл и да започнеш наново.</p>
+        <button type="button" onClick={this.retry}>
+          Опитай пак
+        </button>{" "}
         <button type="button" onClick={this.download}>
           Изтегли черновата (JSON)
         </button>{" "}

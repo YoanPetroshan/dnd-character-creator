@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import type { Draft, Resolution } from "./types";
 
 const DEBOUNCE_MS = 150;
+const REQUEST_TIMEOUT_MS = 30_000;
 
 interface ResolutionState {
   resolution: Resolution | null;
@@ -16,18 +17,23 @@ export function useResolution(draft: Draft): ResolutionState & { retry: () => vo
     error: null,
   });
   const [retryNonce, setRetryNonce] = useState(0);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestId = useRef(0);
 
   useEffect(() => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
+    const controller = new AbortController();
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, REQUEST_TIMEOUT_MS);
+    const timer = setTimeout(() => {
       const id = ++requestId.current;
       setState((s) => ({ ...s, loading: true, error: null }));
       fetch("/api/resolve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(draft),
+        signal: controller.signal,
       })
         .then(async (resp) => {
           if (!resp.ok) {
@@ -37,7 +43,10 @@ export function useResolution(draft: Draft): ResolutionState & { retry: () => vo
             } catch {
               // non-JSON error body
             }
-            throw new Error(detail || `resolve failed: ${resp.status}`);
+            if (!detail && (resp.status === 502 || resp.status === 503 || resp.status === 504)) {
+              throw new Error(`Няма връзка със сървъра (${resp.status}).`);
+            }
+            throw new Error(detail || `Сървърът върна грешка ${resp.status}.`);
           }
           return (await resp.json()) as Resolution;
         })
@@ -47,13 +56,23 @@ export function useResolution(draft: Draft): ResolutionState & { retry: () => vo
         })
         .catch((err: unknown) => {
           if (id !== requestId.current) return;
-          const message = err instanceof Error ? err.message : String(err);
+          // A superseded request is aborted by the cleanup below; only a
+          // timeout abort reaches here with the current id still set.
+          let message: string;
+          if (timedOut) message = "Сървърът не отговори навреме.";
+          else if (err instanceof TypeError) message = "Няма връзка със сървъра.";
+          else message = err instanceof Error ? err.message : String(err);
+          // keep the last good resolution: only the error line changes
           setState((s) => ({ ...s, loading: false, error: message }));
         });
     }, DEBOUNCE_MS);
 
     return () => {
-      if (timer.current) clearTimeout(timer.current);
+      clearTimeout(timer);
+      clearTimeout(timeout);
+      controller.abort();
+      // an aborted in-flight request must not leave a stuck "loading"
+      requestId.current++;
     };
   }, [draft, retryNonce]);
 

@@ -38,7 +38,7 @@ export function useItems(
       if (sourcesKey) params.set("sources", sourcesKey);
       fetch(`/api/items?${params.toString()}`)
         .then((resp) => {
-          if (!resp.ok) throw new Error(`items fetch failed: ${resp.status}`);
+          if (!resp.ok) throw new Error(`Списъкът не се зареди (грешка ${resp.status}).`);
           return resp.json() as Promise<{ items: CatalogItem[] }>;
         })
         .then((data) => {

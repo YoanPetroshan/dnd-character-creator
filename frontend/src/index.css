@@ -461,3 +461,21 @@ main {
 .choice-picker__toggle-unavailable {
   margin-top: 8px;
 }
+
+/* W10: functional tap-target minimums measured at 375px (min-height only). */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),
+select,
+textarea,
+summary {
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+label:has(> input[type="checkbox"]),
+label:has(> input[type="radio"]) {
+  min-height: 44px;
+}
+
+input[type="number"] {
+  min-width: 44px;
+}

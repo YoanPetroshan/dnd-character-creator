@@ -6,18 +6,9 @@ import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
 
 export function BackgroundPage() {
   const { draft, dispatch } = useDraft();
-  const { resolution, loading, error, retry } = useResolutionContext();
+  const { resolution, loading } = useResolutionContext();
   const catalog = useCatalogContext();
 
-  if (error)
-    return (
-      <div className="page">
-        <p>Грешка: {error}</p>
-        <button type="button" onClick={retry}>
-          Опитай пак
-        </button>
-      </div>
-    );
 
   const selectedBackgroundId = draft.background.id;
   // A selected background the current ruleset/sources hide stays listed.
@@ -71,6 +62,7 @@ export function BackgroundPage() {
         </p>
       )}
       <select
+        aria-label="Background"
         value={selectedBackgroundId ?? ""}
         onChange={(e) => {
           if (e.target.value) dispatch({ type: "SET_BACKGROUND", backgroundId: e.target.value });

@@ -6,12 +6,13 @@ interface Props {
   min?: number;
   max?: number;
   placeholder?: string;
+  ariaLabel?: string;
 }
 
 /** Number input that keeps what the user types as a local string and only
  *  commits a valid integer on blur / Enter, so clearing the field with
  *  backspace doesn't snap back (or pass through intermediate values). */
-export function CommitNumberInput({ value, onCommit, min, max, placeholder }: Props) {
+export function CommitNumberInput({ value, onCommit, min, max, placeholder, ariaLabel }: Props) {
   const [text, setText] = useState(value === undefined ? "" : String(value));
 
   useEffect(() => {
@@ -36,6 +37,7 @@ export function CommitNumberInput({ value, onCommit, min, max, placeholder }: Pr
       min={min}
       max={max}
       placeholder={placeholder}
+      aria-label={ariaLabel}
       value={text}
       onChange={(e) => setText(e.target.value)}
       onBlur={commit}
