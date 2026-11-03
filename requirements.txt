@@ -1,5 +1,2 @@
-flask
-flask-cors
-PyYAML
-pypdf
-pytest
+# The v1 root app needs a subset of the v2 server dependencies (flask, flask-cors, PyYAML, pypdf, pytest).
+-r server/requirements.txt
