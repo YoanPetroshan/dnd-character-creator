@@ -208,18 +208,13 @@ BOOK_IDS = [t for t, s in ref.SPECIES_RESOURCES_2014.items() if t not in SRD_IDS
 SKIPPED_BOOK_TRAITS = {
     "aarakocra-mpmm-trait-0": "Flight: armor restriction wording, no uses",
     "aetherborn-psk-trait-7": "Gift of the Aetherborn: hit point maximum penalty over days, no use count",
-    "bugbear-erlw-trait-7": "Surprise Attack: once per combat rider (the resource vocabulary has no per-combat recharge)",
-    "bugbear-vgm-trait-6": "Surprise Attack: once per combat rider (the resource vocabulary has no per-combat recharge)",
     "fairy-mpmm-trait-2": "Flight: armor restriction wording, no uses",
     "fairy-wbtw-trait-1": "Flight: armor restriction wording, no uses",
     "githyanki-mpmm-trait-0": "Astral Knowledge: proficiency swap per long rest, no uses",
     "harengon-mpmm-trait-3": "Lucky Footwork: reaction d4 with no use count",
     "harengon-wbtw-trait-3": "Lucky Footwork: reaction d4 with no use count",
-    "hobgoblin-dmg-trait-0": "Martial Advantage: once per turn rider, not a resource",
     "lizardfolk-vgm-trait-4": "Cunning Artisan: downtime crafting during a short rest",
     "owlin-scc-trait-2": "Flight: armor restriction wording, no uses",
-    "tabaxi-mpmm-trait-5": "Feline Agility: recharges by moving 0 feet, not by a rest",
-    "tabaxi-vgm-trait-3": "Feline Agility: recharges by moving 0 feet, not by a rest",
     "vampire-psz-trait-3": "Blood Thirst: no use count",
     "verdan-ai-trait-3": "Black Blood Healing: Hit Die reroll, no use count",
     "astral-elf-aag-trait-6": "Astral Trance: rest-duration rule, no uses",
@@ -324,6 +319,8 @@ def test_every_book_entry_states_its_rest_and_use_rule_in_the_text(catalog):
             assert spec["uses"] is None, tid
         elif spec["recharge"] == "long":
             assert "long rest" in text, tid
+        elif spec["recharge"] in ("turn", "combat", "other"):  # X2: the non-rest limits, pinned by test_x2_turn_combat_rage_recharges.py
+            assert spec["uses"] == 1 and spec["recharge"] in ref.RESOURCE_RECHARGES, tid
         else:
             assert spec["recharge"] == "short-or-long" and "short" in text and "long rest" in text, tid
         if spec["uses"] == "pb":
@@ -495,7 +492,7 @@ def test_book_entries_use_the_resource_shape_minus_class_id(catalog):
 
 
 def test_species_without_a_modelled_trait_stay_empty(catalog):
-    for sp in ("tabaxi-mpmm", "bugbear-vgm", "elf-phb", "gnome-phb", "dwarf-phb"):
+    for sp in ("elf-phb", "gnome-phb", "dwarf-phb"):  # X2: Tabaxi and Bugbear moved to the table (non-rest recharges)
         assert _res(catalog, sp, 5)["derived"]["speciesResources"] == [], sp
 
 

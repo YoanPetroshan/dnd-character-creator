@@ -97,7 +97,7 @@ NEW = [
     ("monk", "monk:empty-body", 18, None, None, None),
     ("paladin", "paladin:divine-smite", 2, None, None, None),
     ("paladin", "paladin:cleansing-touch", 14, "cha", "long", None),
-    ("ranger", "ranger:foe-slayer", 20, None, None, None),
+    ("ranger", "ranger:foe-slayer", 20, 1, "turn", None),  # X2: "Once on each of your turns"
     ("rogue", "rogue:stroke-of-luck", 20, 1, "short-or-long", None),
     ("warlock", "warlock:mystic-arcanum", 11, 1, "long", None),
     ("warlock", "warlock:eldritch-master", 20, 1, "long", None),

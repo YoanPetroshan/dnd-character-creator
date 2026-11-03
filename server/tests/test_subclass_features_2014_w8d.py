@@ -116,7 +116,7 @@ RESOURCES = [
     ("clockwork-soul-tce", "sorcerer", "sorcerer:trance-of-order", 14, 1, "long"),
     ("clockwork-soul-tce", "sorcerer", "sorcerer:clockwork-cavalcade", 18, 1, "long"),
     ("divine-soul-xge", "sorcerer", "sorcerer:favored-by-the-gods", 1, 1, "short-or-long"),
-    ("divine-soul-xge", "sorcerer", "sorcerer:empowered-healing", 6, None, None),
+    ("divine-soul-xge", "sorcerer", "sorcerer:empowered-healing", 6, 1, "turn"),  # X2
     ("divine-soul-xge", "sorcerer", "sorcerer:unearthly-recovery", 18, 1, "long"),
     ("lunar-dsotdq", "sorcerer", "sorcerer:lunar-embodiment", 1, 1, "long"),
     ("lunar-dsotdq", "sorcerer", "sorcerer:lunar-boons", 6, "pb", "long"),
@@ -134,6 +134,7 @@ RESOURCES = [
     ("wild-phb", "sorcerer", "sorcerer:tides-of-chaos", 1, 1, "long"),
     ("wild-phb", "sorcerer", "sorcerer:wild-magic-surge", 1, None, None),
     ("wild-phb", "sorcerer", "sorcerer:bend-luck", 6, None, None),
+    ("wild-phb", "sorcerer", "sorcerer:spell-bombardment", 18, 1, "turn"),  # X2: "only once per turn"
     ("archfey-phb", "warlock", "warlock:fey-presence", 1, 1, "short-or-long"),
     ("archfey-phb", "warlock", "warlock:misty-escape", 6, 1, "short-or-long"),
     ("archfey-phb", "warlock", "warlock:beguiling-defenses", 10, None, None),
@@ -147,7 +148,7 @@ RESOURCES = [
     ("fathomless-tce", "warlock", "warlock:grasping-tentacles", 10, 1, "long"),
     ("fathomless-tce", "warlock", "warlock:fathomless-plunge", 14, 1, "short-or-long"),
     ("genie-tce", "warlock", "warlock:bottled-respite", 1, 1, "long"),
-    ("genie-tce", "warlock", "warlock:genie-s-wrath", 1, None, None),
+    ("genie-tce", "warlock", "warlock:genie-s-wrath", 1, 1, "turn"),  # X2
     ("genie-tce", "warlock", "warlock:elemental-gift", 6, "pb", "long"),
     ("genie-tce", "warlock", "warlock:limited-wish", 14, 1, None),
     ("great-old-one-phb", "warlock", "warlock:entropic-ward", 6, 1, "short-or-long"),
@@ -177,7 +178,7 @@ RESOURCES = [
     ("graviturgy-egw", "wizard", "wizard:violent-attraction", 10, "int1", "long"),
     ("graviturgy-egw", "wizard", "wizard:event-horizon", 14, 1, "long"),
     ("illusion-phb", "wizard", "wizard:illusory-self", 10, 1, "short-or-long"),
-    ("necromancy-phb", "wizard", "wizard:grim-harvest", 2, None, None),
+    ("necromancy-phb", "wizard", "wizard:grim-harvest", 2, 1, "turn"),  # X2
     ("necromancy-phb", "wizard", "wizard:undead-thralls", 6, None, None),
     ("necromancy-phb", "wizard", "wizard:command-undead", 14, None, None),
     ("scribes-tce", "wizard", "wizard:awakened-spellbook", 2, 1, "long"),

@@ -169,8 +169,8 @@ def test_mixed_does_not_use_the_2024_tables(catalog):
 @pytest.mark.parametrize("level,dice", [(1, "1d6"), (2, "1d6"), (3, "2d6"), (5, "3d6"), (11, "6d6"), (19, "10d6"), (20, "10d6")])
 def test_rogue_sneak_attack_dice_all_rulesets(catalog, ruleset, level, dice):
     sneak = _entry(_res(catalog, [("rogue", level)], ruleset), "rogue:sneak-attack")
-    assert sneak["name"] == "Sneak Attack" and sneak["dice"] == dice and sneak["uses"] is None
-    assert sneak["recharge"] is None and sneak["classId"] == "rogue"
+    assert sneak["name"] == "Sneak Attack" and sneak["dice"] == dice and sneak["uses"] == 1
+    assert sneak["recharge"] == "turn" and sneak["classId"] == "rogue"  # X2: "Once per turn"
 
 
 @needs_classes
@@ -261,7 +261,7 @@ def test_markdown_and_pdf_list_class_resources(catalog):
     md = to_markdown(res)
     assert "## Ресурси на класа" in md
     assert "- Rage: 3 (дълга почивка), щета +2" in md
-    assert "- Sneak Attack: 2d6" in md
+    assert "- Sneak Attack: 1, 2d6 (на ход)" in md  # X2
     text = "".join(p.extract_text() for p in PdfReader(io.BytesIO(to_pdf(res))).pages)
     assert "Ресурси на класа" in text and "Rage: 3" in text
 

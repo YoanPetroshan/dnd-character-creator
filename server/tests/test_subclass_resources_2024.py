@@ -157,6 +157,11 @@ RESOURCES = [
     ("fiend-xphb", "warlock", "Dark One's Own Luck", 6, "cha", "long"),
     ("fiend-xphb", "warlock", "Hurl Through Hell", 14, 1, "long"),
     ("great-old-one-xphb", "warlock", "Clairvoyant Combatant", 6, 1, "short-or-long"),
+    # X2: the per-turn / per-rage rows (uses 1, recharge "turn" / "rage")
+    ("fey-wanderer-xphb", "ranger", "Dreadful Strikes", 3, 1, "turn"),
+    ("hunter-xphb", "ranger", "Superior Hunter's Prey", 11, 1, "turn"),
+    ("celestial-xphb", "warlock", "Radiant Soul", 6, 1, "turn"),
+    ("world-tree-xphb", "barbarian", "Travel Along the Tree", 14, 1, "rage"),
     ("abjurer-xphb", "wizard", "Arcane Ward", 3, 1, "long"),
     ("diviner-xphb", "wizard", "Portent", 3, 2, "long"),
     ("diviner-xphb", "wizard", "The Third Eye", 10, 1, "short-or-long"),

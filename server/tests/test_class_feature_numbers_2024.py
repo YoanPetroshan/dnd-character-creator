@@ -133,7 +133,7 @@ def test_record_levels_are_the_documented_ones(catalog):
         spec = next(s for s in reference_data.RESOURCE_TAIL_2024 if s["class"] == cls and s.get("quotes")
                     and s["name"].lower().replace(" ", "-") == rid.split(":")[1])
         assert catalog.features[spec["feature"]]["level"] == first, rid
-        assert spec["uses"] is None and spec["recharge"] is None
+        assert (spec["uses"], spec["recharge"]) == ((1, "turn") if rid == "monk:stunning-strike" else (None, None))  # X2
 
 
 # ---- note-only resources: appear at the record's level, with computed numbers ---------------------------
@@ -144,7 +144,8 @@ def test_note_only_resource_appears_at_the_feature_level(catalog, cls, rid, firs
     res = _res(catalog, [(cls, first)])
     r = _entry(res, rid)
     assert r and r["classId"] == cls and r["source"]["kind"] == "class"
-    assert r["uses"] is None and r["recharge"] is None and "unlimited" not in r
+    # X2: Stunning Strike "Once per turn" is 1 use per turn; the other note-only rows keep no use count
+    assert (r["uses"], r["recharge"]) == ((1, "turn") if rid == "monk:stunning-strike" else (None, None)) and "unlimited" not in r
     assert r["details"]["note"]
     assert _entry(_res(catalog, [(cls, first - 1)]), rid) is None
 

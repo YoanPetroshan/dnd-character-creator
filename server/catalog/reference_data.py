@@ -931,6 +931,39 @@ SPECIES_RESOURCES_2014.update({
         ("you can breathe underwater for up to 1 hour", "you can't use this trait again until you finish a long rest")),
 })
 
+# X2: the resource recharge vocabulary. `long` / `short` / `short-or-long` are rests; `turn` ("Once per turn"), `combat`
+# ("only once per combat"), `rage` ("only once per rage") and `other` (any other stated condition, written out in
+# `details.note`) are the non-rest limits. Consumers: export_fields._RECHARGE_WORDS, ClassResourcesList.tsx RECHARGE,
+# types.ts ResourceCore.recharge (tests/test_x2_turn_combat_rage_recharges.py keeps the four in step).
+RESOURCE_RECHARGES: tuple[str, ...] = ("long", "short", "short-or-long", "turn", "combat", "rage", "other")
+
+# X2: the five book species traits W5b skipped because the vocabulary could not express their limit.
+SPECIES_RESOURCES_2014.update({
+    "hobgoblin-dmg-trait-0": _e("hobgoblin-dmg", "Martial Advantage", 1, "turn",
+        "Once per turn, extra 2d6 damage to a creature you hit with a weapon attack if it is within 5 feet of an ally of "
+        "yours that isn't incapacitated",
+        ("Once per turn, you can deal an extra 2d6 damage to a creature you hit with a weapon attack",
+         "if that creature is within 5 ft. of an ally of yours that isn't incapacitated")),
+    "bugbear-erlw-trait-7": _e("bugbear-erlw", "Surprise Attack", 1, "combat",
+        "If you surprise a creature and hit it with an attack on your first turn in combat, the attack deals an extra 2d6 damage",
+        ("If you surprise a creature and hit it with an attack on your first turn in combat",
+         "the attack deals an extra 2d6 damage to it", "You can use this trait only once per combat.")),
+    "bugbear-vgm-trait-6": _e("bugbear-vgm", "Surprise Attack", 1, "combat",
+        "If you surprise a creature and hit it with an attack on your first turn in combat, the attack deals an extra 2d6 damage",
+        ("If you surprise a creature and hit it with an attack on your first turn in combat",
+         "the attack deals an extra 2d6 damage to it", "You can use this trait only once per combat.")),
+    "tabaxi-mpmm-trait-5": _e("tabaxi-mpmm", "Feline Agility", 1, "other",
+        "When you move on your turn in combat, double your speed until the end of the turn; after you use it you can't use "
+        "it again until you move 0 feet on one of your turns",
+        ("When you move on your turn in combat, you can double your speed until the end of the turn",
+         "you can't use it again until you move 0 feet on one of your turns.")),
+    "tabaxi-vgm-trait-3": _e("tabaxi-vgm", "Feline Agility", 1, "other",
+        "When you move on your turn in combat, double your speed until the end of the turn; after you use it you can't use "
+        "it again until you move 0 feet on one of your turns",
+        ("When you move on your turn in combat, you can double your speed until the end of the turn",
+         "you can't use it again until you move 0 feet on one of your turns.")),
+})
+
 # W5a: Giant Ancestry (Goliath, XPHB) boons by species variant id. The catalog trait text drops the list, so the
 # `quote` is pinned against the raw 5etools race entry instead (tests/test_w5a_species_resources.py).
 GIANT_ANCESTRY_2024: dict[str, dict] = {
@@ -4869,6 +4902,119 @@ SIGNATURE_SPELLS_2024 = {"feature": "xphb-wizard-20-signature-spells", "choice":
 # Arcane Recovery (SRD `arcane-recovery`, XPHB Arcane Recovery): "combined level ... no more
 # than half your Wizard level (round up), and none of the slots can be level 6 or higher".
 ARCANE_RECOVERY_MAX_SLOT_LEVEL = 5
+
+# ---- X2: per-turn / per-combat / per-rage limits of class and subclass features -------------------------------------
+# Rows that were note-only (`uses` None, `recharge` None) although the catalog text limits the feature's main effect to
+# "once per turn" / "only once per rage": X2 sets `uses` 1 and the recharge and appends the pinned sentence to the row's
+# quotes when no quote has it yet. (table, subclass or None, feature id, name, recharge, sentence); the sentences are
+# pinned against catalog.features by tests/test_x2_turn_combat_rage_recharges.py.
+_DIVINE_STRIKE_SENTENCE = "Once on each of your turns when you hit a creature with a weapon attack"
+X2_RECHARGE_UPGRADES: tuple[tuple, ...] = (
+    ("RESOURCE_TAIL_2014", None, "foe-slayer", "Foe Slayer", "turn",
+     "Once on each of your turns, you can add your Wisdom modifier to the attack roll or the damage roll"),
+    ("RESOURCE_TAIL_2024", None, "xphb-monk-5-stunning-strike", "Stunning Strike", "turn",
+     "Once per turn when you hit a creature with a Monk weapon or an Unarmed Strike"),
+    ("SUBCLASS_TAIL_2014", "life", "divine-strike", "Divine Strike (Life Domain)", "turn", _DIVINE_STRIKE_SENTENCE),
+) + tuple(
+    ("SUBCLASS_TAIL_2014_BOOKS", sub, f"{sub}-8-divine-strike", f"Divine Strike ({dom} Domain)", "turn", _DIVINE_STRIKE_SENTENCE)
+    for sub, dom in (("forge-xge", "Forge"), ("nature-phb", "Nature"), ("order-tce", "Order"), ("solidarity-psa", "Solidarity"),
+                     ("strength-psa", "Strength"), ("tempest-phb", "Tempest"), ("trickery-phb", "Trickery"),
+                     ("twilight-tce", "Twilight"), ("war-phb", "War"), ("zeal-psa", "Zeal"))
+) + (
+    ("SUBCLASS_TAIL_2014_BOOKS", "death-dmg", "death-dmg-8-divine-strike", "Divine Strike (Death Domain)", "turn",
+     "Once on each of the cleric's turns when he or she hits a creature with a weapon attack"),
+    ("SUBCLASS_TAIL_2014_BOOKS", "order-tce", "order-tce-17-orders-wrath", "Order's Wrath", "turn",
+     "You can curse a creature in this way only once per turn"),
+    ("SUBCLASS_TAIL_2014_BOOKS", "cavalier-xge", "cavalier-xge-15-ferocious-charger", "Ferocious Charger", "turn",
+     "You can use this feature only once on each of your turns"),
+    ("SUBCLASS_TAIL_2014_BOOKS", "kensei-xge", "kensei-xge-6-one-with-the-blade", "Deft Strike", "turn",
+     "You can use this feature only once on each of your turns"),
+    ("SUBCLASS_TAIL_2014_BOOKS", "mercy-tce", "mercy-tce-3-hand-of-harm", "Hand of Harm", "turn",
+     "You can use this feature only once per turn"),
+    ("SUBCLASS_TAIL_2014_BOOKS", "fey-wanderer-tce", "fey-wanderer-tce-3-dreadful-strikes", "Dreadful Strikes", "turn",
+     "which can take this extra damage only once per turn"),
+    ("SUBCLASS_TAIL_2014_BOOKS", "swarmkeeper-tce", "swarmkeeper-tce-3-gathered-swarm", "Gathered Swarm", "turn",
+     "Once on each of your turns, you can cause the swarm to assist you"),
+    ("SUBCLASS_TAIL_2014_BOOKS", "divine-soul-xge", "divine-soul-xge-6-empowered-healing", "Empowered Healing", "turn",
+     "You can use this feature only once per turn"),
+    ("SUBCLASS_TAIL_2014_BOOKS", "genie-tce", "genie-tce-1-genies-vessel", "Genie's Wrath", "turn",
+     "Once during each of your turns when you hit with an attack roll"),
+    ("SUBCLASS_TAIL_2014_BOOKS", "necromancy-phb", "necromancy-phb-2-grim-harvest", "Grim Harvest", "turn",
+     "Once per turn when you kill one or more creatures with a spell of 1st level or higher"),
+    ("SUBCLASS_TAIL_2014_BOOKS", "zealot-xge", "zealot-xge-6-fanatical-focus", "Fanatical Focus", "rage",
+     "You can use this ability only once per rage"),
+)
+
+
+def _x2_upgrade(table_name: str, sub: str | None, feature: str, name: str, recharge: str, sentence: str) -> None:
+    rows = list(globals()[table_name])
+    hits = [i for i, row in enumerate(rows) if row["feature"] == feature and row["name"] == name
+            and (sub is None or row.get("subclass") == sub)]
+    assert len(hits) == 1, (table_name, feature, name)
+    row = rows[hits[0]]
+    assert row["uses"] is None and row["recharge"] is None, (feature, name)
+    quotes = tuple(row["quotes"])
+    if not any(sentence in quote for _fid, quote in quotes):
+        quotes += ((feature, sentence),)
+    rows[hits[0]] = {**row, "uses": 1, "recharge": recharge, "quotes": quotes}
+    globals()[table_name] = tuple(rows)
+
+
+# New rows (features the W6-W8 / RP11 scans skipped as "once per turn, no number"), appended to the tables.
+SUBCLASS_TAIL_2014_BOOKS = SUBCLASS_TAIL_2014_BOOKS + (
+    _w8_res("samurai-xge", "fighter", "samurai-xge-15-rapid-strike", "Rapid Strike", 1, "turn",
+            "If you take the Attack action on your turn and have advantage on an attack roll against one of the targets, "
+            "forgo the advantage for that roll to make an additional weapon attack against that target as part of the same "
+            "action; once per turn",
+            ((None, "you can forgo the advantage for that roll to make an additional weapon attack against that target, as part of the same action"),
+             (None, "You can do so no more than once per turn"))),
+    _w8_res("kensei-xge", "monk", "kensei-xge-17-unerring-accuracy", "Unerring Accuracy", 1, "turn",
+            "If you miss with an attack roll using a monk weapon on your turn, you can reroll it; once on each of your turns",
+            ((None, "If you miss with an attack roll using a monk weapon on your turn, you can reroll it"),
+             (None, "You can use this feature only once on each of your turns"))),
+    _w8_res("gloom-stalker-xge", "ranger", "gloom-stalker-xge-11-stalkers-flurry", "Stalker's Flurry", 1, "turn",
+            "Once on each of your turns when you miss with a weapon attack, make another weapon attack as part of the same action",
+            ((None, "Once on each of your turns when you miss with a weapon attack, you can make another weapon attack as part of the same action"),)),
+    _w8_res("wild-phb", "sorcerer", "wild-phb-18-spell-bombardment", "Spell Bombardment", 1, "turn",
+            "When you roll damage for a spell and roll the highest number possible on any of the dice, choose one of those "
+            "dice, roll it again and add that roll to the damage; once per turn",
+            ((None, "When you roll damage for a spell and roll the highest number possible on any of the dice, choose one of those dice, roll it again and add that roll to the damage"),
+             (None, "You can use the feature only once per turn"))),
+)
+
+SUBCLASS_TAIL_2024 = SUBCLASS_TAIL_2024 + (
+    {"subclass": "fey-wanderer-xphb", "class": "ranger", "feature": "fey-wanderer-xphb-3-dreadful-strikes",
+     "name": "Dreadful Strikes", "uses": 1, "recharge": "turn",
+     "note": "When you hit a creature with a weapon you can deal an extra 1d4 Psychic damage (1d6 from Ranger level 11); a "
+             "creature can take it only once per turn",
+     "quotes": (("fey-wanderer-xphb-3-dreadful-strikes", "you can deal an extra 1d4 Psychic damage to the target"),
+                ("fey-wanderer-xphb-3-dreadful-strikes", "which can take this extra damage only once per turn"),
+                ("fey-wanderer-xphb-3-dreadful-strikes", "The extra damage increases to 1d6 when you reach Ranger level 11"))},
+    {"subclass": "celestial-xphb", "class": "warlock", "feature": "celestial-xphb-6-radiant-soul",
+     "name": "Radiant Soul", "uses": 1, "recharge": "turn",
+     "note": "Once per turn, when a spell you cast deals Radiant or Fire damage, add your Charisma modifier ({cha:+d}) to "
+             "that spell's damage against one of its targets",
+     "quotes": (("celestial-xphb-6-radiant-soul", "Once per turn, when a spell you cast deals Radiant or Fire damage"),
+                ("celestial-xphb-6-radiant-soul", "you can add your Charisma modifier to that spell's damage against one of the spell's targets"))},
+    {"subclass": "hunter-xphb", "class": "ranger", "feature": "hunter-xphb-11-superior-hunters-prey",
+     "name": "Superior Hunter's Prey", "uses": 1, "recharge": "turn",
+     "note": "Once per turn when you deal damage to a creature marked by your Hunter's Mark, also deal that spell's extra "
+             "damage to a different creature you can see within 30 feet of the first",
+     "quotes": (("hunter-xphb-11-superior-hunters-prey", "Once per turn when you deal damage to a creature marked by your Hunter's Mark"),
+                ("hunter-xphb-11-superior-hunters-prey", "you can also deal that spell's extra damage to a different creature that you can see within 30 feet of the first creature"))},
+    {"subclass": "world-tree-xphb", "class": "barbarian", "feature": "world-tree-xphb-14-travel-along-the-tree",
+     "name": "Travel Along the Tree", "uses": 1, "recharge": "rage",
+     "note": "When you activate your Rage and as a Bonus Action while it is active, teleport up to 60 feet to an unoccupied "
+             "space you can see; once per Rage the range is 150 feet and you can bring up to six willing creatures within "
+             "10 feet of you",
+     "quotes": (("world-tree-xphb-14-travel-along-the-tree", "you can teleport up to 60 feet to an unoccupied space you can see"),
+                ("world-tree-xphb-14-travel-along-the-tree", "once per Rage, you can increase the range of that teleport to 150 feet"),
+                ("world-tree-xphb-14-travel-along-the-tree", "you can also bring up to six willing creatures who are within 10 feet of you"))},
+)
+
+for _args in X2_RECHARGE_UPGRADES:
+    _x2_upgrade(*_args)
+del _args
 
 # Bard Font of Inspiration (SRD `font-of-inspiration`, XPHB): short rest recharge from level 5.
 FONT_OF_INSPIRATION_LEVEL = 5

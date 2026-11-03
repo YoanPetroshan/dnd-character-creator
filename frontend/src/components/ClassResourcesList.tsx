@@ -4,6 +4,10 @@ const RECHARGE: Record<string, string> = {
   long: "дълга почивка",
   short: "кратка почивка",
   "short-or-long": "кратка или дълга почивка",
+  turn: "на ход",
+  combat: "на битка",
+  rage: "на ярост",
+  other: "виж бележката",
 };
 
 /** One resource as text, same wording as the exports: "Rage: 3 (дълга почивка), щета +2". */

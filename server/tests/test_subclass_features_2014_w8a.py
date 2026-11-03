@@ -115,7 +115,7 @@ RESOURCES = [
     ("wild-magic-tce", "barbarian", "barbarian:wild-surge", 3, None, None),
     ("wild-magic-tce", "barbarian", "barbarian:bolstering-magic", 6, "pb", "long"),
     ("zealot-xge", "barbarian", "barbarian:divine-fury", 3, None, None),
-    ("zealot-xge", "barbarian", "barbarian:fanatical-focus", 6, None, None),
+    ("zealot-xge", "barbarian", "barbarian:fanatical-focus", 6, 1, "rage"),  # X2
     ("zealot-xge", "barbarian", "barbarian:zealous-presence", 10, 1, "long"),
     ("creation-tce", "bard", "bard:performance-of-creation", 3, 1, "long"),
     ("creation-tce", "bard", "bard:animating-performance", 6, 1, "long"),
@@ -344,7 +344,7 @@ def test_fanatical_focus_and_zealous_presence(catalog):
     res = _res(catalog, "barbarian", 10, "zealot-xge")
     assert "once per rage" in _note(res, "barbarian:fanatical-focus")
     assert "ten other creatures" in _note(res, "barbarian:zealous-presence") and "60 feet" in _note(res, "barbarian:zealous-presence")
-    assert _entry(res, "barbarian:fanatical-focus")["recharge"] is None  # a rage is not a rest
+    assert _entry(res, "barbarian:fanatical-focus")["recharge"] == "rage"  # X2: a rage is not a rest, "rage" is its own recharge
 
 
 # ---- numbers: Bard ---------------------------------------------------------------------------------------

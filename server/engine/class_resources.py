@@ -14,7 +14,8 @@ helpers `_resource(...)` and `ctx.table(...)`, then register it in `_BUILDERS`
 
 Resource shape (see the plan, "Resource shape"):
   id, classId, source {kind, id, label}, name, uses, unlimited?, recharge
-  ("long" | "short" | "short-or-long" | None), die?, dice?, pool?, bonus?, dc?,
+  ("long" | "short" | "short-or-long" | "turn" | "combat" | "rage" | "other" | None; X2: the last four are non-rest
+  limits, `other` names its condition in details.note), die?, dice?, pool?, bonus?, dc?,
   details?
 """
 from __future__ import annotations
@@ -173,7 +174,7 @@ def _rogue(ctx: Ctx, rc: dict) -> list[dict]:
         dice = f"{sa['dice_count']}d{sa['dice_value']}" if sa.get("dice_count") else None
     if dice is None:
         return []
-    return [_resource(rc, "Sneak Attack", dice=dice)]
+    return [_resource(rc, "Sneak Attack", dice=dice, uses=1, recharge="turn")]  # X2: "Once per turn, you can deal an extra ..."
 
 
 def _fighter(ctx: Ctx, rc: dict) -> list[dict]:
@@ -265,7 +266,8 @@ def _class_strikes(ctx: Ctx, rc: dict) -> list[dict]:
         effect = class_choices_2024.strike_effect(ctx.choices, cls_id, key)
         dice = effect and class_choices_2024.dice_at_level(effect["dice_by_level"], level)
         if dice:
-            out.append(_resource(rc, name, dice=dice, details={"note": usage, "damageTypes": effect["types"]}))
+            out.append(_resource(rc, name, dice=dice, uses=1, recharge="turn",  # X2: "Once on each of your turns ..."
+                                 details={"note": usage, "damageTypes": effect["types"]}))
     potent = class_choices_2024.strike_effect(ctx.choices, cls_id, "potent_spellcasting")
     if potent:
         wis = ctx.modifiers.get("WIS", 0)

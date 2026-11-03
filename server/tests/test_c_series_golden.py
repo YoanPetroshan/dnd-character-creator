@@ -261,6 +261,20 @@ REBASELINES: dict[str, dict] = {
         ],
         "why": "2014 SRD subclass use-limit tail (W7)",
     },
+    # X2: per-turn / per-combat / per-rage limits as a recharge ("turn" / "combat" / "rage" / "other"). Rule matrix: the
+    # existing SRD resources whose catalog text says "Once per turn" / "Once on each of your turns" get `uses` 1 and
+    # `recharge` "turn": the Rogue's Sneak Attack (every Rogue level 1 / 3 / 11 / 20, the multiclass Rogue 3 / Bard 2, the
+    # 2014 feats Rogue 16 kitchen sink), the Life Domain Divine Strike (Cleric 11 / 20) and the Ranger's Foe Slayer (Ranger
+    # 20). Only the `uses` and `recharge` fields of those three resource ids move; nothing else (no new resource, no note).
+    # The book-subclass rows and the species rows X2 touches are in no golden case (verified by the dry-run).
+    "X2": {
+        "cases": ["*/src-*/rogue1", "*/src-*/rogue3", "*/src-*/rogue11", "*/src-*/rogue20", "*/src-*/multi-rogue3-bard2",
+                  "*/src-*/cleric11", "*/src-*/cleric20", "*/src-*/ranger20", "ks/src-*/feats-2014-rogue16"],
+        "paths": [
+            r"^result\.derived\.classResources\[(rogue:sneak-attack|cleric:divine-strike-life-domain|ranger:foe-slayer)\]\.(uses|recharge)$",
+        ],
+        "why": "per-turn recharge of Sneak Attack, Life Domain Divine Strike and Foe Slayer (X2)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -613,7 +627,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7") and STRIP == ("derived.featResources", "derived.speciesResources")
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2") and STRIP == ("derived.featResources", "derived.speciesResources")
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
@@ -837,6 +851,20 @@ def test_mixed_and_2014_resolve_is_unchanged(catalog, name):
     entry = _GOLDEN[name]
     now = strip(json.loads(json.dumps(resolve(copy.deepcopy(entry["draft"]), catalog))))
     assert now == strip(entry["result"])
+
+
+def test_x2_cases_hold_the_turn_recharge():
+    """X2: the 33 rebaselined cases carry Sneak Attack / Life Domain Divine Strike / Foe Slayer as 1 use per turn; every
+    other case holds no resource with a non-rest recharge (the species, book-subclass and 2024 rows are in no golden case)."""
+    hit = sorted(n for n in _GOLDEN if any(fnmatch.fnmatchcase(n, p) for p in REBASELINES["X2"]["cases"]))
+    assert len(hit) == 33
+    x2_ids = {"rogue:sneak-attack", "cleric:divine-strike-life-domain", "ranger:foe-slayer"}
+    for n, entry in _GOLDEN.items():
+        resources = entry["result"]["derived"]["classResources"]
+        turn = {r["id"] for r in resources if r["recharge"] in ("turn", "combat", "rage", "other")}
+        assert (turn <= x2_ids) and (n in hit or not turn), n
+        if n in hit:
+            assert turn and all(r["uses"] == 1 and r["recharge"] == "turn" for r in resources if r["id"] in turn), n
 
 
 if __name__ == "__main__":

@@ -149,7 +149,7 @@ def test_c6a_orders_are_unchanged(catalog):
 @pytest.mark.parametrize("level,dice", [(7, "1d8"), (13, "1d8"), (14, "2d8"), (20, "2d8")])
 def test_divine_strike_dice_by_level(catalog, level, dice):
     r = _resource(_res(catalog, [_cleric(level)]), "cleric:divine-strike")
-    assert r["dice"] == dice and r["name"] == "Divine Strike" and r["uses"] is None and r["recharge"] is None
+    assert r["dice"] == dice and r["name"] == "Divine Strike" and r["uses"] == 1 and r["recharge"] == "turn"  # X2: once on each of your turns
     assert r["source"] == {"kind": "class", "id": "cleric", "label": "Cleric"}
     assert "once" in r["details"]["note"].lower() and "necrotic or radiant" in r["details"]["damageTypes"].lower()
 

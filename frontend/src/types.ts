@@ -297,7 +297,8 @@ export interface ResourceCore {
   name: string;
   uses: number | null;
   unlimited?: boolean;
-  recharge: "long" | "short" | "short-or-long" | null;
+  /** Rests (long, short, short-or-long) or a non-rest limit: once per turn / combat / rage, or `other` (the condition is in details.note). */
+  recharge: "long" | "short" | "short-or-long" | "turn" | "combat" | "rage" | "other" | null;
   die?: string;
   dice?: string;
   pool?: number;

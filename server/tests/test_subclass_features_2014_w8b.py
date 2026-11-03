@@ -114,7 +114,7 @@ RESOURCES = [
     ("grave-xge", "cleric", "cleric:sentinel-at-death-s-door", 6, "wis1", "long"),
     ("grave-xge", "cleric", "cleric:keeper-of-souls", 17, None, None),
     ("order-tce", "cleric", "cleric:embodiment-of-the-law", 6, "wis1", "long"),
-    ("order-tce", "cleric", "cleric:order-s-wrath", 17, None, None),
+    ("order-tce", "cleric", "cleric:order-s-wrath", 17, 1, "turn"),  # X2
     ("peace-tce", "cleric", "cleric:emboldening-bond", 1, "pb", "long"),
     ("twilight-tce", "cleric", "cleric:steps-of-night", 6, "pb", "long"),
     ("forge-xge", "cleric", "cleric:blessing-of-the-forge", 1, 1, "long"),
@@ -124,7 +124,7 @@ RESOURCES = [
     ("knowledge-psa", "cleric", "cleric:visions-of-the-past", 17, 1, "short-or-long"),
     ("light-phb", "cleric", "cleric:corona-of-light", 17, None, None),
     ("nature-phb", "cleric", "cleric:dampen-elements", 6, None, None),
-    *[(sub, "cleric", f"cleric:divine-strike-{dom.lower()}-domain", 8, None, None) for sub, dom in _DS],
+    *[(sub, "cleric", f"cleric:divine-strike-{dom.lower()}-domain", 8, 1, "turn") for sub, dom in _DS],
     ("dreams-xge", "druid", "druid:balm-of-the-summer-court", 2, "level", "long"),
     ("dreams-xge", "druid", "druid:hidden-paths", 10, "wis1", "long"),
     ("dreams-xge", "druid", "druid:walker-in-dreams", 14, 1, "long"),
@@ -138,7 +138,7 @@ RESOURCES = [
     ("wildfire-tce", "druid", "druid:blazing-revival", 14, 1, "long"),
     ("cavalier-xge", "fighter", "fighter:unwavering-mark", 3, "str1", "long"),
     ("cavalier-xge", "fighter", "fighter:warding-maneuver", 7, "con1", "long"),
-    ("cavalier-xge", "fighter", "fighter:ferocious-charger", 15, None, None),
+    ("cavalier-xge", "fighter", "fighter:ferocious-charger", 15, 1, "turn"),  # X2
     ("echo-knight-egw", "fighter", "fighter:manifest-echo", 3, None, None),
     ("echo-knight-egw", "fighter", "fighter:unleash-incarnation", 3, "con1", "long"),
     ("echo-knight-egw", "fighter", "fighter:echo-avatar", 7, None, None),
@@ -148,6 +148,7 @@ RESOURCES = [
     ("rune-knight-tce", "fighter", "fighter:giant-s-might", 3, "pb", "long"),
     ("rune-knight-tce", "fighter", "fighter:runic-shield", 7, "pb", "long"),
     ("samurai-xge", "fighter", "fighter:fighting-spirit", 3, 3, "long"),
+    ("samurai-xge", "fighter", "fighter:rapid-strike", 15, 1, "turn"),  # X2: "no more than once per turn"
     ("samurai-xge", "fighter", "fighter:strength-before-death", 18, 1, "long"),
 ]
 

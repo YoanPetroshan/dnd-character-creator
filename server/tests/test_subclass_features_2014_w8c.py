@@ -122,12 +122,14 @@ RESOURCES = [
     ("drunken-master-xge", "monk", "monk:drunkard-s-luck", 11, None, None),
     ("four-elements-phb", "monk", "monk:disciple-of-the-elements", 3, None, None),
     ("kensei-xge", "monk", "monk:kensei-s-shot", 3, None, None),
-    ("kensei-xge", "monk", "monk:deft-strike", 6, None, None),
+    ("kensei-xge", "monk", "monk:deft-strike", 6, 1, "turn"),  # X2
+    ("kensei-xge", "monk", "monk:unerring-accuracy", 17, 1, "turn"),  # X2: "only once on each of your turns"
+    ("gloom-stalker-xge", "ranger", "ranger:stalker-s-flurry", 11, 1, "turn"),  # X2: "Once on each of your turns"
     ("kensei-xge", "monk", "monk:sharpen-the-blade", 11, None, None),
     ("long-death-scag", "monk", "monk:touch-of-death", 3, None, None),
     ("long-death-scag", "monk", "monk:mastery-of-death", 11, None, None),
     ("long-death-scag", "monk", "monk:touch-of-the-long-death", 17, None, None),
-    ("mercy-tce", "monk", "monk:hand-of-harm", 3, None, None),
+    ("mercy-tce", "monk", "monk:hand-of-harm", 3, 1, "turn"),  # X2
     ("mercy-tce", "monk", "monk:hand-of-healing", 3, None, None),
     ("mercy-tce", "monk", "monk:hand-of-ultimate-mercy", 17, 1, "long"),
     ("shadow-phb", "monk", "monk:shadow-arts", 3, None, None),
@@ -154,7 +156,7 @@ RESOURCES = [
     ("drakewarden-ftd", "ranger", "ranger:drake-companion", 3, 1, "long"),
     ("drakewarden-ftd", "ranger", "ranger:drake-s-breath", 11, 1, "long"),
     ("drakewarden-ftd", "ranger", "ranger:reflexive-resistance", 15, "pb", "long"),
-    ("fey-wanderer-tce", "ranger", "ranger:dreadful-strikes", 3, None, None),
+    ("fey-wanderer-tce", "ranger", "ranger:dreadful-strikes", 3, 1, "turn"),  # X2
     ("fey-wanderer-tce", "ranger", "ranger:otherworldly-glamour", 3, None, None),
     ("fey-wanderer-tce", "ranger", "ranger:beguiling-twist", 7, None, None),
     ("fey-wanderer-tce", "ranger", "ranger:fey-reinforcements", 11, 1, "long"),
@@ -166,7 +168,7 @@ RESOURCES = [
     ("monster-slayer-xge", "ranger", "ranger:hunter-s-sense", 3, "wis1", "long"),
     ("monster-slayer-xge", "ranger", "ranger:slayer-s-prey", 3, None, None),
     ("monster-slayer-xge", "ranger", "ranger:magic-user-s-nemesis", 11, 1, "short-or-long"),
-    ("swarmkeeper-tce", "ranger", "ranger:gathered-swarm", 3, None, None),
+    ("swarmkeeper-tce", "ranger", "ranger:gathered-swarm", 3, 1, "turn"),  # X2
     ("swarmkeeper-tce", "ranger", "ranger:writhing-tide", 7, "pb", "long"),
     ("swarmkeeper-tce", "ranger", "ranger:swarming-dispersal", 15, "pb", "long"),
     ("arcane-trickster-phb", "rogue", "rogue:spell-thief", 17, 1, "long"),

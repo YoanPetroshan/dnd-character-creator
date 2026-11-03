@@ -67,7 +67,9 @@ def expertise_label(entry: str) -> str:
     return SKILL_NAMES.get(entry) or proficiency_label(entry)
 
 
-_RECHARGE_WORDS = {"long": "дълга почивка", "short": "кратка почивка", "short-or-long": "кратка или дълга почивка"}
+# X2: `turn` / `combat` / `rage` are non-rest limits ("once per turn" ...), `other` points at the condition in the note.
+_RECHARGE_WORDS = {"long": "дълга почивка", "short": "кратка почивка", "short-or-long": "кратка или дълга почивка",
+                   "turn": "на ход", "combat": "на битка", "rage": "на ярост", "other": "виж бележката"}
 
 
 _DAMAGE_NAMES_BG = {

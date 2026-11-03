@@ -96,7 +96,7 @@ RESOURCES = [
     ("berserker", "barbarian", "barbarian:frenzy", 3, None, None),
     ("berserker", "barbarian", "barbarian:intimidating-presence", 10, None, None),
     ("life", "cleric", "cleric:disciple-of-life", 1, None, None),
-    ("life", "cleric", "cleric:divine-strike-life-domain", 8, None, None),
+    ("life", "cleric", "cleric:divine-strike-life-domain", 8, 1, "turn"),  # X2
     ("land", "druid", "druid:natural-recovery", 2, None, "long"),
     ("land", "druid", "druid:nature-s-sanctuary", 14, None, None),
     ("champion", "fighter", "fighter:survivor", 18, None, None),

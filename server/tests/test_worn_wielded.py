@@ -161,6 +161,8 @@ def _neutralise_class_feature_tails(*results):
         for r in res["derived"]["classResources"]:
             if r["id"] in new_ids:
                 continue
+            if r["id"] == "rogue:sneak-attack":  # X2: "Once per turn" is now uses 1 / recharge "turn" (the pre-G2 baseline has neither)
+                r["uses"], r["recharge"] = None, None
             if r["id"] in targets and r.get("details"):
                 r["details"].pop("note", None)
                 if not r["details"]:
