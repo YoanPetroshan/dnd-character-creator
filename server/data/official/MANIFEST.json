@@ -1,0 +1,409 @@
+{
+  "bundle_sha256": "88aab57fab15e41e83929e86da1e825c59d8ff2312b4901f8908c04e03c369b2",
+  "files": {
+    "backgrounds.json": {
+      "bytes": 703412,
+      "pulled_at": "2026-08-24 23:55 UTC",
+      "records": {
+        "background": 161
+      },
+      "sha256": "7f41ce389aef5820fe4966c5844f1e3fa87bf908ae9b4db09378c93d58b3bb40",
+      "url": "https://raw.githubusercontent.com/5etools-mirror-3/5etools-src/main/data/backgrounds.json"
+    },
+    "class/class-artificer.json": {
+      "bytes": 153816,
+      "pulled_at": null,
+      "records": {
+        "class": 2,
+        "classFeature": 41,
+        "subclass": 13,
+        "subclassFeature": 78
+      },
+      "sha256": "4213e978e2af87173babdbe50931c349d8e8ac0941776293fdba565dbb85b048",
+      "url": null
+    },
+    "class/class-barbarian.json": {
+      "bytes": 121107,
+      "pulled_at": null,
+      "records": {
+        "class": 2,
+        "classFeature": 51,
+        "subclass": 22,
+        "subclassFeature": 96
+      },
+      "sha256": "e13109b124331e052f00333826855333f26db39d26d0416a27cf100dd3b6cf5c",
+      "url": null
+    },
+    "class/class-bard.json": {
+      "bytes": 128158,
+      "pulled_at": null,
+      "records": {
+        "class": 2,
+        "classFeature": 46,
+        "subclass": 21,
+        "subclassFeature": 75
+      },
+      "sha256": "2caa2b0910127ba3b8910914e8f2a54549c2189306b7021d5c7f7804d3463892",
+      "url": null
+    },
+    "class/class-cleric.json": {
+      "bytes": 243659,
+      "pulled_at": null,
+      "records": {
+        "class": 2,
+        "classFeature": 46,
+        "subclass": 43,
+        "subclassFeature": 209
+      },
+      "sha256": "ca6c89359ac1b47e97e9a89b427add8d51b04e2af9b9f23569e694388b8005a7",
+      "url": null
+    },
+    "class/class-druid.json": {
+      "bytes": 144107,
+      "pulled_at": null,
+      "records": {
+        "class": 2,
+        "classFeature": 42,
+        "subclass": 18,
+        "subclassFeature": 80
+      },
+      "sha256": "ed8e4d25e3dafe16df49620de5a3a1f1f2bb1db9a47493ad809fef61d1929266",
+      "url": null
+    },
+    "class/class-fighter.json": {
+      "bytes": 156790,
+      "pulled_at": null,
+      "records": {
+        "class": 2,
+        "classFeature": 50,
+        "subclass": 25,
+        "subclassFeature": 129
+      },
+      "sha256": "07411cc6484ef7ef1a5e509edbef23cbf7c27d53e85c2ab6da4af4fae680c10f",
+      "url": null
+    },
+    "class/class-monk.json": {
+      "bytes": 140349,
+      "pulled_at": null,
+      "records": {
+        "class": 2,
+        "classFeature": 68,
+        "subclass": 24,
+        "subclassFeature": 86
+      },
+      "sha256": "1d43629bee18150f7d592c532962bb9dce98359deb8533550a9267abdafee8e0",
+      "url": null
+    },
+    "class/class-mystic.json": {
+      "bytes": 52194,
+      "pulled_at": null,
+      "records": {
+        "class": 1,
+        "classFeature": 23,
+        "subclass": 6,
+        "subclassFeature": 36
+      },
+      "sha256": "61143202adf151fb130f3a35840b8ccd7aa792d334d001ea4278d1c0f8d5c2dc",
+      "url": null
+    },
+    "class/class-paladin.json": {
+      "bytes": 164043,
+      "pulled_at": null,
+      "records": {
+        "class": 2,
+        "classFeature": 48,
+        "subclass": 23,
+        "subclassFeature": 116
+      },
+      "sha256": "d7d95eeff5e396cb3338c79e2fe852e1b94476fcd14e390ffb2e6e3f92c50573",
+      "url": null
+    },
+    "class/class-ranger.json": {
+      "bytes": 142052,
+      "pulled_at": null,
+      "records": {
+        "class": 2,
+        "classFeature": 54,
+        "subclass": 21,
+        "subclassFeature": 94
+      },
+      "sha256": "50e58b97502ba7ceffe2b47979ff1082b88825f1755950398771ef76c8b35b08",
+      "url": null
+    },
+    "class/class-rogue.json": {
+      "bytes": 138174,
+      "pulled_at": null,
+      "records": {
+        "class": 2,
+        "classFeature": 55,
+        "subclass": 23,
+        "subclassFeature": 93
+      },
+      "sha256": "f171ba2fddef031c08dc05d9d6cf6f974fdd0690763b13711509bd18d60eaa1c",
+      "url": null
+    },
+    "class/class-sidekick.json": {
+      "bytes": 34187,
+      "pulled_at": null,
+      "records": {
+        "class": 3,
+        "classFeature": 47
+      },
+      "sha256": "945a457b3d672c1913230b64ae8dd6b32aa4a3d777a487d5ed018aa17adf2b86",
+      "url": null
+    },
+    "class/class-sorcerer.json": {
+      "bytes": 170371,
+      "pulled_at": null,
+      "records": {
+        "class": 2,
+        "classFeature": 39,
+        "subclass": 23,
+        "subclassFeature": 98
+      },
+      "sha256": "31efb2befb0181a70fe6ba323bbea9f06f76a5969e0eb9a55f8a6403fbd2da1b",
+      "url": null
+    },
+    "class/class-warlock.json": {
+      "bytes": 143320,
+      "pulled_at": null,
+      "records": {
+        "class": 2,
+        "classFeature": 37,
+        "subclass": 22,
+        "subclassFeature": 86
+      },
+      "sha256": "c6a7e3414d350fddffee686060b2420f69e58273517e5609583b855fdf9a75f0",
+      "url": null
+    },
+    "class/class-wizard.json": {
+      "bytes": 157537,
+      "pulled_at": null,
+      "records": {
+        "class": 2,
+        "classFeature": 30,
+        "subclass": 31,
+        "subclassFeature": 121
+      },
+      "sha256": "08c7e796dc8761ff956a532d56e2a87371a434bd94e387944411612744a4ceaf",
+      "url": null
+    },
+    "class/index.json": {
+      "bytes": 497,
+      "pulled_at": null,
+      "records": {},
+      "sha256": "77b4e3c24ab8a0515948c258a7104f04bbe70e6a89a17714f2ee0bdfce23c2e8",
+      "url": null
+    },
+    "feats.json": {
+      "bytes": 407892,
+      "pulled_at": "2026-09-27 19:05 UTC",
+      "records": {
+        "feat": 305
+      },
+      "sha256": "a7b55565927f767a16e515a18f432349fe93cb0b98dc616dfd4bc61819d078b1",
+      "url": "https://raw.githubusercontent.com/5etools-mirror-3/5etools-src/main/data/feats.json"
+    },
+    "items-base.json": {
+      "bytes": 185338,
+      "pulled_at": "2026-10-09 09:37 UTC",
+      "records": {
+        "baseitem": 230,
+        "itemEntry": 13,
+        "itemMastery": 8,
+        "itemProperty": 27,
+        "itemType": 67,
+        "itemTypeAdditionalEntries": 2
+      },
+      "sha256": "77f843ad3738684eb3d0ef567021f865120fc827a271b5f2d8ca19aa1aa5b067",
+      "url": "https://raw.githubusercontent.com/5etools-mirror-3/5etools-src/main/data/items-base.json"
+    },
+    "optionalfeatures.json": {
+      "bytes": 140865,
+      "pulled_at": null,
+      "records": {
+        "optionalfeature": 213
+      },
+      "sha256": "cf7665175a591c7ab24f3a6007639c11b8b56ebeacf8fe63eaab440a75f591c1",
+      "url": null
+    },
+    "races.json": {
+      "bytes": 567063,
+      "pulled_at": "2026-08-24 23:55 UTC",
+      "records": {
+        "race": 160,
+        "subrace": 98
+      },
+      "sha256": "c6bcd03065f5c00a3d39732492f8e7b932d9b64417e8ec6541e19e810d6dc580",
+      "url": "https://raw.githubusercontent.com/5etools-mirror-3/5etools-src/main/data/races.json"
+    },
+    "spells/index.json": {
+      "bytes": 486,
+      "pulled_at": null,
+      "records": {},
+      "sha256": "8d36d7f859bb434380a18f5fed4024f1bfdcd1bba279897c3436c48021dea529",
+      "url": null
+    },
+    "spells/sources.json": {
+      "bytes": 234251,
+      "pulled_at": null,
+      "records": {},
+      "sha256": "7ed1fe9978ffa977e70f12b7d257a252ceb0db5a6001a3930ff1d0d68ecd9107",
+      "url": null
+    },
+    "spells/spells-aag.json": {
+      "bytes": 1987,
+      "pulled_at": null,
+      "records": {
+        "spell": 2
+      },
+      "sha256": "30cd772fa48ae872b8794fdd5ff4e010fed5448cc3653e6742b5cca1ab866c84",
+      "url": null
+    },
+    "spells/spells-ai.json": {
+      "bytes": 11201,
+      "pulled_at": null,
+      "records": {
+        "spell": 7
+      },
+      "sha256": "24a2e2b650dfaa0973b90d8afc19d75d0233fe190e7b01f4bb34bff5b0eaa27d",
+      "url": null
+    },
+    "spells/spells-aitfr-avt.json": {
+      "bytes": 4306,
+      "pulled_at": null,
+      "records": {
+        "spell": 1
+      },
+      "sha256": "d6df59a02812d07ffe6f1d5e5317805eea677586b75d693f1d9904fb0468dcb9",
+      "url": null
+    },
+    "spells/spells-bmt.json": {
+      "bytes": 4223,
+      "pulled_at": null,
+      "records": {
+        "spell": 3
+      },
+      "sha256": "cdbcb5381e2296e3d1ffdf11b5442be3ddb4c32fff62a60694c6bf1b49af7741",
+      "url": null
+    },
+    "spells/spells-efa.json": {
+      "bytes": 1577,
+      "pulled_at": null,
+      "records": {
+        "spell": 1
+      },
+      "sha256": "e4c35eb6a906e59a5a93c4eb00af39e63a8c5714cc847e038444a9e92ebbdac2",
+      "url": null
+    },
+    "spells/spells-egw.json": {
+      "bytes": 22952,
+      "pulled_at": null,
+      "records": {
+        "spell": 15
+      },
+      "sha256": "4da676ea7019b995b50589321aaefcd7c6560e0f0bbbf7615a525d79e0222329",
+      "url": null
+    },
+    "spells/spells-frhof.json": {
+      "bytes": 33085,
+      "pulled_at": null,
+      "records": {
+        "spell": 19
+      },
+      "sha256": "c21ae4df107f127f5398d5697f63aab566097d103ec6d5509a926a0a3eaa0dea",
+      "url": null
+    },
+    "spells/spells-ftd.json": {
+      "bytes": 11872,
+      "pulled_at": null,
+      "records": {
+        "spell": 7
+      },
+      "sha256": "1989e9eaaacc7f792c98fd63cdb364e3e1c4cb6a5b4b82f75694d85c6a9829fe",
+      "url": null
+    },
+    "spells/spells-ggr.json": {
+      "bytes": 1504,
+      "pulled_at": null,
+      "records": {
+        "spell": 1
+      },
+      "sha256": "d85aefacdeccf8bc395f872b3c0ebb64a0bc2cf77da2fbbcd9554eddb58542a1",
+      "url": null
+    },
+    "spells/spells-idrotf.json": {
+      "bytes": 2670,
+      "pulled_at": null,
+      "records": {
+        "spell": 2
+      },
+      "sha256": "b57aa142fc19fe209332a852a9aa31a99ba8d03d4a4a39348f8f0dbb9d6ea813",
+      "url": null
+    },
+    "spells/spells-llk.json": {
+      "bytes": 6457,
+      "pulled_at": null,
+      "records": {
+        "spell": 3
+      },
+      "sha256": "ec4eb3de178b7140067842f6b7ba72fe8c1c9d2ef253722bec102266df0e1f04",
+      "url": null
+    },
+    "spells/spells-phb.json": {
+      "bytes": 637074,
+      "pulled_at": null,
+      "records": {
+        "spell": 361
+      },
+      "sha256": "caffbdae5fa82b946e5b0ac98d5bf78c3a08b6ca5429a39f3c45dee2459537ab",
+      "url": null
+    },
+    "spells/spells-sato.json": {
+      "bytes": 2355,
+      "pulled_at": null,
+      "records": {
+        "spell": 2
+      },
+      "sha256": "8765fdb23acd17a9202ccc7f29280e9102f94fbb3bab6f7359dfb3029956a385",
+      "url": null
+    },
+    "spells/spells-scc.json": {
+      "bytes": 5626,
+      "pulled_at": null,
+      "records": {
+        "spell": 5
+      },
+      "sha256": "748f5c8ac9dfc197bc83e254d872bdeac21b317affa0201c2b1d6efd9b9810a3",
+      "url": null
+    },
+    "spells/spells-tce.json": {
+      "bytes": 34202,
+      "pulled_at": null,
+      "records": {
+        "spell": 21
+      },
+      "sha256": "2366f928759cf4b20807a91f716c1dde3c40727edbc5573eafb61c471a9633bc",
+      "url": null
+    },
+    "spells/spells-xge.json": {
+      "bytes": 162309,
+      "pulled_at": null,
+      "records": {
+        "spell": 95
+      },
+      "sha256": "b33c0366d27b0cf3470243556511df770f44507a84dc1144ee0363412e5fbdff",
+      "url": null
+    },
+    "spells/spells-xphb.json": {
+      "bytes": 594989,
+      "pulled_at": null,
+      "records": {
+        "spell": 391
+      },
+      "sha256": "7befcfc3cf1556dfbe82a5de82bffb4f9e7c1434b750d931d3c954ee265a23cc",
+      "url": null
+    }
+  },
+  "format": 1
+}
