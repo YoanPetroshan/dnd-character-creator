@@ -65,9 +65,7 @@ the v1 code needs a subset of the same packages, so one install covers both). Th
 `python -m chargen.sync --official`). Without it the tests that need it are skipped with the reason
 "official data not fetched on this machine" (`has_official()` from `catalog.official_source`); the SRD-only tests
 still run. To see the skip count on your machine, run `DND_CAMPAIGN_ROOT=/nonexistent` in front of the pytest
-command (it hides the synced data) and read the summary line. Measured on 2026-11-03: with the data 7196 passed; without it 5265 tests skip, 1447 pass,
-and 229 tests plus 5 fuzz setup errors fail because they assume the official data without a skip marker (a known
-hygiene gap: run the suite only with the data synced). The repo-root suite does not depend on the data: 405 passed,
+command (it hides the synced data) and read the summary line. Measured on 2026-11-03 (W12): with the data 7213 passed; without it 5503 tests skip and 1460 pass, with 0 failures and 0 errors (every test that assumes the data carries a skip marker). The repo-root suite does not depend on the data: 405 passed,
 8 skipped (ported dead-by-design code).
 
 **Timing.** The server suite takes about 100 s on the development machine (it can take several minutes on a loaded
