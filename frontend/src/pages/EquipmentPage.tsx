@@ -157,7 +157,7 @@ export function EquipmentPage() {
       )}
 
       <h2>Предмети</h2>
-      <input type="search" aria-label="Търсене на предмети" placeholder="Търсене…" value={query} onChange={(e) => setQuery(e.target.value)} />
+      <input type="text" inputMode="search" enterKeyHint="search" aria-label="Търсене на предмети" placeholder="Търсене…" value={query} onChange={(e) => setQuery(e.target.value)} />
       <select aria-label="Категория" value={category} onChange={(e) => setCategory(e.target.value)}>
         {CATEGORIES.map((c) => (
           <option key={c.value} value={c.value}>

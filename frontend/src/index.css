@@ -468,7 +468,6 @@ select,
 textarea,
 summary {
   min-height: 44px;
-  box-sizing: border-box;
 }
 
 label:has(> input[type="checkbox"]),
