@@ -26,6 +26,11 @@ import pytest
 from catalog.loader import load
 from engine.resolve import resolve
 
+from catalog.official.paths import has_official, has_official_classes, has_official_spells  # noqa: E402
+
+needs_official = pytest.mark.skipif(
+    not (has_official() and has_official_classes() and has_official_spells()), reason="5etools data not available")
+
 KNOWN = "class:bard:spells-known"
 CANTRIPS = "class:bard:spells-cantrips"
 RULESETS = pytest.mark.parametrize("ruleset", ["mixed", "2014"])
@@ -112,6 +117,7 @@ def test_secrets_spells_follow_the_highest_bard_slot_level(catalog, ruleset):
     assert _opt(_card(_bard(catalog, 17, ruleset=ruleset)), "wish")["label"] == "Wish (Magical Secrets)"
 
 
+@needs_official
 def test_a_spell_on_no_class_list_is_not_offered(catalog):
     orphans = [s for s in catalog.spells.values() if not s.get("classes") and s["level"] <= 5]
     assert orphans, "the catalog should hold class-less spells for this test to mean something"
@@ -127,6 +133,7 @@ def test_each_offered_spell_is_unique_and_the_list_is_sorted_by_level_then_name(
     assert levels == sorted(levels) and levels[0] == 0
 
 
+@needs_official
 def test_sources_srd_offers_only_srd_spells(catalog):
     card = _card(_bard(catalog, 10, sources=["srd"]))
     assert _opt(card, "fireball")["label"] == "Fireball (Magical Secrets)"
@@ -134,6 +141,7 @@ def test_sources_srd_offers_only_srd_spells(catalog):
     assert len(card["options"]) < len(_card(_bard(catalog, 10))["options"])
 
 
+@needs_official
 def test_a_stored_pick_hidden_by_the_sources_filter_stays_offered(catalog):
     book_only = next(s for s in catalog.spells.values()
                      if s.get("source") not in (None, "SRD") and not s.get("ruleset") == "2024" and s["level"] == 3
@@ -239,6 +247,7 @@ def test_degrades_without_the_srd_features(catalog):
 
 # ---- 2024 unchanged ----------------------------------------------------------------------------------
 
+@needs_official
 def test_2024_keeps_its_own_mechanism(catalog):
     card = _card(_bard(catalog, 10, ruleset="2024"))
     assert _opt(card, "fireball-xphb")["label"] == "Fireball (Magical Secrets)"

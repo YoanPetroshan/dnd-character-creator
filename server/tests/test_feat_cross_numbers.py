@@ -28,6 +28,11 @@ from catalog.official_source import has_official, has_official_classes
 from engine import feat_effects as fe
 from engine.resolve import resolve
 
+from catalog.official.paths import has_official, has_official_classes, has_official_spells  # noqa: E402
+
+needs_official = pytest.mark.skipif(
+    not (has_official() and has_official_classes() and has_official_spells()), reason="5etools data not available")
+
 needs_data = pytest.mark.skipif(not (has_official() and has_official_classes()),
                                 reason="5etools official data not available")
 
@@ -90,15 +95,18 @@ def _marks(base, greater=True, **kw):
 # ---------------------------------------------------------------- data pins
 
 
+@needs_official
 @pytest.mark.parametrize("index", sorted(tail.RP5_INNATE_QUOTES))
 def test_quote_matches_catalog(catalog, index):
     assert tail.RP5_INNATE_QUOTES[index] in _plain(catalog.feats[index]["entries"])
 
 
+@needs_official
 def test_healing_dice_quote_matches_catalog(catalog):
     assert tail.RP5_HEALING_DICE_QUOTE in _plain(catalog.feats["greater-mark-of-healing-efa"]["entries"])
 
 
+@needs_official
 @pytest.mark.parametrize("dependent", sorted(tail.RP5_ABILITY_FROM))
 def test_ability_from_quote_and_base_match_the_catalog(catalog, dependent):
     base, sentence = tail.RP5_ABILITY_FROM[dependent]

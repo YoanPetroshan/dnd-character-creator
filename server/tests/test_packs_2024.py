@@ -26,6 +26,11 @@ from export import to_yaml
 from markdown_export import to_markdown
 from pdf_export import to_pdf
 
+from catalog.official.paths import has_official, has_official_classes, has_official_spells  # noqa: E402
+
+needs_official = pytest.mark.skipif(
+    not (has_official() and has_official_classes() and has_official_spells()), reason="5etools data not available")
+
 TABLE = {"burglars-pack": 42, "diplomats-pack": 39, "dungeoneers-pack": 55, "entertainers-pack": 58.5,
          "explorers-pack": 55, "priests-pack": 29, "scholars-pack": 22}
 
@@ -96,6 +101,7 @@ def test_mixed_and_2014_have_no_contents_and_the_srd_sum_weight(catalog, ruleset
     assert not any("contents" in e for k in ("granted", "chosen", "added") for e in res["sheet"]["equipment"][k])
 
 
+@needs_official
 def test_fighter_package_a_dungeoneers_pack_adds_55(catalog):
     cid = "class:fighter:1:equipment-choice-0"
     base = resolve(_draft(), catalog)

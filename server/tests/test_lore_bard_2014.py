@@ -42,6 +42,11 @@ from catalog.loader import load
 from engine import class_choices_2024
 from engine.resolve import resolve
 
+from catalog.official.paths import has_official, has_official_classes, has_official_spells  # noqa: E402
+
+needs_official = pytest.mark.skipif(
+    not (has_official() and has_official_classes() and has_official_spells()), reason="5etools data not available")
+
 BONUS = "class:bard:3:feature:bonus-proficiencies"
 SECRETS = "class:bard:6:feature:additional-magical-secrets"
 KNOWN = "class:bard:spells-known"
@@ -128,6 +133,7 @@ def test_bonus_proficiencies_card(catalog, ruleset):
     assert card["description"] == " ".join(catalog.features["bonus-proficiencies"]["desc"])
 
 
+@needs_official
 def test_bonus_proficiencies_is_absent_under_2024_and_xphb_lore_is_unchanged(catalog):
     res = _res(catalog, [("bard", 3, "lore", {})], "2024")
     assert _card(res, BONUS) is None
@@ -221,6 +227,7 @@ def test_secrets_card_appears_at_bard_6_with_lore_only(catalog, ruleset):
     assert "don't count against the number of bard spells you know" in card["description"]
 
 
+@needs_official
 @RULESETS
 def test_secrets_options_are_any_class_up_to_the_bard_slot_level_plus_cantrips(catalog, ruleset):
     card = _card(_lore(catalog, 6, ruleset=ruleset), SECRETS)           # Bard 6: 3rd-level slots
@@ -243,6 +250,7 @@ def test_secrets_levels_follow_the_bard_table(catalog):
     assert _opt(_card(_lore(catalog, 20), SECRETS), "wish") is not None
 
 
+@needs_official
 def test_secrets_sources_srd_filter_and_kept_hidden_pick(catalog):
     srd = _card(_lore(catalog, 6, sources=["srd"]), SECRETS)
     assert _opt(srd, "fireball") is not None

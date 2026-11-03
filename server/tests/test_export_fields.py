@@ -12,6 +12,10 @@ from engine.resolve import resolve
 from export import to_yaml
 from markdown_export import to_markdown
 from pdf_export import to_pdf
+from catalog.official.paths import has_official, has_official_classes, has_official_spells
+
+needs_official = pytest.mark.skipif(
+    not (has_official() and has_official_classes() and has_official_spells()), reason="5etools data not available")
 
 
 @pytest.fixture(scope="module")
@@ -66,6 +70,7 @@ def test_yaml_values_match_resolution(catalog):
     assert doc["senses"].get("darkvision") == 60
 
 
+@needs_official
 def test_markdown_lists_new_sections(catalog):
     md = to_markdown(_rich_resolution(catalog))
     assert "## Черти и способности" in md
@@ -163,6 +168,7 @@ def test_markdown_and_pdf_show_dueling_damage(catalog):
 import re
 
 from kitchen_sink import KITCHEN_SINK, build, skip_reason
+
 
 # What each draft must actually put on the sheet, so a passing sweep is not vacuous.
 _EXPECT = {

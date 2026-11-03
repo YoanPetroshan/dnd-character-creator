@@ -24,6 +24,11 @@ from catalog.reference_data import EXPERTISE_2024, SKILL_NAMES, SRD_CARDS_REPLAC
 from engine import class_choices_2024, sheet_features
 from engine.resolve import resolve
 
+from catalog.official.paths import has_official, has_official_classes, has_official_spells  # noqa: E402
+
+needs_official = pytest.mark.skipif(
+    not (has_official() and has_official_classes() and has_official_spells()), reason="5etools data not available")
+
 needs_data = pytest.mark.skipif(not (has_official() and has_official_classes()),
                                 reason="5etools official data not available")
 
@@ -443,6 +448,7 @@ def test_ranger_favored_enemy_row_has_no_leftover_srd_rows(catalog):
     assert names.count("Favored Enemy") == 1 and names.count("Expertise") == 1
 
 
+@needs_official
 def test_generic_attach_rule_takes_any_card_ending_in_an_xphb_feature_id(catalog):
     """C6b-1: cids of kind `languages` (C6b-2) and any `<kind>:<xphb feature id>` attach to that row."""
     assert sheet_features._CLASS_CHOICE_ID.match("class:ranger:2:languages:xphb-ranger-2-deft-explorer")

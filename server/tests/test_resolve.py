@@ -16,6 +16,11 @@ from engine.resolve import (
     _feat_senses, _gate_expertise_choices, _spell_filter_options, _resolve_granted_feats, resolve,
 )
 
+from catalog.official.paths import has_official, has_official_classes, has_official_spells  # noqa: E402
+
+needs_official = pytest.mark.skipif(
+    not (has_official() and has_official_classes() and has_official_spells()), reason="5etools data not available")
+
 
 @pytest.fixture(scope="module")
 def catalog():
@@ -3692,6 +3697,7 @@ def test_feat_prerequisite_problems_chosen_deltas_by_instance_dont_collide_acros
     assert {p["id"] for p in problems} == {"feat-prerequisite-unmet-synthetic-grappler-like-test"}
 
 
+@needs_official
 def test_feat_choice_templates_origin_param_scopes_the_cid(catalog):
     # Skill Expert/XPHB (grounded 2026-09-28 via catalog.feats): a real
     # proficiency_choices entry (any_skill, choose 1) and no
@@ -3708,6 +3714,7 @@ def test_feat_choice_templates_origin_param_scopes_the_cid(catalog):
     assert [t["label"] for t in default_templates] == [t["label"] for t in scoped_templates]
 
 
+@needs_official
 def test_feat_ability_bonus_choice_templates_origin_param_scopes_the_cid(catalog):
     skill_expert = catalog.feats.get("skill-expert-xphb")
     assert skill_expert is not None, "ground the real catalog id before trusting this test"
@@ -3718,6 +3725,7 @@ def test_feat_ability_bonus_choice_templates_origin_param_scopes_the_cid(catalog
     assert scoped_pairs[0][1] is skill_expert  # the paired feat itself is unaffected by origin
 
 
+@needs_official
 def test_asi_choice_templates_includes_eligible_feats(catalog):
     templates = _asi_choice_templates(
         "fighter", "Fighter", [4], {4: {"STR": 15, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10}},
@@ -3739,6 +3747,7 @@ def test_asi_choice_templates_includes_eligible_feats(catalog):
     assert len(option_ids) == 21 + 237
 
 
+@needs_official
 def test_asi_choice_templates_disables_a_feat_option_with_unmet_prerequisite(catalog):
     # Grappler/XPHB requires STR >= 13 or DEX >= 13 (grounded 2026-09-28:
     # catalog.feats["grappler-xphb"]["prerequisite"] ==
@@ -3752,6 +3761,7 @@ def test_asi_choice_templates_disables_a_feat_option_with_unmet_prerequisite(cat
     assert "prerequisite" in grappler_option.get("disabledReason", "").lower()
 
 
+@needs_official
 def test_asi_choice_templates_feat_options_not_disabled_when_prerequisites_off(catalog):
     templates = _asi_choice_templates(
         "fighter", "Fighter", [4], {4: {"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10}},

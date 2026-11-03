@@ -47,6 +47,11 @@ from export import to_yaml
 from markdown_export import to_markdown
 from pdf_export import to_pdf
 
+from catalog.official.paths import has_official, has_official_classes, has_official_spells  # noqa: E402
+
+needs_official = pytest.mark.skipif(
+    not (has_official() and has_official_classes() and has_official_spells()), reason="5etools data not available")
+
 needs_classes = pytest.mark.skipif(not has_official_classes(), reason="5etools class files not available")
 
 
@@ -208,6 +213,7 @@ def test_attacks_per_action_does_not_stack(catalog, classes, expected):
     assert _apa(_res(catalog, classes)) == expected
 
 
+@needs_official
 @pytest.mark.parametrize("classes,expected", [
     ([("bard", 6, "valor-phb")], 2), ([("bard", 5, "valor-phb")], 1),
     ([("bard", 6, "swords-xge")], 2), ([("bard", 6, "valor-phb"), ("fighter", 11)], 3),
@@ -222,6 +228,7 @@ def test_attacks_per_action_xphb_valor(catalog):
     assert _apa(_res(catalog, [("bard", 6, "valor-xphb")], "2024")) == 2
 
 
+@needs_official
 def test_extra_attack_feature_ids_exist_in_the_catalog(catalog):
     for fid in cr.EXTRA_ATTACK_FEATURES:
         if fid.endswith("-xphb-6-extra-attack") or fid.endswith("frhof-6-extra-attack") or "-tce-" in fid or "-xge-" in fid:

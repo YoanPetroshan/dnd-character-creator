@@ -25,6 +25,11 @@ from catalog.official_source import has_official, has_official_classes
 from catalog.reference_data import FEAT_LANGUAGE_REPLACEMENT, LANGUAGES_2024_RARE, LANGUAGES_2024_STANDARD
 from engine.resolve import resolve
 
+from catalog.official.paths import has_official, has_official_classes, has_official_spells  # noqa: E402
+
+needs_official = pytest.mark.skipif(
+    not (has_official() and has_official_classes() and has_official_spells()), reason="5etools data not available")
+
 needs_data = pytest.mark.skipif(not (has_official() and has_official_classes()),
                                 reason="5etools official data not available")
 
@@ -64,6 +69,7 @@ def _lessons_choices(extra=None):
     return inv
 
 
+@needs_official
 def test_quote_matches_catalog(catalog):
     text = " ".join(e for e in catalog.feats[FEAT]["entries"][1]["entries"])
     assert FEAT_LANGUAGE_REPLACEMENT[FEAT]["quote"] in text

@@ -33,6 +33,11 @@ import pytest
 from catalog.loader import load
 from engine.resolve import resolve
 
+from catalog.official.paths import has_official, has_official_classes, has_official_spells  # noqa: E402
+
+needs_official = pytest.mark.skipif(
+    not (has_official() and has_official_classes() and has_official_spells()), reason="5etools data not available")
+
 BOOK, PREPARED = "class:wizard:spellbook", "class:wizard:spells-known"
 MASTERY1, MASTERY2 = "class:wizard:18:spell-mastery-1", "class:wizard:18:spell-mastery-2"
 SIGNATURE = "class:wizard:20:signature-spells"
@@ -271,6 +276,7 @@ def test_wizard_multiclass_uses_the_wizard_class_level(catalog):
     assert _card(_res(catalog, [("fighter", 3, {}), _wizard(17)]), MASTERY1) is None
 
 
+@needs_official
 def test_2024_cards_keep_their_casting_time_rule_and_always_prepared_mastery(catalog):
     book = ["shield-xphb", "magic-missile-xphb", "detect-magic-xphb", "identify-xphb"]
     res = _res(catalog, [_wizard(18, {MASTERY1: ["magic-missile-xphb"]}, book=book)], "2024")
@@ -280,6 +286,7 @@ def test_2024_cards_keep_their_casting_time_rule_and_always_prepared_mastery(cat
     assert "Spell Mastery" in rows and "Signature Spell" not in rows
 
 
+@needs_official
 def test_a_stored_pick_keeps_its_cid_across_a_ruleset_switch(catalog):
     picks = {MASTERY1: ["magic-missile"]}
     mixed = _res(catalog, [_wizard(18, picks)], "mixed")

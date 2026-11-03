@@ -21,6 +21,11 @@ from catalog.loader import load
 from catalog.official_source import has_official_spells
 from engine.resolve import resolve
 
+from catalog.official.paths import has_official, has_official_classes, has_official_spells  # noqa: E402
+
+needs_official = pytest.mark.skipif(
+    not (has_official() and has_official_classes() and has_official_spells()), reason="5etools data not available")
+
 needs_spells = pytest.mark.skipif(not has_official_spells(), reason="5etools spell files not available")
 
 _BASE = {"STR": 10, "DEX": 10, "CON": 12, "INT": 14, "WIS": 10, "CHA": 16}
@@ -190,6 +195,7 @@ def test_ruleset_visibility_matches_other_spell_options(catalog):
     assert _arcanum(res)[0]["selected"] == ["conjure-fey"]
 
 
+@needs_official
 def test_srd_only_catalog(catalog):
     srd = dataclasses.replace(catalog, spells={k: v for k, v in catalog.spells.items() if v.get("source") == "SRD"})
     res = resolve(_draft([("warlock", 17)]), srd)

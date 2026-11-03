@@ -24,6 +24,11 @@ from catalog import choices as choices_mod
 from catalog.loader import load
 from engine.resolve import resolve
 
+from catalog.official.paths import has_official, has_official_classes, has_official_spells  # noqa: E402
+
+needs_official = pytest.mark.skipif(
+    not (has_official() and has_official_classes() and has_official_spells()), reason="5etools data not available")
+
 # (class, card id, option id, item, qty, quoted phrase of the card description)
 OPTIONS = [
     ("barbarian", "class:barbarian:1:equipment-choice-1", "handaxe", "handaxe", 2, "two handaxes"),
@@ -144,6 +149,7 @@ def test_pack_units_rule():
     assert choices_mod.pack_quantities({"arrow": 20, "handaxe": 2}, {"arrow": arrow, "handaxe": {}}) == {"handaxe": 2}
 
 
+@needs_official
 def test_background_counts_follow_the_text_under_mixed(catalog):
     """A 5etools background keeps its counts under mixed too (Criminal XPHB: two daggers, two pouches)."""
     cid = "background:criminal-xphb:equipment-choice-0"
@@ -157,6 +163,7 @@ def test_background_counts_follow_the_text_under_mixed(catalog):
     assert _chosen(res)["dagger"]["qty"] == 2 and _chosen(res)["pouch"]["qty"] == 2
 
 
+@needs_official
 def test_2024_packages_are_untouched(catalog):
     """The C9b quantities (Fighter A: four? handaxes / javelins) keep their ids and counts under 2024."""
     cid = "class:fighter:1:equipment-choice-0"

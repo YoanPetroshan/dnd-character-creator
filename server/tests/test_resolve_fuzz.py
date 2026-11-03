@@ -23,8 +23,13 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import kitchen_sink as ks  # noqa: E402
 from app import app  # noqa: E402
 from catalog.loader import load  # noqa: E402
+from catalog.official.paths import has_official, has_official_classes, has_official_spells  # noqa: E402
 from catalog.reference_data import ruleset_allows  # noqa: E402
 from engine.resolve import resolve  # noqa: E402
+
+pytestmark = pytest.mark.skipif(
+    not (has_official() and has_official_classes() and has_official_spells()),
+    reason="the fuzz generator draws from the full 5etools catalog (classes, species, backgrounds, spells)")
 
 FUZZ_N = int(os.environ.get("FUZZ_N", "60"))
 FUZZ_SEED0 = int(os.environ.get("FUZZ_SEED0", "0"))

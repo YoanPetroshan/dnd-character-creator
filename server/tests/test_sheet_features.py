@@ -4,6 +4,11 @@ import pytest
 from catalog.loader import load
 from engine.resolve import resolve
 
+from catalog.official.paths import has_official, has_official_classes, has_official_spells  # noqa: E402
+
+needs_official = pytest.mark.skipif(
+    not (has_official() and has_official_classes() and has_official_spells()), reason="5etools data not available")
+
 
 @pytest.fixture(scope="module")
 def catalog():
@@ -104,6 +109,7 @@ def _bg_feat_ids(catalog):
     return catalog
 
 
+@needs_official
 def test_feats_from_background_and_asi_in_features_and_feats(catalog):
     d = _draft([_cls("fighter", 4, choices={"class:fighter:4:asi": ["feat:athlete-xphb"]})], background="acolyte-xphb")
     d["sources"] = ["srd", "phb", "xphb"]

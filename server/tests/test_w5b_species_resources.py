@@ -15,6 +15,11 @@ from catalog import reference_data as ref
 from catalog.loader import load
 from engine.resolve import resolve
 
+from catalog.official.paths import has_official, has_official_classes, has_official_spells  # noqa: E402
+
+needs_official = pytest.mark.skipif(
+    not (has_official() and has_official_classes() and has_official_spells()), reason="5etools data not available")
+
 ABS = ("STR", "DEX", "CON", "INT", "WIS", "CHA")
 
 
@@ -290,6 +295,7 @@ SCAN_PATTERN = re.compile(r"long rest|short rest|short or long rest|expended|tim
                           r"(?:this|that|it)|can't cast", re.I)
 
 
+@needs_official
 @pytest.mark.parametrize("tid", BOOK_IDS)
 def test_book_entry_quotes_match_catalog_trait_text(catalog, tid):
     spec = ref.SPECIES_RESOURCES_2014[tid]
@@ -308,6 +314,7 @@ def test_book_entry_quotes_match_catalog_trait_text(catalog, tid):
     assert tid in held
 
 
+@needs_official
 def test_every_book_entry_states_its_rest_and_use_rule_in_the_text(catalog):
     """`uses` / `recharge` come from the pinned text: a PB entry quotes the proficiency-bonus count, a rest entry its rest."""
     for tid in BOOK_IDS:
@@ -323,6 +330,7 @@ def test_every_book_entry_states_its_rest_and_use_rule_in_the_text(catalog):
             assert "proficiency bonus" in text, tid
 
 
+@needs_official
 def test_scan_every_book_species_trait_with_a_use_or_rest_rule_is_modelled_or_listed_skipped(catalog):
     seen = set()
     for race in catalog.races.values():
@@ -346,6 +354,7 @@ def _book(catalog, species, level=1, **kw):
     return _by_name(_res(catalog, species, level, **kw))
 
 
+@needs_official
 @pytest.mark.parametrize("level,pb", [(1, 2), (5, 3), (9, 4), (13, 5), (17, 6)])
 def test_pb_uses_scale_with_the_proficiency_bonus(catalog, level, pb):
     for species, name in (("astral-elf-aag", "Starlight Step"), ("autognome-aag", "Built for Success"),
@@ -355,6 +364,7 @@ def test_pb_uses_scale_with_the_proficiency_bonus(catalog, level, pb):
         assert r["uses"] == pb and r["recharge"] == "long", (species, name)
 
 
+@needs_official
 @pytest.mark.parametrize("species,name", [
     ("firbolg-vgm", "Hidden Step"), ("goblin-vgm", "Fury of the Small"), ("goliath-vgm", "Stone's Endurance"),
     ("hobgoblin-vgm", "Saving Face"), ("kobold-vgm", "Grovel, Cower, and Beg"), ("leonin-mot", "Daunting Roar"),
@@ -364,6 +374,7 @@ def test_fixed_single_use_recharged_by_a_short_or_long_rest(catalog, species, na
     assert r["uses"] == 1 and r["recharge"] == "short-or-long"
 
 
+@needs_official
 @pytest.mark.parametrize("species,name", [
     ("half-orc-phb", "Relentless Endurance"), ("orc-mpmm", "Relentless Endurance"), ("orc-(ixalan)-psx", "Relentless Endurance"),
     ("minotaur-(amonkhet)-psa", "Relentless Endurance"), ("kender-dsotdq", "Fearless"), ("hexblood-vrgr", "Eerie Token"),
@@ -373,6 +384,7 @@ def test_fixed_single_use_recharged_by_a_long_rest(catalog, species, name):
     assert r["uses"] == 1 and r["recharge"] == "long"
 
 
+@needs_official
 def test_numbers_in_the_notes_follow_the_character(catalog):
     kw = dict(base={"CON": 16})
     goliath = _res(catalog, "goliath-mpmm", 5, **kw)
@@ -394,6 +406,7 @@ def test_numbers_in_the_notes_follow_the_character(catalog):
     assert _book(catalog, "aasimar-mpmm", 9)["Healing Hands"]["details"]["heal"] == "4d4"
 
 
+@needs_official
 def test_level_gated_book_traits_appear_at_their_level(catalog):
     for species, name, lvl, picks in [("aasimar-mpmm", "Celestial Revelation", 3, None),
                                       ("dragonborn-(chromatic)-ftd", "Chromatic Warding", 5, None),
@@ -404,6 +417,7 @@ def test_level_gated_book_traits_appear_at_their_level(catalog):
         assert r["uses"] == 1 and r["recharge"] == "long", name
 
 
+@needs_official
 def test_subspecies_traits_need_the_subspecies_pick(catalog):
     assert "Fey Step" not in _book(catalog, "elf-phb", 1)
     r = _book(catalog, "elf-phb", 1, subrace="elf-phb-eladrin-mtf")["Fey Step"]
@@ -415,6 +429,7 @@ def test_subspecies_traits_need_the_subspecies_pick(catalog):
     assert "Forceful Presence" not in _book(catalog, "dragonborn-phb", 1, subrace="dragonborn-phb-ravenite-egw")
 
 
+@needs_official
 @pytest.mark.parametrize("fam,variant,dmg", [("chromatic", "black", "acid"), ("chromatic", "red", "fire"),
                                              ("gem", "amethyst", "force"), ("gem", "topaz", "necrotic"),
                                              ("metallic", "silver", "cold"), ("metallic", "gold", "fire")])
@@ -430,18 +445,21 @@ def test_ftd_dragonborn_breath_weapon_has_dc_dice_and_the_variant_damage_type(ca
         assert not any("Breath" in a.get("name", "") for a in res["derived"]["attacks"])  # D-2
 
 
+@needs_official
 def test_ftd_breath_weapon_area_differs_by_family(catalog):
     assert "30-foot line" in _book(catalog, "dragonborn-(chromatic)-ftd")["Breath Weapon"]["details"]["note"]
     assert "15-foot cone" in _book(catalog, "dragonborn-(gem)-ftd")["Breath Weapon"]["details"]["note"]
     assert "15-foot cone" in _book(catalog, "dragonborn-(metallic)-ftd")["Breath Weapon"]["details"]["note"]
 
 
+@needs_official
 def test_metallic_second_breath_weapon_has_a_dc_but_no_invented_dice(catalog):
     r = _by_name(_res(catalog, "dragonborn-(metallic)-ftd", 5, base={"CON": 14}))["Metallic Breath Weapon"]
     res = _res(catalog, "dragonborn-(metallic)-ftd", 5, base={"CON": 14})
     assert r["dc"] == 8 + res["derived"]["proficiencyBonus"] + res["derived"]["abilityModifiers"]["CON"] and "dice" not in r and "save" not in r["details"]
 
 
+@needs_official
 def test_phb_dragonborn_breath_weapon_takes_its_damage_type_from_the_resistance_pick(catalog):
     res = _res(catalog, "dragonborn-phb", 6, picks={"species:dragonborn-phb:resistance": ["fire"]}, base={"CON": 12})
     bw = _by_name(res)["Breath Weapon"]
@@ -452,6 +470,7 @@ def test_phb_dragonborn_breath_weapon_takes_its_damage_type_from_the_resistance_
     assert unpicked["details"]["damageType"] is None and "choose your Draconic Ancestry to see the damage type" in unpicked["details"]["note"]
 
 
+@needs_official
 def test_leonin_roar_dc_and_aasimar_shroud_dc(catalog):
     res = _res(catalog, "leonin-mot", 5, base={"CON": 14})
     roar = _by_name(res)["Daunting Roar"]
@@ -463,6 +482,7 @@ def test_leonin_roar_dc_and_aasimar_shroud_dc(catalog):
     assert shroud["details"]["save"] == "CHA"
 
 
+@needs_official
 def test_eladrin_fey_step_and_kender_taunt_do_not_invent_a_dc(catalog):
     assert "dc" not in _book(catalog, "eladrin-mpmm", 5)["Fey Step"]  # the casting ability is chosen when you select the race
     assert "dc" not in _book(catalog, "kender-dsotdq", 5)["Taunt"]
@@ -484,6 +504,7 @@ def test_book_wiring_removed_gives_no_resources(catalog, monkeypatch):
     assert _res(catalog, "astral-elf-aag", 5)["derived"]["speciesResources"] == []
 
 
+@needs_official
 def test_book_entry_degrades_when_its_trait_is_missing_from_the_catalog(catalog, monkeypatch):
     patched = dict(catalog.traits)
     patched.pop("astral-elf-aag-trait-5")
@@ -491,6 +512,7 @@ def test_book_entry_degrades_when_its_trait_is_missing_from_the_catalog(catalog,
     assert _res(catalog, "astral-elf-aag", 5)["derived"]["speciesResources"] == []
 
 
+@needs_official
 def test_book_resources_reach_the_exports(catalog):
     blocks = export_fields.extra_blocks(_res(catalog, "astral-elf-aag", 5))
     idx = blocks.index(("h2", "Ресурси от расата"))

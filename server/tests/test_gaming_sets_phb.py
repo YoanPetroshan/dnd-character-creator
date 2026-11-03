@@ -25,6 +25,11 @@ from catalog import reference_data
 from catalog.loader import load
 from engine.resolve import resolve
 
+from catalog.official.paths import has_official, has_official_classes, has_official_spells  # noqa: E402
+
+needs_official = pytest.mark.skipif(
+    not (has_official() and has_official_classes() and has_official_spells()), reason="5etools data not available")
+
 FOUR = ["dice-set", "dragonchess-set", "playing-card-set", "three-dragon-ante-set"]
 PHB = {  # id: (cost quantity, unit, weight lb)
     "dice-set": (1, "sp", 0), "dragonchess-set": (1, "gp", 0.5),
@@ -78,6 +83,7 @@ def _gaming_cards(res):
     return [c for c in res["choices"] if set(FOUR) & {o["id"] for o in c.get("options", [])}]
 
 
+@needs_official
 @pytest.mark.parametrize("sources", [(), ("srd", "phb")])
 @pytest.mark.parametrize("ruleset", ["mixed", "2014", "2024"])
 def test_every_background_gaming_card_offers_exactly_the_four(catalog, ruleset, sources):
@@ -97,6 +103,7 @@ def test_every_background_gaming_card_offers_exactly_the_four(catalog, ruleset, 
     assert seen >= 1
 
 
+@needs_official
 def test_noble_gaming_set_pick_offers_all_four_and_grants_the_proficiency(catalog):
     res = resolve(_draft("noble-phb", sources=("phb",)), catalog)
     card = next(c for c in res["choices"] if c["id"].startswith("background:noble-phb:") and "proficiency-choice" in c["id"])
@@ -105,6 +112,7 @@ def test_noble_gaming_set_pick_offers_all_four_and_grants_the_proficiency(catalo
     assert "dragonchess-set" in res["sheet"]["proficiencies"]["tools"] and res["problems"] == []
 
 
+@needs_official
 def test_wayfarer_2024_nested_card_offers_all_four_and_the_pick_is_the_item(catalog):
     cid = "background:wayfarer-xphb:equipment-choice-0"
     res = resolve(_draft("wayfarer-xphb", "2024"), catalog)
@@ -120,6 +128,7 @@ def test_wayfarer_2024_nested_card_offers_all_four_and_the_pick_is_the_item(cata
         assert r["derived"]["carryingCapacity"]["carried"] - base == pytest.approx(weight)
 
 
+@needs_official
 def test_soldier_2024_same_as_above_gaming_set_is_the_picked_dragonchess_set(catalog):
     cid = "background:soldier-xphb:equipment-choice-0"
     prof = next(c["id"] for c in resolve(_draft("soldier-xphb", "2024"), catalog)["choices"]
@@ -149,6 +158,7 @@ def test_api_items_lists_the_new_sets_for_every_ruleset():
         assert {r["id"] for r in rows} >= {"dragonchess-set", "three-dragon-ante-set"}, ruleset
 
 
+@needs_official
 def test_patched_catalog_without_the_extra_sets_degrades(catalog):
     patched = load()
     for k in ("dragonchess-set", "three-dragon-ante-set"):

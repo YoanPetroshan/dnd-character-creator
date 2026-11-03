@@ -43,6 +43,11 @@ from catalog.official_source import has_official_classes
 from engine.class_resources import resources_for
 from engine.resolve import resolve
 
+from catalog.official.paths import has_official, has_official_classes, has_official_spells  # noqa: E402
+
+needs_official = pytest.mark.skipif(
+    not (has_official() and has_official_classes() and has_official_spells()), reason="5etools data not available")
+
 needs_classes = pytest.mark.skipif(not has_official_classes(), reason="5etools class files not available")
 
 
@@ -77,6 +82,7 @@ def _dice(r):
 # ------------------------------------------------- Psi Warrior / Soulknife, 2014
 
 
+@needs_official
 @pytest.mark.parametrize("cls,sub", [("fighter", "psi-warrior-tce"), ("rogue", "soulknife-tce")])
 @pytest.mark.parametrize("level,expected", [(3, (4, "d6")), (4, (4, "d6")), (5, (6, "d8")), (10, (8, "d8")),
                                             (11, (8, "d10")), (16, (10, "d10")), (17, (12, "d12")), (20, (12, "d12"))])
@@ -90,6 +96,7 @@ def test_tce_psionic_dice_formula(catalog, cls, sub, level, expected, ruleset):
     assert r["details"]["bonusActionRegainsOne"] is True
 
 
+@needs_official
 def test_tce_dice_follow_total_level_proficiency_bonus(catalog):
     res = _res(catalog, [("fighter", 3, "psi-warrior-tce"), ("cleric", 6)], "mixed")
     assert res["derived"]["proficiencyBonus"] == 4
@@ -101,6 +108,7 @@ def test_psi_warrior_below_level_3_has_no_subclass_resource(catalog):
     assert _entry(res, "fighter:psionic-energy-dice") is None
 
 
+@needs_official
 def test_soulknife_and_psi_warrior_both_present_in_multiclass(catalog):
     res = _res(catalog, [("fighter", 3, "psi-warrior-tce"), ("rogue", 3, "soulknife-tce")], "mixed")
     ids = [r["id"] for r in res["derived"]["classResources"]]
@@ -154,6 +162,7 @@ def test_xphb_record_never_reads_2024_table_outside_2024(catalog, ruleset):
     assert _dice(r) == (6, "d8")  # 2 x PB 3, formula
 
 
+@needs_official
 def test_tce_record_under_2024_uses_formula(catalog):
     r = _entry(_res(catalog, [("fighter", 5, "psi-warrior-tce")], "2024"), "fighter:psionic-energy-dice")
     assert _dice(r) == (6, "d8") and r["details"]["bonusActionRegainsOne"] is True
@@ -173,6 +182,7 @@ def test_xphb_degrades_to_formula_without_tables_and_warns_once(catalog):
 # ------------------------------------------------------------- Battle Master
 
 
+@needs_official
 @pytest.mark.parametrize("sub,ruleset", [("battle-master-phb", "2014"), ("battle-master-phb", "mixed"),
                                          ("battle-master-xphb", "2024"), ("battle-master-xphb", "mixed")])
 @pytest.mark.parametrize("level,n,die", [(3, 4, "d8"), (6, 4, "d8"), (7, 5, "d8"), (9, 5, "d8"), (10, 5, "d10"),
@@ -186,17 +196,20 @@ def test_superiority_dice(catalog, sub, ruleset, level, n, die):
     assert r["source"]["kind"] == "subclass" and r["source"]["id"] == sub
 
 
+@needs_official
 def test_maneuver_dc_uses_strength_when_better(catalog):
     # STR 16 (+1 human = 17, +3); fighter 3 -> PB 2 -> 8 + 2 + 3 = 13
     r = _entry(_res(catalog, [("fighter", 3, "battle-master-phb")], "2014", {"STR": 16}), "fighter:superiority-dice")
     assert r["dc"] == 13
 
 
+@needs_official
 def test_maneuver_dc_uses_dexterity_when_better(catalog):
     res = _res(catalog, [("fighter", 5, "battle-master-phb")], "2014", {"STR": 8, "DEX": 18})  # DEX 19 -> +4, PB 3
     assert _entry(res, "fighter:superiority-dice")["dc"] == 8 + 3 + 4
 
 
+@needs_official
 def test_maneuver_dc_follows_total_level_proficiency_bonus(catalog):
     res = _res(catalog, [("fighter", 3, "battle-master-phb"), ("cleric", 6)], "2014", {"STR": 16})
     assert res["derived"]["proficiencyBonus"] == 4
@@ -217,6 +230,7 @@ def test_champion_and_no_subclass_have_no_subclass_entries(catalog):
 # -------------------------------------------------------------- Arcane Archer
 
 
+@needs_official
 @pytest.mark.parametrize("level", [3, 7, 18, 20])
 def test_arcane_shot_two_uses_short_or_long(catalog, level):
     r = _entry(_res(catalog, [("fighter", level, "arcane-archer-xge")], "mixed"), "fighter:arcane-shot")
@@ -231,6 +245,7 @@ def test_arcane_archer_level_2_has_none(catalog):
 # ------------------------------------------------------------ order / timing
 
 
+@needs_official
 def test_subclass_entries_follow_their_class_entries(catalog):
     res = _res(catalog, [("fighter", 3, "battle-master-phb"), ("rogue", 3, "soulknife-tce")], "mixed")
     ids = [r["id"] for r in res["derived"]["classResources"]]

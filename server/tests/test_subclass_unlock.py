@@ -5,6 +5,11 @@ import pytest
 from catalog.loader import load
 from engine.resolve import resolve
 
+from catalog.official.paths import has_official, has_official_classes, has_official_spells  # noqa: E402
+
+needs_official = pytest.mark.skipif(
+    not (has_official() and has_official_classes() and has_official_spells()), reason="5etools data not available")
+
 
 @pytest.fixture(scope="module")
 def catalog():
@@ -37,6 +42,7 @@ def test_wizard_level_1_bladesinging_grants_no_armor(catalog):
     assert r["sheet"]["classes"][0]["subclass"] is None
 
 
+@needs_official
 def test_wizard_level_2_bladesinging_grants_light_armor(catalog):
     r = resolve(_draft("wizard", "bladesinging-tce", 2), catalog)
     assert "light-armor" in r["sheet"]["proficiencies"]["armor"]

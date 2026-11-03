@@ -48,6 +48,11 @@ import pytest
 from catalog.loader import load
 from engine.resolve import resolve
 
+from catalog.official.paths import has_official, has_official_classes, has_official_spells  # noqa: E402
+
+needs_official = pytest.mark.skipif(
+    not (has_official() and has_official_classes() and has_official_spells()), reason="5etools data not available")
+
 ABS = ("STR", "DEX", "CON", "INT", "WIS", "CHA")
 TS = "totem-warrior-phb-3-totem-spirit"
 
@@ -175,6 +180,7 @@ def test_fast_movement_stacks_with_unarmored_movement(catalog):
     assert _res(catalog, [("barbarian", 4), ("monk", 2)])["derived"]["speed"] == 40
 
 
+@needs_official
 def test_speed_bonuses_raise_only_the_walking_speed(catalog):
     """F1 (6): "Your speed increases by 10 feet" (Fast Movement, Unarmored Movement) is the
     walking speed. WF: a Triton's swim speed is "equal to your walking speed" (stored as true), so it
@@ -199,6 +205,7 @@ def test_plain_rage_resistances_unchanged(catalog):
     assert _rage(_res(catalog, [("barbarian", 3)]))["details"]["resistances"] == ["bludgeoning", "piercing", "slashing"]
 
 
+@needs_official
 @pytest.mark.parametrize("ruleset", ["2014", "mixed", "2024"])
 def test_bear_totem_resists_everything_but_psychic(catalog, ruleset):
     r = _res(catalog, [("barbarian", 3, "totem-warrior-phb")], ruleset=ruleset,
