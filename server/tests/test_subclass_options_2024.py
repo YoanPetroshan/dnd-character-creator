@@ -28,6 +28,7 @@ Rule matrix:
   Affinity  resistance in sheet.damageModifiers + a note-only subclass resource with the Charisma modifier
   Colossus  a note-only resource and the note on every weapon attack row (never the unarmed strike)
   switching the stored option moves the effect; the other options give nothing"""
+from perf_helpers import assert_fast
 import copy
 import time
 
@@ -457,7 +458,9 @@ def test_spec_for_card_maps_cards_back(catalog):
 def test_resolve_speed(catalog, classes):
     draft = _draft(classes)
     resolve(draft, catalog)
-    start = time.perf_counter()
+    laps = []
     for _ in range(10):
+        t_run = time.perf_counter()
         resolve(draft, catalog)
-    assert (time.perf_counter() - start) / 10 < 0.05
+        laps.append(time.perf_counter() - t_run)
+    assert_fast(laps)

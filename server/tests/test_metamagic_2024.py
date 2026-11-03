@@ -14,6 +14,7 @@ Matrix: converter (38 records, repeatable, prerequisite shapes, spells, senses, 
 attack helpers (XPHB, SRD) x ruleset (2024 / mixed / 2014) x Sorcerer level (1, 2, 10, 17, 10 -> 9 prune) x
 SRD cards skipped under 2024 x sheet.features row x Sorcery Points resource detail x export line x
 catalog (real / SRD-only) x timing."""
+from perf_helpers import assert_fast
 import copy
 import time
 
@@ -299,7 +300,9 @@ def test_resolve_timing(catalog):
               _draft([("fighter", 20, {})], ruleset="mixed"), _draft([("wizard", 20, {})], ruleset="mixed")]
     for d in drafts:
         resolve(d, catalog)
-        start = time.perf_counter()
+        laps = []
         for _ in range(20):
+            t_run = time.perf_counter()
             resolve(d, catalog)
-        assert (time.perf_counter() - start) / 20 < 0.05
+            laps.append(time.perf_counter() - t_run)
+        assert_fast(laps)

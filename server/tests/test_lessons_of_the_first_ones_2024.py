@@ -16,6 +16,7 @@ Rule matrix (text -> engine):
             (Skilled picks, Magic Initiate variant and spells); removing the invocation (or the level) prunes the pick.
 Matrix: instance x duplicate source (background / other instance / ASI / other class) x cascade (Skilled, Magic
 Initiate) x stored pick validity x level-down x ruleset x SRD-only x timing."""
+from perf_helpers import assert_fast
 import io
 
 import pytest
@@ -24,7 +25,7 @@ from catalog.loader import load
 from c7c_helpers import (  # noqa: F401
     AGON, BLADE, BLADE_W, CANT, CHAIN, EB, FB, INV, KNOWN, LESSONS, LONGSWORD, MI, REPEL, SPEAR, THIRST, TOME, TOME_C, TOME_R,
     TTD, X, _card, _dependent_ids, _draft, _l, _opt, _problem_ids, _pruned, _res, _resource, _srd_only, needs_data, tcid,
-    time_resolve,
+    resolve_laps,
 )
 from engine import class_choices_2024
 from engine.resolve import resolve
@@ -208,11 +209,11 @@ def test_timing_warlock_20_with_tome_and_lessons_and_big_classes(catalog):
     d = _draft(20, picks, [EB, MI, "mage-hand-xphb", "chill-touch-xphb"], extra=extra, added=LONGSWORD)
     r = resolve(d, catalog)
     assert _card(r, INV)["status"] == "resolved" and len(_dependent_ids(r)) >= 9
-    assert time_resolve(d, catalog) < 50
+    assert_fast(resolve_laps(d, catalog))
     for cls in ("fighter", "wizard"):
         for rs in ("mixed", "2024"):
             dd = {"ruleset": rs, "sources": [], "species": {"id": "human-xphb"}, "background": {"id": "soldier-xphb"},
                   "abilities": {"method": "manual", "base": {a: 14 for a in ("STR", "DEX", "CON", "INT", "WIS", "CHA")}},
                   "equipment": {"choices": {}, "added": [], "skipped": False},
                   "classes": [{"classId": cls, "level": 20, "choices": {}}]}
-            assert time_resolve(dd, catalog) < 50
+            assert_fast(resolve_laps(dd, catalog))

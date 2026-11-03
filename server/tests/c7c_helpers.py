@@ -4,6 +4,8 @@ import time
 
 import pytest
 
+from perf_helpers import measure
+
 from catalog.official_source import has_official, has_official_classes
 from engine.resolve import resolve
 
@@ -96,10 +98,6 @@ def _l(k=1):
     return LESSONS if k == 1 else f"{LESSONS}~{k}"
 
 
-def time_resolve(draft, catalog, n=20):
-    """Mean resolve() time in ms over n runs (after one warm-up)."""
-    resolve(draft, catalog)
-    start = time.perf_counter()
-    for _ in range(n):
-        resolve(draft, catalog)
-    return (time.perf_counter() - start) / n * 1000
+def resolve_laps(draft, catalog, n=20):
+    """Per-run resolve() times (Laps, seconds) over n runs after one warm-up; check with perf_helpers.assert_fast."""
+    return measure(lambda: resolve(draft, catalog), runs=n)

@@ -11,6 +11,7 @@ level 1 class feature, so each class of a multiclass character grants its own.
 Matrix: ruleset (2024 / mixed / 2014) x class (the five / others) x level (count)
 x class filter (Barbarian ranged, Rogue heavy martial) x proficiency gate (SRD-chassis
 Rogue lacks e.g. Scimitar) x level-down prune x equipped weapon -> attack row."""
+from perf_helpers import assert_fast
 import pytest
 
 from catalog import official_source
@@ -177,10 +178,12 @@ def test_srd_only_catalog_has_no_card(monkeypatch):
 def test_resolve_speed_fighter_20(catalog):
     import time
     _res(catalog, [("fighter", 20)])
-    start = time.perf_counter()
+    laps = []
     for _ in range(20):
+        t_run = time.perf_counter()
         _res(catalog, [("fighter", 20)])
-    assert (time.perf_counter() - start) / 20 < 0.05
+        laps.append(time.perf_counter() - t_run)
+    assert_fast(laps)
 
 
 def _gear(*ids):

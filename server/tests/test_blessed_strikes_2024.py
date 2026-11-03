@@ -21,6 +21,7 @@ Matrix: class (Cleric, Druid, others) x level (6, 7, 13, 14, 15) x option (2 per
 x ruleset (2024 / mixed / 2014) x stored pick (7 -> 6 prune, unknown option, unpicked = pending) x multiclass
 (Cleric 7 / Druid 7, Cleric 7 / Fighter 1) x attack rows (weapon rows only, unarmed strike none) x
 sheet.features row x export line x catalog (real / SRD-only) x C6a cards unchanged x timing."""
+from perf_helpers import assert_fast
 import time
 
 import pytest
@@ -289,7 +290,9 @@ def test_resolve_speed(catalog, classes):
     choices = {"cleric": _cleric(20)[2], "druid": _druid(20)[2]}
     spec = [(c, lv, choices[c]) for c, lv in classes]
     _res(catalog, spec, added=["longsword"])
-    start = time.perf_counter()
+    laps = []
     for _ in range(20):
+        t_run = time.perf_counter()
         _res(catalog, spec, added=["longsword"])
-    assert (time.perf_counter() - start) / 20 < 0.05
+        laps.append(time.perf_counter() - t_run)
+    assert_fast(laps)

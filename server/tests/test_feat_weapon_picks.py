@@ -15,6 +15,7 @@ edition's text under every ruleset (effects are keyed by feat index). Governing 
 Matrix: edition x ruleset (2014, mixed, 2024) x proficiency (Wizard / Rogue / Fighter) x pick count x stale pick x
 duplicate with a class mastery card x edit x five feat sites x no-feat identity x empty catalog x pending blocks export
 x timing."""
+from perf_helpers import assert_fast, measure
 import copy
 import re
 import time
@@ -330,16 +331,12 @@ def test_empty_feat_catalog_degrades(catalog):
     assert not [c for c in r["choices"] if c["id"].endswith(":weapon-choice")]
 
 
-def _mean_ms(catalog, draft):
-    resolve(draft, catalog)
-    start = time.perf_counter()
-    for _ in range(10):
-        resolve(draft, catalog)
-    return (time.perf_counter() - start) / 10 * 1000
+def _laps(catalog, draft):
+    return measure(lambda: resolve(draft, catalog))
 
 
 def test_resolve_stays_fast_with_weapon_master(catalog):
     ch = {"class:fighter:4:asi": [f"feat:{PHB}"], cid_of("fighter", 4, PHB, "weapon-choice"): ["longsword", "dagger", "rapier", "halberd"]}
-    assert _mean_ms(catalog, _draft([("fighter", 20, ch)])) < 50
+    assert_fast(_laps(catalog, _draft([("fighter", 20, ch)])))
     ch = {"class:fighter:4:asi": [f"feat:{XPHB}"], cid_of("fighter", 4, XPHB, "weapon-mastery"): ["dagger"]}
-    assert _mean_ms(catalog, _draft([("fighter", 20, ch)], ruleset="2024")) < 50
+    assert_fast(_laps(catalog, _draft([("fighter", 20, ch)], ruleset="2024")))

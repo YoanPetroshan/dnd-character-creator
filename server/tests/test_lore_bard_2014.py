@@ -32,6 +32,7 @@ Rule matrix (ruleset mixed and 2014; the Bard class with the SRD subclass `lore`
                 duplicate is dropped (`pruned`); a spell picked here is disabled on those two cards
     sheet       the picks list in sheet.spells[bard].known (a cantrip with level 0, as the RP16 secrets cantrips)
     stale       count-variable: a pick that stops being offered (level / sources) or exceeds the count is `pruned`"""
+from perf_helpers import assert_fast
 import copy
 import time
 
@@ -379,7 +380,9 @@ def test_bard_20_lore_resolves_under_50_ms(catalog, ruleset):
     sub = "lore-xphb" if ruleset == "2024" else "lore"
     bg = "sage-xphb" if ruleset == "2024" else "acolyte"
     _res(catalog, [("bard", 20, sub, {})], ruleset, background=bg)
-    t = time.perf_counter()
+    laps = []
     for _ in range(20):
+        t_run = time.perf_counter()
         _res(catalog, [("bard", 20, sub, {BONUS: ["skill-arcana"], SECRETS: ["fireball"]})], ruleset, background=bg)
-    assert (time.perf_counter() - t) / 20 * 1000 < 50
+        laps.append(time.perf_counter() - t_run)
+    assert_fast(laps)

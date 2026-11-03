@@ -18,6 +18,7 @@ Matrix: ruleset (2024 / mixed / 2014) x background (acolyte 2014 / Criminal XPHB
 its own extra language / XPHB Human) x stored picks (valid / duplicate of another card / not Standard / more than 2)
 x class cards (Rogue Thieves' Cant, Ranger Deft Explorer) x export gate x exports x catalog (real / SRD-only) x
 helper isolation x timing."""
+from perf_helpers import assert_fast
 import copy
 import time
 
@@ -249,7 +250,9 @@ def test_gate_without_any_language_card_is_a_noop():
 def test_resolve_stays_fast(catalog, ruleset):
     draft = _draft([("rogue", 1, {})], ruleset=ruleset, background="acolyte", species="human")
     resolve(draft, catalog)
-    t0 = time.perf_counter()
+    laps = []
     for _ in range(20):
+        t_run = time.perf_counter()
         resolve(draft, catalog)
-    assert (time.perf_counter() - t0) / 20 < 0.05
+        laps.append(time.perf_counter() - t_run)
+    assert_fast(laps)

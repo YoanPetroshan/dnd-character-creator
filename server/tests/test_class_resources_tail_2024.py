@@ -64,6 +64,7 @@ quote):
 
 Scanned and skipped (no use count or recharge in the text): see ARCHITECTURE-CURRENT-STATE.md (R9 section).
 """
+from perf_helpers import assert_fast
 import copy
 
 import pytest
@@ -339,7 +340,9 @@ def test_resolve_stays_fast(catalog, cls, ruleset):
         "STR": 12, "DEX": 14, "CON": 14, "INT": 10, "WIS": 14, "CHA": 16}},
         "species": {"id": "human"}, "background": {"id": "acolyte"}, "classes": [{"classId": cls, "level": 20, "choices": {}}]}
     resolve(draft, catalog)
-    start = time.perf_counter()
+    laps = []
     for _ in range(20):
+        t_run = time.perf_counter()
         resolve(draft, catalog)
-    assert (time.perf_counter() - start) / 20 * 1000 < 50
+        laps.append(time.perf_counter() - t_run)
+    assert_fast(laps)

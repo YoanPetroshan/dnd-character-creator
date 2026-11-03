@@ -20,6 +20,7 @@ Matrix: which note / resource a feat has (data) x number (Proficiency Bonus, lev
 ability) x source of the feat (background, ASI, hidden by ruleset) x edition x output surface (sheet.feats[].notes,
 derived.featResources, YAML, Markdown, PDF) x no-feat identity x empty catalog x timing.
 """
+from perf_helpers import assert_fast
 import copy
 import io
 import re
@@ -451,7 +452,9 @@ def test_resolve_stays_fast_with_note_and_resource_feats(catalog):
              ([("wizard", 20)], "mixed", "acolyte", ["lucky-phb", "actor-phb", "keen-mind-phb"]))
     for classes, ruleset, bg, feats in cases:
         _res(catalog, classes, feats, ruleset=ruleset, background=bg)
-        t = time.perf_counter()
+        laps = []
         for _ in range(10):
+            t_run = time.perf_counter()
             _res(catalog, classes, feats, ruleset=ruleset, background=bg)
-        assert (time.perf_counter() - t) / 10 < 0.05
+            laps.append(time.perf_counter() - t_run)
+        assert_fast(laps)

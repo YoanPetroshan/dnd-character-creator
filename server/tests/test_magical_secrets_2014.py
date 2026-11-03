@@ -18,6 +18,7 @@ Rule matrix (ruleset mixed and 2014; 2024 keeps its XPHB mechanism, test_class_s
                options are disabled "Magical Secrets: N of N used"; a stored pick over the cap is dropped (`pruned`,
                never blocking). No level-up history: the per-feature level limit is not enforced (as C6d)
   absent       Bard below 10, non-Bards, the other class of a multiclass Bard, a catalog without the SRD features"""
+from perf_helpers import assert_fast
 import copy
 import time
 
@@ -262,7 +263,9 @@ def test_2024_keeps_its_own_mechanism(catalog):
 def test_bard_20_resolves_under_50_ms(catalog, ruleset):
     picks = ["fireball", "fly", "haste"] if ruleset != "2024" else ["fireball-xphb", "fly-xphb", "haste-xphb"]
     _bard(catalog, 20, picks, ruleset)
-    start = time.perf_counter()
+    laps = []
     for _ in range(20):
+        t_run = time.perf_counter()
         _bard(catalog, 20, picks, ruleset)
-    assert (time.perf_counter() - start) / 20 * 1000 < 50
+        laps.append(time.perf_counter() - t_run)
+    assert_fast(laps)

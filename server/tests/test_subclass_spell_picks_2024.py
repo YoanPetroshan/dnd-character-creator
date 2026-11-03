@@ -38,6 +38,7 @@ Rule matrix:
                    unpicked: none; Nature's Ward (10): Poisoned immunity always, Resistance of the picked land only
   gates            2024 only; none below the record's level, without the subclass, with an SRD-only catalog or a catalog
                    without the converter keys; an empty card is `unavailable` (never blocks export)"""
+from perf_helpers import assert_fast, measure
 import copy
 import time
 
@@ -696,8 +697,4 @@ def test_resolve_stays_fast(catalog):
     }
     for name, d in drafts.items():
         resolve(d, catalog)
-        t0 = time.perf_counter()
-        for _ in range(10):
-            resolve(d, catalog)
-        mean = (time.perf_counter() - t0) / 10 * 1000
-        assert mean < 50, (name, mean)
+        assert_fast(measure(lambda: resolve(d, catalog)), name)

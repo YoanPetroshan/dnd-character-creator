@@ -26,6 +26,7 @@ Rule matrix:
   Iron Mind      WIS is fixed (no card) unless the Wisdom save is already proficient at Ranger 7 (Cleric first, a
                  Resilient (WIS) feat at an earlier ASI, Monk 14 ...); then a card INT / CHA (count 1) appears
   unavailable    a card with every option disabled is `unavailable` (never blocks export)"""
+from perf_helpers import assert_fast
 import copy
 import time
 
@@ -473,7 +474,9 @@ def test_resolve_timing(catalog):
     ]
     for d in drafts:
         resolve(d, catalog)
-        start = time.perf_counter()
+        laps = []
         for _ in range(20):
+            t_run = time.perf_counter()
             resolve(d, catalog)
-        assert (time.perf_counter() - start) / 20 < 0.05
+            laps.append(time.perf_counter() - t_run)
+        assert_fast(laps)

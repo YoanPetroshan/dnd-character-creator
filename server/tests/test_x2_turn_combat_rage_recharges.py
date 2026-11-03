@@ -24,6 +24,7 @@ Rule matrix (catalog text, tags stripped; ``QUOTE`` below pins every sentence, `
 """
 from __future__ import annotations
 
+from perf_helpers import assert_fast
 import pathlib
 import re
 import time
@@ -404,7 +405,9 @@ def test_scan_every_per_turn_feature_is_handled_or_listed_with_a_reason(catalog)
 
 def test_timing(catalog):
     _char(catalog, "rogue", 20, None, "2014")
-    start = time.perf_counter()
+    laps = []
     for _ in range(10):
+        t_run = time.perf_counter()
         _char(catalog, "rogue", 20, None, "2014")
-    assert (time.perf_counter() - start) / 10 < 0.05
+        laps.append(time.perf_counter() - t_run)
+    assert_fast(laps)

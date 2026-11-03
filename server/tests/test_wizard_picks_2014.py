@@ -26,6 +26,7 @@ Rule matrix (ruleset mixed and 2014 -> the SRD feature ids; 2024 keeps the C6d c
                      itself still blocks
   absent             below the class levels, for non-Wizards, in an SRD-only/empty catalog (no feature record), and the
                      2024 cards are untouched (test_class_spell_grants_2024.py)"""
+from perf_helpers import assert_fast
 import time
 
 import pytest
@@ -328,7 +329,9 @@ def test_resolve_stays_fast(catalog):
     picks = {MASTERY1: ["magic-missile"], MASTERY2: ["web"], SIGNATURE: ["fireball", "fly"]}
     for ruleset in ("mixed", "2014"):
         _res(catalog, [_wizard(20, picks)], ruleset)
-        start = time.perf_counter()
+        laps = []
         for _ in range(10):
+            t_run = time.perf_counter()
             _res(catalog, [_wizard(20, picks)], ruleset)
-        assert (time.perf_counter() - start) / 10 < 0.05, ruleset
+            laps.append(time.perf_counter() - t_run)
+        assert_fast(laps, str(ruleset))

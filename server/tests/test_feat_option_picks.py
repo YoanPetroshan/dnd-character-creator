@@ -24,6 +24,7 @@ set is `catalog.feat_effects_data.FEAT_EFFECT_QUOTES`, pinned against the catalo
 Matrix: feat x ruleset (2014, mixed, 2024) x class (Wizard, Fighter, Warlock, Sorcerer, Battle Master) x pool x
 prerequisite (Warlock level / Pact / cantrip) x duplicate with the class's own list (both directions) x edit x stale
 pick x five feat sites x Variant Human origin x no-feat identity x empty catalog x pending blocks export x timing."""
+from perf_helpers import assert_fast, measure
 import copy
 import re
 import time
@@ -505,12 +506,8 @@ def test_empty_feat_catalog_degrades(catalog):
     assert not [c for c in r["choices"] if c["id"].endswith(":maneuvers")] and r["derived"]["featResources"] == []
 
 
-def _mean_ms(catalog, draft):
-    resolve(draft, catalog)
-    start = time.perf_counter()
-    for _ in range(10):
-        resolve(draft, catalog)
-    return (time.perf_counter() - start) / 10 * 1000
+def _laps(catalog, draft):
+    return measure(lambda: resolve(draft, catalog))
 
 
 def test_resolve_stays_fast_with_the_heaviest_fe9_feats(catalog):
@@ -521,6 +518,6 @@ def test_resolve_stays_fast_with_the_heaviest_fe9_feats(catalog):
            cid_of("wizard", 12, MMA, "metamagic"): ["metamagic-careful-spell", "metamagic-twinned-spell"],
            cid_of("wizard", 16, FI, "fighting-style"): ["fighter-fighting-style-defense"]}
     for ruleset in ("mixed", "2024"):
-        assert _mean_ms(catalog, _draft([("wizard", 20, asi)], ruleset=ruleset)) < 50
-    assert _mean_ms(catalog, _draft([("fighter", 20, {})])) < 50
-    assert _mean_ms(catalog, _draft([("wizard", 20, {})])) < 50
+        assert_fast(_laps(catalog, _draft([("wizard", 20, asi)], ruleset=ruleset)))
+    assert_fast(_laps(catalog, _draft([("fighter", 20, {})])))
+    assert_fast(_laps(catalog, _draft([("wizard", 20, {})])))

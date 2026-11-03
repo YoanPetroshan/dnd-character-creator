@@ -15,6 +15,7 @@ Rule matrix: AC (armor of shadows alone / with Unarmored Defense / with body arm
 skills, senses, innate at-will vs 1/long rest, resource bonus, level-down, table
 verified against the SRD feature text and spell ids.
 """
+from perf_helpers import assert_fast
 import dataclasses
 import time
 
@@ -184,7 +185,9 @@ def test_resolve_speed_warlock_17(catalog):
              "whispers-of-the-grave", "visions-of-distant-realms", "master-of-myriad-forms", "minions-of-chaos"]
     d = _draft([_warlock(17, picks)])
     resolve(d, catalog)
-    t = time.perf_counter()
+    laps = []
     for _ in range(20):
+        t_run = time.perf_counter()
         resolve(d, catalog)
-    assert (time.perf_counter() - t) / 20 < 0.05
+        laps.append(time.perf_counter() - t_run)
+    assert_fast(laps)

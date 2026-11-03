@@ -16,6 +16,7 @@ Rule matrix:
            chosen ability; base chosen later changes both; base removed -> own card is back (Outlands / Warlike have none
            of their own: ability pending / None); a stored pick on the removed card is a non-blocking `pruned` entry.
   Markdown / PDF show the note. SRD-only catalog: no entry."""
+from perf_helpers import assert_fast
 import re
 import time
 
@@ -258,7 +259,9 @@ def test_magic_connoisseur_has_no_card_and_follows_magic_initiate(catalog):
 def test_timing_stays_fast(catalog):
     d = _marks("mark-of-healing-efa", level=20)
     resolve(d, catalog)
-    t = time.perf_counter()
+    laps = []
     for _ in range(10):
+        t_run = time.perf_counter()
         resolve(d, catalog)
-    assert (time.perf_counter() - t) / 10 < 0.05
+        laps.append(time.perf_counter() - t_run)
+    assert_fast(laps)

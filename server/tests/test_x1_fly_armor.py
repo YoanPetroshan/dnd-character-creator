@@ -15,6 +15,7 @@ a shield alone, an explicit ``worn.armor: null`` and armor in the pack leave it.
 """
 from __future__ import annotations
 
+from perf_helpers import assert_fast
 import re
 import time
 
@@ -296,7 +297,9 @@ def test_ban_table_entry_without_the_catalog_trait_degrades(catalog, monkeypatch
 
 def test_resolve_timing_is_unchanged(catalog):
     _res(catalog, "aarakocra-mpmm", added=["plate-armor"])
-    start = time.perf_counter()
+    laps = []
     for _ in range(10):
+        t_run = time.perf_counter()
         _res(catalog, "aarakocra-mpmm", added=["plate-armor"])
-    assert (time.perf_counter() - start) / 10 < 0.05
+        laps.append(time.perf_counter() - t_run)
+    assert_fast(laps)

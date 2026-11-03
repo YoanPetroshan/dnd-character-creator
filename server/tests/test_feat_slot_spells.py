@@ -21,6 +21,7 @@ Rule matrix (FE edition policy: the effect applies under every ruleset in which 
                  not duplicated; hidden by the ruleset / sources -> not offered; a stored pick that becomes invalid is a
                  non-blocking `pruned` entry (the existing spell-card pass).
   gates          no effect without the feat; a catalog without the converter keys / an empty catalog gives nothing."""
+from perf_helpers import assert_fast
 import copy
 import re
 import time
@@ -550,7 +551,9 @@ def test_timing_stays_under_50_ms(catalog):
     ]
     for d in cases:
         resolve(d, catalog)
-        t0 = time.perf_counter()
+        laps = []
         for _ in range(10):
+            t_run = time.perf_counter()
             resolve(d, catalog)
-        assert (time.perf_counter() - t0) / 10 * 1000 < 50
+            laps.append(time.perf_counter() - t_run)
+        assert_fast(laps)

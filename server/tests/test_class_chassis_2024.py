@@ -37,6 +37,7 @@ primary ability equals the SRD multiclass prerequisite) | resolve under 2024 (ca
 armor warnings, sheet proficiencies, multiclass) | mixed / 2014 are covered byte for byte by the F0
 golden (test_c_series_golden.py) and spot-checked here | SRD-only catalog | /api/catalog/class
 | export label | speed."""
+from perf_helpers import assert_fast
 import copy
 import time
 
@@ -494,7 +495,9 @@ def test_resolve_speed_under_50_ms(catalog):
     for ruleset in ("mixed", "2024"):
         for classes in cases:
             _res(catalog, classes, ruleset)
-            start = time.perf_counter()
+            laps = []
             for _ in range(10):
+                t_run = time.perf_counter()
                 _res(catalog, classes, ruleset)
-            assert (time.perf_counter() - start) / 10 < 0.05, (ruleset, classes)
+                laps.append(time.perf_counter() - t_run)
+            assert_fast(laps, str((ruleset, classes)))

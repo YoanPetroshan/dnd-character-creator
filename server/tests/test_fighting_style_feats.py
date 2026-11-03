@@ -19,6 +19,7 @@ Paladin and Ranger 12; with sources that exclude AU, 10 / 11.
 Matrix: ruleset (2024 / mixed / 2014) x class (fighter / paladin / ranger / wizard) x
 level (feature gained / not yet) x source of the pick (feature card / ASI card / stored
 SRD pick) x state (taken, hidden, pruned) x effect (AC, attacks, senses, cantrips)."""
+from perf_helpers import assert_fast
 import pytest
 
 from catalog.loader import load
@@ -419,10 +420,12 @@ def test_srd_only_catalog_does_not_crash_and_keeps_the_srd_card():
 def test_resolve_speed_fighter_20(catalog):
     import time
     _res(catalog, [("fighter", 20)], choices={"fighter": {"class:fighter:1:fighting-style": ["feat:defense-xphb"]}})
-    start = time.perf_counter()
+    laps = []
     for _ in range(20):
+        t_run = time.perf_counter()
         _res(catalog, [("fighter", 20)], choices={"fighter": {"class:fighter:1:fighting-style": ["feat:defense-xphb"]}})
-    assert (time.perf_counter() - start) / 20 < 0.05
+        laps.append(time.perf_counter() - t_run)
+    assert_fast(laps)
 
 
 @needs_data

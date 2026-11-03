@@ -27,6 +27,7 @@ Matrix: feat x pick (damage type reaches ``damageModifiers.resistances``) x orig
 Style, Lessons, ASI; the three origins no shipped FE7 feat reaches are covered by patching the effect table) x
 stale / duplicate pick x edit (F-D7: changing the pick changes the sheet) x pending card blocks export x no-feat
 identity x empty catalog x timing."""
+from perf_helpers import assert_fast, measure
 import copy
 import re
 import time
@@ -441,12 +442,8 @@ def test_pure_resistances_dedupe_and_keep_order():
     assert fe.resistances(insts) == ["fire", "cold", "acid"]
 
 
-def _mean_ms(catalog, draft):
-    resolve(draft, catalog)
-    start = time.perf_counter()
-    for _ in range(10):
-        resolve(draft, catalog)
-    return (time.perf_counter() - start) / 10 * 1000
+def _laps(catalog, draft):
+    return measure(lambda: resolve(draft, catalog))
 
 
 def test_resolve_stays_fast_with_fe7_feats(catalog):
@@ -454,5 +451,5 @@ def test_resolve_stays_fast_with_fe7_feats(catalog):
            "class:fighter:8:asi:feat:elemental-adept-xphb:damage-type": ["cold"],
            "class:fighter:12:asi:feat:strike-of-the-giants-bgg:giant-type": ["storm"]}
     ch = _asi("fighter", {4: "dragonscarred-frhof", 8: "elemental-adept-xphb", 12: "strike-of-the-giants-bgg"}, **cid)
-    assert _mean_ms(catalog, _draft([("fighter", 20, ch)])) < 50
-    assert _mean_ms(catalog, _draft([("fighter", 20, ch)], ruleset="2024")) < 50
+    assert_fast(_laps(catalog, _draft([("fighter", 20, ch)])))
+    assert_fast(_laps(catalog, _draft([("fighter", 20, ch)], ruleset="2024")))

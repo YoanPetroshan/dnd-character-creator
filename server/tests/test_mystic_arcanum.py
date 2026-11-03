@@ -12,6 +12,7 @@ when another caster class is in the draft; going down a level prunes the
 picks whose cid no longer exists. Real data: true-seeing is a level-6
 Warlock spell (SRD), twin true-seeing-xphb.
 """
+from perf_helpers import assert_fast
 import dataclasses
 import time
 
@@ -208,7 +209,9 @@ def test_srd_only_catalog(catalog):
 def test_resolve_stays_fast_for_warlock_17(catalog):
     d = _draft([("warlock", 17)])
     resolve(d, catalog)
-    t = time.perf_counter()
+    laps = []
     for _ in range(20):
+        t_run = time.perf_counter()
         resolve(d, catalog)
-    assert (time.perf_counter() - t) / 20 < 0.05
+        laps.append(time.perf_counter() - t_run)
+    assert_fast(laps)

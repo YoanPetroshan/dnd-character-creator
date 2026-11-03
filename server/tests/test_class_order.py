@@ -10,6 +10,7 @@ grants its own (as Weapon Mastery, C2).
 Matrix: ruleset (2024 / mixed / 2014) x class (Cleric, Druid, others) x option (4) x WIS (16, 8)
 x level-down / option change (cantrip count and pruning) x multiclass (Cleric 1 / Fighter 1,
 Cleric 1 / Druid 1) x catalog (real XPHB / SRD-only) x Weapon Mastery gate x sheet.features row."""
+from perf_helpers import assert_fast
 import pytest
 
 from catalog import official_source
@@ -250,7 +251,9 @@ def test_resolve_speed_cleric_20(catalog):
     import time
     choices = {"cleric": {DIVINE: [THAUMATURGE]}}
     _res(catalog, [("cleric", 20)], choices=choices)
-    start = time.perf_counter()
+    laps = []
     for _ in range(20):
+        t_run = time.perf_counter()
         _res(catalog, [("cleric", 20)], choices=choices)
-    assert (time.perf_counter() - start) / 20 < 0.05
+        laps.append(time.perf_counter() - t_run)
+    assert_fast(laps)

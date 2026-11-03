@@ -25,6 +25,7 @@ Governing sentences (catalog text, tags stripped; pinned by ``test_quote_matches
 Matrix: feat x ruleset (2014, mixed, 2024) x class (Wizard, Sorcerer, Fighter, Warlock) x pool x prerequisite (level /
 Pact / cantrip) x duplicate with the class card (both pools) x stale SRD pick x effects (AC formula, senses, innate
 spell) x no-feat identity x SRD-only catalog x timing."""
+from perf_helpers import assert_fast
 import copy
 import re
 import time
@@ -373,10 +374,12 @@ def test_resolve_stays_fast_with_all_four_feats(catalog, ruleset):
           "class:wizard:12:asi": [f"feat:{MMA}"], "class:wizard:16:asi": [f"feat:{FI}"]}
     d = _draft([("wizard", 20, ch, None)], ruleset=ruleset)
     resolve(d, catalog)
-    start = time.perf_counter()
+    laps = []
     for _ in range(10):
+        t_run = time.perf_counter()
         resolve(d, catalog)
-    assert (time.perf_counter() - start) / 10 * 1000 < 50
+        laps.append(time.perf_counter() - t_run)
+    assert_fast(laps)
 
 
 # ================================================================ A3b: dependents of a feat-held invocation
@@ -599,10 +602,12 @@ def test_warlock_20_with_all_four_feats_stays_fast(catalog):
     for ruleset in ("mixed", "2024"):
         d = _draft([("warlock", 20, ch, None)], ruleset=ruleset)
         resolve(d, catalog)
-        start = time.perf_counter()
+        laps = []
         for _ in range(10):
+            t_run = time.perf_counter()
             resolve(d, catalog)
-        assert (time.perf_counter() - start) / 10 * 1000 < 50
+            laps.append(time.perf_counter() - t_run)
+        assert_fast(laps)
 
 
 def test_a_tome_card_without_any_ritual_spell_is_unavailable_not_blocking(catalog):

@@ -32,6 +32,7 @@ Numbers (read from the SRD level rows and the XPHB tables by script):
   3 (4-9), 4 (10-20); heal 1d10 + fighter level. Action Surge 1 at 2, 2 at 17;
   Indomitable 1 at 9, 2 at 13, 3 at 17 (SRD rows; same in 2024).
 """
+from perf_helpers import assert_fast
 import io
 
 import pytest
@@ -331,7 +332,9 @@ def test_attacks_per_action_line_for_a_single_attack_character(catalog):
 def test_level_20_resolve_is_fast(catalog, classes):
     import time
     _res(catalog, classes)  # warm up
-    t = time.perf_counter()
+    laps = []
     for _ in range(10):
+        t_run = time.perf_counter()
         _res(catalog, classes, "2024")
-    assert (time.perf_counter() - t) / 10 < 0.05
+        laps.append(time.perf_counter() - t_run)
+    assert_fast(laps)

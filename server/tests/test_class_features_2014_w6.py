@@ -33,6 +33,7 @@ Rule matrix (texts read from the catalog on 2026-10-24; `test_quotes_match_catal
 
 Scanned and skipped: see ARCHITECTURE-CURRENT-STATE.md (W6 section).
 """
+from perf_helpers import assert_fast
 import copy
 import time
 
@@ -364,7 +365,9 @@ def test_sources_filter_does_not_remove_srd_entries(catalog):
 def test_resolve_stays_fast(catalog, ruleset):
     for cls in ("fighter", "wizard", "bard", "cleric", "warlock"):
         _res(catalog, [(cls, 20)], ruleset)  # warm
-        t = time.perf_counter()
+        laps = []
         for _ in range(10):
+            t_run = time.perf_counter()
             _res(catalog, [(cls, 20)], ruleset)
-        assert (time.perf_counter() - t) / 10 < 0.05, (ruleset, cls)
+            laps.append(time.perf_counter() - t_run)
+        assert_fast(laps, str((ruleset, cls)))

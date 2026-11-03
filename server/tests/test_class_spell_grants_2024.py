@@ -26,6 +26,7 @@ lists, label, stored pick, slot level cap, sources srd, mixed) x Spell Mastery (
 "1 action", reaction excluded, empty book, level-down pruned, stale pick pruned, picks always prepared and
 disabled in the prepared card, sheet keys) x Signature Spells (count 2, level 3 only) x sheet.features row x
 Markdown/PDF lines x catalog (real / SRD-only) x timing."""
+from perf_helpers import assert_fast
 import time
 
 import pytest
@@ -456,7 +457,9 @@ def test_resolve_stays_fast(catalog):
     for name, classes in drafts.items():
         for ruleset in ("mixed", "2024"):
             _res(catalog, classes, ruleset=ruleset)
-            start = time.perf_counter()
+            laps = []
             for _ in range(10):
+                t_run = time.perf_counter()
                 _res(catalog, classes, ruleset=ruleset)
-            assert (time.perf_counter() - start) / 10 < 0.05, (name, ruleset)
+                laps.append(time.perf_counter() - t_run)
+            assert_fast(laps, str((name, ruleset)))

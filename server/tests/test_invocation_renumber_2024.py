@@ -21,6 +21,7 @@ Rule matrix (rows = stored shape, all ruleset 2024, Warlock):
   Eldritch Adept (feat-held)          no instances (RP20 pool has none): nothing renumbers, `~k` ids stay invalid
   the draft is never mutated; the result is stable when the client echoes the renumbered selection back.
 """
+from perf_helpers import assert_fast
 import copy
 
 import pytest
@@ -28,7 +29,7 @@ import pytest
 from catalog.loader import load
 from c7c_helpers import (  # noqa: F401
     AGON, CANT, CHAIN, EB, INV, LESSONS, MI, REPEL, SPEAR, TOME, TTD, _card, _dependent_ids, _draft, _l, _pruned, _res,
-    _resource, _srd_only, needs_data, tcid, time_resolve,
+    _resource, _srd_only, needs_data, tcid, resolve_laps,
 )
 from engine import class_choices_2024
 from engine.resolve import resolve
@@ -325,7 +326,7 @@ def test_warlock_20_with_ten_invocations_and_a_removed_base_stays_fast(catalog):
     d = _draft(20, picks, [EB, TTD, PS, CT], extra=extra)
     r = resolve(d, catalog)
     assert _sel(r, INV)[:4] == [TOME, CHAIN, AGON, AGON + "~2"]
-    assert time_resolve(d, catalog, 20) < 50
+    assert_fast(resolve_laps(d, catalog, 20))
 
 
 X_MIND, X_ARMOR = "opt-eldritch-mind-xphb", "opt-armor-of-shadows-xphb"

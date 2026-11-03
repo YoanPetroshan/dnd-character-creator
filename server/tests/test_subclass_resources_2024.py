@@ -47,6 +47,7 @@ finish a Long Rest" = 1 use, recharge long; "Short or Long Rest" = short-or-long
 
 Scanned and skipped: see ARCHITECTURE-CURRENT-STATE.md (RP11 section).
 """
+from perf_helpers import assert_fast
 import copy
 import re
 
@@ -522,7 +523,9 @@ def test_resolve_stays_fast_with_the_tail(catalog):
                  "species": {"id": "human"}, "background": {"id": "acolyte"},
                  "classes": [{"classId": cls, "level": 20, "subclassId": sub, "choices": {}}]}
             resolve(d, catalog)
-            t = time.perf_counter()
+            laps = []
             for _ in range(10):
+                t_run = time.perf_counter()
                 resolve(d, catalog)
-            assert (time.perf_counter() - t) / 10 < 0.05, (ruleset, cls)
+                laps.append(time.perf_counter() - t_run)
+            assert_fast(laps, str((ruleset, cls)))

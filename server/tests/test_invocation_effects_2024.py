@@ -30,6 +30,7 @@ Rule matrix (text -> engine):
 Deferred to C7c (no entry here): Pact of the Tome, Lessons of the First Ones.
 Matrix: effect kind (innate / AC / senses / speeds / resource / note) x ruleset (2024 vs mixed/2014 unchanged) x
 level gate (prerequisite lost -> effect gone) x repeat instances x SRD-only catalog x exhaustiveness x timing."""
+from perf_helpers import assert_fast
 import copy
 import time
 
@@ -376,7 +377,9 @@ def test_timing_warlock_20_with_ten_invocations(catalog):
     c = ["eldritch-blast-xphb", "toll-the-dead-xphb"]
     r = _res(catalog, 20, picks, cantrips=c)
     assert len(r["derived"]["classResources"]) > 5
-    t = time.perf_counter()
+    laps = []
     for _ in range(20):
+        t_run = time.perf_counter()
         _res(catalog, 20, picks, cantrips=c)
-    assert (time.perf_counter() - t) / 20 < 0.05
+        laps.append(time.perf_counter() - t_run)
+    assert_fast(laps)

@@ -8,6 +8,7 @@ Matrix: ruleset (2024 / 2014 / mixed) x data (real XPHB lists / SRD-only catalog
 boundary (Fighter 1 -> 2, Bard 1 -> 2 -> 3, Fighter 8 -> 9) x multiclass x choice family
 (weapon mastery, fighting style, expertise, metamagic, invocations, favored enemy; unmapped:
 pact boon, natural explorer, which keep their SRD row)."""
+from perf_helpers import assert_fast
 import copy
 import time
 
@@ -274,7 +275,9 @@ def test_resolve_timing_fighter_and_wizard_20(catalog):
     for cls in ("fighter", "wizard"):
         d = _d([_cls(cls, 20)])
         resolve(d, catalog)
-        t = time.perf_counter()
+        laps = []
         for _ in range(20):
+            t_run = time.perf_counter()
             resolve(d, catalog)
-        assert (time.perf_counter() - t) / 20 < 0.05
+            laps.append(time.perf_counter() - t_run)
+        assert_fast(laps)

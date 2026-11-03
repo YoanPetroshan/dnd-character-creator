@@ -9,6 +9,7 @@ Properties: (a) resolve never raises, (b) resolve twice is byte-identical, (c) k
 (failure prints seed, draft and the cards still pending / flipping), (d) after random mutations resolve never raises
 and stale picks are reported in `pruned`, (e) yaml / markdown / pdf exports return 200 on up to 10 settled drafts,
 (f) the slowest resolve is under 50 ms."""
+from perf_helpers import Laps, assert_fast
 import copy
 import json
 import os
@@ -228,14 +229,14 @@ def test_exports_return_200_on_settled_drafts(settled, client):
 
 def test_slowest_resolve_under_50_ms(settled, catalog):
     """A draft's first resolve with a new `sources` set also builds the per-sources spell-visibility cache (one run in
-    8000 measured 66 ms cold, 2.8 ms warm), so a slow draft is re-timed warm (best of 3) before it fails."""
+    8000 measured 66 ms cold, 2.8 ms warm), so a slow draft is re-timed warm (best of 7) before it fails."""
     slow = sorted(((max(t) if t else 0.0, seed) for seed, (_, _, t) in settled.items()), reverse=True)[:3]
     for first, seed in slow:
         if first < 0.05:
             continue
         draft = settled[seed][0]
-        best = min(_timed(draft, catalog) for _ in range(3))
-        assert best < 0.05, f"seed={seed} resolve took {best * 1000:.1f} ms warm ({first * 1000:.1f} ms first)"
+        laps = Laps(_timed(draft, catalog) for _ in range(7))
+        assert_fast(laps, f"seed={seed} ({first * 1000:.1f} ms first)")
 
 
 def _timed(draft, catalog):

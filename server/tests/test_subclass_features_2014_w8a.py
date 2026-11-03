@@ -39,6 +39,7 @@ bonus; "mod" = ability modifier):
 
 Scanned and skipped: see ARCHITECTURE-CURRENT-STATE.md (W8 section).
 """
+from perf_helpers import assert_fast
 import copy
 import time
 
@@ -498,7 +499,9 @@ def test_resolve_stays_fast(catalog, ruleset):
     for cls, sub in (("barbarian", "storm-herald-xge"), ("barbarian", "beast-tce"), ("bard", "creation-tce"),
                      ("bard", "whispers-xge"), ("bard", "glamour-xge")):
         _res(catalog, cls, 20, sub, ruleset)  # warm
-        t = time.perf_counter()
+        laps = []
         for _ in range(10):
+            t_run = time.perf_counter()
             _res(catalog, cls, 20, sub, ruleset)
-        assert (time.perf_counter() - t) / 10 < 0.05, (ruleset, cls, sub)
+            laps.append(time.perf_counter() - t_run)
+        assert_fast(laps, str((ruleset, cls, sub)))

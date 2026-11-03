@@ -45,6 +45,7 @@ PB + the class's spellcasting modifier (CHA for Sorcerer and Warlock, INT for Wi
 
 Scanned and skipped: see ARCHITECTURE-CURRENT-STATE.md (W8d section).
 """
+from perf_helpers import assert_fast
 import copy
 import time
 
@@ -617,10 +618,12 @@ def test_resolve_stays_fast(catalog, ruleset):
     for cls, sub in (("sorcerer", "lunar-dsotdq"), ("sorcerer", "shadow-xge"), ("warlock", "genie-tce"), ("warlock", "celestial-xge"),
                      ("warlock", "undead-vrgr"), ("wizard", "scribes-tce"), ("wizard", "graviturgy-egw"), ("wizard", "war-xge")):
         _res(catalog, cls, 20, sub, ruleset)  # warm
-        t = time.perf_counter()
+        laps = []
         for _ in range(10):
+            t_run = time.perf_counter()
             _res(catalog, cls, 20, sub, ruleset)
-        assert (time.perf_counter() - t) / 10 < 0.05, (ruleset, cls, sub)
+            laps.append(time.perf_counter() - t_run)
+        assert_fast(laps, str((ruleset, cls, sub)))
 
 
 @needs_data

@@ -21,7 +21,7 @@ from catalog.loader import load
 from c7c_helpers import (  # noqa: F401
     AGON, BLADE, BLADE_W, CANT, CHAIN, EB, FB, INV, KNOWN, LESSONS, LONGSWORD, MI, REPEL, SPEAR, THIRST, TOME, TOME_C, TOME_R,
     TTD, X, _card, _dependent_ids, _draft, _l, _opt, _problem_ids, _pruned, _res, _resource, _srd_only, needs_data, tcid,
-    time_resolve,
+    resolve_laps,
 )
 from engine import class_choices_2024
 from engine.resolve import resolve

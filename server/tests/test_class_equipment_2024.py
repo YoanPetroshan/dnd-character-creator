@@ -39,6 +39,7 @@ resolve (card, quantities, gold, nested picks, AC, Monk sentinel, Wizard spellbo
 B options give only gold | secondary class has no equipment card | mixed / 2014 unchanged (the F0
 golden covers them byte for byte; spot-checked here) | SRD-only catalog keeps the SRD packages |
 G2 worn / wielded interplay | speed."""
+from perf_helpers import assert_fast
 import re
 import time
 
@@ -458,7 +459,9 @@ def test_timing_reference_characters(catalog):
         for draft in cases:
             draft = {**draft, "ruleset": ruleset}
             resolve(draft, catalog)
-            start = time.perf_counter()
+            laps = []
             for _ in range(20):
+                t_run = time.perf_counter()
                 resolve(draft, catalog)
-            assert (time.perf_counter() - start) / 20 < 0.05
+                laps.append(time.perf_counter() - t_run)
+            assert_fast(laps)

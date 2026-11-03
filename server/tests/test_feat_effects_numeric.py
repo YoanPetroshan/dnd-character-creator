@@ -19,6 +19,7 @@ Speed bonuses raise the walking speed only (F1-6 precedent), after Unarmored Mov
 before the Gift of the Depths swim speed and the Athlete climb speed, which both read the final walk speed.
 Matrix: rule (which feat applies) x number x source of the feat (ASI, background, species) x ruleset x
 multiclass x hidden-by-filters x manual HP x no-feat identity x empty catalog x timing."""
+from perf_helpers import assert_fast
 import copy
 import re
 import time
@@ -370,7 +371,9 @@ def test_resolve_stays_fast_with_feats(catalog):
         feats = ["alert-phb", "tough-phb", "mobile-phb", "squat-nimbleness-xge"] if ruleset == "mixed" else \
             ["alert-xphb", "speedy-xphb", "athlete-xphb"]
         _res(catalog, classes, feats, ruleset=ruleset, background=bg)
-        t = time.perf_counter()
+        laps = []
         for _ in range(10):
+            t_run = time.perf_counter()
             _res(catalog, classes, feats, ruleset=ruleset, background=bg)
-        assert (time.perf_counter() - t) / 10 < 0.05
+            laps.append(time.perf_counter() - t_run)
+        assert_fast(laps)

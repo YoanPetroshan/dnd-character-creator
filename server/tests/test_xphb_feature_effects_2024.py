@@ -17,6 +17,7 @@ Rule matrix (every row 2024; the same draft under mixed is unchanged):
   Conditional wording          not an effect (CLASS_FEATURE_NOTES_ONLY_2024)
   Level / subclass gating      the record's own level; a subclass feature needs that subclass selected
   SRD-only catalog             nothing applies, SRD Primal Champion (cap 24) stays"""
+from perf_helpers import assert_fast
 import time
 
 import pytest
@@ -322,7 +323,9 @@ def test_srd_only_catalog_applies_nothing_and_keeps_srd_primal_champion(monkeypa
                                      [("monk", 20, "shadow-xphb")], [("sorcerer", 6, "draconic-xphb")]])
 def test_resolve_speed(catalog, classes):
     _res(catalog, classes)
-    start = time.perf_counter()
+    laps = []
     for _ in range(20):
+        t_run = time.perf_counter()
         _res(catalog, classes)
-    assert (time.perf_counter() - start) / 20 < 0.05
+        laps.append(time.perf_counter() - t_run)
+    assert_fast(laps)

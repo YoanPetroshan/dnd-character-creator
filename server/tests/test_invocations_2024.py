@@ -14,6 +14,7 @@ Matrix: ruleset (2024 / mixed / 2014) x Warlock level (1, 2, 5, 12, 15, 20) x pr
 invocation, damaging cantrip, attack-roll cantrip) x repeat instances (~2, ~3 need the previous one) x fixed-point
 pruning (Pact of the Blade -> Thirsting Blade -> Devouring Blade) x level-down count x SRD cards skipped under
 2024 x sheet.features row x SRD-only catalog x helpers (strip ~k) x timing."""
+from perf_helpers import assert_fast
 import copy
 import time
 
@@ -221,7 +222,9 @@ def test_timing(catalog):
     c = ["eldritch-blast-xphb", "toll-the-dead-xphb"]
     for lvl, pk in [(17, picks[:9]), (20, picks)]:
         _res(catalog, lvl, picks=pk, cantrips=c)
-        t = time.perf_counter()
+        laps = []
         for _ in range(20):
+            t_run = time.perf_counter()
             _res(catalog, lvl, picks=pk, cantrips=c)
-        assert (time.perf_counter() - t) / 20 < 0.05
+            laps.append(time.perf_counter() - t_run)
+        assert_fast(laps)

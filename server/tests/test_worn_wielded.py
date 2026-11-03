@@ -15,6 +15,7 @@ two-handed with an off-hand item.
 """
 from __future__ import annotations
 
+from perf_helpers import assert_fast
 import copy
 import gzip
 import json
@@ -474,7 +475,9 @@ def test_resolve_stays_fast_for_a_level_20_fighter_with_worn_and_wielded(catalog
     draft = _duelist({"main": "longsword", "off": "shield"}, _KIT, worn={"armor": None, "shield": True})
     draft["classes"][0]["level"] = 20
     resolve(draft, catalog)
-    t0 = time.perf_counter()
+    laps = []
     for _ in range(20):
+        t_run = time.perf_counter()
         resolve(draft, catalog)
-    assert (time.perf_counter() - t0) / 20 < 0.05
+        laps.append(time.perf_counter() - t_run)
+    assert_fast(laps)

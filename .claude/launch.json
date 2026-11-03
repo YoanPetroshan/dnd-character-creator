@@ -14,7 +14,7 @@
     },
     {
       "name": "backend",
-      "runtimeExecutable": "/Users/yoanpetrov/dnd-character-creator/.venv/bin/flask",
+      "runtimeExecutable": ".venv/bin/flask",
       "runtimeArgs": [
         "--app",
         "server/app.py",

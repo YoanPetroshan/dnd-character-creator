@@ -35,6 +35,7 @@ column 2/2/2/2/3/3/3/3/4/4/4/4/5/5/5/5/6/6/6/6). 2014 Favored Enemy is a choice
 (already modelled), so no resource under 2014 or mixed. With the 2024 tables
 missing, no entry and the `class-2024-tables-missing` warning.
 """
+from perf_helpers import assert_fast
 import copy
 import time
 
@@ -209,7 +210,10 @@ def test_multiclass_bard_wizard_gets_one_entry_each_in_class_order(catalog):
 
 def test_bard_and_sorcerer_20_resolve_under_50_ms(catalog):
     for cls in ("bard", "sorcerer"):
-        t = time.perf_counter()
+        _res(catalog, [(cls, 20)], "mixed")  # warm
+        laps = []
         for _ in range(10):
+            t_run = time.perf_counter()
             _res(catalog, [(cls, 20)], "mixed")
-        assert (time.perf_counter() - t) / 10 < 0.05
+            laps.append(time.perf_counter() - t_run)
+        assert_fast(laps)

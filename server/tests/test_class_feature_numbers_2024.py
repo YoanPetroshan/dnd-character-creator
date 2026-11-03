@@ -34,6 +34,7 @@ Rule matrix (texts read from the catalog on 2026-10-23; `test_quotes_match_catal
 
 Scanned and skipped: see ARCHITECTURE-CURRENT-STATE.md (RP10 section).
 """
+from perf_helpers import assert_fast
 import copy
 
 import pytest
@@ -402,7 +403,9 @@ def test_resolve_stays_fast_with_the_notes(catalog, ruleset):
         d = {"ruleset": ruleset, "sources": [], "abilities": {"method": "manual", "base": {"STR": 12, "DEX": 14, "CON": 14, "INT": 10, "WIS": 10, "CHA": 10}},
              "species": {"id": "human"}, "background": {"id": "acolyte"}, "classes": [{"classId": cls, "level": 20, "choices": {}}]}
         resolve(d, catalog)
-        t = time.perf_counter()
+        laps = []
         for _ in range(10):
+            t_run = time.perf_counter()
             resolve(d, catalog)
-        assert (time.perf_counter() - t) / 10 < 0.05, cls
+            laps.append(time.perf_counter() - t_run)
+        assert_fast(laps, str(cls))

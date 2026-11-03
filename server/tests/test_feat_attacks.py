@@ -43,6 +43,7 @@ Governing sentences (catalog text, tags stripped; every one is pinned by ``test_
 Matrix: rule (which row gets which note) x number (computed value in the note) x ruleset (mixed / 2014 / 2024) x
 grant source (ASI, background, Fighting Style card) x wielded hands x Monk x no-feat identity x empty catalog x timing.
 """
+from perf_helpers import assert_fast
 import re
 import time
 
@@ -683,7 +684,9 @@ def test_resolve_stays_fast_with_attack_feats(catalog):
     feats = ["great-weapon-master-xphb", "polearm-master-xphb", "crusher-xphb", "dual-wielder-xphb", "piercer-xphb"]
     items = ["glaive", "greataxe", "longsword", "rapier", "mace", "longbow", "crossbow-hand", "dagger"]
     _res(catalog, [("fighter", 19)], feats, ruleset="2024", base={"STR": 16, "DEX": 14}, added=items)  # warm up
-    start = time.perf_counter()
+    laps = []
     for _ in range(10):
+        t_run = time.perf_counter()
         _res(catalog, [("fighter", 19)], feats, ruleset="2024", base={"STR": 16, "DEX": 14}, added=items)
-    assert (time.perf_counter() - start) / 10 < 0.05
+        laps.append(time.perf_counter() - t_run)
+    assert_fast(laps)

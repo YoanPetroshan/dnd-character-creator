@@ -34,6 +34,7 @@ short-or-long, L18 still 2 uses; L2 none.
 
 Not resources / skipped: see ARCHITECTURE R6 (Rune Knight, Bladesinging, ...).
 """
+from perf_helpers import assert_fast
 import time
 
 import pytest
@@ -256,7 +257,9 @@ def test_subclass_entries_follow_their_class_entries(catalog):
 def test_subclass_resources_resolve_under_50_ms(catalog):
     for cls, lvl, sub in (("fighter", 11, "psi-warrior-tce"), ("fighter", 15, "battle-master-phb")):
         _res(catalog, [(cls, lvl, sub)], "mixed")
-        t = time.perf_counter()
+        laps = []
         for _ in range(20):
+            t_run = time.perf_counter()
             _res(catalog, [(cls, lvl, sub)], "mixed")
-        assert (time.perf_counter() - t) / 20 < 0.05
+            laps.append(time.perf_counter() - t_run)
+        assert_fast(laps)

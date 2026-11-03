@@ -23,6 +23,7 @@ the condition; otherwise the feat's static note states the rule and AC is unchan
 Matrix: rule (which feat applies) x number x wielded state x ruleset x armor / shield x no-feat identity x
 empty catalog x timing. The MAM cap reads the Dexterity SCORE (not the modifier).
 """
+from perf_helpers import assert_fast, measure
 import copy
 import json
 import re
@@ -449,19 +450,15 @@ def test_empty_feat_catalog_resolves_with_the_plain_numbers():
     assert _d(r)["passivePerception"] == 10 + _d(r)["skills"]["skill-perception"]
 
 
-def _mean_ms(catalog, classes, feats, **kw):
-    _res(catalog, classes, feats, **kw)
-    start = time.perf_counter()
-    for _ in range(10):
-        _res(catalog, classes, feats, **kw)
-    return (time.perf_counter() - start) / 10 * 1000
+def _laps(catalog, classes, feats, **kw):
+    return measure(lambda: _res(catalog, classes, feats, **kw))
 
 
 def test_resolve_stays_fast_with_defense_feats(catalog):
     gear = dict(added=["half-plate-armor", "longsword", "shortsword"], worn={"armor": "half-plate-armor"},
                 wielded={"main": "longsword", "off": "shortsword"}, base={"DEX": 16})
     feats = ["medium-armor-master-phb", "dual-wielder-phb", "observant-phb", "dragon-hide-xge"]
-    for ms in (_mean_ms(catalog, [("fighter", 20)], feats, ruleset="mixed", **gear),
-               _mean_ms(catalog, [("fighter", 20)], ["medium-armor-master-xphb"], ruleset="2024", **gear),
-               _mean_ms(catalog, [("wizard", 20)], ["observant-phb", "dual-wielder-phb"], ruleset="mixed")):
-        assert ms < 50
+    for laps in (_laps(catalog, [("fighter", 20)], feats, ruleset="mixed", **gear),
+               _laps(catalog, [("fighter", 20)], ["medium-armor-master-xphb"], ruleset="2024", **gear),
+               _laps(catalog, [("wizard", 20)], ["observant-phb", "dual-wielder-phb"], ruleset="mixed")):
+        assert_fast(laps)

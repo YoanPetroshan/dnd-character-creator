@@ -18,6 +18,7 @@ Matrix: ruleset (2024 / mixed / 2014) x class (Rogue 1, Druid 1, Ranger 1/2, Bar
 (species fixed, background card, other class fixed, other class card) x stored duplicate (pruned) x
 exports x sheet.features rows x Primal Knowledge options (6, L1 skill already proficient from the class
 card / background, stored pick pruned) x catalog (real XPHB / SRD-only) x helper isolation x timing."""
+from perf_helpers import assert_fast
 import copy
 import time
 
@@ -329,7 +330,9 @@ def test_resolve_timing(catalog):
     ]
     for d in drafts:
         resolve(d, catalog)
-        start = time.perf_counter()
+        laps = []
         for _ in range(20):
+            t_run = time.perf_counter()
             resolve(d, catalog)
-        assert (time.perf_counter() - start) / 20 < 0.05
+            laps.append(time.perf_counter() - t_run)
+        assert_fast(laps)

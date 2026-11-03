@@ -24,6 +24,7 @@ prints (DCs, Temporary Hit Points, level, Proficiency Bonus) x the effects the c
 immunities, senses, Expertise, languages, spells) x output surfaces (YAML, Markdown, PDF) x no-feat identity x empty
 catalog x timing.
 """
+from perf_helpers import assert_fast
 import copy
 import io
 import re
@@ -429,10 +430,12 @@ def test_resolve_stays_fast_with_many_resource_feats(catalog):
     for classes, ruleset, bg, feats in cases:
         draft = _draft(classes, feats, ruleset=ruleset, background=bg, sources=ALL_SOURCES)
         resolve(draft, catalog)
-        t = time.perf_counter()
+        laps = []
         for _ in range(10):
+            t_run = time.perf_counter()
             result = resolve(draft, catalog)
-        assert (time.perf_counter() - t) / 10 < 0.05
+            laps.append(time.perf_counter() - t_run)
+        assert_fast(laps)
         assert len(result["derived"]["featResources"]) >= 4
 
 

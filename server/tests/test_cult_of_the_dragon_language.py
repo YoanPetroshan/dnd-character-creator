@@ -15,6 +15,7 @@ disabled "already known"; the fixed Draconic stays on the sheet):
   Mixed / 2014 with the feat: same behaviour (FE policy: the feat's own text under every ruleset)
   A stored pick of an already known language is dropped (pruned, card pending)
   SRD-only catalog: nothing (feat absent)."""
+from perf_helpers import assert_fast
 import copy
 import time
 
@@ -228,10 +229,12 @@ def test_timing(catalog, ruleset):
     for cls in ("fighter", "wizard", "bard"):
         d = _draft([(cls, 20, None)], ruleset=ruleset, species="dragonborn")
         resolve(d, catalog)
-        t = time.perf_counter()
+        laps = []
         for _ in range(10):
+            t_run = time.perf_counter()
             resolve(d, catalog)
-        assert (time.perf_counter() - t) / 10 < 0.05
+            laps.append(time.perf_counter() - t_run)
+        assert_fast(laps)
 
 
 @needs_data

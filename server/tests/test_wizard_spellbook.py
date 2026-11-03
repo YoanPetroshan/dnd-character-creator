@@ -11,6 +11,7 @@ Prepared counts: 2014/mixed = max(1, INT mod + level); 2024 = XPHB table (level 
 Cases: book count by level, options up to the highest slot level, prepared options == the
 stored (valid, truncated) book, prepared pick outside the book -> pruned (non-blocking), level
 down -> book pruned with "now allows N", third casters (EK/AT) are not wizards, SRD-only catalog."""
+from perf_helpers import assert_fast, measure
 import time
 
 import pytest
@@ -172,12 +173,10 @@ def test_resolve_wizard_20_with_a_full_book_is_fast(catalog):
     assert len(book) == 44
     d = _draft(20, {BOOK: book, PREP: book[:20]})
     resolve(d, catalog)
-    t = time.perf_counter()
-    for _ in range(5):
-        res = resolve(d, catalog)
-    ms = (time.perf_counter() - t) / 5 * 1000
-    print(f"wizard 20 full book resolve: {ms:.1f} ms")
-    assert ms < 50
+    laps = measure(lambda: resolve(d, catalog), runs=10, warmup=0)
+    res = resolve(d, catalog)
+    print(f"wizard 20 full book resolve: best {min(laps) * 1000:.1f} ms")
+    assert_fast(laps)
     assert _choice(res, BOOK)["count"] == 44
 
 
