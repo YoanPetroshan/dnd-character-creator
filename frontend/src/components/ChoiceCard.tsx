@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import type { Choice } from "../types";
 import { ChoicePicker } from "./ChoicePicker";
+import { cidFromHash } from "../logic/hashTarget";
 
 interface ChoiceCardProps {
   choice: Choice;
@@ -15,10 +17,21 @@ export function firstPendingId(choices: Choice[]): string | undefined {
 }
 
 export function ChoiceCard({ choice, onToggle, defaultExpanded = false }: ChoiceCardProps) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
+  // A "#<cid>" URL hash (the Export page's unresolved list links here) opens
+  // this card and scrolls to it. cids contain colons, so the element is found
+  // with getElementById, never a CSS selector.
+  const { hash } = useLocation();
+  const isTarget = cidFromHash(hash) === choice.id;
+  const [expanded, setExpanded] = useState(defaultExpanded || isTarget);
+
+  useEffect(() => {
+    if (!isTarget) return;
+    setExpanded(true);
+    document.getElementById(choice.id)?.scrollIntoView?.({ block: "start" });
+  }, [isTarget, choice.id]);
 
   return (
-    <div className="choice-card" data-status={choice.status}>
+    <div className="choice-card" id={choice.id} data-status={choice.status}>
       <button
         type="button"
         className="choice-card__header"

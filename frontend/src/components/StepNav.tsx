@@ -1,9 +1,11 @@
 import { useEffect, useRef } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
 import { STEPS, stepBadgeCount, stepStatus } from "../logic/steps";
 
 export function StepNav() {
+  const { draft } = useDraft();
   const { resolution } = useResolutionContext();
   const navRef = useRef<HTMLElement>(null);
   const { pathname } = useLocation();
@@ -13,7 +15,7 @@ export function StepNav() {
     navRef.current?.querySelector(".active")?.scrollIntoView?.({ inline: "nearest", block: "nearest" });
   }, [pathname]);
 
-  const status = stepStatus(resolution);
+  const status = stepStatus(resolution, draft);
 
   return (
     <nav className="step-nav" aria-label="Стъпки" ref={navRef}>
@@ -22,7 +24,11 @@ export function StepNav() {
         return (
           <NavLink key={step.path} to={step.path} className={({ isActive }) => (isActive ? "active" : "")}>
             {step.label}
-            {count > 0 && <span className="step-nav__badge">{count}</span>}
+            {count > 0 && (
+              <span className="step-nav__badge" role="img" aria-label={`неизбрани: ${count}`}>
+                {count}
+              </span>
+            )}
           </NavLink>
         );
       })}

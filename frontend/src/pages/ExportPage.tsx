@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
 import { httpErrorMessage } from "../httpErrors";
 import { exportReadiness } from "../logic/exportReadiness";
+import { stepForChoice } from "../logic/steps";
 import { safeFilename, shareOrDownload } from "../logic/files";
 import { ClassResourcesList } from "../components/ClassResourcesList";
 import { SheetTraitsSummary } from "../components/SheetTraitsSummary";
@@ -84,7 +86,9 @@ export function ExportPage() {
           <h2>Unresolved choices</h2>
           <ul>
             {pendingChoices.map((c) => (
-              <li key={c.id}>{c.label}</li>
+              <li key={c.id}>
+                <Link to={{ pathname: stepForChoice(c.id), hash: c.id }}>{c.label}</Link>
+              </li>
             ))}
           </ul>
         </div>

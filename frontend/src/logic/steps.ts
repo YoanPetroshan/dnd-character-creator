@@ -42,22 +42,40 @@ export interface StepStatus {
   pending: number;
   /** Blocking resolve() problems that belong to the step. */
   problems: number;
-  /** Required parts that are not chosen at all. Always 0 for now: an empty
-   *  step gets no badge today (SK3 changes this). */
+  /** Required parts that are not chosen at all: 1 for an empty Class, Species
+   *  or Background step, else 0. */
   missing: number;
   /** Nothing outstanding (and a resolution exists). */
   done: boolean;
 }
 
+/** Is the part a step is about still unchosen? Read from the draft when one
+ *  is given (it is the user's truth), else from the resolution's sheet (the
+ *  same test the export gate uses). */
+function isMissing(path: string, resolution: Resolution, draft?: Draft): boolean {
+  switch (path) {
+    case "/class":
+      return draft ? draft.classes.length === 0 : resolution.sheet.classes.length === 0;
+    case "/species":
+      return draft ? !draft.species.id : !resolution.sheet.species;
+    case "/background":
+      return draft ? !draft.background.id : !resolution.sheet.background;
+    default:
+      return false;
+  }
+}
+
 /** Per-step status, keyed by step path. The StepNav badge is
- *  `problems + pending` (+ `missing` once SK3 fills it). `draft` is accepted
- *  so SK3 can count an empty step without changing callers. */
-export function stepStatus(resolution: Resolution | null, _draft?: Draft): Record<string, StepStatus> {
+ *  `problems + pending + missing`. Without a resolution nothing is counted
+ *  (no badge flashes while the first resolve is loading). */
+export function stepStatus(resolution: Resolution | null, draft?: Draft): Record<string, StepStatus> {
   const out: Record<string, StepStatus> = {};
   for (const step of STEPS) {
     let problems = 0;
     let pending = 0;
+    let missing = 0;
     if (resolution) {
+      missing = isMissing(step.path, resolution, draft) ? 1 : 0;
       problems = step.problemStep ? problemsForStep(resolution.problems, step.problemStep).length : 0;
       if (step.kind) {
         const kinds = step.kind;
@@ -66,7 +84,7 @@ export function stepStatus(resolution: Resolution | null, _draft?: Draft): Recor
         ).length;
       }
     }
-    out[step.path] = { pending, problems, missing: 0, done: resolution !== null && pending + problems === 0 };
+    out[step.path] = { pending, problems, missing, done: resolution !== null && pending + problems + missing === 0 };
   }
   return out;
 }
@@ -74,4 +92,24 @@ export function stepStatus(resolution: Resolution | null, _draft?: Draft): Recor
 /** The number shown in the StepNav badge (0 = no badge). */
 export function stepBadgeCount(status: StepStatus): number {
   return status.problems + status.pending + status.missing;
+}
+
+/** The first step, in STEPS order, that still has something outstanding
+ *  (a missing part, a pending card or a blocking problem); Export when
+ *  nothing is. null while there is no resolution yet. */
+export function nextUnfinishedStep(resolution: Resolution | null, draft?: Draft): string | null {
+  if (!resolution) return null;
+  const status = stepStatus(resolution, draft);
+  const next = STEPS.find((step) => stepBadgeCount(status[step.path]) > 0);
+  return next ? next.path : "/export";
+}
+
+/** The step page that owns a choice card, from its cid. Equipment cards
+ *  come first: a class's equipment cid ("class:<id>:1:equipment-choice-N")
+ *  starts with "class:" but is shown on the Equipment page. */
+export function stepForChoice(cid: string): string {
+  if (/(^|:)equipment-choice-\d+$/.test(cid)) return "/equipment";
+  if (isClassCid(cid)) return "/class";
+  if (isSpeciesCid(cid)) return "/species";
+  return "/background";
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { StepProblems } from "../components/StepProblems";
 import { MAX_TOTAL_LEVEL, totalLevel, useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
@@ -9,6 +10,7 @@ import { SpellLibrary } from "../components/SpellLibrary";
 import { ClassResourcesList } from "../components/ClassResourcesList";
 import { SpellSlotsSummary } from "../components/SpellSlotsSummary";
 import { classChoicesFor, splitClassChoices } from "../logic/choiceRouting";
+import { cidFromHash } from "../logic/hashTarget";
 
 type ClassTab = "features" | "spells";
 
@@ -24,6 +26,8 @@ interface ClassDetail {
 function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolean }) {
   const { draft, dispatch } = useDraft();
   const { resolution, loading } = useResolutionContext();
+  const catalog = useCatalogContext();
+  const sheetClass = resolution?.sheet.classes.find((c) => c.id === classId);
   const [tab, setTab] = useState<ClassTab>("features");
   const [classDetail, setClassDetail] = useState<ClassDetail | null>(null);
 
@@ -61,6 +65,16 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
   const hasSpells = spellChoices.length > 0;
   const effectiveTab: ClassTab = hasSpells ? tab : "features";
 
+  // A "#<cid>" hash may point into the tab that is not showing: switch to it
+  // (the card itself expands and scrolls, see ChoiceCard).
+  const hashCid = cidFromHash(useLocation().hash);
+  const hashInSpells = hashCid !== null && spellChoices.some((c) => c.id === hashCid);
+  const hashInFeatures = hashCid !== null && featureChoices.some((c) => c.id === hashCid);
+  useEffect(() => {
+    if (hashInSpells) setTab("spells");
+    else if (hashInFeatures) setTab("features");
+  }, [hashCid, hashInSpells, hashInFeatures]);
+
   const tabFeaturesId = `tab-features-${classId}`;
   const panelFeaturesId = `panel-features-${classId}`;
   const tabSpellsId = `tab-spells-${classId}`;
@@ -73,7 +87,7 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
   return (
     <div className="class-block">
       <h2>
-        {classId}{" "}
+        {sheetClass?.name ?? catalog.classes.find((c) => c.id === classId)?.name ?? classId}{" "}
         {!isPrimary && (
           <button type="button" onClick={() => dispatch({ type: "REMOVE_CLASS", classId })}>
             ✕ Премахни

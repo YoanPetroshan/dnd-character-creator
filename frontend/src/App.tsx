@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { CatalogProvider } from "./CatalogContext";
 import { ResolutionProvider } from "./ResolutionContext";
 import { StepNav } from "./components/StepNav";
+import { NextStepLink } from "./components/NextStepLink";
 import { StatusBanner } from "./components/StatusBanner";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { HomePage } from "./pages/HomePage";
@@ -19,6 +20,7 @@ export default function App() {
       <CatalogProvider>
         <ResolutionProvider>
           <StepNav />
+          <NextStepLink />
           <StatusBanner />
           <main>
             {/* per-route boundary: a crash on one page keeps the nav usable, and navigating away clears it */}
@@ -32,6 +34,7 @@ export default function App() {
               <Route path="/abilities" element={<AbilitiesPage />} />
               <Route path="/equipment" element={<EquipmentPage />} />
               <Route path="/export" element={<ExportPage />} />
+              <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
             </ErrorBoundary>
           </main>
