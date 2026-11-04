@@ -1,5 +1,6 @@
 import { CommitNumberInput } from "../components/CommitNumberInput";
 import { StepProblems } from "../components/StepProblems";
+import { t } from "../copy";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
 import {
@@ -12,6 +13,7 @@ import {
   rollAbilityScore,
   setStandardScore,
 } from "../logic/abilities";
+import { abilityRows } from "../logic/sheetSections";
 import type { Ability, Draft } from "../types";
 
 export function AbilitiesPage() {
@@ -20,8 +22,9 @@ export function AbilitiesPage() {
 
 
   const { method, base } = draft.abilities;
-  const derived = resolution?.derived as { abilityModifiers?: Record<string, number> } | undefined;
-  const modifiers = derived?.abilityModifiers;
+  // base / bonus / total / modifier per ability (the scores before and after species, background and feat bonuses)
+  const rows = resolution ? abilityRows(resolution.sheet.abilities, resolution.derived.abilityModifiers, base) : null;
+  const rowOf = (ability: Ability) => rows?.find((r) => r.ability === ability);
 
   function setAbility(ability: Ability, value: number) {
     dispatch({ type: "SET_ABILITY_SCORE", ability, value });
@@ -83,16 +86,18 @@ export function AbilitiesPage() {
       <table className="ability-table">
         <thead>
           <tr>
-            <th>Ability</th>
-            <th>Score</th>
-            <th>Modifier</th>
+            <th>{t.abilitiesPage.columns.ability}</th>
+            <th>{t.abilitiesPage.columns.base}</th>
+            <th>{t.abilitiesPage.columns.bonus}</th>
+            <th>{t.abilitiesPage.columns.total}</th>
+            <th>{t.abilitiesPage.columns.modifier}</th>
           </tr>
         </thead>
         <tbody>
           {ABILITIES.map((ability) => {
             const score = base[ability];
             const canInc = canIncrement(base, ability);
-            const modifier = modifiers?.[ability];
+            const row = rowOf(ability);
             return (
               <tr key={ability}>
                 <td>{ability}</td>
@@ -129,7 +134,9 @@ export function AbilitiesPage() {
                     />
                   )}
                 </td>
-                <td>{formatModifier(modifier)}</td>
+                <td>{row?.bonus == null ? t.common.none : formatModifier(row.bonus)}</td>
+                <td>{row?.total ?? t.common.none}</td>
+                <td>{formatModifier(row?.modifier)}</td>
               </tr>
             );
           })}

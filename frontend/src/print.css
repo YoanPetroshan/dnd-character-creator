@@ -1,0 +1,10 @@
+/* Print hook (structure only, no visual choices): the sheet prints without the app chrome. */
+@media print {
+  .step-nav,
+  .next-step,
+  .status-banner,
+  .no-print,
+  button {
+    display: none !important;
+  }
+}

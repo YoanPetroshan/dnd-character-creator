@@ -414,10 +414,16 @@ fieldset label {
   min-height: 100dvh;
 }
 
-.ability-table {
+.ability-table,
+[data-section] table {
   display: block;
   overflow-x: auto;
   max-width: 100%;
+}
+
+/* Sheet sections: long names and rule texts wrap instead of widening the page (structure only). */
+[data-section] {
+  overflow-wrap: anywhere;
 }
 
 .item-browser-list,

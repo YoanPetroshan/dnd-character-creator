@@ -1,0 +1,585 @@
+{
+ "id": "warlock7-2024",
+ "ruleset": "2024",
+ "base": {
+  "STR": 16,
+  "DEX": 14,
+  "CON": 14,
+  "INT": 14,
+  "WIS": 14,
+  "CHA": 16
+ },
+ "resolution": {
+  "sheet": {
+   "name": "Кухненска мивка",
+   "level": 7,
+   "classes": [
+    {
+     "id": "warlock",
+     "name": "Warlock",
+     "level": 7,
+     "subclass": null
+    }
+   ],
+   "background": {
+    "id": "acolyte",
+    "name": "Acolyte"
+   },
+   "species": {
+    "id": "human",
+    "name": "Human",
+    "subspecies": null,
+    "variant": null,
+    "size": "Medium"
+   },
+   "abilities": {
+    "STR": 18,
+    "DEX": 14,
+    "CON": 14,
+    "INT": 14,
+    "WIS": 14,
+    "CHA": 16
+   },
+   "proficiencies": {
+    "skills": [
+     "skill-arcana",
+     "skill-deception",
+     "skill-insight",
+     "skill-religion"
+    ],
+    "savingThrows": [
+     "WIS",
+     "CHA"
+    ],
+    "languages": [
+     "common",
+     "common-sign-language",
+     "draconic",
+     "dwarvish"
+    ],
+    "armor": [
+     "light-armor"
+    ],
+    "weapons": [
+     "simple-weapons"
+    ],
+    "tools": []
+   },
+   "startingGold": 30,
+   "equipment": {
+    "granted": [
+     {
+      "itemId": "clothes-common",
+      "name": "Clothes, common",
+      "qty": 1
+     },
+     {
+      "itemId": "pouch",
+      "name": "Pouch",
+      "qty": 1
+     }
+    ],
+    "chosen": [
+     {
+      "itemId": "leather-armor",
+      "name": "Leather Armor",
+      "qty": 1
+     },
+     {
+      "itemId": "sickle",
+      "name": "Sickle",
+      "qty": 1
+     },
+     {
+      "itemId": "dagger",
+      "name": "Dagger",
+      "qty": 2
+     },
+     {
+      "itemId": "orb",
+      "name": "Orb",
+      "qty": 1
+     },
+     {
+      "itemId": "book",
+      "name": "Book",
+      "qty": 1
+     },
+     {
+      "itemId": "scholars-pack",
+      "name": "Scholar's Pack",
+      "qty": 1,
+      "contents": [
+       {
+        "itemId": "backpack",
+        "name": "Backpack",
+        "qty": 1
+       },
+       {
+        "itemId": "book",
+        "name": "Book",
+        "qty": 1
+       },
+       {
+        "itemId": "ink-1-ounce-bottle",
+        "name": "Ink (1 ounce bottle)",
+        "qty": 1
+       },
+       {
+        "itemId": "ink-pen",
+        "name": "Ink pen",
+        "qty": 1
+       },
+       {
+        "itemId": "lamp",
+        "name": "Lamp",
+        "qty": 1
+       },
+       {
+        "itemId": "oil-flask",
+        "name": "Oil (flask)",
+        "qty": 10
+       },
+       {
+        "itemId": "parchment-one-sheet",
+        "name": "Parchment (one sheet)",
+        "qty": 10
+       },
+       {
+        "itemId": "tinderbox",
+        "name": "Tinderbox",
+        "qty": 1
+       }
+      ]
+     },
+     {
+      "itemId": "amulet",
+      "name": "Amulet",
+      "qty": 1
+     }
+    ],
+    "added": [
+     {
+      "itemId": "longsword",
+      "name": "Longsword",
+      "qty": 1,
+      "equipped": true
+     }
+    ],
+    "narrativeItems": [],
+    "slots": {
+     "armor": [
+      {
+       "itemId": "leather-armor",
+       "name": "Leather Armor"
+      }
+     ],
+     "shield": [],
+     "hands": [
+      {
+       "itemId": "sickle",
+       "name": "Sickle",
+       "kind": "weapon",
+       "twoHanded": false
+      },
+      {
+       "itemId": "dagger",
+       "name": "Dagger",
+       "kind": "weapon",
+       "twoHanded": false
+      },
+      {
+       "itemId": "longsword",
+       "name": "Longsword",
+       "kind": "weapon",
+       "twoHanded": false
+      }
+     ],
+     "current": {
+      "armor": "leather-armor",
+      "shield": false
+     }
+    }
+   },
+   "spells": [
+    {
+     "classId": "warlock",
+     "mysticArcanum": [],
+     "cantrips": [
+      {
+       "id": "eldritch-blast-xphb",
+       "name": "Eldritch Blast",
+       "level": 0
+      },
+      {
+       "id": "minor-illusion-xphb",
+       "name": "Minor Illusion",
+       "level": 0
+      },
+      {
+       "id": "mage-hand-xphb",
+       "name": "Mage Hand",
+       "level": 0
+      }
+     ],
+     "known": [
+      {
+       "id": "armor-of-agathys-xphb",
+       "name": "Armor of Agathys",
+       "level": 1
+      },
+      {
+       "id": "arms-of-hadar-xphb",
+       "name": "Arms of Hadar",
+       "level": 1
+      },
+      {
+       "id": "bane-xphb",
+       "name": "Bane",
+       "level": 1
+      },
+      {
+       "id": "cause-fear",
+       "name": "Cause Fear",
+       "level": 1
+      },
+      {
+       "id": "charm-person-xphb",
+       "name": "Charm Person",
+       "level": 1
+      },
+      {
+       "id": "comprehend-languages-xphb",
+       "name": "Comprehend Languages",
+       "level": 1
+      },
+      {
+       "id": "detect-magic-xphb",
+       "name": "Detect Magic",
+       "level": 1
+      },
+      {
+       "id": "distort-value",
+       "name": "Distort Value",
+       "level": 1
+      }
+     ],
+     "pactOfTheTome": [
+      {
+       "id": "acid-splash-xphb",
+       "name": "Acid Splash",
+       "level": 0
+      },
+      {
+       "id": "blade-ward-xphb",
+       "name": "Blade Ward",
+       "level": 0
+      },
+      {
+       "id": "booming-blade",
+       "name": "Booming Blade",
+       "level": 0
+      },
+      {
+       "id": "alarm-xphb",
+       "name": "Alarm",
+       "level": 1
+      },
+      {
+       "id": "ceremony",
+       "name": "Ceremony",
+       "level": 1
+      }
+     ],
+     "alwaysPrepared": [],
+     "spellSaveDC": 14,
+     "spellAttackBonus": 6
+    }
+   ],
+   "details": null,
+   "damageModifiers": {
+    "resistances": [],
+    "immunities": [],
+    "vulnerabilities": []
+   },
+   "conditionImmunities": [],
+   "innateSpells": [
+    {
+     "spellId": "mage-armor-xphb",
+     "name": "Mage Armor",
+     "level": 1,
+     "uses": "at-will",
+     "ability": "CHA",
+     "variant": null,
+     "source": "Eldritch Invocation"
+    }
+   ],
+   "grantedFeats": [
+    "alert-xphb"
+   ],
+   "featOptions": [],
+   "senses": {
+    "devilsSight": 120
+   },
+   "expertiseSkills": [],
+   "features": [
+    {
+     "source": {
+      "kind": "class",
+      "id": "warlock",
+      "label": "Warlock"
+     },
+     "name": "Eldritch Invocations",
+     "level": 1,
+     "choice": [
+      "Pact of the Tome",
+      "Pact of the Blade",
+      "Agonizing Blast",
+      "Lessons of the First Ones",
+      "Devil's Sight",
+      "Armor of Shadows"
+     ]
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "warlock",
+      "label": "Warlock"
+     },
+     "name": "Pact Magic",
+     "level": 1
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "warlock",
+      "label": "Warlock"
+     },
+     "name": "Eldritch Invocation Options",
+     "level": 1
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "warlock",
+      "label": "Warlock"
+     },
+     "name": "Magical Cunning",
+     "level": 2
+    },
+    {
+     "source": {
+      "kind": "background",
+      "id": "acolyte",
+      "label": "Acolyte"
+     },
+     "name": "Shelter of the Faithful",
+     "level": null
+    },
+    {
+     "source": {
+      "kind": "feat",
+      "id": "alert-xphb",
+      "label": "Alert"
+     },
+     "name": "Alert",
+     "level": 2
+    }
+   ],
+   "feats": [
+    {
+     "id": "alert-xphb",
+     "name": "Alert",
+     "origin": "invocation",
+     "level": 2,
+     "notes": [
+      "Initiative Swap: right after you roll Initiative you can swap it with a willing ally's (neither of you Incapacitated)."
+     ]
+    }
+   ],
+   "weaponMasteries": []
+  },
+  "choices": [],
+  "derived": {
+   "abilityModifiers": {
+    "STR": 4,
+    "DEX": 2,
+    "CON": 2,
+    "INT": 2,
+    "WIS": 2,
+    "CHA": 3
+   },
+   "proficiencyBonus": 3,
+   "hitPointMax": 52,
+   "hitDice": "7d8",
+   "armorClass": 13,
+   "speed": 30,
+   "speeds": {
+    "walk": 30
+   },
+   "initiative": 5,
+   "savingThrows": {
+    "STR": 4,
+    "DEX": 2,
+    "CON": 2,
+    "INT": 2,
+    "WIS": 5,
+    "CHA": 6
+   },
+   "skills": {
+    "skill-acrobatics": 2,
+    "skill-animal-handling": 2,
+    "skill-arcana": 5,
+    "skill-athletics": 4,
+    "skill-deception": 6,
+    "skill-history": 2,
+    "skill-insight": 5,
+    "skill-intimidation": 3,
+    "skill-investigation": 2,
+    "skill-medicine": 2,
+    "skill-nature": 2,
+    "skill-perception": 2,
+    "skill-performance": 3,
+    "skill-persuasion": 3,
+    "skill-religion": 5,
+    "skill-sleight-of-hand": 2,
+    "skill-stealth": 2,
+    "skill-survival": 2
+   },
+   "passivePerception": 12,
+   "passiveInsight": 15,
+   "passiveInvestigation": 12,
+   "spellSlots": {},
+   "warlockSpellSlots": {
+    "4": 2
+   },
+   "slotGrantingClasses": [],
+   "attacks": [
+    {
+     "itemId": "sickle",
+     "name": "Sickle",
+     "ability": "STR",
+     "proficient": true,
+     "attackBonus": 7,
+     "damage": "1d4+4",
+     "damageType": "slashing",
+     "duelingDamage": null,
+     "versatileDamage": null,
+     "offhandDamage": "1d4",
+     "range": "5",
+     "notes": [],
+     "mastery": null
+    },
+    {
+     "itemId": "dagger",
+     "name": "Dagger",
+     "ability": "STR",
+     "proficient": true,
+     "attackBonus": 7,
+     "damage": "1d4+4",
+     "damageType": "piercing",
+     "duelingDamage": null,
+     "versatileDamage": null,
+     "offhandDamage": "1d4",
+     "range": "20/60",
+     "notes": [
+      "thrown"
+     ],
+     "mastery": null
+    },
+    {
+     "itemId": "longsword",
+     "name": "Longsword",
+     "ability": "STR",
+     "proficient": true,
+     "attackBonus": 7,
+     "damage": "1d8+4",
+     "damageType": "slashing",
+     "duelingDamage": null,
+     "versatileDamage": "1d10+4",
+     "offhandDamage": null,
+     "range": "5",
+     "notes": [
+      "Pact weapon: proficient; Charisma for attack and damage; Necrotic, Psychic or Radiant damage allowed"
+     ],
+     "mastery": null
+    }
+   ],
+   "attacksPerAction": 1,
+   "classResources": [
+    {
+     "id": "warlock:magical-cunning",
+     "classId": "warlock",
+     "source": {
+      "kind": "class",
+      "id": "warlock",
+      "label": "Warlock"
+     },
+     "name": "Magical Cunning",
+     "uses": 1,
+     "recharge": "long",
+     "details": {
+      "note": "1 minute rite: regain expended Pact Magic slots, up to half your maximum Pact Magic slots (2) rounded up = 1"
+     }
+    },
+    {
+     "id": "warlock:pact-of-the-blade",
+     "classId": "warlock",
+     "source": {
+      "kind": "class",
+      "id": "warlock",
+      "label": "Warlock"
+     },
+     "name": "Pact of the Blade",
+     "uses": null,
+     "recharge": null,
+     "details": {
+      "note": "Bonus Action: conjure a pact weapon (Simple or Martial Melee) or bond with a magic weapon you touch. You are proficient with it and can use it as a Spellcasting Focus. Attack and damage rolls can use Charisma, and it can deal Necrotic, Psychic or Radiant damage or its normal type."
+     }
+    },
+    {
+     "id": "warlock:agonizing-blast",
+     "classId": "warlock",
+     "source": {
+      "kind": "class",
+      "id": "warlock",
+      "label": "Warlock"
+     },
+     "name": "Agonizing Blast",
+     "uses": null,
+     "recharge": null,
+     "bonus": 3,
+     "details": {
+      "spell": "eldritch-blast-xphb",
+      "note": "Add your Charisma modifier to the damage rolls of Eldritch Blast."
+     }
+    }
+   ],
+   "featResources": [],
+   "speciesResources": [],
+   "carryingCapacity": {
+    "capacity": 270,
+    "pushDragLift": 540,
+    "carried": 52,
+    "overCapacity": false
+   },
+   "stealthDisadvantage": false
+  },
+  "problems": [],
+  "warnings": [
+   {
+    "id": "ruleset-2024-species-asi-ignored",
+    "message": "Under the 2024 rules ability scores come from the background; the species' ability score increase is ignored."
+   },
+   {
+    "id": "ruleset-2024-background-no-asi",
+    "message": "Acolyte is a 2014 background and grants no ability score increase under the 2024 rules."
+   },
+   {
+    "id": "ruleset-2024-background-no-origin-feat",
+    "message": "Acolyte grants no Origin feat, which the 2024 rules expect from a background."
+   }
+  ],
+  "pruned": []
+ }
+}

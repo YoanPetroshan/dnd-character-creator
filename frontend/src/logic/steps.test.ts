@@ -5,8 +5,8 @@ import { choice, resolution } from "./testFixtures";
 import type { Draft } from "../types";
 
 describe("STEPS", () => {
-  it("keeps the seven routes in order", () => {
-    expect(STEPS.map((s) => s.path)).toEqual(["/home", "/class", "/background", "/species", "/abilities", "/equipment", "/export"]);
+  it("keeps the eight routes in order (the sheet sits between Equipment and Export)", () => {
+    expect(STEPS.map((s) => s.path)).toEqual(["/home", "/class", "/background", "/species", "/abilities", "/equipment", "/sheet", "/export"]);
   });
 });
 

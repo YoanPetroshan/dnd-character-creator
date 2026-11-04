@@ -1,0 +1,199 @@
+{
+ "_comment": "Section key -> the resolution paths (sheet.* / derived.*) the section shows. Pattern syntax as in server/tests/test_export_completeness.py: [] list item, * one segment, ** any depth, # numeric dict key. Read by sheetSections.test.ts and server/tests/test_sheet_coverage.py.",
+ "sections": {
+  "identity": [
+   "sheet.name",
+   "sheet.level",
+   "sheet.classes.[].id",
+   "sheet.classes.[].level",
+   "sheet.classes.[].name",
+   "sheet.classes.[].subclass",
+   "sheet.classes.[].subclass.name",
+   "sheet.background.name",
+   "sheet.species.name",
+   "sheet.species.subspecies",
+   "sheet.species.subspecies.name",
+   "sheet.species.variant",
+   "sheet.species.variant.name",
+   "sheet.species.size"
+  ],
+  "abilities": [
+   "sheet.abilities.*",
+   "derived.abilityModifiers.*"
+  ],
+  "proficiencyBonus": [
+   "derived.proficiencyBonus"
+  ],
+  "armorClass": [
+   "derived.armorClass",
+   "derived.stealthDisadvantage"
+  ],
+  "hitPoints": [
+   "derived.hitPointMax",
+   "derived.hitDice"
+  ],
+  "initiative": [
+   "derived.initiative"
+  ],
+  "speeds": [
+   "derived.speed",
+   "derived.speeds.*"
+  ],
+  "senses": [
+   "sheet.senses.*"
+  ],
+  "passives": [
+   "derived.passivePerception",
+   "derived.passiveInsight",
+   "derived.passiveInvestigation"
+  ],
+  "savingThrows": [
+   "derived.savingThrows.*",
+   "sheet.proficiencies.savingThrows.[]"
+  ],
+  "skills": [
+   "derived.skills.*",
+   "sheet.proficiencies.skills.[]",
+   "sheet.expertiseSkills.[]"
+  ],
+  "proficiencies": [
+   "sheet.proficiencies.armor.[]",
+   "sheet.proficiencies.weapons.[]",
+   "sheet.proficiencies.tools.[]"
+  ],
+  "languages": [
+   "sheet.proficiencies.languages.[]"
+  ],
+  "attacks": [
+   "derived.attacksPerAction",
+   "derived.attacks.[].name",
+   "derived.attacks.[].ability",
+   "derived.attacks.[].attackBonus",
+   "derived.attacks.[].damage",
+   "derived.attacks.[].damageType",
+   "derived.attacks.[].versatileDamage",
+   "derived.attacks.[].duelingDamage",
+   "derived.attacks.[].offhandDamage",
+   "derived.attacks.[].range",
+   "derived.attacks.[].notes.[]",
+   "derived.attacks.[].mastery",
+   "derived.attacks.[].wielded",
+   "sheet.weaponMasteries.[].name",
+   "sheet.weaponMasteries.[].mastery"
+  ],
+  "resources": [
+   "derived.classResources.[].name",
+   "derived.classResources.[].uses",
+   "derived.classResources.[].unlimited",
+   "derived.classResources.[].recharge",
+   "derived.classResources.[].die",
+   "derived.classResources.[].dice",
+   "derived.classResources.[].pool",
+   "derived.classResources.[].bonus",
+   "derived.classResources.[].dc",
+   "derived.featResources.[].name",
+   "derived.featResources.[].uses",
+   "derived.featResources.[].recharge",
+   "derived.featResources.[].die",
+   "derived.featResources.[].dc",
+   "derived.speciesResources.[].name",
+   "derived.speciesResources.[].uses",
+   "derived.speciesResources.[].recharge",
+   "derived.speciesResources.[].dice",
+   "derived.speciesResources.[].dc",
+   "derived.classResources.[].details.note",
+   "derived.classResources.[].details.damageBonus",
+   "derived.classResources.[].details.damageTypes",
+   "derived.classResources.[].details.heal",
+   "derived.classResources.[].details.maxCr",
+   "derived.classResources.[].details.resistances.[]",
+   "derived.classResources.[].details.shortRestRegains",
+   "derived.classResources.[].details.bonusActionRegainsOne",
+   "derived.classResources.[].details.onShortRest",
+   "derived.classResources.[].details.maxSlotLevel",
+   "derived.classResources.[].details.slotCosts.#",
+   "derived.classResources.[].details.knownForms",
+   "derived.classResources.[].details.fly",
+   "derived.classResources.[].details.swim",
+   "derived.classResources.[].details.metamagic.[].name",
+   "derived.classResources.[].details.metamagic.[].cost",
+   "derived.featResources.[].details.note",
+   "derived.speciesResources.[].details.note"
+  ],
+  "features": [
+   "sheet.features.[].name",
+   "sheet.features.[].level",
+   "sheet.features.[].choice.[]",
+   "sheet.features.[].source.label"
+  ],
+  "feats": [
+   "sheet.feats.[].name",
+   "sheet.feats.[].level",
+   "sheet.feats.[].choice.[]",
+   "sheet.feats.[].notes.[]"
+  ],
+  "spells": [
+   "sheet.spells.[].classId",
+   "sheet.spells.[].spellSaveDC",
+   "sheet.spells.[].spellAttackBonus",
+   "sheet.spells.[].cantrips.[].name",
+   "sheet.spells.[].known.[].name",
+   "sheet.spells.[].known.[].level",
+   "sheet.spells.[].spellbook.[].name",
+   "sheet.spells.[].spellbook.[].level",
+   "sheet.spells.[].alwaysPrepared.[].name",
+   "sheet.spells.[].alwaysPrepared.[].level",
+   "sheet.spells.[].mysticArcanum.[].name",
+   "sheet.spells.[].mysticArcanum.[].level",
+   "sheet.spells.[].spellMastery.[].name",
+   "sheet.spells.[].spellMastery.[].level",
+   "sheet.spells.[].signatureSpells.[].name",
+   "sheet.spells.[].signatureSpells.[].level",
+   "sheet.spells.[].pactOfTheTome.[].name",
+   "sheet.spells.[].pactOfTheTome.[].level",
+   "derived.spellSlots.#",
+   "derived.warlockSpellSlots.#",
+   "derived.slotGrantingClasses.[]"
+  ],
+  "innateSpells": [
+   "sheet.innateSpells.[].name",
+   "sheet.innateSpells.[].level",
+   "sheet.innateSpells.[].uses",
+   "sheet.innateSpells.[].ability",
+   "sheet.innateSpells.[].variant",
+   "sheet.innateSpells.[].source",
+   "sheet.innateSpells.[].note"
+  ],
+  "equipment": [
+   "sheet.equipment.granted.[].name",
+   "sheet.equipment.granted.[].qty",
+   "sheet.equipment.chosen.[].name",
+   "sheet.equipment.chosen.[].qty",
+   "sheet.equipment.chosen.[].contents.[].name",
+   "sheet.equipment.chosen.[].contents.[].qty",
+   "sheet.equipment.added.[].name",
+   "sheet.equipment.added.[].qty",
+   "sheet.equipment.added.[].equipped",
+   "sheet.equipment.narrativeItems.[]",
+   "sheet.equipment.worn.armor",
+   "sheet.equipment.worn.shield",
+   "sheet.equipment.wielded.main",
+   "sheet.equipment.wielded.off",
+   "sheet.startingGold"
+  ],
+  "carryingCapacity": [
+   "derived.carryingCapacity.carried",
+   "derived.carryingCapacity.capacity",
+   "derived.carryingCapacity.pushDragLift",
+   "derived.carryingCapacity.overCapacity"
+  ],
+  "defenses": [
+   "sheet.damageModifiers.*.[]",
+   "sheet.conditionImmunities.[]"
+  ],
+  "details": [
+   "sheet.details",
+   "sheet.details.*"
+  ]
+ }
+}

@@ -1,0 +1,653 @@
+{
+ "id": "rogue6-2024",
+ "ruleset": "2024",
+ "base": {
+  "STR": 16,
+  "DEX": 14,
+  "CON": 14,
+  "INT": 14,
+  "WIS": 14,
+  "CHA": 16
+ },
+ "resolution": {
+  "sheet": {
+   "name": "Кухненска мивка",
+   "level": 6,
+   "classes": [
+    {
+     "id": "rogue",
+     "name": "Rogue",
+     "level": 6,
+     "subclass": null
+    }
+   ],
+   "background": {
+    "id": "soldier-xphb",
+    "name": "Soldier"
+   },
+   "species": {
+    "id": "human-xphb",
+    "name": "Human",
+    "subspecies": null,
+    "variant": null,
+    "size": "Small"
+   },
+   "abilities": {
+    "STR": 20,
+    "DEX": 15,
+    "CON": 14,
+    "INT": 14,
+    "WIS": 14,
+    "CHA": 16
+   },
+   "proficiencies": {
+    "skills": [
+     "skill-acrobatics",
+     "skill-athletics",
+     "skill-deception",
+     "skill-intimidation",
+     "skill-perception",
+     "skill-sleight-of-hand",
+     "skill-stealth"
+    ],
+    "savingThrows": [
+     "DEX",
+     "INT"
+    ],
+    "languages": [
+     "common",
+     "common-sign-language",
+     "draconic",
+     "dwarvish",
+     "thieves-cant"
+    ],
+    "armor": [
+     "light-armor"
+    ],
+    "weapons": [
+     "martial-weapons-finesse-or-light",
+     "simple-weapons"
+    ],
+    "tools": [
+     "dice-set",
+     "thieves-tools"
+    ]
+   },
+   "startingGold": 22,
+   "equipment": {
+    "granted": [],
+    "chosen": [
+     {
+      "itemId": "leather-armor",
+      "name": "Leather Armor",
+      "qty": 1
+     },
+     {
+      "itemId": "dagger",
+      "name": "Dagger",
+      "qty": 2
+     },
+     {
+      "itemId": "shortsword",
+      "name": "Shortsword",
+      "qty": 1
+     },
+     {
+      "itemId": "shortbow",
+      "name": "Shortbow",
+      "qty": 1
+     },
+     {
+      "itemId": "arrow",
+      "name": "Arrow",
+      "qty": 1
+     },
+     {
+      "itemId": "quiver",
+      "name": "Quiver",
+      "qty": 1
+     },
+     {
+      "itemId": "thieves-tools",
+      "name": "Thieves' Tools",
+      "qty": 1
+     },
+     {
+      "itemId": "burglars-pack",
+      "name": "Burglar's Pack",
+      "qty": 1,
+      "contents": [
+       {
+        "itemId": "backpack",
+        "name": "Backpack",
+        "qty": 1
+       },
+       {
+        "itemId": "ball-bearings-bag-of-1000",
+        "name": "Ball bearings (bag of 1,000)",
+        "qty": 1
+       },
+       {
+        "itemId": "bell",
+        "name": "Bell",
+        "qty": 1
+       },
+       {
+        "itemId": "candle",
+        "name": "Candle",
+        "qty": 10
+       },
+       {
+        "itemId": "crowbar",
+        "name": "Crowbar",
+        "qty": 1
+       },
+       {
+        "itemId": "lantern-hooded",
+        "name": "Lantern, hooded",
+        "qty": 1
+       },
+       {
+        "itemId": "oil-flask",
+        "name": "Oil (flask)",
+        "qty": 7
+       },
+       {
+        "itemId": "rations-1-day",
+        "name": "Rations (1 day)",
+        "qty": 5
+       },
+       {
+        "itemId": "rope-hempen-50-feet",
+        "name": "Rope, hempen (50 feet)",
+        "qty": 1
+       },
+       {
+        "itemId": "tinderbox",
+        "name": "Tinderbox",
+        "qty": 1
+       },
+       {
+        "itemId": "waterskin",
+        "name": "Waterskin",
+        "qty": 1
+       }
+      ]
+     },
+     {
+      "itemId": "spear",
+      "name": "Spear",
+      "qty": 1
+     },
+     {
+      "itemId": "shortbow",
+      "name": "Shortbow",
+      "qty": 1
+     },
+     {
+      "itemId": "arrow",
+      "name": "Arrow",
+      "qty": 1
+     },
+     {
+      "itemId": "dice-set",
+      "name": "Dice Set",
+      "qty": 1
+     },
+     {
+      "itemId": "healers-kit",
+      "name": "Healer's Kit",
+      "qty": 1
+     },
+     {
+      "itemId": "quiver",
+      "name": "Quiver",
+      "qty": 1
+     },
+     {
+      "itemId": "clothes-travelers",
+      "name": "Clothes, traveler's",
+      "qty": 1
+     }
+    ],
+    "added": [],
+    "narrativeItems": [],
+    "slots": {
+     "armor": [
+      {
+       "itemId": "leather-armor",
+       "name": "Leather Armor"
+      }
+     ],
+     "shield": [],
+     "hands": [
+      {
+       "itemId": "dagger",
+       "name": "Dagger",
+       "kind": "weapon",
+       "twoHanded": false
+      },
+      {
+       "itemId": "shortsword",
+       "name": "Shortsword",
+       "kind": "weapon",
+       "twoHanded": false
+      },
+      {
+       "itemId": "shortbow",
+       "name": "Shortbow",
+       "kind": "weapon",
+       "twoHanded": true
+      },
+      {
+       "itemId": "spear",
+       "name": "Spear",
+       "kind": "weapon",
+       "twoHanded": false
+      }
+     ],
+     "current": {
+      "armor": "leather-armor",
+      "shield": false
+     }
+    }
+   },
+   "spells": [],
+   "details": null,
+   "damageModifiers": {
+    "resistances": [],
+    "immunities": [],
+    "vulnerabilities": []
+   },
+   "conditionImmunities": [],
+   "innateSpells": [],
+   "grantedFeats": [
+    "savage-attacker",
+    "alert-xphb"
+   ],
+   "featOptions": [],
+   "senses": {},
+   "expertiseSkills": [
+    "skill-stealth",
+    "skill-sleight-of-hand",
+    "skill-perception",
+    "skill-acrobatics"
+   ],
+   "features": [
+    {
+     "source": {
+      "kind": "class",
+      "id": "rogue",
+      "label": "Rogue"
+     },
+     "name": "Expertise",
+     "level": 1,
+     "choice": [
+      "Stealth",
+      "Sleight of Hand"
+     ]
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "rogue",
+      "label": "Rogue"
+     },
+     "name": "Sneak Attack",
+     "level": 1
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "rogue",
+      "label": "Rogue"
+     },
+     "name": "Thieves' Cant",
+     "level": 1,
+     "choice": [
+      "Dwarvish"
+     ]
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "rogue",
+      "label": "Rogue"
+     },
+     "name": "Weapon Mastery",
+     "level": 1,
+     "choice": [
+      "Club (Slow)",
+      "Dagger (Nick)"
+     ]
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "rogue",
+      "label": "Rogue"
+     },
+     "name": "Cunning Action",
+     "level": 2
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "rogue",
+      "label": "Rogue"
+     },
+     "name": "Steady Aim",
+     "level": 3
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "rogue",
+      "label": "Rogue"
+     },
+     "name": "Cunning Strike",
+     "level": 5
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "rogue",
+      "label": "Rogue"
+     },
+     "name": "Uncanny Dodge",
+     "level": 5
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "rogue",
+      "label": "Rogue"
+     },
+     "name": "Expertise",
+     "level": 6,
+     "choice": [
+      "Perception",
+      "Acrobatics"
+     ]
+    },
+    {
+     "source": {
+      "kind": "species",
+      "id": "human-xphb",
+      "label": "Human"
+     },
+     "name": "Resourceful",
+     "level": null
+    },
+    {
+     "source": {
+      "kind": "species",
+      "id": "human-xphb",
+      "label": "Human"
+     },
+     "name": "Skillful",
+     "level": null
+    },
+    {
+     "source": {
+      "kind": "species",
+      "id": "human-xphb",
+      "label": "Human"
+     },
+     "name": "Versatile",
+     "level": null
+    },
+    {
+     "source": {
+      "kind": "species",
+      "id": "human-xphb",
+      "label": "Human"
+     },
+     "name": "Skill Proficiency",
+     "level": null,
+     "choice": [
+      "Acrobatics"
+     ]
+    },
+    {
+     "source": {
+      "kind": "feat",
+      "id": "savage-attacker-xphb",
+      "label": "Savage Attacker"
+     },
+     "name": "Savage Attacker",
+     "level": null
+    },
+    {
+     "source": {
+      "kind": "feat",
+      "id": "alert-xphb",
+      "label": "Alert"
+     },
+     "name": "Alert",
+     "level": null
+    }
+   ],
+   "feats": [
+    {
+     "id": "savage-attacker-xphb",
+     "name": "Savage Attacker",
+     "origin": "background",
+     "level": null
+    },
+    {
+     "id": "alert-xphb",
+     "name": "Alert",
+     "origin": "species",
+     "level": null,
+     "notes": [
+      "Initiative Swap: right after you roll Initiative you can swap it with a willing ally's (neither of you Incapacitated)."
+     ]
+    }
+   ],
+   "weaponMasteries": [
+    {
+     "itemId": "club",
+     "name": "Club",
+     "mastery": "Slow"
+    },
+    {
+     "itemId": "dagger",
+     "name": "Dagger",
+     "mastery": "Nick"
+    }
+   ]
+  },
+  "choices": [],
+  "derived": {
+   "abilityModifiers": {
+    "STR": 5,
+    "DEX": 2,
+    "CON": 2,
+    "INT": 2,
+    "WIS": 2,
+    "CHA": 3
+   },
+   "proficiencyBonus": 3,
+   "hitPointMax": 45,
+   "hitDice": "6d8",
+   "armorClass": 13,
+   "speed": 30,
+   "speeds": {
+    "walk": 30
+   },
+   "initiative": 5,
+   "savingThrows": {
+    "STR": 5,
+    "DEX": 5,
+    "CON": 2,
+    "INT": 5,
+    "WIS": 2,
+    "CHA": 3
+   },
+   "skills": {
+    "skill-acrobatics": 8,
+    "skill-animal-handling": 2,
+    "skill-arcana": 2,
+    "skill-athletics": 8,
+    "skill-deception": 6,
+    "skill-history": 2,
+    "skill-insight": 2,
+    "skill-intimidation": 6,
+    "skill-investigation": 2,
+    "skill-medicine": 2,
+    "skill-nature": 2,
+    "skill-perception": 8,
+    "skill-performance": 3,
+    "skill-persuasion": 3,
+    "skill-religion": 2,
+    "skill-sleight-of-hand": 8,
+    "skill-stealth": 8,
+    "skill-survival": 2
+   },
+   "passivePerception": 18,
+   "passiveInsight": 12,
+   "passiveInvestigation": 12,
+   "spellSlots": {},
+   "warlockSpellSlots": {},
+   "slotGrantingClasses": [],
+   "attacks": [
+    {
+     "itemId": "dagger",
+     "name": "Dagger",
+     "ability": "STR",
+     "proficient": true,
+     "attackBonus": 8,
+     "damage": "1d4+5",
+     "damageType": "piercing",
+     "duelingDamage": null,
+     "versatileDamage": null,
+     "offhandDamage": "1d4",
+     "range": "20/60",
+     "notes": [
+      "thrown",
+      "Sneak Attack 3d6",
+      "Savage Attacker: once per turn when you hit, roll the weapon's damage dice twice and use either roll."
+     ],
+     "mastery": "Nick"
+    },
+    {
+     "itemId": "shortsword",
+     "name": "Shortsword",
+     "ability": "STR",
+     "proficient": true,
+     "attackBonus": 8,
+     "damage": "1d6+5",
+     "damageType": "piercing",
+     "duelingDamage": null,
+     "versatileDamage": null,
+     "offhandDamage": "1d6",
+     "range": "5",
+     "notes": [
+      "Sneak Attack 3d6",
+      "Savage Attacker: once per turn when you hit, roll the weapon's damage dice twice and use either roll."
+     ],
+     "mastery": null
+    },
+    {
+     "itemId": "shortbow",
+     "name": "Shortbow",
+     "ability": "DEX",
+     "proficient": true,
+     "attackBonus": 5,
+     "damage": "1d6+2",
+     "damageType": "piercing",
+     "duelingDamage": null,
+     "versatileDamage": null,
+     "offhandDamage": null,
+     "range": "80/320",
+     "notes": [
+      "two-handed",
+      "ammunition",
+      "Sneak Attack 3d6",
+      "Savage Attacker: once per turn when you hit, roll the weapon's damage dice twice and use either roll."
+     ],
+     "mastery": null
+    },
+    {
+     "itemId": "spear",
+     "name": "Spear",
+     "ability": "STR",
+     "proficient": true,
+     "attackBonus": 8,
+     "damage": "1d6+5",
+     "damageType": "piercing",
+     "duelingDamage": null,
+     "versatileDamage": "1d8+5",
+     "offhandDamage": null,
+     "range": "20/60",
+     "notes": [
+      "thrown",
+      "Savage Attacker: once per turn when you hit, roll the weapon's damage dice twice and use either roll."
+     ],
+     "mastery": null
+    }
+   ],
+   "attacksPerAction": 1,
+   "classResources": [
+    {
+     "id": "rogue:sneak-attack",
+     "classId": "rogue",
+     "source": {
+      "kind": "class",
+      "id": "rogue",
+      "label": "Rogue"
+     },
+     "name": "Sneak Attack",
+     "uses": 1,
+     "recharge": "turn",
+     "dice": "3d6"
+    },
+    {
+     "id": "rogue:cunning-strike",
+     "classId": "rogue",
+     "source": {
+      "kind": "class",
+      "id": "rogue",
+      "label": "Rogue"
+     },
+     "name": "Cunning Strike",
+     "uses": null,
+     "recharge": null,
+     "details": {
+      "note": "When you deal Sneak Attack damage you can add one effect, forgoing the dice shown for each: Poison 1d6 (Constitution save, needs a Poisoner's Kit), Trip 1d6 (Dexterity save, Large or smaller), Withdraw 1d6; save DC 13"
+     }
+    }
+   ],
+   "featResources": [],
+   "speciesResources": [
+    {
+     "id": "species:human-xphb:resourceful",
+     "speciesId": "human-xphb",
+     "traitId": "human-xphb-trait-0",
+     "source": {
+      "kind": "species",
+      "id": "human-xphb",
+      "label": "Human"
+     },
+     "name": "Resourceful",
+     "uses": null,
+     "recharge": "long",
+     "details": {
+      "note": "You gain Heroic Inspiration whenever you finish a Long Rest"
+     }
+    }
+   ],
+   "carryingCapacity": {
+    "capacity": 300,
+    "pushDragLift": 600,
+    "carried": 75,
+    "overCapacity": false
+   },
+   "stealthDisadvantage": false
+  },
+  "problems": [],
+  "warnings": [],
+  "pruned": []
+ }
+}

@@ -6,6 +6,7 @@ import { httpErrorMessage } from "../httpErrors";
 import { exportReadiness } from "../logic/exportReadiness";
 import { stepForChoice } from "../logic/steps";
 import { safeFilename, shareOrDownload } from "../logic/files";
+import { t } from "../copy";
 import { ClassResourcesList } from "../components/ClassResourcesList";
 import { SheetTraitsSummary } from "../components/SheetTraitsSummary";
 import { SpellSlotsSummary } from "../components/SpellSlotsSummary";
@@ -172,6 +173,9 @@ export function ExportPage() {
       {pendingEquipment.length > 0 && (
         <p>Не всички избори за екипировка са направени ({pendingEquipment.length}) — това не блокира експорта.</p>
       )}
+      <p>
+        <Link to="/sheet">{t.exportPage.sheetLink}</Link>
+      </p>
       {canExport && <p>Всичко е готово за експорт.</p>}
       {exportError && <p role="alert" style={{ color: "red" }}>{exportError}</p>}
       {(Object.keys(EXPORT_FORMATS) as ExportFormat[]).map((format) => (

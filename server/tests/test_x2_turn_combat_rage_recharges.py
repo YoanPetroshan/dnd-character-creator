@@ -73,8 +73,9 @@ def test_export_words_cover_the_vocabulary_with_bulgarian_words():
 
 
 def test_frontend_describe_resource_words_equal_the_export_words():
-    src = (ROOT / "frontend/src/components/ClassResourcesList.tsx").read_text(encoding="utf-8")
-    block = re.search(r"const RECHARGE: Record<string, string> = \{(.*?)\};", src, re.S).group(1)
+    # SK5: the words moved from ClassResourcesList.tsx into the copy module (resourceText.ts reads them from there)
+    src = (ROOT / "frontend/src/copy/bg.ts").read_text(encoding="utf-8")
+    block = re.search(r"recharge: \{(.*?)\} as Record<string, string>", src, re.S).group(1)
     words = {m.group(1) or m.group(2): m.group(3) for m in re.finditer(r'(?:"([\w-]+)"|(\w+)):\s*"([^"]+)"', block)}
     assert words == export_fields._RECHARGE_WORDS
 

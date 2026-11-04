@@ -5,6 +5,7 @@ import { StepNav } from "./components/StepNav";
 import { NextStepLink } from "./components/NextStepLink";
 import { StatusBanner } from "./components/StatusBanner";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { RouteA11y } from "./components/RouteA11y";
 import { HomePage } from "./pages/HomePage";
 import { ClassPage } from "./pages/ClassPage";
 import { BackgroundPage } from "./pages/BackgroundPage";
@@ -12,6 +13,7 @@ import { SpeciesPage } from "./pages/SpeciesPage";
 import { AbilitiesPage } from "./pages/AbilitiesPage";
 import { EquipmentPage } from "./pages/EquipmentPage";
 import { ExportPage } from "./pages/ExportPage";
+import { SheetPage } from "./pages/SheetPage";
 
 export default function App() {
   const location = useLocation();
@@ -19,6 +21,7 @@ export default function App() {
     <div className="app">
       <CatalogProvider>
         <ResolutionProvider>
+          <RouteA11y />
           <StepNav />
           <NextStepLink />
           <StatusBanner />
@@ -33,6 +36,7 @@ export default function App() {
               <Route path="/species" element={<SpeciesPage />} />
               <Route path="/abilities" element={<AbilitiesPage />} />
               <Route path="/equipment" element={<EquipmentPage />} />
+              <Route path="/sheet" element={<SheetPage />} />
               <Route path="/export" element={<ExportPage />} />
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>

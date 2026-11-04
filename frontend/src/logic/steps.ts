@@ -1,3 +1,4 @@
+import { t } from "../copy";
 import type { ChoiceSourceKind, Draft, Resolution } from "../types";
 import { problemsForStep, type ProblemStep } from "../problems";
 import { isBackgroundCid, isClassCid, isSpeciesCid } from "./choiceRouting";
@@ -34,6 +35,7 @@ export const STEPS: Step[] = [
   { path: "/species", problemStep: "species", label: "Species", kind: ["species", "feat"], cidFilter: isSpeciesCid },
   { path: "/abilities", problemStep: "abilities", label: "Abilities", kind: null },
   { path: "/equipment", problemStep: "equipment", label: "Equipment", kind: ["equipment"] },
+  { path: "/sheet", label: t.nav.sheet, kind: null },
   { path: "/export", label: "Export", kind: null },
 ];
 

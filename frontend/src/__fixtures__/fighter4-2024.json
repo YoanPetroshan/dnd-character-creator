@@ -1,0 +1,628 @@
+{
+ "id": "fighter4-2024",
+ "ruleset": "2024",
+ "base": {
+  "STR": 16,
+  "DEX": 14,
+  "CON": 14,
+  "INT": 14,
+  "WIS": 14,
+  "CHA": 16
+ },
+ "resolution": {
+  "sheet": {
+   "name": "Кухненска мивка",
+   "level": 4,
+   "classes": [
+    {
+     "id": "fighter",
+     "name": "Fighter",
+     "level": 4,
+     "subclass": null
+    }
+   ],
+   "background": {
+    "id": "soldier-xphb",
+    "name": "Soldier"
+   },
+   "species": {
+    "id": "human-xphb",
+    "name": "Human",
+    "subspecies": null,
+    "variant": null,
+    "size": "Small"
+   },
+   "abilities": {
+    "STR": 20,
+    "DEX": 15,
+    "CON": 14,
+    "INT": 14,
+    "WIS": 14,
+    "CHA": 16
+   },
+   "proficiencies": {
+    "skills": [
+     "skill-acrobatics",
+     "skill-animal-handling",
+     "skill-athletics",
+     "skill-history",
+     "skill-intimidation"
+    ],
+    "savingThrows": [
+     "STR",
+     "CON"
+    ],
+    "languages": [
+     "common",
+     "common-sign-language",
+     "draconic"
+    ],
+    "armor": [
+     "heavy-armor",
+     "light-armor",
+     "medium-armor",
+     "shields"
+    ],
+    "weapons": [
+     "martial-weapons",
+     "simple-weapons"
+    ],
+    "tools": [
+     "dice-set"
+    ]
+   },
+   "startingGold": 18,
+   "equipment": {
+    "granted": [],
+    "chosen": [
+     {
+      "itemId": "chain-mail",
+      "name": "Chain Mail",
+      "qty": 1
+     },
+     {
+      "itemId": "greatsword",
+      "name": "Greatsword",
+      "qty": 1
+     },
+     {
+      "itemId": "flail",
+      "name": "Flail",
+      "qty": 1
+     },
+     {
+      "itemId": "javelin",
+      "name": "Javelin",
+      "qty": 8
+     },
+     {
+      "itemId": "dungeoneers-pack",
+      "name": "Dungeoneer's Pack",
+      "qty": 1,
+      "contents": [
+       {
+        "itemId": "backpack",
+        "name": "Backpack",
+        "qty": 1
+       },
+       {
+        "itemId": "caltrops",
+        "name": "Caltrops",
+        "qty": 1
+       },
+       {
+        "itemId": "crowbar",
+        "name": "Crowbar",
+        "qty": 1
+       },
+       {
+        "itemId": "oil-flask",
+        "name": "Oil (flask)",
+        "qty": 2
+       },
+       {
+        "itemId": "rations-1-day",
+        "name": "Rations (1 day)",
+        "qty": 10
+       },
+       {
+        "itemId": "rope-hempen-50-feet",
+        "name": "Rope, hempen (50 feet)",
+        "qty": 1
+       },
+       {
+        "itemId": "tinderbox",
+        "name": "Tinderbox",
+        "qty": 1
+       },
+       {
+        "itemId": "torch",
+        "name": "Torch",
+        "qty": 10
+       },
+       {
+        "itemId": "waterskin",
+        "name": "Waterskin",
+        "qty": 1
+       }
+      ]
+     },
+     {
+      "itemId": "spear",
+      "name": "Spear",
+      "qty": 1
+     },
+     {
+      "itemId": "shortbow",
+      "name": "Shortbow",
+      "qty": 1
+     },
+     {
+      "itemId": "arrow",
+      "name": "Arrow",
+      "qty": 1
+     },
+     {
+      "itemId": "dice-set",
+      "name": "Dice Set",
+      "qty": 1
+     },
+     {
+      "itemId": "healers-kit",
+      "name": "Healer's Kit",
+      "qty": 1
+     },
+     {
+      "itemId": "quiver",
+      "name": "Quiver",
+      "qty": 1
+     },
+     {
+      "itemId": "clothes-travelers",
+      "name": "Clothes, traveler's",
+      "qty": 1
+     }
+    ],
+    "added": [],
+    "narrativeItems": [],
+    "slots": {
+     "armor": [
+      {
+       "itemId": "chain-mail",
+       "name": "Chain Mail"
+      }
+     ],
+     "shield": [],
+     "hands": [
+      {
+       "itemId": "greatsword",
+       "name": "Greatsword",
+       "kind": "weapon",
+       "twoHanded": true
+      },
+      {
+       "itemId": "flail",
+       "name": "Flail",
+       "kind": "weapon",
+       "twoHanded": false
+      },
+      {
+       "itemId": "javelin",
+       "name": "Javelin",
+       "kind": "weapon",
+       "twoHanded": false
+      },
+      {
+       "itemId": "spear",
+       "name": "Spear",
+       "kind": "weapon",
+       "twoHanded": false
+      },
+      {
+       "itemId": "shortbow",
+       "name": "Shortbow",
+       "kind": "weapon",
+       "twoHanded": true
+      }
+     ],
+     "current": {
+      "armor": "chain-mail",
+      "shield": false
+     }
+    }
+   },
+   "spells": [],
+   "details": null,
+   "damageModifiers": {
+    "resistances": [],
+    "immunities": [],
+    "vulnerabilities": []
+   },
+   "conditionImmunities": [],
+   "innateSpells": [],
+   "grantedFeats": [
+    "savage-attacker",
+    "alert-xphb",
+    "archery-xphb"
+   ],
+   "featOptions": [],
+   "senses": {},
+   "expertiseSkills": [],
+   "features": [
+    {
+     "source": {
+      "kind": "class",
+      "id": "fighter",
+      "label": "Fighter"
+     },
+     "name": "Fighting Style",
+     "level": 1,
+     "choice": [
+      "Archery"
+     ]
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "fighter",
+      "label": "Fighter"
+     },
+     "name": "Second Wind",
+     "level": 1
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "fighter",
+      "label": "Fighter"
+     },
+     "name": "Weapon Mastery",
+     "level": 1,
+     "choice": [
+      "Club (Slow)",
+      "Dagger (Nick)",
+      "Greatclub (Push)",
+      "Handaxe (Vex)"
+     ]
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "fighter",
+      "label": "Fighter"
+     },
+     "name": "Action Surge",
+     "level": 2
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "fighter",
+      "label": "Fighter"
+     },
+     "name": "Tactical Mind",
+     "level": 2
+    },
+    {
+     "source": {
+      "kind": "species",
+      "id": "human-xphb",
+      "label": "Human"
+     },
+     "name": "Resourceful",
+     "level": null
+    },
+    {
+     "source": {
+      "kind": "species",
+      "id": "human-xphb",
+      "label": "Human"
+     },
+     "name": "Skillful",
+     "level": null
+    },
+    {
+     "source": {
+      "kind": "species",
+      "id": "human-xphb",
+      "label": "Human"
+     },
+     "name": "Versatile",
+     "level": null
+    },
+    {
+     "source": {
+      "kind": "species",
+      "id": "human-xphb",
+      "label": "Human"
+     },
+     "name": "Skill Proficiency",
+     "level": null,
+     "choice": [
+      "Acrobatics"
+     ]
+    },
+    {
+     "source": {
+      "kind": "feat",
+      "id": "savage-attacker-xphb",
+      "label": "Savage Attacker"
+     },
+     "name": "Savage Attacker",
+     "level": null
+    },
+    {
+     "source": {
+      "kind": "feat",
+      "id": "alert-xphb",
+      "label": "Alert"
+     },
+     "name": "Alert",
+     "level": null
+    },
+    {
+     "source": {
+      "kind": "feat",
+      "id": "archery-xphb",
+      "label": "Archery"
+     },
+     "name": "Archery",
+     "level": 1
+    }
+   ],
+   "feats": [
+    {
+     "id": "savage-attacker-xphb",
+     "name": "Savage Attacker",
+     "origin": "background",
+     "level": null
+    },
+    {
+     "id": "alert-xphb",
+     "name": "Alert",
+     "origin": "species",
+     "level": null,
+     "notes": [
+      "Initiative Swap: right after you roll Initiative you can swap it with a willing ally's (neither of you Incapacitated)."
+     ]
+    },
+    {
+     "id": "archery-xphb",
+     "name": "Archery",
+     "origin": "fighting-style",
+     "level": 1
+    }
+   ],
+   "weaponMasteries": [
+    {
+     "itemId": "club",
+     "name": "Club",
+     "mastery": "Slow"
+    },
+    {
+     "itemId": "dagger",
+     "name": "Dagger",
+     "mastery": "Nick"
+    },
+    {
+     "itemId": "greatclub",
+     "name": "Greatclub",
+     "mastery": "Push"
+    },
+    {
+     "itemId": "handaxe",
+     "name": "Handaxe",
+     "mastery": "Vex"
+    }
+   ]
+  },
+  "choices": [],
+  "derived": {
+   "abilityModifiers": {
+    "STR": 5,
+    "DEX": 2,
+    "CON": 2,
+    "INT": 2,
+    "WIS": 2,
+    "CHA": 3
+   },
+   "proficiencyBonus": 2,
+   "hitPointMax": 36,
+   "hitDice": "4d10",
+   "armorClass": 16,
+   "speed": 30,
+   "speeds": {
+    "walk": 30
+   },
+   "initiative": 4,
+   "savingThrows": {
+    "STR": 7,
+    "DEX": 2,
+    "CON": 4,
+    "INT": 2,
+    "WIS": 2,
+    "CHA": 3
+   },
+   "skills": {
+    "skill-acrobatics": 4,
+    "skill-animal-handling": 4,
+    "skill-arcana": 2,
+    "skill-athletics": 7,
+    "skill-deception": 3,
+    "skill-history": 4,
+    "skill-insight": 2,
+    "skill-intimidation": 5,
+    "skill-investigation": 2,
+    "skill-medicine": 2,
+    "skill-nature": 2,
+    "skill-perception": 2,
+    "skill-performance": 3,
+    "skill-persuasion": 3,
+    "skill-religion": 2,
+    "skill-sleight-of-hand": 2,
+    "skill-stealth": 2,
+    "skill-survival": 2
+   },
+   "passivePerception": 12,
+   "passiveInsight": 12,
+   "passiveInvestigation": 12,
+   "spellSlots": {},
+   "warlockSpellSlots": {},
+   "slotGrantingClasses": [],
+   "attacks": [
+    {
+     "itemId": "greatsword",
+     "name": "Greatsword",
+     "ability": "STR",
+     "proficient": true,
+     "attackBonus": 7,
+     "damage": "2d6+5",
+     "damageType": "slashing",
+     "duelingDamage": null,
+     "versatileDamage": null,
+     "offhandDamage": null,
+     "range": "5",
+     "notes": [
+      "two-handed",
+      "heavy",
+      "Savage Attacker: once per turn when you hit, roll the weapon's damage dice twice and use either roll."
+     ],
+     "mastery": null
+    },
+    {
+     "itemId": "flail",
+     "name": "Flail",
+     "ability": "STR",
+     "proficient": true,
+     "attackBonus": 7,
+     "damage": "1d8+5",
+     "damageType": "bludgeoning",
+     "duelingDamage": null,
+     "versatileDamage": null,
+     "offhandDamage": null,
+     "range": "5",
+     "notes": [
+      "Savage Attacker: once per turn when you hit, roll the weapon's damage dice twice and use either roll."
+     ],
+     "mastery": null
+    },
+    {
+     "itemId": "javelin",
+     "name": "Javelin",
+     "ability": "STR",
+     "proficient": true,
+     "attackBonus": 7,
+     "damage": "1d6+5",
+     "damageType": "piercing",
+     "duelingDamage": null,
+     "versatileDamage": null,
+     "offhandDamage": null,
+     "range": "30/120",
+     "notes": [
+      "thrown",
+      "Savage Attacker: once per turn when you hit, roll the weapon's damage dice twice and use either roll."
+     ],
+     "mastery": null
+    },
+    {
+     "itemId": "spear",
+     "name": "Spear",
+     "ability": "STR",
+     "proficient": true,
+     "attackBonus": 7,
+     "damage": "1d6+5",
+     "damageType": "piercing",
+     "duelingDamage": null,
+     "versatileDamage": "1d8+5",
+     "offhandDamage": null,
+     "range": "20/60",
+     "notes": [
+      "thrown",
+      "Savage Attacker: once per turn when you hit, roll the weapon's damage dice twice and use either roll."
+     ],
+     "mastery": null
+    },
+    {
+     "itemId": "shortbow",
+     "name": "Shortbow",
+     "ability": "DEX",
+     "proficient": true,
+     "attackBonus": 6,
+     "damage": "1d6+2",
+     "damageType": "piercing",
+     "duelingDamage": null,
+     "versatileDamage": null,
+     "offhandDamage": null,
+     "range": "80/320",
+     "notes": [
+      "two-handed",
+      "ammunition",
+      "Savage Attacker: once per turn when you hit, roll the weapon's damage dice twice and use either roll."
+     ],
+     "mastery": null
+    }
+   ],
+   "attacksPerAction": 1,
+   "classResources": [
+    {
+     "id": "fighter:second-wind",
+     "classId": "fighter",
+     "source": {
+      "kind": "class",
+      "id": "fighter",
+      "label": "Fighter"
+     },
+     "name": "Second Wind",
+     "uses": 3,
+     "recharge": "long",
+     "details": {
+      "heal": "1d10+4",
+      "shortRestRegains": 1,
+      "note": "Tactical Mind: when you fail an ability check, expend a use to add 1d10 to it instead of regaining Hit Points; if the check still fails, the use isn't expended"
+     }
+    },
+    {
+     "id": "fighter:action-surge",
+     "classId": "fighter",
+     "source": {
+      "kind": "class",
+      "id": "fighter",
+      "label": "Fighter"
+     },
+     "name": "Action Surge",
+     "uses": 1,
+     "recharge": "short-or-long"
+    }
+   ],
+   "featResources": [],
+   "speciesResources": [
+    {
+     "id": "species:human-xphb:resourceful",
+     "speciesId": "human-xphb",
+     "traitId": "human-xphb-trait-0",
+     "source": {
+      "kind": "species",
+      "id": "human-xphb",
+      "label": "Human"
+     },
+     "name": "Resourceful",
+     "uses": null,
+     "recharge": "long",
+     "details": {
+      "note": "You gain Heroic Inspiration whenever you finish a Long Rest"
+     }
+    }
+   ],
+   "carryingCapacity": {
+    "capacity": 300,
+    "pushDragLift": 600,
+    "carried": 148,
+    "overCapacity": false
+   },
+   "stealthDisadvantage": true
+  },
+  "problems": [],
+  "warnings": [],
+  "pruned": []
+ }
+}

@@ -1,0 +1,557 @@
+{
+ "id": "bard10-2014",
+ "ruleset": "2014",
+ "base": {
+  "STR": 16,
+  "DEX": 14,
+  "CON": 14,
+  "INT": 14,
+  "WIS": 14,
+  "CHA": 16
+ },
+ "resolution": {
+  "sheet": {
+   "name": "Кухненска мивка",
+   "level": 10,
+   "classes": [
+    {
+     "id": "bard",
+     "name": "Bard",
+     "level": 10,
+     "subclass": null
+    }
+   ],
+   "background": {
+    "id": "acolyte",
+    "name": "Acolyte"
+   },
+   "species": {
+    "id": "human",
+    "name": "Human",
+    "subspecies": null,
+    "variant": null,
+    "size": "Medium"
+   },
+   "abilities": {
+    "STR": 19,
+    "DEX": 17,
+    "CON": 15,
+    "INT": 15,
+    "WIS": 15,
+    "CHA": 17
+   },
+   "proficiencies": {
+    "skills": [
+     "skill-acrobatics",
+     "skill-animal-handling",
+     "skill-arcana",
+     "skill-insight",
+     "skill-religion"
+    ],
+    "savingThrows": [
+     "DEX",
+     "CHA"
+    ],
+    "languages": [
+     "common",
+     "dwarvish"
+    ],
+    "armor": [
+     "light-armor"
+    ],
+    "weapons": [
+     "hand-crossbows",
+     "longswords",
+     "rapiers",
+     "shortswords",
+     "simple-weapons"
+    ],
+    "tools": [
+     "bagpipes",
+     "drum",
+     "dulcimer"
+    ]
+   },
+   "startingGold": 15,
+   "equipment": {
+    "granted": [
+     {
+      "itemId": "leather-armor",
+      "name": "Leather Armor",
+      "qty": 1
+     },
+     {
+      "itemId": "dagger",
+      "name": "Dagger",
+      "qty": 1
+     },
+     {
+      "itemId": "clothes-common",
+      "name": "Clothes, common",
+      "qty": 1
+     },
+     {
+      "itemId": "pouch",
+      "name": "Pouch",
+      "qty": 1
+     }
+    ],
+    "chosen": [
+     {
+      "itemId": "rapier",
+      "name": "Rapier",
+      "qty": 1
+     },
+     {
+      "itemId": "diplomats-pack",
+      "name": "Diplomat's Pack",
+      "qty": 1
+     },
+     {
+      "itemId": "lute",
+      "name": "Lute",
+      "qty": 1
+     },
+     {
+      "itemId": "amulet",
+      "name": "Amulet",
+      "qty": 1
+     }
+    ],
+    "added": [],
+    "narrativeItems": [],
+    "slots": {
+     "armor": [
+      {
+       "itemId": "leather-armor",
+       "name": "Leather Armor"
+      }
+     ],
+     "shield": [],
+     "hands": [
+      {
+       "itemId": "dagger",
+       "name": "Dagger",
+       "kind": "weapon",
+       "twoHanded": false
+      },
+      {
+       "itemId": "rapier",
+       "name": "Rapier",
+       "kind": "weapon",
+       "twoHanded": false
+      }
+     ],
+     "current": {
+      "armor": "leather-armor",
+      "shield": false
+     }
+    }
+   },
+   "spells": [
+    {
+     "classId": "bard",
+     "cantrips": [
+      {
+       "id": "blade-ward",
+       "name": "Blade Ward",
+       "level": 0
+      },
+      {
+       "id": "dancing-lights",
+       "name": "Dancing Lights",
+       "level": 0
+      },
+      {
+       "id": "friends",
+       "name": "Friends",
+       "level": 0
+      },
+      {
+       "id": "light",
+       "name": "Light",
+       "level": 0
+      }
+     ],
+     "known": [
+      {
+       "id": "cure-wounds",
+       "name": "Cure Wounds",
+       "level": 1
+      },
+      {
+       "id": "healing-word",
+       "name": "Healing Word",
+       "level": 1
+      },
+      {
+       "id": "heroism",
+       "name": "Heroism",
+       "level": 1
+      },
+      {
+       "id": "dissonant-whispers",
+       "name": "Dissonant Whispers",
+       "level": 1
+      },
+      {
+       "id": "hold-person",
+       "name": "Hold Person",
+       "level": 2
+      },
+      {
+       "id": "invisibility",
+       "name": "Invisibility",
+       "level": 2
+      },
+      {
+       "id": "suggestion",
+       "name": "Suggestion",
+       "level": 2
+      },
+      {
+       "id": "hypnotic-pattern",
+       "name": "Hypnotic Pattern",
+       "level": 3
+      },
+      {
+       "id": "dimension-door",
+       "name": "Dimension Door",
+       "level": 4
+      },
+      {
+       "id": "polymorph",
+       "name": "Polymorph",
+       "level": 4
+      },
+      {
+       "id": "greater-invisibility",
+       "name": "Greater Invisibility",
+       "level": 4
+      },
+      {
+       "id": "hold-monster",
+       "name": "Hold Monster",
+       "level": 5
+      },
+      {
+       "id": "fireball",
+       "name": "Fireball",
+       "level": 3
+      },
+      {
+       "id": "sacred-flame",
+       "name": "Sacred Flame",
+       "level": 0
+      }
+     ],
+     "alwaysPrepared": [],
+     "spellSaveDC": 15,
+     "spellAttackBonus": 7
+    }
+   ],
+   "details": null,
+   "damageModifiers": {
+    "resistances": [],
+    "immunities": [],
+    "vulnerabilities": []
+   },
+   "conditionImmunities": [],
+   "innateSpells": [],
+   "grantedFeats": [],
+   "featOptions": [],
+   "senses": {},
+   "expertiseSkills": [
+    "skill-acrobatics",
+    "skill-animal-handling"
+   ],
+   "features": [
+    {
+     "source": {
+      "kind": "class",
+      "id": "bard",
+      "label": "Bard"
+     },
+     "name": "Spellcasting: Bard",
+     "level": 1
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "bard",
+      "label": "Bard"
+     },
+     "name": "Bardic Inspiration (d6)",
+     "level": 1
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "bard",
+      "label": "Bard"
+     },
+     "name": "Jack of All Trades",
+     "level": 2
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "bard",
+      "label": "Bard"
+     },
+     "name": "Song of Rest (d6)",
+     "level": 2
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "bard",
+      "label": "Bard"
+     },
+     "name": "Expertise",
+     "level": 3,
+     "choice": [
+      "Acrobatics",
+      "Animal Handling"
+     ]
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "bard",
+      "label": "Bard"
+     },
+     "name": "Bard College",
+     "level": 3
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "bard",
+      "label": "Bard"
+     },
+     "name": "Bardic Inspiration (d8)",
+     "level": 5
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "bard",
+      "label": "Bard"
+     },
+     "name": "Font of Inspiration",
+     "level": 5
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "bard",
+      "label": "Bard"
+     },
+     "name": "Countercharm",
+     "level": 6
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "bard",
+      "label": "Bard"
+     },
+     "name": "Bard College feature",
+     "level": 6
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "bard",
+      "label": "Bard"
+     },
+     "name": "Song of Rest (d8)",
+     "level": 9
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "bard",
+      "label": "Bard"
+     },
+     "name": "Expertise",
+     "level": 10,
+     "choice": [
+      "Acrobatics",
+      "Animal Handling"
+     ]
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "bard",
+      "label": "Bard"
+     },
+     "name": "Bardic Inspiration (d10)",
+     "level": 10
+    },
+    {
+     "source": {
+      "kind": "class",
+      "id": "bard",
+      "label": "Bard"
+     },
+     "name": "Magical Secrets",
+     "level": 10
+    },
+    {
+     "source": {
+      "kind": "background",
+      "id": "acolyte",
+      "label": "Acolyte"
+     },
+     "name": "Shelter of the Faithful",
+     "level": null
+    }
+   ],
+   "feats": [],
+   "weaponMasteries": []
+  },
+  "choices": [],
+  "derived": {
+   "abilityModifiers": {
+    "STR": 4,
+    "DEX": 3,
+    "CON": 2,
+    "INT": 2,
+    "WIS": 2,
+    "CHA": 3
+   },
+   "proficiencyBonus": 4,
+   "hitPointMax": 73,
+   "hitDice": "10d8",
+   "armorClass": 14,
+   "speed": 30,
+   "speeds": {
+    "walk": 30
+   },
+   "initiative": 5,
+   "savingThrows": {
+    "STR": 4,
+    "DEX": 7,
+    "CON": 2,
+    "INT": 2,
+    "WIS": 2,
+    "CHA": 7
+   },
+   "skills": {
+    "skill-acrobatics": 11,
+    "skill-animal-handling": 10,
+    "skill-arcana": 6,
+    "skill-athletics": 6,
+    "skill-deception": 5,
+    "skill-history": 4,
+    "skill-insight": 6,
+    "skill-intimidation": 5,
+    "skill-investigation": 4,
+    "skill-medicine": 4,
+    "skill-nature": 4,
+    "skill-perception": 4,
+    "skill-performance": 5,
+    "skill-persuasion": 5,
+    "skill-religion": 6,
+    "skill-sleight-of-hand": 5,
+    "skill-stealth": 5,
+    "skill-survival": 4
+   },
+   "passivePerception": 14,
+   "passiveInsight": 16,
+   "passiveInvestigation": 14,
+   "spellSlots": {
+    "1": 4,
+    "2": 3,
+    "3": 3,
+    "4": 3,
+    "5": 2
+   },
+   "warlockSpellSlots": {},
+   "slotGrantingClasses": [
+    "bard"
+   ],
+   "attacks": [
+    {
+     "itemId": "rapier",
+     "name": "Rapier",
+     "ability": "STR",
+     "proficient": true,
+     "attackBonus": 8,
+     "damage": "1d8+4",
+     "damageType": "piercing",
+     "duelingDamage": null,
+     "versatileDamage": null,
+     "offhandDamage": null,
+     "range": "5",
+     "notes": [],
+     "mastery": null
+    },
+    {
+     "itemId": "dagger",
+     "name": "Dagger",
+     "ability": "STR",
+     "proficient": true,
+     "attackBonus": 8,
+     "damage": "1d4+4",
+     "damageType": "piercing",
+     "duelingDamage": null,
+     "versatileDamage": null,
+     "offhandDamage": "1d4",
+     "range": "20/60",
+     "notes": [
+      "thrown"
+     ],
+     "mastery": null
+    }
+   ],
+   "attacksPerAction": 1,
+   "classResources": [
+    {
+     "id": "bard:bardic-inspiration",
+     "classId": "bard",
+     "source": {
+      "kind": "class",
+      "id": "bard",
+      "label": "Bard"
+     },
+     "name": "Bardic Inspiration",
+     "uses": 3,
+     "recharge": "short-or-long",
+     "die": "d10"
+    },
+    {
+     "id": "bard:song-of-rest",
+     "classId": "bard",
+     "source": {
+      "kind": "class",
+      "id": "bard",
+      "label": "Bard"
+     },
+     "name": "Song of Rest",
+     "uses": null,
+     "recharge": null,
+     "details": {
+      "note": "During a short rest, you and friendly creatures who hear your performance and spend Hit Dice regain an extra 1d8 hit points"
+     },
+     "die": "d8"
+    }
+   ],
+   "featResources": [],
+   "speciesResources": [],
+   "carryingCapacity": {
+    "capacity": 285,
+    "pushDragLift": 570,
+    "carried": 56,
+    "overCapacity": false
+   },
+   "stealthDisadvantage": false
+  },
+  "problems": [],
+  "warnings": [],
+  "pruned": []
+ }
+}

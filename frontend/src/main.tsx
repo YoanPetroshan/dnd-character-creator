@@ -6,6 +6,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { DraftProvider } from "./DraftContext";
 import { LibraryProvider } from "./LibraryContext";
 import "./index.css";
+import "./print.css";
 
 const rootElement = document.getElementById("root");
 if (!rootElement) throw new Error("#root element not found");
