@@ -519,6 +519,29 @@ def declared_families() -> dict[str, str]:
     return out
 
 
+
+# --- AST helpers shared by the I3-I5 catalog tests -----------------------------------------------------------------------
+
+SERVER_FILES = sorted(glob.glob(str(SERVER / "engine" / "*.py"))) + [str(SERVER / n) for n in (
+    "app.py", "export.py", "export_fields.py", "markdown_export.py", "pdf_export.py")]
+
+
+def server_trees():
+    for path in SERVER_FILES:
+        yield path, ast.parse(pathlib.Path(path).read_text(encoding="utf-8"))
+
+
+def msg_calls() -> list[tuple]:
+    """(file, line, key, keyword names, has ** splat) for every `msg("<key>", ...)` call in the server code."""
+    out = []
+    for path, tree in server_trees():
+        for node in ast.walk(tree):
+            if _is_msg_call(node):
+                out.append((pathlib.Path(path).name, node.lineno, node.args[0].value,
+                            {k.arg for k in node.keywords if k.arg}, any(k.arg is None for k in node.keywords)))
+    return out
+
+
 def observed_pairs(snapshot: dict) -> set[tuple[str, str]]:
     pairs = set()
     for leaf in snapshot.values():

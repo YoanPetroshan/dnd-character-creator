@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from catalog import reference_data
 from engine import class_choices_2024
+from i18n.messages import msg
 
 ABILITIES = ("STR", "DEX", "CON", "INT", "WIS", "CHA")
 
@@ -98,9 +99,9 @@ def ability_bonus_losses(scores: dict[str, int], effects) -> list[dict]:
             applied = max(cur, min(cur + bonus, cap)) - cur if cap else bonus
             running[ab] = cur + applied
             if applied < bonus:
-                reason = (f"{e['feature_name']}: {ab} is already at maximum ({cap}) and the increase was ignored."
+                reason = (msg("pruned-ability-at-max", name=e["feature_name"], ab=ab, cap=cap)
                           if applied == 0 else
-                          f"{e['feature_name']}: {ab} is capped at {cap}; only +{applied} of +{bonus} applied.")
+                          msg("pruned-ability-capped", name=e["feature_name"], ab=ab, cap=cap, applied=applied, bonus=bonus))
                 out.append({"choiceId": f"feature:{e['feature_id']}", "reason": reason})
     return out
 

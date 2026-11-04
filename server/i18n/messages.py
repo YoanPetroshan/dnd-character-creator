@@ -10,8 +10,8 @@ finished resolution: it walks it and swaps each `Msg` for the rendering of its k
     render(m, "bg")                                             # the Bulgarian rendering (English if the key has none)
     localize(resolution, "bg")                                  # a copy of the resolution with every Msg rendered
 
-Catalog: `i18n.catalog.MESSAGES[key] = {"en": template, "bg": template}`; templates use `str.format` fields and one
-extra, the plural filter `{n|one|many}` (see `format_template`). The catalog package is empty until I2.
+Catalog: `i18n.catalog.MESSAGES[key] = {"en": template, "bg": template}`; templates use `str.format` fields and two
+extras: the plural filter `{n|one|many}` and the list join `{names:, }` (see `format_template`).
 
 Tag loss: string operations on a `Msg` (`+`, `%`, f-strings, `.strip()`, `"".join`) return a plain `str`, and the tag is
 gone. The localizer then leaves that text as it is, in English. Conversions must therefore build the whole message with
@@ -53,7 +53,14 @@ def _rebuild(text: str, key: str, params: dict) -> Msg:
 
 class _Formatter(string.Formatter):
     """`str.format` plus the plural filter: a field `{n|one|many}` yields `one` when the parameter n equals 1, else
-    `many`. The two forms may not contain `{ } : ! [ ] |`."""
+    `many`. The two forms may not contain `{ } : ! [ ] |`.
+    A list or tuple parameter with a format spec is joined: `{names:, }` with ", ", `{names: or }` with " or " (the
+    text after the colon is the separator; without a spec a list formats as its repr) (I3: the engine hands over the names it used to join itself, so each can still be a nested message)."""
+
+    def format_field(self, value, format_spec):
+        if isinstance(value, (list, tuple)) and format_spec:
+            return format_spec.join(str(v) for v in value)
+        return super().format_field(value, format_spec)
 
     def get_field(self, field_name: str, args, kwargs):
         if "|" in field_name:
@@ -70,6 +77,11 @@ _FORMATTER = _Formatter()
 def format_template(template: str, params: dict) -> str:
     """Fill a catalog template: `str.format` fields (`{name}`, `{n!r}`) and plural fields `{n|one|many}`."""
     return _FORMATTER.vformat(template, (), params)
+
+
+def list_fields(template: str) -> set[str]:
+    """The parameters a template formats with a join separator (`{names:, }`): they take a list."""
+    return {field.split("|")[0] for _t, field, spec, _c in string.Formatter().parse(template) if field and spec}
 
 
 def template_fields(template: str) -> set[str]:
@@ -170,7 +182,8 @@ def validate_catalog(messages: dict | None = None, *, require_bg: bool = False) 
             problems.append(f"{key}: placeholder mismatch {fields}")
         for lang in fields:
             try:
-                format_template(entry[lang], {name: 2 for name in fields[lang]})
+                joined = list_fields(entry[lang])
+                format_template(entry[lang], {name: ([2] if name in joined else 2) for name in fields[lang]})
             except (ValueError, KeyError, IndexError) as exc:
                 problems.append(f"{key}: {lang} template does not format ({exc})")
     return problems

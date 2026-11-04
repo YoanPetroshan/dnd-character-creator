@@ -16,6 +16,7 @@ from __future__ import annotations
 import re
 
 from catalog import reference_data
+from i18n.messages import msg
 
 _CARD_RE = re.compile(r"^class:([^:]+):(\d+):feature:(.+)$")
 
@@ -172,16 +173,15 @@ def gate_improved_illusions(choices: list[dict], catalog, innate_ids) -> list[di
     if not (held & minor_illusion_ids(catalog)):
         del choices[idx]
         if card["selected"]:
-            pruned.append({"choiceId": card["id"], "reason": (
-                f"'{card['label']}' applies only when you already know Minor Illusion; the selection was ignored.")})
+            pruned.append({"choiceId": card["id"], "reason": msg("pruned-minor-illusion-required", label=card["label"])})
         return pruned
     options = [o if o.get("disabled") or o["id"] not in held else {**o, "disabled": True, "disabledReason": "already known"}
                for o in card["options"]]
     kept = [s for s in card["selected"] if s not in held]
     dropped = [s for s in card["selected"] if s in held]
     if dropped:
-        names = ", ".join((catalog.spells.get(d) or {}).get("name", d) for d in dropped)
-        pruned.append({"choiceId": card["id"], "reason": f"'{card['label']}': {names} is already known and was ignored."})
+        names = [(catalog.spells.get(d) or {}).get("name", d) for d in dropped]
+        pruned.append({"choiceId": card["id"], "reason": msg("pruned-known-ignored", label=card["label"], names=names)})
     choices[idx] = {**card, "options": options, "selected": kept,
                     "status": "resolved" if len(kept) == card["count"] else "pending"}
     return pruned

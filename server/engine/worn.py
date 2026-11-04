@@ -111,7 +111,7 @@ def apply(equipped_items: list[dict], equipment: dict, inventory: dict[str, dict
         if item_id not in inventory:
             name = lookup[item_id].get("name", item_id)
             warnings.append({"id": f"{kind}-{slot}-not-in-inventory", "message": msg("slot-not-in-inventory", name=name, kind=_kind_msg(kind), slot=_slot_msg(slot))})
-            pruned.append({"choiceId": f"equipment:{kind}:{slot}", "reason": f"{name} is no longer in the inventory and was removed from the {kind} {slot} slot."})
+            pruned.append({"choiceId": f"equipment:{kind}:{slot}", "reason": msg("pruned-slot-removed", name=name, kind=_kind_msg(kind), slot=_slot_msg(slot))})
             return None
         return lookup[item_id]
 

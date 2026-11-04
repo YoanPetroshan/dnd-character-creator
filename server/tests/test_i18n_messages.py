@@ -280,12 +280,12 @@ def test_error_bodies_stay_english_whatever_the_language(client):
 # --- the catalog package ----------------------------------------------------------------------------------------------
 
 def test_catalog_is_wired_to_the_modules():
-    """I2 filled problems and warnings; pruned, disabled and labels stay empty until I3-I5."""
+    """I2 filled problems and warnings, I3 pruned; disabled and labels stay empty until I4-I5."""
     assert catalog_pkg.MESSAGES is m.MESSAGES
-    assert catalog_pkg.problems.MESSAGES and catalog_pkg.warnings.MESSAGES
-    for sub in ("pruned", "disabled", "labels"):
+    assert catalog_pkg.problems.MESSAGES and catalog_pkg.warnings.MESSAGES and catalog_pkg.pruned.MESSAGES
+    for sub in ("disabled", "labels"):
         assert getattr(catalog_pkg, sub).MESSAGES == {}
-    assert m.MESSAGES == {**catalog_pkg.problems.MESSAGES, **catalog_pkg.warnings.MESSAGES}
+    assert m.MESSAGES == {**catalog_pkg.problems.MESSAGES, **catalog_pkg.warnings.MESSAGES, **catalog_pkg.pruned.MESSAGES}
 
 
 def test_catalog_modules_merge_and_reject_duplicates(monkeypatch):

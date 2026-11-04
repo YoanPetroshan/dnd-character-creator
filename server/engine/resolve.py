@@ -2136,9 +2136,9 @@ def _gate_distinct_choices(choices: list[dict], class_order: list[str] = ()) -> 
         dropped = [s for s in c.get("selected", []) if s not in kept]
         if dropped:
             labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
-            pruned_by_index[i] = {"choiceId": c["id"], "reason": (
-                f"'{c['label']}': {', '.join(labels.get(d, d) for d in dropped)} was already chosen for {name} "
-                f"({taken[dropped[0]]}); the selection was ignored.")}
+            pruned_by_index[i] = {"choiceId": c["id"], "reason": msg(
+                "pruned-distinct-duplicate", label=c["label"], names=[labels.get(d, d) for d in dropped], name=name,
+                n=taken[dropped[0]])}
         choices[i] = {**c, "options": options, "selected": kept,
                       "status": "resolved" if len(kept) == c["count"] else "pending"}
         for s in kept:
@@ -2282,8 +2282,8 @@ def _gate_duplicate_skill_picks(choices: list[dict], class_order: list[str]) -> 
         kept = [s for s in c["selected"] if s not in held]
         if dup:
             labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
-            pruned.append({"choiceId": c["id"], "reason": (
-                f"'{c['label']}': {', '.join(labels.get(d, d) for d in dup)} is already proficient; the selection was ignored.")})
+            pruned.append({"choiceId": c["id"], "reason": msg(
+                "pruned-proficient", label=c["label"], names=[labels.get(d, d) for d in dup])})
         choices[i] = {**c, "options": options, "selected": kept, "status": "resolved" if len(kept) == c["count"] else "pending"}
         held.update(s for s in kept if s.startswith("skill-"))
     return pruned
@@ -2381,9 +2381,7 @@ def _gate_save_picks(choices: list[dict], catalog: Catalog, resolved_classes: li
         if spec["fixed"] not in prior:
             choices[:] = [c for c in choices if c["id"] != card["id"]]
             if card["selected"]:
-                pruned.append({"choiceId": card["id"], "reason": (
-                    f"'{card['label']}': the Wisdom saving throw is not proficient yet, so Iron Mind grants it "
-                    f"outright and the stored selection was ignored.")})
+                pruned.append({"choiceId": card["id"], "reason": msg("pruned-iron-mind", label=card["label"])})
             if spec["fixed"] not in proficient_save_abilities:
                 proficient_save_abilities.append(spec["fixed"])
             continue
@@ -2439,9 +2437,9 @@ def _gate_expertise_choices(
             dropped = [s for s in c.get("selected", []) if s not in kept]
             if dropped:
                 labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
-                names = ", ".join(labels.get(d, d) for d in dropped)
+                names = [labels.get(d, d) for d in dropped]
                 pruned_by_index[i] = {"choiceId": c["id"],
-                                      "reason": f"'{c['label']}': {names} already has Expertise; the selection was ignored."}
+                                      "reason": msg("pruned-expertise-already", label=c["label"], names=names)}
             choices[i] = {**c, "options": options, "selected": kept,
                           "status": "resolved" if len(kept) == c["count"] else "pending"}
             have.update(s for s in kept if s in prior)
@@ -2465,12 +2463,12 @@ def _gate_expertise_choices(
         dropped = [s for s in selected if s not in kept]
         if dropped:
             labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
-            names = ", ".join(labels.get(d, d) for d in dropped)
+            names = [labels.get(d, d) for d in dropped]
             lost_profs = [d for d in dropped if d not in proficient_skills]
             if lost_profs:
-                reason = f"'{c['label']}': {names} is no longer a proficient skill; the Expertise selection was ignored."
+                reason = msg("pruned-expertise-not-proficient", label=c["label"], names=names)
             else:
-                reason = f"'{c['label']}': {names} already has Expertise; the Expertise selection was ignored."
+                reason = msg("pruned-expertise-already-chosen", label=c["label"], names=names)
             pruned_by_index[i] = {"choiceId": c["id"], "reason": reason}
         choices[i] = {**c, "options": options, "selected": kept,
                       "status": "resolved" if len(kept) == c["count"] else "pending"}
@@ -2522,7 +2520,7 @@ def _gate_invocation_choices(choices: list[dict], resolved_classes: list[dict], 
         if dropped:
             pruned.append({
                 "choiceId": c["id"],
-                "reason": f"'{c['label']}': {', '.join(dropped)} no longer meets its prerequisites and was ignored.",
+                "reason": msg("pruned-invocation-prereq", label=c["label"], names=dropped),
             })
         choices[i] = {**c, "options": options, "selected": selected,
                       "status": "resolved" if len(selected) == c["count"] else "pending"}
@@ -2567,9 +2565,8 @@ def _gate_feat_invocation_prereqs(choices: list[dict], resolved_classes: list[di
             options.append(o)
         kept = [s for s in c["selected"] if s not in unmet]
         if len(kept) != len(c["selected"]):
-            pruned.append({"choiceId": c["id"], "reason": (
-                f"'{c['label']}': {', '.join(unmet[s] for s in c['selected'] if s in unmet)} needs a Warlock who meets its "
-                f"prerequisite and was ignored.")})
+            pruned.append({"choiceId": c["id"], "reason": msg(
+                "pruned-eldritch-adept-prereq", label=c["label"], names=[unmet[s] for s in c["selected"] if s in unmet])})
         choices[i] = {**c, "options": options, "selected": kept,
                       "status": "resolved" if len(kept) == c["count"] else "pending"}
     return pruned
@@ -2652,9 +2649,8 @@ def _gate_duplicate_picks(choices: list[dict], catalog: Catalog, class_order: li
             dropped = [p for p in picks if p[1] in taken]
             picks = [p for p in picks if p[1] not in taken]
             if dropped:
-                pruned.append({"choiceId": c["id"], "reason": (
-                    f"'{c['label']}': {', '.join(p[2] for p in dropped)} was already taken "
-                    f"({taken[dropped[0][1]]}); the selection was ignored.")})
+                pruned.append({"choiceId": c["id"], "reason": msg(
+                    "pruned-already-taken", label=c["label"], names=[p[2] for p in dropped], where=taken[dropped[0][1]])})
             if dropped or any(a is not b for a, b in zip(options, c["options"])):
                 ids = [p[0] for p in picks]
                 choices[i] = {**c, "options": options, "selected": ids,
@@ -4592,24 +4588,21 @@ def _gate_mastery_choices(choices: list[dict], catalog: Catalog, proficient_weap
             options.append(o)
         dup = [repeated[s] for s in c["selected"] if s in repeated and s not in lacking]
         if dup:
-            pruned.append({"choiceId": c["id"], "reason": f"'{c['label']}': {', '.join(dup)} is already mastered through a class and was ignored."})
+            pruned.append({"choiceId": c["id"], "reason": msg("pruned-mastered-through-class", label=c["label"], names=dup)})
         proficient = [s for s in c["selected"] if s not in lacking and s not in repeated]
         selected = proficient[: c["count"]]
         dropped = [lacking[s] for s in c["selected"] if s in lacking]
         if dropped:
             pruned.append({
                 "choiceId": c["id"],
-                "reason": f"'{c['label']}': {', '.join(dropped)} is no longer a proficient weapon and was ignored.",
+                "reason": msg("pruned-weapon-not-proficient", label=c["label"], names=dropped),
             })
         overflow = proficient[c["count"]:]
         if overflow:
-            names = ", ".join((catalog.items.get(d) or {}).get("name", d) for d in overflow)
+            names = [(catalog.items.get(d) or {}).get("name", d) for d in overflow]
             pruned.append({
                 "choiceId": c["id"],
-                "reason": (
-                    f"'{c['id']}' now allows {c['count']} selection(s); "
-                    f"{len(overflow)} stored selection(s) no longer fit and were ignored: {names}."
-                ),
+                "reason": msg("pruned-count-overflow", id=c["id"], count=c["count"], n=len(overflow), names=names),
             })
         choices[i] = {**c, "options": options, "selected": selected,
                       "status": "resolved" if len(selected) == c["count"] else "pending"}
@@ -4965,7 +4958,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             # hides the select). Below the unlock level it must not apply.
             subclass_pruned.append({
                 "choiceId": f"class:{entry_cls_id}:subclass",
-                "reason": f"'{entry_subclass['name']}' unlocks at {entry_cls_id} level {unlock_level} and was ignored.",
+                "reason": msg("pruned-subclass-unlocks", subclass=entry_subclass["name"], cls=entry_cls_id, level=unlock_level),
             })
             entry_subclass = None
             entry_subclass_id = None
@@ -5227,8 +5220,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 background_bonuses[ab_key] = applied
                 background_clamped_notes.append({
                     "choiceId": background_ability_choice_tpl["id"],
-                    "reason": f"{bg['name']}: {ab_key} is already at maximum ({asi_mod.ASI_CAP}) "
-                              f"and the increase was ignored."})
+                    "reason": msg("pruned-ability-at-max", name=bg["name"], ab=ab_key, cap=asi_mod.ASI_CAP)})
 
     # Slice 8a: feats a species grants (Human/XPHB's Origin feat, Variant
     # Human's and Custom Lineage's free feat). Resolved BEFORE the ASI walk
@@ -5394,8 +5386,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             if delta > 0 and applied < delta:
                 fixed_clamped_notes.append({
                     "choiceId": feat.get("_species_origin") or f"feat:{feat['index']}",
-                    "reason": f"{feat['name']}: {ab_key} is already at maximum ({_feat_ability_cap(feat)}) "
-                              f"and the +{delta} increase was ignored."})
+                    "reason": msg("pruned-ability-at-max-delta", name=feat["name"], ab=ab_key, cap=_feat_ability_cap(feat),
+                                  delta=delta)})
         applied_fixed_deltas_by_instance[_feat_instance_key(feat)] = applied_list
 
     # Phase 4c-ii Task 2: a FOURTH source into this same early pass — a
@@ -5656,8 +5648,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             fixed_names = ", ".join(_feat_ability_bonuses([skipped_feat]))
             fixed_clamped_notes.append({
                 "choiceId": skipped_cid,
-                "reason": f"{skipped_feat['name']}: {fixed_names} is already at maximum "
-                          f"({_feat_ability_cap(skipped_feat)}) and the increase was ignored."})
+                "reason": msg("pruned-ability-at-max", name=skipped_feat["name"], ab=fixed_names,
+                              cap=_feat_ability_cap(skipped_feat))})
     problems += _feat_prerequisite_problems(
         resolved_feats, total_level, final_scores, use_feat_prereqs, background_chosen_ability_deltas_by_instance,
         applied_fixed_deltas_by_instance,
@@ -5906,7 +5898,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choice_templates = [tpl for tpl in choice_templates if tpl["id"] not in no_own_ability_card]
     current_template_ids = {tpl["id"] for tpl in choice_templates}
     pruned = subclass_pruned + [
-        {"choiceId": choice_id, "reason": f"'{choice_id}' no longer applies to the current character and was ignored."}
+        {"choiceId": choice_id, "reason": msg("pruned-stale", id=choice_id)}
         for choice_id, selected in all_selections.items()
         if selected and choice_id not in current_template_ids
     ]
@@ -5925,7 +5917,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 name = feat_record["name"] if feat_record else item
                 pruned.append({
                     "choiceId": choice_id,
-                    "reason": f"'{name}' can't be taken at this Ability Score Improvement and was ignored.",
+                    "reason": msg("pruned-asi-feat-ineligible", name=name),
                 })
     choices: list[dict] = []
     for tpl in choice_templates:
@@ -5953,33 +5945,32 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 selected = selected[: tpl["count"]]
             dropped = [s for s in raw_selected if s not in selected]
             if dropped:
-                names = ", ".join((catalog.spells.get(d) or catalog.items.get(d) or {}).get("name", d) for d in dropped)
+                names = [(catalog.spells.get(d) or catalog.items.get(d) or {}).get("name", d) for d in dropped]
                 if _is_mastery_choice(tpl):  # F1: here only options the class filter / catalog no longer offers
-                    where = "this class" if tpl["source"]["kind"] == "class" else "this feat"
-                    reason = f"'{tpl['label']}': {names} is not an available weapon for {where} and was ignored."
+                    if tpl["source"]["kind"] == "class":
+                        reason = msg("pruned-mastery-unavailable-class", label=tpl["label"], names=names)
+                    else:
+                        reason = msg("pruned-mastery-unavailable-feat", label=tpl["label"], names=names)
                 elif class_choices_2024.is_dependent_choice(tpl):
-                    names = ", ".join(
+                    names = [
                         (catalog.spells.get(d) or catalog.items.get(d) or catalog.feats.get(d[len("feat:"):]) or {}).get("name", d)
-                        for d in dropped)  # C7c
-                    reason = f"'{tpl['label']}': {names} is no longer available and was ignored."
+                        for d in dropped]  # C7c
+                    reason = msg("pruned-no-longer-available", label=tpl["label"], names=names)
                 else:
-                    reason = (
-                        f"'{tpl['id']}' now allows {tpl['count']} selection(s); "
-                        f"{len(dropped)} stored selection(s) no longer fit and were ignored: {names}."
-                    )
+                    reason = msg("pruned-count-overflow", id=tpl["id"], count=tpl["count"], n=len(dropped), names=names)
                     if tpl["id"] == "class:wizard:spells-known":
                         # F2-B: the prepared card offers only spellbook spells, so a pick the
                         # card no longer offers is missing from the book, not over the count.
                         outside = [d for d in dropped if d not in valid_ids]
                         if outside:
-                            outside_names = ", ".join((catalog.spells.get(d) or {}).get("name", d) for d in outside)
-                            reason = (f"'{tpl['id']}': {len(outside)} stored prepared spell(s) are not in your "
-                                      f"spellbook and were ignored: {outside_names}.")
+                            outside_names = [(catalog.spells.get(d) or {}).get("name", d) for d in outside]
                             rest = [d for d in dropped if d in valid_ids]
                             if rest:
-                                rest_names = ", ".join((catalog.spells.get(d) or {}).get("name", d) for d in rest)
-                                reason += (f" Also {len(rest)} over the allowed {tpl['count']} "
-                                           f"selection(s): {rest_names}.")
+                                rest_names = [(catalog.spells.get(d) or {}).get("name", d) for d in rest]
+                                reason = msg("pruned-wizard-not-in-spellbook-and-over", id=tpl["id"], n=len(outside),
+                                             names=outside_names, m=len(rest), count=tpl["count"], rest=rest_names)
+                            else:
+                                reason = msg("pruned-wizard-not-in-spellbook", id=tpl["id"], n=len(outside), names=outside_names)
                 pruned.append({"choiceId": tpl["id"], "reason": reason})
         else:
             # F3a-1: a stored pick the card does not offer at all (e.g. a 2014 equipment bundle after switching to
@@ -5996,26 +5987,25 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                     return " + ".join(_one(p) for p in pick.split("+")) if "+" in pick else _one(pick)
                 pruned.append({
                     "choiceId": tpl["id"],
-                    "reason": (f"'{tpl['label']}': {', '.join(_pick_name(g) for g in gone)} is no longer offered "
-                               f"and was ignored."),
+                    "reason": msg("pruned-no-longer-offered", label=tpl["label"], names=[_pick_name(g) for g in gone]),
                 })
             if tpl["source"]["kind"] == "class" and _ASI_CID_RE.match(tpl["id"]):
                 # RPF: a stored ASI pick whose option is offered but disabled (cap 20 after a ruleset / species switch,
                 # a feat prerequisite) is reported with the option's own reason instead of leaving the card pending silently.
                 for o in tpl["options"]:
                     if o.get("disabled") and o["id"] in raw_selected:
-                        pruned.append({"choiceId": tpl["id"], "reason": (
-                            f"'{tpl['label']}': {o['label']} is not available ({o.get('disabledReason', 'not available')}) "
-                            f"and was ignored.")})
+                        pruned.append({"choiceId": tpl["id"], "reason": msg(
+                            "pruned-asi-option-closed", label=tpl["label"], option=o["label"],
+                            why=o.get("disabledReason", "not available"))})
             if tpl["source"]["kind"] == "feat" and tpl["id"].endswith(":ability-bonus"):
                 # FE2 (B9): a stored pick of an option closed by the feat's ability cap is reported, not lost silently.
                 closed = [o for o in tpl["options"] if o.get("disabled") and o["id"] in raw_selected]
                 if closed:
                     pruned.append({
                         "choiceId": tpl["id"],
-                        "reason": (f"'{tpl['label']}': " + ", ".join(
-                            f"{o['id'].upper()} is {o.get('disabledReason', 'not available')}" for o in closed)
-                            + " and was ignored."),
+                        "reason": msg("pruned-ability-closed", label=tpl["label"], items=[
+                            msg("pruned-ability-closed-item", ab=o["id"].upper(), why=o.get("disabledReason", "not available"))
+                            for o in closed]),
                     })
             if len(selected) > tpl["count"]:
                 problems.append({
@@ -6773,7 +6763,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         extra = len(pruned) - MAX_PRUNED_REPORTED
         pruned = pruned[:MAX_PRUNED_REPORTED] + [{
             "choiceId": "pruned-more",
-            "reason": f"...and {extra} more stale selections were ignored.",
+            "reason": msg("pruned-more", extra=extra),
         }]
 
     return {

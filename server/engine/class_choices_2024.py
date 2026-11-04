@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 
 from engine import subclass_options_2024, subclass_spells_2024
+from i18n.messages import msg
 from catalog.reference_data import (
     FEAT_LANGUAGE_REPLACEMENT,
     CLASS_LANGUAGES_2024, CLASS_OPTION_CHOICES_2024, EXPERTISE_2024, INVOCATION_EFFECTS, INVOCATION_EFFECTS_2024, LANGUAGES_2024_RARE, LANGUAGES_2024_STANDARD, PRIMAL_KNOWLEDGE_2024,
@@ -272,11 +273,10 @@ def gate_languages(choices: list[dict], fixed_languages, class_order: list[str] 
         if lang not in known_before:
             if c["selected"]:
                 labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
-                names = ", ".join(labels.get(d, d) for d in c["selected"])
+                names = [labels.get(d, d) for d in c["selected"]]
                 pruned_by_index[i] = {
                     "choiceId": c["id"],
-                    "reason": (f"'{c['label']}': {names} no longer applies because you do not already know "
-                               f"{lang.capitalize()}; the language selection was ignored."),
+                    "reason": msg("pruned-language-replacement-lost", label=c["label"], names=names, lang=lang.capitalize()),
                 }
             removed.add(i)
             return
@@ -290,8 +290,7 @@ def gate_languages(choices: list[dict], fixed_languages, class_order: list[str] 
             labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
             pruned_by_index[i] = {
                 "choiceId": c["id"],
-                "reason": f"'{c['label']}': {', '.join(labels.get(d, d) for d in dropped)} is already known; "
-                          "the language selection was ignored.",
+                "reason": msg("pruned-language-known", label=c["label"], names=[labels.get(d, d) for d in dropped]),
             }
         choices[i] = {**c, "options": options, "selected": kept,
                       "status": "resolved" if len(kept) == c["count"] else "pending"}
@@ -333,10 +332,10 @@ def gate_languages(choices: list[dict], fixed_languages, class_order: list[str] 
         dropped = [s for s in c["selected"] if s not in kept]
         if dropped:
             labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
-            names = ", ".join(labels.get(d, d) for d in dropped)
+            names = [labels.get(d, d) for d in dropped]
             pruned_by_index[i] = {
                 "choiceId": c["id"],
-                "reason": f"'{c['label']}': {names} is already known; the language selection was ignored.",
+                "reason": msg("pruned-language-known", label=c["label"], names=names),
             }
         choices[i] = {**c, "options": options, "selected": kept,
                       "status": "resolved" if len(kept) == c["count"] else "pending"}
@@ -446,8 +445,8 @@ def gate_after_positioned_pick(choices: list[dict], class_order, pos: tuple[int,
         kept = [s for s in c["selected"] if s not in granted]
         if len(kept) != len(c["selected"]):
             labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
-            names = ", ".join(labels.get(s, s) for s in c["selected"] if s in granted)
-            pruned.append({"choiceId": c["id"], "reason": f"'{c['label']}': {names} is already proficient ({source_name}); the selection was ignored."})
+            names = [labels.get(s, s) for s in c["selected"] if s in granted]
+            pruned.append({"choiceId": c["id"], "reason": msg("pruned-proficient-source", label=c["label"], names=names, source=source_name)})
         choices[i] = {**c, "options": options, "selected": kept, "status": "resolved" if len(kept) == c["count"] else "pending"}
     return pruned
 
@@ -470,9 +469,8 @@ def gate_primal_knowledge(choices: list[dict], proficient_skills: set[str]) -> l
         dropped = [s for s in c["selected"] if s not in kept]
         if dropped:
             labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
-            names = ", ".join(labels.get(d, d) for d in dropped)
-            pruned.append({"choiceId": c["id"],
-                           "reason": f"'{c['label']}': {names} is already a proficient skill; the selection was ignored."})
+            names = [labels.get(d, d) for d in dropped]
+            pruned.append({"choiceId": c["id"], "reason": msg("pruned-proficient-skill", label=c["label"], names=names)})
         choices[i] = {**c, "options": options, "selected": kept,
                       "status": "resolved" if len(kept) == c["count"] else "pending"}
     return pruned
@@ -604,8 +602,8 @@ def gate_additional_secrets(choices: list[dict], catalog) -> list[dict]:
     kept = [s for s in c["selected"] if s not in held]
     dropped = [s for s in c["selected"] if s in held]
     if dropped:
-        names = ", ".join((catalog.spells.get(d) or {}).get("name", d) for d in dropped)
-        pruned.append({"choiceId": c["id"], "reason": f"'{c['label']}': {names} is already known on the Bard's spell cards and was ignored."})
+        names = [(catalog.spells.get(d) or {}).get("name", d) for d in dropped]
+        pruned.append({"choiceId": c["id"], "reason": msg("pruned-bard-known", label=c["label"], names=names)})
     choices[secrets] = {**c, "options": options, "selected": kept, "status": "resolved" if len(kept) == c["count"] else "pending"}
     taken = set(kept)
     for i in others:
@@ -630,8 +628,8 @@ def gate_positioned_card(choices: list[dict], card_id: str, prior: set[str]) -> 
         dropped = [s for s in c["selected"] if s in prior]
         if dropped:
             labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
-            names = ", ".join(labels.get(d, d) for d in dropped)
-            pruned.append({"choiceId": c["id"], "reason": f"'{c['label']}': {names} is already proficient; the selection was ignored."})
+            names = [labels.get(d, d) for d in dropped]
+            pruned.append({"choiceId": c["id"], "reason": msg("pruned-proficient", label=c["label"], names=names)})
         choices[i] = {**c, "options": options, "selected": kept, "status": "resolved" if len(kept) == c["count"] else "pending"}
     return pruned
 
@@ -1091,11 +1089,11 @@ def gate_invocations(catalog, choice: dict, level: int, cantrips: list[str],
     pruned = []
     if dropped:
         pruned.append({"choiceId": choice["id"], "reason":
-                       f"'{choice['label']}': {', '.join(names.get(d, d) for d in dropped)} no longer meets its prerequisites and was ignored."})
+                       msg("pruned-invocation-prereq", label=choice["label"], names=[names.get(d, d) for d in dropped])})
     if overflow:
         pruned.append({"choiceId": choice["id"], "reason":
-                       f"'{choice['id']}' now allows {choice['count']} selection(s); {len(overflow)} stored selection(s) "
-                       f"no longer fit and were ignored: {', '.join(names.get(d, d) for d in overflow)}."})
+                       msg("pruned-count-overflow", id=choice["id"], count=choice["count"], n=len(overflow),
+                           names=[names.get(d, d) for d in overflow])})
     return {**choice, "options": options, "selected": selected,
             "status": "resolved" if len(selected) == choice["count"] else "pending"}, pruned
 
@@ -1461,7 +1459,7 @@ def prune_feat_invocation_dependents(choices: list[dict]) -> list[dict]:
         if card is None or m.group(2) not in card["selected"]:
             choices.remove(c)
             if c.get("selected"):
-                pruned.append({"choiceId": c["id"], "reason": f"'{c['label']}' no longer applies: its invocation is no longer selected, so the pick was ignored."})
+                pruned.append({"choiceId": c["id"], "reason": msg("pruned-invocation-dependent", label=c["label"])})
     return pruned
 
 
@@ -1475,7 +1473,7 @@ def prune_invocation_dependents(choices: list[dict], selected_instances) -> list
         if m and m.group(1) not in keep:
             choices.remove(c)
             if c.get("selected"):
-                pruned.append({"choiceId": c["id"], "reason": f"'{c['label']}' no longer applies: its invocation is no longer selected, so the pick was ignored."})
+                pruned.append({"choiceId": c["id"], "reason": msg("pruned-invocation-dependent", label=c["label"])})
     return pruned
 
 
