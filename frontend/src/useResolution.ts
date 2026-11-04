@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useLang } from "./LanguageContext";
+import { withLang } from "./logic/langQuery";
 import type { Draft, Resolution } from "./types";
 import { httpErrorMessage } from "./httpErrors";
 import { MsgError, msg, toMsg, type Msg } from "./logic/messages";
@@ -19,6 +21,7 @@ export function useResolution(draft: Draft): ResolutionState & { retry: () => vo
     error: null,
   });
   const [retryNonce, setRetryNonce] = useState(0);
+  const { lang } = useLang();
   const requestId = useRef(0);
 
   useEffect(() => {
@@ -31,7 +34,7 @@ export function useResolution(draft: Draft): ResolutionState & { retry: () => vo
     const timer = setTimeout(() => {
       const id = ++requestId.current;
       setState((s) => ({ ...s, loading: true, error: null }));
-      fetch("/api/resolve", {
+      fetch(withLang("/api/resolve", lang), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(draft),
@@ -73,7 +76,7 @@ export function useResolution(draft: Draft): ResolutionState & { retry: () => vo
       // an aborted in-flight request must not leave a stuck "loading"
       requestId.current++;
     };
-  }, [draft, retryNonce]);
+  }, [draft, retryNonce, lang]);
 
   const retry = useCallback(() => setRetryNonce((n) => n + 1), []);
 

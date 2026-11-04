@@ -10,6 +10,8 @@ type Msgs = Record<string, string>;
 export const en: Copy = {
   appName: "Character Builder",
 
+  lang: { label: "Language", bg: "BG", en: "EN" },
+
   nav: {
     label: "Steps",
     steps: {

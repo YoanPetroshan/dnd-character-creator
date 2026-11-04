@@ -7,6 +7,9 @@ type Msgs = Record<string, string>;
 export const bg = {
   appName: "Конструктор на герои",
 
+  /** The language control in the header: its group label and the two button labels. */
+  lang: { label: "Език", bg: "БГ", en: "EN" },
+
   /** The step navigation. `steps` are the labels of the eight routes (several are English words on purpose: legacy wording kept as it was). */
   nav: {
     label: "Стъпки",

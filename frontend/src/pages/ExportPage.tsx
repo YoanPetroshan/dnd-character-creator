@@ -6,7 +6,8 @@ import { httpErrorMessage } from "../httpErrors";
 import { exportReadiness } from "../logic/exportReadiness";
 import { stepForChoice } from "../logic/steps";
 import { safeFilename, shareOrDownload } from "../logic/files";
-import { useT } from "../LanguageContext";
+import { useLang, useT } from "../LanguageContext";
+import { withLang } from "../logic/langQuery";
 import { MsgError, msg, renderMsg, toMsg, type Msg } from "../logic/messages";
 import { ClassResourcesList } from "../components/ClassResourcesList";
 import { SheetTraitsSummary } from "../components/SheetTraitsSummary";
@@ -22,6 +23,7 @@ type ExportFormat = keyof typeof EXPORT_FORMATS;
 
 export function ExportPage() {
   const t = useT();
+  const { lang } = useLang();
   const xp = t.exportPage;
   const { draft } = useDraft();
   const { resolution, loading, error } = useResolutionContext();
@@ -38,7 +40,7 @@ export function ExportPage() {
     setExportingFormat(format);
     setExportError(null);
     try {
-      const resp = await fetch(config.endpoint, {
+      const resp = await fetch(withLang(config.endpoint, lang), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(draft),

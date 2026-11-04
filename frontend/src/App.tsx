@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { CatalogProvider } from "./CatalogContext";
 import { ResolutionProvider } from "./ResolutionContext";
+import { LanguageSwitch } from "./components/LanguageSwitch";
 import { StepNav } from "./components/StepNav";
 import { NextStepLink } from "./components/NextStepLink";
 import { StatusBanner } from "./components/StatusBanner";
@@ -22,6 +23,9 @@ export default function App() {
       <CatalogProvider>
         <ResolutionProvider>
           <RouteA11y />
+          <header className="app-header">
+            <LanguageSwitch />
+          </header>
           <StepNav />
           <NextStepLink />
           <StatusBanner />
