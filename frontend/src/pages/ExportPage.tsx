@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
 import { httpErrorMessage } from "../httpErrors";
+import { exportReadiness } from "../logic/exportReadiness";
+import { safeFilename, shareOrDownload } from "../logic/files";
 import { ClassResourcesList } from "../components/ClassResourcesList";
 import { SheetTraitsSummary } from "../components/SheetTraitsSummary";
 import { SpellSlotsSummary } from "../components/SpellSlotsSummary";
@@ -22,19 +24,8 @@ export function ExportPage() {
 
   if (!resolution) return <div className="page">{error ? null : "Зареждане…"}</div>;
 
-  // Must mirror server/app.py `_pending_export_problems`: equipment choices
-  // never block export.
-  const allPending = resolution.choices.filter((c) => c.status === "pending");
-  const pendingChoices = allPending.filter((c) => c.source.kind !== "equipment" && !c.optional); // RPF: optional cards never block
-  const pendingEquipment = allPending.filter((c) => c.source.kind === "equipment");
-  // Also mirrors the server gate: a character needs a class, species and background.
-  const missingParts = [
-    resolution.sheet.classes.length === 0 && "Избери клас.",
-    !resolution.sheet.species && "Избери species.",
-    !resolution.sheet.background && "Избери background.",
-  ].filter((m): m is string => typeof m === "string");
-  // a failed re-resolve means the data on screen may be stale: do not offer export
-  const canExport = !error && resolution.problems.length === 0 && pendingChoices.length === 0 && missingParts.length === 0;
+  // Mirrors server/app.py `_pending_export_problems` (see logic/exportReadiness.ts).
+  const { missingParts, pendingChoices, pendingEquipment, canExport } = exportReadiness(resolution, error);
 
   async function handleExport(format: ExportFormat) {
     const config = EXPORT_FORMATS[format];
@@ -58,33 +49,7 @@ export function ExportPage() {
         throw new Error(`Експортът не успя. ${httpErrorMessage(resp.status, body.error ?? "")}`);
       }
       const blob = await resp.blob();
-      const filename = `${(draft.name || "character").replace(/[\\/:*?"<>|]/g, "_")}.${config.extension}`;
-
-      // Touch devices: prefer the native share sheet (iOS Safari often
-      // ignores a.download for PDF/text and would navigate away instead).
-      if (typeof File !== "undefined" && navigator.canShare && window.matchMedia("(pointer: coarse)").matches) {
-        const file = new File([blob], filename, { type: blob.type });
-        if (navigator.canShare({ files: [file] })) {
-          try {
-            await navigator.share({ files: [file] });
-            return;
-          } catch (shareErr) {
-            if (shareErr instanceof DOMException && shareErr.name === "AbortError") return;
-            // Any other share failure: fall through to the download link.
-          }
-        }
-      }
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.rel = "noopener";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      // Revoking immediately can cancel the download in iOS/Android WebViews.
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      await shareOrDownload(blob, safeFilename(draft.name, config.extension));
     } catch (err) {
       setExportError(
         err instanceof TypeError ? "Няма връзка със сървъра. Експортът не е изтеглен." : err instanceof Error ? err.message : String(err),

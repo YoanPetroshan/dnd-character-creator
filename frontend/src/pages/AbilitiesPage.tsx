@@ -2,21 +2,17 @@ import { CommitNumberInput } from "../components/CommitNumberInput";
 import { StepProblems } from "../components/StepProblems";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
+import {
+  ABILITIES,
+  POINT_BUY_BUDGET,
+  STANDARD_ARRAY,
+  canIncrement,
+  formatModifier,
+  pointBuySpent as pointBuySpentOf,
+  rollAbilityScore,
+  setStandardScore,
+} from "../logic/abilities";
 import type { Ability, Draft } from "../types";
-
-const ABILITIES: Ability[] = ["STR", "DEX", "CON", "INT", "WIS", "CHA"];
-const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
-const POINT_BUY_COST: Record<number, number> = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
-const POINT_BUY_BUDGET = 27;
-
-/** 4d6, drop the lowest die. Uses crypto randomness where available. */
-function rollAbilityScore(): number {
-  const buf = new Uint32Array(4);
-  if (typeof crypto !== "undefined" && crypto.getRandomValues) crypto.getRandomValues(buf);
-  else for (let i = 0; i < 4; i++) buf[i] = Math.floor(Math.random() * 0xffffffff);
-  const dice = Array.from(buf, (n) => (n % 6) + 1).sort((a, b) => a - b);
-  return dice[1] + dice[2] + dice[3];
-}
 
 export function AbilitiesPage() {
   const { draft, dispatch } = useDraft();
@@ -38,13 +34,10 @@ export function AbilitiesPage() {
   // Standard array: every select lists all six values; picking one that
   // another ability holds swaps the two, so the selects never lock.
   function setStandard(ability: Ability, value: number) {
-    const holder = ABILITIES.find((a) => a !== ability && base[a] === value);
-    const next = { ...base, [ability]: value };
-    if (holder) next[holder] = base[ability];
-    dispatch({ type: "SET_ABILITY_SCORES", base: next });
+    dispatch({ type: "SET_ABILITY_SCORES", base: setStandardScore(base, ability, value) });
   }
 
-  const pointBuySpent = ABILITIES.reduce((sum, a) => sum + (POINT_BUY_COST[base[a]] ?? 0), 0);
+  const pointBuySpent = pointBuySpentOf(base);
 
   return (
     <div className="page">
@@ -98,9 +91,7 @@ export function AbilitiesPage() {
         <tbody>
           {ABILITIES.map((ability) => {
             const score = base[ability];
-            const currentCost = POINT_BUY_COST[score] ?? 0;
-            const nextCost = POINT_BUY_COST[score + 1];
-            const canIncrement = score < 15 && nextCost !== undefined && pointBuySpent - currentCost + nextCost <= POINT_BUY_BUDGET;
+            const canInc = canIncrement(base, ability);
             const modifier = modifiers?.[ability];
             return (
               <tr key={ability}>
@@ -122,7 +113,7 @@ export function AbilitiesPage() {
                         −
                       </button>
                       <span className="point-buy-stepper__value">{score}</span>
-                      <button type="button" aria-label={`${ability}: увеличи`} disabled={!canIncrement} onClick={() => setAbility(ability, score + 1)}>
+                      <button type="button" aria-label={`${ability}: увеличи`} disabled={!canInc} onClick={() => setAbility(ability, score + 1)}>
                         +
                       </button>
                     </span>
@@ -138,7 +129,7 @@ export function AbilitiesPage() {
                     />
                   )}
                 </td>
-                <td>{modifier === undefined ? "—" : modifier >= 0 ? `+${modifier}` : modifier}</td>
+                <td>{formatModifier(modifier)}</td>
               </tr>
             );
           })}

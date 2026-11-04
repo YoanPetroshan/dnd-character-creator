@@ -2,6 +2,8 @@ import { useRef, useState } from "react";
 import { mergeDraft, useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
 import { useCatalogContext } from "../CatalogContext";
+import { safeFilename, shareOrDownload } from "../logic/files";
+import { sourceOn, toggleSource } from "../logic/sources";
 import type { Ruleset } from "../types";
 
 const RULESET_HELP: Record<Ruleset, string> = {
@@ -26,27 +28,7 @@ export function HomePage() {
 
   async function downloadDraft() {
     const blob = new Blob([JSON.stringify(draft, null, 2)], { type: "application/json" });
-    const filename = `${(draft.name || "character").replace(/[\\/:*?"<>|]/g, "_")}.draft.json`;
-    if (typeof File !== "undefined" && navigator.canShare && window.matchMedia("(pointer: coarse)").matches) {
-      const file = new File([blob], filename, { type: "application/json" });
-      if (navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file] });
-          return;
-        } catch (e) {
-          if (e instanceof DOMException && e.name === "AbortError") return;
-        }
-      }
-    }
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.rel = "noopener";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    await shareOrDownload(blob, safeFilename(draft.name, "draft.json"), "application/json");
   }
 
   async function uploadDraft(file: File | undefined) {
@@ -69,16 +51,9 @@ export function HomePage() {
   }
 
   const allSourceIds = catalog.sources.map((src) => src.id);
-  const sourceOn = (id: string) =>
-    draft.sources.length === 0 || draft.sources.some((x) => x.toLowerCase() === id.toLowerCase());
-  function toggleSource(id: string, on: boolean) {
-    const current = draft.sources.length === 0 ? allSourceIds : draft.sources;
-    const next = on
-      ? [...current.filter((x) => x.toLowerCase() !== id.toLowerCase()), id]
-      : current.filter((x) => x.toLowerCase() !== id.toLowerCase());
-    // [] means "everything", so all-on collapses to [] and none-on becomes SRD only.
-    const all = allSourceIds.every((x) => next.some((n) => n.toLowerCase() === x.toLowerCase()));
-    dispatch({ type: "SET_SOURCES", sources: all ? [] : next.length === 0 ? ["srd"] : next });
+  const sourceOnFor = (id: string) => sourceOn(draft.sources, id);
+  function toggle(id: string, on: boolean) {
+    dispatch({ type: "SET_SOURCES", sources: toggleSource(draft.sources, allSourceIds, id, on) });
   }
   return (
     <div className="page">
@@ -138,7 +113,7 @@ export function HomePage() {
         </div>
         {catalog.sources.map((src) => (
           <label key={src.id}>
-            <input type="checkbox" checked={sourceOn(src.id)} onChange={(e) => toggleSource(src.id, e.target.checked)} />
+            <input type="checkbox" checked={sourceOnFor(src.id)} onChange={(e) => toggle(src.id, e.target.checked)} />
             {src.name} ({src.count})
           </label>
         ))}

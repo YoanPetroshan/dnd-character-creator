@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { optionSource } from "../logic/sources";
 import type { Choice, ChoiceOption } from "../types";
 
 interface ChoicePickerProps {
@@ -16,14 +17,6 @@ export const FILTER_THRESHOLD = 20;
  *  (collapsed groups, "Избрано" block, source select). Shorter cards render
  *  exactly as before. */
 export const LONG_LIST_THRESHOLD = 30;
-
-/** Book code the server appends to a feat label when it has to tell
- *  same-named options apart, e.g. "Athlete (XPHB)" -> "XPHB". */
-const SOURCE_SUFFIX = /\s\(([A-Z][A-Z0-9]{1,7})\)$/;
-export function optionSource(label: string): string | null {
-  const m = SOURCE_SUFFIX.exec(label);
-  return m ? m[1] : null;
-}
 
 const GROUP_LABELS: Record<string, string> = {
   asi: "Увеличение на характеристики",

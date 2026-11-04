@@ -8,12 +8,9 @@ import { CommitNumberInput } from "../components/CommitNumberInput";
 import { SpellLibrary } from "../components/SpellLibrary";
 import { ClassResourcesList } from "../components/ClassResourcesList";
 import { SpellSlotsSummary } from "../components/SpellSlotsSummary";
+import { classChoicesFor, splitClassChoices } from "../logic/choiceRouting";
 
 type ClassTab = "features" | "spells";
-
-function isSpellChoiceId(choiceId: string): boolean {
-  return choiceId.endsWith(":spells-cantrips") || choiceId.endsWith(":spells-known") || choiceId.endsWith(":spellbook") || choiceId.includes(":mystic-arcanum-") || choiceId.includes(":spell-mastery-") || choiceId.endsWith(":signature-spells") || choiceId.endsWith(":feature:additional-magical-secrets") || choiceId.includes(":opt-pact-of-the-tome-xphb:") || /:feature:[a-z0-9-]+-(?:savant|improved-illusions|magical-discoveries)$/.test(choiceId);
-}
 
 interface ClassDetail {
   // "index", not "id". Filtered server-side by ruleset/sources; `hidden` marks
@@ -58,16 +55,8 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
     };
   }, [classId, draft.ruleset, sourcesKey, selectedSubclassId]);
 
-  const classChoices = resolution
-    ? resolution.choices.filter(
-        (c) => (c.source.kind === "class" || c.source.kind === "feat") && c.id.startsWith(`class:${classId}:`)
-      )
-    : [];
-  const featureChoices = classChoices.filter((c) => !isSpellChoiceId(c.id));
-  // C4: the Wizard's spellbook card comes first (prepared spells are drawn from it).
-  const spellChoices = classChoices
-    .filter((c) => isSpellChoiceId(c.id))
-    .sort((a, b) => Number(b.id.endsWith(":spellbook")) - Number(a.id.endsWith(":spellbook")));
+  const classChoices = resolution ? classChoicesFor(resolution.choices, classId) : [];
+  const { featureChoices, spellChoices } = splitClassChoices(classChoices);
   const prunedReasons = new Map((resolution?.pruned ?? []).map((p) => [p.choiceId, p.reason]));
   const hasSpells = spellChoices.length > 0;
   const effectiveTab: ClassTab = hasSpells ? tab : "features";

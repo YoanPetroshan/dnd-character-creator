@@ -95,8 +95,13 @@ while online, then `pip install --no-index --find-links <dir>`. `RUN_CLONE_SMOKE
     cd server && ../.venv/bin/python -m pytest -q
     # repo-root tests (the chargen package + the import-isolation guard that covers server/ too)
     .venv/bin/python -m pytest -q
-    # frontend: type-check and build (there is no frontend test runner)
-    cd frontend && npm run build
+    # frontend: type-check and build, then the unit tests of the pure logic modules
+    cd frontend && npm run build && npm test
+
+**Frontend tests.** `cd frontend && npm test` runs vitest (pinned, node environment, no DOM) over `frontend/src/logic/*.test.ts`:
+the pure modules the pages call (export gate parity with `server/app.py` `_pending_export_problems`, step status, spell-card
+routing, source toggling, file names, ability math, draft merge/sanitize and the draft reducer). There are no component or
+browser tests; the pages are checked by hand at 375 px (see `docs/superpowers/specs/REAL-DEVICE-CHECKLIST.md`).
 
 Python dependencies are pinned in `server/requirements.txt` (the repo-root `requirements.txt` only includes it, so one install covers both suites). The frontend is locked by
 `frontend/package-lock.json`.

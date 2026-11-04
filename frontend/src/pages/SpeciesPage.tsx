@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { StepProblems } from "../components/StepProblems";
 import { useDraft } from "../DraftContext";
+import { speciesChoicesOf } from "../logic/choiceRouting";
 import { useResolutionContext } from "../ResolutionContext";
 import { useCatalogContext } from "../CatalogContext";
 import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
@@ -44,7 +45,7 @@ export function SpeciesPage() {
   // "species:" choice, and its cascaded choices (proficiencies, spells, ...)
   // have source.kind "feat" but a "species:" cid, so they show here too.
   const choices = resolution
-    ? resolution.choices.filter((c) => c.source.kind === "species" || (c.source.kind === "feat" && c.id.startsWith("species:")))
+    ? speciesChoicesOf(resolution.choices)
     : [];
 
   return (

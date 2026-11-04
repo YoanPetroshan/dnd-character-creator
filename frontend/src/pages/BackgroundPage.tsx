@@ -1,5 +1,6 @@
 import { StepProblems } from "../components/StepProblems";
 import { useDraft } from "../DraftContext";
+import { backgroundChoicesOf } from "../logic/choiceRouting";
 import { useResolutionContext } from "../ResolutionContext";
 import { useCatalogContext } from "../CatalogContext";
 import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
@@ -33,7 +34,7 @@ export function BackgroundPage() {
   // — those belong on ClassPage only, which already scopes by that same
   // "class:" cid prefix.
   const choices = resolution
-    ? resolution.choices.filter((c) => (c.source.kind === "background" || c.source.kind === "feat") && !c.id.startsWith("class:") && !c.id.startsWith("species:"))
+    ? backgroundChoicesOf(resolution.choices)
     : [];
 
   return (

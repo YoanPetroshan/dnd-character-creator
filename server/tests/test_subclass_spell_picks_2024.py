@@ -656,11 +656,11 @@ def test_new_cards_are_count_variable_and_unavailable_aware(catalog):
 def test_frontend_routes_the_new_spell_cards_to_the_spells_tab():
     import pathlib
     import re
-    text = (pathlib.Path(__file__).resolve().parents[2] / "frontend" / "src" / "pages" / "ClassPage.tsx").read_text()
+    text = (pathlib.Path(__file__).resolve().parents[2] / "frontend" / "src" / "logic" / "choiceRouting.ts").read_text()
     start = text.index("function isSpellChoiceId")
     body = text[start: text.index("\n}\n", start)]
     literal = re.search(r"/(:feature:[^/]*savant[^/]*)/\.test\(choiceId\)", body)
-    assert literal, "ClassPage.isSpellChoiceId has no pattern for the subclass spell cards"
+    assert literal, "logic/choiceRouting.isSpellChoiceId has no pattern for the subclass spell cards"
     pattern = re.compile(literal.group(1))  # the same syntax in JS and Python for this pattern
     for cid in (EVO, IMPROVED, DISCOVERIES, *[v[0] for v in SAVANT.values()]):
         assert pattern.search(cid), cid
