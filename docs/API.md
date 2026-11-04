@@ -7,7 +7,7 @@ Contract versions are reported by `GET /api/health` (`apiVersion`, `draftVersion
 ## Conventions
 
 - Query lists are comma separated: `sources=phb,xge`. `ruleset` is `2014`, `2024` or `mixed` (default `mixed`). Both are visibility filters only; `resolve` decides what is valid.
-- The client appends `?lang=bg|en` to `/api/resolve` and `/api/export/<fmt>`. The server ignores it today.
+- `lang` (`bg` or `en`) is read by `/api/resolve` and `/api/export/<fmt>`; the client appends it to both. Missing means `en`; any other value (including an empty, upper-case or comma-separated one) is a 400 `{"error": "'lang' must be 'bg' or 'en'"}`, checked before the body is read. It selects the language of the engine's messages (`problems`, `warnings`, `pruned`, option `disabledReason`, the export gate). Until the engine's messages are converted (I2-I5 of the bilingual plan) every message is still English whatever `lang` is; no other route reads it, and the `{"error": ...}` texts below are always English.
 - Ids are catalog ids (`fighter`, `acolyte`, `human`, spell and item indexes).
 
 ## Error shapes
@@ -25,6 +25,7 @@ The texts are English and meant for humans; clients branch on the status code (a
 | --- | --- | --- |
 | 400 | `{"error": "draft must be a JSON object"}` | the body of `/api/resolve` or `/api/export/<fmt>` is JSON but not an object (list, string, number, boolean) |
 | 400 | `{"error": "'level' must be an integer"}` | `/api/spells?level=` is not an integer |
+| 400 | `{"error": "'lang' must be 'bg' or 'en'"}` | `/api/resolve` or `/api/export/<fmt>` with a `lang` other than `bg` / `en` |
 | 400 | `{"problems": [...]}` | export gate, see below |
 | 404 | `{"error": "not found"}` | unknown class / background / species / spell id, or an unknown `/api/...` path |
 | 404 | `{"error": "unknown export format '<fmt>'"}` | `/api/export/<fmt>` with a format other than `yaml`, `markdown`, `pdf` |
@@ -86,4 +87,4 @@ Export gate: the export is refused with 400 `{"problems": [...]}` when the resol
 - no class, species or background is chosen (`export-missing-class`, `export-missing-species`, `export-missing-background`), or
 - a choice card is still `pending`, except equipment cards and `optional` cards (`unresolved-choice-<choice id>`, message `'<label>' isn't fully chosen yet.`).
 
-The `problems` list is the resolution's problems first, then the gate's own entries. The frontend mirrors the gate in `frontend/src/logic/exportReadiness.ts`, and a test keeps the two in step.
+The `problems` list is the resolution's problems first, then the gate's own entries, in the requested `lang` (see Conventions). The exported file itself is not yet language dependent. The frontend mirrors the gate in `frontend/src/logic/exportReadiness.ts`, and a test keeps the two in step.

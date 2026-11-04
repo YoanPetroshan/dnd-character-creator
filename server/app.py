@@ -17,6 +17,7 @@ from catalog.loader import load as load_catalog
 from catalog.reference_data import SOURCE_NAMES, ruleset_allows, subclass_unlock_level
 from engine.resolve import _source_allowed, _spell_visible, _subclass_visible, resolve
 from export import to_yaml
+from i18n.messages import localize, parse_lang
 from markdown_export import to_markdown
 from pdf_export import to_pdf
 
@@ -83,12 +84,24 @@ def _json_draft() -> dict | None:
     return body if isinstance(body, dict) else None
 
 
+def _request_lang():
+    """The `?lang=` query parameter as (lang, None), or (None, a 400 response). Missing is "en"; anything but
+    `bg` / `en` is rejected (docs/API.md). Engine messages are English until the I-series tags them."""
+    try:
+        return parse_lang(request.args.get("lang")), None
+    except ValueError:
+        return None, (jsonify({"error": "'lang' must be 'bg' or 'en'"}), 400)
+
+
 @app.route("/api/resolve", methods=["POST"])
 def api_resolve():
+    lang, bad_lang = _request_lang()
+    if bad_lang:
+        return bad_lang
     draft = _json_draft()
     if draft is None:
         return jsonify({"error": "draft must be a JSON object"}), 400
-    return jsonify(resolve(draft, _catalog))
+    return jsonify(localize(resolve(draft, _catalog), lang))
 
 
 def _catalog_sources() -> list[dict]:
@@ -360,13 +373,16 @@ def api_export(fmt: str):
     if entry is None:
         return jsonify({"error": f"unknown export format '{fmt}'"}), 404
     renderer, mimetype, extension = entry
+    lang, bad_lang = _request_lang()
+    if bad_lang:
+        return bad_lang
     draft = _json_draft()
     if draft is None:
         return jsonify({"error": "draft must be a JSON object"}), 400
     resolution = resolve(draft, _catalog)
     all_problems = resolution["problems"] + _pending_export_problems(resolution)
     if all_problems:
-        return jsonify({"problems": all_problems}), 400
+        return jsonify(localize({"problems": all_problems}, lang)), 400
     name = re.sub(r'[\\/:*?"<>|]', "_", str(draft.get("name") or "character"))
     filename = urllib.parse.quote(f"{name}.{extension}", safe="")
     return Response(
