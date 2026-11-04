@@ -1,0 +1,159 @@
+/* --- Mobile/touch structural rules (no visual restyling) --- */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* >=16px prevents iOS Safari zooming on focus. */
+input,
+select,
+textarea,
+button {
+  font-size: 16px;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: 20px;
+  height: 20px;
+  margin: 0 var(--space-2) 0 0;
+  flex: 0 0 auto;
+}
+
+button,
+.tab-bar button,
+.point-buy-stepper button,
+.choice-card__header {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.choice-picker li,
+.picker-list li,
+.item-browser-list li,
+.inventory-list li {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.choice-picker label,
+.picker-list label,
+.item-browser-list label,
+.inventory-list label,
+.ability-method-selector label,
+fieldset label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.ability-method-selector {
+  flex-wrap: wrap;
+}
+
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.ability-table,
+[data-section] table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* Sheet sections: long names and rule texts wrap instead of widening the page (structure only). */
+[data-section] {
+  overflow-wrap: anywhere;
+}
+
+.item-browser-list,
+.inventory-list,
+.spell-library-list {
+  overscroll-behavior: contain;
+}
+
+/* Notch / home-indicator safe areas (viewport-fit=cover). */
+.step-nav {
+  padding-left: max(var(--space-2), env(safe-area-inset-left));
+  padding-right: max(var(--space-2), env(safe-area-inset-right));
+  padding-top: max(var(--space-2), env(safe-area-inset-top));
+}
+
+main {
+  padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+}
+
+/* Big-option-list usability (structural only). */
+.picker-filter {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-height: 44px;
+  margin: 0 0 var(--space-2);
+}
+
+.choice-picker__group {
+  display: block;
+  width: 100%;
+  font-weight: 600;
+  padding: var(--space-2) 0 2px;
+}
+
+.choice-picker li.choice-picker__item--group-start {
+  flex-wrap: wrap;
+}
+
+.choice-picker__toggle-unavailable {
+  margin-top: var(--space-2);
+}
+
+/* W10: functional tap-target minimums measured at 375px (min-height only). */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),
+select,
+textarea,
+summary {
+  min-height: 44px;
+}
+
+label:has(> input[type="checkbox"]),
+label:has(> input[type="radio"]) {
+  min-height: 44px;
+}
+
+input[type="number"] {
+  min-width: 44px;
+}
+
+/* Y1: long option lists (structural only). */
+.choice-picker__group-toggle {
+  display: block;
+  width: 100%;
+  text-align: left;
+  min-height: 44px;
+}
+
+.choice-picker__selected-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.choice-picker__selected-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 44px;
+}
+
+.picker-source {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-height: 44px;
+  margin: 0 0 var(--space-2);
+}

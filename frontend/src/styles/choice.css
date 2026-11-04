@@ -1,0 +1,83 @@
+.choice-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-2);
+  background: var(--color-surface);
+}
+
+.choice-card__header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 10px var(--space-3);
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.choice-card[data-status="pending"] .choice-card__header {
+  border-left: 3px solid var(--color-accent);
+}
+
+.choice-card__pending-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-round);
+  background: var(--color-accent);
+  color: var(--color-on-dark);
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.choice-card__label {
+  font-weight: 600;
+  flex: 1;
+}
+
+.choice-card__level,
+.choice-card__count {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.choice-card__body {
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.choice-picker {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.choice-picker li {
+  padding: 2px 0;
+}
+
+.choice-picker__option--disabled {
+  color: var(--color-disabled);
+}
+
+.choice-picker__reason {
+  font-style: italic;
+  font-size: 12px;
+}
+
+.picker-list {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+}
+
+.picker-list li {
+  padding: 2px 0;
+}

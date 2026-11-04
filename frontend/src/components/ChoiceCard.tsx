@@ -33,7 +33,7 @@ export function ChoiceCard({ choice, onToggle, defaultExpanded = false }: Choice
   }, [isTarget, choice.id]);
 
   return (
-    <div className="choice-card" id={choice.id} data-status={choice.status}>
+    <div className="choice-card" id={choice.id} data-status={choice.status} data-state={expanded ? "expanded" : "collapsed"}>
       <button
         type="button"
         className="choice-card__header"

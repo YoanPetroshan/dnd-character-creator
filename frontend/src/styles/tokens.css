@@ -1,0 +1,33 @@
+:root {
+  /* Neutral placeholder tokens: every value equals what the stylesheets used before SK7.
+     A designer changes the look here (or overrides these on :root / [data-theme]). */
+  --font-sans: system-ui, sans-serif;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+
+  --radius-sm: 4px;
+  --radius-pill: 10px;
+  --radius-round: 50%;
+
+  --color-text: #222;
+  --color-text-strong: #333;
+  --color-text-muted: #555;
+  --color-text-secondary: #666;
+  --color-disabled: #999;
+  --color-page: #fafafa;
+  --color-surface: #fff;
+  --color-surface-muted: #f5f5f5;
+  --color-on-dark: #fff;
+  --color-border: #ccc;
+  --color-border-subtle: #eee;
+  --color-accent: #2980b9;
+  --color-danger: #c0392b;
+  --color-error: red;
+  --color-warning-text: #8a5a00;
+  --color-warning-bg: #fff7e0;
+  --color-warning-border: #e0a800;
+}

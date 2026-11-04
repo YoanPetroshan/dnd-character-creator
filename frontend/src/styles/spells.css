@@ -1,0 +1,47 @@
+.spell-library-list {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+}
+
+.spell-library-card {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.spell-library-card:last-child {
+  border-bottom: none;
+}
+
+.spell-library-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-weight: bold;
+}
+
+.spell-library-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: 0.85em;
+  color: var(--color-text-muted);
+  margin: var(--space-1) 0;
+}
+
+.spell-library-card summary {
+  cursor: pointer;
+}
+
+.spell-library-card__material {
+  margin: var(--space-1) 0 0;
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+.spell-library-card__desc {
+  margin: var(--space-1) 0 0;
+}

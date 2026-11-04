@@ -15,7 +15,7 @@ export function StatusBanner() {
   return (
     <>
       {error && (
-        <p className="status-banner" role="alert">
+        <p className="status-banner" role="alert" data-state="error">
           {t.status.calcError(renderMsg(t, error))}
           {resolution && ` ${t.status.lastGood}`}{" "}
           <button type="button" onClick={retry}>
@@ -24,7 +24,7 @@ export function StatusBanner() {
         </p>
       )}
       {notices.length > 0 && (
-        <p className="status-banner" role="status">
+        <p className="status-banner" role="status" data-state="notice">
           {notices.map((m) => renderMsg(t, m)).join(" ")}{" "}
           {unsavedRaw && (
             <>
@@ -42,12 +42,12 @@ export function StatusBanner() {
         </p>
       )}
       {storageFailed && (
-        <p className="status-banner" role="status">
+        <p className="status-banner" role="status" data-state="storage-failed">
           {t.status.storageFailed}
         </p>
       )}
       {prunedCount > 0 && (
-        <p className="status-banner" role="status">
+        <p className="status-banner" role="status" data-state="pruned">
           {t.status.pruned(prunedCount)} <NavLink to="/home">{t.status.seeInHome}</NavLink>
         </p>
       )}

@@ -8,7 +8,7 @@ export function LanguageSwitch() {
   return (
     <div className="lang-switch" role="group" aria-label={t.lang.label}>
       {LANGS.map((code) => (
-        <button key={code} type="button" lang={code} aria-pressed={lang === code} onClick={() => setLang(code)}>
+        <button key={code} type="button" lang={code} aria-pressed={lang === code} data-state={lang === code ? "active" : "inactive"} onClick={() => setLang(code)}>
           {t.lang[code]}
         </button>
       ))}

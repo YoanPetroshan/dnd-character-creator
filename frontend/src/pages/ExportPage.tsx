@@ -184,7 +184,7 @@ export function ExportPage() {
       </p>
       {canExport && <p>{xp.ready}</p>}
       {exportError && (
-        <p role="alert" style={{ color: "red" }}>
+        <p role="alert" className="status--error" data-state="error">
           {renderMsg(t, exportError)}
         </p>
       )}
@@ -193,6 +193,7 @@ export function ExportPage() {
           key={format}
           type="button"
           disabled={!canExport || exportingFormat !== null}
+          data-state={exportingFormat === format ? "busy" : !canExport || exportingFormat !== null ? "disabled" : "ready"}
           onClick={() => handleExport(format)}
         >
           {exportingFormat === format ? xp.downloading : xp.download(EXPORT_FORMATS[format].label)}

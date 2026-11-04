@@ -247,7 +247,7 @@ export function HomePage() {
           <h3>{t.home.prunedTitle}</h3>
           <ul>
             {resolution.pruned.map((p, i) => (
-              <li key={`${i}-${p.choiceId}`}>{p.reason}</li>
+              <li key={`${i}-${p.choiceId}`} data-state="pruned">{p.reason}</li>
             ))}
           </ul>
           <button

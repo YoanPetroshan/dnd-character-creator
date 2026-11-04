@@ -20,6 +20,11 @@ export const FILTER_THRESHOLD = 20;
  *  exactly as before. */
 export const LONG_LIST_THRESHOLD = 30;
 
+/** The state of one option row, for styling: disabled, hidden-by-filters or available. */
+function optionState(o: ChoiceOption): "disabled" | "hidden-by-filters" | "available" {
+  return o.disabled ? "disabled" : o.hiddenByFilters ? "hidden-by-filters" : "available";
+}
+
 export function groupLabel(t: Copy, group: string): string {
   const m = /^spell-level-(\d+)$/.exec(group);
   if (m) return m[1] === "0" ? t.choice.cantripsGroup : t.choice.spellLevelGroup(m[1]);
@@ -47,7 +52,7 @@ function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
   function renderOption(option: ChoiceOption, prev: ChoiceOption | undefined) {
     const heading = option.group && option.group !== prev?.group ? option.group : null;
     return (
-      <li key={option.id} className={heading ? "choice-picker__item--group-start" : undefined}>
+      <li key={option.id} className={heading ? "choice-picker__item--group-start" : undefined} data-state={optionState(option)}>
         {heading && (
           <span className="choice-picker__group" role="presentation">
             {groupLabel(t, heading)}
@@ -181,7 +186,7 @@ function LongPicker({ choice, onToggle }: ChoicePickerProps) {
 
   function renderRow(option: ChoiceOption) {
     return (
-      <li key={option.id}>
+      <li key={option.id} data-state={optionState(option)}>
         <label className={option.disabled ? "choice-picker__option--disabled" : ""}>
           <input
             type="checkbox"
