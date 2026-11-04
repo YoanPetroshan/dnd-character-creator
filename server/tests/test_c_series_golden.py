@@ -275,6 +275,15 @@ REBASELINES: dict[str, dict] = {
         ],
         "why": "per-turn recharge of Sneak Attack, Life Domain Divine Strike and Foe Slayer (X2)",
     },
+    # SK10 / Y2: option dicts carry `source` (the book code, "SRD" when the record has none). Rule: only a new key on
+    # an existing option of an existing card; no label, id, order, card or draft changes. Every case holds options.
+    "Y2": {
+        "cases": ["*"],
+        "paths": [
+            r"^result[.]choices[[][^]]+[]][.]options[[][^]]+[]][.]source$",
+        ],
+        "why": "option source field (SK10 / Y2)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -627,7 +636,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2") and STRIP == ("derived.featResources", "derived.speciesResources")
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2") and STRIP == ("derived.featResources", "derived.speciesResources")
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
@@ -865,6 +874,24 @@ def test_x2_cases_hold_the_turn_recharge():
         assert (turn <= x2_ids) and (n in hit or not turn), n
         if n in hit:
             assert turn and all(r["uses"] == 1 and r["recharge"] == "turn" for r in resources if r["id"] in turn), n
+
+
+def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
+    """Y2: the rebaseline touched only `options[*].source` (the allowlist); 215 of 251 cases hold a book option, the
+    other 36 (level 1 / 3 cases without feat, spell or feature options) are byte-identical. Every stored source is a
+    non-empty code, and no option outside the book kinds (skills, languages, equipment items) has one."""
+    assert REBASELINES["Y2"]["cases"] == ["*"] and len(REBASELINES["Y2"]["paths"]) == 1
+    with_source = 0
+    for name, entry in _GOLDEN.items():
+        has = False
+        for card in entry["result"]["choices"]:
+            for o in card["options"]:
+                if "source" in o:
+                    has = True
+                    assert isinstance(o["source"], str) and o["source"], (name, card["id"], o["id"])
+                    assert not o["id"].startswith("skill-") and card["source"]["kind"] != "equipment", (name, card["id"], o["id"])
+        with_source += has
+    assert with_source == 215
 
 
 if __name__ == "__main__":

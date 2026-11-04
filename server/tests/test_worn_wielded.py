@@ -87,6 +87,9 @@ def strip_g2(res: dict) -> dict:
         a.pop("wielded", None)
     res["derived"].pop("featResources", None)  # FE3 additive key (feat-less baseline drafts: always [])
     res["derived"].pop("speciesResources", None)  # W5a additive key (empty for the baseline drafts)
+    for card in res["choices"]:  # SK10 (Y2) additive key: the book code of an option (the pre-G2 baseline has none)
+        for o in card.get("options", []):
+            o.pop("source", None)
     return res
 
 

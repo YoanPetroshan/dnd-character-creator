@@ -21,6 +21,9 @@ export const FILTER_THRESHOLD = 20;
 export const LONG_LIST_THRESHOLD = 30;
 
 /** The state of one option row, for styling: disabled, hidden-by-filters or available. */
+/** The book code of an option: the server's `source` (Y2), else the code parsed from the label. */
+const srcOf = (o: ChoiceOption): string | null => o.source ?? optionSource(o.label);
+
 function optionState(o: ChoiceOption): "disabled" | "hidden-by-filters" | "available" {
   return o.disabled ? "disabled" : o.hiddenByFilters ? "hidden-by-filters" : "available";
 }
@@ -128,7 +131,7 @@ function LongPicker({ choice, onToggle }: ChoicePickerProps) {
   const sourceCounts = new Map<string, number>();
   let unlabelled = 0;
   for (const o of choice.options) {
-    const src = optionSource(o.label);
+    const src = srcOf(o);
     if (src) sourceCounts.set(src, (sourceCounts.get(src) ?? 0) + 1);
     else unlabelled += 1;
   }
@@ -140,7 +143,7 @@ function LongPicker({ choice, onToggle }: ChoicePickerProps) {
   const matches = (o: ChoiceOption) => {
     if (needle && !o.label.toLowerCase().includes(needle)) return false;
     if (source) {
-      const src = optionSource(o.label);
+      const src = srcOf(o);
       if (source === "-" ? src !== null : src !== source) return false;
     }
     return true;

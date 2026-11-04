@@ -67,6 +67,7 @@ from . import asi as asi_mod
 from . import attacks as attacks_mod
 from . import class_choices_2024
 from . import subclass_options_2024
+from . import option_source as option_source_mod
 from . import subclass_innate_2024
 from . import subclass_spells_2024
 from . import class_resources as class_resources_mod
@@ -6766,6 +6767,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     }
 
     choices = class_choices_2024.mark_unavailable(choices, ruleset)  # F3a-2b: uncompletable new 2024 cards do not block
+    choices = option_source_mod.annotate_choices(catalog, choices)  # SK10 (Y2): `source` on feat / spell / feature options
 
     if len(pruned) > MAX_PRUNED_REPORTED:  # F2-D: cap last, so every gate's entries count and the marker ends the list
         extra = len(pruned) - MAX_PRUNED_REPORTED

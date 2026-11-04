@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { optionSource, sourceOn, toggleSource } from "./sources";
 
@@ -54,5 +55,12 @@ describe("optionSource", () => {
   });
   it("takes the last group of a label with several parentheses", () => {
     expect(optionSource("Spell (Ritual) (PHB)")).toBe("PHB");
+  });
+});
+
+describe("option source (Y2)", () => {
+  it("the picker uses the server's source and falls back to the label suffix", () => {
+    const src = readFileSync(new URL("../components/ChoicePicker.tsx", import.meta.url)).toString("utf8");
+    expect(src).toContain("o.source ?? optionSource(o.label)");
   });
 });

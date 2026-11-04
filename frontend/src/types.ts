@@ -10,6 +10,10 @@ export interface ChoiceOption {
   group?: string;
   /** Option is hidden by the current ruleset/source filters (treated like an unavailable option). */
   hiddenByFilters?: boolean;
+  /** Y2: book code of the record behind the option ("PHB", "XPHB", ...; "SRD" when it has none). Set on feat,
+   *  spell, invocation / metamagic / optional-feature and subclass-option options and on ASI steps; absent on
+   *  skills, languages, equipment and the like. The label is not changed by it. */
+  source?: string;
   /** 2024 class starting-equipment package: {item id: count} for members with a count other than 1. */
   quantities?: Record<string, number>;
 }
