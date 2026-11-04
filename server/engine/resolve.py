@@ -279,9 +279,9 @@ def _taken_reason(feat: dict, taken) -> str | None:
     if feat.get("repeatable") or not taken:
         return None
     if feat["index"] in taken:
-        return "already taken"
+        return msg("disabled-already-taken")
     label = taken.get("name:" + _feat_name_key(feat))
-    return f"already taken ({label})" if label is not None else None
+    return msg("disabled-already-taken-from", where=label) if label is not None else None
 
 
 def _resolve_granted_feats(
@@ -1147,7 +1147,7 @@ def _feat_ability_bonus_choice_templates(
                 for option in tpl["options"]:
                     if asi_mod.asi_exceeds_cap(deltas_by_option.get(option["id"], []), scores, cap):
                         option["disabled"] = True
-                        option["disabledReason"] = f"already at maximum ({cap})"
+                        option["disabledReason"] = msg("disabled-feat-ability-max", cap=cap)
             pairs.append((tpl, feat))
     return pairs
 
@@ -1672,7 +1672,7 @@ def _optional_feature_options(catalog: Catalog, option_ids, skip=(), class_level
         need = opt.get("prerequisite_level")
         if need and class_level is not None and need > class_level:
             option["disabled"] = True
-            option["disabledReason"] = f"requires level {need}"
+            option["disabledReason"] = msg("disabled-requires-level", level=need)
         options.append(option)
     return options
 
@@ -2130,7 +2130,7 @@ def _gate_distinct_choices(choices: list[dict], class_order: list[str] = ()) -> 
         taken = held.setdefault(group, {})
         name = c["source"]["label"]
         options = [o if o.get("disabled") or o["id"] not in taken
-                   else {**o, "disabled": True, "disabledReason": f"already chosen for {name} ({taken[o['id']]})"}
+                   else {**o, "disabled": True, "disabledReason": msg("disabled-already-chosen-for-n", name=name, n=taken[o["id"]])}
                    for o in c["options"]]
         kept = [s for s in c.get("selected", []) if s not in taken]
         dropped = [s for s in c.get("selected", []) if s not in kept]
@@ -2278,7 +2278,7 @@ def _gate_duplicate_skill_picks(choices: list[dict], class_order: list[str]) -> 
         c = choices[i]
         dup = [s for s in c["selected"] if s in held]
         options = [o if o.get("disabled") or o["id"] not in held
-                   else {**o, "disabled": True, "disabledReason": "already proficient"} for o in c["options"]]
+                   else {**o, "disabled": True, "disabledReason": msg("disabled-already-proficient")} for o in c["options"]]
         kept = [s for s in c["selected"] if s not in held]
         if dup:
             labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
@@ -2432,7 +2432,7 @@ def _gate_expertise_choices(
             # revised) may not repeat an Expertise skill.
             prior = poe_priors[c["id"]]
             options = [o if o.get("disabled") or not (ruleset == "2024" and o["id"] in prior and o["id"] in have)
-                       else {**o, "disabled": True, "disabledReason": "already has Expertise"} for o in c["options"]]
+                       else {**o, "disabled": True, "disabledReason": msg("disabled-has-expertise")} for o in c["options"]]
             kept = [s for s in c.get("selected", []) if not (ruleset == "2024" and s in prior and s in have)]
             dropped = [s for s in c.get("selected", []) if s not in kept]
             if dropped:
@@ -2452,9 +2452,9 @@ def _gate_expertise_choices(
             if o.get("disabled"):
                 options.append(o)
             elif o["id"] not in proficient_skills:
-                options.append({**o, "disabled": True, "disabledReason": "not proficient"})
+                options.append({**o, "disabled": True, "disabledReason": msg("disabled-not-proficient")})
             elif lacks and o["id"] in have:
-                options.append({**o, "disabled": True, "disabledReason": "already has Expertise"})
+                options.append({**o, "disabled": True, "disabledReason": msg("disabled-has-expertise")})
             else:
                 options.append(o)
         enabled = {o["id"] for o in options if not o.get("disabled")}
@@ -2481,11 +2481,11 @@ def _invocation_unmet(inv: dict, warlock_level: int, pacts: set[str], cantrips: 
     for req in inv.get("prerequisites") or []:
         kind = req.get("type")
         if kind == "level" and warlock_level < req.get("level", 0):
-            return f"requires warlock level {req['level']}"
+            return msg("disabled-requires-warlock-level", level=req["level"])
         if kind == "feature" and req.get("feature", "").rsplit("/", 1)[-1] not in pacts:
-            return "requires " + req["feature"].rsplit("/", 1)[-1].replace("-", " ").title().replace(" Of ", " of ").replace(" The ", " the ")
+            return msg("disabled-requires", name=req["feature"].rsplit("/", 1)[-1].replace("-", " ").title().replace(" Of ", " of ").replace(" The ", " the "))
         if kind == "spell" and req.get("spell", "").rsplit("/", 1)[-1] not in cantrips:
-            return "requires the " + req["spell"].rsplit("/", 1)[-1].replace("-", " ") + " cantrip"
+            return msg("disabled-requires-cantrip", spell=req["spell"].rsplit("/", 1)[-1].replace("-", " "))
     return None
 
 
@@ -2643,7 +2643,7 @@ def _gate_duplicate_picks(choices: list[dict], catalog: Catalog, class_order: li
         labels = {o["id"]: o["label"] for o in c["options"]}
         picks = [(s, *key_and_name(group, s, labels.get(s, s))) for s in c["selected"]]  # (id, key, name, feat source)
         if modifiable:
-            options = [{**o, "disabled": True, "disabledReason": f"already taken ({taken[key]})"}
+            options = [{**o, "disabled": True, "disabledReason": msg("disabled-already-taken-from", where=taken[key])}
                        if (key := key_and_name(group, o["id"], o["label"])[0]) in taken and not o.get("disabled") else o
                        for o in c["options"]]
             dropped = [p for p in picks if p[1] in taken]
@@ -2961,6 +2961,8 @@ def _resolve_species_selected_feats(template: dict, species_choices: dict, catal
         if not feat:
             continue
         if option.get("disabled"):
+            # `disabledReason` is a Msg (a str subclass whose text is the English wording), so this plain text check
+            # still works; do not rebuild it with `+` / f-strings or the tag is lost (tests/test_i18n_disabled.py)
             if str(option.get("disabledReason")).startswith("already taken"):
                 problems.append({
                     "id": f"feat-duplicate-{feat['index']}-{template['id']}",
@@ -3187,14 +3189,14 @@ def _race_entry_met(entry: dict, held: "_HeldFeatState") -> bool:
     return not subrace or (isinstance(subrace, str) and _race_name_key(subrace) in held.subrace_names)
 
 
-def _race_entry_phrase(entry: dict) -> str:
+def _race_entry_phrase(entry: dict):
     if entry.get("displayEntry") and isinstance(entry["displayEntry"], str):
         return entry["displayEntry"]
     name = entry["name"].title()
     subrace = entry.get("subrace")
     if isinstance(subrace, str) and subrace:
         name = f"{subrace.title()} {name}"
-    return f"a {name} character"
+    return msg("prereq-race", name=name)
 
 
 def _feat_prerequisite_alt_met(
@@ -3521,55 +3523,65 @@ def _feat_prerequisite_unmet_reason(
         return None
     if any(_feat_prerequisite_alt_met(alt, total_level, scores, held) for alt in prereq):
         return None
-    reason = "prerequisite not met"
     if len(prereq) == 1:
         parts = _feat_prerequisite_failing_parts(prereq[0], total_level, scores, held, catalog)
         if parts:
-            reason += ": requires " + "; ".join(parts)
-    return reason
+            return msg("disabled-prereq-unmet-requires", parts=parts)
+    return msg("disabled-prereq-unmet")
+
+
+def _armor_category_msg(value):
+    """The armor category word of an armor proficiency prerequisite ("light" / "medium" / "heavy") as a nested message."""
+    if value == "light":
+        return msg("armor-category-light")
+    if value == "medium":
+        return msg("armor-category-medium")
+    return msg("armor-category-heavy")
 
 
 def _feat_prerequisite_failing_parts(
     alt: dict, total_level: int, scores: dict[str, int], held: "_HeldFeatState | None", catalog: Catalog | None,
 ) -> list[str]:
-    parts: list[str] = []
+    parts: list = []
     level_req = alt.get("level")
     if isinstance(level_req, int) and total_level < level_req:
-        parts.append(f"character level {level_req}")
+        parts.append(msg("prereq-level", level=level_req))
     ability_req = alt.get("ability")
     if ability_req and not _feat_prerequisite_alt_met({"ability": ability_req}, total_level, scores, held):
-        parts.append(" or ".join(
+        parts.append(msg("prereq-any-of", items=[
             f"{ab.upper()} {minimum}"
             for entry in ability_req if isinstance(entry, dict) for ab, minimum in entry.items()
-        ))
+        ]))
     if alt.get("spellcasting2020") and not (held and held.has_spellcasting_feature):
-        parts.append("the Spellcasting or Pact Magic feature")
+        parts.append(msg("prereq-spellcasting-or-pact"))
     if "feature" in alt and not (held and _feature_prerequisite_met(alt["feature"], held)):
         parts.append(
-            "the Fighting Style feature" if alt["feature"] == ["Fighting Style"] else "the Spellcasting or Pact Magic feature"
+            msg("prereq-fighting-style") if alt["feature"] == ["Fighting Style"] else msg("prereq-spellcasting-or-pact")
         )
     if alt.get("spellcastingFeature") and not (held and held.has_spellcasting_feature):
-        parts.append("the Spellcasting feature")
+        parts.append(msg("prereq-spellcasting"))
     if alt.get("spellcasting") and not (held and held.can_cast_spell):
-        parts.append("the ability to cast at least one spell")
+        parts.append(msg("prereq-cast-spell"))
     if "race" in alt and not (held and any(_race_entry_met(e, held) for e in alt["race"])):
-        parts.append(" or ".join(_race_entry_phrase(e) for e in alt["race"]))
+        parts.append(msg("prereq-any-of", items=[_race_entry_phrase(e) for e in alt["race"]]))
     if "featCategory" in alt and not any(c in (held.feat_categories if held else ()) for c in alt["featCategory"]):
-        parts.append("a Dragonmark feat" if alt["featCategory"] == ["D"] else "a feat of a required category")
+        parts.append(msg("prereq-dragonmark") if alt["featCategory"] == ["D"] else msg("prereq-feat-category"))
     for entry in alt.get("proficiency", []):
         satisfiers = _PROFICIENCY_PREREQ_SATISFIERS[_proficiency_entry_key(entry)]
         if not (held and held.proficiency_ids & satisfiers):
             kind, value = _proficiency_entry_key(entry)
             if kind == "weaponGroup":
-                parts.append("martial weapon proficiency")
+                parts.append(msg("prereq-martial"))
+            elif value == "shield":
+                parts.append(msg("prereq-shield"))
             else:
-                parts.append(f"{value} armor proficiency" if value != "shield" else "shield proficiency")
+                parts.append(msg("prereq-armor-proficiency", category=_armor_category_msg(value)))
     if "feat" in alt and not _feat_prerequisite_alt_met({"feat": alt["feat"]}, total_level, scores, held):
         names = []
         for ref in alt["feat"]:
             record = (catalog.feats.get(_feat_ref_index(ref)) if catalog else None)
-            names.append(f"the {record['name']} feat" if record else f"the {ref.partition('|')[0].title()} feat")
-        parts.append(" or ".join(names))
+            names.append(msg("prereq-feat", name=record["name"] if record else ref.partition("|")[0].title()))
+        parts.append(msg("prereq-any-of", items=names))
     return parts
 
 
@@ -3617,7 +3629,7 @@ def _asi_choice_templates(
             option = {"id": option_id, "label": _asi_option_label(deltas), "group": "asi"}
             if asi_mod.asi_exceeds_cap(deltas, current_scores):
                 option["disabled"] = True
-                option["disabledReason"] = "would exceed the ability score cap of 20"
+                option["disabledReason"] = msg("disabled-ability-cap-20")
             options.append(option)
         for feat, option in _feat_options(general_feats, ruleset):
             if feat.get("_hidden_by_filters"):
@@ -3837,7 +3849,7 @@ def _fighting_style_templates(
 # (`_asi_origin` = `<card cid>:<feat index>`, `_asi_level` 2) plus `_inv_cid`, so cid prefixes, cascaded choices and
 # sheet.feats work.
 LESSONS_LEVEL = 2
-_LESSONS_REASON = "already chosen for Lessons of the First Ones"
+_LESSONS_REASON = msg("disabled-already-chosen-lessons")
 
 
 def _lessons_slots(catalog: Catalog, resolved_classes: list[dict], ruleset: str) -> dict[int, list[tuple[str, str]]]:
@@ -4122,7 +4134,7 @@ def _apply_secrets_cap(catalog: Catalog, tpl: dict, cls_id: str, cap: int, store
     def off_list(option_id: str) -> bool:
         return option_id not in on_list and not any(c["index"] == cls_id for c in (catalog.spells.get(option_id) or {}).get("classes", []))
 
-    reason = f"Magical Secrets: {cap} of {cap} used"
+    reason = msg("disabled-magical-secrets-used", cap=cap)
     valid = {o["id"] for o in tpl["options"] if not o.get("disabled")}
     stored_ids = [x for x in dict.fromkeys(stored if isinstance(stored, list) else []) if isinstance(x, str) and x in valid]
     accepted, used, excess = [], 0, []
@@ -4245,12 +4257,11 @@ def _apply_school_limit(
     picked = [x for x in dict.fromkeys(stored if isinstance(stored, list) else []) if isinstance(x, str) and x in valid]
     picked = picked[: tpl["count"]]
     outside = [x for x in picked if not inside(x)]
-    names = " or ".join(limit["schools"])
     if len(outside) >= free:
         for opt in tpl["options"]:
             if opt["group"] == "any-school" and not opt.get("disabled") and opt["id"] not in picked:
                 opt["disabled"] = True
-                opt["disabledReason"] = f"only {free} spell(s) may come from outside {names} at this level"
+                opt["disabledReason"] = msg("disabled-school-limit", free=free, schools=list(limit["schools"]))
     if len(outside) > free and problems_out is not None:
         problems_out.append({
             "id": f"subclass-spell-school-limit-{cls_id}",
@@ -4409,7 +4420,7 @@ def _spell_choice_templates(
             for opt in tpl["options"]:
                 if opt["id"] in always_ids:
                     opt["disabled"] = True
-                    opt["disabledReason"] = f"always prepared ({always_ids[opt['id']]})"
+                    opt["disabledReason"] = msg("disabled-always-prepared", source=always_ids[opt["id"]])
             templates.append(tpl)
 
     known_count = spells_mod.known_spell_count(level_row, ability_modifier, class_level=class_level, cls_id=cls_id)
@@ -4439,7 +4450,7 @@ def _spell_choice_templates(
                 for opt in book_tpl["options"]:  # the spellbook card may not repeat a free Savant spell
                     if opt["id"] in savant_picks and not opt.get("disabled"):
                         opt["disabled"] = True
-                        opt["disabledReason"] = f"chosen as {savant_tpl['label']}"
+                        opt["disabledReason"] = msg("disabled-chosen-as", label=savant_tpl["label"])
                 wizard_book = wizard_book + [x for x in savant_picks if x not in wizard_book]
     # C6d (2024): Wizard 18 Spell Mastery / Wizard 20 Signature Spells; their picks are always prepared
     pick_templates: list[dict] = []
@@ -4499,7 +4510,7 @@ def _spell_choice_templates(
             for opt in tpl["options"]:
                 if opt["id"] in always_ids:
                     opt["disabled"] = True
-                    opt["disabledReason"] = f"always prepared ({always_ids[opt['id']]})"
+                    opt["disabledReason"] = msg("disabled-always-prepared", source=always_ids[opt["id"]])
             if school_limit:
                 _apply_school_limit(catalog, tpl, school_limit, class_level, cls_id,
                                     (class_choices or {}).get(cid), problems_out)
@@ -4524,7 +4535,7 @@ def _mastery_filter_reason(cls_id: str, item: dict) -> str | None:
     weapon); F3a-8: the XPHB Rogue text is "two kinds of weapons of your choice with which you have
     proficiency", so only the proficiency gate limits the Rogue."""
     if cls_id == "barbarian" and item.get("weapon_range") != "Melee":
-        return "melee weapons only"
+        return msg("disabled-melee-only")
     return None
 
 
@@ -4581,10 +4592,10 @@ def _gate_mastery_choices(choices: list[dict], catalog: Catalog, proficient_weap
             item = catalog.items.get(o["id"])
             if item and not o.get("disabled") and not attacks_mod.weapon_is_proficient(item, proficient_weapons):
                 lacking[o["id"]] = o["label"]
-                o = {**o, "disabled": True, "disabledReason": "not proficient"}
+                o = {**o, "disabled": True, "disabledReason": msg("disabled-not-proficient")}
             elif is_feat and not o.get("disabled") and o["id"] in mastered:
                 repeated[o["id"]] = o["label"]
-                o = {**o, "disabled": True, "disabledReason": "already mastered"}
+                o = {**o, "disabled": True, "disabledReason": msg("disabled-already-mastered")}
             options.append(o)
         dup = [repeated[s] for s in c["selected"] if s in repeated and s not in lacking]
         if dup:
@@ -4821,7 +4832,7 @@ def _apply_background_overlap(class_templates: list[dict], bg: dict | None) -> N
         for opt in tpl["options"]:
             if opt["id"] in granted:
                 opt["disabled"] = True
-                opt["disabledReason"] = f"already granted by {bg['name']}"
+                opt["disabledReason"] = msg("disabled-granted-by", name=bg["name"])
 
 
 def _apply_species_overlap(class_templates: list[dict], race: dict | None, subrace: dict | None, catalog: Catalog) -> None:
@@ -4849,7 +4860,7 @@ def _apply_species_overlap(class_templates: list[dict], race: dict | None, subra
         for opt in tpl["options"]:
             if opt["id"] in granted:
                 opt["disabled"] = True
-                opt["disabledReason"] = f"already granted by {race['name']}"
+                opt["disabledReason"] = msg("disabled-granted-by", name=race["name"])
 
 
 def _class_feature_list(
@@ -5544,7 +5555,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                     label = held_names.get("name:" + names.get(opt["id"], "\0"))
                     if label is not None:
                         opt["disabled"] = True
-                        opt["disabledReason"] = f"already taken ({label})"
+                        opt["disabledReason"] = msg("disabled-already-taken-from", where=label)
         choice_templates += _fighting_style_templates(  # C3
             catalog, rc, rc_fs_slots, draft.get("sources"), ruleset, total_level, final_scores, use_feat_prereqs, held,
             fs_taken_by_cid,
@@ -5996,7 +6007,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                     if o.get("disabled") and o["id"] in raw_selected:
                         pruned.append({"choiceId": tpl["id"], "reason": msg(
                             "pruned-asi-option-closed", label=tpl["label"], option=o["label"],
-                            why=o.get("disabledReason", "not available"))})
+                            why=o.get("disabledReason", msg("disabled-not-available")))})
             if tpl["source"]["kind"] == "feat" and tpl["id"].endswith(":ability-bonus"):
                 # FE2 (B9): a stored pick of an option closed by the feat's ability cap is reported, not lost silently.
                 closed = [o for o in tpl["options"] if o.get("disabled") and o["id"] in raw_selected]
@@ -6004,7 +6015,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                     pruned.append({
                         "choiceId": tpl["id"],
                         "reason": msg("pruned-ability-closed", label=tpl["label"], items=[
-                            msg("pruned-ability-closed-item", ab=o["id"].upper(), why=o.get("disabledReason", "not available"))
+                            msg("pruned-ability-closed-item", ab=o["id"].upper(), why=o.get("disabledReason", msg("disabled-not-available")))
                             for o in closed]),
                     })
             if len(selected) > tpl["count"]:

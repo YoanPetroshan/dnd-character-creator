@@ -114,7 +114,7 @@ def savant_template(catalog, rc: dict, ruleset: str, max_slot: int, book_ids: li
         for o in options:
             if o["id"] in in_book:
                 o["disabled"] = True
-                o["disabledReason"] = "already in your spellbook"
+                o["disabledReason"] = msg("disabled-in-spellbook")
         count = len(entries)
         level = record.get("level") or 1
         return {
@@ -175,7 +175,7 @@ def gate_improved_illusions(choices: list[dict], catalog, innate_ids) -> list[di
         if card["selected"]:
             pruned.append({"choiceId": card["id"], "reason": msg("pruned-minor-illusion-required", label=card["label"])})
         return pruned
-    options = [o if o.get("disabled") or o["id"] not in held else {**o, "disabled": True, "disabledReason": "already known"}
+    options = [o if o.get("disabled") or o["id"] not in held else {**o, "disabled": True, "disabledReason": msg("disabled-already-known")}
                for o in card["options"]]
     kept = [s for s in card["selected"] if s not in held]
     dropped = [s for s in card["selected"] if s in held]
@@ -206,7 +206,7 @@ def discoveries_template(catalog, rc: dict, ruleset: str, max_slot: int, taken: 
         for o in options:
             if o["id"] in taken:
                 o["disabled"] = True
-                o["disabledReason"] = f"always prepared ({taken[o['id']]})"
+                o["disabledReason"] = msg("disabled-always-prepared", source=taken[o["id"]])
         level = record.get("level") or 1
         tpl = {"id": card_id(rc["cls_id"], level, fid), "source": _source(rc, level), "label": record["name"],
                "description": _join(record.get("desc")), "count": len(entries), "options": options}

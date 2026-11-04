@@ -282,7 +282,7 @@ def gate_languages(choices: list[dict], fixed_languages, class_order: list[str] 
             return
         known_here = known | known_before | {l for p, l in positioned if p <= here}
         options = [o if o.get("disabled") or o["id"] not in known_here
-                   else {**o, "disabled": True, "disabledReason": "already known"} for o in c["options"]]
+                   else {**o, "disabled": True, "disabledReason": msg("disabled-already-known")} for o in c["options"]]
         enabled = {o["id"] for o in options if not o.get("disabled")}
         kept = [s for s in c["selected"] if s in enabled][: c["count"]]
         dropped = [s for s in c["selected"] if s not in kept]
@@ -324,7 +324,7 @@ def gate_languages(choices: list[dict], fixed_languages, class_order: list[str] 
         known_here = known | {lang for pos, lang in positioned if pos <= here}
         options = [
             o if o.get("disabled") or o["id"] not in known_here
-            else {**o, "disabled": True, "disabledReason": "already known"}
+            else {**o, "disabled": True, "disabledReason": msg("disabled-already-known")}
             for o in c["options"]
         ]
         enabled = {o["id"] for o in options if not o.get("disabled")}
@@ -440,7 +440,7 @@ def gate_after_positioned_pick(choices: list[dict], class_order, pos: tuple[int,
         hit = [o["id"] for o in c["options"] if o["id"] in granted]
         if here is None or here <= pos or not hit:
             continue
-        options = [o if o["id"] not in granted or o.get("disabled") else {**o, "disabled": True, "disabledReason": "already proficient"}
+        options = [o if o["id"] not in granted or o.get("disabled") else {**o, "disabled": True, "disabledReason": msg("disabled-already-proficient")}
                    for o in c["options"]]
         kept = [s for s in c["selected"] if s not in granted]
         if len(kept) != len(c["selected"]):
@@ -461,7 +461,7 @@ def gate_primal_knowledge(choices: list[dict], proficient_skills: set[str]) -> l
             continue
         options = [
             o if o.get("disabled") or o["id"] not in proficient_skills
-            else {**o, "disabled": True, "disabledReason": "already proficient"}
+            else {**o, "disabled": True, "disabledReason": msg("disabled-already-proficient")}
             for o in c["options"]
         ]
         enabled = {o["id"] for o in options if not o.get("disabled")}
@@ -597,7 +597,7 @@ def gate_additional_secrets(choices: list[dict], catalog) -> list[dict]:
     held = {s for i in others for s in choices[i]["selected"]}
     c = choices[secrets]
     pruned: list[dict] = []
-    options = [o if o.get("disabled") or o["id"] not in held else {**o, "disabled": True, "disabledReason": "already known"}
+    options = [o if o.get("disabled") or o["id"] not in held else {**o, "disabled": True, "disabledReason": msg("disabled-already-known")}
                for o in c["options"]]
     kept = [s for s in c["selected"] if s not in held]
     dropped = [s for s in c["selected"] if s in held]
@@ -609,7 +609,7 @@ def gate_additional_secrets(choices: list[dict], catalog) -> list[dict]:
     for i in others:
         o_card = choices[i]
         opts = [o if o.get("disabled") or o["id"] not in taken
-                else {**o, "disabled": True, "disabledReason": f"chosen as {spec['label']}"} for o in o_card["options"]]
+                else {**o, "disabled": True, "disabledReason": msg("disabled-chosen-as", label=spec["label"])} for o in o_card["options"]]
         choices[i] = {**o_card, "options": opts}
     return pruned
 
@@ -623,7 +623,7 @@ def gate_positioned_card(choices: list[dict], card_id: str, prior: set[str]) -> 
         if c["id"] != card_id:
             continue
         options = [o if o.get("disabled") or o["id"] not in prior
-                   else {**o, "disabled": True, "disabledReason": "already proficient"} for o in c["options"]]
+                   else {**o, "disabled": True, "disabledReason": msg("disabled-already-proficient")} for o in c["options"]]
         kept = [s for s in c["selected"] if s not in prior]
         dropped = [s for s in c["selected"] if s in prior]
         if dropped:
@@ -1019,29 +1019,31 @@ def _invocation_unmet_2024(catalog, option_id: str, level: int, selected: set[st
     rec = catalog.features.get(invocation_base_id(option_id)) or {}
     pre = rec.get("prerequisite_2024") or {}
     if (pre.get("level") or 0) > level:
-        return f"requires warlock level {pre['level']}"
+        return msg("disabled-requires-warlock-level", level=pre["level"])
     bases = {invocation_base_id(s) for s in selected}
     for need in pre.get("optional_features") or []:
         if need not in bases:
-            return "requires " + (catalog.features.get(need) or {}).get("name", need)
+            return msg("disabled-requires", name=(catalog.features.get(need) or {}).get("name", need))
     kind = pre.get("cantrip")
     if kind:
         test = spell_attack_roll if kind == "attack" else spell_deals_damage
         if not any(test(catalog.spells.get(c) or {}) for c in cantrips):
-            return ("requires a Warlock cantrip that requires an attack roll" if kind == "attack"
-                    else "requires a Warlock cantrip that deals damage")
+            return (msg("disabled-requires-attack-cantrip") if kind == "attack"
+                    else msg("disabled-requires-damage-cantrip"))
     k = invocation_instance(option_id)
     if k > 1:
         prev = invocation_base_id(option_id) + ("" if k == 2 else f"~{k - 1}")
         if prev not in selected:
-            return f"take {rec.get('name', 'it')}{'' if k == 2 else f' ({k - 1})'} first"
+            if k == 2:
+                return msg("disabled-take-first", name=rec.get("name", "it"))
+            return msg("disabled-take-first-n", name=rec.get("name", "it"), n=k - 1)
     base = invocation_base_id(option_id)
     if base in _TARGET_KIND:
         # F3a-2a: instance k needs k different eligible cantrips (the same check the target cards use, incl.
         # Eldritch Spear's range), or its target card could never be completed.
         eligible = {c for c in cantrips if c in catalog.spells and not _target_reason(catalog, base, catalog.spells[c])}
         if len(eligible) < k:
-            return "needs another eligible cantrip" if k > 1 else "needs an eligible cantrip"
+            return msg("disabled-needs-another-cantrip") if k > 1 else msg("disabled-needs-cantrip")
     return None
 
 
@@ -1258,11 +1260,11 @@ def _target_source(rc: dict) -> dict:
 def _target_reason(catalog, base_id: str, spell: dict) -> str | None:
     from engine.spells import spell_attack_roll, spell_deals_damage
     if _TARGET_KIND[base_id] == "attack":
-        return None if spell_attack_roll(spell) else "does not require an attack roll"
+        return None if spell_attack_roll(spell) else msg("disabled-target-no-attack-roll")
     if not spell_deals_damage(spell):
-        return "does not deal damage"
+        return msg("disabled-target-no-damage")
     if base_id == SPEAR_ID and (spell_range_feet(spell) or 0) < SPEAR_MIN_RANGE_FEET:
-        return "range is under 10 feet"
+        return msg("disabled-target-short-range")
     return None
 
 
@@ -1293,7 +1295,7 @@ def target_templates(catalog, rc: dict | None, instances: list[str], candidates:
             reason = _target_reason(catalog, base, catalog.spells[sid])
             other = next((o for o in chosen if o != inst and invocation_base_id(o) == base and chosen[o] == sid), None)
             if reason is None and other:
-                reason = f"already chosen for {instance_label(catalog, other)}"
+                reason = msg("disabled-already-chosen-for", name=instance_label(catalog, other))
             if reason:
                 opt.update(disabled=True, disabledReason=reason)
             options.append(opt)
@@ -1331,7 +1333,7 @@ def tome_templates(catalog, rc: dict | None, instances: list[str], spell_options
             sid = o["item"]["index"]
             opt = {"id": sid, "label": o["item"]["name"]}
             if sid in owned:
-                opt.update(disabled=True, disabledReason="already prepared")
+                opt.update(disabled=True, disabledReason=msg("disabled-already-prepared"))
             options.append(opt)
         out.append({
             "id": dependent_cid(TOME_ID, kind, holder["prefix"] if holder else DEPENDENT_PREFIX),
