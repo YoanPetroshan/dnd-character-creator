@@ -29,6 +29,12 @@ CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
 
 _catalog = load_catalog()
 
+# Contract versions reported by /api/health (docs/API.md). API_VERSION changes when a request or
+# response shape changes incompatibly; DRAFT_VERSION is the draft shape this server understands and
+# must equal DRAFT_VERSION in frontend/src/logic/draft.ts (a test pins the two together).
+API_VERSION = 1
+DRAFT_VERSION = 2
+
 
 @app.errorhandler(Exception)
 def handle_unexpected(exc):
@@ -41,9 +47,31 @@ def handle_unexpected(exc):
     return jsonify({"error": "The server couldn't process this character. Check the draft and try again."}), 500
 
 
+def _bundle_sha256() -> str | None:
+    """Full bundle_sha256 of the vendored data when the bundle is the active source, else None."""
+    import json
+    from catalog.official.paths import BUNDLED_DIR, data_source
+
+    if data_source() != "bundled":
+        return None
+    try:
+        return json.loads((BUNDLED_DIR / "MANIFEST.json").read_text(encoding="utf-8"))["bundle_sha256"]
+    except (OSError, ValueError, KeyError):
+        return None
+
+
 @app.route("/api/health")
 def health():
-    return jsonify({"ok": True})
+    """Liveness plus the contract versions. `ok` is the original field; old consumers that read only it keep working."""
+    from catalog.official.paths import data_source
+
+    return jsonify({
+        "ok": True,
+        "apiVersion": API_VERSION,
+        "draftVersion": DRAFT_VERSION,
+        "dataSource": data_source(),
+        "bundleSha256": _bundle_sha256(),
+    })
 
 
 def _json_draft() -> dict | None:

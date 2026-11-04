@@ -29,7 +29,7 @@ def test_static_asset_served(client):
 
 
 def test_api_routes_unaffected(client):
-    assert client.get("/api/health").get_json() == {"ok": True}
+    assert client.get("/api/health").get_json()["ok"] is True
     assert client.post("/api/resolve", json={}).status_code == 200
 
 

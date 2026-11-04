@@ -330,6 +330,7 @@ export const en: Copy = {
     storageFailed:
       "The draft cannot be saved in the browser (storage is full or blocked). Download it from Home as a file so you do not lose it.",
     pruned: (n: number) => `Dropped choices: ${n}.`,
+    serverOlder: "The server is an older version than the app and may not understand all of the character's data. Update the server.",
     seeInHome: "See in Home",
   },
 

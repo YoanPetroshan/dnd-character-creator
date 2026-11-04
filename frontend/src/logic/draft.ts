@@ -1,6 +1,7 @@
 // Pure draft logic moved out of DraftContext (SK1): no React, importable from tests.
 import type { Ability, ChoiceSourceKind, Draft, Ruleset } from "../types";
 import { MsgError, msg } from "./messages";
+import { migrateDraft } from "./migrations";
 
 /** Bump when the draft shape changes incompatibly. Stored/imported drafts
  *  with a NEWER version than this build are rejected rather than guessed at.
@@ -343,6 +344,6 @@ export function mergeDraft(stored: unknown): Draft {
   }
   // an arbitrary JSON object (e.g. an exported sheet) is not a draft: demand at least one draft key
   if (!DRAFT_KEYS.some((k) => k in stored)) throw new MsgError(msg("draft.notRecognised"));
-  const merged = mergeInto(emptyDraft, stored) as Draft;
+  const merged = mergeInto(emptyDraft, migrateDraft(stored, DRAFT_VERSION)) as Draft;
   return sanitizeDraft({ ...merged, draftVersion: DRAFT_VERSION });
 }

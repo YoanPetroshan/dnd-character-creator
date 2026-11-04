@@ -29,7 +29,7 @@ Theme switch: override tokens on `:root[data-theme="..."]` (nothing sets `data-t
 - `data-state` = the UI state of an element, one value per element:
   - choice card: `expanded | collapsed`
   - option row in a picker: `available | disabled | hidden-by-filters`
-  - status banner: `error | notice | storage-failed | pruned`
+  - status banner: `error | notice | storage-failed | server-older | pruned`
   - pruned-selection list item (Home): `pruned`
   - export button: `ready | busy | disabled`; export error line: `error`
   - language button: `active | inactive`

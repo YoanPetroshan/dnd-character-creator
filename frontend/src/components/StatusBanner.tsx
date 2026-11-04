@@ -3,6 +3,9 @@ import { useDraft } from "../DraftContext";
 import { useT } from "../LanguageContext";
 import { renderMsg } from "../logic/messages";
 import { useResolutionContext } from "../ResolutionContext";
+import { DRAFT_VERSION } from "../logic/draft";
+import { serverIsOlder } from "../logic/serverHealth";
+import { useServerHealth } from "../useServerHealth";
 
 /** App-wide status lines shown on every page: a failed /api/resolve (the last
  *  good resolution stays on screen), a draft that could not be stored or
@@ -11,6 +14,7 @@ export function StatusBanner() {
   const t = useT();
   const { notices, storageFailed, dismissNotice, unsavedRaw } = useDraft();
   const { resolution, error, retry } = useResolutionContext();
+  const health = useServerHealth();
   const prunedCount = resolution?.pruned.length ?? 0;
   return (
     <>
@@ -44,6 +48,11 @@ export function StatusBanner() {
       {storageFailed && (
         <p className="status-banner" role="status" data-state="storage-failed">
           {t.status.storageFailed}
+        </p>
+      )}
+      {serverIsOlder(health, DRAFT_VERSION) && (
+        <p className="status-banner" role="status" data-state="server-older">
+          {t.status.serverOlder}
         </p>
       )}
       {prunedCount > 0 && (

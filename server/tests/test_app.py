@@ -30,7 +30,7 @@ def _fighter_acolyte_human_draft():
 def test_health(client):
     resp = client.get("/api/health")
     assert resp.status_code == 200
-    assert resp.get_json() == {"ok": True}
+    assert resp.get_json()["ok"] is True  # full shape: test_api_contract.py
 
 
 def test_resolve_empty_draft_is_valid_not_an_error(client):
