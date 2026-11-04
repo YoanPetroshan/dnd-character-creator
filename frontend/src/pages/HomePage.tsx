@@ -9,6 +9,7 @@ import { useCatalogContext } from "../CatalogContext";
 import { safeFilename, shareOrDownload } from "../logic/files";
 import { sourceOn, toggleSource } from "../logic/sources";
 import type { Ruleset } from "../types";
+import { formatDateTime } from "../logic/formatDate";
 
 export function HomePage() {
   const t = useT();
@@ -91,7 +92,7 @@ export function HomePage() {
                 ` — ${t.home.itemSummary(item.classes.length ? item.classes.map((c) => `${className(c.classId)} ${c.level}`).join(", ") : t.home.noClass, item.totalLevel)}`}
               {" — "}
               <time dateTime={new Date(item.updatedAt).toISOString()}>
-                {t.home.updated(new Date(item.updatedAt).toLocaleString(t.common.dateLocale))}
+                {t.home.updated(formatDateTime(item.updatedAt, t.common.dateLocale))}
               </time>{" "}
               {!active && (
                 <button type="button" onClick={() => library.openCharacter(item.id)}>
