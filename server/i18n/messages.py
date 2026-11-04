@@ -81,7 +81,7 @@ def template_fields(template: str) -> set[str]:
     return names
 
 
-def msg(key: str, **params: Any) -> Msg:
+def msg(key: str, /, **params: Any) -> Msg:
     """A `Msg` for `key`: its text is the English template filled in with `params` (nested `Msg` params render as
     their English text). An unknown key is a programming error and raises KeyError."""
     return Msg(format_template(MESSAGES[key]["en"], params), key, params)

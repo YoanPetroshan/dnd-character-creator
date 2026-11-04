@@ -26,6 +26,7 @@ from typing import Callable
 
 from catalog import reference_data
 from engine import class_choices_2024, subclass_options_2024
+from i18n.messages import msg
 
 UNLIMITED_ROW_VALUE = 9999  # SRD level rows store "unlimited" as 9999 (Barbarian 20 rages)
 
@@ -53,7 +54,7 @@ class Ctx:
             if not self._warned and self.warnings_out is not None:
                 self.warnings_out.append({
                     "id": "class-2024-tables-missing",
-                    "message": "The 2024 class tables are not available; class resources use the 2014 numbers.",
+                    "message": msg("class-2024-tables-missing"),
                 })
             self._warned = True
             return None
@@ -71,7 +72,7 @@ class Ctx:
             if not self._warned_sub and self.warnings_out is not None:
                 self.warnings_out.append({
                     "id": "subclass-2024-tables-missing",
-                    "message": "The 2024 subclass tables are not available; subclass resources use the 2014 formulas.",
+                    "message": msg("subclass-2024-tables-missing"),
                 })
             self._warned_sub = True
             return None

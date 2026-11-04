@@ -58,6 +58,7 @@ from dataclasses import dataclass, field
 from catalog import feat_effects_data, reference_data
 from catalog.choices import build_choice_template, build_equipment_choice, pack_quantities, pack_units
 from catalog.loader import Catalog
+from i18n.messages import msg
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
 from catalog.reference_data import (
     ABILITIES, HEAVY_ARMOR_SPEED_EXEMPT_RACES, HEAVY_ARMOR_SPEED_EXEMPT_TRAITS, SPECIFIC_WEAPON_PROFICIENCY_IDS, SRD_TRAIT_EFFECTS, SUBCLASS_PROFICIENCIES, SUBCLASS_EXTRA_FEATURES,
@@ -105,17 +106,17 @@ def _ability_method_problems(abilities: dict) -> list[dict]:
     out: list[dict] = []
     if method == "pointbuy":
         if any(not 8 <= v <= 15 for v in scores):
-            out.append({"id": "point-buy-out-of-range", "message": "Point buy scores must be between 8 and 15."})
+            out.append({"id": "point-buy-out-of-range", "message": msg("point-buy-out-of-range")})
         else:
             spent = sum(_POINT_BUY_COST[v] for v in scores)
             if spent > 27:
-                out.append({"id": "point-buy-over-budget", "message": f"Point buy allows 27 points but these scores cost {spent}."})
+                out.append({"id": "point-buy-over-budget", "message": msg("point-buy-over-budget", spent=spent)})
     elif method == "standard":
         if scores != [10] * 6 and sorted(scores, reverse=True) != _STANDARD_ARRAY:
-            out.append({"id": "standard-array-mismatch", "message": "The standard array is 15, 14, 13, 12, 10, 8, each used once."})
+            out.append({"id": "standard-array-mismatch", "message": msg("standard-array-mismatch")})
     elif method == "roll":
         if any(not 3 <= v <= 18 for v in scores):
-            out.append({"id": "roll-out-of-range", "message": "Rolled scores (4d6, drop the lowest) must be between 3 and 18."})
+            out.append({"id": "roll-out-of-range", "message": msg("roll-out-of-range")})
     return out
 
 
@@ -157,31 +158,31 @@ def _asi_policy(ruleset: str, race: dict | None, subrace: dict | None, bg: dict 
         if bg_has:
             warnings.append({
                 "id": "ruleset-2014-background-asi-ignored",
-                "message": f"{bg['name']} is a 2024 background; under the 2014 rules its ability score increase is ignored.",
+                "message": msg("ruleset-2014-background-asi-ignored", name=bg["name"]),
             })
         return True, False, warnings
     if ruleset == "2024":
         if species_has:
             warnings.append({
                 "id": "ruleset-2024-species-asi-ignored",
-                "message": "Under the 2024 rules ability scores come from the background; the species' ability score increase is ignored.",
+                "message": msg("ruleset-2024-species-asi-ignored"),
             })
         if bg:
             if not bg_has:
                 warnings.append({
                     "id": "ruleset-2024-background-no-asi",
-                    "message": f"{bg['name']} is a 2014 background and grants no ability score increase under the 2024 rules.",
+                    "message": msg("ruleset-2024-background-no-asi", name=bg["name"]),
                 })
             if not (bg.get("feats") or bg.get("feat_options") or bg.get("feat_grants")):
                 warnings.append({
                     "id": "ruleset-2024-background-no-origin-feat",
-                    "message": f"{bg['name']} grants no Origin feat, which the 2024 rules expect from a background.",
+                    "message": msg("ruleset-2024-background-no-origin-feat", name=bg["name"]),
                 })
         return False, True, warnings
     if bg_has and species_has:
         warnings.append({
             "id": "asi-double-dip-prevented",
-            "message": "The background's ability score increase replaces the species' (both would double-count under the 2024 rules).",
+            "message": msg("asi-double-dip-prevented"),
         })
         return False, True, warnings
     return True, True, warnings
@@ -2967,12 +2968,12 @@ def _resolve_species_selected_feats(template: dict, species_choices: dict, catal
             if str(option.get("disabledReason")).startswith("already taken"):
                 problems.append({
                     "id": f"feat-duplicate-{feat['index']}-{template['id']}",
-                    "message": f"{feat['name']} was already taken, so the pick at {template['source']['label']} isn't applied.",
+                    "message": msg("feat-duplicate-at-source", feat=feat["name"], source=template["source"]["label"]),
                 })
             else:
                 problems.append({
                     "id": f"feat-prerequisite-unmet-{feat['index']}",
-                    "message": f"{feat['name']}'s prerequisite isn't met, so the {template['source']['label']} pick isn't applied.",
+                    "message": msg("feat-prerequisite-unmet-pick", feat=feat["name"], source=template["source"]["label"]),
                 })
             continue
         picked.append(feat)
@@ -3028,7 +3029,7 @@ def _multiclass_prerequisite_problems(resolved_classes: list[dict], final_scores
         if not met:
             problems.append({
                 "id": f"multiclass-prerequisite-unmet-{cls_id}",
-                "message": f"{cls['name']}'s multiclassing prerequisite isn't met.",
+                "message": msg("multiclass-prerequisite-unmet", cls=cls["name"]),
             })
     return problems
 
@@ -3385,7 +3386,7 @@ def _feat_prerequisite_problems(
         if not any(_feat_prerequisite_alt_met(alt, total_level, scores_without_own_bonus) for alt in prereq):
             problems.append({
                 "id": f"feat-prerequisite-unmet-{feat['index']}",
-                "message": f"{feat['name']}'s prerequisite isn't met.",
+                "message": msg("feat-prerequisite-unmet", feat=feat["name"]),
             })
     return problems
 
@@ -4257,7 +4258,7 @@ def _apply_school_limit(
     if len(outside) > free and problems_out is not None:
         problems_out.append({
             "id": f"subclass-spell-school-limit-{cls_id}",
-            "message": f"{len(outside)} known spells are outside {names} but only {free} are allowed at this level.",
+            "message": msg("subclass-spell-school-limit", n=len(outside), school_a=limit["schools"][0], school_b=limit["schools"][-1], free=free),
         })
 
 
@@ -4907,18 +4908,18 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     if classes_raw is None:
         classes_raw = []
     elif not isinstance(classes_raw, list):
-        problems.append({"id": "malformed-classes", "message": "'classes' must be a list."})
+        problems.append({"id": "malformed-classes", "message": msg("malformed-classes")})
         classes_raw = []
     classes = [c for c in classes_raw if isinstance(c, dict)]
     if len(classes) != len(classes_raw):
-        problems.append({"id": "malformed-class-entry", "message": "one or more entries in 'classes' were not objects and were ignored."})
+        problems.append({"id": "malformed-class-entry", "message": msg("malformed-class-entry")})
 
     seen_class_ids: set[str] = set()
     deduped_classes: list[dict] = []
     for c in classes:
         cid_check = c.get("classId")
         if cid_check in seen_class_ids:
-            problems.append({"id": "duplicate-class", "message": f"'{cid_check}' appears more than once in classes — only the first entry is used."})
+            problems.append({"id": "duplicate-class", "message": msg("duplicate-class", cls=cid_check)})
             continue
         if cid_check is not None:
             seen_class_ids.add(cid_check)
@@ -4935,26 +4936,26 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         try:
             entry_level = int(raw_level)
         except (TypeError, ValueError):
-            problems.append({"id": "level-unsupported", "message": f"Level {raw_level!r} for '{entry_cls_id}' isn't a valid number; using 1 instead."})
+            problems.append({"id": "level-unsupported", "message": msg("level-invalid-number", value=raw_level, cls=entry_cls_id)})
             entry_level = 1
         if not (1 <= entry_level <= 20):
-            problems.append({"id": "level-unsupported", "message": f"Level {entry_level} for '{entry_cls_id}' is out of the 1-20 range; using 1 instead."})
+            problems.append({"id": "level-unsupported", "message": msg("level-out-of-range", level=entry_level, cls=entry_cls_id)})
             entry_level = 1
 
         entry_cls = catalog.classes.get(entry_cls_id) if entry_cls_id else None
         if entry_cls and draft.get("ruleset") == "2024":  # C9a: XPHB chassis (raw string, as O2)
             entry_cls = catalog.classes_2024.get(entry_cls_id, entry_cls)
         if entry_cls_id and not entry_cls:
-            problems.append({"id": "unknown-class", "message": f"Unknown class '{entry_cls_id}'."})
+            problems.append({"id": "unknown-class", "message": msg("unknown-class", id=entry_cls_id)})
 
         entry_subclass = catalog.subclasses.get(entry_subclass_id) if entry_subclass_id else None
         if entry_subclass_id and not entry_subclass:
-            problems.append({"id": "unknown-subclass", "message": f"Unknown subclass '{entry_subclass_id}'."})
+            problems.append({"id": "unknown-subclass", "message": msg("unknown-subclass", id=entry_subclass_id)})
             entry_subclass_id = None
         elif entry_subclass and entry_cls_id and entry_subclass.get("class", {}).get("index") != entry_cls_id:
             problems.append({
                 "id": "subclass-mismatch",
-                "message": f"'{entry_subclass['name']}' isn't a subclass of '{entry_cls_id}'.",
+                "message": msg("subclass-mismatch", subclass=entry_subclass["name"], cls=entry_cls_id),
             })
             entry_subclass_id = None
 
@@ -4984,7 +4985,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # resolve(), not the raw, never-used submitted value.
     total_level = sum(rc["level"] for rc in resolved_classes)
     if total_level > 20:
-        problems.append({"id": "total-level-exceeded", "message": f"Total character level {total_level} exceeds the 20-level cap."})
+        problems.append({"id": "total-level-exceeded", "message": msg("total-level-exceeded", total=total_level)})
 
     primary = resolved_classes[0] if resolved_classes else None
     cls_id = primary["cls_id"] if primary else None
@@ -4996,20 +4997,20 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
 
     background_raw = draft.get("background")
     if background_raw is not None and not isinstance(background_raw, dict):
-        problems.append({"id": "malformed-background", "message": "'background' must be an object."})
+        problems.append({"id": "malformed-background", "message": msg("malformed-background")})
         background_raw = {}
     background_dict = background_raw or {}
     bg_id = background_dict.get("id")
     bg = catalog.backgrounds.get(bg_id) if bg_id else None
     if bg_id and not bg:
-        problems.append({"id": "unknown-background", "message": f"Unknown background '{bg_id}'."})
+        problems.append({"id": "unknown-background", "message": msg("unknown-background", id=bg_id)})
     elif bg and not _source_allowed(bg, draft.get("sources")):
         # Round-2 F3: hidden by the Sources filter is a picker filter only
         # (like ruleset); the record still resolves, with a warning. Only ids
         # absent from the full catalog are `unknown-background` problems.
         warnings.append({
             "id": "source-hidden-background",
-            "message": f"'{bg['name']}' comes from a book that is switched off in Sources; it is still applied.",
+            "message": msg("source-hidden", name=bg["name"]),
         })
 
     # Phase 4b Task 6: a background's `feats` field lands on the sheet as a
@@ -5069,29 +5070,29 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # default un-scoped `feat:{index}:...` cids (which would duplicate them).
     species_raw = draft.get("species")
     if species_raw is not None and not isinstance(species_raw, dict):
-        problems.append({"id": "malformed-species", "message": "'species' must be an object."})
+        problems.append({"id": "malformed-species", "message": msg("malformed-species")})
         species_raw = {}
     species = species_raw or {}
     race_id = species.get("id")
     race = catalog.races.get(race_id) if race_id else None
     if race_id and not race:
-        problems.append({"id": "unknown-species", "message": f"Unknown species '{race_id}'."})
+        problems.append({"id": "unknown-species", "message": msg("unknown-species", id=race_id)})
     elif race and not _source_allowed(race, draft.get("sources")):
         warnings.append({
             "id": "source-hidden-species",
-            "message": f"'{race['name']}' comes from a book that is switched off in Sources; it is still applied.",
+            "message": msg("source-hidden", name=race["name"]),
         })
 
     subrace_id = species.get("subspeciesId")
     subrace = catalog.subraces.get(subrace_id) if subrace_id else None
     if subrace_id and not subrace:
-        problems.append({"id": "unknown-subspecies", "message": f"Unknown subspecies '{subrace_id}'."})
+        problems.append({"id": "unknown-subspecies", "message": msg("unknown-subspecies", id=subrace_id)})
     elif subrace and race_id and not race:
         subrace = None  # the species itself is unknown (reported above): no cascading mismatch
     elif subrace and (not race or subrace.get("race", {}).get("index") != race_id):
         problems.append({
             "id": "subspecies-mismatch",
-            "message": f"'{subrace['name']}' isn't a subspecies of the selected species.",
+            "message": msg("subspecies-mismatch", name=subrace["name"]),
         })
         subrace = None
     elif subrace and not _source_allowed(subrace, draft.get("sources")):
@@ -5099,7 +5100,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         # like a source-hidden species it still resolves, with a warning.
         warnings.append({
             "id": "source-hidden-subspecies",
-            "message": f"'{subrace['name']}' comes from a book that is switched off in Sources; it is still applied.",
+            "message": msg("source-hidden", name=subrace["name"]),
         })
 
     # Read here (before the per-class loop) so _asi_choice_templates can use
@@ -5163,7 +5164,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     if ruleset is None:
         ruleset = "mixed"
     elif ruleset not in RULESETS:
-        warnings.append({"id": "ruleset-invalid", "message": f"Unknown ruleset '{ruleset}'; using mixed."})
+        warnings.append({"id": "ruleset-invalid", "message": msg("ruleset-invalid", ruleset=ruleset)})
         ruleset = "mixed"
     if ruleset == "2024":  # RP21: the stored invocation picks follow their repeat instance (`<id>~k`) when the base goes
         for rc in resolved_classes:
@@ -5270,7 +5271,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 if not _feat_offered(feat, draft.get("sources"), ruleset):
                     warnings.append({
                         "id": f"feat-hidden-by-filters-{slot_cid}",
-                        "message": f"{feat['name']} is outside the current ruleset/sources but stays selected.",
+                        "message": msg("feat-hidden-by-filters", feat=feat["name"]),
                     })
             species_feats += picked
             _taken_add(taken_feat_indices, picked)
@@ -5320,43 +5321,43 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     for dup in skipped_srd_styles:  # G1
         problems.append({
             "id": f"fighting-style-duplicate-{dup['option']}-{dup['cid']}",
-            "message": f"{dup['name']} was already taken, so the pick at {dup['cls']['name']} level {dup['level']} isn't applied.",
+            "message": msg("feat-duplicate-at-level", feat=dup["name"], cls=dup["cls"]["name"], level=dup["level"]),
         })
     for dup in skipped_duplicate_fs_feats:
         problems.append({
             "id": f"feat-duplicate-{dup['feat']['index']}-{dup['cid']}",
-            "message": f"{dup['feat']['name']} was already taken, so the pick at {dup['cls']['name']} level {dup['level']} isn't applied.",
+            "message": msg("feat-duplicate-at-level", feat=dup["feat"]["name"], cls=dup["cls"]["name"], level=dup["level"]),
         })
     for fs_feat in fs_feats:
         held.add_feat(fs_feat)
         if not _feat_offered(fs_feat, draft.get("sources"), ruleset):
             warnings.append({
                 "id": f"feat-hidden-by-filters-{fs_feat['_fs_cid']}",
-                "message": f"{fs_feat['name']} is outside the current ruleset/sources but stays selected.",
+                "message": msg("feat-hidden-by-filters", feat=fs_feat["name"]),
             })
     for dup in skipped_duplicate_lessons + skipped_duplicate_ea_lessons:  # C7c, RP20
         problems.append({
             "id": f"feat-duplicate-{dup['feat']['index']}-{dup['cid']}",
-            "message": f"{dup['feat']['name']} was already taken, so the pick at {dup['cls']['name']} level {dup['level']} isn't applied.",
+            "message": msg("feat-duplicate-at-level", feat=dup["feat"]["name"], cls=dup["cls"]["name"], level=dup["level"]),
         })
     for lessons_feat in lessons_feats:
         held.add_feat(lessons_feat)
         if not _feat_offered(lessons_feat, draft.get("sources"), ruleset):
             warnings.append({
                 "id": f"feat-hidden-by-filters-{lessons_feat['_inv_cid']}",
-                "message": f"{lessons_feat['name']} is outside the current ruleset/sources but stays selected.",
+                "message": msg("feat-hidden-by-filters", feat=lessons_feat["name"]),
             })
 
     for dup in skipped_duplicate_asi_feats:
         problems.append({
             "id": f"feat-duplicate-{dup['feat']['index']}-{dup['cid']}",
-            "message": f"{dup['feat']['name']} was already taken, so the pick at {dup['cls']['name']} level {dup['level']} isn't applied.",
+            "message": msg("feat-duplicate-at-level", feat=dup["feat"]["name"], cls=dup["cls"]["name"], level=dup["level"]),
         })
     for pick in asi_feat_picks:
         if not _asi_feat_in_pool(pick, draft.get("sources"), ruleset, pick["_asi_level"], held.fighting_style):
             warnings.append({
                 "id": f"feat-hidden-by-filters-{pick['_asi_cid']}",
-                "message": f"{pick['name']} is outside the current ruleset/sources but stays selected.",
+                "message": msg("feat-hidden-by-filters", feat=pick["name"]),
             })
     asi_feats_by_cid = {f["_asi_cid"]: f for f in asi_feat_picks}
     prerequisite_blocked_asi_feat_cids: set[str] = set()
@@ -5478,20 +5479,21 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         try:
             base_score = int(raw)
         except (TypeError, ValueError):
-            problems.append({"id": f"ability-invalid-{ab}", "message": f"{ab} score {raw!r} isn't a valid number; using 10 instead."})
+            problems.append({"id": f"ability-invalid-{ab}", "message": msg("ability-invalid-number", ab=ab, value=raw)})
             base_score = 10
         final_scores[ab] = base_score + species_bonuses.get(ab, 0) + background_bonuses.get(ab, 0) + feat_bonuses.get(ab, 0)
     for ab in derived_mod.ABILITIES:
         if isinstance(base_scores.get(ab), int) and not isinstance(base_scores.get(ab), bool) and base_scores[ab] > 20:
-            warnings.append({"id": f"ability-above-20-{ab}", "message": f"{ab} base score {base_scores[ab]} is above 20, the usual cap for a character's own score."})
+            warnings.append({"id": f"ability-above-20-{ab}", "message": msg("ability-above-20", ab=ab, value=base_scores[ab])})
     for ab, score in final_scores.items():
         if 1 <= score <= 30:
             continue
         reported = next((p for p in problems if p["id"] == f"ability-out-of-range-{ab}"), None)  # normalize may have reported the base already
         if reported is None:
-            problems.append({"id": f"ability-out-of-range-{ab}", "message": f"{ab} score {score} is out of the 1-30 range."})
-        elif "final" not in reported["message"]:  # WF: the clamped base plus bonuses still leaves the sheet out of range
-            reported["message"] += f" With the species, background and feat bonuses the final {ab} score is {score}, still outside 1-30."
+            problems.append({"id": f"ability-out-of-range-{ab}", "message": msg("ability-out-of-range", ab=ab, score=score)})
+        elif reported["message"].key == "ability-out-of-range-clamped":  # WF: the clamped base plus bonuses still leaves the sheet out of range
+            # (a tagged rebuild, not `+=`: a string operation would drop the tag; same text as "... final" not in message)
+            reported["message"] = msg("ability-out-of-range-clamped-final", final=score, **reported["message"].params)
 
     choice_templates: list[dict] = []
     for rc in resolved_classes:
@@ -5517,10 +5519,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             blocked_feat = asi_feats_by_cid[blocked_cid]
             problems.append({
                 "id": f"feat-prerequisite-unmet-{blocked_feat['index']}",
-                "message": (
-                    f"{blocked_feat['name']}'s prerequisite isn't met at {rc_cls['name']} level "
-                    f"{blocked_feat['_asi_level']}, so it isn't applied."
-                ),
+                "message": msg("feat-prerequisite-unmet-at-level", feat=blocked_feat["name"], cls=rc_cls["name"],
+                               level=blocked_feat["_asi_level"]),
             })
         rc["asi_levels"] = rc_asi_levels  # stashed for Task 4's prerequisite check convenience, and for sheet assembly
 
@@ -5815,7 +5815,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         if cls_dropped:
             warnings.append({
                 "id": f"equipment-envelope-dropped-class-{cls_id}",
-                "message": f"{cls['name']}'s starting equipment has {cls_dropped} choice(s) that can't be shown yet and were left out.",
+                "message": msg("equipment-envelope-dropped", name=cls["name"], n=cls_dropped),
             })
     if bg and bg_id:
         # RP9 (C, E12): under ruleset 2024 the 2024 envelope (real items and quantities) replaces the old one; the cid
@@ -5830,7 +5830,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         if bg_dropped:
             warnings.append({
                 "id": f"equipment-envelope-dropped-background-{bg_id}",
-                "message": f"{bg['name']}'s starting equipment has {bg_dropped} choice(s) that can't be shown yet and were left out.",
+                "message": msg("equipment-envelope-dropped", name=bg["name"], n=bg_dropped),
             })
 
     _apply_background_overlap([t for t in choice_templates if t["source"]["kind"] == "class"], bg)
@@ -5841,7 +5841,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     equipment_dict = equipment_raw if isinstance(equipment_raw, dict) else {}
     equipment_choices_raw = equipment_raw.get("choices") if isinstance(equipment_raw, dict) else None
     if equipment_choices_raw is not None and not isinstance(equipment_choices_raw, dict):
-        problems.append({"id": "malformed-equipment-choices", "message": "'equipment.choices' must be an object."})
+        problems.append({"id": "malformed-equipment-choices", "message": msg("malformed-equipment-choices")})
         equipment_choices_raw = None
 
     details = _sanitized_details(draft.get("details"))
@@ -6020,7 +6020,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             if len(selected) > tpl["count"]:
                 problems.append({
                     "id": f"over-selected-{tpl['id']}",
-                    "message": f"'{tpl['label']}' allows {tpl['count']} selection(s) but {len(selected)} were submitted.",
+                    "message": msg("over-selected", label=tpl["label"], count=tpl["count"], submitted=len(selected)),
                 })
                 selected = selected[: tpl["count"]]
         status = "resolved" if len(selected) == tpl["count"] else "pending"
@@ -6030,7 +6030,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     if added_raw is None:
         added_raw = []
     elif not isinstance(added_raw, list):
-        problems.append({"id": "malformed-equipment-added", "message": "'equipment.added' must be a list."})
+        problems.append({"id": "malformed-equipment-added", "message": msg("malformed-equipment-added")})
         added_raw = []
 
     added_resolved = []
@@ -6500,7 +6500,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 if not (isinstance(roll, int) and not isinstance(roll, bool) and 1 <= roll <= rc_hit_die):
                     warnings.append({
                         "id": f"hp-roll-invalid-{rc['cls_id']}-{lvl}",
-                        "message": f"The HP roll for {rc['cls_id']} level {lvl} must be between 1 and {rc_hit_die}; the average was used instead.",
+                        "message": msg("hp-roll-invalid", cls=rc["cls_id"], level=lvl, die=rc_hit_die),
                     })
         hp_class_entries.append({"hit_die": rc_hit_die, "level": rc["level"], "hp_rolls": rc_hp_rolls})
     class_feature_list = _class_feature_list(catalog, resolved_classes, choices, resolved_feats)

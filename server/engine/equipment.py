@@ -4,6 +4,8 @@ independently testable. Mirrors engine/derived.py's style.
 """
 from __future__ import annotations
 
+from i18n.messages import msg
+
 
 def armor_class_from_gear(
     equipped_items: list[dict], dex_modifier: int, formulas=(), modifiers: dict | None = None, armored_bonus: int = 0,
@@ -77,8 +79,21 @@ def fly_armor_bans(race: dict | None, subrace: dict | None, equipped_items: list
 
 
 def fly_armor_warning(ban: dict) -> dict:
-    banned = "medium/heavy" if len(ban["categories"]) > 1 else ban["categories"][0].lower()
-    return {"id": ban["id"], "message": f"{ban['name']} flying speed unusable in {banned} armor."}
+    return {"id": ban["id"], "message": msg("fly-armor", name=ban["name"], armor=_armor_category_msg(ban["categories"]))}
+
+
+def _armor_category_msg(categories: list[str]):
+    """The banned armor category as a nested message (it renders as "medium/heavy", "light", ... in English)."""
+    if len(categories) > 1:
+        return msg("armor-category-medium-heavy")
+    category = categories[0].lower()
+    if category == "light":
+        return msg("armor-category-light")
+    if category == "medium":
+        return msg("armor-category-medium")
+    if category == "heavy":
+        return msg("armor-category-heavy")
+    return category
 
 
 def armor_speed_penalty(equipped_items: list[dict], scores: dict, counted_body: str | None = None) -> int:
@@ -121,16 +136,16 @@ def armor_warnings(
         if not proficient:
             warnings.append({
                 "id": f"armor-not-proficient-{index}",
-                "message": f"Not proficient with {name}: disadvantage on STR/DEX ability checks, saves and attack rolls, and no spellcasting while it is worn.",
+                "message": msg("armor-not-proficient", name=name),
             })
         minimum = item.get("str_minimum") or 0
         uncounted = (counted_body is not None and category != "Shield" and index != counted_body)  # WH
         if minimum > scores.get("STR", 10) and not speed_exempt and not uncounted:
             warnings.append({
                 "id": f"armor-strength-{index}",
-                "message": f"{name} needs Strength {minimum}; below that, speed is reduced by 10 ft.",
+                "message": msg("armor-strength", name=name, minimum=minimum),
             })
     if sum(1 for i in armor if i.get("armor_category") != "Shield") > 1:
-        warnings.append({"id": "armor-multiple-body", "message": "More than one suit of body armor is equipped; only one can be worn."})
+        warnings.append({"id": "armor-multiple-body", "message": msg("armor-multiple-body")})
     return warnings, any(i.get("stealth_disadvantage") for i in armor
                          if not (medium_armor_stealth_ok and i.get("armor_category") == "Medium"))

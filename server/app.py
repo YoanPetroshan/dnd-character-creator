@@ -17,7 +17,7 @@ from catalog.loader import load as load_catalog
 from catalog.reference_data import SOURCE_NAMES, ruleset_allows, subclass_unlock_level
 from engine.resolve import _source_allowed, _spell_visible, _subclass_visible, resolve
 from export import to_yaml
-from i18n.messages import localize, parse_lang
+from i18n.messages import localize, msg, parse_lang
 from markdown_export import to_markdown
 from pdf_export import to_pdf
 
@@ -328,16 +328,16 @@ def api_spell_detail(spell_id: str):
 def _pending_export_problems(resolution: dict) -> list[dict]:
     sheet = resolution.get("sheet") or {}
     missing = [
-        {"id": pid, "message": msg}
-        for pid, msg, present in (
-            ("export-missing-class", "Choose a class first.", sheet.get("classes")),
-            ("export-missing-species", "Choose a species first.", sheet.get("species")),
-            ("export-missing-background", "Choose a background first.", sheet.get("background")),
+        {"id": pid, "message": text}
+        for pid, text, present in (
+            ("export-missing-class", msg("export-missing-class"), sheet.get("classes")),
+            ("export-missing-species", msg("export-missing-species"), sheet.get("species")),
+            ("export-missing-background", msg("export-missing-background"), sheet.get("background")),
         )
         if not present
     ]
     return missing + [
-        {"id": f"unresolved-choice-{c['id']}", "message": f"'{c['label']}' isn't fully chosen yet."}
+        {"id": f"unresolved-choice-{c['id']}", "message": msg("unresolved-choice", label=c["label"])}
         for c in resolution["choices"]
         if c["status"] == "pending" and c["source"]["kind"] != "equipment" and not c.get("optional")
         # RPF: an `optional` card (cosmetic table pick, e.g. Feywild Gifts) stays selectable but never blocks.

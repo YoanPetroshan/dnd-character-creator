@@ -474,9 +474,28 @@ def append() -> None:
 
 # --- coverage of the problem / warning id families --------------------------------------------------------------------
 
+def _template_rx(template: str) -> str:
+    """A regex for the text a catalog template produces: literals escaped, every field (plural fields too) `.*?`."""
+    import string
+    out = []
+    for literal, field, _spec, _conv in string.Formatter().parse(template):
+        out.append(re.escape(literal))
+        if field is not None:
+            out.append(".*?")
+    return "".join(out)
+
+
+def _is_msg_call(node) -> bool:
+    return (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "msg"
+            and bool(node.args) and isinstance(node.args[0], ast.Constant) and isinstance(node.args[0].value, str))
+
+
 def declared_families() -> dict[str, str]:
-    """`file:line` -> "<id regex>  ||  <message regex>" for every dict literal with both an "id" and a "message" key in
-    the engine and the app (f-string holes become `.*?`; a non-literal id or message is `<expr>`)."""
+    """`file:line` -> "<id regex>  ||  <message regex>" for every problem / warning emission site in the engine and the
+    app (I2: the message is a `msg("<key>", ...)` call, so its regex comes from the key's English catalog template;
+    f-string holes in the id become `.*?`). A site is a dict literal with an "id" and a "message" whose value is a
+    `msg(...)` call, or a tuple `("<id>", msg(...), ...)` (the export gate's three "choose a ... first" rows)."""
+    from i18n.catalog import MESSAGES
 
     def rx_of(node) -> str:
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
@@ -488,13 +507,15 @@ def declared_families() -> dict[str, str]:
     out: dict[str, str] = {}
     for path in sorted(glob.glob(str(SERVER / "engine" / "*.py"))) + [str(SERVER / "app.py")]:
         tree = ast.parse(pathlib.Path(path).read_text(encoding="utf-8"))
+        name = pathlib.Path(path).name
         for node in ast.walk(tree):
-            if not isinstance(node, ast.Dict):
-                continue
-            keys = {k.value: v for k, v in zip(node.keys, node.values) if isinstance(k, ast.Constant)}
-            if "id" not in keys or "message" not in keys:
-                continue
-            out[f"{pathlib.Path(path).name}:{node.lineno}"] = f"{rx_of(keys['id'])}  ||  {rx_of(keys['message'])}"
+            if isinstance(node, ast.Dict):
+                keys = {k.value: v for k, v in zip(node.keys, node.values) if isinstance(k, ast.Constant)}
+                if "id" in keys and _is_msg_call(keys.get("message")):
+                    out[f"{name}:{node.lineno}"] = f"{rx_of(keys['id'])}  ||  {_template_rx(MESSAGES[keys['message'].args[0].value]['en'])}"
+            elif isinstance(node, ast.Tuple) and len(node.elts) >= 2 and _is_msg_call(node.elts[1]) \
+                    and isinstance(node.elts[0], ast.Constant) and isinstance(node.elts[0].value, str):
+                out[f"{name}:{node.lineno}"] = f"{rx_of(node.elts[0])}  ||  {_template_rx(MESSAGES[node.elts[1].args[0].value]['en'])}"
     return out
 
 

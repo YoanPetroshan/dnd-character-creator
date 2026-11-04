@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import re
 
+from i18n.messages import msg
+
 ABILITIES = ("STR", "DEX", "CON", "INT", "WIS", "CHA")
 _INT_STR = re.compile(r"^\s*[+-]?\d+\s*$")
 
@@ -32,7 +34,7 @@ def _dict(value, key: str, problems: list, label: str) -> dict:
     if value is None:
         return {}
     if not isinstance(value, dict):
-        problems.append({"id": f"malformed-{key}", "message": f"'{label}' must be an object; it was ignored."})
+        problems.append({"id": f"malformed-{key}", "message": msg("malformed-object", label=label)})
         return {}
     return dict(value)
 
@@ -40,7 +42,7 @@ def _dict(value, key: str, problems: list, label: str) -> dict:
 def _id(value, key: str, problems: list, label: str):
     if value is None or isinstance(value, str):
         return value
-    problems.append({"id": f"malformed-{key}", "message": f"'{label}' must be text; it was ignored."})
+    problems.append({"id": f"malformed-{key}", "message": msg("malformed-text", label=label)})
     return None
 
 
@@ -50,11 +52,11 @@ def _selections(raw, problems: list, label: str) -> dict:
     clean = {}
     for k, v in raw.items():
         if not isinstance(v, list):
-            problems.append({"id": "malformed-choice-selection", "message": f"The selection for '{k}' must be a list; it was ignored."})
+            problems.append({"id": "malformed-choice-selection", "message": msg("malformed-selection-not-list", key=k)})
             continue
         strs = [s for s in v if isinstance(s, str)]
         if len(strs) != len(v):
-            problems.append({"id": "malformed-choice-selection", "message": f"Non-text entries in the selection for '{k}' were ignored."})
+            problems.append({"id": "malformed-choice-selection", "message": msg("malformed-selection-entries", key=k)})
         clean[k] = strs
     return clean
 
@@ -62,24 +64,24 @@ def _selections(raw, problems: list, label: str) -> dict:
 def normalize_draft(draft) -> tuple[dict, list[dict]]:
     problems: list[dict] = []
     if not isinstance(draft, dict):
-        problems.append({"id": "malformed-draft", "message": "The draft must be a JSON object; it was ignored."})
+        problems.append({"id": "malformed-draft", "message": msg("malformed-draft")})
         return {}, problems
     out = dict(draft)
 
     if not isinstance(out.get("name"), str):
         if out.get("name") is not None:
-            problems.append({"id": "malformed-name", "message": "'name' must be text; it was ignored."})
+            problems.append({"id": "malformed-name", "message": msg("malformed-name")})
         out["name"] = ""
 
     sources = out.get("sources")
     if sources is not None and not isinstance(sources, list):
-        problems.append({"id": "malformed-sources", "message": "'sources' must be a list; it was ignored."})
+        problems.append({"id": "malformed-sources", "message": msg("malformed-sources")})
         out.pop("sources")
 
     prefs = _dict(out.get("preferences"), "preferences", problems, "preferences")
     use_prereq = prefs.get("usePrerequisites")
     if use_prereq is not None and not isinstance(use_prereq, dict):
-        problems.append({"id": "malformed-use-prerequisites", "message": "'preferences.usePrerequisites' must be an object; it was ignored."})
+        problems.append({"id": "malformed-use-prerequisites", "message": msg("malformed-use-prerequisites")})
         prefs["usePrerequisites"] = {}
     if not isinstance(prefs.get("hitPointType"), str):
         prefs.pop("hitPointType", None)
@@ -88,7 +90,7 @@ def normalize_draft(draft) -> tuple[dict, list[dict]]:
     abilities = _dict(out.get("abilities"), "abilities", problems, "abilities")
     base = abilities.get("base")
     if base is not None and not isinstance(base, dict):
-        problems.append({"id": "malformed-abilities-base", "message": "'abilities.base' must be an object; it was ignored."})
+        problems.append({"id": "malformed-abilities-base", "message": msg("malformed-abilities-base")})
         base = {}
     base = dict(base or {})
     for ab in ABILITIES:
@@ -96,10 +98,10 @@ def normalize_draft(draft) -> tuple[dict, list[dict]]:
             continue
         n = coerce_int(base[ab])
         if n is None:
-            problems.append({"id": f"ability-invalid-{ab}", "message": f"{ab} score {base[ab]!r} isn't a valid whole number; using 10 instead."})
+            problems.append({"id": f"ability-invalid-{ab}", "message": msg("ability-invalid-whole", ab=ab, value=base[ab])})
             n = 10
         elif not 1 <= n <= 30:  # W2 / F6: a base score outside 1..30 is clamped and reported
-            problems.append({"id": f"ability-out-of-range-{ab}", "message": f"{ab} score {n} is out of the 1-30 range; using {max(1, min(30, n))} instead."})
+            problems.append({"id": f"ability-out-of-range-{ab}", "message": msg("ability-out-of-range-clamped", ab=ab, n=n, clamped=max(1, min(30, n)))})
             n = max(1, min(30, n))
         base[ab] = n
     abilities["base"] = base
@@ -118,7 +120,7 @@ def normalize_draft(draft) -> tuple[dict, list[dict]]:
             if "level" in e:
                 n = coerce_int(e["level"])
                 if n is None:
-                    problems.append({"id": "level-unsupported", "message": f"Level {e['level']!r} for '{e['classId']}' isn't a valid whole number; using 1 instead."})
+                    problems.append({"id": "level-unsupported", "message": msg("level-invalid-whole", value=e["level"], cls=e["classId"])})
                     n = 1
                 e["level"] = n
             e["choices"] = _selections(e.get("choices"), problems, "class choices")
@@ -138,7 +140,7 @@ def normalize_draft(draft) -> tuple[dict, list[dict]]:
 
     equipment = out.get("equipment")
     if equipment is not None and not isinstance(equipment, dict):
-        problems.append({"id": "malformed-equipment", "message": "'equipment' must be an object; it was ignored."})
+        problems.append({"id": "malformed-equipment", "message": msg("malformed-equipment")})
         equipment = {}
     if isinstance(equipment, dict):
         equipment = dict(equipment)
@@ -156,7 +158,7 @@ def normalize_draft(draft) -> tuple[dict, list[dict]]:
                 if "qty" in e:
                     n = coerce_int(e["qty"])
                     if n is None or n < 1:
-                        problems.append({"id": "equipment-qty-invalid", "message": f"Quantity {e['qty']!r} for '{e['itemId']}' isn't a positive whole number; using 1 instead."})
+                        problems.append({"id": "equipment-qty-invalid", "message": msg("equipment-qty-invalid", value=e["qty"], item=e["itemId"])})
                         n = 1
                     e["qty"] = n
                 clean_added.append(e)
@@ -167,7 +169,7 @@ def normalize_draft(draft) -> tuple[dict, list[dict]]:
                 equipment.pop(key, None)
                 continue
             if not isinstance(raw, dict):
-                problems.append({"id": f"malformed-equipment-{key}", "message": f"'equipment.{key}' must be an object; it was ignored."})
+                problems.append({"id": f"malformed-equipment-{key}", "message": msg("malformed-equipment-slot-object", key=key)})
                 equipment.pop(key)
                 continue
             clean = dict(raw)
@@ -175,7 +177,7 @@ def normalize_draft(draft) -> tuple[dict, list[dict]]:
                 v = clean.get(f)
                 ok = v is None or isinstance(v, bool) if f == "shield" else v is None or isinstance(v, str)
                 if f in clean and not ok:
-                    problems.append({"id": f"malformed-equipment-{key}", "message": f"'equipment.{key}.{f}' has the wrong type; it was ignored."})
+                    problems.append({"id": f"malformed-equipment-{key}", "message": msg("malformed-equipment-slot-type", key=key, field=f)})
                     clean.pop(f)
             equipment[key] = clean
         out["equipment"] = equipment

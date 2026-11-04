@@ -29,6 +29,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from i18n.messages import msg
+
+
+def _kind_msg(kind: str):
+    """"worn" / "wielded" as a nested message (renders as the same English word)."""
+    return msg("slot-kind-worn") if kind == "worn" else msg("slot-kind-wielded")
+
+
+def _slot_msg(slot: str):
+    """"armor" / "main" / "off" as a nested message."""
+    if slot == "armor":
+        return msg("slot-armor")
+    return msg("slot-main") if slot == "main" else msg("slot-off")
+
 
 def _cat(item: dict) -> str | None:
     return (item.get("equipment_category") or {}).get("index")
@@ -92,11 +106,11 @@ def apply(equipped_items: list[dict], equipment: dict, inventory: dict[str, dict
         if item_id is None:
             return None
         if item_id not in lookup:
-            warnings.append({"id": f"{kind}-{slot}-unknown-item", "message": f"The {kind} {slot} item '{item_id}' is not in the catalog and was ignored."})
+            warnings.append({"id": f"{kind}-{slot}-unknown-item", "message": msg("slot-unknown-item", kind=_kind_msg(kind), slot=_slot_msg(slot), item=item_id)})
             return None
         if item_id not in inventory:
             name = lookup[item_id].get("name", item_id)
-            warnings.append({"id": f"{kind}-{slot}-not-in-inventory", "message": f"{name} is set as {kind} ({slot}) but is not in the inventory; it was ignored."})
+            warnings.append({"id": f"{kind}-{slot}-not-in-inventory", "message": msg("slot-not-in-inventory", name=name, kind=_kind_msg(kind), slot=_slot_msg(slot))})
             pruned.append({"choiceId": f"equipment:{kind}:{slot}", "reason": f"{name} is no longer in the inventory and was removed from the {kind} {slot} slot."})
             return None
         return lookup[item_id]
@@ -108,19 +122,19 @@ def apply(equipped_items: list[dict], equipment: dict, inventory: dict[str, dict
         off = lookup_slot(wielded_raw.get("off"), "wielded", "off")
         for slot, item in (("main", main), ("off", off)):
             if item is not None and is_body_armor(item):
-                warnings.append({"id": f"wielded-{slot}-not-holdable", "message": f"{item['name']} is body armor; it cannot be held in a hand."})
+                warnings.append({"id": f"wielded-{slot}-not-holdable", "message": msg("wielded-not-holdable", name=item["name"])})
                 if slot == "main":
                     main = None
                 else:
                     off = None
         if main is not None and is_shield(main):
-            warnings.append({"id": "wielded-main-shield", "message": f"{main['name']} is a shield; put it in the off hand."})
+            warnings.append({"id": "wielded-main-shield", "message": msg("wielded-main-shield", name=main["name"])})
             main = None
         if main is not None and off is not None and main["index"] == off["index"] and inventory[main["index"]]["qty"] < 2:
-            warnings.append({"id": "wielded-same-item-twice", "message": f"{main['name']} is in both hands but the inventory has only one."})
+            warnings.append({"id": "wielded-same-item-twice", "message": msg("wielded-same-item-twice", name=main["name"])})
         two = [i for i, other in ((main, off), (off, main)) if i is not None and other is not None and is_weapon(i) and is_two_handed(i)]
         if two:
-            warnings.append({"id": "wielded-two-handed-conflict", "message": f"{two[0]['name']} needs both hands, but the other hand also holds an item."})
+            warnings.append({"id": "wielded-two-handed-conflict", "message": msg("wielded-two-handed-conflict", name=two[0]["name"])})
 
     worn = worn_raw or {}
     non_armor = [i for i in equipped_items if _cat(i) != "armor"]
@@ -133,7 +147,7 @@ def apply(equipped_items: list[dict], equipment: dict, inventory: dict[str, dict
         else:
             chosen = lookup_slot(worn["armor"], "worn", "armor")
             if chosen is not None and not is_body_armor(chosen):
-                warnings.append({"id": "worn-armor-not-body-armor", "message": f"{chosen['name']} is not body armor; the armor slot was ignored."})
+                warnings.append({"id": "worn-armor-not-body-armor", "message": msg("worn-armor-not-body-armor", name=chosen["name"])})
                 chosen = None
             if chosen is not None:
                 bodies = [chosen]  # else: a dropped id means auto
@@ -141,16 +155,16 @@ def apply(equipped_items: list[dict], equipment: dict, inventory: dict[str, dict
     if shield_flag is True:
         first = next((e["item"] for e in inventory.values() if is_shield(e["item"])), None)
         if first is None:
-            warnings.append({"id": "worn-shield-missing", "message": "A shield is marked as worn but the inventory has none."})
+            warnings.append({"id": "worn-shield-missing", "message": msg("worn-shield-missing")})
         shields = [first] if first else []
     elif shield_flag is False:
         shields = []
         if off is not None and is_shield(off):
-            warnings.append({"id": "wielded-shield-not-worn", "message": f"{off['name']} is in the off hand but the shield is marked as not worn; it adds no AC."})
+            warnings.append({"id": "wielded-shield-not-worn", "message": msg("wielded-shield-not-worn", name=off["name"])})
     elif off is not None and is_shield(off) and not any(s["index"] == off["index"] for s in shields):
         shields = shields + [off]
     if worn_raw is not None and shield_flag is True and any(i is not None and is_weapon(i) and is_two_handed(i) for i in (main, off)):
-        warnings.append({"id": "wielded-two-handed-shield", "message": "A two-handed weapon is held while a shield is marked as worn."})
+        warnings.append({"id": "wielded-two-handed-shield", "message": msg("wielded-two-handed-shield")})
 
     items = non_armor + bodies + shields
     held_ids = set()

@@ -96,7 +96,7 @@ def test_trigger_catalog_variants_exist():
 
 def test_problem_and_warning_families_are_covered_except_the_known_gaps(stored):
     covered, uncovered = zoo.coverage(stored)
-    assert len(covered) + len(uncovered) >= 85, "the AST scan found fewer message sites than at I1"
+    assert len(covered) + len(uncovered) >= 87, "the AST scan found fewer msg(...) problem/warning sites than at I2"
     assert set(uncovered.values()) == KNOWN_GAPS, sorted(set(uncovered.values()) ^ KNOWN_GAPS)
 
 

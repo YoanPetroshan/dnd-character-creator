@@ -279,17 +279,20 @@ def test_error_bodies_stay_english_whatever_the_language(client):
 
 # --- the catalog package ----------------------------------------------------------------------------------------------
 
-def test_catalog_is_wired_and_empty_in_i1():
+def test_catalog_is_wired_to_the_modules():
+    """I2 filled problems and warnings; pruned, disabled and labels stay empty until I3-I5."""
     assert catalog_pkg.MESSAGES is m.MESSAGES
-    for sub in ("problems", "warnings", "pruned", "disabled", "labels"):
+    assert catalog_pkg.problems.MESSAGES and catalog_pkg.warnings.MESSAGES
+    for sub in ("pruned", "disabled", "labels"):
         assert getattr(catalog_pkg, sub).MESSAGES == {}
-    assert m.MESSAGES == {}
+    assert m.MESSAGES == {**catalog_pkg.problems.MESSAGES, **catalog_pkg.warnings.MESSAGES}
 
 
 def test_catalog_modules_merge_and_reject_duplicates(monkeypatch):
+    real = catalog_pkg.build()
     monkeypatch.setitem(catalog_pkg.problems.MESSAGES, "dup", {"en": "a"})
     monkeypatch.setitem(catalog_pkg.pruned.MESSAGES, "other", {"en": "o"})
-    assert catalog_pkg.build() == {"dup": {"en": "a"}, "other": {"en": "o"}}
+    assert catalog_pkg.build() == {**real, "dup": {"en": "a"}, "other": {"en": "o"}}
     monkeypatch.setitem(catalog_pkg.warnings.MESSAGES, "dup", {"en": "b"})
     with pytest.raises(ValueError, match="duplicate message keys"):
         catalog_pkg.build()
