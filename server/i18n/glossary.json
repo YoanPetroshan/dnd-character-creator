@@ -1,0 +1,322 @@
+{
+  "abilityScores": {
+    "en": "Ability Scores",
+    "bg": "Характеристики",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Ability Scores"
+    }
+  },
+  "armorClass": {
+    "en": "Armor Class",
+    "bg": "Клас броня (AC)",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Armor Class"
+    }
+  },
+  "hitPoints": {
+    "en": "Hit Points",
+    "bg": "Точки живот",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Hit Points"
+    }
+  },
+  "hitPointDice": {
+    "en": "Hit Point Dice",
+    "bg": "Зарове за живот",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Hit Point Dice"
+    }
+  },
+  "proficiencyBonus": {
+    "en": "Proficiency Bonus",
+    "bg": "Бонус за умение",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Proficiency Bonus"
+    }
+  },
+  "savingThrows": {
+    "en": "Saving Throws",
+    "bg": "Спасителни хвърляния",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Saving Throws"
+    }
+  },
+  "skills": {
+    "en": "Skills",
+    "bg": "Умения",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Skills"
+    }
+  },
+  "initiative": {
+    "en": "Initiative",
+    "bg": "Инициатива",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Initiative"
+    }
+  },
+  "speed": {
+    "en": "Speed",
+    "bg": "Скорост",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Speed"
+    }
+  },
+  "passivePerception": {
+    "en": "Passive Perception",
+    "bg": "Пасивно възприятие",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Passive Perception"
+    }
+  },
+  "passiveInsight": {
+    "en": "Passive Insight",
+    "bg": "Пасивна проницателност",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Passive Perception"
+    }
+  },
+  "passiveInvestigation": {
+    "en": "Passive Investigation",
+    "bg": "Пасивно разследване",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Passive Perception"
+    }
+  },
+  "spellSaveDc": {
+    "en": "Spell Save DC",
+    "bg": "Спасяване за заклинание (DC)",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Spell save DC"
+    }
+  },
+  "spellAttackBonus": {
+    "en": "Spell Attack Modifier",
+    "bg": "Бонус за атака",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Spell attack modifier"
+    }
+  },
+  "spellSlots": {
+    "en": "Spell Slots",
+    "bg": "Клетки за заклинания",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Spell Slots"
+    }
+  },
+  "cantrips": {
+    "en": "Cantrips",
+    "bg": "Трикове",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Cantrips"
+    }
+  },
+  "preparedSpells": {
+    "en": "Prepared Spells",
+    "bg": "Подготвени заклинания",
+    "cite": {
+      "src": "phb2024",
+      "locator": "text:Prepared Spells"
+    }
+  },
+  "spellbook": {
+    "en": "Spellbook",
+    "bg": "Книга със заклинания",
+    "cite": {
+      "src": "phb2024",
+      "locator": "text:Spellbook"
+    }
+  },
+  "species": {
+    "en": "Species",
+    "bg": "Раса",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Character Species"
+    }
+  },
+  "background": {
+    "en": "Background",
+    "bg": "Произход",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Character Backgrounds"
+    }
+  },
+  "originFeat": {
+    "en": "Origin Feat",
+    "bg": "Талант от произхода",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Origin Feats"
+    }
+  },
+  "feats": {
+    "en": "Feats",
+    "bg": "Таланти",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Chapter 5: Feats"
+    }
+  },
+  "classFeatures": {
+    "en": "Class Features",
+    "bg": "Черти и способности",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Class Features"
+    }
+  },
+  "languages": {
+    "en": "Languages",
+    "bg": "Езици",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Choose Languages"
+    }
+  },
+  "equipment": {
+    "en": "Equipment",
+    "bg": "Екипировка",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Equipment"
+    }
+  },
+  "weaponMastery": {
+    "en": "Weapon Mastery",
+    "bg": "Майсторство с оръжия",
+    "cite": {
+      "src": "5etools",
+      "locator": "class/class-fighter.json::Weapon Mastery"
+    }
+  },
+  "size": {
+    "en": "Size",
+    "bg": "Размер",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Size"
+    }
+  },
+  "senses": {
+    "en": "Special Senses",
+    "bg": "Сетива",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Special Senses"
+    }
+  },
+  "darkvision": {
+    "en": "Darkvision",
+    "bg": "тъмно зрение",
+    "cite": {
+      "src": "srd",
+      "locator": "5e-SRD-Traits.json::Darkvision"
+    }
+  },
+  "blindsight": {
+    "en": "Blindsight",
+    "bg": "сляпо зрение",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Blindsight"
+    }
+  },
+  "tremorsense": {
+    "en": "Tremorsense",
+    "bg": "усещане за вибрации",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Tremorsense"
+    }
+  },
+  "truesight": {
+    "en": "Truesight",
+    "bg": "истинско зрение",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Truesight"
+    }
+  },
+  "resistance": {
+    "en": "Resistance",
+    "bg": "Устойчивост",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Resistance"
+    }
+  },
+  "immunity": {
+    "en": "Immunity",
+    "bg": "Имунитет",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Immunity"
+    }
+  },
+  "vulnerability": {
+    "en": "Vulnerability",
+    "bg": "Уязвимост",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Vulnerability"
+    }
+  },
+  "shortRest": {
+    "en": "Short Rest",
+    "bg": "кратка почивка",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Short Rest"
+    }
+  },
+  "longRest": {
+    "en": "Long Rest",
+    "bg": "дълга почивка",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Long Rest"
+    }
+  },
+  "carryingCapacity": {
+    "en": "Carrying Capacity",
+    "bg": "Носимост",
+    "cite": {
+      "src": "phb2024",
+      "locator": "Carrying Capacity"
+    }
+  },
+  "feet": {
+    "en": "feet",
+    "bg": "фута",
+    "cite": {
+      "src": "phb2024",
+      "locator": "text:30 feet"
+    }
+  },
+  "gold": {
+    "en": "GP",
+    "bg": "зл.",
+    "cite": {
+      "src": "phb2024",
+      "locator": "text:Gold Piece (GP)"
+    }
+  }
+}
