@@ -5,7 +5,7 @@ Markdown or PDF. The UI and the Markdown/PDF exports are in Bulgarian.
 
 The current app is the **v2 builder**: `server/` (Flask JSON API + engine) and
 `frontend/` (React/TypeScript, Vite). The character being built is a
-*Draft* kept in the browser (`localStorage` key `dnd-builder-draft-v2`);
+*Draft* kept in the browser (`localStorage`: a character library under `dnd-builder-library-v1`, one draft per character under `dnd-builder-draft-v2:<id>`);
 every change is sent to `POST /api/resolve`, which returns the finished sheet,
 the open choices and any problems. Nothing is stored on the server.
 `chargen/` holds the bundled SRD JSON (`chargen/data/srd/`) and the official-data

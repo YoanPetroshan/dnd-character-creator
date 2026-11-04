@@ -1,6 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
-const STORAGE_KEY = "dnd-builder-draft-v2";
+import { activeDraftRaw, browserStorage, resetActiveDraft } from "../library";
 
 interface State {
   error: Error | null;
@@ -8,8 +8,8 @@ interface State {
 
 /** Top-level safety net: a render crash (e.g. a corrupt stored draft) must
  *  not leave a white page that persists across reloads. Offers to save the
- *  raw stored draft to a file and to reset it. Reads localStorage directly,
- *  since it sits above DraftProvider. */
+ *  raw stored draft of the active character to a file and to reset it. Reads localStorage directly,
+ *  since it sits above the providers. */
 export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   state: State = { error: null };
 
@@ -24,7 +24,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   private download = () => {
     let raw = "{}";
     try {
-      raw = localStorage.getItem(STORAGE_KEY) ?? "{}";
+      raw = activeDraftRaw(browserStorage()) ?? "{}";
     } catch {
       // storage unavailable — export an empty object
     }
@@ -40,7 +40,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
 
   private reset = () => {
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      resetActiveDraft(browserStorage()); // only the active character; the others stay
     } catch {
       // ignore
     }

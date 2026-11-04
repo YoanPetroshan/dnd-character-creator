@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
-import { mergeDraft, useDraft } from "../DraftContext";
+import { useDraft } from "../DraftContext";
+import { useLibrary } from "../LibraryContext";
+import type { ImportEntry } from "../library";
 import { useResolutionContext } from "../ResolutionContext";
 import { useCatalogContext } from "../CatalogContext";
 import { safeFilename, shareOrDownload } from "../logic/files";
@@ -19,36 +21,46 @@ export function HomePage() {
   const fileInput = useRef<HTMLInputElement>(null);
   const [draftMessage, setDraftMessage] = useState<string | null>(null);
 
-  const resetDraft = () => {
-    if (window.confirm("Нулиране на черновата? Текущият герой ще бъде изтрит.")) {
-      dispatch({ type: "RESET" });
-      setDraftMessage(null);
-    }
-  };
+  const library = useLibrary();
+  const [importReport, setImportReport] = useState<ImportEntry[] | null>(null);
 
   async function downloadDraft() {
     const blob = new Blob([JSON.stringify(draft, null, 2)], { type: "application/json" });
     await shareOrDownload(blob, safeFilename(draft.name, "draft.json"), "application/json");
   }
 
-  async function uploadDraft(file: File | undefined) {
+  async function exportAll() {
+    const { json, skipped } = library.exportAll();
+    await shareOrDownload(new Blob([json], { type: "application/json" }), safeFilename("dnd-heroes", "json"), "application/json");
+    setDraftMessage(
+      skipped.length ? `Пакетът е изтеглен без повредени герои: ${skipped.join(", ")}.` : "Пакетът с всички герои е изтеглен.",
+    );
+  }
+
+  async function importFile(file: File | undefined) {
     if (!file) return;
     try {
-      const imported = mergeDraft(JSON.parse(await file.text()));
-      if (draft.classes.length > 0 || draft.name) {
-        if (!window.confirm("Качването ще замени текущата чернова. Продължаване?")) return;
-      }
-      dispatch({ type: "SET_DRAFT", draft: imported });
-      setDraftMessage("Черновата е качена.");
+      setImportReport(library.importParsed(JSON.parse(await file.text())));
     } catch (e) {
-      setDraftMessage(
-        (e instanceof SyntaxError ? "Файлът не е валиден JSON." : e instanceof Error ? e.message : String(e)) +
-          " Текущата чернова не е променена.",
-      );
+      const message = e instanceof SyntaxError ? "Файлът не е валиден JSON." : e instanceof Error ? e.message : String(e);
+      setImportReport([{ index: 0, name: "", status: "rejected", message }]);
     } finally {
       if (fileInput.current) fileInput.current.value = "";
     }
   }
+
+  function renameItem(id: string, current: string) {
+    const name = window.prompt("Ново име на героя:", current);
+    if (name === null) return;
+    if (id === library.activeId) dispatch({ type: "SET_NAME", name });
+    else library.renameCharacter(id, name);
+  }
+
+  function deleteItem(id: string, name: string) {
+    if (window.confirm(`Изтриване на героя „${name || "Без име"}“? Това не може да се отмени.`)) library.deleteCharacter(id);
+  }
+
+  const className = (classId: string) => catalog.classes.find((c) => c.id === classId)?.name ?? classId;
 
   const allSourceIds = catalog.sources.map((src) => src.id);
   const sourceOnFor = (id: string) => sourceOn(draft.sources, id);
@@ -68,24 +80,77 @@ export function HomePage() {
       </label>
       <p>Saved as you type — reload the page and this name should still be here.</p>
 
+      <h2>Герои</h2>
+      <ul>
+        {library.items.map((item) => {
+          const active = item.id === library.activeId;
+          const name = active ? draft.name : item.name;
+          return (
+            <li key={item.id} data-active={active ? "true" : undefined}>
+              <strong>{name || "Без име"}</strong>
+              {active && " (активен)"}
+              {item.status === "corrupt" && " — повредена чернова"}
+              {item.status === "empty" && " — няма запазена чернова"}
+              {item.status === "ok" &&
+                ` — ${item.classes.length ? item.classes.map((c) => `${className(c.classId)} ${c.level}`).join(", ") : "без клас"}, общо ниво ${item.totalLevel}`}
+              {" — "}
+              <time dateTime={new Date(item.updatedAt).toISOString()}>променен {new Date(item.updatedAt).toLocaleString("bg-BG")}</time>{" "}
+              {!active && (
+                <button type="button" onClick={() => library.openCharacter(item.id)}>
+                  Отвори
+                </button>
+              )}{" "}
+              <button type="button" onClick={() => renameItem(item.id, name)}>
+                Преименувай
+              </button>{" "}
+              <button type="button" onClick={() => library.duplicateCharacter(item.id)}>
+                Копирай
+              </button>{" "}
+              <button type="button" onClick={() => deleteItem(item.id, name)}>
+                Изтрий
+              </button>
+            </li>
+          );
+        })}
+      </ul>
       <div>
-        <button type="button" onClick={resetDraft}>
+        <button type="button" onClick={() => library.newCharacter()}>
           Нов герой
         </button>{" "}
-        <button type="button" onClick={downloadDraft}>
-          Изтегли чернова (.json)
+        <button type="button" onClick={exportAll}>
+          Изтегли всички (.json)
         </button>{" "}
         <button type="button" onClick={() => fileInput.current?.click()}>
-          Качи чернова (.json)
+          Качи герой или пакет (.json)
+        </button>{" "}
+        <button type="button" onClick={downloadDraft}>
+          Изтегли този герой (.json)
         </button>
         <input
           ref={fileInput}
           type="file"
           accept=".json,application/json"
           hidden
-          onChange={(e) => uploadDraft(e.target.files?.[0])}
+          onChange={(e) => importFile(e.target.files?.[0])}
         />
         {draftMessage && <p role="status">{draftMessage}</p>}
+        {importReport && (
+          <div role="status">
+            <p>
+              Качване: {importReport.filter((e) => e.status === "accepted").length} добавени, {importReport.filter((e) => e.status === "rejected").length} отхвърлени. Съществуващите герои не са променени.
+            </p>
+            <ul>
+              {importReport.map((e) => (
+                <li key={e.index} data-status={e.status}>
+                  {e.name || `№ ${e.index + 1}`}: {e.status === "accepted" ? "добавен" : "отхвърлен"} — {e.message}
+                </li>
+              ))}
+            </ul>
+            <button type="button" onClick={() => setImportReport(null)}>
+              Скрий
+            </button>
+          </div>
+        )}
       </div>
 
       <h2>Правила и източници</h2>

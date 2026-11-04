@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { DraftProvider } from "./DraftContext";
+import { LibraryProvider } from "./LibraryContext";
 import "./index.css";
 
 const rootElement = document.getElementById("root");
@@ -13,9 +14,11 @@ createRoot(rootElement).render(
   <StrictMode>
     <BrowserRouter>
       <ErrorBoundary>
-        <DraftProvider>
-          <App />
-        </DraftProvider>
+        <LibraryProvider>
+          <DraftProvider>
+            <App />
+          </DraftProvider>
+        </LibraryProvider>
       </ErrorBoundary>
     </BrowserRouter>
   </StrictMode>,
