@@ -17,6 +17,7 @@ import {
   renameCharacter,
   resetActiveDraft,
   saveDraft,
+  setSeenChoices,
   summarize,
   type LibraryEnv,
   type StorageLike,
@@ -543,5 +544,49 @@ describe("summarize", () => {
     expect(list.map((s) => s.name)).toEqual(["Втори", "Първи"]);
     expect(list[1]).toMatchObject({ totalLevel: 6, status: "ok", classes: [{ classId: "fighter", level: 4 }, { classId: "wizard", level: 2 }] });
     expect(list[0].updatedAt).toBeGreaterThan(list[1].updatedAt);
+  });
+});
+
+describe("seen choice ids (SK8)", () => {
+  it("setSeenChoices stores the list and the baseline flag, keeps updatedAt, survives a reboot", () => {
+    const { env, storage } = makeEnv();
+    const b = bootLibrary(env);
+    const id = b.library.activeId;
+    const before = b.library.items[id].updatedAt;
+    const r = setSeenChoices(env, b.library, id, ["a", "b"], true);
+    expect(r.ok).toBe(true);
+    expect(r.library.items[id]).toMatchObject({ seenChoiceIds: ["a", "b"], seenBaselined: true, updatedAt: before });
+    const again = bootLibrary(env);
+    expect(again.library.items[id]).toMatchObject({ seenChoiceIds: ["a", "b"], seenBaselined: true });
+    expect(idx(storage).items[id].seenChoiceIds).toEqual(["a", "b"]);
+  });
+
+  it("a quota failure is reported and the in-memory library is still updated", () => {
+    const { env, storage } = makeEnv();
+    const b = bootLibrary(env);
+    storage.failAll = true;
+    const r = setSeenChoices(env, b.library, b.library.activeId, ["a"], true);
+    expect(r.ok).toBe(false);
+    expect(r.library.items[b.library.activeId].seenChoiceIds).toEqual(["a"]);
+  });
+
+  it("a duplicated character inherits the seen list and the baseline flag, as a copy", () => {
+    const { env } = makeEnv();
+    const b = bootLibrary(env);
+    const id = b.library.activeId;
+    const lib = setSeenChoices(env, b.library, id, ["a", "b"], true).library;
+    const d = duplicateCharacter(env, lib, id, { id, draft: draftOf("X") }, NAMES);
+    const copy = d.library.items[d.id as string];
+    expect(copy.seenChoiceIds).toEqual(["a", "b"]);
+    expect(copy.seenBaselined).toBe(true);
+    expect(copy.seenChoiceIds).not.toBe(d.library.items[id].seenChoiceIds);
+  });
+
+  it("an old index without the flag loads as not baselined", () => {
+    const { env, storage } = makeEnv();
+    const b = bootLibrary(env);
+    const id = b.library.activeId;
+    expect(bootLibrary(env).library.items[id].seenBaselined).toBeUndefined();
+    expect(idx(storage).items[id].seenBaselined).toBeUndefined();
   });
 });

@@ -11,6 +11,7 @@ import {
   openCharacter,
   renameCharacter,
   saveDraft,
+  setSeenChoices,
   summarize,
   type ImportEntry,
   type ItemSummary,
@@ -34,6 +35,11 @@ export interface LibraryContextValue {
   unsavedRaw: string | null;
   /** The last library-level write failed (quota, private mode). */
   storageFailed: boolean;
+  /** SK8: the active character's acknowledged choice ids (see logic/newChoices). */
+  seenChoiceIds: string[];
+  seenBaselined: boolean;
+  /** Store them; does not touch the draft or the "updated" time. */
+  setSeen: (seenChoiceIds: string[], baselined: boolean) => void;
   /** Called by DraftProvider after each edit of the active character; returns whether the write succeeded. */
   persistActive: (id: string, draft: Draft) => boolean;
   newCharacter: () => void;
@@ -118,6 +124,14 @@ export function LibraryProvider({ children, env }: { children: ReactNode; env?: 
       unsavedRaw,
       storageFailed,
       persistActive,
+      seenChoiceIds: lib.items[lib.activeId]?.seenChoiceIds ?? [],
+      seenBaselined: lib.items[lib.activeId]?.seenBaselined === true,
+      setSeen: (seen, baselined) => {
+        const r = setSeenChoices(envRef.current, libRef.current, libRef.current.activeId, seen, baselined);
+        libRef.current = r.library;
+        setLib(r.library);
+        if (!r.ok) setStorageFailed(true);
+      },
       newCharacter: () => {
         const r = createCharacter(envRef.current, libRef.current);
         commit(r.library, structuredClone(r.draft));
@@ -159,7 +173,7 @@ export function LibraryProvider({ children, env }: { children: ReactNode; env?: 
       },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [summaries, lib.activeId, activeDraft, notices, unsavedRaw, storageFailed, persistActive, commit],
+    [summaries, lib, activeDraft, notices, unsavedRaw, storageFailed, persistActive, commit],
   );
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;

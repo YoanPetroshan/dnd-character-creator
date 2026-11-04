@@ -26,6 +26,7 @@ export const en: Copy = {
     },
     sheet: "Sheet",
     unresolved: (n: number) => `unresolved: ${n}`,
+    newChoices: (n: number) => `New choices: ${n}`,
     nextStep: "Next unfinished step →",
   },
 
@@ -502,6 +503,7 @@ export const en: Copy = {
   },
 
   choice: {
+    newMarker: "new",
     pendingDot: "pending choice",
     levelBadge: (level: number) => `${level} level`,
     counter: (selected: number, count: number) => `selected ${selected}/${count}`,

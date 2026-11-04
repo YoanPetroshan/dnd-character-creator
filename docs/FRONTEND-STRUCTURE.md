@@ -33,6 +33,7 @@ Theme switch: override tokens on `:root[data-theme="..."]` (nothing sets `data-t
   - pruned-selection list item (Home): `pruned`
   - export button: `ready | busy | disabled`; export error line: `error`
   - language button: `active | inactive`
+- `data-new="true"` marks a pending choice card (and the header link `.new-choices`) that appeared through a level-up and has not been resolved yet; the card also holds `<span class="choice-card__new">` (text "ново" / "new"). The attribute is absent otherwise.
 - The step-nav link keeps the `active` class (react-router); the badge `step-nav__badge` appears only when steps are unresolved. `data-active="true"` marks the active character in the Home library list.
 - Colors: `status--error` for error text. The pruned note class `choice-pruned` is defined in CSS but not rendered by any component yet.
 
@@ -61,5 +62,5 @@ Presentational components take props only; logic components read contexts (`useD
 | disabled | picker row `data-state="disabled"` (greyed label, reason text); buttons via `:disabled` / `data-state="disabled"` |
 | hidden-by-filters | picker row `data-state="hidden-by-filters"` (only shown after "show unavailable") |
 | pruned | Home list of dropped selections `data-state="pruned"`; the status banner `data-state="pruned"` |
-| new | not marked in the markup yet (library `seenChoiceIds` exists in data only) |
+| new | choice card `data-new="true"` + `.choice-card__new` text marker; header link `.new-choices` ("Нови избори: N") |
 | loading / error | headings show an ellipsis while resolving; `StatusBanner` `data-state="error"` |

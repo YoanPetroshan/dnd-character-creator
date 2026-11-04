@@ -4,6 +4,7 @@ import { useT } from "../LanguageContext";
 import type { Choice } from "../types";
 import { ChoicePicker } from "./ChoicePicker";
 import { cidFromHash } from "../logic/hashTarget";
+import { useNewChoices } from "../NewChoicesContext";
 
 interface ChoiceCardProps {
   choice: Choice;
@@ -24,6 +25,7 @@ export function ChoiceCard({ choice, onToggle, defaultExpanded = false }: Choice
   // with getElementById, never a CSS selector.
   const { hash } = useLocation();
   const isTarget = cidFromHash(hash) === choice.id;
+  const isNew = useNewChoices().has(choice.id) && choice.status === "pending";
   const [expanded, setExpanded] = useState(defaultExpanded || isTarget);
 
   useEffect(() => {
@@ -33,7 +35,7 @@ export function ChoiceCard({ choice, onToggle, defaultExpanded = false }: Choice
   }, [isTarget, choice.id]);
 
   return (
-    <div className="choice-card" id={choice.id} data-status={choice.status} data-state={expanded ? "expanded" : "collapsed"}>
+    <div className="choice-card" id={choice.id} data-status={choice.status} data-state={expanded ? "expanded" : "collapsed"} data-new={isNew ? "true" : undefined}>
       <button
         type="button"
         className="choice-card__header"
@@ -46,6 +48,7 @@ export function ChoiceCard({ choice, onToggle, defaultExpanded = false }: Choice
           </span>
         )}
         <span className="choice-card__label">{choice.label}</span>
+        {isNew && <span className="choice-card__new">{t.choice.newMarker}</span>}
         {choice.source.level != null && (
           <span className="choice-card__level">{t.choice.levelBadge(choice.source.level)}</span>
         )}

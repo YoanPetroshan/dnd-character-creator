@@ -46,7 +46,10 @@ export interface LibraryItem {
   name: string;
   createdAt: number;
   updatedAt: number;
+  /** Choice ids the app has acknowledged (SK8): a pending card whose id is not here is "new". */
   seenChoiceIds: string[];
+  /** SK8: set after the first sync of seenChoiceIds (an item without it gets its pending cards absorbed once, so old characters do not light up). */
+  seenBaselined?: boolean;
 }
 
 export interface Library {
@@ -145,9 +148,11 @@ function freshId(env: LibraryEnv, lib: Library): string {
   return id;
 }
 
-function newItem(env: LibraryEnv, id: string, name: string, seen: string[] = []): LibraryItem {
+function newItem(env: LibraryEnv, id: string, name: string, seen: string[] = [], baselined = false): LibraryItem {
   const t = env.now();
-  return { id, name, createdAt: t, updatedAt: t, seenChoiceIds: [...seen] };
+  const item: LibraryItem = { id, name, createdAt: t, updatedAt: t, seenChoiceIds: [...seen] };
+  if (baselined) item.seenBaselined = true;
+  return item;
 }
 
 type DraftRead =
@@ -206,6 +211,7 @@ function normalizeLibrary(parsed: unknown, env: LibraryEnv): Library | null {
       createdAt: typeof v.createdAt === "number" && Number.isFinite(v.createdAt) ? v.createdAt : t,
       updatedAt: typeof v.updatedAt === "number" && Number.isFinite(v.updatedAt) ? v.updatedAt : t,
       seenChoiceIds: Array.isArray(v.seenChoiceIds) ? v.seenChoiceIds.filter((x): x is string => typeof x === "string") : [],
+      ...(v.seenBaselined === true ? { seenBaselined: true } : {}),
     };
   }
   const ids = Object.keys(items);
@@ -342,6 +348,24 @@ export function saveDraft(env: LibraryEnv, lib: Library, id: string, draft: Draf
   return { library: next, ok: writeIndex(env, next) };
 }
 
+/** SK8: store the acknowledged choice ids of one character. Touches neither the draft nor `updatedAt`
+ *  (seeing a card is not an edit, so the list order stays). */
+export function setSeenChoices(
+  env: LibraryEnv,
+  lib: Library,
+  id: string,
+  seenChoiceIds: string[],
+  baselined: boolean,
+): { library: Library; ok: boolean } {
+  const item = lib.items[id];
+  if (!item) return { library: lib, ok: true };
+  const updated: LibraryItem = { ...item, seenChoiceIds: [...seenChoiceIds] };
+  if (baselined) updated.seenBaselined = true;
+  else delete updated.seenBaselined;
+  const next: Library = { ...lib, items: { ...lib.items, [id]: updated } };
+  return { library: next, ok: writeIndex(env, next) };
+}
+
 /** Add a character (the draft defaults to an empty one) and make it active. Does not touch the others. */
 export function createCharacter(env: LibraryEnv, lib: Library, draft: Draft = emptyDraft): { library: Library; id: string; draft: Draft; ok: boolean } {
   const id = freshId(env, lib);
@@ -413,7 +437,7 @@ export function duplicateCharacter(
   copy.name = names.copyName(copy.name || names.unnamed);
   const newId = freshId(env, lib);
   const draftOk = put(env, draftKey(newId), JSON.stringify(copy));
-  const next: Library = { ...lib, items: { ...lib.items, [newId]: newItem(env, newId, copy.name, item.seenChoiceIds) } };
+  const next: Library = { ...lib, items: { ...lib.items, [newId]: newItem(env, newId, copy.name, item.seenChoiceIds, item.seenBaselined === true) } };
   const indexOk = writeIndex(env, next);
   dropLegacy(env, next);
   return { library: next, id: newId, ok: draftOk && indexOk };

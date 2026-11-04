@@ -25,6 +25,7 @@ export const bg = {
     },
     sheet: "Лист",
     unresolved: (n: number) => `неизбрани: ${n}`,
+    newChoices: (n: number) => `Нови избори: ${n}`,
     nextStep: "Следваща незавършена стъпка →",
   },
 
@@ -482,6 +483,7 @@ export const bg = {
   },
 
   choice: {
+    newMarker: "ново",
     pendingDot: "pending choice",
     levelBadge: (level: number) => `${level} level`,
     counter: (selected: number, count: number) => `избрани ${selected}/${count}`,
