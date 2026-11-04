@@ -2,17 +2,13 @@ import { useState } from "react";
 import { StepProblems } from "../components/StepProblems";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
+import { useT } from "../LanguageContext";
+import { renderMsg } from "../logic/messages";
 import { useItems } from "../useItems";
 import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
 
-const CATEGORIES = [
-  { value: "", label: "Всички" },
-  { value: "weapon", label: "Оръжия" },
-  { value: "armor", label: "Брони" },
-  { value: "adventuring-gear", label: "Снаряжение" },
-  { value: "tools", label: "Инструменти" },
-  { value: "mounts-and-vehicles", label: "Превозни средства" },
-];
+/** Values of the category filter; the labels are `t.equipmentPage.categories[value || "all"]`. */
+const CATEGORIES = ["", "weapon", "armor", "adventuring-gear", "tools", "mounts-and-vehicles"];
 
 /** RP8: the items of a 2024 equipment pack, one plain line ("Backpack, Oil ×2"). */
 function contentsText(contents: { name: string; qty: number }[]): string {
@@ -20,13 +16,16 @@ function contentsText(contents: { name: string; qty: number }[]): string {
 }
 
 export function EquipmentPage() {
+  const t = useT();
+  const ep = t.equipmentPage;
+  const eq = t.sheet.equipment;
   const { draft, dispatch } = useDraft();
   const { resolution, loading, error } = useResolutionContext();
   const [category, setCategory] = useState("");
   const [query, setQuery] = useState("");
   const items = useItems(category, query, draft.ruleset, draft.sources);
 
-  if (!resolution) return <div className="page">{error ? null : "Зареждане…"}</div>;
+  if (!resolution) return <div className="page">{error ? null : t.common.loading}</div>;
 
   const equipmentChoices = resolution.choices.filter((c) => c.source.kind === "equipment");
 
@@ -38,22 +37,22 @@ export function EquipmentPage() {
 
   return (
     <div className="page">
-      <h1>Equipment {loading && "…"}</h1>
+      <h1>{ep.title} {loading && "…"}</h1>
       <StepProblems step="equipment" />
 
-      {equipmentChoices.length === 0 && <p>Няма избори за стартова екипировка.</p>}
+      {equipmentChoices.length === 0 && <p>{ep.noStartingChoices}</p>}
       {equipmentChoices.map((choice) => (
         <ChoiceCard key={choice.id} choice={choice} onToggle={handleChoiceChange} defaultExpanded={choice.id === firstPendingId(equipmentChoices)} />
       ))}
 
       {sheetEquipment.granted.length > 0 && (
         <div className="equipment-section">
-          <h2>Получена екипировка</h2>
+          <h2>{eq.groups.granted}</h2>
           <ul>
             {sheetEquipment.granted.map((g, i) => (
               <li key={`${g.itemId}-${i}`}>
                 {g.name} ×{g.qty}
-                {g.contents && g.contents.length > 0 && ` (съдържа: ${contentsText(g.contents)})`}
+                {g.contents && g.contents.length > 0 && ` ${ep.contains(contentsText(g.contents))}`}
               </li>
             ))}
           </ul>
@@ -62,13 +61,13 @@ export function EquipmentPage() {
 
       {sheetEquipment.chosen.length > 0 && (
         <div className="equipment-section">
-          <h2>Избрана екипировка</h2>
+          <h2>{eq.groups.chosen}</h2>
           <ul>
             {sheetEquipment.chosen.map((c, i) => (
               <li key={`${c.itemId}-${i}`}>
                 {c.name}
                 {c.qty !== 1 ? ` ×${c.qty}` : ""}
-                {c.contents && c.contents.length > 0 && ` (съдържа: ${contentsText(c.contents)})`}
+                {c.contents && c.contents.length > 0 && ` ${ep.contains(contentsText(c.contents))}`}
               </li>
             ))}
           </ul>
@@ -77,7 +76,7 @@ export function EquipmentPage() {
 
       {sheetEquipment.slots && (
         <div className="equipment-section">
-          <h2>Носено и държано</h2>
+          <h2>{ep.wornAndHeld}</h2>
           <label>
             <input
               type="checkbox"
@@ -91,19 +90,19 @@ export function EquipmentPage() {
                 })
               }
             />
-            Задай ръчно какво нося
+            {ep.setWornManually}
           </label>
           {draft.equipment.worn && (
             <>
               <label>
-                Броня
+                {ep.armor}
                 <select
                   value={draft.equipment.worn.armor ?? ""}
                   onChange={(e) =>
                     dispatch({ type: "SET_WORN", worn: { ...draft.equipment.worn, armor: e.target.value || null } })
                   }
                 >
-                  <option value="">Без броня</option>
+                  <option value="">{ep.noArmor}</option>
                   {sheetEquipment.slots.armor.map((o) => (
                     <option key={o.itemId} value={o.itemId}>
                       {o.name}
@@ -117,7 +116,7 @@ export function EquipmentPage() {
                   checked={draft.equipment.worn.shield == null ? !!sheetEquipment.worn?.shield : draft.equipment.worn.shield}
                   onChange={(e) => dispatch({ type: "SET_WORN", worn: { ...draft.equipment.worn, shield: e.target.checked } })}
                 />
-                Щит
+                {ep.shield}
               </label>
             </>
           )}
@@ -127,20 +126,20 @@ export function EquipmentPage() {
               checked={!!draft.equipment.wielded}
               onChange={(e) => dispatch({ type: "SET_WIELDED", wielded: e.target.checked ? { main: null, off: null } : undefined })}
             />
-            Задай ръчно какво държа в ръцете
+            {ep.setWieldedManually}
           </label>
           {draft.equipment.wielded && (
             <>
               {(["main", "off"] as const).map((hand) => (
                 <label key={hand}>
-                  {hand === "main" ? "Основна ръка" : "Свободна ръка"}
+                  {hand === "main" ? ep.mainHand : ep.offHand}
                   <select
                     value={draft.equipment.wielded?.[hand] ?? ""}
                     onChange={(e) =>
                       dispatch({ type: "SET_WIELDED", wielded: { ...draft.equipment.wielded, [hand]: e.target.value || null } })
                     }
                   >
-                    <option value="">Празна</option>
+                    <option value="">{ep.emptyHand}</option>
                     {sheetEquipment.slots!.hands
                       .filter((o) => hand === "off" || o.kind !== "shield")
                       .map((o) => (
@@ -156,20 +155,20 @@ export function EquipmentPage() {
         </div>
       )}
 
-      <h2>Предмети</h2>
-      <input type="text" inputMode="search" enterKeyHint="search" aria-label="Търсене на предмети" placeholder="Търсене…" value={query} onChange={(e) => setQuery(e.target.value)} />
-      <select aria-label="Категория" value={category} onChange={(e) => setCategory(e.target.value)}>
-        {CATEGORIES.map((c) => (
-          <option key={c.value} value={c.value}>
-            {c.label}
+      <h2>{ep.itemsTitle}</h2>
+      <input type="text" inputMode="search" enterKeyHint="search" aria-label={ep.searchLabel} placeholder={t.common.search} value={query} onChange={(e) => setQuery(e.target.value)} />
+      <select aria-label={ep.categoryLabel} value={category} onChange={(e) => setCategory(e.target.value)}>
+        {CATEGORIES.map((value) => (
+          <option key={value} value={value}>
+            {ep.categories[value || "all"]}
           </option>
         ))}
       </select>
       {items.error && (
         <p>
-          Грешка: {items.error}{" "}
+          {t.common.errorLine(renderMsg(t, items.error))}{" "}
           <button type="button" onClick={items.retry}>
-            Опитай пак
+            {t.common.retry}
           </button>
         </p>
       )}
@@ -177,22 +176,22 @@ export function EquipmentPage() {
         {items.items.map((item) => (
           <li key={item.id}>
             <span>{item.name}</span>
-            <button type="button" aria-label={`Добави ${item.name}`} onClick={() => dispatch({ type: "ADD_ITEM", itemId: item.id })}>
-              Add
+            <button type="button" aria-label={ep.addLabel(item.name)} onClick={() => dispatch({ type: "ADD_ITEM", itemId: item.id })}>
+              {ep.add}
             </button>
           </li>
         ))}
       </ul>
 
-      <h2>Инвентар</h2>
-      {sheetEquipment.added.length === 0 && <p>Няма добавени предмети.</p>}
+      <h2>{eq.groups.added}</h2>
+      {sheetEquipment.added.length === 0 && <p>{ep.noAdded}</p>}
       {sheetEquipment.added.length > 0 && (
         <ul className="inventory-list">
           {sheetEquipment.added.map((entry) => (
             <li key={entry.itemId}>
               <span>
                 {entry.name} ×{entry.qty}
-                {entry.contents && entry.contents.length > 0 && ` (съдържа: ${contentsText(entry.contents)})`}
+                {entry.contents && entry.contents.length > 0 && ` ${ep.contains(contentsText(entry.contents))}`}
               </span>
               <label>
                 <input
@@ -200,10 +199,10 @@ export function EquipmentPage() {
                   checked={entry.equipped}
                   onChange={() => dispatch({ type: "TOGGLE_EQUIPPED", itemId: entry.itemId })}
                 />
-                Екипиран
+                {ep.equipped}
               </label>
-              <button type="button" aria-label={`Премахни ${entry.name}`} onClick={() => dispatch({ type: "REMOVE_ITEM", itemId: entry.itemId })}>
-                Премахни
+              <button type="button" aria-label={ep.removeLabel(entry.name)} onClick={() => dispatch({ type: "REMOVE_ITEM", itemId: entry.itemId })}>
+                {t.common.remove}
               </button>
             </li>
           ))}

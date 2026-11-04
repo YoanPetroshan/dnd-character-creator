@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
+import { useT } from "../LanguageContext";
 import { activeDraftRaw, browserStorage, resetActiveDraft } from "../library";
 
 interface State {
@@ -49,21 +50,27 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
 
   render() {
     if (!this.state.error) return this.props.children;
-    return (
-      <div className="page" role="alert">
-        <h1>Нещо се обърка</h1>
-        <p>Приложението се натъкна на грешка: {this.state.error.message}</p>
-        <p>Можеш да запазиш чернова като файл и да започнеш наново.</p>
-        <button type="button" onClick={this.retry}>
-          Опитай пак
-        </button>{" "}
-        <button type="button" onClick={this.download}>
-          Изтегли черновата (JSON)
-        </button>{" "}
-        <button type="button" onClick={this.reset}>
-          Нулирай черновата
-        </button>
-      </div>
-    );
+    return <ErrorView message={this.state.error.message} onRetry={this.retry} onDownload={this.download} onReset={this.reset} />;
   }
+}
+
+/** The fallback page. A function component so it can read the language; the boundary itself cannot. */
+function ErrorView({ message, onRetry, onDownload, onReset }: { message: string; onRetry: () => void; onDownload: () => void; onReset: () => void }) {
+  const t = useT();
+  return (
+    <div className="page" role="alert">
+      <h1>{t.errorBoundary.title}</h1>
+      <p>{t.errorBoundary.body(message)}</p>
+      <p>{t.errorBoundary.hint}</p>
+      <button type="button" onClick={onRetry}>
+        {t.common.retry}
+      </button>{" "}
+      <button type="button" onClick={onDownload}>
+        {t.errorBoundary.download}
+      </button>{" "}
+      <button type="button" onClick={onReset}>
+        {t.errorBoundary.reset}
+      </button>
+    </div>
+  );
 }

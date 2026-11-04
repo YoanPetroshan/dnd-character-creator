@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { StepProblems } from "../components/StepProblems";
 import { MAX_TOTAL_LEVEL, totalLevel, useDraft } from "../DraftContext";
+import { useT } from "../LanguageContext";
+import { renderMsg } from "../logic/messages";
 import { useResolutionContext } from "../ResolutionContext";
 import { useCatalogContext } from "../CatalogContext";
 import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
@@ -24,6 +26,8 @@ interface ClassDetail {
 }
 
 function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolean }) {
+  const t = useT();
+  const cp = t.classPage;
   const { draft, dispatch } = useDraft();
   const { resolution, loading } = useResolutionContext();
   const catalog = useCatalogContext();
@@ -90,13 +94,13 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
         {sheetClass?.name ?? catalog.classes.find((c) => c.id === classId)?.name ?? classId}{" "}
         {!isPrimary && (
           <button type="button" onClick={() => dispatch({ type: "REMOVE_CLASS", classId })}>
-            ✕ Премахни
+            {cp.remove}
           </button>
         )}
       </h2>
 
       <label>
-        Ниво
+        {cp.level}
         <CommitNumberInput
           min={1}
           max={Math.min(20, MAX_TOTAL_LEVEL - (totalLevel(draft) - classLevel))}
@@ -107,17 +111,17 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
 
       {classDetail && classDetail.subclassUnlockLevel !== null && classLevel >= classDetail.subclassUnlockLevel && (
         <label>
-          Подклас
+          {cp.subclass}
           <select
             value={classEntry?.subclassId ?? ""}
             onChange={(e) => dispatch({ type: "SET_SUBCLASS", classId, subclassId: e.target.value || undefined })}
           >
-            <option value="">— избери подклас —</option>
+            <option value="">{cp.chooseSubclass}</option>
             {classDetail.subclasses.map((s) => (
               <option key={s.index} value={s.index}>
                 {s.name}
                 {s.source && s.source !== "SRD" ? ` (${s.source})` : ""}
-                {s.hidden ? " — скрит от текущите филтри" : ""}
+                {s.hidden ? ` — ${t.common.hiddenByFilters}` : ""}
               </option>
             ))}
           </select>
@@ -126,7 +130,7 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
 
       {classDetail && (
         <p className="higher-levels-teaser">
-          Способности на по-високи нива:{" "}
+          {cp.higherLevels}{" "}
           {Object.entries(classDetail.levelFeatureCounts)
             .filter(([lvl]) => Number(lvl) > classLevel)
             .reduce((sum, [, count]) => sum + count, 0)}
@@ -135,7 +139,7 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
 
       {(resolution?.derived.classResources ?? []).some((r) => r.classId === classId) && (
         <div className="class-resources">
-          <h3>Ресурси на класа</h3>
+          <h3>{cp.classResources}</h3>
           <ClassResourcesList resources={(resolution?.derived.classResources ?? []).filter((r) => r.classId === classId)} />
         </div>
       )}
@@ -144,7 +148,7 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
           later rolls (or averages) its own level 1 as well. */}
       {draft.preferences.hitPointType === "manual" && classLevel >= (isPrimary ? 2 : 1) && (
         <div className="hp-rolls">
-          <h3>Хвърляния за точки живот</h3>
+          <h3>{cp.hpRolls}</h3>
           {(resolution?.warnings ?? [])
             .filter((w) => w.id.startsWith(`hp-roll-invalid-${classId}-`))
             .map((w) => (
@@ -154,7 +158,7 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
             ))}
           {Array.from({ length: classLevel - (isPrimary ? 1 : 0) }, (_, i) => i + (isPrimary ? 2 : 1)).map((lvl) => (
             <label key={lvl}>
-              Ниво {lvl}
+              {cp.levelN(lvl)}
               <CommitNumberInput
                 min={1}
                 max={classDetail?.hit_die}
@@ -178,7 +182,7 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
           aria-controls={panelFeaturesId}
           onClick={() => setTab("features")}
         >
-          Способности
+          {cp.tabFeatures}
         </button>
         {hasSpells && (
           <button
@@ -189,14 +193,14 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
             aria-controls={panelSpellsId}
             onClick={() => setTab("spells")}
           >
-            Заклинания
+            {cp.tabSpells}
           </button>
         )}
       </div>
 
       {effectiveTab === "features" && (
         <div id={panelFeaturesId} role="tabpanel" aria-labelledby={tabFeaturesId}>
-          {!loading && featureChoices.length === 0 && <p>Няма избори за този клас.</p>}
+          {!loading && featureChoices.length === 0 && <p>{cp.noChoices}</p>}
           {featureChoices.map((choice) => (
             <div key={choice.id}>
               <ChoiceCard choice={choice} onToggle={handleChange} defaultExpanded={choice.id === firstPendingId(featureChoices)} />
@@ -232,6 +236,8 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
 }
 
 export function ClassPage() {
+  const t = useT();
+  const cp = t.classPage;
   const { draft, dispatch } = useDraft();
   const { resolution, loading } = useResolutionContext();
   const catalog = useCatalogContext();
@@ -242,13 +248,13 @@ export function ClassPage() {
 
   return (
     <div className="page">
-      <h1>Клас {loading && "…"}</h1>
+      <h1>{cp.title} {loading && "…"}</h1>
       <StepProblems step="class" />
       {catalog.error && (
         <p>
-          Грешка при зареждане на класовете: {catalog.error}{" "}
+          {cp.loadError(renderMsg(t, catalog.error))}{" "}
           <button type="button" onClick={catalog.retry}>
-            Опитай пак
+            {t.common.retry}
           </button>
         </p>
       )}
@@ -264,7 +270,7 @@ export function ClassPage() {
                   checked={c.id === primaryClassId}
                   onChange={() => dispatch({ type: "SET_CLASS", classId: c.id })}
                 />
-                {c.name} (d{c.hitDie})
+                {cp.hitDieLabel(c.name, c.hitDie)}
               </label>
             </li>
           ))}
@@ -273,7 +279,7 @@ export function ClassPage() {
 
       {primaryClassId && (
         <div className="hp-summary">
-          <strong>Точки живот:</strong> {resolution ? String(resolution.derived.hitPointMax ?? "—") : "—"}
+          <strong>{cp.hitPoints}</strong> {resolution ? String(resolution.derived.hitPointMax ?? "—") : "—"}
         </div>
       )}
 
@@ -283,9 +289,9 @@ export function ClassPage() {
 
       {primaryClassId && (
         <div className="add-class">
-          <h3>+ Добави клас</h3>
+          <h3>{cp.addClass}</h3>
           {totalLevel(draft) >= MAX_TOTAL_LEVEL && (
-            <p role="note">Общото ниво е {MAX_TOTAL_LEVEL} — намали ниво на клас, за да добавиш друг.</p>
+            <p role="note">{cp.levelCap(MAX_TOTAL_LEVEL)}</p>
           )}
           <ul className="picker-list">
             {catalog.classes
@@ -297,7 +303,7 @@ export function ClassPage() {
                     disabled={totalLevel(draft) >= MAX_TOTAL_LEVEL}
                     onClick={() => dispatch({ type: "ADD_CLASS", classId: c.id })}
                   >
-                    {c.name} (d{c.hitDie})
+                    {cp.hitDieLabel(c.name, c.hitDie)}
                   </button>
                 </li>
               ))}

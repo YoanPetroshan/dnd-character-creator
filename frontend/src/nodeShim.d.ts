@@ -11,6 +11,10 @@ declare module "node:fs" {
   export function readdirSync(path: URL | string): string[];
   export function statSync(path: URL | string): { isDirectory(): boolean };
 }
+declare module "rolldown/parseAst" {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  export function parseAst(code: string, options?: { lang?: string }): { body: any[] };
+}
 declare module "node:zlib" {
   export function gzipSync(data: Uint8Array, options?: { level?: number }): Uint8Array;
   export function gunzipSync(data: Uint8Array): Uint8Array & { toString(encoding?: string): string };

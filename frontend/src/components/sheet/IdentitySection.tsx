@@ -1,8 +1,9 @@
-import { t } from "../../copy";
+import { useT } from "../../LanguageContext";
 import type { SheetSectionData } from "../../logic/sheetSections";
 import { SectionFrame } from "./SectionFrame";
 
 export function IdentitySection({ data }: { data: SheetSectionData["identity"] }) {
+  const t = useT();
   const c = t.sheet.identity;
   return (
     <SectionFrame sectionKey="identity" title={c.title}>

@@ -1,5 +1,6 @@
 // Pure draft logic moved out of DraftContext (SK1): no React, importable from tests.
 import type { Ability, ChoiceSourceKind, Draft, Ruleset } from "../types";
+import { MsgError, msg } from "./messages";
 
 /** Bump when the draft shape changes incompatibly. Stored/imported drafts
  *  with a NEWER version than this build are rejected rather than guessed at.
@@ -335,13 +336,13 @@ export function sanitizeDraft(d: Draft): Draft {
  *  newer build never come back undefined. Throws on non-objects or on a
  *  draft written by a newer app version. */
 export function mergeDraft(stored: unknown): Draft {
-  if (!isPlainObject(stored)) throw new Error("Файлът не е чернова на герой.");
+  if (!isPlainObject(stored)) throw new MsgError(msg("draft.notADraft"));
   const v = stored.draftVersion;
   if (typeof v === "number" && v > DRAFT_VERSION) {
-    throw new Error("Тази чернова е записана от по-нова версия на приложението.");
+    throw new MsgError(msg("draft.newer"));
   }
   // an arbitrary JSON object (e.g. an exported sheet) is not a draft: demand at least one draft key
-  if (!DRAFT_KEYS.some((k) => k in stored)) throw new Error("Файлът не прилича на чернова на герой.");
+  if (!DRAFT_KEYS.some((k) => k in stored)) throw new MsgError(msg("draft.notRecognised"));
   const merged = mergeInto(emptyDraft, stored) as Draft;
   return sanitizeDraft({ ...merged, draftVersion: DRAFT_VERSION });
 }

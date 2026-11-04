@@ -21,8 +21,14 @@ import {
   type LibraryEnv,
   type StorageLike,
 } from "./library";
+import { bg } from "./copy";
 import { DRAFT_VERSION, emptyDraft } from "./logic/draft";
+import { renderMsg, type Msg } from "./logic/messages";
 import type { Draft } from "./types";
+
+/** The Bulgarian text of a message (the messages are codes; the BG wording is pinned here). */
+const bgText = (m: Msg) => renderMsg(bg, m);
+const NAMES = { unnamed: bg.library.unnamed, copyName: bg.library.copyName };
 
 class MemoryStorage implements StorageLike {
   data = new Map<string, string>();
@@ -108,8 +114,8 @@ describe("bootLibrary: first run and legacy migration", () => {
     storage.setItem(LEGACY_DRAFT_KEY, "{not json");
     const b = bootLibrary(env);
     expect(storage.getItem(LEGACY_BACKUP_KEY)).toBe("{not json");
-    expect(b.notices[0]).toContain("повредена");
-    expect(b.notices[0]).toContain(LEGACY_BACKUP_KEY);
+    expect(bgText(b.notices[0])).toContain("повредена");
+    expect(bgText(b.notices[0])).toContain(LEGACY_BACKUP_KEY);
     expect(b.unsavedRaw).toBeNull();
     expect(Object.keys(b.library.items)).toHaveLength(1);
     expect(b.draft.classes).toEqual([]);
@@ -121,7 +127,7 @@ describe("bootLibrary: first run and legacy migration", () => {
     storage.failKeys.add(LEGACY_BACKUP_KEY);
     const b = bootLibrary(env);
     expect(b.unsavedRaw).toBe("{not json");
-    expect(b.notices[0]).toContain("НЕ можа да се запази");
+    expect(bgText(b.notices[0])).toContain("НЕ можа да се запази");
   });
 
   it("a newer-version legacy draft is treated as unreadable and backed up", () => {
@@ -129,7 +135,7 @@ describe("bootLibrary: first run and legacy migration", () => {
     storage.setItem(LEGACY_DRAFT_KEY, JSON.stringify({ draftVersion: DRAFT_VERSION + 1, classes: [] }));
     const b = bootLibrary(env);
     expect(storage.getItem(LEGACY_BACKUP_KEY)).not.toBeNull();
-    expect(b.notices[0]).toContain("по-нова версия");
+    expect(bgText(b.notices[0])).toContain("по-нова версия");
   });
 
   it("migration is lossless when the library cannot be written: legacy stays, nothing half-written", () => {
@@ -207,7 +213,7 @@ describe("operations", () => {
 
   it("duplicate deep-copies: new id, 'копие' suffix, independent from the original", () => {
     const { env, storage, boot, firstId } = twoCharacters();
-    const r = duplicateCharacter(env, boot.library, firstId);
+    const r = duplicateCharacter(env, boot.library, firstId, undefined, NAMES);
     expect(r.id).not.toBe(firstId);
     expect(r.library.items[r.id as string].name).toBe("Зара (копие)");
     const copy = stored(storage, r.id as string);
@@ -224,14 +230,14 @@ describe("operations", () => {
     const { env, storage, boot, firstId } = twoCharacters();
     storage.failKeys.add(draftKey(firstId));
     const live = draftOf("Зара", [["warlock", 12]]);
-    const r = duplicateCharacter(env, boot.library, firstId, { id: firstId, draft: live });
+    const r = duplicateCharacter(env, boot.library, firstId, { id: firstId, draft: live }, NAMES);
     expect(stored(storage, r.id as string).classes[0].level).toBe(12);
   });
 
   it("an unnamed character duplicates as 'Без име (копие)'", () => {
     const { env } = makeEnv();
     const b = bootLibrary(env);
-    const r = duplicateCharacter(env, b.library, b.library.activeId);
+    const r = duplicateCharacter(env, b.library, b.library.activeId, undefined, NAMES);
     expect(r.library.items[r.id as string].name).toBe("Без име (копие)");
   });
 
@@ -318,7 +324,7 @@ describe("storage failure and corruption", () => {
     const again = bootLibrary(h.env);
     expect(Object.keys(again.library.items)).toHaveLength(3);
     expect(h.storage.getItem(backupKey(second.id as string))).toBe("{broken");
-    expect(again.notices.join(" ")).toContain("повредена");
+    expect(again.notices.map(bgText).join(" ")).toContain("повредена");
     expect(again.library.activeId).toBe(third.id);
     const list = summarize(h.env, again.library);
     expect(list).toHaveLength(3);
@@ -346,7 +352,7 @@ describe("storage failure and corruption", () => {
     h.storage.failKeys.add(backupKey(b.library.activeId));
     const again = bootLibrary(h.env);
     expect(h.storage.getItem(draftKey(b.library.activeId))).toBe("{broken");
-    expect(again.notices.join(" ")).toContain("НЕ можа");
+    expect(again.notices.map(bgText).join(" ")).toContain("НЕ можа");
     expect(again.library.activeId).toBe(second.id);
     expect(summarize(h.env, again.library).find((s) => s.id === b.library.activeId)?.status).toBe("corrupt");
   });
@@ -360,7 +366,7 @@ describe("storage failure and corruption", () => {
     const again = bootLibrary(h.env);
     expect(h.storage.getItem(LIBRARY_BACKUP_KEY)).toBe("garbage");
     expect(Object.keys(again.library.items)).toHaveLength(2);
-    expect(again.notices.join(" ")).toContain("библиотеката");
+    expect(again.notices.map(bgText).join(" ")).toContain("библиотеката");
     expect(again.library.items[again.library.activeId]).toBeDefined();
   });
 
@@ -462,9 +468,9 @@ describe("export and import", () => {
     };
     const r = importDrafts(env, boot.library, bundle);
     expect(r.report.map((e) => e.status)).toEqual(["accepted", "rejected", "rejected", "rejected", "rejected", "accepted"]);
-    expect(r.report[1].message).toMatch(/чернова/);
-    expect(r.report[3].message).toContain("не прилича на чернова");
-    expect(r.report[4].message).toContain("по-нова версия");
+    expect(bgText(r.report[1].message)).toMatch(/чернова/);
+    expect(bgText(r.report[3].message)).toContain("не прилича на чернова");
+    expect(bgText(r.report[4].message)).toContain("по-нова версия");
     expect(r.report[0].name).toBe("Добър");
     expect(Object.keys(r.library.items)).toHaveLength(3);
     expect(idx(storage).items).toBeDefined();
@@ -509,7 +515,7 @@ describe("export and import", () => {
     h.storage.failKeys.add(draftKey("c"));
     const r = importDrafts(h.env, boot.library, { kind: "dnd-builder-library", version: 1, drafts: [draftOf("Х1"), draftOf("Х2")] });
     expect(r.report.map((e) => e.status)).toEqual(["accepted", "rejected"]);
-    expect(r.report[1].message).toContain("пълно");
+    expect(bgText(r.report[1].message)).toContain("пълно");
     expect(r.ok).toBe(false);
     expect(Object.keys(idx(h.storage).items).sort()).toEqual(["a", "b"]);
   });

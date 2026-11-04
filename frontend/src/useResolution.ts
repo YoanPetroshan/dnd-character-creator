@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { Draft, Resolution } from "./types";
 import { httpErrorMessage } from "./httpErrors";
+import { MsgError, msg, toMsg, type Msg } from "./logic/messages";
 
 const DEBOUNCE_MS = 150;
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -8,7 +9,7 @@ const REQUEST_TIMEOUT_MS = 30_000;
 interface ResolutionState {
   resolution: Resolution | null;
   loading: boolean;
-  error: string | null;
+  error: Msg | null;
 }
 
 export function useResolution(draft: Draft): ResolutionState & { retry: () => void } {
@@ -44,7 +45,7 @@ export function useResolution(draft: Draft): ResolutionState & { retry: () => vo
             } catch {
               // non-JSON error body
             }
-            throw new Error(httpErrorMessage(resp.status, detail));
+            throw new MsgError(httpErrorMessage(resp.status, detail));
           }
           return (await resp.json()) as Resolution;
         })
@@ -56,10 +57,10 @@ export function useResolution(draft: Draft): ResolutionState & { retry: () => vo
           if (id !== requestId.current) return;
           // A superseded request is aborted by the cleanup below; only a
           // timeout abort reaches here with the current id still set.
-          let message: string;
-          if (timedOut) message = "Сървърът не отговори навреме.";
-          else if (err instanceof TypeError) message = "Няма връзка със сървъра.";
-          else message = err instanceof Error ? err.message : String(err);
+          let message: Msg;
+          if (timedOut) message = msg("net.timeout");
+          else if (err instanceof TypeError) message = msg("net.offline");
+          else message = toMsg(err);
           // keep the last good resolution: only the error line changes
           setState((s) => ({ ...s, loading: false, error: message }));
         });

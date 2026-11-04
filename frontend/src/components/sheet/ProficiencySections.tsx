@@ -1,9 +1,10 @@
-import { t } from "../../copy";
+import { useT } from "../../LanguageContext";
 import { formatModifier } from "../../logic/abilities";
 import type { SheetSectionData } from "../../logic/sheetSections";
 import { SectionFrame } from "./SectionFrame";
 
 export function SavingThrowsSection({ data }: { data: SheetSectionData["savingThrows"] }) {
+  const t = useT();
   const c = t.sheet.savingThrows;
   return (
     <SectionFrame sectionKey="savingThrows" title={c.title}>
@@ -30,6 +31,7 @@ export function SavingThrowsSection({ data }: { data: SheetSectionData["savingTh
 }
 
 export function SkillsSection({ data }: { data: SheetSectionData["skills"] }) {
+  const t = useT();
   const c = t.sheet.skills;
   return (
     <SectionFrame sectionKey="skills" title={c.title}>
@@ -61,6 +63,7 @@ export function SkillsSection({ data }: { data: SheetSectionData["skills"] }) {
 }
 
 export function ProficienciesSection({ data }: { data: SheetSectionData["proficiencies"] }) {
+  const t = useT();
   const c = t.sheet.proficiencies;
   const rows = [
     [c.armor, data.armor],
@@ -84,6 +87,7 @@ export function ProficienciesSection({ data }: { data: SheetSectionData["profici
 }
 
 export function LanguagesSection({ data }: { data: SheetSectionData["languages"] }) {
+  const t = useT();
   return (
     <SectionFrame sectionKey="languages" title={t.sheet.languages.title}>
       <p>{data.join(", ")}</p>

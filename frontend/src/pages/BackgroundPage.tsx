@@ -1,11 +1,16 @@
 import { StepProblems } from "../components/StepProblems";
 import { useDraft } from "../DraftContext";
 import { backgroundChoicesOf } from "../logic/choiceRouting";
+import { useT } from "../LanguageContext";
+import { renderMsg } from "../logic/messages";
 import { useResolutionContext } from "../ResolutionContext";
 import { useCatalogContext } from "../CatalogContext";
 import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
 
 export function BackgroundPage() {
+  const t = useT();
+  const bp = t.backgroundPage;
+  const d = t.sheet.details;
   const { draft, dispatch } = useDraft();
   const { resolution, loading } = useResolutionContext();
   const catalog = useCatalogContext();
@@ -39,13 +44,13 @@ export function BackgroundPage() {
 
   return (
     <div className="page">
-      <h1>Background {loading && "…"}</h1>
+      <h1>{bp.title} {loading && "…"}</h1>
       <StepProblems step="background" />
       {catalog.error && (
         <p>
-          Грешка при зареждане: {catalog.error}{" "}
+          {t.common.loadError(renderMsg(t, catalog.error))}{" "}
           <button type="button" onClick={catalog.retry}>
-            Опитай пак
+            {t.common.retry}
           </button>
         </p>
       )}
@@ -58,125 +63,124 @@ export function BackgroundPage() {
       )}
       {catalog.backgroundsFallback && (
         <p role="note">
-          Няма 2024 backgrounds в избраните източници — показан е само SRD background (от 2014, без бонус към
-          характеристики и Origin feat по правилата от 2024).
+          {bp.fallbackNote}
         </p>
       )}
       <select
-        aria-label="Background"
+        aria-label={bp.selectLabel}
         value={selectedBackgroundId ?? ""}
         onChange={(e) => {
           if (e.target.value) dispatch({ type: "SET_BACKGROUND", backgroundId: e.target.value });
         }}
       >
-        <option value="">— избери background —</option>
+        <option value="">{bp.choose}</option>
         {backgroundList.map((b) => (
           <option key={b.id} value={b.id}>
             {b.name}
-            {hiddenBackground && b.id === hiddenBackground.id ? " (скрит от текущите филтри)" : ""}
+            {hiddenBackground && b.id === hiddenBackground.id ? ` (${t.common.hiddenByFilters})` : ""}
           </option>
         ))}
       </select>
-      {selectedBackgroundId && !loading && choices.length === 0 && <p>Няма избори за този background.</p>}
+      {selectedBackgroundId && !loading && choices.length === 0 && <p>{bp.noChoices}</p>}
       {choices.map((choice) => (
         <ChoiceCard key={choice.id} choice={choice} onToggle={handleChange} defaultExpanded={choice.id === firstPendingId(choices)} />
       ))}
 
       <details className="details-section">
-        <summary>Данни за героя</summary>
+        <summary>{d.title}</summary>
         <label>
-          Мирогледие
+          {d.fields.alignment}
           <select value={draft.details.alignment ?? ""} onChange={(e) => dispatch({ type: "SET_DETAIL", field: "alignment", value: e.target.value })}>
-            <option value="">—</option>
-            <option value="Lawful Good">Законен добър</option>
-            <option value="Neutral Good">Неутрален добър</option>
-            <option value="Chaotic Good">Хаотичен добър</option>
-            <option value="Lawful Neutral">Законен неутрален</option>
-            <option value="True Neutral">Истински неутрален</option>
-            <option value="Chaotic Neutral">Хаотичен неутрален</option>
-            <option value="Lawful Evil">Законен зъл</option>
-            <option value="Neutral Evil">Неутрален зъл</option>
-            <option value="Chaotic Evil">Хаотичен зъл</option>
+            <option value="">{t.common.none}</option>
+            <option value="Lawful Good">{bp.alignments["Lawful Good"]}</option>
+            <option value="Neutral Good">{bp.alignments["Neutral Good"]}</option>
+            <option value="Chaotic Good">{bp.alignments["Chaotic Good"]}</option>
+            <option value="Lawful Neutral">{bp.alignments["Lawful Neutral"]}</option>
+            <option value="True Neutral">{bp.alignments["True Neutral"]}</option>
+            <option value="Chaotic Neutral">{bp.alignments["Chaotic Neutral"]}</option>
+            <option value="Lawful Evil">{bp.alignments["Lawful Evil"]}</option>
+            <option value="Neutral Evil">{bp.alignments["Neutral Evil"]}</option>
+            <option value="Chaotic Evil">{bp.alignments["Chaotic Evil"]}</option>
           </select>
         </label>
         <label>
-          Вяра/Божество
+          {d.fields.faith}
           <input type="text" value={draft.details.faith ?? ""} onChange={(e) => dispatch({ type: "SET_DETAIL", field: "faith", value: e.target.value })} />
         </label>
         <label>
-          Начин на живот
+          {d.fields.lifestyle}
           <input type="text" value={draft.details.lifestyle ?? ""} onChange={(e) => dispatch({ type: "SET_DETAIL", field: "lifestyle", value: e.target.value })} />
         </label>
       </details>
 
       <details className="details-section">
-        <summary>Физически характеристики</summary>
+        <summary>{d.sections.physical}</summary>
         <label>
-          Възраст
+          {d.fields.age}
           <input type="text" value={draft.details.age ?? ""} onChange={(e) => dispatch({ type: "SET_DETAIL", field: "age", value: e.target.value })} />
         </label>
         <label>
-          Височина
+          {d.fields.height}
           <input type="text" value={draft.details.height ?? ""} onChange={(e) => dispatch({ type: "SET_DETAIL", field: "height", value: e.target.value })} />
         </label>
         <label>
-          Тегло
+          {d.fields.weight}
           <input type="text" value={draft.details.weight ?? ""} onChange={(e) => dispatch({ type: "SET_DETAIL", field: "weight", value: e.target.value })} />
         </label>
         <label>
-          Очи
+          {d.fields.eyes}
           <input type="text" value={draft.details.eyes ?? ""} onChange={(e) => dispatch({ type: "SET_DETAIL", field: "eyes", value: e.target.value })} />
         </label>
         <label>
-          Кожа
+          {d.fields.skin}
           <input type="text" value={draft.details.skin ?? ""} onChange={(e) => dispatch({ type: "SET_DETAIL", field: "skin", value: e.target.value })} />
         </label>
         <label>
-          Коса
+          {d.fields.hair}
           <input type="text" value={draft.details.hair ?? ""} onChange={(e) => dispatch({ type: "SET_DETAIL", field: "hair", value: e.target.value })} />
         </label>
       </details>
 
       <details className="details-section">
-        <summary>Личност</summary>
+        <summary>{d.sections.personality}</summary>
         <label>
-          Черти на характера
+          {d.fields.personalityTraits}
           <textarea value={draft.details.personalityTraits ?? ""} onChange={(e) => dispatch({ type: "SET_DETAIL", field: "personalityTraits", value: e.target.value })} />
         </label>
         <label>
-          Идеали
+          {d.fields.ideals}
           <textarea value={draft.details.ideals ?? ""} onChange={(e) => dispatch({ type: "SET_DETAIL", field: "ideals", value: e.target.value })} />
         </label>
         <label>
-          Връзки
+          {d.fields.bonds}
           <textarea value={draft.details.bonds ?? ""} onChange={(e) => dispatch({ type: "SET_DETAIL", field: "bonds", value: e.target.value })} />
         </label>
         <label>
-          Слабости
+          {d.fields.flaws}
           <textarea value={draft.details.flaws ?? ""} onChange={(e) => dispatch({ type: "SET_DETAIL", field: "flaws", value: e.target.value })} />
         </label>
       </details>
 
       <details className="details-section">
-        <summary>Бележки</summary>
+        <summary>{d.sections.notes}</summary>
         <label>
-          Предистория
+          {d.fields.backstory}
           <textarea value={draft.details.backstory ?? ""} onChange={(e) => dispatch({ type: "SET_DETAIL", field: "backstory", value: e.target.value })} />
         </label>
         <label>
-          Организации
+          {d.fields.organizations}
           <textarea value={draft.details.organizations ?? ""} onChange={(e) => dispatch({ type: "SET_DETAIL", field: "organizations", value: e.target.value })} />
         </label>
         <label>
-          Съюзници
+          {d.fields.allies}
           <textarea value={draft.details.allies ?? ""} onChange={(e) => dispatch({ type: "SET_DETAIL", field: "allies", value: e.target.value })} />
         </label>
         <label>
-          Врагове
+          {d.fields.enemies}
           <textarea value={draft.details.enemies ?? ""} onChange={(e) => dispatch({ type: "SET_DETAIL", field: "enemies", value: e.target.value })} />
         </label>
         <label>
-          Допълнителни бележки
+          {d.fields.notes}
           <textarea value={draft.details.notes ?? ""} onChange={(e) => dispatch({ type: "SET_DETAIL", field: "notes", value: e.target.value })} />
         </label>
       </details>

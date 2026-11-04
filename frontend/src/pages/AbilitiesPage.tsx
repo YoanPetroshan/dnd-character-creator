@@ -1,7 +1,7 @@
 import { CommitNumberInput } from "../components/CommitNumberInput";
 import { StepProblems } from "../components/StepProblems";
-import { t } from "../copy";
 import { useDraft } from "../DraftContext";
+import { useT } from "../LanguageContext";
 import { useResolutionContext } from "../ResolutionContext";
 import {
   ABILITIES,
@@ -17,6 +17,8 @@ import { abilityRows } from "../logic/sheetSections";
 import type { Ability, Draft } from "../types";
 
 export function AbilitiesPage() {
+  const t = useT();
+  const ap = t.abilitiesPage;
   const { draft, dispatch } = useDraft();
   const { resolution, loading } = useResolutionContext();
 
@@ -44,24 +46,24 @@ export function AbilitiesPage() {
 
   return (
     <div className="page">
-      <h1>Abilities {loading && "…"}</h1>
+      <h1>{ap.title} {loading && "…"}</h1>
       <StepProblems step="abilities" />
       <div className="ability-method-selector">
         <label>
           <input type="radio" name="ability-method" checked={method === "standard"} onChange={() => setMethod("standard")} />
-          Standard Array
+          {ap.methods.standard}
         </label>
         <label>
           <input type="radio" name="ability-method" checked={method === "pointbuy"} onChange={() => setMethod("pointbuy")} />
-          Point Buy
+          {ap.methods.pointbuy}
         </label>
         <label>
           <input type="radio" name="ability-method" checked={method === "roll"} onChange={() => setMethod("roll")} />
-          Roll (4d6, drop lowest)
+          {ap.methods.roll}
         </label>
         <label>
           <input type="radio" name="ability-method" checked={method === "manual"} onChange={() => setMethod("manual")} />
-          Manual
+          {ap.methods.manual}
         </label>
       </div>
 
@@ -76,21 +78,21 @@ export function AbilitiesPage() {
               })
             }
           >
-            Roll all six scores
+            {ap.rollAll}
           </button>{" "}
-          Re-rolling replaces the current scores.
+          {ap.rerollNote}
         </p>
       )}
-      {method === "pointbuy" && <p>Points Remaining: {POINT_BUY_BUDGET - pointBuySpent}</p>}
+      {method === "pointbuy" && <p>{ap.pointsRemaining(POINT_BUY_BUDGET - pointBuySpent)}</p>}
 
       <table className="ability-table">
         <thead>
           <tr>
-            <th>{t.abilitiesPage.columns.ability}</th>
-            <th>{t.abilitiesPage.columns.base}</th>
-            <th>{t.abilitiesPage.columns.bonus}</th>
-            <th>{t.abilitiesPage.columns.total}</th>
-            <th>{t.abilitiesPage.columns.modifier}</th>
+            <th>{ap.columns.ability}</th>
+            <th>{ap.columns.base}</th>
+            <th>{ap.columns.bonus}</th>
+            <th>{ap.columns.total}</th>
+            <th>{ap.columns.modifier}</th>
           </tr>
         </thead>
         <tbody>
@@ -103,7 +105,7 @@ export function AbilitiesPage() {
                 <td>{ability}</td>
                 <td>
                   {method === "standard" && (
-                    <select aria-label={`${ability}: стойност`} value={score} onChange={(e) => setStandard(ability, Number(e.target.value))}>
+                    <select aria-label={ap.valueLabel(ability)} value={score} onChange={(e) => setStandard(ability, Number(e.target.value))}>
                       {!STANDARD_ARRAY.includes(score) && <option value={score}>{score}</option>}
                       {STANDARD_ARRAY.map((v) => (
                         <option key={v} value={v}>
@@ -114,11 +116,11 @@ export function AbilitiesPage() {
                   )}
                   {method === "pointbuy" && (
                     <span className="point-buy-stepper">
-                      <button type="button" aria-label={`${ability}: намали`} disabled={score <= 8} onClick={() => setAbility(ability, score - 1)}>
+                      <button type="button" aria-label={ap.decreaseLabel(ability)} disabled={score <= 8} onClick={() => setAbility(ability, score - 1)}>
                         −
                       </button>
                       <span className="point-buy-stepper__value">{score}</span>
-                      <button type="button" aria-label={`${ability}: увеличи`} disabled={!canInc} onClick={() => setAbility(ability, score + 1)}>
+                      <button type="button" aria-label={ap.increaseLabel(ability)} disabled={!canInc} onClick={() => setAbility(ability, score + 1)}>
                         +
                       </button>
                     </span>
@@ -126,7 +128,7 @@ export function AbilitiesPage() {
                   {method === "roll" && <span>{score}</span>}
                   {method === "manual" && (
                     <CommitNumberInput
-                      ariaLabel={`${ability}: стойност`}
+                      ariaLabel={ap.valueLabel(ability)}
                       min={1}
                       max={30}
                       value={score}

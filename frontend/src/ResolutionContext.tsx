@@ -2,11 +2,12 @@ import { createContext, useContext, type ReactNode } from "react";
 import { useDraft } from "./DraftContext";
 import { useResolution } from "./useResolution";
 import type { Resolution } from "./types";
+import type { Msg } from "./logic/messages";
 
 interface ResolutionContextValue {
   resolution: Resolution | null;
   loading: boolean;
-  error: string | null;
+  error: Msg | null;
   retry: () => void;
 }
 

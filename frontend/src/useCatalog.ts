@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { MsgError, msg, toMsg, type Msg } from "./logic/messages";
 
 export interface CatalogClass {
   id: string;
@@ -50,7 +51,7 @@ interface CatalogState extends CatalogData {
   allBackgrounds: CatalogBackground[];
   allSpecies: CatalogSpecies[];
   loading: boolean;
-  error: string | null;
+  error: Msg | null;
 }
 
 const EMPTY_STATE: CatalogState = {
@@ -59,7 +60,7 @@ const EMPTY_STATE: CatalogState = {
 
 async function fetchCatalog(query: string): Promise<CatalogData> {
   const resp = await fetch(`/api/catalog${query}`);
-  if (!resp.ok) throw new Error(`Каталогът не се зареди (грешка ${resp.status}).`);
+  if (!resp.ok) throw new MsgError(msg("catalog.failed", { status: resp.status }));
   return (await resp.json()) as CatalogData;
 }
 
@@ -93,8 +94,7 @@ export function useCatalog(ruleset: string = "mixed", sources: string[] = []): C
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        const message = err instanceof Error ? err.message : String(err);
-        setState((s) => ({ ...s, loading: false, error: message }));
+        setState((s) => ({ ...s, loading: false, error: toMsg(err) }));
       });
     return () => {
       cancelled = true;

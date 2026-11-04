@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { useT } from "../LanguageContext";
 import type { Choice } from "../types";
 import { ChoicePicker } from "./ChoicePicker";
 import { cidFromHash } from "../logic/hashTarget";
@@ -17,6 +18,7 @@ export function firstPendingId(choices: Choice[]): string | undefined {
 }
 
 export function ChoiceCard({ choice, onToggle, defaultExpanded = false }: ChoiceCardProps) {
+  const t = useT();
   // A "#<cid>" URL hash (the Export page's unresolved list links here) opens
   // this card and scrolls to it. cids contain colons, so the element is found
   // with getElementById, never a CSS selector.
@@ -39,16 +41,16 @@ export function ChoiceCard({ choice, onToggle, defaultExpanded = false }: Choice
         aria-expanded={expanded}
       >
         {choice.status === "pending" && !choice.optional && (
-          <span className="choice-card__pending-dot" aria-label="pending choice">
+          <span className="choice-card__pending-dot" aria-label={t.choice.pendingDot}>
             !
           </span>
         )}
         <span className="choice-card__label">{choice.label}</span>
         {choice.source.level != null && (
-          <span className="choice-card__level">{choice.source.level} level</span>
+          <span className="choice-card__level">{t.choice.levelBadge(choice.source.level)}</span>
         )}
         <span className="choice-card__count">
-          избрани {choice.selected.length}/{choice.count}
+          {t.choice.counter(choice.selected.length, choice.count)}
         </span>
       </button>
       {expanded && (
@@ -56,7 +58,7 @@ export function ChoiceCard({ choice, onToggle, defaultExpanded = false }: Choice
           <p>{choice.description}</p>
           {choice.status === "unavailable" && <p>{choice.unavailableReason}</p>}
           {choice.granted && choice.granted.length > 0 && (
-            <p>Получавате автоматично: {choice.granted.map((g) => g.label).join(", ")}</p>
+            <p>{t.choice.granted(choice.granted.map((g) => g.label).join(", "))}</p>
           )}
           <ChoicePicker choice={choice} onToggle={onToggle} />
         </div>

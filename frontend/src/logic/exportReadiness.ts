@@ -1,8 +1,10 @@
 import type { Choice, Problem, Resolution } from "../types";
 
+export type MissingPart = "class" | "species" | "background";
+
 export interface ExportReadiness {
-  /** Missing class / species / background, as the Bulgarian lines ExportPage shows. */
-  missingParts: string[];
+  /** Missing parts; ExportPage prints `t.exportPage.missing[part]`. */
+  missingParts: MissingPart[];
   /** Pending cards that block export (equipment and optional cards never do). */
   pendingChoices: Choice[];
   /** Pending equipment cards: shown as a note, never blocking. */
@@ -23,10 +25,10 @@ export function exportReadiness(resolution: Resolution, error: unknown): ExportR
   const pendingChoices = allPending.filter((c) => c.source.kind !== "equipment" && !c.optional);
   const pendingEquipment = allPending.filter((c) => c.source.kind === "equipment");
   const missingParts = [
-    resolution.sheet.classes.length === 0 && "Избери клас.",
-    !resolution.sheet.species && "Избери species.",
-    !resolution.sheet.background && "Избери background.",
-  ].filter((m): m is string => typeof m === "string");
+    resolution.sheet.classes.length === 0 && "class",
+    !resolution.sheet.species && "species",
+    !resolution.sheet.background && "background",
+  ].filter((m): m is MissingPart => typeof m === "string");
   const canExport = !error && resolution.problems.length === 0 && pendingChoices.length === 0 && missingParts.length === 0;
   return { missingParts, pendingChoices, pendingEquipment, problems: resolution.problems, canExport };
 }

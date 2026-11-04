@@ -1,8 +1,9 @@
-import { t } from "../../copy";
+import { useT } from "../../LanguageContext";
 import type { SheetSectionData } from "../../logic/sheetSections";
 import { SectionFrame } from "./SectionFrame";
 
 export function EquipmentSection({ data }: { data: SheetSectionData["equipment"] }) {
+  const t = useT();
   const c = t.sheet.equipment;
   return (
     <SectionFrame sectionKey="equipment" title={c.title}>
@@ -70,6 +71,7 @@ export function EquipmentSection({ data }: { data: SheetSectionData["equipment"]
 }
 
 export function CarryingCapacitySection({ data }: { data: SheetSectionData["carryingCapacity"] }) {
+  const t = useT();
   const c = t.sheet.carryingCapacity;
   return (
     <SectionFrame sectionKey="carryingCapacity" title={c.title}>
@@ -87,6 +89,7 @@ export function CarryingCapacitySection({ data }: { data: SheetSectionData["carr
 }
 
 export function DefensesSection({ data }: { data: SheetSectionData["defenses"] }) {
+  const t = useT();
   const c = t.sheet.defenses;
   const rows = [
     [c.resistances, data.resistances],

@@ -1,22 +1,26 @@
 import { useEffect, useRef, useState } from "react";
 import { useDraft } from "../DraftContext";
+import { useT } from "../LanguageContext";
+import { renderMsg, toMsg, type Msg } from "../logic/messages";
 import { fetchSpellDetail, useSpells, type CatalogSpell, type SpellDetail } from "../useSpells";
 
 type LevelFilter = "" | "0" | "1";
 
-const LEVEL_FILTERS: { value: LevelFilter; label: string }[] = [
-  { value: "", label: "Всички избираеми" },
-  { value: "0", label: "Трикове" },
-  { value: "1", label: "1-во ниво" },
+const LEVEL_FILTERS: { value: LevelFilter; key: "all" | "cantrips" | "level1" }[] = [
+  { value: "", key: "all" },
+  { value: "0", key: "cantrips" },
+  { value: "1", key: "level1" },
 ];
 
 interface SpellLibraryProps {
   classId: string;
 }
 
-type DetailState = { status: "loading" } | { status: "error"; message: string } | { status: "ready"; spell: SpellDetail };
+type DetailState = { status: "loading" } | { status: "error"; message: Msg } | { status: "ready"; spell: SpellDetail };
 
 export function SpellLibrary({ classId }: SpellLibraryProps) {
+  const t = useT();
+  const sl = t.spellLibrary;
   const { draft } = useDraft();
   const [levelFilter, setLevelFilter] = useState<LevelFilter>("");
   const [query, setQuery] = useState("");
@@ -44,7 +48,7 @@ export function SpellLibrary({ classId }: SpellLibraryProps) {
       .catch((err: unknown) => {
         if (!alive.current) return;
         requested.current.delete(id); // closing and reopening the card retries
-        setDetails((d) => ({ ...d, [id]: { status: "error", message: err instanceof Error ? err.message : String(err) } }));
+        setDetails((d) => ({ ...d, [id]: { status: "error", message: toMsg(err) } }));
       });
   }
 
@@ -62,20 +66,20 @@ export function SpellLibrary({ classId }: SpellLibraryProps) {
 
   return (
     <>
-      <h2>Списък със заклинания {loading && "…"}</h2>
-      <input type="text" inputMode="search" enterKeyHint="search" aria-label="Търсене на заклинания" placeholder="Търсене…" value={query} onChange={(e) => setQuery(e.target.value)} />
-      <select aria-label="Ниво на заклинанията" value={levelFilter} onChange={(e) => setLevelFilter(e.target.value as LevelFilter)}>
+      <h2>{sl.title} {loading && "…"}</h2>
+      <input type="text" inputMode="search" enterKeyHint="search" aria-label={sl.searchLabel} placeholder={t.common.search} value={query} onChange={(e) => setQuery(e.target.value)} />
+      <select aria-label={sl.levelLabel} value={levelFilter} onChange={(e) => setLevelFilter(e.target.value as LevelFilter)}>
         {LEVEL_FILTERS.map((l) => (
           <option key={l.value} value={l.value}>
-            {l.label}
+            {sl.filters[l.key]}
           </option>
         ))}
       </select>
       {error && (
         <p>
-          Грешка: {error}{" "}
+          {t.common.errorLine(renderMsg(t, error))}{" "}
           <button type="button" onClick={retry}>
-            Опитай пак
+            {t.common.retry}
           </button>
         </p>
       )}
@@ -90,7 +94,7 @@ export function SpellLibrary({ classId }: SpellLibraryProps) {
               <summary>
                 <span className="spell-library-card__header">
                   <span className="spell-library-card__name">{spell.name}</span>
-                  <span className="spell-library-card__level">{spell.level === 0 ? "Трик" : `${spell.level} ниво`}</span>
+                  <span className="spell-library-card__level">{spell.level === 0 ? sl.cantrip : sl.levelBadge(spell.level)}</span>
                 </span>
                 <span className="spell-library-card__meta">
                   {spell.school && <span>{spell.school}</span>}
@@ -98,8 +102,8 @@ export function SpellLibrary({ classId }: SpellLibraryProps) {
                   {spell.range && <span>{spell.range}</span>}
                   {spell.components.length > 0 && <span>{spell.components.join(", ")}</span>}
                   {spell.duration && <span>{spell.duration}</span>}
-                  {spell.concentration && <span>Концентрация</span>}
-                  {spell.ritual && <span>Ритуал</span>}
+                  {spell.concentration && <span>{sl.concentration}</span>}
+                  {spell.ritual && <span>{sl.ritual}</span>}
                 </span>
               </summary>
               <SpellDetailBody state={details[spell.id]} />
@@ -112,8 +116,9 @@ export function SpellLibrary({ classId }: SpellLibraryProps) {
 }
 
 function SpellDetailBody({ state }: { state: DetailState | undefined }) {
-  if (!state || state.status === "loading") return <p className="spell-library-card__desc">Зареждане…</p>;
-  if (state.status === "error") return <p className="spell-library-card__desc">Грешка: {state.message}</p>;
+  const t = useT();
+  if (!state || state.status === "loading") return <p className="spell-library-card__desc">{t.common.loading}</p>;
+  if (state.status === "error") return <p className="spell-library-card__desc">{t.common.errorLine(renderMsg(t, state.message))}</p>;
   const { spell } = state;
   return (
     <div className="spell-library-card__body">

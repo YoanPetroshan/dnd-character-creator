@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { DraftProvider } from "./DraftContext";
+import { LanguageProvider } from "./LanguageContext";
 import { LibraryProvider } from "./LibraryContext";
 import "./index.css";
 import "./print.css";
@@ -14,13 +15,15 @@ if (!rootElement) throw new Error("#root element not found");
 createRoot(rootElement).render(
   <StrictMode>
     <BrowserRouter>
-      <ErrorBoundary>
-        <LibraryProvider>
-          <DraftProvider>
-            <App />
-          </DraftProvider>
-        </LibraryProvider>
-      </ErrorBoundary>
+      <LanguageProvider>
+        <ErrorBoundary>
+          <LibraryProvider>
+            <DraftProvider>
+              <App />
+            </DraftProvider>
+          </LibraryProvider>
+        </ErrorBoundary>
+      </LanguageProvider>
     </BrowserRouter>
   </StrictMode>,
 );

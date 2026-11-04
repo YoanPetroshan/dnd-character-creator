@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { SheetView } from "../components/sheet/SheetView";
-import { t } from "../copy";
+import { bg as t } from "../copy";
 import bard10 from "../__fixtures__/bard10-2014.json";
 import fighter4 from "../__fixtures__/fighter4-2024.json";
 import rogue6 from "../__fixtures__/rogue6-2024.json";
@@ -200,13 +200,13 @@ describe("spellcastingAbility", () => {
 describe("routeTitle", () => {
   it("every step path has its own title ending with the app name", () => {
     const paths = ["/home", "/class", "/background", "/species", "/abilities", "/equipment", "/sheet", "/export"];
-    const titles = paths.map(routeTitle);
+    const titles = paths.map((p) => routeTitle(t, p));
     expect(new Set(titles).size).toBe(paths.length);
     for (const title of titles) expect(title.endsWith(t.appName)).toBe(true);
-    expect(routeTitle("/sheet").startsWith(t.titles.pages["/sheet"])).toBe(true);
+    expect(routeTitle(t, "/sheet").startsWith(t.titles.pages["/sheet"])).toBe(true);
   });
   it("an unknown path gets the fallback title", () => {
-    expect(routeTitle("/nope")).toBe(`${t.titles.fallback}${t.titles.separator}${t.appName}`);
+    expect(routeTitle(t, "/nope")).toBe(`${t.titles.fallback}${t.titles.separator}${t.appName}`);
   });
 });
 

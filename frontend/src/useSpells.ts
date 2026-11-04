@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { MsgError, msg, toMsg, type Msg } from "./logic/messages";
 
 export interface CatalogSpell {
   id: string;
@@ -28,14 +29,14 @@ export interface SpellDetail extends CatalogSpell {
 
 export async function fetchSpellDetail(id: string, signal?: AbortSignal): Promise<SpellDetail> {
   const resp = await fetch(`/api/spells/${encodeURIComponent(id)}`, { signal });
-  if (!resp.ok) throw new Error(`Заклинанието не се зареди (грешка ${resp.status}).`);
+  if (!resp.ok) throw new MsgError(msg("spell.failed", { status: resp.status }));
   return (await resp.json()) as SpellDetail;
 }
 
 interface SpellsState {
   spells: CatalogSpell[];
   loading: boolean;
-  error: string | null;
+  error: Msg | null;
 }
 
 const DEBOUNCE_MS = 150;
@@ -68,7 +69,7 @@ export function useSpells(
       if (sourcesKey) params.set("sources", sourcesKey);
       fetch(`/api/spells?${params.toString()}`)
         .then((resp) => {
-          if (!resp.ok) throw new Error(`Списъкът със заклинания не се зареди (грешка ${resp.status}).`);
+          if (!resp.ok) throw new MsgError(msg("spells.failed", { status: resp.status }));
           return resp.json() as Promise<{ spells: CatalogSpell[] }>;
         })
         .then((data) => {
@@ -77,8 +78,7 @@ export function useSpells(
         })
         .catch((err: unknown) => {
           if (id !== requestId.current) return;
-          const message = err instanceof Error ? err.message : String(err);
-          setState((s) => ({ ...s, loading: false, error: message }));
+          setState((s) => ({ ...s, loading: false, error: toMsg(err) }));
         });
     }, DEBOUNCE_MS);
     return () => {

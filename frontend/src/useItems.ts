@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { MsgError, msg, toMsg, type Msg } from "./logic/messages";
 
 export interface CatalogItem {
   id: string;
@@ -11,7 +12,7 @@ export interface CatalogItem {
 interface ItemsState {
   items: CatalogItem[];
   loading: boolean;
-  error: string | null;
+  error: Msg | null;
 }
 
 const DEBOUNCE_MS = 150;
@@ -38,7 +39,7 @@ export function useItems(
       if (sourcesKey) params.set("sources", sourcesKey);
       fetch(`/api/items?${params.toString()}`)
         .then((resp) => {
-          if (!resp.ok) throw new Error(`Списъкът не се зареди (грешка ${resp.status}).`);
+          if (!resp.ok) throw new MsgError(msg("items.failed", { status: resp.status }));
           return resp.json() as Promise<{ items: CatalogItem[] }>;
         })
         .then((data) => {
@@ -47,8 +48,7 @@ export function useItems(
         })
         .catch((err: unknown) => {
           if (id !== requestId.current) return;
-          const message = err instanceof Error ? err.message : String(err);
-          setState((s) => ({ ...s, loading: false, error: message }));
+          setState((s) => ({ ...s, loading: false, error: toMsg(err) }));
         });
     }, DEBOUNCE_MS);
     return () => {

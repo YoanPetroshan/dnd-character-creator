@@ -1,3 +1,4 @@
+import { useT } from "../LanguageContext";
 import type { Resolution } from "../types";
 
 function sortedSlots(slots: Record<string, number> | undefined): [number, number][] {
@@ -10,6 +11,7 @@ function sortedSlots(slots: Record<string, number> | undefined): [number, number
 /** Plain-text spell slot lines from derived.spellSlots / derived.warlockSpellSlots.
  *  `classId` limits the pact line to a Warlock tab; omit it (export page) to show both. */
 export function SpellSlotsSummary({ resolution, classId }: { resolution: Resolution; classId?: string }) {
+  const t = useT();
   const { spellSlots, warlockSpellSlots, slotGrantingClasses = [] } = resolution.derived;
   const shared = sortedSlots(spellSlots);
   const pact = sortedSlots(warlockSpellSlots);
@@ -21,11 +23,11 @@ export function SpellSlotsSummary({ resolution, classId }: { resolution: Resolut
     <>
       {showShared && (
         <p>
-          Клетки за заклинания: {shared.map(([level, count]) => `ниво ${level} ×${count}`).join(", ")}
-          {sharers > 1 && " (общи за всички класове)"}
+          {t.sheet.spells.slotsTitle}: {shared.map(([level, count]) => t.slots.line(level, count)).join(", ")}
+          {sharers > 1 && ` (${t.sheet.spells.slotsShared})`}
         </p>
       )}
-      {showPact && <p>Магия на договора: {pact.map(([level, count]) => `${count} × ниво ${level}`).join(", ")}</p>}
+      {showPact && <p>{t.sheet.spells.pactTitle}: {pact.map(([level, count]) => t.slots.pactLine(count, level)).join(", ")}</p>}
     </>
   );
 }

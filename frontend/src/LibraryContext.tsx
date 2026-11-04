@@ -15,9 +15,12 @@ import {
   type ImportEntry,
   type ItemSummary,
   type Library,
+  type LibraryNames,
   type LibraryEnv,
 } from "./library";
 import { totalLevel } from "./logic/draft";
+import type { Msg } from "./logic/messages";
+import { useT } from "./LanguageContext";
 
 export interface LibraryContextValue {
   /** Rows for the character list, newest first. */
@@ -26,7 +29,7 @@ export interface LibraryContextValue {
   /** The active character's draft as loaded at boot / on switch (DraftProvider's initial state). */
   activeDraft: Draft;
   /** Boot-time / switch-time messages (unreadable stored data), dismissable. */
-  notice: string | null;
+  notices: Msg[];
   dismissNotice: () => void;
   unsavedRaw: string | null;
   /** The last library-level write failed (quota, private mode). */
@@ -55,7 +58,11 @@ export function LibraryProvider({ children, env }: { children: ReactNode; env?: 
   const [lib, setLib] = useState<Library>(boot.library);
   const [activeDraft, setActiveDraft] = useState<Draft>(boot.draft);
   const [summaries, setSummaries] = useState<ItemSummary[]>(() => summarize(envRef.current, boot.library));
-  const [notices, setNotices] = useState<string[]>(boot.notices);
+  const [notices, setNotices] = useState<Msg[]>(boot.notices);
+  // the words written into a copied character's name follow the language at the time of the click
+  const t = useT();
+  const namesRef = useRef<LibraryNames>({ unnamed: t.library.unnamed, copyName: t.library.copyName });
+  namesRef.current = { unnamed: t.library.unnamed, copyName: t.library.copyName };
   const [unsavedRaw, setUnsavedRaw] = useState<string | null>(boot.unsavedRaw);
   const [storageFailed, setStorageFailed] = useState(boot.storageFailed);
 
@@ -93,7 +100,7 @@ export function LibraryProvider({ children, env }: { children: ReactNode; env?: 
     return r.ok;
   }, []);
 
-  const addNotices = (more: string[], raw: string | null) => {
+  const addNotices = (more: Msg[], raw: string | null) => {
     if (more.length) setNotices((n) => [...n, ...more]);
     if (raw) setUnsavedRaw(raw);
   };
@@ -103,7 +110,7 @@ export function LibraryProvider({ children, env }: { children: ReactNode; env?: 
       items: summaries,
       activeId: lib.activeId,
       activeDraft,
-      notice: notices.length ? notices.join(" ") : null,
+      notices,
       dismissNotice: () => {
         setNotices([]);
         setUnsavedRaw(null);
@@ -130,7 +137,7 @@ export function LibraryProvider({ children, env }: { children: ReactNode; env?: 
         setStorageFailed(!r.ok);
       },
       duplicateCharacter: (id) => {
-        const r = duplicateCharacter(envRef.current, libRef.current, id, liveRef.current);
+        const r = duplicateCharacter(envRef.current, libRef.current, id, liveRef.current, namesRef.current);
         commit(r.library);
         setStorageFailed(!r.ok);
       },

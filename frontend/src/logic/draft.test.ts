@@ -1,3 +1,5 @@
+import { bg } from "../copy";
+import { MsgError, renderMsg } from "./messages";
 import { describe, expect, it } from "vitest";
 import { DRAFT_VERSION, MAX_TOTAL_LEVEL, emptyDraft, mergeDraft, reducer, sanitizeDraft, totalLevel } from "./draft";
 import type { Draft } from "../types";
@@ -6,13 +8,29 @@ const withClasses = (classes: unknown[]) => ({ draftVersion: DRAFT_VERSION, clas
 
 describe("mergeDraft", () => {
   it("throws on a draft written by a newer version", () => {
-    expect(() => mergeDraft({ draftVersion: DRAFT_VERSION + 1, classes: [] })).toThrow(/по-нова версия/);
+    expect(() => mergeDraft({ draftVersion: DRAFT_VERSION + 1, classes: [] })).toThrow("draft.newer");
   });
   it("throws on non-objects", () => {
-    for (const v of [null, undefined, 5, "x", true, []]) expect(() => mergeDraft(v), String(v)).toThrow(/не е чернова/);
+    for (const v of [null, undefined, 5, "x", true, []]) expect(() => mergeDraft(v), String(v)).toThrow("draft.notADraft");
   });
   it("throws on an object without any draft key (e.g. an exported sheet)", () => {
-    expect(() => mergeDraft({ sheet: {}, derived: {} })).toThrow(/не прилича на чернова/);
+    expect(() => mergeDraft({ sheet: {}, derived: {} })).toThrow("draft.notRecognised");
+  });
+  it("the errors are message errors whose Bulgarian wording is unchanged", () => {
+    const texts = [
+      [{ draftVersion: DRAFT_VERSION + 1, classes: [] }, "Тази чернова е записана от по-нова версия на приложението."],
+      [5, "Файлът не е чернова на герой."],
+      [{ sheet: {} }, "Файлът не прилича на чернова на герой."],
+    ] as const;
+    for (const [input, text] of texts) {
+      try {
+        mergeDraft(input);
+        throw new Error("did not throw");
+      } catch (e) {
+        expect(e).toBeInstanceOf(MsgError);
+        expect(renderMsg(bg, (e as MsgError).msg)).toBe(text);
+      }
+    }
   });
   it("accepts an older version and stamps the current one, filling defaults", () => {
     const d = mergeDraft({ draftVersion: 1, classes: [{ classId: "fighter", level: 3, choices: {} }] });

@@ -1,9 +1,10 @@
-import { t } from "../../copy";
+import { useT } from "../../LanguageContext";
 import { formatModifier } from "../../logic/abilities";
 import type { SheetSectionData } from "../../logic/sheetSections";
 import { SectionFrame } from "./SectionFrame";
 
 export function AbilitiesSection({ data }: { data: SheetSectionData["abilities"] }) {
+  const t = useT();
   const c = t.sheet.abilities.columns;
   return (
     <SectionFrame sectionKey="abilities" title={t.sheet.abilities.title}>

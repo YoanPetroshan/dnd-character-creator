@@ -1,12 +1,13 @@
-/** Bulgarian messages for failed API calls. The server's JSON errors are in
- *  English; they are kept only as a secondary technical line after the
- *  Bulgarian text. */
-export function httpErrorMessage(status: number, detail = ""): string {
-  let base: string;
-  if (status === 400) base = "Черновата не е във вярна форма и сървърът я отхвърли.";
-  else if (status === 413) base = "Черновата е твърде голяма за сървъра (над 1 MB).";
-  else if (status === 500) base = "Сървърът има вътрешна грешка. Опитай пак след малко.";
-  else if (status === 502 || status === 503 || status === 504) base = `Няма връзка със сървъра (${status}).`;
-  else base = `Сървърът върна грешка ${status}.`;
-  return detail ? `${base} Технически детайл: ${detail}` : base;
+import { msg, type Msg } from "./logic/messages";
+
+/** Message for a failed API call (rendered with the catalog). The server's JSON errors are in
+ *  English; they are kept only as a secondary technical line after the localized text. */
+export function httpErrorMessage(status: number, detail = ""): Msg {
+  let base: Msg;
+  if (status === 400) base = msg("http.400");
+  else if (status === 413) base = msg("http.413");
+  else if (status === 500) base = msg("http.500");
+  else if (status === 502 || status === 503 || status === 504) base = msg("http.gateway", { status });
+  else base = msg("http.other", { status });
+  return detail ? msg("http.detail", { base, detail }) : base;
 }

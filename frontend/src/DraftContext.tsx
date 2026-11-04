@@ -2,6 +2,7 @@ import { createContext, useContext, useReducer, useEffect, useRef, useState, typ
 import type { Draft } from "./types";
 import { DRAFT_VERSION, MAX_TOTAL_LEVEL, emptyDraft, mergeDraft, reducer, totalLevel, type Action } from "./logic/draft";
 import { useLibrary } from "./LibraryContext";
+import type { Msg } from "./logic/messages";
 
 // Re-exported so existing imports from "./DraftContext" keep working.
 export { DRAFT_VERSION, MAX_TOTAL_LEVEL, emptyDraft, mergeDraft, totalLevel };
@@ -10,8 +11,8 @@ interface DraftContextValue {
   /** The ACTIVE character's draft. Every page works with this one only. */
   draft: Draft;
   dispatch: Dispatch<Action>;
-  /** One-off message about the boot-time load (unreadable stored draft). */
-  notice: string | null;
+  /** One-off messages about the boot-time load (unreadable stored data). */
+  notices: Msg[];
   dismissNotice: () => void;
   /** Raw text of an unreadable stored draft whose backup write failed; offered for download. */
   unsavedRaw: string | null;
@@ -56,7 +57,7 @@ function ActiveDraft({ activeId, initial, children }: { activeId: string; initia
       value={{
         draft,
         dispatch,
-        notice: lib.notice,
+        notices: lib.notices,
         dismissNotice: lib.dismissNotice,
         unsavedRaw: lib.unsavedRaw,
         storageFailed: draftFailed || lib.storageFailed,

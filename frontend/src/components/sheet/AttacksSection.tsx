@@ -1,10 +1,11 @@
-import { t } from "../../copy";
+import type { Copy } from "../../copy";
+import { useT } from "../../LanguageContext";
 import { formatModifier } from "../../logic/abilities";
 import type { SheetSectionData } from "../../logic/sheetSections";
 import type { Attack } from "../../types";
 import { SectionFrame } from "./SectionFrame";
 
-function damageText(a: Attack): string {
+function damageText(t: Copy, a: Attack): string {
   const c = t.sheet.attacks;
   if (!a.damage) return t.common.none;
   const parts = [c.damage(a.damage, a.damageType)];
@@ -15,6 +16,7 @@ function damageText(a: Attack): string {
 }
 
 export function AttacksSection({ data }: { data: SheetSectionData["attacks"] }) {
+  const t = useT();
   const c = t.sheet.attacks;
   return (
     <SectionFrame sectionKey="attacks" title={c.title}>
@@ -44,7 +46,7 @@ export function AttacksSection({ data }: { data: SheetSectionData["attacks"] }) 
                 </th>
                 <td>{a.ability}</td>
                 <td>{formatModifier(a.attackBonus)}</td>
-                <td>{damageText(a)}</td>
+                <td>{damageText(t, a)}</td>
                 <td>{a.range ?? t.common.none}</td>
                 <td>{a.mastery ?? t.common.none}</td>
                 <td>{a.notes.length > 0 ? a.notes.join("; ") : t.common.none}</td>

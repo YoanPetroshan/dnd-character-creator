@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { SheetView } from "../components/sheet/SheetView";
-import { t } from "../copy";
+import { useT } from "../LanguageContext";
 import { useDraft } from "../DraftContext";
 import { exportReadiness } from "../logic/exportReadiness";
 import { sheetSections } from "../logic/sheetSections";
@@ -8,6 +8,7 @@ import { useResolutionContext } from "../ResolutionContext";
 
 /** The in-app character sheet: every section of the resolution, read-only. Works on an unfinished draft too. */
 export function SheetPage() {
+  const t = useT();
   const { draft } = useDraft();
   const { resolution, loading, error } = useResolutionContext();
 

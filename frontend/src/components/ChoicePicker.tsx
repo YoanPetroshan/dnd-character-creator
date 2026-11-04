@@ -1,4 +1,6 @@
 import { useId, useState } from "react";
+import { useT } from "../LanguageContext";
+import type { Copy } from "../copy";
 import { optionSource } from "../logic/sources";
 import type { Choice, ChoiceOption } from "../types";
 
@@ -18,23 +20,14 @@ export const FILTER_THRESHOLD = 20;
  *  exactly as before. */
 export const LONG_LIST_THRESHOLD = 30;
 
-const GROUP_LABELS: Record<string, string> = {
-  asi: "Увеличение на характеристики",
-  general: "Общи черти",
-  origin: "Черти за произход",
-  "epic-boon": "Епични дарове",
-  "feat-2014": "Черти (2014)",
-  "any-school": "Всяка школа",
-  school: "Школа на магията",
-};
-
-export function groupLabel(group: string): string {
+export function groupLabel(t: Copy, group: string): string {
   const m = /^spell-level-(\d+)$/.exec(group);
-  if (m) return m[1] === "0" ? "Трикове" : `Заклинания ниво ${m[1]}`;
-  return GROUP_LABELS[group] ?? group;
+  if (m) return m[1] === "0" ? t.choice.cantripsGroup : t.choice.spellLevelGroup(m[1]);
+  return t.choice.groups[group] ?? group;
 }
 
 function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
+  const t = useT();
   const [filter, setFilter] = useState("");
   const [showUnavailable, setShowUnavailable] = useState(false);
 
@@ -57,7 +50,7 @@ function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
       <li key={option.id} className={heading ? "choice-picker__item--group-start" : undefined}>
         {heading && (
           <span className="choice-picker__group" role="presentation">
-            {groupLabel(heading)}
+            {groupLabel(t, heading)}
           </span>
         )}
         <label className={option.disabled ? "choice-picker__option--disabled" : ""}>
@@ -71,7 +64,7 @@ function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
           />
           {option.label}
           {option.hiddenByFilters && (
-            <span className="choice-picker__reason"> — скрит от текущите филтри</span>
+            <span className="choice-picker__reason"> — {t.common.hiddenByFilters}</span>
           )}
           {option.disabled && option.disabledReason && (
             <span className="choice-picker__reason" id={`${choice.id}::${option.id}::why`}> — {option.disabledReason}</span>
@@ -87,13 +80,13 @@ function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
         <input
           type="search"
           className="picker-filter"
-          aria-label={`Търсене: ${choice.label}`}
-          placeholder="Търсене…"
+          aria-label={t.choice.searchLabel(choice.label)}
+          placeholder={t.common.search}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />
       )}
-      {filterable && needle && available.length + hidden.length === 0 && <p>Няма съвпадения.</p>}
+      {filterable && needle && available.length + hidden.length === 0 && <p>{t.common.noMatches}</p>}
       <ul className="choice-picker">{shown.map((o, i) => renderOption(o, shown[i - 1]))}</ul>
       {hidden.length > 0 && (
         <button
@@ -102,7 +95,7 @@ function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
           aria-expanded={showUnavailable}
           onClick={() => setShowUnavailable((v) => !v)}
         >
-          {showUnavailable ? "Скриване на недостъпните" : `Показване на недостъпните (${hidden.length})`}
+          {showUnavailable ? t.choice.hideUnavailable : t.choice.showUnavailable(hidden.length)}
         </button>
       )}
     </div>
@@ -113,6 +106,7 @@ function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
 const NO_GROUP = "";
 
 function LongPicker({ choice, onToggle }: ChoicePickerProps) {
+  const t = useT();
   const uid = useId();
   const [filter, setFilter] = useState("");
   const [source, setSource] = useState("");
@@ -199,7 +193,7 @@ function LongPicker({ choice, onToggle }: ChoicePickerProps) {
           />
           {option.label}
           {option.hiddenByFilters && (
-            <span className="choice-picker__reason"> — скрит от текущите филтри</span>
+            <span className="choice-picker__reason"> — {t.common.hiddenByFilters}</span>
           )}
           {option.disabled && option.disabledReason && (
             <span className="choice-picker__reason" id={`${choice.id}::${option.id}::why`}> — {option.disabledReason}</span>
@@ -209,18 +203,11 @@ function LongPicker({ choice, onToggle }: ChoicePickerProps) {
     );
   }
 
-  function groupSummary(b: { available: ChoiceOption[]; hidden: ChoiceOption[]; selected: number }) {
-    const parts = [`${b.available.length} налични`];
-    if (b.hidden.length > 0) parts.push(`${b.hidden.length} недостъпни`);
-    if (b.selected > 0) parts.push(`избрани ${b.selected}`);
-    return parts.join(", ");
-  }
-
   return (
     <div className="choice-picker-wrap choice-picker-wrap--long">
-      <div className="choice-picker__selected" role="group" aria-label="Избрано">
+      <div className="choice-picker__selected" role="group" aria-label={t.choice.selectedTitle}>
         <p className="choice-picker__selected-title">
-          Избрано ({choice.selected.length}/{choice.count})
+          {t.choice.selectedCount(choice.selected.length, choice.count)}
         </p>
         {choice.selected.length > 0 && (
           <ul className="choice-picker__selected-list">
@@ -231,10 +218,10 @@ function LongPicker({ choice, onToggle }: ChoicePickerProps) {
                   <span>{label}</span>
                   <button
                     type="button"
-                    aria-label={`Премахни: ${label}`}
+                    aria-label={t.choice.removeLabel(label)}
                     onClick={() => onToggle(choice.id, id, choice.count)}
                   >
-                    Премахни
+                    {t.common.remove}
                   </button>
                 </li>
               );
@@ -245,8 +232,8 @@ function LongPicker({ choice, onToggle }: ChoicePickerProps) {
       <input
         type="search"
         className="picker-filter"
-        aria-label={`Търсене: ${choice.label}`}
-        placeholder="Търсене…"
+        aria-label={t.choice.searchLabel(choice.label)}
+        placeholder={t.common.search}
         value={filter}
         onChange={(e) => {
           setFilter(e.target.value);
@@ -256,27 +243,25 @@ function LongPicker({ choice, onToggle }: ChoicePickerProps) {
       {showSourceSelect && (
         <select
           className="picker-source"
-          aria-label={`Източник: ${choice.label}`}
+          aria-label={t.choice.sourceLabel(choice.label)}
           value={source}
           onChange={(e) => {
             setSource(e.target.value);
             resetOpen();
           }}
         >
-          <option value="">Всички източници</option>
+          <option value="">{t.choice.allSources}</option>
           {[...sourceCounts.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([code, n]) => (
             <option key={code} value={code}>
               {code} ({n})
             </option>
           ))}
-          {unlabelled > 0 && <option value="-">Без етикет ({unlabelled})</option>}
+          {unlabelled > 0 && <option value="-">{t.choice.unlabelled(unlabelled)}</option>}
         </select>
       )}
       {searching && (
         <p role="status" aria-live="polite" className="choice-picker__result-count">
-          {totalAvailable + totalHidden === 0
-            ? "Няма съвпадения."
-            : `Намерени: ${totalAvailable}${totalHidden > 0 ? ` (още ${totalHidden} недостъпни)` : ""}`}
+          {totalAvailable + totalHidden === 0 ? t.common.noMatches : t.choice.found(totalAvailable, totalHidden)}
         </p>
       )}
       {grouped ? (
@@ -294,7 +279,7 @@ function LongPicker({ choice, onToggle }: ChoicePickerProps) {
                 aria-controls={listId}
                 onClick={() => toggleGroup(key)}
               >
-                {key === NO_GROUP ? "Други" : groupLabel(key)} — {groupSummary(b)}
+                {key === NO_GROUP ? t.choice.other : groupLabel(t, key)} — {t.choice.groupSummary(b.available.length, b.hidden.length, b.selected)}
               </button>
               {open && (
                 <ul className="choice-picker" id={listId}>
@@ -314,7 +299,7 @@ function LongPicker({ choice, onToggle }: ChoicePickerProps) {
           aria-expanded={showUnavailable}
           onClick={() => setShowUnavailable((v) => !v)}
         >
-          {showUnavailable ? "Скриване на недостъпните" : `Показване на недостъпните (${totalHidden})`}
+          {showUnavailable ? t.choice.hideUnavailable : t.choice.showUnavailable(totalHidden)}
         </button>
       )}
     </div>

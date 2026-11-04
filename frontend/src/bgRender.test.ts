@@ -20,6 +20,8 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { DraftProvider } from "./DraftContext";
 import { LibraryProvider } from "./LibraryContext";
 import { emptyDraft } from "./logic/draft";
+import { LanguageProvider } from "./LanguageContext";
+import type { Lang } from "./copy";
 import type { LibraryEnv } from "./library";
 import type { Draft } from "./types";
 
@@ -28,7 +30,7 @@ process.env.TZ = "UTC";
 interface Cap {
   catalog: unknown;
   resolution: unknown;
-  error: string | null;
+  error: unknown;
   loading: boolean;
   items: unknown[];
 }
@@ -41,7 +43,7 @@ vi.mock("./useResolution", () => ({
   useResolution: () => ({ resolution: cap.cur.resolution, loading: cap.cur.loading, error: cap.cur.error, retry: () => undefined }),
 }));
 vi.mock("./useItems", () => ({
-  useItems: () => ({ items: cap.cur.items, loading: false, error: cap.cur.error ? "Elements failed" : null, retry: () => undefined }),
+  useItems: () => ({ items: cap.cur.items, loading: false, error: cap.cur.error ? { code: "raw", params: { text: "Elements failed" } } : null, retry: () => undefined }),
 }));
 vi.mock("./useSpells", async (orig) => ({
   ...(await orig<object>()),
@@ -212,27 +214,30 @@ interface State {
   name: string;
   draft: Draft;
   resolution: unknown;
-  error: string | null;
+  error: unknown;
   loading: boolean;
   catalog: unknown;
-  library?: (storage: Map<string, string>) => void;
+  ascii?: boolean;
   stored?: boolean;
 }
 
-function states(): State[] {
+/** `ascii`: the same states with Latin user data (names, notes), so an English page can be checked for Cyrillic. */
+function states(ascii = false): State[] {
+  const T = (cyr: string, lat: string) => (ascii ? lat : cyr);
   const out: State[] = FIXTURES.map((f, i) => ({
+    ascii,
     name: f.id,
-    draft: draftOf(f, ["Бранимир", "Rosen", "Мила Тестова", "Wizard Twenty", ""][i]),
-    resolution: f.resolution,
+    draft: draftOf(f, [T("Бранимир", "Branimir"), "Rosen", T("Мила Тестова", "Mila Testova"), "Wizard Twenty", ""][i]),
+    resolution: ascii ? { ...f.resolution, sheet: { ...f.resolution.sheet, name: "Kitchen Sink" } } : f.resolution,
     error: null,
     loading: false,
     catalog: CATALOG,
   }));
-  out.push({ name: "empty-loading", draft: { ...emptyDraft }, resolution: null, error: null, loading: true, catalog: { ...CATALOG, loading: true } });
-  out.push({ name: "empty-failed", draft: { ...emptyDraft }, resolution: null, error: "Няма връзка със сървъра.", loading: false, catalog: { ...CATALOG, error: "Каталогът не се зареди (грешка 500)." } });
+  out.push({ ascii, name: "empty-loading", draft: { ...emptyDraft }, resolution: null, error: null, loading: true, catalog: { ...CATALOG, loading: true } });
+  out.push({ ascii, name: "empty-failed", draft: { ...emptyDraft }, resolution: null, error: { code: "net.offline" }, loading: false, catalog: { ...CATALOG, error: { code: "catalog.failed", params: { status: 500 } } } });
   const f = FIXTURES[2];
   for (const [method, hp] of [["pointbuy", "manual"], ["roll", "fixed"], ["manual", "fixed"]] as const) {
-    const d = draftOf(f, "Тест " + method);
+    const d = draftOf(f, T("Тест ", "Test ") + method);
     d.abilities = { method, base: { STR: 15, DEX: 14, CON: 13, INT: 12, WIS: 10, CHA: 8 } };
     d.preferences = { ...d.preferences, hitPointType: hp };
     d.classes = [{ classId: "fighter", level: 4, choices: {}, hpRolls: { "2": 6 } } as any, { classId: "rogue", level: 2, choices: {} } as any];
@@ -240,8 +245,9 @@ function states(): State[] {
     d.background = { id: "sage", choices: {} };
     d.species = { id: "human-xphb", subspeciesId: "sub-a", choices: {} } as any;
     d.equipment = { ...d.equipment, worn: { armor: null, shield: false }, wielded: { main: null, off: null } } as any;
-    d.details = { alignment: "Lawful Good", faith: "Тир", age: "30", personalityTraits: "Смел" };
+    d.details = { alignment: "Lawful Good", faith: T("Тир", "Tyr"), age: "30", personalityTraits: T("Смел", "Bold") };
     const res = busyResolution();
+    if (ascii) res.sheet.name = "Kitchen Sink";
     res.sheet.equipment = {
       granted: [{ itemId: "pack", name: "Explorer's Pack", qty: 1, contents: [{ itemId: "oil", name: "Oil", qty: 2 }, { itemId: "rope", name: "Rope", qty: 1 }] }],
       chosen: [{ itemId: "axe", name: "Axe", qty: 2 }, { itemId: "mace", name: "Mace", qty: 1, contents: [{ itemId: "x", name: "X", qty: 1 }] }],
@@ -249,7 +255,7 @@ function states(): State[] {
       slots: { current: { armor: null, shield: false }, armor: [{ itemId: "chain", name: "Chain Mail" }], hands: [{ itemId: "sword", name: "Sword", kind: "weapon" }, { itemId: "shield", name: "Shield", kind: "shield" }] },
       worn: { armor: null, shield: true },
     };
-    out.push({ name: `busy-${method}`, draft: d, resolution: res, error: method === "roll" ? "Сървърът не отговори навреме." : null, loading: method === "manual", catalog: { ...CATALOG, error: method === "manual" ? "cat err" : null, backgroundsFallback: method === "pointbuy" }, stored: true });
+    out.push({ ascii, name: `busy-${method}`, draft: d, resolution: res, error: method === "roll" ? { code: "net.timeout" } : null, loading: method === "manual", catalog: { ...CATALOG, error: method === "manual" ? { code: "raw", params: { text: "cat err" } } : null, backgroundsFallback: method === "pointbuy" }, stored: true });
   }
   return out;
 }
@@ -263,7 +269,8 @@ function memoryStorage(initial: Map<string, string>) {
   };
 }
 
-function render(state: State, route: string): string {
+function render(state: State, route: string, lang: Lang = "bg"): string {
+  const T = (cyr: string, lat: string) => (state.ascii ? lat : cyr);
   const store = new Map<string, string>();
   if (state.stored) {
     // a library with several characters: active ok, one empty (no stored draft), one corrupt, one with a class and a draft
@@ -272,13 +279,13 @@ function render(state: State, route: string): string {
       activeId: "c1",
       items: {
         c1: { id: "c1", name: state.draft.name, createdAt: 1_700_000_000_000, updatedAt: 1_700_000_100_000, seenChoiceIds: [] },
-        c2: { id: "c2", name: "Втори герой", createdAt: 1_700_000_000_000, updatedAt: 1_700_000_050_000, seenChoiceIds: [] },
+        c2: { id: "c2", name: T("Втори герой", "Second"), createdAt: 1_700_000_000_000, updatedAt: 1_700_000_050_000, seenChoiceIds: [] },
         c3: { id: "c3", name: "", createdAt: 1_700_000_000_000, updatedAt: 1_700_000_040_000, seenChoiceIds: [] },
-        c4: { id: "c4", name: "Повреден", createdAt: 1_700_000_000_000, updatedAt: 1_700_000_030_000, seenChoiceIds: [] },
+        c4: { id: "c4", name: T("Повреден", "Damaged"), createdAt: 1_700_000_000_000, updatedAt: 1_700_000_030_000, seenChoiceIds: [] },
       },
     }));
     store.set("dnd-builder-draft-v2:c1", JSON.stringify(state.draft));
-    store.set("dnd-builder-draft-v2:c2", JSON.stringify({ ...emptyDraft, name: "Втори герой", classes: [{ classId: "wizard", level: 3, choices: {} }, { classId: "gone", level: 1, choices: {} }] }));
+    store.set("dnd-builder-draft-v2:c2", JSON.stringify({ ...emptyDraft, name: T("Втори герой", "Second"), classes: [{ classId: "wizard", level: 3, choices: {} }, { classId: "gone", level: 1, choices: {} }] }));
     store.set("dnd-builder-draft-v2:c4", "{not json");
   } else {
     store.set("dnd-builder-draft-v2", JSON.stringify(state.draft));
@@ -290,20 +297,23 @@ function render(state: State, route: string): string {
     createElement(
       MemoryRouter,
       { initialEntries: [route] },
-      createElement(
-        ErrorBoundary,
-        null,
-        createElement(LibraryProvider, { env, children: createElement(DraftProvider, null, createElement(App)) }),
-      ),
+      createElement(LanguageProvider, {
+        initial: lang,
+        children: createElement(
+          ErrorBoundary,
+          null,
+          createElement(LibraryProvider, { env, children: createElement(DraftProvider, null, createElement(App)) }),
+        ),
+      }),
     ),
   );
   // React ids (useId) depend on the tree above; they carry no copy
   return html.replace(/(["#=])(?:_[rR]_[0-9a-zA-Z]+_|«r[0-9a-z]+»|:r[0-9a-z]+:)/g, "$1<uid>");
 }
 
-function capture(): Record<string, string> {
+function capture(lang: Lang = "bg", ascii = false): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const st of states()) for (const route of ROUTES) out[`${st.name} ${route}`] = render(st, route);
+  for (const st of states(ascii)) for (const route of ROUTES) out[`${st.name} ${route}`] = render(st, route, lang);
   return out;
 }
 
@@ -334,5 +344,20 @@ describe("BG render is identical to the snapshot captured before the copy conver
     expect(now["busy-pointbuy /home"]).toContain("Втори герой");
     expect(now["busy-manual /equipment"]).toContain("Explorer&#x27;s Pack");
     expect(now["wizard20-2024 /sheet"].length).toBeGreaterThan(10000);
+  });
+
+  it("the English UI shows no Cyrillic on any route when the data has none", () => {
+    const en = capture("en", true);
+    const bad = Object.entries(en).filter(([, html]) => /[\u0400-\u04FF]/.test(html)).map(([k, html]) => `${k}: ${html.match(/.{0,40}[\u0400-\u04FF]+.{0,20}/)?.[0]}`);
+    expect(bad).toEqual([]);
+    expect(en["busy-pointbuy /home"]).toContain("Characters");
+    expect(en["busy-pointbuy /class"]).toContain("Class Resources");
+    expect(en["wizard20-2024 /sheet"]).toContain("Armor Class");
+  });
+
+  it("the two languages render different pages from the same data", () => {
+    const bgPages = capture("bg", true);
+    const enPages = capture("en", true);
+    for (const key of Object.keys(bgPages)) if (!key.startsWith("empty-loading")) expect(enPages[key], key).not.toBe(bgPages[key]);
   });
 });

@@ -1,63 +1,55 @@
+import { useT } from "../LanguageContext";
+import { slugTitle } from "../logic/labels";
 import type { Sheet } from "../types";
 
-// Same wording as the exports (server/export_fields.py `extra_blocks` and markdown_export.py).
-const SENSE_NAMES: Record<string, string> = {
-  darkvision: "тъмно зрение", blindsight: "сляпо зрение",
-  tremorsense: "усещане за вибрации", truesight: "истинско зрение", devilsSight: "дяволско зрение",
-};
-const DAMAGE_SECTIONS = [
-  ["resistances", "Устойчивост"],
-  ["immunities", "Имунитет"],
-  ["vulnerabilities", "Уязвимост"],
-] as const;
-
-const title = (slug: string) => {
-  const s = slug.replace(/-/g, " ");
-  return s.charAt(0).toUpperCase() + s.slice(1);
-};
+// Same wording as the exports (server/export_fields.py `extra_blocks` and markdown_export.py); the words live in the catalog.
+const DAMAGE_SECTIONS = ["resistances", "immunities", "vulnerabilities"] as const;
 
 /** Read-only senses, damage modifiers, condition immunities and innate spells of the sheet. */
 export function SheetTraitsSummary({ sheet }: { sheet: Sheet }) {
+  const t = useT();
   const senses = Object.entries(sheet.senses ?? {});
   const damage = sheet.damageModifiers;
-  const damageLines = DAMAGE_SECTIONS.filter(([key]) => (damage?.[key]?.length ?? 0) > 0);
+  const damageLines = DAMAGE_SECTIONS.filter((key) => (damage?.[key]?.length ?? 0) > 0);
   const conditions = sheet.conditionImmunities ?? [];
   const innate = sheet.innateSpells ?? [];
   return (
     <>
       {senses.length > 0 && (
         <div>
-          <h2>Сетива</h2>
+          <h2>{t.sheet.senses.title}</h2>
           <ul>
             {senses.map(([k, v]) => (
-              <li key={k}>
-                {SENSE_NAMES[k] ?? k} {v} фута
-              </li>
+              <li key={k}>{t.traits.senseLine(t.sheet.senses.kinds[k] ?? k, v)}</li>
             ))}
           </ul>
         </div>
       )}
       {(damageLines.length > 0 || conditions.length > 0) && (
         <div>
-          <h2>Съпротиви и имунитети</h2>
+          <h2>{t.sheet.defenses.title}</h2>
           <ul>
-            {damageLines.map(([key, label]) => (
+            {damageLines.map((key) => (
               <li key={key}>
-                {label} към щета: {damage![key].map(title).join(", ")}
+                {t.sheet.defenses[key]}: {damage![key].map(slugTitle).join(", ")}
               </li>
             ))}
-            {conditions.length > 0 && <li>Имунитет към състояния: {conditions.map(title).join(", ")}</li>}
+            {conditions.length > 0 && (
+              <li>
+                {t.sheet.defenses.conditionImmunities}: {conditions.map(slugTitle).join(", ")}
+              </li>
+            )}
           </ul>
         </div>
       )}
       {innate.length > 0 && (
         <div>
-          <h2>Вродени заклинания</h2>
+          <h2>{t.sheet.innateSpells.title}</h2>
           <ul>
             {innate.map((e, i) => (
               <li key={`${e.spellId ?? e.name}:${i}`}>
-                {e.name} ({e.uses}
-                {e.level ? `, от ниво ${e.level}` : ""}){e.note ? ` - ${e.note}` : ""}
+                {t.sheet.innateSpells.line(e.name, e.uses, e.level)}
+                {e.note ? ` - ${e.note}` : ""}
                 {e.source ? ` [${e.source}]` : ""}
               </li>
             ))}

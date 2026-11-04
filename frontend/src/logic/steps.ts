@@ -1,11 +1,12 @@
-import { t } from "../copy";
+import type { Copy } from "../copy";
 import type { ChoiceSourceKind, Draft, Resolution } from "../types";
 import { problemsForStep, type ProblemStep } from "../problems";
 import { isBackgroundCid, isClassCid, isSpeciesCid } from "./choiceRouting";
 
 export interface Step {
   path: string;
-  label: string;
+  /** Key of the label in `t.nav.steps` (the label itself comes from the catalog). */
+  key: keyof Copy["nav"]["steps"];
   // Most steps only ever show choices of their own kind. The Background
   // step also renders feat-sourced choices (a background-granted feat's
   // proficiency/ability-bonus/language picks — see BackgroundPage.tsx),
@@ -29,14 +30,14 @@ export interface Step {
 }
 
 export const STEPS: Step[] = [
-  { path: "/home", label: "Home", kind: null },
-  { path: "/class", problemStep: "class", label: "Клас", kind: ["class", "feat"], cidFilter: isClassCid },
-  { path: "/background", problemStep: "background", label: "Background", kind: ["background", "feat"], cidFilter: isBackgroundCid },
-  { path: "/species", problemStep: "species", label: "Species", kind: ["species", "feat"], cidFilter: isSpeciesCid },
-  { path: "/abilities", problemStep: "abilities", label: "Abilities", kind: null },
-  { path: "/equipment", problemStep: "equipment", label: "Equipment", kind: ["equipment"] },
-  { path: "/sheet", label: t.nav.sheet, kind: null },
-  { path: "/export", label: "Export", kind: null },
+  { path: "/home", key: "home", kind: null },
+  { path: "/class", problemStep: "class", key: "class", kind: ["class", "feat"], cidFilter: isClassCid },
+  { path: "/background", problemStep: "background", key: "background", kind: ["background", "feat"], cidFilter: isBackgroundCid },
+  { path: "/species", problemStep: "species", key: "species", kind: ["species", "feat"], cidFilter: isSpeciesCid },
+  { path: "/abilities", problemStep: "abilities", key: "abilities", kind: null },
+  { path: "/equipment", problemStep: "equipment", key: "equipment", kind: ["equipment"] },
+  { path: "/sheet", key: "sheet", kind: null },
+  { path: "/export", key: "export", kind: null },
 ];
 
 export interface StepStatus {

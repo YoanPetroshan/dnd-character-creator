@@ -1,10 +1,11 @@
-import { t } from "../../copy";
+import { useT } from "../../LanguageContext";
 import { formatModifier } from "../../logic/abilities";
 import type { SheetSectionData, SlotRow } from "../../logic/sheetSections";
 import type { SheetInnateSpell, SheetSpellSummary } from "../../types";
 import { SectionFrame } from "./SectionFrame";
 
 function SpellList({ title, spells }: { title: string; spells: SheetSpellSummary[] }) {
+  const t = useT();
   if (spells.length === 0) return null;
   return (
     <>
@@ -19,6 +20,7 @@ function SpellList({ title, spells }: { title: string; spells: SheetSpellSummary
 }
 
 function Slots({ title, rows, note }: { title: string; rows: SlotRow[]; note?: string }) {
+  const t = useT();
   if (rows.length === 0) return null;
   return (
     <>
@@ -34,6 +36,7 @@ function Slots({ title, rows, note }: { title: string; rows: SlotRow[]; note?: s
 }
 
 export function SpellsSection({ data }: { data: SheetSectionData["spells"] }) {
+  const t = useT();
   const c = t.sheet.spells;
   return (
     <SectionFrame sectionKey="spells" title={c.title}>
@@ -86,6 +89,7 @@ export function SpellsSection({ data }: { data: SheetSectionData["spells"] }) {
 }
 
 export function InnateSpellsSection({ data }: { data: SheetSectionData["innateSpells"] }) {
+  const t = useT();
   const c = t.sheet.innateSpells;
   const line = (e: SheetInnateSpell) =>
     [

@@ -1,5 +1,6 @@
 import { createContext, useContext, type ReactNode } from "react";
 import { useDraft } from "./DraftContext";
+import type { Msg } from "./logic/messages";
 import {
   useCatalog, type CatalogClass, type CatalogBackground, type CatalogSpecies, type CatalogSource,
 } from "./useCatalog";
@@ -13,7 +14,7 @@ interface CatalogContextValue {
   backgroundsFallback?: boolean;
   allSpecies: CatalogSpecies[];
   loading: boolean;
-  error: string | null;
+  error: Msg | null;
   retry: () => void;
 }
 

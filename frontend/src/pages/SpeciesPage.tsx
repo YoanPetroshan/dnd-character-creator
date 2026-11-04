@@ -2,11 +2,15 @@ import { useState } from "react";
 import { StepProblems } from "../components/StepProblems";
 import { useDraft } from "../DraftContext";
 import { speciesChoicesOf } from "../logic/choiceRouting";
+import { useT } from "../LanguageContext";
+import { renderMsg } from "../logic/messages";
 import { useResolutionContext } from "../ResolutionContext";
 import { useCatalogContext } from "../CatalogContext";
 import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
 
 export function SpeciesPage() {
+  const t = useT();
+  const sp = t.speciesPage;
   const { draft, dispatch } = useDraft();
   const [speciesFilter, setSpeciesFilter] = useState("");
   const { resolution, loading } = useResolutionContext();
@@ -50,13 +54,13 @@ export function SpeciesPage() {
 
   return (
     <div className="page">
-      <h1>Species {loading && "…"}</h1>
+      <h1>{sp.title} {loading && "…"}</h1>
       <StepProblems step="species" />
       {catalog.error && (
         <p>
-          Грешка при зареждане: {catalog.error}{" "}
+          {t.common.loadError(renderMsg(t, catalog.error))}{" "}
           <button type="button" onClick={catalog.retry}>
-            Опитай пак
+            {t.common.retry}
           </button>
         </p>
       )}
@@ -70,12 +74,12 @@ export function SpeciesPage() {
       <input
         type="search"
         className="picker-filter"
-        aria-label="Търсене на species"
-        placeholder="Търсене на species…"
+        aria-label={sp.searchLabel}
+        placeholder={sp.searchPlaceholder}
         value={speciesFilter}
         onChange={(e) => setSpeciesFilter(e.target.value)}
       />
-      {needle && shownSpecies.length === 0 && <p>Няма съвпадения.</p>}
+      {needle && shownSpecies.length === 0 && <p>{t.common.noMatches}</p>}
       <ul className="picker-list">
         {shownSpecies.map((s) => (
           <li key={s.id}>
@@ -87,20 +91,20 @@ export function SpeciesPage() {
                 onChange={() => dispatch({ type: "SET_SPECIES", speciesId: s.id })}
               />
               {s.name}
-              {speciesHidden && s.id === selectedSpeciesId ? " (скрит от текущите филтри)" : ""}
+              {speciesHidden && s.id === selectedSpeciesId ? ` (${t.common.hiddenByFilters})` : ""}
             </label>
           </li>
         ))}
       </ul>
       {selectedSpecies && subspeciesList.length > 0 && (
         <>
-          <h2>Subspecies</h2>
+          <h2>{sp.subspecies}</h2>
           <select
-            aria-label="Subspecies"
+            aria-label={sp.subspecies}
             value={draft.species.subspeciesId ?? ""}
             onChange={(e) => dispatch({ type: "SET_SUBSPECIES", subspeciesId: e.target.value || undefined })}
           >
-            <option value="">— none —</option>
+            <option value="">{sp.subspeciesNone}</option>
             {subspeciesList.map((sub) => (
               <option key={sub.id} value={sub.id}>
                 {sub.name}
@@ -109,7 +113,7 @@ export function SpeciesPage() {
           </select>
         </>
       )}
-      {selectedSpeciesId && !loading && choices.length === 0 && <p>Няма избори за този species.</p>}
+      {selectedSpeciesId && !loading && choices.length === 0 && <p>{sp.noChoices}</p>}
       {choices.map((choice) => (
         <ChoiceCard key={choice.id} choice={choice} onToggle={handleChange} defaultExpanded={choice.id === firstPendingId(choices)} />
       ))}

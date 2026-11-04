@@ -43,9 +43,9 @@ describe("exportReadiness", () => {
   });
 
   it("a missing class, species or background blocks, each with its own line", () => {
-    expect(exportReadiness(resolution({ classes: 0 }), null)).toMatchObject({ canExport: false, missingParts: ["Избери клас."] });
-    expect(exportReadiness(resolution({ species: false }), null)).toMatchObject({ canExport: false, missingParts: ["Избери species."] });
-    expect(exportReadiness(resolution({ background: false }), null)).toMatchObject({ canExport: false, missingParts: ["Избери background."] });
+    expect(exportReadiness(resolution({ classes: 0 }), null)).toMatchObject({ canExport: false, missingParts: ["class"] });
+    expect(exportReadiness(resolution({ species: false }), null)).toMatchObject({ canExport: false, missingParts: ["species"] });
+    expect(exportReadiness(resolution({ background: false }), null)).toMatchObject({ canExport: false, missingParts: ["background"] });
     expect(exportReadiness(resolution({ classes: 0, species: false, background: false }), null).missingParts).toHaveLength(3);
   });
 

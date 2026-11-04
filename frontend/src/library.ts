@@ -14,6 +14,7 @@
 // of one character never touches the others.
 import type { Draft } from "./types";
 import { emptyDraft, mergeDraft, totalLevel } from "./logic/draft";
+import { MsgError, msg, toMsg, type Msg } from "./logic/messages";
 
 export const LIBRARY_KEY = "dnd-builder-library-v1";
 export const LIBRARY_BACKUP_KEY = "dnd-builder-library-v1.unreadable-backup";
@@ -59,7 +60,7 @@ export interface Library {
 export interface BootResult {
   library: Library;
   draft: Draft;
-  notices: string[];
+  notices: Msg[];
   /** raw text of an unreadable ACTIVE draft/legacy key whose backup write failed */
   unsavedRaw: string | null;
   storageFailed: boolean;
@@ -81,7 +82,7 @@ export interface ImportEntry {
   name: string;
   status: "accepted" | "rejected";
   id?: string;
-  message: string;
+  message: Msg;
 }
 
 export interface LiveDraft {
@@ -125,9 +126,14 @@ function isObj(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
-const whyOf = (e: unknown) =>
-  e instanceof SyntaxError ? "Запазената чернова е повредена." : e instanceof Error ? e.message : "Запазената чернова не може да се прочете.";
-const label = (name: string) => (name ? name : "Без име");
+const whyOf = (e: unknown): Msg =>
+  e instanceof SyntaxError
+    ? msg("lib.unreadable")
+    : e instanceof MsgError
+      ? e.msg
+      : e instanceof Error
+        ? msg("raw", { text: e.message })
+        : msg("lib.cannotRead");
 
 function writeIndex(env: LibraryEnv, lib: Library): boolean {
   return put(env, LIBRARY_KEY, JSON.stringify(lib));
@@ -147,7 +153,7 @@ function newItem(env: LibraryEnv, id: string, name: string, seen: string[] = [])
 type DraftRead =
   | { kind: "ok"; draft: Draft }
   | { kind: "missing" }
-  | { kind: "corrupt"; raw: string; why: string };
+  | { kind: "corrupt"; raw: string; why: Msg };
 
 function readDraft(env: LibraryEnv, id: string): DraftRead {
   const raw = get(env, draftKey(id));
@@ -173,18 +179,18 @@ function dropLegacy(env: LibraryEnv, lib: Library): void {
 
 /** Back up a corrupt item draft and remove it from the draft key (the item becomes an empty
  *  character). If the backup cannot be written the stored text is left untouched. */
-function isolateCorrupt(env: LibraryEnv, item: LibraryItem, raw: string, why: string): { isolated: boolean; notice: string } {
+function isolateCorrupt(env: LibraryEnv, item: LibraryItem, raw: string, why: Msg): { isolated: boolean; notice: Msg } {
   const bk = backupKey(item.id);
   if (put(env, bk, raw)) {
     del(env, draftKey(item.id));
     return {
       isolated: true,
-      notice: `Героят „${label(item.name)}": ${why} Започнат е празен; старият текст е запазен в браузъра (${bk}).`,
+      notice: msg("lib.isolated", { name: item.name, why, key: bk }),
     };
   }
   return {
     isolated: false,
-    notice: `Героят „${label(item.name)}": ${why} Копие НЕ можа да се запази (хранилището е пълно); повредените данни са оставени непипнати.`,
+    notice: msg("lib.isolatedNoBackup", { name: item.name, why }),
   };
 }
 
@@ -239,7 +245,7 @@ function rebuildFromDraftKeys(env: LibraryEnv): Library | null {
 // ---- boot ---------------------------------------------------------------------------------
 
 export function bootLibrary(env: LibraryEnv): BootResult {
-  const notices: string[] = [];
+  const notices: Msg[] = [];
   let unsavedRaw: string | null = null;
   let storageFailed = false;
   let lib: Library | null = null;
@@ -259,9 +265,10 @@ export function bootLibrary(env: LibraryEnv): BootResult {
       const saved = put(env, LIBRARY_BACKUP_KEY, libRaw);
       lib = rebuildFromDraftKeys(env);
       notices.push(
-        `Списъкът с герои (библиотеката) е повреден или от по-нова версия. ${
-          saved ? `Старият текст е запазен в браузъра (${LIBRARY_BACKUP_KEY}).` : "Копие НЕ можа да се запази (хранилището е пълно)."
-        }${lib ? " Героите са възстановени от запазените чернови." : " Започнато е с празна библиотека."}`,
+        msg("lib.libraryDamaged", {
+          saved: saved ? msg("lib.backupSaved", { key: LIBRARY_BACKUP_KEY }) : msg("lib.backupFailed"),
+          recovered: lib ? msg("lib.recovered") : msg("lib.startedEmptyLibrary"),
+        }),
       );
       if (!saved) unsavedRaw = libRaw;
       loadedText = null;
@@ -283,12 +290,10 @@ export function bootLibrary(env: LibraryEnv): BootResult {
         draft = emptyDraft;
         const saved = put(env, LEGACY_BACKUP_KEY, legacyRaw);
         const why = whyOf(e);
-        if (saved) notices.push(`${why} Започнато е с празна чернова; старата е запазена в браузъра (${LEGACY_BACKUP_KEY}).`);
+        if (saved) notices.push(msg("lib.legacyBackedUp", { why, key: LEGACY_BACKUP_KEY }));
         else {
           unsavedRaw = legacyRaw;
-          notices.push(
-            `${why} Започнато е с празна чернова, а старата НЕ можа да се запази в браузъра (хранилището е пълно). Свали я сега, иначе ще се загуби.`,
-          );
+          notices.push(msg("lib.legacyNotBackedUp", { why }));
         }
       }
     }
@@ -351,10 +356,10 @@ export function openCharacter(
   env: LibraryEnv,
   lib: Library,
   id: string,
-): { library: Library; draft: Draft | null; notices: string[]; unsavedRaw: string | null; ok: boolean } {
+): { library: Library; draft: Draft | null; notices: Msg[]; unsavedRaw: string | null; ok: boolean } {
   const item = lib.items[id];
   if (!item) return { library: lib, draft: null, notices: [], unsavedRaw: null, ok: true };
-  const notices: string[] = [];
+  const notices: Msg[] = [];
   let unsavedRaw: string | null = null;
   let draft: Draft;
   const r = readDraft(env, id);
@@ -382,11 +387,18 @@ export function renameCharacter(env: LibraryEnv, lib: Library, id: string, name:
   return saveDraft(env, lib, id, { ...base, name });
 }
 
+/** The words the library writes into a character's name (language-dependent, so the caller supplies them). */
+export interface LibraryNames {
+  unnamed: string;
+  copyName: (name: string) => string;
+}
+
 export function duplicateCharacter(
   env: LibraryEnv,
   lib: Library,
   id: string,
-  live?: LiveDraft,
+  live: LiveDraft | undefined,
+  names: LibraryNames,
 ): { library: Library; id: string | null; ok: boolean } {
   const item = lib.items[id];
   if (!item) return { library: lib, id: null, ok: true };
@@ -398,7 +410,7 @@ export function duplicateCharacter(
     source = r.kind === "ok" ? r.draft : { ...clone(emptyDraft), name: item.name };
   }
   const copy = clone(source);
-  copy.name = `${label(copy.name)} (копие)`;
+  copy.name = names.copyName(copy.name || names.unnamed);
   const newId = freshId(env, lib);
   const draftOk = put(env, draftKey(newId), JSON.stringify(copy));
   const next: Library = { ...lib, items: { ...lib.items, [newId]: newItem(env, newId, copy.name, item.seenChoiceIds) } };
@@ -410,14 +422,14 @@ export function duplicateCharacter(
 /** Delete one character. Deleting the active one activates the most recently updated other one
  *  (its draft is returned); deleting the last one creates an empty character. `draft` is null when
  *  the active character did not change. */
-export function deleteCharacter(env: LibraryEnv, lib: Library, id: string): { library: Library; draft: Draft | null; notices: string[]; unsavedRaw: string | null; ok: boolean } {
+export function deleteCharacter(env: LibraryEnv, lib: Library, id: string): { library: Library; draft: Draft | null; notices: Msg[]; unsavedRaw: string | null; ok: boolean } {
   if (!lib.items[id]) return { library: lib, draft: null, notices: [], unsavedRaw: null, ok: true };
   const items = { ...lib.items };
   delete items[id];
   let next: Library = { ...lib, items };
   let draft: Draft | null = null;
   let ok = true;
-  let notices: string[] = [];
+  let notices: Msg[] = [];
   let unsavedRaw: string | null = null;
   if (Object.keys(items).length === 0) {
     const created = createCharacter(env, next);
@@ -457,24 +469,24 @@ export function exportLibrary(
     const r = readDraft(env, item.id);
     if (r.kind === "ok") drafts.push(r.draft);
     else if (r.kind === "missing") drafts.push({ ...clone(emptyDraft), name: item.name });
-    else skipped.push(label(item.name));
+    else skipped.push(item.name);
   }
   return { bundle: { kind: "dnd-builder-library", version: 1, drafts }, skipped };
 }
 
 /** Import one draft or a library bundle. Every draft goes through mergeDraft; accepted ones become
  *  NEW characters with fresh ids (existing characters are never overwritten, the active one does not
- *  change). The report has one entry per candidate, with Bulgarian messages. */
+ *  change). The report has one entry per candidate, with messages (Msg, rendered by the UI). */
 export function importDrafts(env: LibraryEnv, lib: Library, parsed: unknown): { library: Library; report: ImportEntry[]; ok: boolean } {
   const report: ImportEntry[] = [];
   let candidates: unknown[];
   if (isObj(parsed) && parsed.kind === "dnd-builder-library") {
     if (typeof parsed.version === "number" && parsed.version > 1) {
-      return rejectAll(lib, "Пакетът с герои е записан от по-нова версия на приложението.");
+      return rejectAll(lib, msg("lib.bundleNewer"));
     }
-    if (!Array.isArray(parsed.drafts)) return rejectAll(lib, "Пакетът с герои няма списък с чернови.");
+    if (!Array.isArray(parsed.drafts)) return rejectAll(lib, msg("lib.bundleNoList"));
     candidates = parsed.drafts;
-    if (candidates.length === 0) return rejectAll(lib, "Пакетът с герои е празен.");
+    if (candidates.length === 0) return rejectAll(lib, msg("lib.bundleEmpty"));
   } else {
     candidates = [parsed];
   }
@@ -484,25 +496,25 @@ export function importDrafts(env: LibraryEnv, lib: Library, parsed: unknown): { 
   candidates.forEach((c, index) => {
     const nameOf = isObj(c) && typeof c.name === "string" ? c.name : "";
     if (index >= MAX_IMPORT) {
-      report.push({ index, name: nameOf, status: "rejected", message: `Пакетът е прекалено голям: приемат се най-много ${MAX_IMPORT} героя.` });
+      report.push({ index, name: nameOf, status: "rejected", message: msg("lib.tooMany", { max: MAX_IMPORT }) });
       return;
     }
     let draft: Draft;
     try {
       draft = mergeDraft(c);
     } catch (e) {
-      report.push({ index, name: nameOf, status: "rejected", message: e instanceof Error ? e.message : String(e) });
+      report.push({ index, name: nameOf, status: "rejected", message: toMsg(e) });
       return;
     }
     const id = freshId(env, next);
     if (!put(env, draftKey(id), JSON.stringify(draft))) {
       ok = false;
-      report.push({ index, name: draft.name, status: "rejected", message: "Не можа да се запази: хранилището на браузъра е пълно или забранено." });
+      report.push({ index, name: draft.name, status: "rejected", message: msg("lib.cannotStore") });
       return;
     }
     next = { ...next, items: { ...next.items, [id]: newItem(env, id, draft.name) } };
     accepted++;
-    report.push({ index, name: draft.name, status: "accepted", id, message: "Добавен като нов герой." });
+    report.push({ index, name: draft.name, status: "accepted", id, message: msg("lib.added") });
   });
   if (accepted > 0) {
     if (!writeIndex(env, next)) ok = false;
@@ -510,7 +522,7 @@ export function importDrafts(env: LibraryEnv, lib: Library, parsed: unknown): { 
   }
   return { library: next, report, ok };
 
-  function rejectAll(l: Library, message: string) {
+  function rejectAll(l: Library, message: Msg) {
     return { library: l, report: [{ index: 0, name: "", status: "rejected" as const, message }], ok: true };
   }
 }
