@@ -620,7 +620,7 @@ MESSAGE_SAMPLES: dict[str, dict] = {
     "desc-feat-proficiencies": {"n": 3}, "desc-feat-expertise": {"n": 2}, "desc-feat-saves": {"n": 1},
     "desc-weapon-proficiency-choice": {"n": 4}, "desc-asi-improvement-options": {"n": 2},
     "desc-asi-increase": {"n": 2, "bonus": "+1"}, "desc-resist-types": {"n": 2},
-    "desc-species-feat": {"noun": msg("noun-origin-feat")}, "desc-species-feats": {"count": 2},
+    "desc-species-feat": {"noun": msg("noun-origin-feat")}, "desc-species-feats": {"count": 2}, "desc-feat-or-dark-gift": {"name": "Survivor"},
     "desc-pick-fighting-style": {"n": 1}, "desc-pick-maneuver": {"n": 3}, "desc-pick-metamagic": {"n": 2},
     "desc-pick-invocation": {"n": 2}, "desc-weapon-mastery-feat": {"n": 2}, "desc-weapon-mastery-class": {"count": 3},
     "desc-granted-automatically": {"names": "Fire Bolt", "n": 1},

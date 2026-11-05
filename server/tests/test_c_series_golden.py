@@ -1062,6 +1062,17 @@ def test_g5_no_rebaseline_and_the_rune_carver_sink_holds_rune_shaper():
     assert card["count"] == 2 and card["status"] == "resolved"
 
 
+def test_g7_no_rebaseline_and_the_haunted_one_sink_holds_the_either_or_card():
+    """G7: no stored case holds Haunted One / Investigator (a background of RHW, hidden by every "srd" filter), so no stored
+    case moved and there is no REBASELINES entry; the Fighter 3 / Haunted One sink was appended instead."""
+    assert "G7" not in REBASELINES
+    entry = next(e for n, e in _GOLDEN.items() if n.endswith("/haunted-one-fighter3-2014"))
+    res = entry["result"]
+    card = next(c for c in res["choices"] if c["id"] == "background:haunted-one-rhw:feat-0")
+    assert card["status"] == "resolved" and card["selected"] == ["feat:survivor-rhw"] and card["options"][0]["id"] == "feat:survivor-rhw"
+    assert [f["id"] for f in res["sheet"]["feats"]] == ["survivor-rhw"]
+
+
 def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
     """Y2: the rebaseline touched only `options[*].source` (the allowlist); 218 of the first 254 cases hold a book option (the
     G2, G3 and G4 cases appended later hold one too: 225 of 261), the other 36 (level 1 / 3 cases without feat, spell or feature options) are byte-identical. Every stored source is a
@@ -1077,7 +1088,7 @@ def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
                     assert isinstance(o["source"], str) and o["source"], (name, card["id"], o["id"])
                     assert not o["id"].startswith("skill-") and card["source"]["kind"] != "equipment", (name, card["id"], o["id"])
         with_source += has
-    assert with_source == 227  # the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
+    assert with_source == 228  # the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
 
 
 if __name__ == "__main__":

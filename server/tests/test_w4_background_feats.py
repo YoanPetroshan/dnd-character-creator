@@ -9,8 +9,8 @@ VERIFIED against the raw 5etools backgrounds.json (the catalog text is the rule;
                          choice|feats|category=DG} ({@feat Mist Walker|RHW} is recommended)". Not a fixed feat: a pick.
   Spirit Medium (RHW)    same shape, "({@feat Gathered Whispers|RHW} is recommended)".
   Haunted One / Investigator (RHW) carry the SAME wildcard beside a plain grant (Survivor / Sharp Eye) and the text says
-                         "{@feat Survivor|RHW} or a {@filter Dark Gift feat ...}": an alternative, already served by the
-                         plain grant; they get no pick card (deferred, listed in ARCHITECTURE).
+                         "{@feat Survivor|RHW} or a {@filter Dark Gift feat ...}": an alternative. W4 left the plain grant
+                         and made no card; G7 (tests/test_g7_either_or_feat.py) made them one either-or card.
 
 Matrix: raw pins | converter output | card (cid `background:<id>:feat-0`, kind background, 9 Dark Gift options) |
   the pick reaches the sheet (origin background) and its cascaded choices live under the same cid prefix |
@@ -118,8 +118,10 @@ def test_dark_gift_backgrounds_carry_a_feat_grant(catalog, bid):
     assert bg["feat_grants"] == [{"count": 1, "category": "DG"}] and bg["feats"] == []
 
 
-def test_exactly_two_backgrounds_carry_feat_grants(catalog):
-    assert sorted(i for i, b in catalog.backgrounds.items() if b.get("feat_grants")) == ["mist-wanderer-rhw", "spirit-medium-rhw"]
+def test_exactly_four_backgrounds_carry_feat_grants(catalog):
+    """Mist Wanderer / Spirit Medium (W4: a Dark Gift) and, since G7, Haunted One / Investigator (the either-or)."""
+    assert sorted(i for i, b in catalog.backgrounds.items() if b.get("feat_grants")) == [
+        "haunted-one-rhw", "investigator-rhw", "mist-wanderer-rhw", "spirit-medium-rhw"]
 
 
 def test_every_2024_background_now_has_an_origin_feat_or_a_pick(catalog):
@@ -195,8 +197,8 @@ def test_background_pick_is_in_the_taken_map_of_later_cards(catalog, monkeypatch
     import engine.resolve as r
     real = r._species_feat_pool
 
-    def widened(cat, category, sources, ruleset="mixed", keep=()):
-        return real(cat, category, sources, ruleset, keep) + ([cat.feats["mist-walker-rhw"]] if category == "O" else [])
+    def widened(cat, category, sources, ruleset="mixed", keep=(), include=()):
+        return real(cat, category, sources, ruleset, keep, include) + ([cat.feats["mist-walker-rhw"]] if category == "O" else [])
 
     monkeypatch.setattr(r, "_species_feat_pool", widened)
     res = resolve(_draft("mist-wanderer-rhw", species="human-xphb", choices={MIST: ["feat:mist-walker-rhw"]}), catalog)
@@ -221,11 +223,10 @@ def test_hidden_pick_stays_applied_with_a_warning(catalog):
 # --- unrelated records stay put ---------------------------------------------------------------------------------
 
 @pytest.mark.parametrize("bid", ["haunted-one-rhw", "investigator-rhw"])
-def test_alternative_backgrounds_keep_their_plain_grant_only(catalog, bid):
+def test_alternative_backgrounds_are_the_g7_either_or_card(catalog, bid):
+    """W4 deferred these two ("Survivor or a Dark Gift feat"); G7 (tests/test_g7_either_or_feat.py) made them one card."""
     bg = catalog.backgrounds[bid]
-    assert len(bg["feats"]) == 1 and not bg.get("feat_grants")
-    res = resolve(_draft(bid), catalog)
-    assert len(res["sheet"]["feats"]) == 1
+    assert bg["feats"] == [] and len(bg["feat_grants"]) == 1 and bg["feat_grants"][0]["include"]
 
 
 def test_mixed_and_2014_output_for_an_unrelated_background_is_unchanged(catalog):

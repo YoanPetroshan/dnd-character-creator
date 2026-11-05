@@ -1350,15 +1350,14 @@ def test_feats_with_no_field_at_all_gets_an_empty_list():
 
 
 def test_feats_anyfromcategory_wildcard_is_excluded_not_crashed_on():
-    # Haunted One/RHW carries a real fixed feat grant (Survivor) AND a
-    # non-boolean anyFromCategory wildcard entry in the same list — the
-    # wildcard must be silently excluded (no feat catalog to resolve it
-    # against), while the fixed grant still comes through.
+    # Haunted One/RHW carries a plain feat (Survivor) AND an anyFromCategory wildcard entry in the same list: the data's
+    # either-or. G7: no unconditional grant any more; one grant {count, category DG, include: [Survivor's ref]}.
     backgrounds = load_official_backgrounds(official_dir())
     bg = next(b for b in backgrounds if b["index"] == "haunted-one-rhw")
-    assert bg["feats"] == ["survivor"]
+    assert bg["feats"] == []
     assert bg["feat_options"] == []
-    assert bg["feat_refs"] == ["survivor-rhw"]
+    assert bg["feat_refs"] == []
+    assert bg["feat_grants"] == [{"count": 1, "category": "DG", "include": ["survivor-rhw"]}]
 
 
 def test_feats_multiple_true_entries_are_alternatives_not_a_triple_grant():

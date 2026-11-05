@@ -210,6 +210,8 @@ _EXPECT = {
     "tiefling-phb5-2014": {"innate": True},
     # G5: Rune Shaper (Rune Carver background), Comprehend Languages and two rune spells, 1/day each
     "rune-carver-wizard9-2014": {"innate": True},
+    # G7: Haunted One, the either-or card resolved to Survivor
+    "haunted-one-fighter3-2014": {"feats": ["survivor-rhw"]},
     # G4: the discipline ki costs, the runes as resources, Limited Wish (recharge other) and Power Surge (INT pool)
     "four-elements17-2014": {"resources": ["Ki", "Disciple of the Elements"], "feature_choice": "Fist of Four Thunders"},
     "rune-knight15-2014": {"resources": ["Rune Carver", "Rune Carver: Fire Rune", "Rune Carver: Stone Rune"], "feature_choice": "Fire Rune"},

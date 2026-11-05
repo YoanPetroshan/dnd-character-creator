@@ -136,6 +136,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     "desc-size": {"en": "Choose your size.", "bg": "Изберете размера си."},
     "desc-species-feat": {"en": "Choose {noun}.", "bg": "Изберете {noun}."},
     "desc-species-feats": {"en": "Choose {count} feats.", "bg": "Изберете {count} таланта (Feats)."},
+    "desc-feat-or-dark-gift": {"en": "Choose {name} or a Dark Gift feat.", "bg": "Изберете {name} или талант (Feat) Dark Gift."},
     "noun-origin-feat": {"en": "an Origin feat", "bg": "талант от произхода (Origin Feat)"},
     "noun-dark-gift-feat": {"en": "a Dark Gift feat", "bg": "талант (Feat) Dark Gift"},
     "noun-feat": {"en": "a feat", "bg": "талант (Feat)"},

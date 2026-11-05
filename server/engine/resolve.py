@@ -2940,7 +2940,8 @@ def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrac
     return templates
 
 
-def _species_feat_pool(catalog: Catalog, category: str | None, sources, ruleset: str = "mixed", keep=()) -> list[dict]:
+def _species_feat_pool(catalog: Catalog, category: str | None, sources, ruleset: str = "mixed", keep=(),
+                       include=()) -> list[dict]:
     """Feats a species feat grant may be spent on. An explicit category
     ("O": Human/XPHB's Origin feat) offers exactly that category; `None`
     (the "any" grant of Variant Human and Custom Lineage) offers feats with
@@ -2952,12 +2953,13 @@ def _species_feat_pool(catalog: Catalog, category: str | None, sources, ruleset:
     lists the 2014 category-less feats that ruleset_allows lets through.)
     `keep`: stored option ids (`feat:<index>`); one whose category fits the
     grant stays in the pool even when ruleset/sources hide it (the caller
-    flags it `hiddenByFilters`)."""
+    flags it `hiddenByFilters`). G7: `include` (catalog feat indexes) joins the pool whatever its category: the plain feat
+    of an either-or grant ("Survivor or a Dark Gift feat"), still subject to the sources filter."""
     allowed = {category} if category is not None else {"", "G", "O"}
     kept = {k[len("feat:"):] for k in keep if isinstance(k, str) and k.startswith("feat:")}
     pool = [
         f for f in catalog.feats.values()
-        if (f.get("category") or "") in allowed and f["name"] != "Ability Score Improvement"
+        if (((f.get("category") or "") in allowed and f["name"] != "Ability Score Improvement") or f["index"] in include)
         and (_feat_offered(f, sources, ruleset) or f["index"] in kept)
     ]
     return pool
@@ -2995,7 +2997,8 @@ def _species_feat_choice_template(
     scores before any feat bonus and the total level (permissive, like the
     ASI pre-walk)."""
     options = []
-    for feat, option in _feat_options(_species_feat_pool(catalog, grant["category"], sources, ruleset, keep), ruleset):
+    include = tuple(grant.get("include") or ())
+    for feat, option in _feat_options(_species_feat_pool(catalog, grant["category"], sources, ruleset, keep, include), ruleset):
         if not _feat_offered(feat, sources, ruleset):
             option["hiddenByFilters"] = True
         reason = _feat_prerequisite_unmet_reason(feat, total_level, scores, use_prereqs, held, catalog)
@@ -3006,13 +3009,15 @@ def _species_feat_choice_template(
             option["disabled"] = True
             option["disabledReason"] = _taken_reason(feat, taken)
         options.append(option)
+    options.sort(key=lambda o: o["id"][len("feat:"):] not in include)  # G7: the plain feat of an either-or grant leads (stable)
     count = grant["count"]
     noun = (msg("noun-origin-feat") if grant["category"] == "O"
             else msg("noun-dark-gift-feat") if grant["category"] == "DG" else msg("noun-feat"))
     return {
         "id": cid, "source": {"kind": kind, "id": race_id, "label": race["name"]},
         "label": msg("label-origin-feat") if grant["category"] == "O" else msg("label-feat"),
-        "description": msg("desc-species-feat", noun=noun) if count == 1 else msg("desc-species-feats", count=count),
+        "description": (msg("desc-feat-or-dark-gift", name=catalog.feats[include[0]]["name"]) if include and include[0] in catalog.feats
+                        else msg("desc-species-feat", noun=noun) if count == 1 else msg("desc-species-feats", count=count)),
         "count": count, "options": options,
     }
 

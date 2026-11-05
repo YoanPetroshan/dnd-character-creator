@@ -235,6 +235,16 @@ def _background_from_5etools(raw: dict) -> dict | None:
     fixed_languages, language_options = _language_grants_from_5etools(raw)
     fixed_equipment, fixed_gold, fixed_narrative_items = _fixed_starting_equipment_from_5etools(raw)
     feats, feat_options, feat_refs = _feats_from_5etools(raw)
+    feat_grants = _species_feat_grants_from_5etools(raw)
+    if len(feats) == 1 and feat_refs[0] and len(feat_grants) == 1 and not feat_options:
+        # G7: "Survivor or a Dark Gift feat of your choice" (Haunted One, Investigator; RHW). The data encodes the
+        # either-or as TWO `feats` array entries, `{"survivor|rhw": true}` beside `{"anyFromCategory": {...}}` (the same
+        # shape as Rewarded / Ruined's alternatives). One pick card then offers the plain feat (`include`) with the
+        # category pool, and the background has no unconditional grant any more.
+        feat_grants = [{**feat_grants[0], "include": list(feat_refs)}]
+        feats, feat_refs = [], []
+    elif feats or feat_options:
+        feat_grants = []
 
     proficiency_choices = _proficiency_choices_from_5etools(raw)
     ruleset = ruleset_for_edition(raw)
@@ -264,7 +274,7 @@ def _background_from_5etools(raw: dict) -> dict | None:
         # Medium: "A Dark Gift feat of your choice") -> [{"count", "category"}], like a species feat grant. When a
         # plain feat is also listed (Haunted One, Investigator: "Survivor or a Dark Gift feat") the plain grant
         # stands and no pick card is made.
-        "feat_grants": [] if (feats or feat_options) else _species_feat_grants_from_5etools(raw),
+        "feat_grants": feat_grants,
         # Finding 1 of the final whole-branch review (2026-09-28): a
         # source-qualified parallel to `feats` — see _feats_from_5etools'
         # own docstring. engine.resolve._resolve_granted_feats tries this
