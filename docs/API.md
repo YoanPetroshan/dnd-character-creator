@@ -1,6 +1,6 @@
 # HTTP API
 
-The Flask server (`server/app.py`) is a thin shell over the catalog and the resolve engine. All API routes live under `/api`; every other GET serves the built single-page app (an unknown `/api/...` path is a JSON 404). All API responses are JSON except the three export downloads. There is no authentication or rate limiting. Requests are limited to 1 MB.
+The routes are implemented in `server/service.py`, a framework-free entry point: `handle(method, path, query, body) -> (status, content_type, headers, body_bytes)` takes plain values, imports nothing from Flask and reproduces Flask's responses byte for byte (sorted keys, ASCII-escaped compact JSON with a trailing newline, the JSON error bodies, `Content-Disposition` on exports); `query` is a query string or a mapping, `body` is the raw JSON bytes / text, `None`, or a zero-argument callable that returns them (only the two draft routes call it, after their `lang` check). The Flask server (`server/app.py`) is a thin adapter over it: it registers the routes of `service.ROUTES`, passes the request through `service.handle`, and keeps the 1 MB limit (413), CORS, the static single-page app and the startup log line. A non-`/api/` path is not the service's (it answers a JSON 404); a method a route does not take is a 405 `{"error": "The method is not allowed for the requested URL."}`, except a GET of a POST-only path, which is the 404 below (as it always was). All API routes live under `/api`; every other GET serves the built single-page app (an unknown `/api/...` path is a JSON 404). All API responses are JSON except the three export downloads. There is no authentication or rate limiting. Requests are limited to 1 MB.
 
 Contract versions are reported by `GET /api/health` (`apiVersion`, `draftVersion`). The client reads it once at start and shows a banner when the server's `draftVersion` is older than the app's.
 
@@ -46,7 +46,7 @@ Liveness and versions.
 
 - `ok`: always `true` (the only field older servers sent; consumers that read just `ok` keep working).
 - `apiVersion`: integer, bumped when a request or response shape changes incompatibly.
-- `draftVersion`: the draft shape the server understands (`server/app.py` `DRAFT_VERSION`, pinned by a test to `frontend/src/logic/draft.ts`).
+- `draftVersion`: the draft shape the server understands (`server/service.py` `DRAFT_VERSION`, pinned by a test to `frontend/src/logic/draft.ts`).
 - `dataSource`: `bundled` (the vendored data in `server/data/official`), `srd-only` (`DND_OFFICIAL_DATA=none`), `explicit` (`DND_OFFICIAL_DATA=<path>`) or `campaign` (`DND_CAMPAIGN_ROOT` set and non-empty).
 - `bundleSha256`: the full `bundle_sha256` of the vendored data when `dataSource` is `bundled`, else `null`.
 

@@ -57,8 +57,8 @@ LOCAL_MODULES = {p.stem for p in ROOT.glob("*.py")} | {"chargen", "tests"}
 # the module docstring), so this exemption only applies to imports from
 # inside server/ itself — an `import engine` anywhere else in the repo is
 # still exactly the violation this test is designed to flag.
-# "app" is server/app.py (the root app.py was removed in D-5, so it is no longer a LOCAL_MODULES stem).
-SERVER_LOCAL_MODULES = {"app", "catalog", "engine", "export", "export_fields", "markdown_export", "pdf_export", "test_export", "kitchen_sink", "c7c_helpers", "perf_helpers", "test_feat_tail", "test_types_drift", "test_resolve_fuzz", "test_export_completeness", "i18n", "i18n_zoo", "export_labels", "test_export_baseline", "test_export_labels", "test_pdf_export", "test_i18n_completeness"}
+# "service" is server/service.py, the framework-free API (O0); "app" is server/app.py (the root app.py was removed in D-5, so it is no longer a LOCAL_MODULES stem).
+SERVER_LOCAL_MODULES = {"app", "catalog", "engine", "export", "export_fields", "markdown_export", "pdf_export", "test_export", "kitchen_sink", "c7c_helpers", "perf_helpers", "test_feat_tail", "test_types_drift", "test_resolve_fuzz", "test_export_completeness", "i18n", "i18n_zoo", "export_labels", "test_export_baseline", "test_export_labels", "test_pdf_export", "test_i18n_completeness", "service", "test_service", "service_requests", "test_service_baseline"}
 
 # The one lazy import chargen/cli.py is allowed to keep — see module
 # docstring above and final-review.md's I6/Minor 7.

@@ -21,7 +21,7 @@ from i18n import messages as m
 from i18n.messages import Msg, localize, msg, render, template_fields
 
 SERVER = pathlib.Path(__file__).resolve().parent.parent
-ENGINE_FILES = sorted(glob.glob(str(SERVER / "engine" / "*.py"))) + [str(SERVER / "app.py")]
+ENGINE_FILES = sorted(glob.glob(str(SERVER / "engine" / "*.py"))) + [str(SERVER / "service.py")]
 SERVER_FILES = ENGINE_FILES + [str(SERVER / n) for n in ("export.py", "export_fields.py", "markdown_export.py", "pdf_export.py")]
 CODE_KEYS_MODULES = (catalog_pkg.problems, catalog_pkg.warnings)
 I2_KEYS = {k for mod in CODE_KEYS_MODULES for k in mod.MESSAGES}

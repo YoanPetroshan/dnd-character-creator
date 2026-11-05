@@ -139,7 +139,7 @@ def test_valid_equipment_qty_untouched(catalog):
 def test_unexpected_exception_returns_json_error(client, monkeypatch):
     def boom(draft, catalog):
         raise RuntimeError("kaboom")
-    monkeypatch.setattr(app_module, "resolve", boom)
+    monkeypatch.setattr("service.resolve", boom)
     resp = client.post("/api/resolve", json={})
     assert resp.status_code == 500
     assert resp.is_json

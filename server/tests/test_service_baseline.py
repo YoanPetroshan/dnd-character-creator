@@ -84,7 +84,7 @@ def test_unhandled_exception_is_the_json_500(client, monkeypatch):
     def boom(draft, catalog):
         raise RuntimeError("boom")
 
-    monkeypatch.setattr("app.resolve", boom)
+    monkeypatch.setattr("service.resolve", boom)
     r = client.post("/api/resolve", json={})
     assert r.status_code == 500
     assert r.get_json() == {"error": "The server couldn't process this character. Check the draft and try again."}

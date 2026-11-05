@@ -258,7 +258,7 @@ def test_unknown_export_format_is_still_404_with_a_bad_lang(client):
 
 
 def test_export_problems_body_is_localized(client, monkeypatch, cat):
-    monkeypatch.setattr("app.resolve", lambda draft, catalog: {
+    monkeypatch.setattr("service.resolve", lambda draft, catalog: {
         "problems": [{"id": "x", "message": msg("t-name")}], "choices": [], "sheet": {"classes": [1], "species": 1, "background": 1}})
     en = client.post("/api/export/yaml?lang=en", json=EMPTY).get_json()
     bg = client.post("/api/export/yaml?lang=bg", json=EMPTY).get_json()
@@ -267,7 +267,7 @@ def test_export_problems_body_is_localized(client, monkeypatch, cat):
 
 
 def test_resolve_response_is_localized(client, monkeypatch, cat):
-    monkeypatch.setattr("app.resolve", lambda draft, catalog: {"problems": [{"id": "x", "message": msg("t-name")}]})
+    monkeypatch.setattr("service.resolve", lambda draft, catalog: {"problems": [{"id": "x", "message": msg("t-name")}]})
     assert client.post("/api/resolve", json=EMPTY).get_json() == {"problems": [{"id": "x", "message": "Dueling"}]}
     assert client.post("/api/resolve?lang=bg", json=EMPTY).get_json() == {"problems": [{"id": "x", "message": "Дуел"}]}
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { exportReadiness } from "./exportReadiness";
 import { choice, resolution } from "./testFixtures";
 
-// Parity with server/app.py `_pending_export_problems` (and /api/export's
+// Parity with server/service.py `_pending_export_problems` (and /api/export's
 // refusal on resolve problems).
 describe("exportReadiness", () => {
   it("a complete character can export", () => {

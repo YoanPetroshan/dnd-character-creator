@@ -518,7 +518,7 @@ def declared_families() -> dict[str, str]:
         return "<expr>"
 
     out: dict[str, str] = {}
-    for path in sorted(glob.glob(str(SERVER / "engine" / "*.py"))) + [str(SERVER / "app.py")]:
+    for path in sorted(glob.glob(str(SERVER / "engine" / "*.py"))) + [str(SERVER / "service.py")]:
         tree = ast.parse(pathlib.Path(path).read_text(encoding="utf-8"))
         name = pathlib.Path(path).name
         for node in ast.walk(tree):
@@ -536,7 +536,7 @@ def declared_families() -> dict[str, str]:
 # --- AST helpers shared by the I3-I5 catalog tests -----------------------------------------------------------------------
 
 SERVER_FILES = sorted(glob.glob(str(SERVER / "engine" / "*.py"))) + [str(SERVER / n) for n in (
-    "app.py", "export.py", "export_fields.py", "markdown_export.py", "pdf_export.py")]
+    "service.py", "export.py", "export_fields.py", "markdown_export.py", "pdf_export.py")]
 # I5: the catalog modules that write card texts (a label of a data table, the equipment card builder); the earlier guards
 # scan SERVER_FILES only (data tables carry plain "reason" keys of their own)
 CATALOG_FILES = [str(SERVER / n) for n in ("catalog/choices.py", "catalog/reference_data.py", "catalog/feat_effects_data.py")]

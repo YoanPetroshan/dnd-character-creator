@@ -13,7 +13,7 @@ export interface ExportReadiness {
   canExport: boolean;
 }
 
-/** Must mirror server/app.py `_pending_export_problems` (plus the resolve
+/** Must mirror server/service.py `_pending_export_problems` (plus the resolve
  *  problems that /api/export/<fmt> also refuses on): equipment choices never
  *  block export, `optional` cards never block, a character needs a class,
  *  species and background, and only status "pending" cards count (an

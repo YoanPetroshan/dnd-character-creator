@@ -32,7 +32,7 @@ export function ExportPage() {
 
   if (!resolution) return <div className="page">{error ? null : t.common.loading}</div>;
 
-  // Mirrors server/app.py `_pending_export_problems` (see logic/exportReadiness.ts).
+  // Mirrors server/service.py `_pending_export_problems` (see logic/exportReadiness.ts).
   const { missingParts, pendingChoices, pendingEquipment, canExport } = exportReadiness(resolution, error);
 
   async function handleExport(format: ExportFormat) {
