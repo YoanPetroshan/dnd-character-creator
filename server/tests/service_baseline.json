@@ -1,0 +1,1135 @@
+{
+ "api-catalog-unknown-kind": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
+ "api-deep-unknown": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
+ "api-delete-items": {
+  "bodyLength": 61,
+  "bodySha256": "eebb0b50596e7e45815086b2bcb7bcec3cafe452b2f0e242642074bae8ab1f45",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 405
+ },
+ "api-delete-unknown": {
+  "bodyLength": 61,
+  "bodySha256": "eebb0b50596e7e45815086b2bcb7bcec3cafe452b2f0e242642074bae8ab1f45",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 405
+ },
+ "api-get-export": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
+ "api-get-resolve": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
+ "api-patch-spell": {
+  "bodyLength": 61,
+  "bodySha256": "eebb0b50596e7e45815086b2bcb7bcec3cafe452b2f0e242642074bae8ab1f45",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 405
+ },
+ "api-post-class": {
+  "bodyLength": 61,
+  "bodySha256": "eebb0b50596e7e45815086b2bcb7bcec3cafe452b2f0e242642074bae8ab1f45",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 405
+ },
+ "api-post-health": {
+  "bodyLength": 61,
+  "bodySha256": "eebb0b50596e7e45815086b2bcb7bcec3cafe452b2f0e242642074bae8ab1f45",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 405
+ },
+ "api-post-spells": {
+  "bodyLength": 61,
+  "bodySha256": "eebb0b50596e7e45815086b2bcb7bcec3cafe452b2f0e242642074bae8ab1f45",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 405
+ },
+ "api-post-unknown": {
+  "bodyLength": 61,
+  "bodySha256": "eebb0b50596e7e45815086b2bcb7bcec3cafe452b2f0e242642074bae8ab1f45",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 405
+ },
+ "api-put-catalog": {
+  "bodyLength": 61,
+  "bodySha256": "eebb0b50596e7e45815086b2bcb7bcec3cafe452b2f0e242642074bae8ab1f45",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 405
+ },
+ "api-root": {
+  "bodyLength": 470,
+  "bodySha256": "39a041c4f3da62f4545c48f9bbc67a197504be722657e0d17dd1ca0f77f30063",
+  "headers": {
+   "Content-Disposition": "inline; filename=index.html",
+   "Content-Type": "text/html; charset=utf-8"
+  },
+  "status": 200
+ },
+ "api-root-slash": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
+ "api-trailing-slash": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
+ "api-unknown": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
+ "background-acolyte": {
+  "bodyLength": 7509,
+  "bodySha256": "5225dbcf93037c4ce07d5fa0f8434d13a11dfe020e5f578222a8eb0550e7281a",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "background-unknown": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
+ "catalog": {
+  "bodyLength": 36552,
+  "bodySha256": "53eb40b2e9965c36c0fd5707e800b9c021397d63472808a7d6fa3e483b26a7fa",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "catalog-2014": {
+  "bodyLength": 29877,
+  "bodySha256": "fd6e8834dd4eebb7c90d66ad90fa09c7a1cf6faf2279b31504806297e221fd59",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "catalog-2024": {
+  "bodyLength": 30350,
+  "bodySha256": "2b090346c9823547d5062514d53c02e1f02fa336e94c22542d6157042286d148",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "catalog-2024-srd-fallback": {
+  "bodyLength": 4150,
+  "bodySha256": "f5a44fff7e82aefd62acd5a3a43244c88e48f99b14a3bb0a82ed521aed31a1ba",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "catalog-junk-ruleset": {
+  "bodyLength": 36552,
+  "bodySha256": "53eb40b2e9965c36c0fd5707e800b9c021397d63472808a7d6fa3e483b26a7fa",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "catalog-sources": {
+  "bodyLength": 6802,
+  "bodySha256": "912933080779c4ce83aad4b00b278ac328f831cfa053b5650b148148c0ea0782",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "class-cleric": {
+  "bodyLength": 9071,
+  "bodySha256": "4434d6a86434da72f19db0593ac69853900af844cb7643b769598c8a89517d6c",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "class-empty-id": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
+ "class-fighter": {
+  "bodyLength": 6816,
+  "bodySha256": "b4e2f48a6c5101d88df62bf3fe862d42753b006b0e16222f486e2801778eb67b",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "class-fighter-2024": {
+  "bodyLength": 5512,
+  "bodySha256": "7c90c4a03c095930fb4136a771a6dc10e1ec12c4af937eb31bee855f4bcc7a25",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "class-fighter-include": {
+  "bodyLength": 6054,
+  "bodySha256": "290a7eeee4521af127ad66c273ca63712c477ae90e547b5d09dbcb4797155bd1",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "class-unknown": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
+ "class-unknown-nonascii": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
+ "class-with-slash": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
+ "class-wizard-2014-phb": {
+  "bodyLength": 7351,
+  "bodySha256": "81fe621b45e118ef381109457029be6eaab8efe45d992f04bd279c76dee7adc3",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "export-bad-lang-before-body": {
+  "bodyLength": 40,
+  "bodySha256": "ee60dac6b21ae6a61d4968384661143ac2bd670750a0e658fadf7cd58c5c2746",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-docx-404": {
+  "bodyLength": 41,
+  "bodySha256": "e2bd08bc219d04a1aedf0f67d60c4d87f8a42069ed561bbafaa55e267f7c36c7",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
+ "export-docx-bad-lang-still-404": {
+  "bodyLength": 41,
+  "bodySha256": "e2bd08bc219d04a1aedf0f67d60c4d87f8a42069ed561bbafaa55e267f7c36c7",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
+ "export-markdown": {
+  "bodyLength": 2149,
+  "bodySha256": "08f8c4974967644bfbeb7a8795ff70d8989bada1a892c524a9476c7f42074e76",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''Torvin%20Bracewell.md",
+   "Content-Type": "text/markdown; charset=utf-8"
+  },
+  "status": 200
+ },
+ "export-markdown-bad-lang": {
+  "bodyLength": 40,
+  "bodySha256": "ee60dac6b21ae6a61d4968384661143ac2bd670750a0e658fadf7cd58c5c2746",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-markdown-body-list": {
+  "bodyLength": 40,
+  "bodySha256": "c24b698482b0a1b88d3381103d46d9e3206edd23b62b3c72f5fdb9b32c3697e3",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-markdown-gate-bg": {
+  "bodyLength": 1032,
+  "bodySha256": "bf0dee850e2773cdc544135557ec5814896429d8d939a1354b9211bbc23c18c0",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-markdown-gate-empty": {
+  "bodyLength": 221,
+  "bodySha256": "b6d43f16aaf0bcb51f7b4ad075d8a71c8429dda0a83f78df36ef8c981315629e",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-markdown-gate-en": {
+  "bodyLength": 465,
+  "bodySha256": "2f3fb67468b906bc36504ce5d87f865158ed6d917beb5dc4184b854f8be90337",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-markdown-invalid-json": {
+  "bodyLength": 221,
+  "bodySha256": "b6d43f16aaf0bcb51f7b4ad075d8a71c8429dda0a83f78df36ef8c981315629e",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-markdown-lang-bg": {
+  "bodyLength": 2149,
+  "bodySha256": "08f8c4974967644bfbeb7a8795ff70d8989bada1a892c524a9476c7f42074e76",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''Torvin%20Bracewell.md",
+   "Content-Type": "text/markdown; charset=utf-8"
+  },
+  "status": 200
+ },
+ "export-markdown-lang-en": {
+  "bodyLength": 1680,
+  "bodySha256": "9349fd7b4e432291c2222c41fc0e50f1cf921a3c9cbf5d0bd731fb2b0d2eb2ac",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''Torvin%20Bracewell.md",
+   "Content-Type": "text/markdown; charset=utf-8"
+  },
+  "status": 200
+ },
+ "export-markdown-name-cyrillic": {
+  "bodyLength": 2150,
+  "bodySha256": "9f86f750f22019f722e0cd142b7a48062c398e756d256affcc71828c24ad2763",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''%D0%90%D0%BD%D0%B0_%D0%91%D0%BE%D1%80%D0%B8%D1%81.md",
+   "Content-Type": "text/markdown; charset=utf-8"
+  },
+  "status": 200
+ },
+ "export-markdown-name-empty-string": {
+  "bodyLength": 2162,
+  "bodySha256": "fc10dbafda44fe060891d4ffe6d746ffabb05a078511ab0d4a205f91f6b61b71",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''%D0%B3%D0%B5%D1%80%D0%BE%D0%B9.md",
+   "Content-Type": "text/markdown; charset=utf-8"
+  },
+  "status": 200
+ },
+ "export-markdown-name-number": {
+  "bodyLength": 88,
+  "bodySha256": "825419965fb14f0375ac1989dc8a36d97dc318e5890d7374683e32ceecbd26d5",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-markdown-name-special": {
+  "bodyLength": 2151,
+  "bodySha256": "90834f245521dedfb579c717a5a84b971666ca25d18a496fed2e86581f6d4bd5",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''A_B_C_D_E__F_G_H_I.md",
+   "Content-Type": "text/markdown; charset=utf-8"
+  },
+  "status": 200
+ },
+ "export-markdown-nameless": {
+  "bodyLength": 2162,
+  "bodySha256": "fc10dbafda44fe060891d4ffe6d746ffabb05a078511ab0d4a205f91f6b61b71",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''character.md",
+   "Content-Type": "text/markdown; charset=utf-8"
+  },
+  "status": 200
+ },
+ "export-markdown-nameless-bg": {
+  "bodyLength": 2162,
+  "bodySha256": "fc10dbafda44fe060891d4ffe6d746ffabb05a078511ab0d4a205f91f6b61b71",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''%D0%B3%D0%B5%D1%80%D0%BE%D0%B9.md",
+   "Content-Type": "text/markdown; charset=utf-8"
+  },
+  "status": 200
+ },
+ "export-markdown-nameless-en": {
+  "bodyLength": 1681,
+  "bodySha256": "488a0bec1063f316b0f2f914ff7c53f225dc935b751aab4412bb8411bdeaf8f6",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''character.md",
+   "Content-Type": "text/markdown; charset=utf-8"
+  },
+  "status": 200
+ },
+ "export-markdown-no-body": {
+  "bodyLength": 221,
+  "bodySha256": "b6d43f16aaf0bcb51f7b4ad075d8a71c8429dda0a83f78df36ef8c981315629e",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-name-unicode-md-bg": {
+  "bodyLength": 2142,
+  "bodySha256": "cbaea50df47d743bcfa338407a835570e6d9a9c69eac922a4ac2db295d682103",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''%D0%96%C3%A9%20%F0%9F%90%89.md",
+   "Content-Type": "text/markdown; charset=utf-8"
+  },
+  "status": 200
+ },
+ "export-pdf": {
+  "bodyLength": 30416,
+  "bodySha256": "f1300a2e09531dd98d168f157d92faacd7097b0261d11c5260770b30d84d46c4",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''Torvin%20Bracewell.pdf",
+   "Content-Type": "application/pdf"
+  },
+  "status": 200
+ },
+ "export-pdf-bad-lang": {
+  "bodyLength": 40,
+  "bodySha256": "ee60dac6b21ae6a61d4968384661143ac2bd670750a0e658fadf7cd58c5c2746",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-pdf-body-list": {
+  "bodyLength": 40,
+  "bodySha256": "c24b698482b0a1b88d3381103d46d9e3206edd23b62b3c72f5fdb9b32c3697e3",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-pdf-gate-bg": {
+  "bodyLength": 1032,
+  "bodySha256": "bf0dee850e2773cdc544135557ec5814896429d8d939a1354b9211bbc23c18c0",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-pdf-gate-empty": {
+  "bodyLength": 221,
+  "bodySha256": "b6d43f16aaf0bcb51f7b4ad075d8a71c8429dda0a83f78df36ef8c981315629e",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-pdf-gate-en": {
+  "bodyLength": 465,
+  "bodySha256": "2f3fb67468b906bc36504ce5d87f865158ed6d917beb5dc4184b854f8be90337",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-pdf-invalid-json": {
+  "bodyLength": 221,
+  "bodySha256": "b6d43f16aaf0bcb51f7b4ad075d8a71c8429dda0a83f78df36ef8c981315629e",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-pdf-lang-bg": {
+  "bodyLength": 30416,
+  "bodySha256": "f1300a2e09531dd98d168f157d92faacd7097b0261d11c5260770b30d84d46c4",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''Torvin%20Bracewell.pdf",
+   "Content-Type": "application/pdf"
+  },
+  "status": 200
+ },
+ "export-pdf-lang-en": {
+  "bodyLength": 26172,
+  "bodySha256": "c020a48f991e8e22f340b0ea20bd2c1ea1fa008b5c17363b5f65b5885e3f037d",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''Torvin%20Bracewell.pdf",
+   "Content-Type": "application/pdf"
+  },
+  "status": 200
+ },
+ "export-pdf-name-cyrillic": {
+  "bodyLength": 29766,
+  "bodySha256": "de9aa29d022a66b11fcb0babfe7c30dfadd5864b3395e1902d532e0216edbd05",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''%D0%90%D0%BD%D0%B0_%D0%91%D0%BE%D1%80%D0%B8%D1%81.pdf",
+   "Content-Type": "application/pdf"
+  },
+  "status": 200
+ },
+ "export-pdf-name-empty-string": {
+  "bodyLength": 29700,
+  "bodySha256": "b3fe419fc1bfaeacd7041013228a291a7280e612149d0875ff58b4612e4ace72",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''%D0%B3%D0%B5%D1%80%D0%BE%D0%B9.pdf",
+   "Content-Type": "application/pdf"
+  },
+  "status": 200
+ },
+ "export-pdf-name-number": {
+  "bodyLength": 88,
+  "bodySha256": "825419965fb14f0375ac1989dc8a36d97dc318e5890d7374683e32ceecbd26d5",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-pdf-name-special": {
+  "bodyLength": 30934,
+  "bodySha256": "7b2bd1d1cd67bbe15c6b65cf97159cfb6cff528644a846a46de3b6c4428c9188",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''A_B_C_D_E__F_G_H_I.pdf",
+   "Content-Type": "application/pdf"
+  },
+  "status": 200
+ },
+ "export-pdf-nameless": {
+  "bodyLength": 29700,
+  "bodySha256": "b3fe419fc1bfaeacd7041013228a291a7280e612149d0875ff58b4612e4ace72",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''character.pdf",
+   "Content-Type": "application/pdf"
+  },
+  "status": 200
+ },
+ "export-pdf-nameless-bg": {
+  "bodyLength": 29700,
+  "bodySha256": "b3fe419fc1bfaeacd7041013228a291a7280e612149d0875ff58b4612e4ace72",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''%D0%B3%D0%B5%D1%80%D0%BE%D0%B9.pdf",
+   "Content-Type": "application/pdf"
+  },
+  "status": 200
+ },
+ "export-pdf-nameless-en": {
+  "bodyLength": 26145,
+  "bodySha256": "bb1fb140778c4ae79de617064c48e15351a5e664bec6d2a00527265677f4d1f0",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''character.pdf",
+   "Content-Type": "application/pdf"
+  },
+  "status": 200
+ },
+ "export-pdf-no-body": {
+  "bodyLength": 221,
+  "bodySha256": "b6d43f16aaf0bcb51f7b4ad075d8a71c8429dda0a83f78df36ef8c981315629e",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-yaml": {
+  "bodyLength": 3117,
+  "bodySha256": "6a98b3efd33221522b4d96f78afee9deea0be67799917456c242328d924417a1",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''Torvin%20Bracewell.yaml",
+   "Content-Type": "application/x-yaml"
+  },
+  "status": 200
+ },
+ "export-yaml-bad-lang": {
+  "bodyLength": 40,
+  "bodySha256": "ee60dac6b21ae6a61d4968384661143ac2bd670750a0e658fadf7cd58c5c2746",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-yaml-body-list": {
+  "bodyLength": 40,
+  "bodySha256": "c24b698482b0a1b88d3381103d46d9e3206edd23b62b3c72f5fdb9b32c3697e3",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-yaml-gate-bg": {
+  "bodyLength": 1032,
+  "bodySha256": "bf0dee850e2773cdc544135557ec5814896429d8d939a1354b9211bbc23c18c0",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-yaml-gate-empty": {
+  "bodyLength": 221,
+  "bodySha256": "b6d43f16aaf0bcb51f7b4ad075d8a71c8429dda0a83f78df36ef8c981315629e",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-yaml-gate-en": {
+  "bodyLength": 465,
+  "bodySha256": "2f3fb67468b906bc36504ce5d87f865158ed6d917beb5dc4184b854f8be90337",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-yaml-invalid-json": {
+  "bodyLength": 221,
+  "bodySha256": "b6d43f16aaf0bcb51f7b4ad075d8a71c8429dda0a83f78df36ef8c981315629e",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-yaml-lang-bg": {
+  "bodyLength": 3117,
+  "bodySha256": "6a98b3efd33221522b4d96f78afee9deea0be67799917456c242328d924417a1",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''Torvin%20Bracewell.yaml",
+   "Content-Type": "application/x-yaml"
+  },
+  "status": 200
+ },
+ "export-yaml-lang-en": {
+  "bodyLength": 3117,
+  "bodySha256": "6a98b3efd33221522b4d96f78afee9deea0be67799917456c242328d924417a1",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''Torvin%20Bracewell.yaml",
+   "Content-Type": "application/x-yaml"
+  },
+  "status": 200
+ },
+ "export-yaml-name-cyrillic": {
+  "bodyLength": 3118,
+  "bodySha256": "2d3fadab14ab5d3ee7d0ad58ae403c606eb8f65c95e9a976070b7f886264c523",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''%D0%90%D0%BD%D0%B0_%D0%91%D0%BE%D1%80%D0%B8%D1%81.yaml",
+   "Content-Type": "application/x-yaml"
+  },
+  "status": 200
+ },
+ "export-yaml-name-empty-string": {
+  "bodyLength": 3103,
+  "bodySha256": "4f6c71a975f6149f18aa5f8a93effa7f22c5c4a353a09cd41c84b1e0fe11217c",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''%D0%B3%D0%B5%D1%80%D0%BE%D0%B9.yaml",
+   "Content-Type": "application/x-yaml"
+  },
+  "status": 200
+ },
+ "export-yaml-name-number": {
+  "bodyLength": 88,
+  "bodySha256": "825419965fb14f0375ac1989dc8a36d97dc318e5890d7374683e32ceecbd26d5",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "export-yaml-name-special": {
+  "bodyLength": 3119,
+  "bodySha256": "1ffcf9a0dc3fc34d9af0a0744970b42572adcd85dc003f7f6b39738fe7773a3b",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''A_B_C_D_E__F_G_H_I.yaml",
+   "Content-Type": "application/x-yaml"
+  },
+  "status": 200
+ },
+ "export-yaml-nameless": {
+  "bodyLength": 3103,
+  "bodySha256": "4f6c71a975f6149f18aa5f8a93effa7f22c5c4a353a09cd41c84b1e0fe11217c",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''character.yaml",
+   "Content-Type": "application/x-yaml"
+  },
+  "status": 200
+ },
+ "export-yaml-nameless-bg": {
+  "bodyLength": 3103,
+  "bodySha256": "4f6c71a975f6149f18aa5f8a93effa7f22c5c4a353a09cd41c84b1e0fe11217c",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''%D0%B3%D0%B5%D1%80%D0%BE%D0%B9.yaml",
+   "Content-Type": "application/x-yaml"
+  },
+  "status": 200
+ },
+ "export-yaml-nameless-en": {
+  "bodyLength": 3103,
+  "bodySha256": "4f6c71a975f6149f18aa5f8a93effa7f22c5c4a353a09cd41c84b1e0fe11217c",
+  "headers": {
+   "Content-Disposition": "attachment; filename*=UTF-8''character.yaml",
+   "Content-Type": "application/x-yaml"
+  },
+  "status": 200
+ },
+ "export-yaml-no-body": {
+  "bodyLength": 221,
+  "bodySha256": "b6d43f16aaf0bcb51f7b4ad075d8a71c8429dda0a83f78df36ef8c981315629e",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "health": {
+  "bodyLength": 149,
+  "bodySha256": "d5e152665856ce2bf8cc9e96c3e2c320d9c7df2cb2856c728288cbafd41fc1c2",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "health-query-ignored": {
+  "bodyLength": 149,
+  "bodySha256": "d5e152665856ce2bf8cc9e96c3e2c320d9c7df2cb2856c728288cbafd41fc1c2",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "items": {
+  "bodyLength": 24521,
+  "bodySha256": "0dad05b88e77b6a8c6c60e65f184672537b01302e832e76e6ae2aa816a2221eb",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "items-2024-sources": {
+  "bodyLength": 254,
+  "bodySha256": "c7c8f59c8e8b3cf558d13e0414de12e9b0b8687de2d33997454ea3c322a03e9f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "items-category-q": {
+  "bodyLength": 286,
+  "bodySha256": "0e83e203402786ab96a14c731ae7cd6aacfcfad07abeb4849b30bbf1f6eadc46",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "items-no-match": {
+  "bodyLength": 13,
+  "bodySha256": "e813d564bccbeefe1db875d1c9abb55d63c52b639acc61134a5f1d19cc489b67",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "resolve-bad-lang-BG": {
+  "bodyLength": 40,
+  "bodySha256": "ee60dac6b21ae6a61d4968384661143ac2bd670750a0e658fadf7cd58c5c2746",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "resolve-bad-lang-and-list-body": {
+  "bodyLength": 40,
+  "bodySha256": "ee60dac6b21ae6a61d4968384661143ac2bd670750a0e658fadf7cd58c5c2746",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "resolve-bad-lang-bg,en": {
+  "bodyLength": 40,
+  "bodySha256": "ee60dac6b21ae6a61d4968384661143ac2bd670750a0e658fadf7cd58c5c2746",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "resolve-bad-lang-empty": {
+  "bodyLength": 40,
+  "bodySha256": "ee60dac6b21ae6a61d4968384661143ac2bd670750a0e658fadf7cd58c5c2746",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "resolve-bad-lang-en%20": {
+  "bodyLength": 40,
+  "bodySha256": "ee60dac6b21ae6a61d4968384661143ac2bd670750a0e658fadf7cd58c5c2746",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "resolve-bad-lang-fr": {
+  "bodyLength": 40,
+  "bodySha256": "ee60dac6b21ae6a61d4968384661143ac2bd670750a0e658fadf7cd58c5c2746",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "resolve-body-bool": {
+  "bodyLength": 40,
+  "bodySha256": "c24b698482b0a1b88d3381103d46d9e3206edd23b62b3c72f5fdb9b32c3697e3",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "resolve-body-list": {
+  "bodyLength": 40,
+  "bodySha256": "c24b698482b0a1b88d3381103d46d9e3206edd23b62b3c72f5fdb9b32c3697e3",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "resolve-body-null": {
+  "bodyLength": 1704,
+  "bodySha256": "029ec3bf9e56254fc0b7312de787facaacb401538222e4e2bc622df6f415a085",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "resolve-body-number": {
+  "bodyLength": 40,
+  "bodySha256": "c24b698482b0a1b88d3381103d46d9e3206edd23b62b3c72f5fdb9b32c3697e3",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "resolve-body-string": {
+  "bodyLength": 40,
+  "bodySha256": "c24b698482b0a1b88d3381103d46d9e3206edd23b62b3c72f5fdb9b32c3697e3",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "resolve-empty": {
+  "bodyLength": 1704,
+  "bodySha256": "029ec3bf9e56254fc0b7312de787facaacb401538222e4e2bc622df6f415a085",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "resolve-empty-body-json-ct": {
+  "bodyLength": 1704,
+  "bodySha256": "029ec3bf9e56254fc0b7312de787facaacb401538222e4e2bc622df6f415a085",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "resolve-exportable": {
+  "bodyLength": 8668,
+  "bodySha256": "6fa69db3932f58c7776acec3d206f1f31a58ba0482d88afd24771ca67068d880",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "resolve-fighter": {
+  "bodyLength": 7919,
+  "bodySha256": "fc176a0b42b60e2c2c5fac1da8f87816d1a5cfea2299aac5fb3baf9f802a734f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "resolve-invalid-json": {
+  "bodyLength": 1704,
+  "bodySha256": "029ec3bf9e56254fc0b7312de787facaacb401538222e4e2bc622df6f415a085",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "resolve-invalid-utf8": {
+  "bodyLength": 1704,
+  "bodySha256": "029ec3bf9e56254fc0b7312de787facaacb401538222e4e2bc622df6f415a085",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "resolve-json-charset-ct": {
+  "bodyLength": 7919,
+  "bodySha256": "fc176a0b42b60e2c2c5fac1da8f87816d1a5cfea2299aac5fb3baf9f802a734f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "resolve-junk-ids": {
+  "bodyLength": 1818,
+  "bodySha256": "bea5899474e55fab7827ef5934d3bf4c2bf3b7a4434a6fd1bcbebc259b4b1b3a",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "resolve-lang-bg": {
+  "bodyLength": 8862,
+  "bodySha256": "ae294eb996351ef1068888d10500431c591d4038bd2636108036b585339bb3c4",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "resolve-lang-bg-empty-draft": {
+  "bodyLength": 1704,
+  "bodySha256": "029ec3bf9e56254fc0b7312de787facaacb401538222e4e2bc622df6f415a085",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "resolve-lang-en": {
+  "bodyLength": 7919,
+  "bodySha256": "fc176a0b42b60e2c2c5fac1da8f87816d1a5cfea2299aac5fb3baf9f802a734f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "resolve-lang-twice-first-wins": {
+  "bodyLength": 8862,
+  "bodySha256": "ae294eb996351ef1068888d10500431c591d4038bd2636108036b585339bb3c4",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "resolve-no-body": {
+  "bodyLength": 1704,
+  "bodySha256": "029ec3bf9e56254fc0b7312de787facaacb401538222e4e2bc622df6f415a085",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "resolve-nonascii-name": {
+  "bodyLength": 7941,
+  "bodySha256": "494d81c398a904e7f041d2b88ff0f85da19c355f8bc9a41ccf617a0b9ddd94d2",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "resolve-text-ct-ignores-body": {
+  "bodyLength": 1704,
+  "bodySha256": "029ec3bf9e56254fc0b7312de787facaacb401538222e4e2bc622df6f415a085",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "resolve-vendor-json-ct": {
+  "bodyLength": 7919,
+  "bodySha256": "fc176a0b42b60e2c2c5fac1da8f87816d1a5cfea2299aac5fb3baf9f802a734f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "species-elf": {
+  "bodyLength": 2674,
+  "bodySha256": "dd784dce42e6f8298bd169fe11db89431b66f5c6753065b81a9fad6c3c44c9f7",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "species-human": {
+  "bodyLength": 3273,
+  "bodySha256": "2269596622abd60e2c97056c9e7ac75244d464bc682dfe76c76c757a1ff82e10",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "species-unknown": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
+ "spell-alias-or-unknown": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
+ "spell-cantrip": {
+  "bodyLength": 786,
+  "bodySha256": "4d65b7be536cd3196e860894c9f7e073ccbf0fd3bd65afd6db2f5260417be506",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "spell-fireball": {
+  "bodyLength": 1014,
+  "bodySha256": "7e63f9028f0fffd4c87484d57089705df7ceadfb2adfee0638c881b8337d5b8e",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "spell-unknown": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
+ "spells-all": {
+  "bodyLength": 134554,
+  "bodySha256": "db8e91d4430b2290e96eb7cbb94f9bb5c0131996035c17463c21bd40a1fcf42d",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "spells-cantrips": {
+  "bodyLength": 1633,
+  "bodySha256": "67bc3d9c09a2c5130da608cf606106466ebe55b0a84254a953460f334a49fa06",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "spells-level-bad": {
+  "bodyLength": 39,
+  "bodySha256": "415c2fc33559c153382897655908f61a9e5696c6623b1ddce66e6963e720a178",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "spells-level-empty": {
+  "bodyLength": 89174,
+  "bodySha256": "f85ed038e4c4bafd9649598f7865da04d449c4c5cd2c3e6bfa4aa92107168b50",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "spells-level-float": {
+  "bodyLength": 39,
+  "bodySha256": "415c2fc33559c153382897655908f61a9e5696c6623b1ddce66e6963e720a178",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "spells-level-negative": {
+  "bodyLength": 14,
+  "bodySha256": "d82129cdd9f0f0bad792894bc9e2447943de70eb7365689b8e34aae0e3e1f6c2",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "spells-level-spaces": {
+  "bodyLength": 15458,
+  "bodySha256": "6176647d435e7a54c02be519c093145ff304f7b308aec4ffd37100b7bea72948",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "spells-unknown-class": {
+  "bodyLength": 14,
+  "bodySha256": "d82129cdd9f0f0bad792894bc9e2447943de70eb7365689b8e34aae0e3e1f6c2",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "spells-wizard": {
+  "bodyLength": 89174,
+  "bodySha256": "f85ed038e4c4bafd9649598f7865da04d449c4c5cd2c3e6bfa4aa92107168b50",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "spells-wizard-level-q": {
+  "bodyLength": 264,
+  "bodySha256": "1e40e4af5dada576094a73db2805342a757e08aa4aa8cb624b48c06112802932",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ }
+}
