@@ -39,7 +39,7 @@ function detailParts(t: Copy, d: Record<string, unknown> | undefined): string[] 
   return parts;
 }
 
-/** One resource as text: "Rage: 3 (дълга почивка), щета +2". */
+/** One resource as text: "Rage: 3, дълга почивка (Long Rest), щета +2" (English: "Rage: 3 (long rest), damage +2"). */
 export function describeResource(t: Copy, r: AnyResource): string {
   const x = t.sheet.resources.text;
   const parts: string[] = [];
@@ -52,7 +52,11 @@ export function describeResource(t: Copy, r: AnyResource): string {
   if (r.dc != null) parts.push(x.dc(r.dc));
   let core = parts.join(", ");
   const word = r.recharge ? x.recharge[r.recharge] : undefined;
-  if (word) core = core ? `${core} (${word})` : `(${word})`;
+  if (word) {
+    // The Bulgarian word carries its English term in brackets: it is joined with a comma, not wrapped in a second pair of parentheses.
+    if (word.includes("(")) core = core ? `${core}, ${word}` : word;
+    else core = core ? `${core} (${word})` : `(${word})`;
+  }
   const note = r.details?.note;
   if (typeof note === "string") core = core ? `${core}, ${note}` : note;
   const damage = r.details?.damageBonus;

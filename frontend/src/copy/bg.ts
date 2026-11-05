@@ -1,6 +1,8 @@
 // Bulgarian copy for the UI, structured by area. Only copy lives here: class / species / feat / spell /
 // item names, feature names and rule texts come from the data as they are and are not translated.
 // A second locale file (en.ts) must have exactly the same shape: `const en: Copy = {...}`.
+// T1 (owner decision 2026-11-05): a Bulgarian rules term is followed by its English term in brackets, "Талант (Feat)"
+// (docs/TERMS-PROPOSAL.md; the allowed terms are the BRACKET_TERMS list of copyGuards.test.ts).
 
 type Msgs = Record<string, string>;
 
@@ -10,14 +12,14 @@ export const bg = {
   /** The language control in the header: its group label and the two button labels. */
   lang: { label: "Език", bg: "БГ", en: "EN" },
 
-  /** The step navigation. `steps` are the labels of the eight routes (several are English words on purpose: legacy wording kept as it was). */
+  /** The step navigation. `steps` are the labels of the eight routes (Home, Abilities, Equipment and Export are English words on purpose: legacy wording kept as it was). */
   nav: {
     label: "Стъпки",
     steps: {
       home: "Home",
       class: "Клас",
-      background: "Background",
-      species: "Species",
+      background: "Произход (Background)",
+      species: "Раса (Species)",
       abilities: "Abilities",
       equipment: "Equipment",
       sheet: "Лист",
@@ -35,9 +37,9 @@ export const bg = {
     pages: {
       "/home": "Начало",
       "/class": "Клас",
-      "/background": "Произход",
-      "/species": "Раса",
-      "/abilities": "Характеристики",
+      "/background": "Произход (Background)",
+      "/species": "Раса (Species)",
+      "/abilities": "Характеристики (Ability Scores)",
       "/equipment": "Екипировка",
       "/sheet": "Лист на героя",
       "/export": "Експорт",
@@ -74,7 +76,7 @@ export const bg = {
     valueLabel: (ability: string) => `${ability}: стойност`,
     decreaseLabel: (ability: string) => `${ability}: намали`,
     increaseLabel: (ability: string) => `${ability}: увеличи`,
-    columns: { ability: "Характеристика", base: "Основа", bonus: "Бонус", total: "Общо", modifier: "Модификатор" },
+    columns: { ability: "Характеристика (Ability)", base: "Основа", bonus: "Бонус", total: "Общо", modifier: "Модификатор" },
   },
 
   sheet: {
@@ -87,16 +89,16 @@ export const bg = {
       count === 1
         ? "Листът е непълен: остава 1 неизбрана част или избор."
         : `Листът е непълен: остават ${count} неизбрани части или избори.`,
-    markers: { proficient: "владее", expertise: "експертиза" },
+    markers: { proficient: "владее", expertise: "експертиза (Expertise)" },
 
     identity: {
       title: "Герой",
       name: "Име",
       level: "Общо ниво",
       classes: "Класове",
-      species: "Раса",
+      species: "Раса (Species)",
       size: "Размер",
-      background: "Произход",
+      background: "Произход (Background)",
       classLine: (name: string, level: number, subclass: string | null) =>
         `${name} ${level}${subclass ? ` (${subclass})` : ""}`,
       speciesLine: (name: string, subspecies: string | null, variant: string | null) =>
@@ -104,15 +106,15 @@ export const bg = {
     },
 
     abilities: {
-      title: "Характеристики",
-      columns: { ability: "Характеристика", base: "Основа", bonus: "Бонус", total: "Общо", modifier: "Модификатор" },
+      title: "Характеристики (Ability Scores)",
+      columns: { ability: "Характеристика (Ability)", base: "Основа", bonus: "Бонус", total: "Общо", modifier: "Модификатор" },
     },
 
-    proficiencyBonus: { title: "Бонус за умение" },
+    proficiencyBonus: { title: "Бонус за владеене (Proficiency Bonus)" },
 
-    armorClass: { title: "Клас броня (AC)", stealthDisadvantage: "Недостатък при Скритост (носена броня)." },
+    armorClass: { title: "Клас броня (Armor Class, AC)", stealthDisadvantage: "Недостатък (Disadvantage) при Скритост (носена броня)." },
 
-    hitPoints: { title: "Точки живот", max: "Максимум", hitDice: "Зарове за живот" },
+    hitPoints: { title: "Точки живот (Hit Points)", max: "Максимум", hitDice: "Зарове за точки живот (Hit Point Dice)" },
 
     initiative: { title: "Инициатива" },
 
@@ -122,13 +124,13 @@ export const bg = {
     },
 
     senses: {
-      title: "Сетива",
+      title: "Сетива (Senses)",
       kinds: {
-        darkvision: "тъмно зрение",
-        blindsight: "сляпо зрение",
-        tremorsense: "усещане за вибрации",
-        truesight: "истинско зрение",
-        devilsSight: "дяволско зрение",
+        darkvision: "тъмно зрение (Darkvision)",
+        blindsight: "сляпо зрение (Blindsight)",
+        tremorsense: "усещане за вибрации (Tremorsense)",
+        truesight: "истинско зрение (Truesight)",
+        devilsSight: "дяволско зрение (Devil's Sight)",
       } as Record<string, string>,
     },
 
@@ -139,15 +141,15 @@ export const bg = {
       investigation: "Пасивно разследване",
     },
 
-    savingThrows: { title: "Спасителни хвърляния", columns: { ability: "Характеристика", bonus: "Бонус", mark: "Владеене" } },
+    savingThrows: { title: "Спасителни хвърляния (Saving Throws)", columns: { ability: "Характеристика (Ability)", bonus: "Бонус", mark: "Владеене (Proficiency)" } },
 
     skills: {
-      title: "Умения",
-      columns: { skill: "Умение", bonus: "Бонус", mark: "Владеене" },
-      otherExpertise: "Друга експертиза",
+      title: "Умения (Skills)",
+      columns: { skill: "Умение (Skill)", bonus: "Бонус", mark: "Владеене (Proficiency)" },
+      otherExpertise: "Друга експертиза (Other Expertise)",
     },
 
-    proficiencies: { title: "Владеене", armor: "Брони", weapons: "Оръжия", tools: "Инструменти" },
+    proficiencies: { title: "Владеене (Proficiencies)", armor: "Брони", weapons: "Оръжия", tools: "Инструменти" },
 
     languages: { title: "Езици" },
 
@@ -156,7 +158,7 @@ export const bg = {
       perAction: "Атаки на действие",
       columns: {
         weapon: "Оръжие",
-        ability: "Характеристика",
+        ability: "Характеристика (Ability)",
         bonus: "Атака",
         damage: "Щета",
         range: "Обхват",
@@ -169,14 +171,14 @@ export const bg = {
       versatile: (dice: string) => `двуръчно ${dice}`,
       dueling: (dice: string) => `с Дуел ${dice}`,
       offhand: (dice: string) => `в свободната ръка ${dice}`,
-      masteriesTitle: "Майсторство с оръжия",
+      masteriesTitle: "Майсторство с оръжия (Weapon Mastery)",
     },
 
     resources: {
       title: "Ресурси",
       class: "Ресурси на класа",
-      feat: "Ресурси от таланти",
-      species: "Ресурси от расата",
+      feat: "Ресурси от таланти (Feats)",
+      species: "Ресурси от расата (Species)",
       /** Text fragments of one resource line (see logic/resourceText.ts). */
       text: {
         unlimited: "без ограничение",
@@ -184,9 +186,9 @@ export const bg = {
         bonus: (n: number) => `бонус ${n >= 0 ? "+" : ""}${n}`,
         dc: (n: number) => `ТС ${n}`,
         recharge: {
-          long: "дълга почивка",
-          short: "кратка почивка",
-          "short-or-long": "кратка или дълга почивка",
+          long: "дълга почивка (Long Rest)",
+          short: "кратка почивка (Short Rest)",
+          "short-or-long": "кратка почивка (Short Rest) или дълга почивка (Long Rest)",
           turn: "на ход",
           combat: "на битка",
           rage: "на ярост",
@@ -195,8 +197,8 @@ export const bg = {
         damageBonus: (n: number) => `щета +${n}`,
         heal: (h: string) => `лекуване ${h}`,
         maxCr: (cr: string) => `макс. CR ${cr}`,
-        resistancesAllButPsychic: "съпротива: всички видове щета освен психична",
-        resistances: (types: string[]) => `съпротива: ${types.join(", ")}`,
+        resistancesAllButPsychic: "устойчивост (Resistance): всички видове щети освен психични",
+        resistances: (types: string[]) => `устойчивост (Resistance): ${types.join(", ")}`,
         damageTypes: {
           acid: "киселинни",
           bludgeoning: "дробящи",
@@ -213,13 +215,13 @@ export const bg = {
           thunder: "гръмотевични",
         } as Record<string, string>,
         shortRestRegains: (n: number) =>
-          n === 1 ? "1 използване се възстановява при кратка почивка" : `${n} използвания се възстановяват при кратка почивка`,
-        spellSlotRegainsUse: "използване се възстановява срещу слот за заклинание",
-        bonusActionRegainsOne: "бонус действие: връща 1 зар",
-        onShortRest: "при кратка почивка",
-        maxSlotLevel: (n: number) => `слотове до ниво ${n}`,
-        slotCost: (level: string, points: number) => `слот ниво ${level} за ${points} т.`,
-        damageTypesLine: (types: string) => `типове щета: ${types}`,
+          n === 1 ? "1 използване се възстановява при кратка почивка (Short Rest)" : `${n} използвания се възстановяват при кратка почивка (Short Rest)`,
+        spellSlotRegainsUse: "използване се възстановява срещу Spell Slot",
+        bonusActionRegainsOne: "бонус действие (Bonus Action): връща 1 зар",
+        onShortRest: "при кратка почивка (Short Rest)",
+        maxSlotLevel: (n: number) => `Spell Slots до ниво ${n}`,
+        slotCost: (level: string, points: number) => `Spell Slot ниво ${level} за ${points} т.`,
+        damageTypesLine: (types: string) => `типове щети: ${types}`,
         knownForms: (n: number) => `известни форми: ${n}`,
         fly: "летене",
         swim: "плуване",
@@ -228,9 +230,9 @@ export const bg = {
       },
     },
 
-    features: { title: "Черти и способности", level: (n: number) => `ниво ${n}` },
+    features: { title: "Способности на класа (Class Features)", level: (n: number) => `ниво ${n}` },
 
-    feats: { title: "Таланти", level: (n: number) => `ниво ${n}` },
+    feats: { title: "Таланти (Feats)", level: (n: number) => `ниво ${n}` },
 
     spells: {
       title: "Заклинания",
@@ -238,15 +240,15 @@ export const bg = {
       slotsShared: "общи за всички класове",
       pactTitle: "Магия на договора",
       slotLine: (level: number, count: number) => `ниво ${level}: ${count}`,
-      ability: "Магическа характеристика",
-      saveDC: "Спасяване за заклинание (DC)",
-      attackBonus: "Бонус за атака",
-      cantrips: "Трикове",
+      ability: "Магическа характеристика (Spellcasting Ability)",
+      saveDC: "DC на спасяването от заклинание (Spell Save DC)",
+      attackBonus: "Бонус за атака със заклинание (Spell Attack Modifier)",
+      cantrips: "Трикове (Cantrips)",
       known: "Известни/Подготвени заклинания",
       spellbook: "Книга със заклинания",
       alwaysPrepared: "Винаги подготвени заклинания",
       mysticArcanum: "Мистичен арканум",
-      spellMastery: "Майсторство със заклинания",
+      spellMastery: "Майсторство със заклинания (Spell Mastery)",
       signatureSpells: "Запазени заклинания",
       pactOfTheTome: "Книга на сенките",
       spellLine: (name: string, level: number) => `${name} (ниво ${level})`,
@@ -255,7 +257,7 @@ export const bg = {
     innateSpells: {
       title: "Вродени заклинания",
       line: (name: string, uses: string, level: number | null) => `${name} (${uses}${level ? `, от ниво ${level}` : ""})`,
-      ability: "характеристика",
+      ability: "характеристика (Ability)",
       variant: "вариант",
     },
 
@@ -278,7 +280,7 @@ export const bg = {
     },
 
     carryingCapacity: {
-      title: "Носимост",
+      title: "Носимост (Carrying Capacity)",
       carried: "Носено",
       capacity: "Капацитет",
       pushDragLift: "Тласкане / влачене / вдигане",
@@ -286,11 +288,11 @@ export const bg = {
     },
 
     defenses: {
-      title: "Съпротиви и имунитети",
-      resistances: "Устойчивост към щета",
-      immunities: "Имунитет към щета",
-      vulnerabilities: "Уязвимост към щета",
-      conditionImmunities: "Имунитет към състояния",
+      title: "Устойчивост (Resistance) и имунитети (Immunities)",
+      resistances: "Устойчивост (Resistance) към щети",
+      immunities: "Имунитет (Immunity) към щети",
+      vulnerabilities: "Уязвимост (Vulnerability) към щети",
+      conditionImmunities: "Имунитет (Immunity) към състояния",
     },
 
     details: {
@@ -384,22 +386,22 @@ export const bg = {
     rulesetMixed: "Смесени",
     rulesetHelp: {
       "2014":
-        "2014: увеличенията на характеристики идват от вида (species); увеличенията на произхода (background) се игнорират. Съдържанието от 2024 е скрито.",
+        "2014: увеличенията на характеристики (Ability Scores) идват от расата (Species); увеличенията на произхода (Background) се игнорират. Съдържанието от 2024 е скрито.",
       "2024":
-        "2024: увеличенията идват от произхода (background); тези на вида се игнорират. Скрити са само стари (2014) произходи.",
+        "2024: увеличенията идват от произхода (Background); тези на расата (Species) се игнорират. Скрити са само стари (2014) произходи.",
       mixed:
-        "Смесени: всичко е достъпно. Ако произходът дава собствено увеличение, това на вида не се прилага (без двойно броене).",
+        "Смесени: всичко е достъпно. Ако произходът (Background) дава собствено увеличение, това на расата (Species) не се прилага (без двойно броене).",
     } as Record<string, string>,
     sourcesSummary: (selected: number | null) =>
       selected === null ? "Източници (Sources) — всички" : `Източници (Sources) — ${selected} избрани`,
     sourcesAll: "Всички",
     sourcesSrdOnly: "Само SRD",
     preferencesTitle: "Preferences",
-    hpPerLevel: "Точки живот на ниво",
+    hpPerLevel: "Точки живот (Hit Points) на ниво",
     hpFixed: "Фиксирани (средна стойност)",
     hpManual: "Хвърляне на зарове (ръчно въвеждане)",
     prerequisites: "Изисквания",
-    prereqFeats: "Прояви на дарби",
+    prereqFeats: "Изисквания за таланти (Feat Prerequisites)",
     prereqMulticlass: "Смяна на класове",
     resolutionTitle: "Resolution (from /api/resolve)",
     prunedTitle: "Отпаднали избори",
@@ -410,16 +412,16 @@ export const bg = {
     title: "Клас",
     loadError: (detail: string) => `Грешка при зареждане на класовете: ${detail}`,
     hitDieLabel: (name: string, die: number) => `${name} (d${die})`,
-    hitPoints: "Точки живот:",
+    hitPoints: "Точки живот (Hit Points):",
     remove: "✕ Премахни",
     level: "Ниво",
     subclass: "Подклас",
     chooseSubclass: "— избери подклас —",
-    higherLevels: "Способности на по-високи нива:",
+    higherLevels: "Способности (Features) на по-високи нива:",
     classResources: "Ресурси на класа",
-    hpRolls: "Хвърляния за точки живот",
+    hpRolls: "Хвърляния за точки живот (Hit Points)",
     levelN: (n: number) => `Ниво ${n}`,
-    tabFeatures: "Способности",
+    tabFeatures: "Способности (Features)",
     tabSpells: "Заклинания",
     noChoices: "Няма избори за този клас.",
     addClass: "+ Добави клас",
@@ -427,12 +429,12 @@ export const bg = {
   },
 
   backgroundPage: {
-    title: "Background",
+    title: "Произход (Background)",
     fallbackNote:
-      "Няма 2024 backgrounds в избраните източници — показан е само SRD background (от 2014, без бонус към характеристики и Origin feat по правилата от 2024).",
-    selectLabel: "Background",
-    choose: "— избери background —",
-    noChoices: "Няма избори за този background.",
+      "Няма произход (Background) от 2024 в избраните източници — показан е само SRD произход от 2014, без бонус към характеристики (Ability Scores) и талант от произхода (Origin Feat) по правилата от 2024.",
+    selectLabel: "Произход (Background)",
+    choose: "— избери произход (Background) —",
+    noChoices: "Няма избори за този произход (Background).",
     alignments: {
       "Lawful Good": "Законен добър",
       "Neutral Good": "Неутрален добър",
@@ -447,12 +449,12 @@ export const bg = {
   },
 
   speciesPage: {
-    title: "Species",
-    searchLabel: "Търсене на species",
-    searchPlaceholder: "Търсене на species…",
+    title: "Раса (Species)",
+    searchLabel: "Търсене на раса (Species)",
+    searchPlaceholder: "Търсене на раса (Species)…",
     subspecies: "Subspecies",
     subspeciesNone: "— none —",
-    noChoices: "Няма избори за този species.",
+    noChoices: "Няма избори за тази раса (Species).",
   },
 
   equipmentPage: {
@@ -493,15 +495,15 @@ export const bg = {
     counter: (selected: number, count: number) => `избрани ${selected}/${count}`,
     granted: (list: string) => `Получавате автоматично: ${list}`,
     groups: {
-      asi: "Увеличение на характеристики",
-      general: "Общи черти",
-      origin: "Черти за произход",
+      asi: "Увеличение на характеристики (Ability Score Improvement)",
+      general: "Общи таланти (General Feats)",
+      origin: "Таланти от произхода (Origin Feats)",
       "epic-boon": "Епични дарове",
-      "feat-2014": "Черти (2014)",
+      "feat-2014": "Таланти от 2014 (Feats)",
       "any-school": "Всяка школа",
       school: "Школа на магията",
     } as Record<string, string>,
-    cantripsGroup: "Трикове",
+    cantripsGroup: "Трикове (Cantrips)",
     spellLevelGroup: (level: string) => `Заклинания ниво ${level}`,
     searchLabel: (label: string) => `Търсене: ${label}`,
     hideUnavailable: "Скриване на недостъпните",
@@ -523,8 +525,8 @@ export const bg = {
     title: "Списък със заклинания",
     searchLabel: "Търсене на заклинания",
     levelLabel: "Ниво на заклинанията",
-    filters: { all: "Всички избираеми", cantrips: "Трикове", level1: "1-во ниво" },
-    cantrip: "Трик",
+    filters: { all: "Всички избираеми", cantrips: "Трикове (Cantrips)", level1: "1-во ниво" },
+    cantrip: "Трик (Cantrip)",
     levelBadge: (n: number) => `${n} ниво`,
     concentration: "Концентрация",
     ritual: "Ритуал",
@@ -608,13 +610,13 @@ export const bg = {
     carrying: (carried: number, capacity: number, pushDragLift: number) =>
       `Carrying: ${carried}/${capacity} lb (push/drag/lift ${pushDragLift} lb)`,
     overCapacity: "over capacity",
-    stealthDisadvantage: "armor: disadvantage on Stealth",
+    stealthDisadvantage: "броня: недостатък (Disadvantage) при Скритост",
     pendingEquipment: (n: number) => `Не всички избори за екипировка са направени (${n}) — това не блокира експорта.`,
     ready: "Всичко е готово за експорт.",
     preparingPdf: "Подготвя се PDF… Първото подготвяне може да отнеме няколко секунди.",
     downloading: "Изтегляне…",
     download: (format: string) => `Изтегли ${format}`,
-    missing: { class: "Избери клас.", species: "Избери species.", background: "Избери background." },
+    missing: { class: "Избери клас.", species: "Избери раса (Species).", background: "Избери произход (Background)." },
     sheetLink: "Виж листа на героя",
   },
 };

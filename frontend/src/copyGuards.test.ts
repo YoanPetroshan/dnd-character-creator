@@ -113,32 +113,123 @@ describe("scripts", () => {
   // Legacy: English words the Bulgarian UI already showed before the copy catalog existed (page titles, labels,
   // sentences). They stay so that the BG rendering is byte-identical; translating them is a deliberate later change.
   const LEGACY = new Set([
-    "Abilities", "Add", "Array", "Attacks", "Background", "Buy", "Carrying", "Character", "Dueling", "Equipment",
-    "Export", "Home", "Manual", "Name", "Origin", "Point", "Points", "Preferences", "Problems", "Re", "Remaining",
-    "Resolution", "Roll", "Saved", "Sources", "Species", "Standard", "Stealth", "Subspecies", "Unresolved", "action",
-    "all", "and", "api", "armor", "as", "background", "backgrounds", "be", "capacity", "choice", "choices", "current",
-    "disadvantage", "drag", "drop", "feat", "from", "hand", "here", "level", "lift", "lowest", "mastery", "name",
-    "none", "off", "on", "over", "page", "pending", "per", "push", "range", "reload", "replaces", "resolve",
-    "rolling", "ruleset", "scores", "should", "six", "species", "still", "the", "this", "type", "versatile", "with",
-    "you",
+    "Abilities", "Add", "Array", "Attacks", "Buy", "Carrying", "Character", "Dueling", "Equipment", "Export", "Home",
+    "Manual", "Name", "Point", "Points", "Preferences", "Problems", "Re", "Remaining", "Resolution", "Roll", "Saved",
+    "Sources", "Standard", "Subspecies", "Unresolved", "action", "all", "and", "api", "as", "be", "capacity",
+    "choice", "choices", "current", "drag", "drop", "from", "hand", "here", "level", "lift", "lowest", "mastery",
+    "name", "none", "off", "over", "page", "pending", "per", "push", "range", "reload", "replaces", "resolve",
+    "rolling", "ruleset", "scores", "should", "six", "still", "the", "this", "type", "versatile", "with", "you",
   ]);
 
   // Game terms kept in English on purpose (owner decision 2026-11-05): "Spell Slots" (glossary spellSlots, as in the BG export).
-  const TERMS = new Set("Spell Slots".split(" "));
+  const TERMS = new Set("Spell Slot Slots".split(" "));
+
+  // T1 (owner decision 2026-11-05): a Bulgarian rules term is followed by its English term in brackets, "Талант (Feat)".
+  // Latin text is allowed inside such a bracket only when it is one of these terms (the same list as
+  // server/i18n/bracket_terms.py BRACKET_TERMS; server/tests/test_t1_brackets.py compares the two). A bracket may also
+  // hold a Bulgarian head or an abbreviation next to the term: "(експертиза, Expertise)", "(Armor Class, AC)".
+  // BRACKET_TERMS_START
+  const BRACKET_TERMS = new Set([
+  "Ability",
+  "Ability Checks",
+  "Ability Score",
+  "Ability Score Improvement",
+  "Ability Score Increase",
+  "Ability Scores",
+  "Armor Class",
+  "Background",
+  "Blindsight",
+  "Bonus Action",
+  "Cantrip",
+  "Cantrips",
+  "Cantrips Known",
+  "Carrying Capacity",
+  "Class Features",
+  "Darkvision",
+  "Devil's Sight",
+  "Disadvantage",
+  "Expertise",
+  "Feat",
+  "Feat Prerequisites",
+  "Feats",
+  "Feature",
+  "Features",
+  "General Feats",
+  "Hit Point Dice",
+  "Hit Points",
+  "Immunities",
+  "Immunity",
+  "Long Rest",
+  "Origin Feat",
+  "Origin Feats",
+  "Other Expertise",
+  "Proficiencies",
+  "Proficiency",
+  "Proficiency Bonus",
+  "Resistance",
+  "Saving Throw",
+  "Saving Throws",
+  "Senses",
+  "Short Rest",
+  "Skill",
+  "Skill Proficiencies",
+  "Skill Proficiency",
+  "Skill or Tool Proficiency",
+  "Skills",
+  "Species",
+  "Spell Attack Modifier",
+  "Spell Mastery",
+  "Spell Save DC",
+  "Spellcasting Ability",
+  "Tool Proficiencies",
+  "Tool Proficiency",
+  "Tremorsense",
+  "Truesight",
+  "Vulnerability",
+  "Weapon Mastery",
+  "Weapon Proficiencies",
+  ]);
+  // BRACKET_TERMS_END
+  const BRACKET_ABBREVIATIONS = new Set(["AC"]);
+  const termBracket = /\(([^()]*)\)/g;
+  /** `text` without its English-term brackets; a bracket that is not made of registered terms stays and is checked as Latin text. */
+  function stripTermBrackets(text: string): string {
+    return text.replace(termBracket, (whole, inner: string) => {
+      const parts = inner.split(",").map((x) => x.trim());
+      const latin = parts.filter((x) => /[A-Za-z]/.test(x) && !CYRILLIC.test(x));
+      const ok = latin.length > 0 && latin.every((x) => BRACKET_TERMS.has(x) || BRACKET_ABBREVIATIONS.has(x));
+      return ok ? "" : whole;
+    });
+  }
 
   it("the legacy list has no stale entries (every word is still printed by the Bulgarian UI)", () => {
     const used = new Set<string>();
-    for (const [, text] of outputs(BG)) for (const w of text.match(/[A-Za-z]+/g) ?? []) used.add(w);
+    for (const [, text] of outputs(BG)) for (const w of stripTermBrackets(text).match(/[A-Za-z]+/g) ?? []) used.add(w);
     expect([...LEGACY, ...TERMS].filter((w) => !used.has(w))).toEqual([]);
   });
 
-  it("bg.ts uses Latin words only from the allowlist (permanent abbreviations + legacy English)", () => {
+  it("bg.ts uses Latin words only from the allowlist (permanent abbreviations + legacy English), except inside an English-term bracket", () => {
     const unknown = new Set<string>();
     for (const [path, text] of outputs(BG)) {
       if (path === "common.dateLocale") continue; // a locale tag, not text
-      for (const w of text.match(/[A-Za-z]+/g) ?? []) if (!PERMANENT.has(w) && !LEGACY.has(w) && !TERMS.has(w)) unknown.add(`${w} (${path})`);
+      for (const w of stripTermBrackets(text).match(/[A-Za-z]+/g) ?? []) if (!PERMANENT.has(w) && !LEGACY.has(w) && !TERMS.has(w)) unknown.add(`${w} (${path})`);
     }
     expect([...unknown].sort()).toEqual([]);
+  });
+
+  it("every term bracket in bg.ts is a registered term, spelled exactly (no typo, no casing slip)", () => {
+    const unknown: string[] = [];
+    for (const [path, text] of outputs(BG)) {
+      if (path === "common.dateLocale") continue;
+      for (const m of text.matchAll(termBracket)) {
+        for (const part of m[1].split(",").map((x) => x.trim())) {
+          if (!/[A-Za-z]/.test(part) || CYRILLIC.test(part) || BRACKET_ABBREVIATIONS.has(part) || BRACKET_TERMS.has(part)) continue;
+          if ([...BRACKET_TERMS].some((t) => t.toLowerCase() === part.toLowerCase())) unknown.push(`${part}: wrong casing (${path})`);
+          else if (/^[A-Z]/.test(part) && !PERMANENT.has(part) && !LEGACY.has(part)) unknown.push(`${part} (${path})`);
+        }
+      }
+    }
+    expect(unknown).toEqual([]);
   });
 });
 
