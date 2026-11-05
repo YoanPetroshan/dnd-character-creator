@@ -18,7 +18,7 @@ Everything visual lives in `frontend/src/styles/*.css`. The markup carries class
 | `spells.css` | spell library |
 | `forms.css` | details section, hit-point rolls, class blocks |
 | `touch.css` | mobile/touch rules (44 px targets, 16 px inputs, safe areas, long lists). Functional: keep the minimums. |
-| `hooks.css` | empty rules for classes that need no style yet (fill in as needed) |
+| `hooks.css` | empty rules for classes that need no style yet (fill in as needed), e.g. `.name-dice` |
 | `print.css` | print: hides the app chrome (imported by `main.tsx`) |
 
 Theme switch: override tokens on `:root[data-theme="..."]` (nothing sets `data-theme` yet).
@@ -49,6 +49,7 @@ Presentational components take props only; logic components read contexts (`useD
 | Small summaries (presentational) | `ClassResourcesList`, `SheetTraitsSummary`, `SpellSlotsSummary`, `StepProblems`, `CommitNumberInput` | | resolution parts |
 | Spells | `SpellLibrary` | cantrip / known / detail browser | spell lists from `useSpells` |
 | Sheet (presentational) | `components/sheet/*` (`SheetView` composes the 23 sections, each in a `SectionFrame` with `data-section`) | read-only character sheet | the resolution's `sheet` / `derived` |
+| Random name | `names/bgNames.ts`, `logic/randomName.ts`, `logic/translit.ts`; button `.name-dice` on Home (`type="button"`, `aria-label` from `t.home.randomName`, 44 px in `touch.css`, no state attribute) | name data and generation are not UI text and not in the catalog | |
 | Copy | `copy/bg.ts`, `copy/en.ts` | all UI text; nothing in a component is hard-coded | |
 
 ## States a designer must cover

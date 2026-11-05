@@ -345,6 +345,8 @@ export const en: Copy = {
   home: {
     title: "Home",
     nameLabel: "Character Name",
+    randomName: "Random name",
+    randomNameIcon: "🎲",
     nameHint: "Saved as you type — reload the page and this name should still be here.",
     charactersTitle: "Characters",
     unnamed: "Unnamed",

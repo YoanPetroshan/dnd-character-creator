@@ -22,6 +22,7 @@ input[type="radio"] {
 button,
 .tab-bar button,
 .point-buy-stepper button,
+.name-dice,
 .choice-card__header {
   min-height: 44px;
   min-width: 44px;

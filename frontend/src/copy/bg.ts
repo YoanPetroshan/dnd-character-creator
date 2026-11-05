@@ -349,6 +349,8 @@ export const bg = {
   home: {
     title: "Home",
     nameLabel: "Character Name",
+    randomName: "Случайно име",
+    randomNameIcon: "🎲",
     nameHint: "Saved as you type — reload the page and this name should still be here.",
     charactersTitle: "Герои",
     unnamed: "Без име",

@@ -215,6 +215,13 @@ const DIALOGS = new Set(["alert", "confirm", "prompt"]);
 // Short explicit exceptions: [file suffix, text]. Technical tokens that are not user-facing copy.
 const EXCEPTIONS: [string, string][] = [];
 
+// Files whose Cyrillic literals are CONTENT, not UI text: the name lists of the random-name button and the
+// Cyrillic -> Latin transliteration table. Nothing here is shown as a label; each file is listed with its reason.
+const CONTENT_FILES: [string, string][] = [
+  ["names/bgNames.ts", "name lists (data)"],
+  ["logic/translit.ts", "transliteration table (script mapping)"],
+];
+
 interface Hit { file: string; what: string; text: string }
 
 /** Calls `cb` with every piece of text an expression can print: string literals, template text,
@@ -256,6 +263,7 @@ function valueStrings(node: any, cb: (text: string) => void): void {
 
 function scan(file: string, code: string): Hit[] {
   const hits: Hit[] = [];
+  const isContent = CONTENT_FILES.some(([f]) => file.endsWith(f));
   const excepted = (text: string) => EXCEPTIONS.some(([f, t]) => file.endsWith(f) && t === text);
   const flag = (what: string) => (text: string) => {
     if (HAS_LETTER.test(text) && !excepted(text)) hits.push({ file, what, text: text.trim().slice(0, 60) });
@@ -279,6 +287,7 @@ function scan(file: string, code: string): Hit[] {
     if (n.type === "AssignmentExpression" && n.left?.type === "MemberExpression" && n.left.property?.name === "title" && n.left.object?.name === "document")
       valueStrings(n.right, flag("document.title"));
     // no Cyrillic literal anywhere outside the catalog
+    if (isContent) return;
     if (n.type === "Literal" && typeof n.value === "string" && CYRILLIC.test(n.value)) hits.push({ file, what: "Cyrillic literal", text: n.value.slice(0, 60) });
     if (n.type === "TemplateElement" && CYRILLIC.test(n.value.raw)) hits.push({ file, what: "Cyrillic template text", text: n.value.raw.slice(0, 60) });
   });
@@ -307,6 +316,14 @@ describe("source scan: all UI text comes from the catalog", () => {
     expect(hits).toEqual(expect.arrayContaining(["title attribute", "aria-label attribute", "JSX text", "JSX child expression", "placeholder attribute", "confirm() argument"]));
     expect(scan("x.tsx", "export const A = () => <p>{t.a}{' '}—</p>;")).toEqual([]);
     expect(scan("x.ts", "export const m = 'Грешка';").map((h) => h.what)).toEqual(["Cyrillic literal"]);
+  });
+
+  it("the content-file exception list is exactly the two data files and they exist", () => {
+    expect(CONTENT_FILES.map(([f]) => f)).toEqual(["names/bgNames.ts", "logic/translit.ts"]);
+    for (const [f] of CONTENT_FILES) expect(files.some((h) => h.endsWith("/" + f)), f).toBe(true);
+    // the exception covers only Cyrillic literals in those two files
+    expect(scan("names/bgNames.ts", "export const m = 'Иван';")).toEqual([]);
+    expect(scan("names/other.ts", "export const m = 'Иван';").map((h) => h.what)).toEqual(["Cyrillic literal"]);
   });
 
   it("has no letters in JSX text, aria-label, placeholder or title outside t.*, and no Cyrillic literal", () => {

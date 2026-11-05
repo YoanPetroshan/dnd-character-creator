@@ -2,7 +2,8 @@ import { useRef, useState } from "react";
 import { useDraft } from "../DraftContext";
 import { useLibrary } from "../LibraryContext";
 import type { ImportEntry } from "../library";
-import { useT } from "../LanguageContext";
+import { useLang, useT } from "../LanguageContext";
+import { randomName } from "../logic/randomName";
 import { msg, renderMsg, toMsg } from "../logic/messages";
 import { useResolutionContext } from "../ResolutionContext";
 import { useCatalogContext } from "../CatalogContext";
@@ -13,6 +14,7 @@ import { formatDateTime } from "../logic/formatDate";
 
 export function HomePage() {
   const t = useT();
+  const { lang } = useLang();
   const { draft, dispatch } = useDraft();
   const { resolution, loading } = useResolutionContext();
   const catalog = useCatalogContext();
@@ -75,6 +77,14 @@ export function HomePage() {
           onChange={(e) => dispatch({ type: "SET_NAME", name: e.target.value })}
         />
       </label>
+      <button
+        type="button"
+        className="name-dice"
+        aria-label={t.home.randomName}
+        onClick={() => dispatch({ type: "SET_NAME", name: randomName(lang, Math.random) })}
+      >
+        {t.home.randomNameIcon}
+      </button>
       <p>{t.home.nameHint}</p>
 
       <h2>{t.home.charactersTitle}</h2>
