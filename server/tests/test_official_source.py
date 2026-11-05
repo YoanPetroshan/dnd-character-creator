@@ -2065,7 +2065,7 @@ def test_feat_prepared_maps_to_prepared_and_first_entry_fallback():
 
 def test_feat_innate_spells_skipped_deferred_and_slot_keyed():
     feats = _feats_by_id()
-    assert feats["rune-shaper-bgg"]["innate_spells"] == []
+    assert [e["spell_id"] for e in feats["rune-shaper-bgg"]["innate_spells"]] == ["comprehend-languages"]  # G5: the other 13 are one pick
     assert feats["magic-initiate-xphb"]["innate_spells"] == []  # only filter choices, no fixed spells
     assert feats["abjuration-adept-au"]["innate_spells"] == []  # slot-level keys
     assert [s["name"] for s in feats["fey-touched-xphb"]["innate_spells"]] == ["Misty Step"]  # filter items ignored

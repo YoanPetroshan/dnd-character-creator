@@ -158,9 +158,66 @@ def _feat_slot_spell_table(raw: dict, mechanism: str) -> dict[int, list[str]]:
     return table
 
 
-# Rune Shaper lists 14 runes but the rule is "know half your proficiency
-# bonus" — a flat list would misrepresent it, so it is skipped.
-_FEAT_SPELLS_SKIP = {"rune-shaper-bgg"}
+# Rune Shaper (BGG) lists 14 spells in one `daily` block, but only the first is a plain grant: the other 13 are the Rune
+# Spells table, of which the feat knows "half your proficiency bonus (rounded down)". A flat import would grant all 14,
+# so G5 reads it as one fixed grant plus ONE pick from the table (`_rune_shaper_spells`); no feat is skipped any more.
+_FEAT_SPELLS_SKIP: set[str] = set()
+
+_RUNE_COUNT_TEXT = "half your proficiency bonus (rounded down)"
+_RUNE_ABILITY_TEXT = "Intelligence, Wisdom, or Charisma (choose when you select this feat)"
+# proficiency bonus // 2 by character level: 1 up to level 8, 2 at 9-16, 3 from 17 (PB 2/3 -> 1, 4/5 -> 2, 6 -> 3)
+_RUNE_COUNT_BY_LEVEL = {"1": 1, "9": 1, "17": 1}
+
+
+def _walk_strings(node):
+    if isinstance(node, str):
+        yield node
+    elif isinstance(node, dict):
+        for v in node.values():
+            yield from _walk_strings(v)
+    elif isinstance(node, list):
+        for v in node:
+            yield from _walk_strings(v)
+
+
+def _rune_shaper_spells(raw: dict) -> tuple[list[dict], list[dict], list[str]]:
+    """G5: Rune Shaper as (innate_spells, spell_choices, spell_variants). Data-checked, nothing assumed: the feat text must
+    carry the count rule and the ability sentence, the entries must hold a "Rune Spells" table (`Rune | Spell` rows) and the
+    additionalSpells list must contain every table spell; else ([], [], []) (the old skip). The list members that are NOT
+    in the table are the plain grants (Comprehend Languages: "cast ... once ... a long rest", 1/day); the table spells
+    are one pick whose count follows `_RUNE_COUNT_BY_LEVEL`, 1/day each ("Once you cast the spell in this way, you can't
+    do so again until you finish a long rest")."""
+    text = " ".join(_walk_strings(raw.get("entries") or []))
+    if _RUNE_COUNT_TEXT not in text or _RUNE_ABILITY_TEXT not in text:
+        return [], [], []
+
+    def tables(node):
+        if isinstance(node, dict):
+            if node.get("type") == "table" and node.get("colLabels") == ["Rune", "Spell"]:
+                yield node
+            for v in node.values():
+                yield from tables(v)
+        elif isinstance(node, list):
+            for v in node:
+                yield from tables(v)
+
+    table = next(tables(raw.get("entries") or []), None)
+    runes = [slug(re.sub(r"\{@spell ([^}|]*)[^}]*\}", r"\1", row[1])) for row in (table or {}).get("rows") or []
+             if isinstance(row, list) and len(row) == 2 and isinstance(row[1], str)]
+    listed: list[str] = []
+    for block in raw.get("additionalSpells") or []:
+        for level_value in ((block.get("innate") or {}) if isinstance(block, dict) else {}).values():
+            for items in ((level_value.get("daily") or {}).values() if isinstance(level_value, dict) else []):
+                listed += [slug(_clean_innate_spell_name(n)) for n in items if isinstance(n, str)]
+    if not runes or not set(runes) <= set(listed):
+        return [], [], []
+    ability = {"choose": ["INT", "WIS", "CHA"]}
+    fixed = [n for n in dict.fromkeys(listed) if n not in runes]
+    innate = [{"name": n.replace("-", " ").title(), "spell_id": n, "level": None, "uses": "1/day", "ability": ability,
+               "variant": None} for n in fixed]
+    choice = {"variant": None, "level": None, "uses": "1/day", "ability": ability, "count": _RUNE_COUNT_BY_LEVEL["1"],
+              "filter": None, "from": runes, "count_by_level": dict(_RUNE_COUNT_BY_LEVEL)}
+    return innate, [choice], []
 
 # The feat's own text decides which spellcasting-ability rule applies, since
 # the raw additionalSpells `ability` is often missing or a generic choose list.
@@ -258,6 +315,8 @@ def _feat_spells_from_5etools(raw: dict, index: str) -> tuple[list[dict], list[d
     the _FEAT_SPELLS_SKIP feats."""
     if index in _FEAT_SPELLS_SKIP:
         return [], [], []
+    if index == "rune-shaper-bgg":
+        return _rune_shaper_spells(raw)
     entries = [e for e in (raw.get("additionalSpells") or []) if isinstance(e, dict)]
     variants: list[str] = []
     if len(entries) > 1:

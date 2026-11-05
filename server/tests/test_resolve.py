@@ -4803,57 +4803,66 @@ def _feat_spells(res, feat_id):
     return [e for e in res["sheet"]["innateSpells"] if e.get("featId") == feat_id]
 
 
+_MI_CLERIC = {"feat:magic-initiate-xphb:spell-variant": ["cleric-spells"]}  # the Acolyte's Magic Initiate list
+
+
+def _mc_draft(extra, mi_variant=True, **kw):
+    """G5: Magic Connoisseur's spell list follows the chosen Magic Initiate list (the Acolyte fixes Cleric Spells)."""
+    draft = _asi_feat_spell_draft("magic-connoisseur-au", extra, **kw)
+    if mi_variant:
+        draft["background"]["choices"].update(_MI_CLERIC)
+    return draft
+
+
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
-def test_magic_connoisseur_variant_pending_with_no_dependent_choices_or_spells(catalog):
-    res = resolve(_asi_feat_spell_draft("magic-connoisseur-au", {}), catalog)
-    variant = _choice(res, _MC + "spell-variant")
-    assert variant["status"] == "pending"
-    assert [o["id"] for o in variant["options"]] == ["cleric-spells", "druid-spells", "wizard-spells"]
-    assert [c for c in res["choices"] if ":spell-choice-" in c["id"]] == []
+def test_magic_connoisseur_has_no_variant_card_and_waits_for_the_magic_initiate_list(catalog):
+    res = resolve(_mc_draft({}, mi_variant=False), catalog)
+    assert _choice(res, _MC + "spell-variant") is None  # G5: the list is Magic Initiate's, not a second pick
+    base = _choice(res, "feat:magic-initiate-xphb:spell-variant")
+    assert base["status"] == "pending" and [o["id"] for o in base["options"]] == ["cleric-spells"]
+    assert [c for c in res["choices"] if c["id"].startswith(_MC) and ":spell-choice-" in c["id"]] == []
     assert _feat_spells(res, "magic-connoisseur-au") == []
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
-def test_magic_connoisseur_selecting_variant_reveals_level_1_and_2_choices(catalog):
-    res = resolve(_asi_feat_spell_draft("magic-connoisseur-au", {_MC + "spell-variant": ["wizard-spells"]}), catalog)
+def test_magic_connoisseur_follows_the_magic_initiate_list_for_its_level_1_and_2_choices(catalog):
+    res = resolve(_mc_draft({}), catalog)
     # cids index the full list (cleric 0-1, druid 2-3, wizard 4-5) so they stay stable across variants
-    spell_cids = sorted(c["id"] for c in res["choices"] if ":spell-choice-" in c["id"])
-    assert spell_cids == [_MC + "spell-choice-4", _MC + "spell-choice-5"]
-    lvl1, lvl2 = _choice(res, _MC + "spell-choice-4"), _choice(res, _MC + "spell-choice-5")
-    assert (lvl1["count"], len(lvl1["options"]), lvl1["status"]) == (1, 31 if has_official_spells() else 27, "pending")
-    assert (lvl2["count"], len(lvl2["options"]), lvl2["status"]) == (1, 39 if has_official_spells() else 31, "pending")  # level 2: 31 SRD + 8 (Slice 11a)
-    assert "shield" in [o["id"] for o in lvl1["options"]]
-    assert "invisibility" in [o["id"] for o in lvl2["options"]]
-    assert "shield" not in [o["id"] for o in lvl2["options"]]
+    spell_cids = sorted(c["id"] for c in res["choices"] if c["id"].startswith(_MC) and ":spell-choice-" in c["id"])
+    assert spell_cids == [_MC + "spell-choice-0", _MC + "spell-choice-1"]
+    lvl1, lvl2 = _choice(res, _MC + "spell-choice-0"), _choice(res, _MC + "spell-choice-1")
+    assert (lvl1["count"], lvl1["status"]) == (1, "pending") and (lvl2["count"], lvl2["status"]) == (1, "pending")
+    assert "cure-wounds" in [o["id"] for o in lvl1["options"]] and "shield" not in [o["id"] for o in lvl1["options"]]
+    assert "lesser-restoration" in [o["id"] for o in lvl2["options"]]
+    assert "cure-wounds" not in [o["id"] for o in lvl2["options"]]
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 def test_magic_connoisseur_selected_spells_become_daily_innate_spells_with_inherited_ability(catalog):
-    picks = {_MC + "spell-variant": ["wizard-spells"], _MC + "spell-choice-4": ["shield"],
-             _MC + "spell-choice-5": ["invisibility"]}
+    picks = {_MC + "spell-choice-0": ["cure-wounds"], _MC + "spell-choice-1": ["lesser-restoration"]}
     # Magic Initiate's ability not yet chosen: the entries carry the open INT/WIS/CHA choice,
     # even with this feat's own ability bonus picked (it does not decide the spell ability)
-    res = resolve(_asi_feat_spell_draft("magic-connoisseur-au", {**picks, _MC + "ability-bonus": ["wis"]}), catalog)
+    res = resolve(_mc_draft({**picks, _MC + "ability-bonus": ["wis"]}), catalog)
     spells = _feat_spells(res, "magic-connoisseur-au")
-    assert [(e["name"], e["uses"]) for e in spells] == [("Shield", "1/day"), ("Invisibility", "1/day")]
+    assert [(e["name"], e["uses"]) for e in spells] == [("Cure Wounds", "1/day"), ("Lesser Restoration", "1/day")]
     assert all(e["ability"] == {"choose": ["INT", "WIS", "CHA"]} for e in spells)
     # the ability picked for the background's Magic Initiate decides it
-    draft = _asi_feat_spell_draft("magic-connoisseur-au", {**picks, _MC + "ability-bonus": ["wis"]})
+    draft = _mc_draft({**picks, _MC + "ability-bonus": ["wis"]})
     draft["background"]["choices"]["feat:magic-initiate-xphb:spell-ability"] = ["cha"]
     res = resolve(draft, catalog)
     spells = _feat_spells(res, "magic-connoisseur-au")
     assert [(e["spellId"], e["ability"], e["variant"]) for e in spells] == [
-        ("shield", "CHA", None), ("invisibility", "CHA", None)]
+        ("cure-wounds", "CHA", None), ("lesser-restoration", "CHA", None)]
     assert not [p for p in res["problems"] if "magic-connoisseur" in p["id"]]
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 def test_magic_connoisseur_picks_from_another_variants_list_are_ignored(catalog):
-    # cid -4 belongs to Wizard Spells; with Cleric Spells selected it must not apply
-    res = resolve(_asi_feat_spell_draft("magic-connoisseur-au", {
-        _MC + "spell-variant": ["cleric-spells"], _MC + "spell-choice-4": ["shield"]}), catalog)
+    # cid -4 belongs to Wizard Spells; Magic Initiate's list is Cleric, so it must not apply
+    res = resolve(_mc_draft({_MC + "spell-choice-4": ["shield"], _MC + "spell-variant": ["wizard-spells"]}), catalog)
     assert _feat_spells(res, "magic-connoisseur-au") == []
-    assert _MC + "spell-choice-4" in [p["choiceId"] for p in res["pruned"]]
+    pruned = [p["choiceId"] for p in res["pruned"]]
+    assert _MC + "spell-choice-4" in pruned and _MC + "spell-variant" in pruned
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
@@ -4862,7 +4871,8 @@ def test_magic_connoisseur_only_pickable_when_background_grants_magic_initiate(c
         res = resolve(_asi_feat_spell_draft("magic-connoisseur-au", {}, background_id=bg), catalog)
         picked = "magic-connoisseur-au" in res["sheet"]["grantedFeats"]
         assert picked is ok, bg
-        assert (_choice(res, _MC + "spell-variant") is not None) is ok, bg
+        assert _choice(res, _MC + "spell-variant") is None, bg  # G5: never an own list card while Magic Initiate is held
+        assert (_choice(res, "feat:magic-initiate-xphb:spell-variant") is not None) is ok, bg
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")

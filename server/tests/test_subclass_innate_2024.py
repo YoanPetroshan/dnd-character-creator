@@ -60,6 +60,8 @@ CASES = {
                                       ["see-invisibility-xphb"], "1/short or long rest", "INT"),
 }
 HEX_FID = "great-old-one-xphb-10-eldritch-hex"
+# G5: the FRHoF rows of the same table (tests/test_g5_frhof_innate.py owns their rule matrix)
+G5_FIDS = {"banneret-frhof-3-knightly-envoy", "moon-frhof-6-blessing-of-moonlight"}
 
 
 @pytest.fixture(scope="module")
@@ -94,11 +96,11 @@ def _subclass_rows(rows, name):
 @needs_data
 def test_quotes_match_catalog(catalog):
     table = reference_data.SUBCLASS_INNATE_2024
-    assert set(table) == set(CASES) | {HEX_FID}
+    assert set(table) == set(CASES) | {HEX_FID} | G5_FIDS
     for fid, spec in table.items():
         rec = catalog.features[fid]
         text = "\n".join(rec["desc"])
-        assert rec["source"] == "XPHB"
+        assert rec["source"] == ("FRHoF" if fid in G5_FIDS else "XPHB")
         assert (rec["subclass"] or {}).get("index") == spec["subclass"], fid
         assert (rec["class"] or {}).get("index") == spec["class"], fid
         assert spec["quotes"], fid
@@ -141,9 +143,10 @@ def test_frequency_and_ability_are_pinned_to_the_text(catalog):
 
 @needs_data
 def test_converter_keeps_the_innate_blocks_as_data(catalog):
-    """The additive `innate_spells` key exists on exactly the seven XPHB subclasses whose 5etools block has `innate`."""
+    """The additive `innate_spells` key exists on exactly the seven XPHB subclasses whose 5etools block has `innate`
+    (plus, since G5, the FRHoF Banneret and College of the Moon; Scion of the Three has only a `choose` item)."""
     with_key = {k for k, v in catalog.subclasses.items() if "innate_spells" in v}
-    assert with_key == {c[1] for c in CASES.values()} | {"great-old-one-xphb"}
+    assert with_key == {c[1] for c in CASES.values()} | {"great-old-one-xphb", "banneret-frhof", "moon-frhof"}
     wh = catalog.subclasses["wild-heart-xphb"]["innate_spells"]
     assert [(e["level"], e["spell"], e["kind"]) for e in wh] == [
         (3, "beast-sense-xphb", "ritual"), (3, "speak-with-animals-xphb", "ritual"), (10, "commune-with-nature-xphb", "ritual")]
@@ -160,7 +163,8 @@ def test_converter_keeps_the_innate_blocks_as_data(catalog):
     assert plain == {"glamour-xphb": [(6, "command-xphb", "plain")], "great-old-one-xphb": [(10, "hex-xphb", "plain")],
                      "diviner-xphb": [(10, "see-invisibility-xphb", "plain")]}
     # no 2014 / SRD subclass gets the key
-    assert not [k for k, v in catalog.subclasses.items() if "innate_spells" in v and not k.endswith("-xphb")]
+    assert not [k for k, v in catalog.subclasses.items()
+                if "innate_spells" in v and not k.endswith(("-xphb", "-frhof"))]
 
 
 @needs_data

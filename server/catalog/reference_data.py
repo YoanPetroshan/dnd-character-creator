@@ -5938,6 +5938,19 @@ SUBCLASS_INNATE_2024: dict[str, dict] = {
     "great-old-one-xphb-10-eldritch-hex": {
         "class": "warlock", "subclass": "great-old-one-xphb", "mode": "prepared", "spells": ("hex",),
         "quotes": ("You always have the Hex spell prepared.",)},
+    # G5: the Forgotten Realms: Heroes of Faerun (FRHoF) subclasses (ruleset 2024 like the XPHB ones, source FRHoF).
+    # Banneret is visible under "2024" only (it has a 2014 twin), Moon is also offered under "mixed" but this table is
+    # read for ruleset "2024" only. NOT done (picks, not a literal spell: the 5etools blocks hold `choose` items): Moon's
+    # Primal Lore cantrip (any Druid cantrip, replaceable on each Bard level) and Scion of the Three's Dread Allegiance
+    # cantrip (one of three, changeable after every Long Rest, tied to the resistance pick: a one-rest choice, Q17).
+    "banneret-frhof-3-knightly-envoy": {
+        "class": "fighter", "subclass": "banneret-frhof", "mode": "innate", "spells": ("comprehend-languages",),
+        "uses": "ritual only", "ability": "CHA", "ability_from": "text", "note": None,
+        "quotes": ("Comprehension. You can cast the Comprehend Languages spell but only as a Ritual. Charisma is your "
+                   "spellcasting ability for it.",)},
+    "moon-frhof-6-blessing-of-moonlight": {
+        "class": "bard", "subclass": "moon-frhof", "mode": "prepared", "spells": ("moonbeam",),
+        "quotes": ("You always have the Moonbeam spell prepared.",)},
 }
 
 # C6d: XPHB Wizard spell picks that are "always prepared" (ruleset 2024 only), keyed by the choice-id

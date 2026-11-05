@@ -422,6 +422,14 @@ def _subclass_innate_spells(raw: dict, resolve_spell) -> list[dict]:
             for kind in ("daily", "resource"):
                 for uses, names in (value.get(kind) or {}).items():
                     add(level, names, kind, str(uses))
+    # G5: a wrapped `prepared` level ({"6": {"daily": {"1e": [...]}}}, College of the Moon's Moonbeam) is not in `spells`
+    # (the plain prepared lists are); it joins the records with the wrapper's kind. A `choose` item stays out.
+    for level_key, value in (block.get("prepared") or {}).items():
+        if isinstance(value, dict):
+            level = int(level_key) if str(level_key).isdigit() else None
+            for kind in ("daily", "resource"):
+                for uses, names in (value.get(kind) or {}).items():
+                    add(level, names, kind, str(uses))
     return sorted(out, key=lambda e: (e["level"] if e["level"] is not None else 0))
 
 
@@ -706,7 +714,7 @@ def convert_subclasses(raw_subs, raw_feats, srd_subclass_ids, resolve_spell, raw
             by_variant = _subclass_spells_by_variant(raw, cls_ref["index"], True, resolve_spell)
             if by_variant:
                 record["spells_by_variant"] = by_variant
-            innate = _subclass_innate_spells(raw, resolve_spell) if raw.get("source") == "XPHB" else []  # RP18
+            innate = _subclass_innate_spells(raw, resolve_spell) if raw.get("source") in ("XPHB", "FRHoF") else []  # RP18, G5 (FRHoF is ruleset 2024 too)
             if innate:
                 record["innate_spells"] = innate
         third = _third_caster_block(raw)

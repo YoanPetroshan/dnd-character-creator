@@ -127,6 +127,12 @@ KITCHEN_SINK: dict[str, dict] = {
     # G6: the PHB Tiefling (Thaumaturgy at will from `known`, Hellish Rebuke 1/day, Darkness 1/day) with usesMax / recharge
     # on the limited entries; non-2024, `once` because a "srd" source filter hides the PHB species
     "tiefling-phb5-2014": _sub("wizard", 5, "2014", marks=("classes", "official"), once=True, origin=("tiefling-phb", "acolyte")),
+    # G5: Rune Shaper (BGG) from the Rune Carver background: the fixed Comprehend Languages and the Rune Spells pick (Wizard 9
+    # = 2 runes) with the feat's spellcasting ability; non-2024, `once` because a "srd" filter hides the BGG background
+    "rune-carver-wizard9-2014": _sub("wizard", 9, "2014", marks=("classes", "official"), once=True,
+                                     origin=("human", "rune-carver-bgg"), overrides={
+        "feat:rune-shaper-bgg:spell-ability": ["wis"],
+        "feat:rune-shaper-bgg:spell-choice-0": ["fog-cloud", "goodberry"]}),
     # G3: Cleric 6 (Life) + Paladin 3 (Devotion) under 2014: one merged Channel Divinity (PHB 164) whose note keeps both
     # classes' options; non-2024, so part of the golden via --append
     "cleric6-paladin3-2014": {**_sub("cleric", 6, "2014", marks=("classes",)),

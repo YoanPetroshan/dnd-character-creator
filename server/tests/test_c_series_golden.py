@@ -1043,8 +1043,23 @@ def test_g6_no_rebaseline_and_only_the_tiefling_sink_holds_a_limited_innate_spel
             assert [e["name"] for e in innate] == ["Thaumaturgy", "Hellish Rebuke", "Darkness"], n
             assert limited == ["Hellish Rebuke", "Darkness"], n
             assert all(e["usesMax"] == 1 and e["recharge"] == "long" for e in innate if "usesMax" in e), n
+        elif n.rsplit("/", 1)[-1] == "rune-carver-wizard9-2014":  # G5: Rune Shaper's three 1/day rows
+            assert limited == ["Comprehend Languages", "Fog Cloud", "Goodberry"], n
         else:
             assert not limited, n
+
+
+def test_g5_no_rebaseline_and_the_rune_carver_sink_holds_rune_shaper():
+    """G5 is 2024-only for the FRHoF subclass rows (the golden holds no 2024 case), and the Rune Shaper / Magic Connoisseur
+    changes reach no stored case (none holds the Rune Carver background or Magic Connoisseur), so there is no REBASELINES
+    entry; the Wizard 9 / Rune Carver sink was appended instead."""
+    assert "G5" not in REBASELINES
+    entry = next(e for n, e in _GOLDEN.items() if n.endswith("/rune-carver-wizard9-2014"))
+    res = entry["result"]
+    assert [(e["spellId"], e["ability"], e["uses"]) for e in res["sheet"]["innateSpells"]] == [
+        ("comprehend-languages", "WIS", "1/day"), ("fog-cloud", "WIS", "1/day"), ("goodberry", "WIS", "1/day")]
+    card = next(c for c in res["choices"] if c["id"] == "feat:rune-shaper-bgg:spell-choice-0")
+    assert card["count"] == 2 and card["status"] == "resolved"
 
 
 def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
@@ -1062,7 +1077,7 @@ def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
                     assert isinstance(o["source"], str) and o["source"], (name, card["id"], o["id"])
                     assert not o["id"].startswith("skill-") and card["source"]["kind"] != "equipment", (name, card["id"], o["id"])
         with_source += has
-    assert with_source == 226  # the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
+    assert with_source == 227  # the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
 
 
 if __name__ == "__main__":

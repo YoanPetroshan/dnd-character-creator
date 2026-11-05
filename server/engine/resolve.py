@@ -698,6 +698,34 @@ def _feat_cid_prefix(feat: dict) -> str:
     return feat.get("_asi_origin") or feat.get("_species_origin") or f"feat:{feat['index']}"
 
 
+def _followed_variants(feats: list[dict], raw_choices: dict) -> dict[str, str | None]:
+    """G5: {dependent feat index: variant slug} for the held feats that FOLLOW another held feat's spell list. A feat whose
+    effect entry has ``ability_from`` (RP5) and that has `spell_variants` of its own (Magic Connoisseur: "Choose a level 1
+    and a level 2 spell from the same list you selected for the Magic Initiate feat's cantrips") takes the list the base
+    feat picked; it then has no `:spell-variant` card of its own. The value is None while the base feat's list is not
+    picked yet (the dependent offers no spell cards until it is) or when the picked list is not one of the dependent's.
+    `raw_choices` is the union of the draft's raw selections (every cid is unique across classes / background / species).
+    Only the base's variant card is read; a base feat that is not held leaves the dependent with its own card."""
+    out: dict[str, str | None] = {}
+    for feat in feats:
+        base = feat_effects_mod.ability_from(feat_effects_data.FEAT_EFFECTS.get(feat.get("index")))
+        if not base or not feat.get("spell_variants") or feat["index"] in out:
+            continue
+        holders = [f for f in feats if f["index"] == base and f.get("spell_variants")]
+        if not holders:
+            continue
+        own = {slug(v) for v in feat["spell_variants"]}
+        picked = None
+        for holder in holders:
+            valid = [slug(v) for v in holder["spell_variants"]]
+            raw = raw_choices.get(f"{_feat_cid_prefix(holder)}:spell-variant")
+            picked = next((slug(x) for x in raw if isinstance(x, str) and slug(x) in valid), None) if isinstance(raw, list) else None
+            if picked:
+                break
+        out[feat["index"]] = picked if picked in own else None
+    return out
+
+
 def _feat_spell_ability(feat: dict, ability, choices: list[dict], feats=(), _follow: bool = True):
     """Resolves a feat's spellcasting ability for the sheet.
     - "inherit": the ability the feat increased (its :ability-bonus choice):
@@ -744,7 +772,8 @@ def _feat_spell_ability(feat: dict, ability, choices: list[dict], feats=(), _fol
     return {"choose": [o["id"].upper() for o in choice["options"]]}
 
 
-def _feat_innate_spells(feats: list[dict], catalog: Catalog, choices: list[dict], patches: dict | None = None) -> list[dict]:
+def _feat_innate_spells(feats: list[dict], catalog: Catalog, choices: list[dict], patches: dict | None = None,
+                        follow_variants: dict | None = None) -> list[dict]:
     """Sheet innate-spell entries granted by feats (fixed names), each
     tagged with its featId. Not filtered by character level, matching
     the race behaviour."""
@@ -754,6 +783,8 @@ def _feat_innate_spells(feats: list[dict], catalog: Catalog, choices: list[dict]
         prefix = _feat_cid_prefix(feat)
         variant_choice = by_id.get(f"{prefix}:spell-variant")
         chosen = slug(variant_choice["selected"][0]) if variant_choice and variant_choice.get("selected") else None
+        if feat["index"] in (follow_variants or {}):  # G5: the list is the base feat's (Magic Connoisseur)
+            chosen = follow_variants[feat["index"]]
 
         def applies(variant):
             return variant is None or slug(variant) == chosen
@@ -892,7 +923,7 @@ def _spell_filter_description(count: int, flt: dict):
 def _feat_spell_choice_templates(
     feats: list[dict], catalog: Catalog, origin: str | None = None,
     raw_selections: dict | None = None, variant_hints: dict | None = None, total_level: int = 0,
-    sources=None, ruleset: str = "mixed",
+    sources=None, ruleset: str = "mixed", follow_variants: dict | None = None,
 ) -> list[dict]:
     """Spell Choices for feats' `spell_choices` plus, for feats with
     mutually exclusive `spell_variants`, the variant picker
@@ -921,7 +952,13 @@ def _feat_spell_choice_templates(
             })
         chosen = None
         variants = feat.get("spell_variants") or []
-        if variants:
+        if variants and feat["index"] in (follow_variants or {}):
+            # G5: the list is the base feat's pick (`_followed_variants`): no card of its own, and no spell cards until
+            # the base feat has picked a list this feat offers.
+            chosen = follow_variants[feat["index"]]
+            if chosen is None:
+                continue
+        elif variants:
             hinted = variant_hints.get(feat["index"])
             offered = [v for v in variants if v == hinted] or variants
             options = []
@@ -5358,6 +5395,12 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         before_level=walk_hook, taken_before_cid=asi_taken_before_cid, after_feat=ea_lessons,
     )
     fs_feats, fs_taken_by_cid = fs_resolver.picks, fs_resolver.taken_by_cid
+    raw_all_choices: dict = {}  # G5: every raw selection of the draft (cids never collide across owners)
+    for rc_ in resolved_classes:
+        raw_all_choices.update(rc_["class_choices"])
+    raw_all_choices.update(bg_grant_choices_raw)
+    raw_all_choices.update(species_choices_raw)
+    variant_follow = _followed_variants(background_feats + species_feats + fs_feats + asi_feat_picks, raw_all_choices)
     lessons_feats = lessons_resolver.picks + ea_lessons.picks  # RP20: Lessons held through Eldritch Adept follow the Warlock's
     for dup in skipped_srd_styles:  # G1
         problems.append({
@@ -5606,14 +5649,14 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 choice_templates += _feat_choice_templates([lessons_feat], origin=lessons_feat["_asi_origin"], items=catalog.items, catalog=catalog, ruleset=ruleset)
                 choice_templates += _feat_spell_choice_templates(
                     [lessons_feat], catalog, origin=lessons_feat["_asi_origin"], raw_selections=rc_class_choices,
-                    total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
+                    total_level=total_level, sources=draft.get("sources"), ruleset=ruleset, follow_variants=variant_follow,
                 )
         for fs_feat in fs_feats:  # cascaded choices (Blessed / Druidic Warrior cantrips) under the pick's origin
             if fs_feat["_asi_origin"].startswith(f"class:{rc_cls_id}:"):
                 choice_templates += _feat_choice_templates([fs_feat], origin=fs_feat["_asi_origin"], items=catalog.items, catalog=catalog, ruleset=ruleset)
                 choice_templates += _feat_spell_choice_templates(
                     [fs_feat], catalog, origin=fs_feat["_asi_origin"], raw_selections=rc_class_choices,
-                    total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
+                    total_level=total_level, sources=draft.get("sources"), ruleset=ruleset, follow_variants=variant_follow,
                 )
         choice_templates += _asi_choice_templates(
             rc_cls_id, rc_cls["name"], rc_asi_levels, rc_asi_scores_by_level, catalog, total_level, use_feat_prereqs,
@@ -5645,7 +5688,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                         use_feat_prereqs, held)
                 choice_templates += _feat_spell_choice_templates(
                     [asi_feat], catalog, origin=asi_feat["_asi_origin"], raw_selections=rc_class_choices,
-                    total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
+                    total_level=total_level, sources=draft.get("sources"), ruleset=ruleset, follow_variants=variant_follow,
                 )
                 choice_templates += [  # FE2: options at the feat's cap read this level's running scores
                     tpl for tpl, _ in _feat_ability_bonus_choice_templates(
@@ -5817,7 +5860,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         background_feats, catalog,
         raw_selections=background_dict.get("choices") if isinstance(background_dict.get("choices"), dict) else {},
         variant_hints=(bg.get("feat_variant_hints") if bg else None) or {},
-        total_level=total_level, sources=draft.get("sources"), ruleset=ruleset,
+        total_level=total_level, sources=draft.get("sources"), ruleset=ruleset, follow_variants=variant_follow,
     )
     choice_templates += _feat_choice_templates(background_feats, items=catalog.items, catalog=catalog, ruleset=ruleset)  # ASI-selected feats' templates: built origin-scoped in the per-class loop
     # Phase 4c-ii Task 2: `feat_ability_choice_tpls` was already built (and
@@ -5834,7 +5877,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choice_templates += _feat_choice_templates([species_feat], origin=origin, items=catalog.items, catalog=catalog, ruleset=ruleset)
         choice_templates += _feat_spell_choice_templates(
             [species_feat], catalog, origin=origin, raw_selections=_origin_choices_raw(species_feat), total_level=total_level,
-            sources=draft.get("sources"), ruleset=ruleset,
+            sources=draft.get("sources"), ruleset=ruleset, follow_variants=variant_follow,
         )
     choice_templates += species_feat_ability_tpls
     if race and race_id:
@@ -6139,7 +6182,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         pruned += subclass_spells_2024.gate_improved_illusions(choices, catalog, [
             e["spellId"] for e in (_species_innate_spells(race, subrace, catalog, species_variant)
                                    + _species_trait_spell_choices(race, subrace, catalog, choices)
-                                   + _feat_innate_spells(resolved_feats, catalog, choices)) if e.get("spellId")])
+                                   + _feat_innate_spells(resolved_feats, catalog, choices, follow_variants=variant_follow)) if e.get("spellId")])
     selections_now = {c["id"]: c["selected"] for c in choices}
     for rc in resolved_classes:
         rc_cls, rc_cls_id = rc["cls"], rc["cls_id"]
@@ -6737,7 +6780,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     senses = features_mod.class_senses(senses, effects)  # RP2 Darkvision +60, Blindsight 30
     innate_spells = (_species_innate_spells(race, subrace, catalog, species_variant)
                      + _species_trait_spell_choices(race, subrace, catalog, choices)
-                     + _feat_innate_spells(resolved_feats, catalog, choices, feat_effects_mod.innate_patches(feat_inst, feat_numbers))
+                     + _feat_innate_spells(resolved_feats, catalog, choices, feat_effects_mod.innate_patches(feat_inst, feat_numbers), follow_variants=variant_follow)
                      + [{**_innate_entry_to_sheet(e, catalog), "featId": e["featId"], "source": e["source_label"], "note": e["note"]}  # RP19
                         for e in feat_spell_tables.adept_entries(resolved_feats, feat_spell_tables.highest_slot_level(spell_slots, warlock_slots))]
                      + [{**_innate_entry_to_sheet(e, catalog), "source": e["source_label"],
