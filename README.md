@@ -48,7 +48,8 @@ were bilingual). Any other value is a 400. Details: `docs/API.md`.
 
 `server/tests/test_i18n_completeness.py` checks all of these layers against each other (both languages complete, glossary
 and copy in step, no plain English left in `?lang=bg` output). `docs/I18N-REVIEW.md` lists the wordings the project owner
-should confirm. The overview with the test map and the known English leftovers is the "i18n" section of
+should confirm. `docs/TERMS-PROPOSAL.md` (generated) is a proposal table of the
+rules terms that are inconsistent or could be English or Bulgarian; it changes nothing by itself. The overview with the test map and the known English leftovers is the "i18n" section of
 `docs/superpowers/specs/ARCHITECTURE-CURRENT-STATE.md`.
 
 **Random names.** The dice button next to the character name on Home fills in a random Bulgarian name (first name and a
