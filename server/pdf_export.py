@@ -14,29 +14,13 @@ from pathlib import Path
 from fpdf import FPDF
 
 from catalog.reference_data import ABILITIES, LANGUAGE_NAMES, SKILL_NAMES, proficiency_label
-from export_fields import SPELL_PICK_LINES as _SPELL_PICK_LINES, extra_blocks, pack_contents_suffix, worn_wielded_line
+from export_fields import DETAIL_SECTIONS, SPELL_PICK_KEYS, extra_blocks, pack_contents_suffix, worn_wielded_line
+from export_labels import DEFAULT_LANG, check_lang, label, word
 
 _FONT_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
 _LANGUAGE_NAMES = LANGUAGE_NAMES
-_PROFICIENCY_SECTIONS = (("armor", "Брони"), ("weapons", "Оръжия"), ("tools", "Инструменти"))
-
-_DETAIL_SECTIONS = [
-    ("Данни за героя", [("alignment", "Мирогледие"), ("faith", "Вяра/Божество"), ("lifestyle", "Начин на живот")]),
-    ("Физически характеристики", [
-        ("age", "Възраст"), ("height", "Височина"), ("weight", "Тегло"),
-        ("eyes", "Очи"), ("skin", "Кожа"), ("hair", "Коса"),
-    ]),
-    ("Личност", [
-        ("personalityTraits", "Черти на характера"), ("ideals", "Идеали"),
-        ("bonds", "Връзки"), ("flaws", "Слабости"),
-    ]),
-    ("Бележки", [
-        ("backstory", "Предистория"), ("organizations", "Организации"),
-        ("allies", "Съюзници"), ("enemies", "Врагове"), ("notes", "Допълнителни бележки"),
-    ]),
-]
-
-_EQUIPMENT_SECTIONS = [("granted", "Получена екипировка"), ("chosen", "Избрана екипировка"), ("added", "Инвентар")]
+_PROFICIENCY_SECTIONS = (("armor", "profArmor"), ("weapons", "profWeapons"), ("tools", "profTools"))
+_EQUIPMENT_SECTIONS = [("granted", "equipGranted"), ("chosen", "equipChosen"), ("added", "equipAdded")]
 
 
 def _fmt_mod(n: int) -> str:
@@ -60,7 +44,7 @@ def _class_label(classes: list) -> str:
     parts = []
     for c in classes:
         # Single-class drafts keep the plain name (the level is already
-        # shown once, in the "Ниво N" prefix); a multiclass draft's level
+        # shown once, in the level prefix); a multiclass draft's level
         # line covers only the total, so each class here carries its own.
         part = c["name"] if len(classes) == 1 else f"{c['name']} {c['level']}"
         if c.get("subclass"):
@@ -69,13 +53,13 @@ def _class_label(classes: list) -> str:
     return " / ".join(parts)
 
 
-def _fmt_spell_slots(slots: dict) -> str:
+def _fmt_spell_slots(slots: dict, lang: str) -> str:
     """Mirrors markdown_export._fmt_spell_slots exactly (duplicated per
     this file's established convention) — slots is
     derived["spellSlots"]/["warlockSpellSlots"], a dict of only the
     nonzero slot levels keyed by level as a string."""
     ordered = sorted(slots, key=int)
-    return ", ".join(f"ниво {lvl}: {slots[lvl]}" for lvl in ordered)
+    return ", ".join(label(lang, "slotLevel", lvl=lvl, n=slots[lvl]) for lvl in ordered)
 
 
 class _SheetPDF(FPDF):
@@ -111,7 +95,9 @@ class _SheetPDF(FPDF):
         self.multi_cell(0, 6, f"• {text}", new_x="LMARGIN", new_y="NEXT")
 
 
-def to_pdf(resolution: dict) -> bytes:
+def to_pdf(resolution: dict, lang: str = DEFAULT_LANG) -> bytes:
+    """The character sheet as a PDF in `lang` ("bg", the default, or "en"). DejaVu Sans draws both scripts."""
+    check_lang(lang)
     sheet = resolution["sheet"]
     derived = resolution["derived"]
     pdf = _SheetPDF()
@@ -121,96 +107,86 @@ def to_pdf(resolution: dict) -> bytes:
 
     class_label = _class_label(classes)
 
-    pdf.h1(sheet["name"] or "Безименен герой")
+    pdf.h1(sheet["name"] or label(lang, "unnamed"))
     pdf.body(
-        f"Ниво {sheet['level']} {class_label}  |  "
-        f"Произход: {bg['name'] if bg else '—'}  |  "
-        f"Раса: {_species_label(sheet['species'])}"
+        f"{label(lang, 'level', level=sheet['level'])} {class_label}  |  "
+        f"{label(lang, 'background')}: {bg['name'] if bg else '—'}  |  "
+        f"{label(lang, 'species')}: {_species_label(sheet['species'])}"
     )
 
-    pdf.h2("Бойни показатели")
+    pdf.h2(label(lang, "secCombat"))
     hit_dice = derived["hitDice"] if derived["hitDice"] is not None else "—"
-    speed = f"{derived['speed']} фута" if derived["speed"] is not None else "—"
+    speed = label(lang, "feet", n=derived["speed"]) if derived["speed"] is not None else "—"
     pdf.body(
-        f"Клас броня (AC): {derived['armorClass']}\n"
-        f"Точки живот: {derived['hitPointMax']} ({hit_dice})\n"
-        f"Скорост: {speed}\n"
-        f"Инициатива: {_fmt_mod(derived['initiative'])}\n"
-        f"Пасивно възприятие: {derived['passivePerception']}\n"
-        f"Пасивна проницателност: {derived['passiveInsight']}\n"
-        f"Пасивно разследване: {derived['passiveInvestigation']}\n"
-        f"Бонус за умение: {_fmt_mod(derived['proficiencyBonus'])}"
+        f"{label(lang, 'armorClass')}: {derived['armorClass']}\n"
+        f"{label(lang, 'hitPoints')}: {derived['hitPointMax']} ({hit_dice})\n"
+        f"{label(lang, 'speed')}: {speed}\n"
+        f"{label(lang, 'initiative')}: {_fmt_mod(derived['initiative'])}\n"
+        f"{label(lang, 'passivePerception')}: {derived['passivePerception']}\n"
+        f"{label(lang, 'passiveInsight')}: {derived['passiveInsight']}\n"
+        f"{label(lang, 'passiveInvestigation')}: {derived['passiveInvestigation']}\n"
+        f"{label(lang, 'proficiencyBonus')}: {_fmt_mod(derived['proficiencyBonus'])}"
     )
 
-    pdf.h2("Характеристики")
+    pdf.h2(label(lang, "secAbilities"))
     scores = sheet["abilities"]
     mods = derived["abilityModifiers"]
     pdf.body("   ".join(f"{ab} {scores[ab]} ({_fmt_mod(mods[ab])})" for ab in ABILITIES))
 
-    pdf.h2("Спасителни хвърляния")
+    pdf.h2(label(lang, "secSaves"))
     saves = derived["savingThrows"]
     proficient_saves = sheet["proficiencies"]["savingThrows"]
     pdf.body("   ".join(
         f"{'●' if ab in proficient_saves else '○'} {ab} {_fmt_mod(saves[ab])}" for ab in ABILITIES
     ))
 
-    pdf.h2("Умения")
+    pdf.h2(label(lang, "secSkills"))
     skills = derived["skills"]
     proficient_skills = sheet["proficiencies"]["skills"]
     expertise = sheet.get("expertiseSkills") or []
     for skill_id in sorted(skills, key=lambda sid: SKILL_NAMES.get(sid, sid)):
         marker = "●" if skill_id in proficient_skills else "○"
-        tag = " (експертиза)" if skill_id in expertise else ""
+        tag = f" {label(lang, 'expertiseTag')}" if skill_id in expertise else ""
         pdf.bullet(f"{marker} {SKILL_NAMES.get(skill_id, skill_id)}: {_fmt_mod(skills[skill_id])}{tag}")
 
-    pdf.h2("Езици")
+    pdf.h2(label(lang, "secLanguages"))
     languages = sheet["proficiencies"]["languages"]
     pdf.body(", ".join(_LANGUAGE_NAMES.get(lang_id, lang_id) for lang_id in languages) if languages else "—")
 
-    pdf.h2("Владеене")
+    pdf.h2(label(lang, "secProficiencies"))
     any_prof = False
-    for key, label in _PROFICIENCY_SECTIONS:
+    for key, label_key in _PROFICIENCY_SECTIONS:
         entries = sheet["proficiencies"].get(key) or []
         if entries:
             any_prof = True
-            pdf.body(f"{label}: " + ", ".join(proficiency_label(e) for e in entries))
+            pdf.body(f"{label(lang, label_key)}: " + ", ".join(proficiency_label(e) for e in entries))
     if not any_prof:
         pdf.body("—")
 
     equipment = sheet["equipment"]
-    pdf.h2("Екипировка")
+    pdf.h2(label(lang, "secEquipment"))
     any_equipment = False
-    for key, label in _EQUIPMENT_SECTIONS:
+    for key, label_key in _EQUIPMENT_SECTIONS:
         entries = equipment[key]
         if not entries:
             continue
         any_equipment = True
-        pdf.h3(label)
+        pdf.h3(label(lang, label_key))
         for e in entries:
             qty_tag = f" x{e['qty']}" if e.get("qty", 1) != 1 else ""
-            equipped_tag = " (екипиран)" if e.get("equipped") else ""
-            pdf.bullet(f"{e['name']}{qty_tag}{equipped_tag}{pack_contents_suffix(e)}")
-    line = worn_wielded_line(sheet)
+            equipped_tag = f" {label(lang, 'equipped')}" if e.get("equipped") else ""
+            pdf.bullet(f"{e['name']}{qty_tag}{equipped_tag}{pack_contents_suffix(e, lang)}")
+    line = worn_wielded_line(sheet, lang)
     if line:
         any_equipment = True
         pdf.body(line)
     if not any_equipment:
         pdf.body("—")
 
-    # sheet["spells"] is a list with one entry per class that has
-    # spellcasting this level (multiclass-aware as of the Phase 3b-i
-    # final-review fix — a single-class caster still gets a one-entry
-    # list). Each entry now carries its OWN spellSaveDC/spellAttackBonus
-    # (Phase 3b-ii — a multiclass character's casters each use their own
-    # spellcasting ability), so these are shown once per caster, labeled,
-    # rather than once at the top as before. derived["spellSlots"] is the
-    # single shared pool across every non-Warlock caster;
-    # derived["warlockSpellSlots"] is Warlock's own separate Pact Magic
-    # pool — both are character-wide, not per-caster, so they're shown
-    # once each, after the per-caster DC/attack lines.
+    # sheet["spells"]: one entry per spellcasting class (see markdown_export.to_markdown for the layout notes).
     spells = sheet["spells"]
     if spells:
-        pdf.h2("Заклинания")
+        pdf.h2(label(lang, "secSpells"))
         class_names = {c["id"]: c["name"] for c in classes}
         multi_caster = len(spells) > 1
         for class_spells in spells:
@@ -218,56 +194,56 @@ def to_pdf(resolution: dict) -> bytes:
             save_dc = class_spells["spellSaveDC"]
             if save_dc is not None:
                 pdf.body(
-                    f"Спасяване за заклинание (DC){suffix}: {save_dc}   "
-                    f"Бонус за атака{suffix}: {_fmt_mod(class_spells['spellAttackBonus'])}"
+                    f"{label(lang, 'spellSaveDc')}{suffix}: {save_dc}   "
+                    f"{label(lang, 'spellAttackBonus')}{suffix}: {_fmt_mod(class_spells['spellAttackBonus'])}"
                 )
         spell_slots = derived["spellSlots"]
         if spell_slots:
-            pdf.body(f"Spell Slots: {_fmt_spell_slots(spell_slots)}")
+            pdf.body(f"{label(lang, 'spellSlots')}: {_fmt_spell_slots(spell_slots, lang)}")
         warlock_slots = derived["warlockSpellSlots"]
         if warlock_slots:
-            pdf.body(f"Pact Magic Slots: {_fmt_spell_slots(warlock_slots)}")
+            pdf.body(f"{label(lang, 'pactSlots')}: {_fmt_spell_slots(warlock_slots, lang)}")
         for class_spells in spells:
             suffix = f" ({class_names.get(class_spells['classId'], class_spells['classId'])})" if multi_caster else ""
             if class_spells["cantrips"]:
-                pdf.h3(f"Трикове{suffix}")
+                pdf.h3(f"{label(lang, 'cantrips')}{suffix}")
                 for s in class_spells["cantrips"]:
                     pdf.bullet(s["name"])
             if class_spells.get("spellbook"):
-                book = ", ".join(f"{s['name']} (ниво {s['level']})" for s in class_spells["spellbook"])
-                pdf.body(f"Книга със заклинания{suffix}: {book}")
+                book = ", ".join(f"{s['name']} ({label(lang, 'spellLevel', lvl=s['level'])})" for s in class_spells["spellbook"])
+                pdf.body(f"{label(lang, 'spellbook')}{suffix}: {book}")
             if class_spells["known"]:
-                pdf.h3(f"Известни/Подготвени заклинания{suffix}")
+                pdf.h3(f"{label(lang, 'preparedSpells')}{suffix}")
                 for s in class_spells["known"]:
-                    pdf.bullet(f"{s['name']} (ниво {s['level']})")
+                    pdf.bullet(f"{s['name']} ({label(lang, 'spellLevel', lvl=s['level'])})")
             if class_spells.get("mysticArcanum"):
-                arcanum = ", ".join(f"{m['name']} (ниво {m['level']})" for m in class_spells["mysticArcanum"])
-                pdf.body(f"Мистичен арканум{suffix}: {arcanum}")
-            for key, label in _SPELL_PICK_LINES:  # C6d: Wizard 18 / 20 picks
+                arcanum = ", ".join(f"{m['name']} ({label(lang, 'spellLevel', lvl=m['level'])})" for m in class_spells["mysticArcanum"])
+                pdf.body(f"{label(lang, 'mysticArcanum')}{suffix}: {arcanum}")
+            for key in SPELL_PICK_KEYS:  # C6d: Wizard 18 / 20 picks
                 if class_spells.get(key):
-                    picked = ", ".join(f"{s['name']} (ниво {s['level']})" for s in class_spells[key])
-                    pdf.body(f"{label}{suffix}: {picked}")
+                    picked = ", ".join(f"{s['name']} ({label(lang, 'spellLevel', lvl=s['level'])})" for s in class_spells[key])
+                    pdf.body(f"{label(lang, key)}{suffix}: {picked}")
 
     innate = sheet.get("innateSpells") or []
     if innate:
-        pdf.h2("Вродени заклинания")
+        pdf.h2(label(lang, "secInnate"))
         for e in innate:
-            level = f", от ниво {e['level']}" if e.get("level") else ""
+            level = label(lang, "innateFromLevel", level=e["level"]) if e.get("level") else ""
             note = f" - {e['note']}" if e.get("note") else ""  # RP5
             pdf.bullet(f"{e['name']} ({e.get('uses', '')}{level}){note}")
 
-    for kind, text in extra_blocks(resolution):
+    for kind, text in extra_blocks(resolution, lang):
         {"h2": pdf.h2, "h3": pdf.h3, "bullet": pdf.bullet, "body": pdf.body}[kind](text)
 
     details = sheet["details"]
     if details:
-        for section_label, fields in _DETAIL_SECTIONS:
-            present = [(label, details[key]) for key, label in fields if key in details]
+        for section_key, field_keys in DETAIL_SECTIONS:
+            present = [(word(lang, "detailFields", key), details[key]) for key in field_keys if key in details]
             if not present:
                 continue
-            pdf.h2(section_label)
-            for label, value in present:
-                pdf.h3(f"{label}:")
+            pdf.h2(word(lang, "detailSections", section_key))
+            for field_label, value in present:
+                pdf.h3(f"{field_label}:")
                 pdf.body(value)
                 pdf.ln(1)
 

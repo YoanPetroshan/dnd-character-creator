@@ -6,6 +6,7 @@ import pytest
 from pypdf import PdfReader
 
 import export_fields
+from export_labels import LABELS
 from catalog.loader import load
 from catalog.reference_data import LANGUAGE_NAMES, SKILL_NAMES
 from engine.resolve import resolve
@@ -303,10 +304,10 @@ def _expected_strings(res) -> list[tuple[str, str]]:
             out.append(("mastery suffix", f"майсторство {a['mastery']}"))
     out += [("language", LANGUAGE_NAMES.get(lang, lang)) for lang in sheet["proficiencies"]["languages"]]  # F3b: C6b-2 / C8
     for cs in sheet["spells"]:  # C6d: Wizard 18 / 20 picks
-        for key, heading in export_fields.SPELL_PICK_LINES:
+        for key in export_fields.SPELL_PICK_KEYS:
             out += [(key, s["name"]) for s in cs.get(key) or []]
             if cs.get(key):
-                out.append((key + " heading", heading))
+                out.append((key + " heading", LABELS["bg"][key]))
     for key in ("granted", "chosen", "added"):  # C9b: package quantities
         for e in sheet["equipment"][key]:
             out.append(("equipment", e["name"] + (f" x{e['qty']}" if e.get("qty", 1) != 1 else "")))

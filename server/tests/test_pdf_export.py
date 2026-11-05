@@ -312,7 +312,7 @@ def test_detail_and_equipment_sections_match_markdown_export():
 
     import pdf_export
 
-    assert pdf_export._DETAIL_SECTIONS == markdown_export._DETAIL_SECTIONS
+    assert pdf_export.DETAIL_SECTIONS == markdown_export.DETAIL_SECTIONS
     assert pdf_export._EQUIPMENT_SECTIONS == markdown_export._EQUIPMENT_SECTIONS
 
 

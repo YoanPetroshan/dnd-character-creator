@@ -7,6 +7,11 @@ describe("safeFilename", () => {
     expect(safeFilename("", "yaml")).toBe("character.yaml");
     expect(safeFilename(undefined, "md")).toBe("character.md");
   });
+  it("takes the language's fallback word", () => {
+    expect(safeFilename("", "pdf", "герой")).toBe("герой.pdf");
+    expect(safeFilename(undefined, "md", "character")).toBe("character.md");
+    expect(safeFilename("Hero", "md", "герой")).toBe("Hero.md");
+  });
   it("replaces every character that is unsafe in a file name", () => {
     expect(safeFilename('a\\b/c:d*e?f"g<h>i|j', "pdf")).toBe("a_b_c_d_e_f_g_h_i_j.pdf");
   });

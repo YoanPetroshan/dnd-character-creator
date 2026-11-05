@@ -590,6 +590,8 @@ export const bg = {
 
   exportPage: {
     title: "Export",
+    /** File name of an unnamed hero (the server's export uses the same word per language). */
+    fileFallback: "герой",
     problems: "Problems",
     unresolved: "Unresolved choices",
     attacks: "Attacks",

@@ -1,7 +1,8 @@
-/** A file name safe on common file systems: the user's name (or "character")
+/** A file name safe on common file systems: the user's name (or `fallback`, the
+ *  language's word for a character: "character" / "герой")
  *  with \ / : * ? " < > | replaced by "_", plus the extension. */
-export function safeFilename(name: string | undefined, extension: string): string {
-  return `${(name || "character").replace(/[\\/:*?"<>|]/g, "_")}.${extension}`;
+export function safeFilename(name: string | undefined, extension: string, fallback = "character"): string {
+  return `${(name || fallback).replace(/[\\/:*?"<>|]/g, "_")}.${extension}`;
 }
 
 /** Click a temporary link to download the blob. */

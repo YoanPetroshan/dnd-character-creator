@@ -25,7 +25,7 @@ export function HomePage() {
 
   async function downloadDraft() {
     const blob = new Blob([JSON.stringify(draft, null, 2)], { type: "application/json" });
-    await shareOrDownload(blob, safeFilename(draft.name, "draft.json"), "application/json");
+    await shareOrDownload(blob, safeFilename(draft.name, "draft.json", t.exportPage.fileFallback), "application/json");
   }
 
   async function exportAll() {

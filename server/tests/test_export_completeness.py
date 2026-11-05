@@ -27,6 +27,7 @@ from pypdf import PdfReader
 
 import export_fields
 import pdf_export
+from export_labels import LABELS, label, word
 from catalog.loader import load
 from catalog.reference_data import LANGUAGE_NAMES, SKILL_NAMES, proficiency_label
 from engine.resolve import resolve
@@ -76,53 +77,62 @@ EXPORT_OMITTED: dict[str, str] = {
     "sheet.spells.[].cantrips.[].level": "implied: cantrips are listed under the 'Трикове' heading, level 0 by definition",
 }
 
-# A value the exporters print through a lookup/translation instead of verbatim: pattern -> value -> printed alternatives.
-_DMG = export_fields._DAMAGE_NAMES_BG
+# Everything below depends on the export language: the words come from export_labels (XL), never from literals.
+LANGS = ("bg", "en")
 
 
-def _recharge(v):
-    return [export_fields._RECHARGE_WORDS[v]]
+def _recharge(lang):
+    return lambda v: [LABELS[lang]["recharge"][v]]
 
 
-FORMATTED = {
-    "sheet.expertiseSkills.[]": lambda v: [export_fields.expertise_label(v)],
-    "sheet.proficiencies.skills.[]": lambda v: [SKILL_NAMES.get(v, v)],
-    "sheet.proficiencies.languages.[]": lambda v: [LANGUAGE_NAMES.get(v, v)],
-    "sheet.proficiencies.armor.[]": lambda v: [proficiency_label(v)],
-    "sheet.proficiencies.weapons.[]": lambda v: [proficiency_label(v)],
-    "sheet.proficiencies.tools.[]": lambda v: [proficiency_label(v)],
-    "derived.classResources.[].recharge": _recharge,
-    "derived.featResources.[].recharge": _recharge,
-    "derived.speciesResources.[].recharge": _recharge,
-    "derived.classResources.[].details.resistances.[]":
-        lambda v: [_DMG.get(v, v), "съпротива: всички видове щета освен психична"],
-}
+def formatted(lang: str) -> dict:
+    """A value the exporters print through a lookup/translation instead of verbatim: pattern -> value -> printed alternatives."""
+    dmg = LABELS[lang]["damage"]
+    return {
+        "sheet.expertiseSkills.[]": lambda v: [export_fields.expertise_label(v)],
+        "sheet.proficiencies.skills.[]": lambda v: [SKILL_NAMES.get(v, v)],
+        "sheet.proficiencies.languages.[]": lambda v: [LANGUAGE_NAMES.get(v, v)],
+        "sheet.proficiencies.armor.[]": lambda v: [proficiency_label(v)],
+        "sheet.proficiencies.weapons.[]": lambda v: [proficiency_label(v)],
+        "sheet.proficiencies.tools.[]": lambda v: [proficiency_label(v)],
+        "derived.classResources.[].recharge": _recharge(lang),
+        "derived.featResources.[].recharge": _recharge(lang),
+        "derived.speciesResources.[].recharge": _recharge(lang),
+        "derived.classResources.[].details.resistances.[]": lambda v: [dmg.get(v, v), label(lang, "resAll")],
+    }
 
-# A True flag that the exporters print as a fixed phrase.
-FLAG_TEXT = {
-    "derived.stealthDisadvantage": "Недостатък при Скритост",
-    "derived.carryingCapacity.overCapacity": "претоварен",
-    "sheet.equipment.*.[].equipped": "(екипиран)",
-    "derived.classResources.[].unlimited": "без ограничение",
-    "derived.classResources.[].details.fly": "летене",
-    "derived.classResources.[].details.swim": "плуване",
-    "derived.classResources.[].details.onShortRest": "при кратка почивка",
-    "derived.classResources.[].details.bonusActionRegainsOne": "бонус действие: връща 1 зар",
-}
 
-# Scalars checked against the exact label the exporters print: path -> printed template.
-STRICT_SCALARS = {
-    "derived.armorClass": "Клас броня (AC): {}",
-    "derived.hitPointMax": "Точки живот: {}",
-    "derived.speed": "Скорост: {} фута",
-    "derived.passivePerception": "Пасивно възприятие: {}",
-    "derived.passiveInsight": "Пасивна проницателност: {}",
-    "derived.passiveInvestigation": "Пасивно разследване: {}",
-    "derived.carryingCapacity.carried": "Носимост {}/",
-    "derived.carryingCapacity.capacity": "/{} lb",
-    "sheet.level": "Ниво {}",
-    "sheet.startingGold": "Начално злато: {} зл.",
-}
+def flag_text(lang: str) -> dict:
+    """A True flag that the exporters print as a fixed phrase."""
+    return {
+        "derived.stealthDisadvantage": label(lang, "stealthDisadvantage"),
+        "derived.carryingCapacity.overCapacity": label(lang, "overCapacity").strip(" ()"),
+        "sheet.equipment.*.[].equipped": label(lang, "equipped"),
+        "derived.classResources.[].unlimited": label(lang, "unlimited"),
+        "derived.classResources.[].details.fly": word(lang, "modes", "fly"),
+        "derived.classResources.[].details.swim": word(lang, "modes", "swim"),
+        "derived.classResources.[].details.onShortRest": label(lang, "onShortRest"),
+        "derived.classResources.[].details.bonusActionRegainsOne": label(lang, "bonusActionRegainsOne"),
+    }
+
+
+def strict_scalars(lang: str) -> dict:
+    """Scalars checked against the exact label the exporters print: path -> printed template."""
+    return {
+        "derived.armorClass": label(lang, "armorClass") + ": {}",
+        "derived.hitPointMax": label(lang, "hitPoints") + ": {}",
+        "derived.speed": label(lang, "speed") + ": " + label(lang, "feet", n="{}"),
+        "derived.passivePerception": label(lang, "passivePerception") + ": {}",
+        "derived.passiveInsight": label(lang, "passiveInsight") + ": {}",
+        "derived.passiveInvestigation": label(lang, "passiveInvestigation") + ": {}",
+        "derived.carryingCapacity.carried": label(lang, "secCarrying") + " {}/",
+        "derived.carryingCapacity.capacity": "/{} lb",
+        "sheet.level": label(lang, "level", level="{}"),
+        "sheet.startingGold": label(lang, "startingGold", n="{}"),
+    }
+
+
+FORMATTED, FLAG_TEXT, STRICT_SCALARS = formatted("bg"), flag_text("bg"), strict_scalars("bg")  # the keys are language independent
 # Numbers the exporters leave out because they are the default: pattern -> the value that is implied.
 IMPLIED_NUMBER = {"**.qty": 1}  # quantity 1 prints no 'x1' tag
 
@@ -186,13 +196,14 @@ def _has_number(text: str, value, name: str | None) -> bool:
     return bool(token.search(text))
 
 
-def _pdf_text(res) -> str:
-    return _norm("\n".join(p.extract_text() for p in PdfReader(io.BytesIO(to_pdf(res))).pages))
+def _pdf_text(res, lang="bg") -> str:
+    return _norm("\n".join(p.extract_text() for p in PdfReader(io.BytesIO(to_pdf(res, lang))).pages))
 
 
-def audit(res: dict) -> tuple[list[str], set[str]]:
-    """(failures, every leaf path seen) for one resolution."""
-    md, pdf = _norm(to_markdown(res).replace("**", "")), _pdf_text(res)
+def audit(res: dict, lang: str = "bg") -> tuple[list[str], set[str]]:
+    """(failures, every leaf path seen) for one resolution, exported in `lang`."""
+    md, pdf = _norm(to_markdown(res, lang).replace("**", "")), _pdf_text(res, lang)
+    FORMATTED, FLAG_TEXT, STRICT_SCALARS = formatted(lang), flag_text(lang), strict_scalars(lang)
     failures, seen = [], set()
     for section in ("sheet", "derived"):
         for path, value, parent in _leaves_with_parent(res[section], [section]):
@@ -253,19 +264,20 @@ def _resolution(sid, catalog):
     return _RES[sid]
 
 
-_AUDITS: dict[str, tuple[list[str], set[str]]] = {}
+_AUDITS: dict[tuple[str, str], tuple[list[str], set[str]]] = {}
 
 
-def _audit(sid, catalog):
-    if sid not in _AUDITS:
-        _AUDITS[sid] = audit(_resolution(sid, catalog))
-    return _AUDITS[sid]
+def _audit(sid, catalog, lang="bg"):
+    if (sid, lang) not in _AUDITS:
+        _AUDITS[sid, lang] = audit(_resolution(sid, catalog), lang)
+    return _AUDITS[sid, lang]
 
 
+@pytest.mark.parametrize("lang", LANGS)
 @pytest.mark.parametrize("sid", list(ALL_SPECS))
-def test_every_sheet_and_derived_leaf_reaches_markdown_and_pdf(catalog, sid):
-    failures, _ = _audit(sid, catalog)
-    assert not failures, f"{sid}:\n" + "\n".join(sorted(set(failures))[:40])
+def test_every_sheet_and_derived_leaf_reaches_markdown_and_pdf(catalog, sid, lang):
+    failures, _ = _audit(sid, catalog, lang)
+    assert not failures, f"{sid} [{lang}]:\n" + "\n".join(sorted(set(failures))[:40])
 
 
 def test_export_omitted_has_no_stale_entries(catalog):
@@ -282,11 +294,12 @@ def test_export_omitted_has_no_stale_entries(catalog):
     assert all(isinstance(r, str) and ": " in r for r in EXPORT_OMITTED.values())
 
 
-def test_the_audit_catches_a_missing_leaf(catalog):
+@pytest.mark.parametrize("lang", LANGS)
+def test_the_audit_catches_a_missing_leaf(catalog, lang):
     """The audit must fail on a value that no exporter prints."""
     res = _resolution("monk14", catalog)
     broken = {"sheet": res["sheet"], "derived": {**res["derived"], "carryingCapacity": {**res["derived"]["carryingCapacity"], "invented": "Zzyzx-Marker"}}}
-    failures, _ = audit({**res, **broken})
+    failures, _ = audit({**res, **broken}, lang)
     assert any("Zzyzx-Marker" in f for f in failures)
 
 
@@ -315,18 +328,19 @@ class _CellSpy:
         monkeypatch.setattr(pdf_export.FPDF, "cell", cell)
 
 
+@pytest.mark.parametrize("lang", LANGS)
 @pytest.mark.parametrize("sid", list(LONG_DRAFTS))
-def test_long_drafts_span_pages_without_cut_or_dropped_lines(catalog, sid, monkeypatch, caplog):
+def test_long_drafts_span_pages_without_cut_or_dropped_lines(catalog, sid, lang, monkeypatch, caplog):
     res = _resolution(sid, catalog)
     spy = _CellSpy(monkeypatch)
     with caplog.at_level("WARNING"):
-        data = to_pdf(res)
+        data = to_pdf(res, lang)
     pages = PdfReader(io.BytesIO(data)).pages
     assert len(pages) >= 2, "a long draft should span several pages"
     assert "glyph" not in caplog.text.lower(), caplog.text
     assert not spy.overflow, spy.overflow
     text = _norm("\n".join(p.extract_text() for p in pages))
-    names = [export_fields.resource_line(r) for key in ("classResources", "featResources", "speciesResources")
+    names = [export_fields.resource_line(r, lang) for key in ("classResources", "featResources", "speciesResources")
              for r in res["derived"][key]]
     for cs in res["sheet"]["spells"]:
         for key in ("cantrips", "known", "spellbook", "mysticArcanum", "spellMastery", "signatureSpells", "pactOfTheTome"):
@@ -337,27 +351,30 @@ def test_long_drafts_span_pages_without_cut_or_dropped_lines(catalog, sid, monke
     assert not missing, missing[:10]
 
 
+@pytest.mark.parametrize("lang", LANGS)
 @pytest.mark.parametrize("sid", list(KITCHEN_SINK))
-def test_no_cell_runs_past_the_page_edge(catalog, sid, monkeypatch):
+def test_no_cell_runs_past_the_page_edge(catalog, sid, lang, monkeypatch):
     spy = _CellSpy(monkeypatch)
-    to_pdf(_resolution(sid, catalog))
+    to_pdf(_resolution(sid, catalog), lang)
     assert not spy.overflow, spy.overflow
 
 
-def test_long_user_text_in_headings_does_not_run_off_the_page(catalog, monkeypatch):
+@pytest.mark.parametrize("lang", LANGS)
+def test_long_user_text_in_headings_does_not_run_off_the_page(catalog, lang, monkeypatch):
     res = _resolution("monk14", catalog)
     res = {**res, "sheet": {**res["sheet"], "name": "Дългото име на един герой, който просто не иска да свърши никога " * 2}}
     spy = _CellSpy(monkeypatch)
-    to_pdf(res)
+    to_pdf(res, lang)
     assert not spy.overflow, spy.overflow
 
 
+@pytest.mark.parametrize("lang", LANGS)
 @pytest.mark.parametrize("sid", list(LONG_DRAFTS) + ["monk14"])
-def test_special_characters_render_in_long_drafts(catalog, sid, caplog):
+def test_special_characters_render_in_long_drafts(catalog, sid, lang, caplog):
     res = _resolution(sid, catalog)
     res = {**res, "sheet": {**res["sheet"], "name": "Дракон × Герой’s – Ъгъл"}}
     with caplog.at_level("WARNING"):
-        text = _pdf_text(res)
+        text = _pdf_text(res, lang)
     assert "glyph" not in caplog.text.lower(), caplog.text
     assert "дракон × герой’s – ъгъл" in text
 

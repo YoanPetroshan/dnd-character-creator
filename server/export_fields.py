@@ -1,4 +1,4 @@
-"""The single field list and Bulgarian text blocks shared by the YAML,
+"""The single field list and the text blocks (Bulgarian or English, words from export_labels) shared by the YAML,
 Markdown and PDF exporters, so a field added to resolve()'s `sheet`/`derived`
 shows up in all three (tests/test_export_fields.py fails when a key is in
 neither list below).
@@ -16,6 +16,7 @@ neither list below).
 from __future__ import annotations
 
 from catalog.reference_data import SKILL_NAMES, proficiency_label
+from export_labels import DEFAULT_LANG, LABELS, label, word
 
 SHEET_FIELDS: list[tuple[str, object]] = [
     ("name", ""), ("level", 0), ("classes", []), ("background", None), ("species", None),
@@ -51,12 +52,14 @@ def yaml_document(resolution: dict) -> dict:
     return doc
 
 
-_MODE_NAMES = {"walk": "ходене", "fly": "летене", "swim": "плуване", "climb": "катерене", "burrow": "ровене"}
-_SENSE_NAMES = {
-    "darkvision": "тъмно зрение", "blindsight": "сляпо зрение",
-    "tremorsense": "усещане за вибрации", "truesight": "истинско зрение", "devilsSight": "дяволско зрение",
-}
-_DAMAGE_SECTIONS = (("resistances", "Устойчивост"), ("immunities", "Имунитет"), ("vulnerabilities", "Уязвимост"))
+# Detail sections of the character sheet: (section key, field keys); the words are export_labels' detailSections / detailFields.
+DETAIL_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("identity", ("alignment", "faith", "lifestyle")),
+    ("physical", ("age", "height", "weight", "eyes", "skin", "hair")),
+    ("personality", ("personalityTraits", "ideals", "bonds", "flaws")),
+    ("notes", ("backstory", "organizations", "allies", "enemies", "notes")),
+)
+_DAMAGE_SECTIONS = (("resistances", "dmgResistances"), ("immunities", "dmgImmunities"), ("vulnerabilities", "dmgVulnerabilities"))
 
 
 def _title(slug: str) -> str:
@@ -68,105 +71,95 @@ def expertise_label(entry: str) -> str:
 
 
 # X2: `turn` / `combat` / `rage` are non-rest limits ("once per turn" ...), `other` points at the condition in the note.
-_RECHARGE_WORDS = {"long": "дълга почивка", "short": "кратка почивка", "short-or-long": "кратка или дълга почивка",
-                   "turn": "на ход", "combat": "на битка", "rage": "на ярост", "other": "виж бележката"}
+_RECHARGE_WORDS = LABELS["bg"]["recharge"]  # the Bulgarian words (tests compare them with the frontend copy)
+
+# C6d / C7c: Wizard 18 / 20 and Pact of the Tome spell picks printed under the class's spells: the key on the
+# sheet.spells entry, which is also the export_labels key of the line's label.
+SPELL_PICK_KEYS = ("spellMastery", "signatureSpells", "pactOfTheTome")  # C7c: Warlock Pact of the Tome
 
 
-_DAMAGE_NAMES_BG = {
-    "acid": "киселинни", "bludgeoning": "дробящи", "cold": "студени", "fire": "огнени", "force": "силови",
-    "lightning": "мълниеносни", "necrotic": "некротични", "piercing": "пробождащи", "poison": "отровни",
-    "psychic": "психични", "radiant": "лъчисти", "slashing": "режещи", "thunder": "гръмотевични",
-}
-
-
-# C6d / C7c: Wizard 18 / 20 and Pact of the Tome spell picks printed under the class's spells (key on the sheet.spells entry, label).
-SPELL_PICK_LINES = (("spellMastery", "Майсторство със заклинания"), ("signatureSpells", "Запазени заклинания"),
-                    ("pactOfTheTome", "Книга на сенките"))  # C7c: Warlock Pact of the Tome
-
-
-def resource_detail_parts(details: dict | None) -> list[str]:
-    """Short Bulgarian fragments for a class resource's `details` (only what is meaningful)."""
+def resource_detail_parts(details: dict | None, lang: str = DEFAULT_LANG) -> list[str]:
+    """Short fragments for a class resource's `details` (only what is meaningful), in `lang`."""
     d = details or {}
     parts: list[str] = []
     res = d.get("resistances")
     if res:
-        if len(res) == len(_DAMAGE_NAMES_BG) - 1 and "psychic" not in res:
-            parts.append("съпротива: всички видове щета освен психична")
+        if len(res) == len(LABELS[lang]["damage"]) - 1 and "psychic" not in res:
+            parts.append(label(lang, "resAll"))
         else:
-            parts.append("съпротива: " + ", ".join(_DAMAGE_NAMES_BG.get(t, t) for t in res))
+            parts.append(label(lang, "resSome", types=", ".join(word(lang, "damage", t) for t in res)))
     if d.get("shortRestRegains"):
-        n = d["shortRestRegains"]
-        parts.append(f"{n} използване се възстановява при кратка почивка" if n == 1
-                     else f"{n} използвания се възстановяват при кратка почивка")
+        parts.append(label(lang, "shortRestRegains", n=d["shortRestRegains"]))
     if d.get("spellSlotRegainsUse"):
-        parts.append("използване се възстановява срещу слот за заклинание")
+        parts.append(label(lang, "spellSlotRegainsUse"))
     if d.get("bonusActionRegainsOne"):
-        parts.append("бонус действие: връща 1 зар")
+        parts.append(label(lang, "bonusActionRegainsOne"))
     if d.get("onShortRest"):
-        parts.append("при кратка почивка")
+        parts.append(label(lang, "onShortRest"))
     if d.get("maxSlotLevel") is not None:
-        parts.append(f"слотове до ниво {d['maxSlotLevel']}")
+        parts.append(label(lang, "maxSlotLevel", n=d["maxSlotLevel"]))
     costs = d.get("slotCosts")
     if costs:
-        parts.append(", ".join(f"слот ниво {lvl} за {costs[lvl]} т." for lvl in sorted(costs, key=int)))
+        parts.append(", ".join(label(lang, "slotCost", lvl=lvl, n=costs[lvl]) for lvl in sorted(costs, key=int)))
     if d.get("knownForms") is not None:
-        parts.append(f"известни форми: {d['knownForms']}")
+        parts.append(label(lang, "knownForms", n=d["knownForms"]))
     if d.get("fly") is True:
-        parts.append("летене")
+        parts.append(word(lang, "modes", "fly"))
     if d.get("swim") is True:
-        parts.append("плуване")
+        parts.append(word(lang, "modes", "swim"))
     meta = d.get("metamagic")
     if meta:
-        parts.append("метамагия: " + ", ".join(f"{m['name']} ({m['cost']})" for m in meta))
+        parts.append(label(lang, "metamagic", items=", ".join(f"{m['name']} ({m['cost']})" for m in meta)))
     options = d.get("perRageOptions")
     if options:
-        parts.append("при всяка ярост една от опциите: " + "; ".join(f"{o['name']}: {o['effect']}" for o in options))
+        parts.append(label(lang, "perRageOptions", items="; ".join(f"{o['name']}: {o['effect']}" for o in options)))
     return parts
 
 
-def resource_line(r: dict) -> str:
-    """One class resource as a bullet: `Rage: 3 (дълга почивка), щета +2`."""
+def resource_line(r: dict, lang: str = DEFAULT_LANG) -> str:
+    """One class resource as a bullet: `Rage: 3 (дълга почивка), щета +2` (EN: `Rage: 3 (long rest), damage +2`)."""
     parts = []
     if r.get("unlimited"):
-        parts.append("без ограничение")
+        parts.append(label(lang, "unlimited"))
     elif r.get("uses") is not None:
         parts.append(str(r["uses"]))
-    for key, label in (("die", ""), ("dice", ""), ("pool", "пул "), ("bonus", "бонус "), ("dc", "ТС ")):
+    for key, prefix in (("die", ""), ("dice", ""), ("pool", LABELS[lang]["pool"]), ("bonus", LABELS[lang]["bonus"]),
+                        ("dc", LABELS[lang]["dc"])):
         if r.get(key) is not None:
             value = f"{r[key]:+d}" if key == "bonus" else r[key]
-            parts.append(f"{label}{value}")
+            parts.append(f"{prefix}{value}")
     core = ", ".join(parts)
-    word = _RECHARGE_WORDS.get(r.get("recharge"))
-    if word:
-        core = f"{core} ({word})" if core else f"({word})"
+    recharge = word(lang, "recharge", r.get("recharge"), "") if r.get("recharge") else ""
+    if recharge:
+        core = f"{core} ({recharge})" if core else f"({recharge})"
     note = (r.get("details") or {}).get("note")
     if note:
         core = f"{core}, {note}" if core else note
     damage = (r.get("details") or {}).get("damageBonus")
     if damage is not None:
-        core += f", щета +{damage}"
+        core += ", " + label(lang, "damageBonus", n=damage)
     heal = (r.get("details") or {}).get("heal")
     if heal:
-        core += f", лекуване {heal}"
-    for fragment in resource_detail_parts(r.get("details")):
+        core += ", " + label(lang, "healing", v=heal)
+    for fragment in resource_detail_parts(r.get("details"), lang):
         core = f"{core}, {fragment}" if core else fragment
     max_cr = (r.get("details") or {}).get("maxCr")
     if max_cr:
-        core = f"{core}, макс. CR {max_cr}" if core else f"макс. CR {max_cr}"
+        core = f"{core}, {label(lang, 'maxCr', v=max_cr)}" if core else label(lang, "maxCr", v=max_cr)
     return f"{r['name']}: {core}" if core else r["name"]
 
 
-def pack_contents_suffix(entry: dict) -> str:
+def pack_contents_suffix(entry: dict, lang: str = DEFAULT_LANG) -> str:
     """RP8: " (съдържа: Backpack, Oil x2, ...)" for a 2024 equipment-pack entry, else "".
     Markdown and PDF both print exactly this text after the entry."""
     contents = entry.get("contents") or []
     if not contents:
         return ""
     parts = [c["name"] + (f" x{c['qty']}" if c.get("qty", 1) != 1 else "") for c in contents]
-    return " (съдържа: " + ", ".join(parts) + ")"
+    return " (" + label(lang, "packContents", items=", ".join(parts)) + ")"
 
 
-def worn_wielded_line(sheet: dict) -> str | None:
+def worn_wielded_line(sheet: dict, lang: str = DEFAULT_LANG) -> str | None:
     """G2: one plain line for the Equipment block, only when the draft sets worn/wielded.
     Markdown and PDF both print exactly this text."""
     eq = sheet.get("equipment") or {}
@@ -177,149 +170,150 @@ def worn_wielded_line(sheet: dict) -> str | None:
     names = {o["itemId"]: o["name"] for k in ("armor", "shield", "hands") for o in slots.get(k, [])}
     parts = []
     if worn:
-        armor = names.get(worn.get("armor"), worn.get("armor")) if worn.get("armor") else "без броня"
-        parts.append("броня: " + armor + (", щит" if worn.get("shield") else ""))
+        armor = names.get(worn.get("armor"), worn.get("armor")) if worn.get("armor") else label(lang, "wornNoArmor")
+        parts.append(label(lang, "wornArmor", name=armor) + (label(lang, "wornShield") if worn.get("shield") else ""))
     if wielded:
         def hand(i):
-            return names.get(i, i) if i else "празна"
-        parts.append(f"в ръце: основна {hand(wielded.get('main'))}, свободна {hand(wielded.get('off'))}")
-    return "Носено: " + "; ".join(parts)
+            return names.get(i, i) if i else label(lang, "handEmpty")
+        parts.append(label(lang, "wielded", main=hand(wielded.get("main")), off=hand(wielded.get("off"))))
+    return label(lang, "worn", parts="; ".join(parts))
 
 
-def extra_blocks(resolution: dict) -> list[tuple[str, str]]:
+def extra_blocks(resolution: dict, lang: str = DEFAULT_LANG) -> list[tuple[str, str]]:
     """Sections for the fields the fixed Markdown/PDF layout lacks."""
     sheet, derived = resolution["sheet"], resolution["derived"]
     blocks: list[tuple[str, str]] = []
+    feet = lambda n: label(lang, "feet", n=n)  # noqa: E731
 
     speeds = derived.get("speeds") or {}
     if len(speeds) > 1 or (speeds and "walk" not in speeds):
-        blocks.append(("h2", "Движение"))
-        blocks.append(("body", ", ".join(f"{_MODE_NAMES.get(m, m)} {v} фута" for m, v in speeds.items())))
+        blocks.append(("h2", label(lang, "secMovement")))
+        blocks.append(("body", ", ".join(f"{word(lang, 'modes', m)} {feet(v)}" for m, v in speeds.items())))
 
     size = (sheet.get("species") or {}).get("size")
     if size:
-        blocks.append(("h2", "Размер"))
+        blocks.append(("h2", label(lang, "secSize")))
         blocks.append(("body", str(size)))
 
     senses = sheet.get("senses") or {}
     if senses:
-        blocks.append(("h2", "Сетива"))
-        blocks.append(("body", ", ".join(f"{_SENSE_NAMES.get(k, k)} {v} фута" for k, v in senses.items())))
+        blocks.append(("h2", label(lang, "secSenses")))
+        blocks.append(("body", ", ".join(f"{word(lang, 'senses', k)} {feet(v)}" for k, v in senses.items())))
 
     expertise = sheet.get("expertiseSkills") or []
     if expertise:
-        blocks.append(("h2", "Експертиза"))
+        blocks.append(("h2", label(lang, "secExpertise")))
         blocks.append(("body", ", ".join(expertise_label(e) for e in expertise)))
 
     damage = sheet.get("damageModifiers") or {}
     conditions = sheet.get("conditionImmunities") or []
     if any(damage.get(k) for k, _ in _DAMAGE_SECTIONS) or conditions:
-        blocks.append(("h2", "Съпротиви и имунитети"))
-        for key, label in _DAMAGE_SECTIONS:
+        blocks.append(("h2", label(lang, "secResistances")))
+        for key, label_key in _DAMAGE_SECTIONS:
             if damage.get(key):
-                blocks.append(("bullet", f"{label} към щета: " + ", ".join(_title(d) for d in damage[key])))
+                blocks.append(("bullet", f"{label(lang, label_key)}: " + ", ".join(_title(d) for d in damage[key])))
         if conditions:
-            blocks.append(("bullet", "Имунитет към състояния: " + ", ".join(_title(c) for c in conditions)))
+            blocks.append(("bullet", f"{label(lang, 'conditionImmunities')}: " + ", ".join(_title(c) for c in conditions)))
 
     attacks = derived.get("attacks") or []
     per_action = derived.get("attacksPerAction") or 1
     if attacks or per_action > 1:
-        blocks.append(("h2", "Атаки"))
-        blocks.append(("bullet", f"Атаки на действие: {per_action}"))
+        blocks.append(("h2", label(lang, "secAttacks")))
+        blocks.append(("bullet", label(lang, "attacksPerAction", n=per_action)))
         for a in attacks:
             line = f"{a['name']}: {a['attackBonus']:+d}"
             if a.get("damage"):
                 line += f", {a['damage']} {a['damageType']}"
                 if a.get("versatileDamage"):
-                    line += f" (versatile {a['versatileDamage']})"
+                    line += f" ({label(lang, 'attackVersatile', dice=a['versatileDamage'])})"
             if a.get("duelingDamage"):
-                line += f", с Дуел {a['duelingDamage']}"
+                line += ", " + label(lang, "attackDueling", dice=a["duelingDamage"])
             if a.get("offhandDamage"):
-                line += f", off hand {a['offhandDamage']}"
+                line += ", " + label(lang, "attackOffhand", dice=a["offhandDamage"])
             if a.get("range"):
-                line += f", range {a['range']}"
+                line += ", " + label(lang, "attackRange", range=a["range"])
             if a.get("notes"):
                 line += "; " + ", ".join(a["notes"])
             if a.get("mastery"):
-                line += f", майсторство {a['mastery']}"
+                line += ", " + label(lang, "attackMastery", mastery=a["mastery"])
             blocks.append(("bullet", line))
 
     masteries = sheet.get("weaponMasteries") or []
     if masteries:
-        blocks.append(("h2", "Майсторство с оръжия"))
+        blocks.append(("h2", label(lang, "secMasteries")))
         for m in masteries:
             blocks.append(("bullet", f"{m['name']}: {m['mastery']}"))
 
     resources = derived.get("classResources") or []
     if resources:
-        blocks.append(("h2", "Ресурси на класа"))
+        blocks.append(("h2", label(lang, "secClassResources")))
         for r in resources:
-            blocks.append(("bullet", resource_line(r)))
+            blocks.append(("bullet", resource_line(r, lang)))
 
     feat_resources = derived.get("featResources") or []  # FE3: same line as a class resource
     if feat_resources:
-        blocks.append(("h2", "Ресурси от таланти"))
+        blocks.append(("h2", label(lang, "secFeatResources")))
         for r in feat_resources:
-            blocks.append(("bullet", resource_line(r)))
+            blocks.append(("bullet", resource_line(r, lang)))
 
     species_resources = derived.get("speciesResources") or []  # W5a: same line as a class resource
     if species_resources:
-        blocks.append(("h2", "Ресурси от расата"))
+        blocks.append(("h2", label(lang, "secSpeciesResources")))
         for r in species_resources:
-            blocks.append(("bullet", resource_line(r)))
+            blocks.append(("bullet", resource_line(r, lang)))
 
     carrying = derived.get("carryingCapacity")
     if carrying:
-        blocks.append(("h2", "Носимост"))
-        over = " (претоварен)" if carrying.get("overCapacity") else ""
-        lift = f", тласкане/влачене/вдигане {carrying['pushDragLift']} lb" if carrying.get("pushDragLift") else ""
+        blocks.append(("h2", label(lang, "secCarrying")))
+        over = label(lang, "overCapacity") if carrying.get("overCapacity") else ""
+        lift = label(lang, "pushDragLift", n=carrying["pushDragLift"]) if carrying.get("pushDragLift") else ""
         blocks.append(("body", f"{carrying['carried']}/{carrying['capacity']} lb{over}{lift}"))
     if derived.get("stealthDisadvantage"):
-        blocks.append(("h2", "Броня"))
-        blocks.append(("body", "Недостатък при Скритост (носена броня)."))
+        blocks.append(("h2", label(lang, "secArmor")))
+        blocks.append(("body", label(lang, "stealthDisadvantage")))
 
     gold = sheet.get("startingGold") or 0
     narrative = (sheet.get("equipment") or {}).get("narrativeItems") or []
     if gold or narrative:
-        blocks.append(("h2", "Начално злато и други предмети"))
+        blocks.append(("h2", label(lang, "secStartingGold")))
         if gold:
-            blocks.append(("bullet", f"Начално злато: {gold} зл."))
+            blocks.append(("bullet", label(lang, "startingGold", n=gold)))
         for item in narrative:
             blocks.append(("bullet", str(item)))
 
     always = [(e["classId"], e["alwaysPrepared"]) for e in sheet.get("spells") or [] if e.get("alwaysPrepared")]
     if always:
         names = {c["id"]: c["name"] for c in sheet.get("classes") or []}
-        blocks.append(("h2", "Винаги подготвени заклинания"))
+        blocks.append(("h2", label(lang, "alwaysPrepared")))
         for class_id, spells in always:
             blocks.append(("h3", names.get(class_id, class_id)))
             for s in spells:
-                blocks.append(("bullet", f"{s['name']} (ниво {s['level']})"))
+                blocks.append(("bullet", f"{s['name']} ({label(lang, 'spellLevel', lvl=s['level'])})"))
 
     # Feats have their own section below.
     features = [f for f in sheet.get("features") or [] if f["source"]["kind"] != "feat"]
     if features:
-        blocks.append(("h2", "Черти и способности"))
+        blocks.append(("h2", label(lang, "secFeatures")))
         current = None
         for f in features:
-            label = f["source"]["label"]
-            if label != current:
-                current = label
-                blocks.append(("h3", label))
+            source_label = f["source"]["label"]
+            if source_label != current:
+                current = source_label
+                blocks.append(("h3", source_label))
             line = f["name"]
             if f.get("level"):
-                line += f" (ниво {f['level']})"
+                line += f" ({label(lang, 'featureLevel', level=f['level'])})"
             if f.get("choice"):
                 line += ": " + ", ".join(f["choice"])
             blocks.append(("bullet", line))
 
     feats = sheet.get("feats") or []
     if feats:
-        blocks.append(("h2", "Таланти"))
+        blocks.append(("h2", label(lang, "secFeats")))
         for f in feats:
             line = f["name"]
             if f.get("level"):
-                line += f" (ниво {f['level']})"
+                line += f" ({label(lang, 'featureLevel', level=f['level'])})"
             if f.get("choice"):
                 line += ": " + ", ".join(f["choice"])
             if f.get("notes"):  # FE3

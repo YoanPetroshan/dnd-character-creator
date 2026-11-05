@@ -17,6 +17,7 @@ from catalog.loader import load as load_catalog
 from catalog.reference_data import SOURCE_NAMES, ruleset_allows, subclass_unlock_level
 from engine.resolve import _source_allowed, _spell_visible, _subclass_visible, resolve
 from export import to_yaml
+from export_labels import DEFAULT_LANG as EXPORT_DEFAULT_LANG, label as export_label
 from i18n.messages import localize, msg, parse_lang
 from markdown_export import to_markdown
 from pdf_export import to_pdf
@@ -383,10 +384,19 @@ def api_export(fmt: str):
     all_problems = resolution["problems"] + _pending_export_problems(resolution)
     if all_problems:
         return jsonify(localize({"problems": all_problems}, lang)), 400
-    name = re.sub(r'[\\/:*?"<>|]', "_", str(draft.get("name") or "character"))
+    # XL: the Markdown / PDF labels follow `lang`; a request without it keeps the language the exports always had
+    # (Bulgarian), unlike the engine messages above, which are English then. YAML has no localized labels.
+    file_lang = lang if request.args.get("lang") is not None else EXPORT_DEFAULT_LANG
+    # a nameless draft downloads as "character" (no lang, as before XL) or as the language's word (lang given)
+    fallback = export_label(lang, "filenameFallback") if request.args.get("lang") is not None else "character"
+    name = re.sub(r'[\\/:*?"<>|]', "_", str(draft.get("name") or fallback))
     filename = urllib.parse.quote(f"{name}.{extension}", safe="")
+    if fmt == "yaml":  # the YAML document is the data as it is: no localized labels, nothing to translate
+        body = renderer(resolution)
+    else:
+        body = renderer(localize(resolution, file_lang), file_lang)
     return Response(
-        renderer(resolution),
+        body,
         mimetype=mimetype,
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
     )

@@ -57,7 +57,7 @@ export function ExportPage() {
         throw new MsgError(msg("export.failed", { detail: httpErrorMessage(resp.status, body.error ?? "") }));
       }
       const blob = await resp.blob();
-      await shareOrDownload(blob, safeFilename(draft.name, config.extension));
+      await shareOrDownload(blob, safeFilename(draft.name, config.extension, xp.fileFallback));
     } catch (err) {
       setExportError(err instanceof TypeError ? msg("export.offline") : toMsg(err));
     } finally {

@@ -116,20 +116,22 @@ def test_phb_locator_forms(tmp_path):
 def test_bg_matches_existing_app_wording():
     import export_fields as ef
 
-    assert DATA["darkvision"]["bg"] == ef._SENSE_NAMES["darkvision"]
-    assert DATA["blindsight"]["bg"] == ef._SENSE_NAMES["blindsight"]
-    assert DATA["tremorsense"]["bg"] == ef._SENSE_NAMES["tremorsense"]
-    assert DATA["truesight"]["bg"] == ef._SENSE_NAMES["truesight"]
+    from export_labels import LABELS
+
+    bg = LABELS["bg"]
+    for sense in ("darkvision", "blindsight", "tremorsense", "truesight"):
+        assert DATA[sense]["bg"] == bg["senses"][sense]
     assert DATA["shortRest"]["bg"] == ef._RECHARGE_WORDS["short"]
     assert DATA["longRest"]["bg"] == ef._RECHARGE_WORDS["long"]
-    assert dict(ef._DAMAGE_SECTIONS)["resistances"] == DATA["resistance"]["bg"]
-    assert dict(ef._DAMAGE_SECTIONS)["immunities"] == DATA["immunity"]["bg"]
-    assert dict(ef._DAMAGE_SECTIONS)["vulnerabilities"] == DATA["vulnerability"]["bg"]
+    # the damage section labels are "<term> към щета" (XL moved the words to export_labels.py)
+    assert bg["dmgResistances"] == DATA["resistance"]["bg"] + " към щета"
+    assert bg["dmgImmunities"] == DATA["immunity"]["bg"] + " към щета"
+    assert bg["dmgVulnerabilities"] == DATA["vulnerability"]["bg"] + " към щета"
 
 
 def test_bg_appears_in_exports_or_frontend_copy():
     corpus = "".join((SERVER / f).read_text(encoding="utf-8")
-                     for f in ("markdown_export.py", "pdf_export.py", "export_fields.py"))
+                     for f in ("markdown_export.py", "pdf_export.py", "export_fields.py", "export_labels.py"))
     corpus += (SERVER.parent / "frontend" / "src" / "copy" / "bg.ts").read_text(encoding="utf-8")
     # originFeat: the app has no Bulgarian label for it today (the page text says "Origin feat"); the
     # rendering is new, introduced with the I-series.
