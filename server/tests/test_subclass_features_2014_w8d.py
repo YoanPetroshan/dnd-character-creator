@@ -24,7 +24,7 @@ PB + the class's spellcasting modifier (CHA for Sorcerer and Warlock, INT for Wi
           2d8 + CHA mod). Fathomless: Tentacle of the Deeps (1; PB uses, long rest, 1d8, 2d8 from 10), Guardian Coil (6; 1d8 / 2d8),
           Grasping Tentacles (10; 1 use, long rest, level temporary hit points), Fathomless Plunge (14; 1 use, short or long
           rest). Genie: Bottled Respite (1; 1 use, long rest, 2 x PB hours; Sanctuary Vessel as an extra from 10), Genie's Wrath
-          (1; PB damage), Elemental Gift (6; PB uses, long rest), Limited Wish (14; 1 use, 1d4 long rests, no recharge value).
+          (1; PB damage), Elemental Gift (6; PB uses, long rest), Limited Wish (14; 1 use, recharge other = 1d4 long rests, G4).
           Great Old One: Entropic Ward (6; 1 use, short or long rest). Hexblade: Hexblade's Curse (1; 1 use, short or long rest,
           PB damage, level + CHA mod hit points), Accursed Specter (6; 1 use, long rest, half the level). Undead: Form of Dread
           (1; PB uses, long rest, 1d10 + level), Necrotic Husk (10; 1d4 long rests, 2d10 + level), Spirit Projection (14; 1 use,
@@ -151,12 +151,12 @@ RESOURCES = [
     ("genie-tce", "warlock", "warlock:bottled-respite", 1, 1, "long"),
     ("genie-tce", "warlock", "warlock:genie-s-wrath", 1, 1, "turn"),  # X2
     ("genie-tce", "warlock", "warlock:elemental-gift", 6, "pb", "long"),
-    ("genie-tce", "warlock", "warlock:limited-wish", 14, 1, None),
+    ("genie-tce", "warlock", "warlock:limited-wish", 14, 1, "other"),  # G4
     ("great-old-one-phb", "warlock", "warlock:entropic-ward", 6, 1, "short-or-long"),
     ("hexblade-xge", "warlock", "warlock:hexblade-s-curse", 1, 1, "short-or-long"),
     ("hexblade-xge", "warlock", "warlock:accursed-specter", 6, 1, "long"),
     ("undead-vrgr", "warlock", "warlock:form-of-dread", 1, "pb", "long"),
-    ("undead-vrgr", "warlock", "warlock:necrotic-husk", 10, 1, None),
+    ("undead-vrgr", "warlock", "warlock:necrotic-husk", 10, 1, "other"),  # G4
     ("undead-vrgr", "warlock", "warlock:spirit-projection", 14, 1, "long"),
     ("undying-scag", "warlock", "warlock:among-the-dead", 1, None, None),
     ("undying-scag", "warlock", "warlock:defy-death", 6, 1, "long"),
@@ -190,7 +190,7 @@ RESOURCES = [
     ("transmutation-phb", "wizard", "wizard:master-transmuter", 14, 1, "long"),
     ("war-xge", "wizard", "wizard:arcane-deflection", 2, None, None),
     ("war-xge", "wizard", "wizard:tactical-wit", 2, None, None),
-    ("war-xge", "wizard", "wizard:power-surge", 6, None, None),
+    ("war-xge", "wizard", "wizard:power-surge", 6, "int1", "other"),  # G4
 ]
 
 # (subclass, class, existing resource id, first level, text the note must hold)
@@ -421,7 +421,7 @@ def test_genie_numbers(catalog, level):
     if level >= 14:
         w = _note(res, "warlock:limited-wish")
         assert "6th level or lower" in w and "1d4 long rests" in w
-        assert _entry(res, "warlock:limited-wish")["recharge"] is None
+        assert _entry(res, "warlock:limited-wish")["recharge"] == "other"  # G4: the d4 is rolled, the text is the recharge
 
 
 @needs_data
@@ -442,7 +442,7 @@ def test_undead_numbers(catalog, level):
     if level >= 10:
         n = _note(res, "warlock:necrotic-husk")
         assert f"2d10 + {level} necrotic" in n and "30 feet" in n and "1d4 long rests" in n
-        assert _entry(res, "warlock:necrotic-husk")["recharge"] is None
+        assert _entry(res, "warlock:necrotic-husk")["recharge"] == "other"  # G4
     if level >= 14:
         s = _note(res, "warlock:spirit-projection")
         assert "1 hour" in s and "1d10 force" in s

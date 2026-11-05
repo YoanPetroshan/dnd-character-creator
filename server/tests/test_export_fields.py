@@ -206,6 +206,11 @@ _EXPECT = {
                       "feature_choice": "Horde Breaker"},
     # G2: Sorcerer 17 under 2014, a Metamagic pick on each card (Twinned Spell "spell level", the TCE Seeking / Transmuted)
     "sorcerer17-metamagic-2014": {"resources": ["Sorcery Points"], "feature_choice": "Twinned Spell"},
+    # G4: the discipline ki costs, the runes as resources, Limited Wish (recharge other) and Power Surge (INT pool)
+    "four-elements17-2014": {"resources": ["Ki", "Disciple of the Elements"], "feature_choice": "Fist of Four Thunders"},
+    "rune-knight15-2014": {"resources": ["Rune Carver", "Rune Carver: Fire Rune", "Rune Carver: Stone Rune"], "feature_choice": "Fire Rune"},
+    "genie-warlock14-2014": {"resources": ["Limited Wish"]},
+    "war-wizard6-2014": {"resources": ["Power Surge"]},
     # G3: Cleric 6 + Paladin 3 under 2014, one merged Channel Divinity
     "cleric6-paladin3-2014": {"resources": ["Channel Divinity", "Lay on Hands"]},
     "cleric1-thaumaturge-2024": {"feature_choice": "Thaumaturge"},

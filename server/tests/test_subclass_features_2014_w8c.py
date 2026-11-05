@@ -319,7 +319,7 @@ def test_drunken_master_and_shadow_costs(catalog):
                                        (12, "up to 4 ki"), (13, "up to 5 ki"), (16, "up to 5 ki"), (17, "up to 6 ki"), (20, "up to 6 ki")])
 def test_disciple_of_the_elements_ki_cap_follows_the_table(catalog, level, cap):
     n = _note(_res(catalog, "monk", level, "four-elements-phb"), "monk:disciple-of-the-elements")
-    assert cap in n and "picks are not tracked" in n
+    assert cap in n and "costs of the picked disciplines are on the Ki entry" in n  # G4
 
 
 @needs_data

@@ -112,6 +112,18 @@ KITCHEN_SINK: dict[str, dict] = {
         "class:sorcerer:3:feature:metamagic-1": ["metamagic-twinned-spell", "opt-seeking-spell-tce"],
         "class:sorcerer:10:feature:metamagic-2": ["metamagic-heightened-spell"],
         "class:sorcerer:17:feature:metamagic-3": ["opt-transmuted-spell-tce"]}),
+    # G4: Way of the Four Elements Monk 17 with four disciplines (ki costs on the Ki entry), Rune Knight Fighter 15 with five
+    # runes (one resource each, 2 uses from Master of Runes, Rune Magic DC on Fire / Stone), the Genie Warlock 14
+    # (Limited Wish, recharge other) and the War Magic Wizard 6 (Power Surge); non-2024, so part of the golden via --append
+    "four-elements17-2014": _sub("monk", 17, "2014", sub="four-elements-phb", marks=("classes",), once=True, overrides={
+        "class:monk:3:feature:four-elements-phb-3-way-of-the-four-elements": [
+            "opt-fist-of-four-thunders-phb", "opt-unbroken-air-phb", "opt-fangs-of-the-fire-snake-phb",
+            "opt-breath-of-winter-phb"]}),
+    "rune-knight15-2014": _sub("fighter", 15, "2014", sub="rune-knight-tce", marks=("classes",), once=True, overrides={
+        "class:fighter:3:feature:rune-knight-tce-3-rune-knight": [
+            "opt-fire-rune-tce", "opt-stone-rune-tce", "opt-frost-rune-tce", "opt-hill-rune-tce", "opt-storm-rune-tce"]}),
+    "genie-warlock14-2014": _sub("warlock", 14, "2014", sub="genie-tce", marks=("classes",), once=True),
+    "war-wizard6-2014": _sub("wizard", 6, "2014", sub="war-xge", marks=("classes",), once=True),
     # G3: Cleric 6 (Life) + Paladin 3 (Devotion) under 2014: one merged Channel Divinity (PHB 164) whose note keeps both
     # classes' options; non-2024, so part of the golden via --append
     "cleric6-paladin3-2014": {**_sub("cleric", 6, "2014", marks=("classes",)),

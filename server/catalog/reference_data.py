@@ -3777,7 +3777,7 @@ _W8C_TAIL: tuple[dict, ...] = (
             ((None, "you can spend 2 ki points to cancel the disadvantage for that roll"),)),
     # ---- Monk: Way of the Four Elements (PHB); the discipline picks are not tracked
     _w8_res("four-elements-phb", "monk", "four-elements-phb-3-disciple-of-the-elements", "Disciple of the Elements", None, None,
-            "An elemental discipline spends ki points each time you use it (the discipline picks are not tracked); {cap}",
+            "An elemental discipline spends ki points each time you use it (the costs of the picked disciplines are on the Ki entry); {cap}",
             ((None, "A discipline requires you to spend ki points each time you use it"),
              (None, "The spell's level increases by 1 for each additional ki point you spend")),
             level_vars={"cap": ELEMENTAL_KI_CAP_2014}),
@@ -4611,12 +4611,13 @@ _W8D_TAIL: tuple[dict, ...] = (
             "Bonus action: a magical flying speed of 30 feet for 10 minutes, and you can hover",
             ((None, "as a bonus action, you can give yourself a flying speed of 30 feet that lasts for 10 minutes"),
              (None, "You can use this bonus action a number of times equal to your proficiency bonus, and you regain all expended uses when you finish a long rest"))),
-    _w8_res("genie-tce", "warlock", "genie-tce-14-limited-wish", "Limited Wish", 1, None,
+    _w8_res("genie-tce", "warlock", "genie-tce-14-limited-wish", "Limited Wish", 1, "other",
             "Action: speak a wish to your vessel for the effect of one spell of 6th level or lower with a casting time of 1 "
             "action, from any class's list and ignoring its requirements and costly components; after using it you can't "
-            "again until you finish 1d4 long rests (the d4 roll has no recharge value here)",
+            "use it again until you finish 1d4 long rests",
             ((None, "requesting the effect of one spell that is 6th level or lower and has a casting time of 1 action"),
-             (None, "you can't use it again until you finish 1d4 long rests"))),
+             (None, "you can't use it again until you finish 1d4 long rests")),
+            details={"recharges": "1d4 long rests"}),  # G4: the d4 is rolled by the player, so the recharge is "other"
     # ---- Warlock: The Great Old One (PHB)
     _w8_res("great-old-one-phb", "warlock", "great-old-one-phb-6-entropic-ward", "Entropic Ward", 1, "short-or-long",
             "Reaction when a creature makes an attack roll against you: impose disadvantage on it; if the attack misses, your "
@@ -4649,14 +4650,15 @@ _W8D_TAIL: tuple[dict, ...] = (
              (None, "You gain temporary hit points equal to 1d10 + your warlock level"),
              (None, "the target is frightened of you until the end of your next turn"),
              (None, "You can transform a number of times equal to your proficiency bonus, and you regain all expended uses when you finish a long rest"))),
-    _w8_res("undead-vrgr", "warlock", "undead-vrgr-10-necrotic-husk", "Necrotic Husk", 1, None,
+    _w8_res("undead-vrgr", "warlock", "undead-vrgr-10-necrotic-husk", "Necrotic Husk", 1, "other",
             "Reaction when you would be reduced to 0 hit points: drop to 1 hit point instead; each creature of your choice "
             "within 30 feet takes 2d10 + {level} necrotic damage (your Warlock level) and you gain 1 level of exhaustion; "
-            "you can't do it again until you finish 1d4 long rests (the d4 roll has no recharge value here)",
+            "you can't do it again until you finish 1d4 long rests",
             ((None, "you can use your reaction to drop to 1 hit point instead"),
              (None, "takes necrotic damage equal to 2d10 + your warlock level"),
              (None, "You then gain 1 level of exhaustion"),
-             (None, "you can't do so again until you finish 1d4 long rests"))),
+             (None, "you can't do so again until you finish 1d4 long rests")),
+            details={"recharges": "1d4 long rests"}),  # G4
     _w8_res("undead-vrgr", "warlock", "undead-vrgr-14-spirit-projection", "Spirit Projection", 1, "long",
             "Action: project your spirit from your body for up to 1 hour or until your concentration is broken; your body is "
             "unconscious; you and your spirit resist bludgeoning, piercing and slashing damage, have a flying speed equal to "
@@ -4881,15 +4883,18 @@ _W8D_TAIL: tuple[dict, ...] = (
     _w8_res("war-xge", "wizard", "war-xge-2-tactical-wit", "Tactical Wit", None, None,
             "You can give yourself a bonus to initiative rolls equal to your Intelligence modifier ({int:+d})",
             ((None, "You can give yourself a bonus to your initiative rolls equal to your Intelligence modifier"),)),
-    _w8_res("war-xge", "wizard", "war-xge-6-power-surge", "Power Surge", None, None,
-            "You store at most {int_min1} power surges (your Intelligence modifier, minimum one); a long rest resets them to "
-            "one, ending a spell with dispel magic or counterspell gives you one, and a short rest that ends with none gives "
-            "you one; once per turn when you damage a creature or object with a wizard spell, spend one for extra force "
+    _w8_res("war-xge", "wizard", "war-xge-6-power-surge", "Power Surge", "@int_min1", "other",
+            "You store at most {int_min1} power surges (your Intelligence modifier, minimum one); a long rest resets the power "
+            "surges to one, a short rest that ends with none gives one, ending a spell with dispel magic or counterspell "
+            "gives one; once per turn when you damage a creature or object with a wizard spell, spend one for extra force "
             "damage equal to {half_level} (half your Wizard level)",
             ((None, "You can store a maximum number of power surges equal to your Intelligence modifier (minimum of one)"),
              (None, "Whenever you finish a long rest, your number of power surges resets to one"),
              (None, "If you end a short rest with no power surges, you gain one power surge"),
-             (None, "The extra damage equals half your wizard level"))),
+             (None, "The extra damage equals half your wizard level")),
+            # G4: `uses` is the maximum pool; the pool is refilled by the conditions below, never by "all uses on a rest"
+            details={"recharges": "a long rest resets the power surges to one, a short rest that ends with none gives one, "
+                                  "ending a spell with dispel magic or counterspell gives one"}),  # also in the note (export audit)
 )
 
 _W8D_NOTES: tuple[dict, ...] = (
@@ -5581,6 +5586,123 @@ SUBCLASS_PICK_RESOURCES_2014: dict[str, dict] = {
                   "While raging, use a bonus action on your turn to knock a Large or smaller creature prone when you hit "
                   "it with a melee weapon attack"),
     ])),
+}
+
+
+# G4: Way of the Four Elements (PHB) discipline ki costs on the Ki resource, and Rune Knight (TCE) runes as resources.
+# Both read the pick cards that already exist (`choices[].selected`), mixed / 2014 only and only for the selected
+# subclass. Every entry has verbatim `quotes` taken from the option's own catalog record (pinned by tests).
+# Disciplines: `cost` is the base ki cost the text states ("You can spend 2 ki points to cast thunderwave."); `more` is the
+# optional extra the same text allows (Fangs of the Fire Snake: one more ki point when the attack hits; Unbroken Air and
+# Water Whip: one more ki point per extra 1d10). Elemental Attunement (granted, "elemental forces" with no ki) has no cost
+# in its text and is not listed. The card is `class:monk:3:feature:<feature>`; the costs go to `target` (details.disciplineKiCosts
+# {option id: base cost} and a sentence on its note).
+def _ed(name, cost, *quotes, more=None):
+    return {"name": name, "cost": cost, "quotes": quotes, **({"more": more} if more else {})}
+
+
+ELEMENTAL_DISCIPLINES_2014: dict = {
+    "class": "monk", "subclass": "four-elements-phb", "feature": "four-elements-phb-3-way-of-the-four-elements",
+    "target": "monk:ki",
+    "options": {
+        "opt-breath-of-winter-phb": _ed("Breath of Winter", 6, "You can spend 6 ki points to cast cone of cold."),
+        "opt-clench-of-the-north-wind-phb": _ed("Clench of the North Wind", 3, "You can spend 3 ki points to cast hold person."),
+        "opt-eternal-mountain-defense-phb": _ed("Eternal Mountain Defense", 5, "You can spend 5 ki points to cast stoneskin, targeting yourself."),
+        "opt-fangs-of-the-fire-snake-phb": _ed(
+            "Fangs of the Fire Snake", 1, "you can spend 1 ki point to cause tendrils of flame to stretch out from your fists and feet",
+            "if you spend 1 ki point when the attack hits, it also deals an extra 1d10 fire damage",
+            more="1 more ki point when the attack hits: extra 1d10 fire damage"),
+        "opt-fist-of-four-thunders-phb": _ed("Fist of Four Thunders", 2, "You can spend 2 ki points to cast thunderwave."),
+        "opt-flames-of-the-phoenix-phb": _ed("Flames of the Phoenix", 4, "You can spend 4 ki points to cast fireball."),
+        "opt-gong-of-the-summit-phb": _ed("Gong of the Summit", 3, "You can spend 3 ki points to cast shatter."),
+        "opt-mist-stance-phb": _ed("Mist Stance", 4, "You can spend 4 ki points to cast gaseous form, targeting yourself."),
+        "opt-ride-the-wind-phb": _ed("Ride the Wind", 4, "You can spend 4 ki points to cast fly, targeting yourself."),
+        "opt-river-of-hungry-flame-phb": _ed("River of Hungry Flame", 5, "You can spend 5 ki points to cast wall of fire."),
+        "opt-rush-of-the-gale-spirits-phb": _ed("Rush of the Gale Spirits", 2, "You can spend 2 ki points to cast gust of wind."),
+        "opt-shape-the-flowing-river-phb": _ed(
+            "Shape the Flowing River", 1, "As an action, you can spend 1 ki point to choose an area of ice or water"),
+        "opt-sweeping-cinder-strike-phb": _ed("Sweeping Cinder Strike", 2, "You can spend 2 ki points to cast burning hands."),
+        "opt-unbroken-air-phb": _ed(
+            "Unbroken Air", 2, "As an action, you can spend 2 ki points and choose a creature within 30 feet of you.",
+            "plus an extra 1d10 bludgeoning damage for each additional ki point you spend",
+            more="1 more ki point per extra 1d10 bludgeoning damage"),
+        "opt-water-whip-phb": _ed(
+            "Water Whip", 2, "You can spend 2 ki points as an action to create a whip of water",
+            "plus an extra 1d10 bludgeoning damage for each additional ki point you spend",
+            more="1 more ki point per extra 1d10 bludgeoning damage"),
+        "opt-wave-of-rolling-earth-phb": _ed("Wave of Rolling Earth", 6, "You can spend 6 ki points to cast wall of stone."),
+    },
+}
+
+# Rune Knight Rune Carver: the picked rune is one resource, "Rune Carver: <Rune>", `uses` 1 and `recharge` "short-or-long"
+# ("Once you invoke this rune, you can't do so again until you finish a short or long rest." in every rune record), 2 uses
+# from Master of Runes ("You can invoke each rune you know from your Rune Carver feature twice, rather than once, and you
+# regain all expended uses when you finish a short or long rest"; the level is that record's). `dc` (the Rune Magic save DC,
+# 8 + proficiency bonus + Constitution modifier, note variable `dc_con`) only for the runes whose text names a saving throw
+# (Fire: Strength, Stone: Wisdom). The card is `class:fighter:3:feature:<feature>`; the level requirement of the Hill and
+# Storm runes is the card's.
+_RUNE_LIMIT = "Once you invoke this rune, you can't do so again until you finish a short or long rest."
+
+
+def _rune(name, note, *quotes, dc=None):
+    return {"name": name, "quotes": (*quotes, _RUNE_LIMIT), "note": note, **({"dc": dc} if dc else {})}
+
+
+RUNE_KNIGHT_RUNES_2014: dict = {
+    "class": "fighter", "subclass": "rune-knight-tce", "feature": "rune-knight-tce-3-rune-knight", "label": "Rune Carver",
+    "master": "rune-knight-tce-15-master-of-runes",
+    "master_quotes": (("rune-knight-tce-15-master-of-runes", "You can invoke each rune you know from your Rune Carver feature twice, rather than once, and you regain all expended uses when you finish a short or long rest."),
+                      ("rune-knight-tce-3-rune-carver", "your Rune Magic save DC equals 8 + your proficiency bonus + your Constitution modifier")),
+    "options": {
+        "opt-cloud-rune-tce": _rune(
+            "Cloud Rune",
+            "While wearing or carrying the inscribed object: advantage on Dexterity (Sleight of Hand) and Charisma (Deception) "
+            "checks. Invoke (reaction): when you or a creature you can see within 30 feet of you is hit by an attack roll, "
+            "choose a different creature within 30 feet of you, other than the attacker; it becomes the target of the attack, "
+            "using the same roll, regardless of the attack's range",
+            "you have advantage on Dexterity (Sleight of Hand) checks and Charisma (Deception) checks.",
+            "you can use your reaction to invoke the rune and choose a different creature within 30 feet of you, other than the attacker."),
+        "opt-fire-rune-tce": _rune(
+            "Fire Rune",
+            "While wearing or carrying the inscribed object: your proficiency bonus is doubled for any ability check that uses "
+            "your proficiency with a tool. Invoke (when you hit a creature with a weapon attack): the target takes an extra "
+            "2d6 fire damage and must succeed on a Strength saving throw (DC {dc_con}) or be restrained for 1 minute; while "
+            "restrained it takes 2d6 fire damage at the start of each of its turns and repeats the save at the end of each "
+            "of its turns",
+            "your proficiency bonus is doubled for any ability check you make that uses your proficiency with a tool.",
+            "the target takes an extra 2d6 fire damage, and it must succeed on a Strength saving throw or be restrained for 1 minute.",
+            dc="dc_con"),
+        "opt-frost-rune-tce": _rune(
+            "Frost Rune",
+            "While wearing or carrying the inscribed object: advantage on Wisdom (Animal Handling) and Charisma (Intimidation) "
+            "checks. Invoke (bonus action): for 10 minutes, a +2 bonus to all ability checks and saving throws that use "
+            "Strength or Constitution",
+            "you have advantage on Wisdom (Animal Handling) checks and Charisma (Intimidation) checks.",
+            "you gain a +2 bonus to all ability checks and saving throws that use Strength or Constitution."),
+        "opt-hill-rune-tce": _rune(
+            "Hill Rune",
+            "While wearing or carrying the inscribed object: advantage on saving throws against being poisoned and resistance "
+            "to poison damage. Invoke (bonus action): resistance to bludgeoning, piercing and slashing damage for 1 minute",
+            "you have advantage on saving throws against being poisoned, and you have resistance against poison damage.",
+            "gaining resistance to bludgeoning, piercing, and slashing damage for 1 minute."),
+        "opt-stone-rune-tce": _rune(
+            "Stone Rune",
+            "While wearing or carrying the inscribed object: advantage on Wisdom (Insight) checks and darkvision out to 120 "
+            "feet. Invoke (reaction, when a creature you can see ends its turn within 30 feet of you): it must make a Wisdom "
+            "saving throw (DC {dc_con}); unless it succeeds, it is charmed by you for 1 minute, with a speed of 0 and "
+            "incapacitated, and repeats the save at the end of each of its turns",
+            "you have advantage on Wisdom (Insight) checks, and you have darkvision out to a range of 120 feet.",
+            "force the creature to make a Wisdom saving throw.",
+            dc="dc_con"),
+        "opt-storm-rune-tce": _rune(
+            "Storm Rune",
+            "While wearing or carrying the inscribed object: advantage on Intelligence (Arcana) checks, and you can't be "
+            "surprised while you aren't incapacitated. Invoke (bonus action): a prophetic state for 1 minute or until you're "
+            "incapacitated; meanwhile, when you or another creature you can see within 60 feet of you makes an attack roll, a "
+            "saving throw or an ability check, use your reaction to give the roll advantage or disadvantage",
+            "you have advantage on Intelligence (Arcana) checks, and you can't be surprised as long as you aren't incapacitated.",
+            "you can use your reaction to cause the roll to have advantage or disadvantage."),
+    },
 }
 
 

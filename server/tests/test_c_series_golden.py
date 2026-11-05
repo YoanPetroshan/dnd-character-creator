@@ -814,7 +814,7 @@ def test_w6_cases_hold_the_2014_class_feature_tail():
               "warlock:eldritch-master"}
     for n, entry in _GOLDEN.items():
         ids = {r["id"] for r in entry["result"]["derived"]["classResources"]}
-        if n not in hit and "/whispers-bard14" not in n and "/watchers-paladin20" not in n and "/celestial-warlock14" not in n and "/totem-elk14" not in n and "/cleric6-paladin3-2014" not in n:  # W8a / W8c / W8d / G1 / G3 appended sinks (G3: a Cleric 6 holds Disciple of Life, a Paladin 3 Divine Smite): a Bard 14 holds Song of Rest, a Paladin 20 Divine Smite and Cleansing Touch, a Warlock 14 Mystic Arcanum, a Barbarian 14 Brutal Critical and Relentless Rage
+        if n not in hit and "/whispers-bard14" not in n and "/watchers-paladin20" not in n and "/celestial-warlock14" not in n and "/totem-elk14" not in n and "/cleric6-paladin3-2014" not in n and "/four-elements17-2014" not in n and "/genie-warlock14-2014" not in n:  # W8a / W8c / W8d / G1 / G3 / G4 appended sinks (G4: a Monk 17 holds Deflect Missiles, Slow Fall and Stunning Strike, a Warlock 14 Mystic Arcanum) (G3: a Cleric 6 holds Disciple of Life, a Paladin 3 Divine Smite): a Bard 14 holds Song of Rest, a Paladin 20 Divine Smite and Cleansing Touch, a Warlock 14 Mystic Arcanum, a Barbarian 14 Brutal Critical and Relentless Rage
             assert not ids & w6_ids, n
     for n in hit:
         ids = {r["id"] for r in _GOLDEN[n]["result"]["derived"]["classResources"]}
@@ -912,7 +912,8 @@ def test_x2_cases_hold_the_turn_recharge():
     for n, entry in _GOLDEN.items():
         resources = entry["result"]["derived"]["classResources"]
         turn = {r["id"] for r in resources if r["recharge"] in ("turn", "combat", "rage", "other")
-                and not r["name"].startswith(G1_PICK_LABELS)}  # G1's pick resources have their own pin test
+                and not r["name"].startswith(G1_PICK_LABELS)  # G1's pick resources have their own pin test
+                and r["id"] not in ("warlock:limited-wish", "wizard:power-surge", "warlock:genie-s-wrath")}  # the G4 Genie / War Magic sinks hold these (Genie's Wrath is the X2 book row)
         assert (turn <= x2_ids) and (n in hit or not turn), n
         if n in hit:
             assert turn and all(r["uses"] == 1 and r["recharge"] == "turn" for r in resources if r["id"] in turn), n
@@ -994,9 +995,43 @@ def test_g3_no_rebaseline_and_the_merged_channel_divinity_sink_holds_both_notes(
             assert not merged and not any(x.startswith(("Cleric:", "Paladin:")) for x in notes), n
 
 
+def test_g4_no_rebaseline_and_the_four_sinks_hold_the_new_resources():
+    """G4: no stored case moved (the golden's primary classes use the first SRD subclass; none of the Genie, War Magic, Four
+    Elements or Rune Knight subclasses is among them), so there is no REBASELINES entry; four sinks were appended instead."""
+    assert "G4" not in REBASELINES
+    sinks = {"genie-warlock14-2014", "war-wizard6-2014", "four-elements17-2014", "rune-knight15-2014"}
+    seen = set()
+    for n, entry in _GOLDEN.items():
+        key = n.rsplit("/", 1)[-1]
+        by = {r["id"]: r for r in entry["result"]["derived"]["classResources"]}
+        runes = sorted(i for i in by if i.startswith("fighter:rune-carver-"))
+        assert (key == "rune-knight15-2014") == bool(runes), n
+        assert ("monk:ki" in by and "disciplineKiCosts" in (by["monk:ki"].get("details") or {})) == (key == "four-elements17-2014"), n
+        assert ("warlock:limited-wish" in by) == (key == "genie-warlock14-2014"), n
+        assert ("wizard:power-surge" in by) == (key == "war-wizard6-2014"), n
+        if key not in sinks:
+            continue
+        seen.add(key)
+        if key == "genie-warlock14-2014":
+            assert (by["warlock:limited-wish"]["recharge"], by["warlock:limited-wish"]["details"]["recharges"]) == ("other", "1d4 long rests")
+        elif key == "war-wizard6-2014":
+            ps = by["wizard:power-surge"]
+            assert (ps["uses"], ps["recharge"]) == (2, "other") and ps["details"]["recharges"] in ps["details"]["note"]
+        elif key == "four-elements17-2014":
+            assert by["monk:ki"]["details"]["disciplineKiCosts"] == {
+                "opt-fist-of-four-thunders-phb": 2, "opt-unbroken-air-phb": 2, "opt-fangs-of-the-fire-snake-phb": 1,
+                "opt-breath-of-winter-phb": 6}
+        else:
+            assert runes == ["fighter:rune-carver-fire-rune", "fighter:rune-carver-frost-rune", "fighter:rune-carver-hill-rune",
+                             "fighter:rune-carver-stone-rune", "fighter:rune-carver-storm-rune"]
+            assert all(by[i]["uses"] == 2 and by[i]["recharge"] == "short-or-long" for i in runes)
+            assert {i for i in runes if "dc" in by[i]} == {"fighter:rune-carver-fire-rune", "fighter:rune-carver-stone-rune"}
+    assert seen == sinks
+
+
 def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
     """Y2: the rebaseline touched only `options[*].source` (the allowlist); 218 of the first 254 cases hold a book option (the
-    G2 and G3 cases appended later hold one too: 221 of 257), the other 36 (level 1 / 3 cases without feat, spell or feature options) are byte-identical. Every stored source is a
+    G2, G3 and G4 cases appended later hold one too: 225 of 261), the other 36 (level 1 / 3 cases without feat, spell or feature options) are byte-identical. Every stored source is a
     non-empty code, and no option outside the book kinds (skills, languages, equipment items) has one."""
     assert REBASELINES["Y2"]["cases"] == ["*"] and len(REBASELINES["Y2"]["paths"]) == 1
     with_source = 0
@@ -1009,7 +1044,7 @@ def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
                     assert isinstance(o["source"], str) and o["source"], (name, card["id"], o["id"])
                     assert not o["id"].startswith("skill-") and card["source"]["kind"] != "equipment", (name, card["id"], o["id"])
         with_source += has
-    assert with_source == 221  # 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases
+    assert with_source == 225  # 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
 
 
 if __name__ == "__main__":

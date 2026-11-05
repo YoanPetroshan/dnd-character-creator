@@ -639,7 +639,7 @@ def _entry_2014(ctx: Ctx, rc: dict, spec: dict, *, kind: str = "class") -> dict:
     fields = {key: _field_2014(ctx, rc, spec, key, values) for key in ("die", "dice", "pool")}
     return _resource(rc, spec["name"], kind=kind, uses=_field_2014(ctx, rc, spec, "uses", values),
                      recharge=_field_2014(ctx, rc, spec, "recharge", values),
-                     details={"note": _render_note(ctx, rc, spec)}, **fields)
+                     details={"note": _render_note(ctx, rc, spec), **(spec.get("details") or {})}, **fields)
 
 
 def _add_note(resources: list[dict], target_id: str, note: str) -> bool:
@@ -815,6 +815,60 @@ def _subclass_pick_resources_2014(ctx: Ctx, rc: dict) -> list[dict]:
     return out
 
 
+def _picked(ctx: Ctx, rc: dict, first: int, feature_id: str) -> list[str]:
+    """The options selected on the card `class:<cls>:<first>:feature:<feature id>` of the resolved choices ([] when the
+    card is absent, e.g. after a level drop or under a `sources` filter)."""
+    if not isinstance(ctx.choices, list):
+        return []
+    card_id = f"class:{rc['cls_id']}:{first}:feature:{feature_id}"
+    card = next((c for c in ctx.choices if c.get("id") == card_id), None)
+    return list((card or {}).get("selected") or [])
+
+
+def _elemental_disciplines_2014(ctx: Ctx, rc: dict, resources: list[dict]) -> None:
+    """G4: the ki cost of each picked Way of the Four Elements discipline on the Ki resource
+    (`reference_data.ELEMENTAL_DISCIPLINES_2014`): `details.disciplineKiCosts` {option id: base cost} and a sentence on its
+    note. Rulesets "mixed" and "2014" only, only for the selected subclass; needs the feature record and the class level
+    at its level; picks only (no pick, no key; a pick the card no longer offers gives nothing)."""
+    spec = reference_data.ELEMENTAL_DISCIPLINES_2014
+    if ctx.ruleset == "2024" or rc.get("subclass_id") != spec["subclass"] or rc["cls_id"] != spec["class"]:
+        return
+    first = _feature_level(ctx, spec["feature"])
+    target = next((r for r in resources if r["id"] == spec["target"]), None)
+    if first is None or rc["level"] < first or target is None:
+        return
+    picked = [(oid, spec["options"][oid]) for oid in _picked(ctx, rc, first, spec["feature"]) if oid in spec["options"]]
+    if not picked:
+        return
+    parts = [f"{o['name']} ({o['cost']} ki" + (f"; {o['more']}" if o.get("more") else "") + ")" for _oid, o in picked]
+    _add_note(resources, spec["target"], "Elemental disciplines: " + ", ".join(parts))
+    target["details"] = {**target["details"], "disciplineKiCosts": {oid: o["cost"] for oid, o in picked}}
+
+
+def _rune_resources_2014(ctx: Ctx, rc: dict) -> list[dict]:
+    """G4: one subclass resource per picked Rune Knight rune (`reference_data.RUNE_KNIGHT_RUNES_2014`): 1 use per short or
+    long rest, 2 from Master of Runes; the Rune Magic save DC (8 + PB + CON) only on the runes that name a saving throw.
+    Rulesets "mixed" and "2014" only, only for the selected subclass; the pick comes from the resolved Rune Carver card."""
+    spec = reference_data.RUNE_KNIGHT_RUNES_2014
+    if ctx.ruleset == "2024" or rc.get("subclass_id") != spec["subclass"] or rc["cls_id"] != spec["class"]:
+        return []
+    first = _feature_level(ctx, spec["feature"])
+    if first is None or rc["level"] < first:
+        return []
+    master = _feature_level(ctx, spec["master"])
+    uses = 2 if master is not None and rc["level"] >= master else 1
+    values = _note_vars(ctx, rc)
+    out = []
+    for oid in _picked(ctx, rc, first, spec["feature"]):
+        option = spec["options"].get(oid)
+        if option is None:
+            continue
+        out.append(_resource(rc, f"{spec['label']}: {option['name']}", kind="subclass", uses=uses, recharge="short-or-long",
+                             dc=values[option["dc"]] if "dc" in option else None,
+                             details={"note": option["note"].format(**values)}))
+    return out
+
+
 def _signature_spells(ctx: Ctx, rc: dict) -> list[dict]:
     """Wizard 20 Signature Spells: one cast per picked spell per Short or Long Rest; nothing while unpicked."""
     sig = reference_data.SIGNATURE_SPELLS_2024 if ctx.ruleset == "2024" else reference_data.SIGNATURE_SPELLS_2014
@@ -963,6 +1017,8 @@ def resources_for(catalog, resolved_classes: list[dict], modifiers: dict, prof_b
         out += _subclass_tail_2024(ctx, rc, mine + sub)  # RP11: 2024 only, after the class and R6 entries
         out += _subclass_tail_2014(ctx, rc, mine + sub)  # W7: mixed / 2014 only
         out += _subclass_pick_resources_2014(ctx, rc)  # G1: mixed / 2014 only
+        _elemental_disciplines_2014(ctx, rc, mine + sub)  # G4: mixed / 2014 only (adds to the Ki entry)
+        out += _rune_resources_2014(ctx, rc)  # G4: mixed / 2014 only
         out += _subclass_pick_notes_2024(ctx, rc)  # RP12: 2024 only
         out += _subclass_option_notes_2024(ctx, rc)  # RP13: 2024 only
     # G1: the 2024 Multiclassing chapter has no merge rule and every class text

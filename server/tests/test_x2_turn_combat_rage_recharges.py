@@ -385,7 +385,7 @@ LEFT = {
     "fiend-xphb-14-hurl-through-hell": "already a resource (1 use, long rest)",
     "divination-phb-2-portent": "already a resource (Portent dice); per-turn replacement is a clause",
     "diviner-xphb-3-portent": "already a resource (Portent dice); per-turn replacement is a clause",
-    "war-xge-6-power-surge": "note-only: its pool resets to one, not to the maximum (W6-W8 deferral (g))",
+    "war-xge-6-power-surge": "already a resource (INT-modifier pool, recharge other, G4); the per-turn clause is the spend rule",
 }
 HANDLED = {u[2] for u in UPGRADES}
 
