@@ -119,6 +119,22 @@ the Vite dev origin (`http://localhost:5173`).
 - A `Dockerfile` and `.dockerignore` are included, but **untested** (Docker is not installed on the development
   machine).
 
+## Offline pack (Pyodide)
+
+The engine can also run in the browser (Pyodide, the same Python code). Slice O1 builds the pack and proves it equal to
+the native engine; the app does not use it yet (worker and PWA come in O2-O4).
+
+    .venv/bin/python scripts/build_offline.py          # builds app.zip + fonts.zip, fetches the pinned runtime
+    .venv/bin/python scripts/build_offline.py --check  # verify only, no network
+    cd frontend && npm run test:offline                # the Node equivalence test (also part of `npm test`)
+
+Output goes to `frontend/public/pyodide/` (gitignored, about 18 MB raw, about 11 MB gzip). The only network use is the
+list of pinned downloads in `scripts/offline_manifest.json` (Pyodide 314.0.7 from `cdn.jsdelivr.net/pyodide/v314.0.7/full/`,
+fpdf2 and defusedxml wheels from `files.pythonhosted.org`); each file must match its pinned size and sha256 or the
+script stops. `app.zip` is deterministic. `npm test` skips the offline test when the pack is absent. To measure the
+cold start on a phone: `cd frontend && npm run dev:lan`, open `http://<Mac LAN IP>:5173/offline-probe.html`, tap Run
+(throwaway page, not in the build). Details: `docs/superpowers/specs/ARCHITECTURE-CURRENT-STATE.md`, section O1.
+
 ## Test
 
 Clean-clone smoke (proves the committed tree alone runs the app: fresh `git clone` of HEAD, empty `HOME`, no `DND_*`

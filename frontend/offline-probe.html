@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Offline engine probe</title>
+<!--
+  THROWAWAY measurement page (O1), not part of the app bundle (vite builds index.html only; this file is not an entry).
+  Measures, in a module Web Worker on the device it is opened on: Pyodide start, loading the pack (pyyaml, app.zip),
+  the first and warm resolves, and (second step) the PDF stack and the first PDF. Needs the pack:
+      .venv/bin/python scripts/build_offline.py
+      cd frontend && npm run dev:lan        # then open http://<this Mac's LAN IP>:5173/offline-probe.html on the iPhone
+  Tap "Run" twice: the first run is the cold start (network + compile), the second after a reload is the warm-cache one.
+  Copy the result text from the box below the log.
+-->
+<style>
+  :root { color-scheme: light dark; font-family: -apple-system, system-ui, sans-serif; }
+  body { margin: 0; padding: 16px; max-width: 40rem; }
+  button { font-size: 1.1rem; padding: .6rem 1.2rem; margin: 0 .5rem .5rem 0; }
+  pre { white-space: pre-wrap; word-break: break-word; background: #8883; padding: .6rem; border-radius: 6px; font-size: .8rem; }
+</style>
+</head>
+<body>
+<h1>Offline engine probe</h1>
+<button id="run">Run (engine)</button>
+<button id="pdf" disabled>Then: PDF stack</button>
+<pre id="log">idle</pre>
+<pre id="result"></pre>
+<script type="module">
+const base = new URL("/pyodide/", location.href).href;
+const workerSource = `
+let t0 = performance.now();
+const ms = () => Math.round(performance.now() - t0);
+const marks = {};
+const say = (m) => postMessage({ log: m });
+let py;
+const fetchBytes = async (name) => new Uint8Array(await (await fetch(BASE + name)).arrayBuffer());
+const BASE = ${JSON.stringify(base)};
+const draft = {
+  name: "Probe", sources: ["srd"],
+  classes: [{ classId: "fighter", level: 1, choices: {} }],
+  background: { id: "acolyte", choices: {} }, species: { id: "human", choices: {} },
+  abilities: { method: "manual", base: { STR: 16, DEX: 14, CON: 14, INT: 10, WIS: 12, CHA: 8 } },
+  equipment: { added: [], skipped: false }, details: {},
+};
+onmessage = async (e) => {
+  try {
+    if (e.data === "engine") {
+      t0 = performance.now(); // marks are relative to the click
+      const { loadPyodide } = await import(BASE + "pyodide.mjs");
+      say("loading Pyodide...");
+      py = await loadPyodide({ indexURL: BASE });
+      marks.pyodide_start_ms = ms();
+      await py.loadPackage(["pyyaml"], { messageCallback: () => {} });
+      marks.pyyaml_ms = ms();
+      py.unpackArchive(await fetchBytes("app.zip"), "zip", { extractDir: "/app" });
+      marks.app_zip_unpacked_ms = ms();
+      py.runPython("import sys; sys.path[:0] = ['/app/server', '/app']");
+      // service.py imports pdf_export (fpdf2, Pillow, fonttools) at module level, so the engine-only step imports the
+      // engine and catalog directly; the PDF step below imports service after loading the stack.
+      py.runPython("import json\\nfrom catalog.loader import load\\nfrom engine.resolve import resolve\\ncatalog = load()");
+      marks.engine_catalog_imported_ms = ms();
+      py.globals.set("draft_json", JSON.stringify(draft));
+      const one = () => py.runPython("len(json.dumps(resolve(json.loads(draft_json), catalog)))");
+      const size = one();
+      marks.first_resolve_done_ms = ms();
+      marks.first_resolve_json_chars = size;
+      const times = [];
+      for (let i = 0; i < 10; i++) { const s = performance.now(); one(); times.push(performance.now() - s); }
+      marks.warm_resolve_best_of_10_ms = +Math.min(...times).toFixed(1);
+      marks.wasm_heap_mb = +(py._module.HEAP8.length / 1048576).toFixed(0);
+    } else if (e.data === "pdf") {
+      const s0 = performance.now();
+      await py.loadPackage(["pillow", "fonttools", BASE + "defusedxml-0.7.1-py2.py3-none-any.whl", BASE + "fpdf2-2.8.8-py3-none-any.whl"], { messageCallback: () => {} });
+      py.unpackArchive(await fetchBytes("fonts.zip"), "zip", { extractDir: "/app" });
+      marks.pdf_stack_load_ms = Math.round(performance.now() - s0);
+      const s1 = performance.now();
+      py.runPython("import service");
+      marks.service_imported_ms = Math.round(performance.now() - s0);
+      py.runPython("import pdf_export\\nres = resolve(json.loads(draft_json), catalog)\\npdf = bytes(pdf_export.to_pdf(res))");
+      marks.first_pdf_ms = Math.round(performance.now() - s1);
+      marks.pdf_bytes = py.runPython("len(pdf)");
+    }
+    postMessage({ done: marks });
+  } catch (err) { postMessage({ error: String(err && err.stack || err) }); }
+};
+`;
+const $ = (id) => document.getElementById(id);
+const worker = new Worker(URL.createObjectURL(new Blob([workerSource], { type: "text/javascript" })), { type: "module" });
+let tClick = performance.now();
+worker.onmessage = (e) => {
+  if (e.data.log) $("log").textContent += "\n" + e.data.log;
+  if (e.data.error) $("log").textContent += "\nERROR " + e.data.error;
+  if (e.data.done) {
+    $("log").textContent += "\nfinished";
+    $("pdf").disabled = false;
+    $("result").textContent = JSON.stringify({
+      userAgent: navigator.userAgent, hardwareConcurrency: navigator.hardwareConcurrency, deviceMemory: navigator.deviceMemory ?? null,
+      wasm: typeof WebAssembly === "object", navigationType: performance.getEntriesByType("navigation")[0]?.type,
+      wall_since_run_click_ms: Math.round(performance.now() - tClick), ...e.data.done,
+    }, null, 1);
+  }
+};
+$("run").onclick = () => { tClick = performance.now(); $("log").textContent = "starting"; worker.postMessage("engine"); };
+$("pdf").onclick = () => { $("log").textContent += "\nloading PDF stack"; worker.postMessage("pdf"); };
+</script>
+</body>
+</html>

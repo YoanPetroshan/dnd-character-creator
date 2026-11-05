@@ -1,0 +1,87 @@
+{
+  "pyodide": "314.0.7",
+  "python": "3.14.2",
+  "note": "Every file is fetched from the url and must match size and sha256, or scripts/build_offline.py stops. Pyodide wheel hashes equal those in pyodide-lock.json; PyPI hashes equal PyPI's published digests. Change a pin only deliberately (golden + Node equivalence test).",
+  "files": [
+    {
+      "name": "pyodide.mjs",
+      "kind": "core",
+      "url": "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyodide.mjs",
+      "size": 17931,
+      "sha256": "6f1d60f7bf529beb300f0f47983c921d3982363640ba20af0e38efdddbc66109",
+      "origin": "pyodide distribution"
+    },
+    {
+      "name": "pyodide.asm.mjs",
+      "kind": "core",
+      "url": "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyodide.asm.mjs",
+      "size": 1250344,
+      "sha256": "f7cdc8ece80678ceb712f8e65ebe6d3a83203a180c399865f49612a051693635",
+      "origin": "pyodide distribution"
+    },
+    {
+      "name": "pyodide.asm.wasm",
+      "kind": "core",
+      "url": "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyodide.asm.wasm",
+      "size": 9598218,
+      "sha256": "cc36e3cab04fdfc9a63ff13eb52eae2b911bf46c025cc7b281f394bd3de1d5e6",
+      "origin": "pyodide distribution"
+    },
+    {
+      "name": "python_stdlib.zip",
+      "kind": "core",
+      "url": "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/python_stdlib.zip",
+      "size": 2545637,
+      "sha256": "fa1957e5777068fc4f7437f96d860ae2fbe9c19732ba06c84e004ec16dd7dd7a",
+      "origin": "pyodide distribution"
+    },
+    {
+      "name": "pyodide-lock.json",
+      "kind": "core",
+      "url": "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyodide-lock.json",
+      "size": 119077,
+      "sha256": "5dc2fc119108bc148c7457dc86e7675b5c87e1cafd420b9c34c1eaef7b36c010",
+      "origin": "pyodide distribution"
+    },
+    {
+      "name": "pyyaml-6.0.3-cp314-cp314-pyemscripten_2026_0_wasm32.whl",
+      "kind": "wheel",
+      "url": "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyyaml-6.0.3-cp314-cp314-pyemscripten_2026_0_wasm32.whl",
+      "size": 112901,
+      "sha256": "a05d2a48c13ed72a8c60c73b30b753a25c3a591bb66c15428b7e95e69a9e806f",
+      "origin": "pyodide distribution (also pinned in pyodide-lock.json)"
+    },
+    {
+      "name": "pillow-12.2.0-cp314-cp314-pyemscripten_2026_0_wasm32.whl",
+      "kind": "wheel",
+      "url": "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pillow-12.2.0-cp314-cp314-pyemscripten_2026_0_wasm32.whl",
+      "size": 1037806,
+      "sha256": "e29838b7a756e4ee0f27a9cfa9a387ee0dfa2e9dd44be2dd595130b9f9d93ac3",
+      "origin": "pyodide distribution (also pinned in pyodide-lock.json)"
+    },
+    {
+      "name": "fonttools-4.62.1-py3-none-any.whl",
+      "kind": "wheel",
+      "url": "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/fonttools-4.62.1-py3-none-any.whl",
+      "size": 1152647,
+      "sha256": "0d1516e073fd0a8d8e6d9af46417b6a26209a42518024a18f7085e72d2599605",
+      "origin": "pyodide distribution (also pinned in pyodide-lock.json)"
+    },
+    {
+      "name": "fpdf2-2.8.8-py3-none-any.whl",
+      "kind": "wheel",
+      "size": 337000,
+      "sha256": "3557a478fc577a929c94aace9666aed4dcc432b5ab6764232e6a59f1ccd75f17",
+      "origin": "PyPI, pure python",
+      "url": "https://files.pythonhosted.org/packages/f5/be/af012eda9507494f28b99b077423806c43a11573eb6225dd46f19ae2d263/fpdf2-2.8.8-py3-none-any.whl"
+    },
+    {
+      "name": "defusedxml-0.7.1-py2.py3-none-any.whl",
+      "kind": "wheel",
+      "size": 25604,
+      "sha256": "a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61",
+      "origin": "PyPI, pure python",
+      "url": "https://files.pythonhosted.org/packages/07/6c/aa3f2f849e01cb6a001cd8554a88d4c77c5c1a31c95bdf1cf9301e6d9ef4/defusedxml-0.7.1-py2.py3-none-any.whl"
+    }
+  ]
+}

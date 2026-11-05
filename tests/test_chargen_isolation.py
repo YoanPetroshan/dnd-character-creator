@@ -60,6 +60,10 @@ LOCAL_MODULES = {p.stem for p in ROOT.glob("*.py")} | {"chargen", "tests"}
 # "service" is server/service.py, the framework-free API (O0); "app" is server/app.py (the root app.py was removed in D-5, so it is no longer a LOCAL_MODULES stem).
 SERVER_LOCAL_MODULES = {"app", "catalog", "engine", "export", "export_fields", "markdown_export", "pdf_export", "test_export", "kitchen_sink", "c7c_helpers", "perf_helpers", "test_feat_tail", "test_types_drift", "test_resolve_fuzz", "test_export_completeness", "i18n", "i18n_zoo", "export_labels", "test_export_baseline", "test_export_labels", "test_pdf_export", "test_i18n_completeness", "service", "test_service", "service_requests", "test_service_baseline"}
 
+# O1: the two offline-pack files that drive the server packages from outside server/ (the fixture emitter runs natively
+# with server/ and server/tests on sys.path; the harness runs inside Pyodide with the app mounted at /app/server).
+OFFLINE_SERVER_USERS = {pathlib.Path("scripts") / "offline_fixtures.py", pathlib.Path("frontend") / "src" / "offline" / "harness.py"}
+
 # The one lazy import chargen/cli.py is allowed to keep — see module
 # docstring above and final-review.md's I6/Minor 7.
 _CLI_LAZY_IMPORT_EXEMPTION = (pathlib.Path("chargen") / "cli.py", "library")
@@ -124,7 +128,7 @@ def test_every_top_level_import_is_stdlib_chargen_or_a_declared_dependency():
                 if (top in LOCAL_MODULES or top in ALLOWED_THIRD_PARTY
                         or top in STDLIB_MODULES):
                     continue
-                if rel.parts[0] == "server" and top in SERVER_LOCAL_MODULES:
+                if (rel.parts[0] == "server" or rel in OFFLINE_SERVER_USERS) and top in SERVER_LOCAL_MODULES:
                     continue
                 if (rel, top) == _CLI_LAZY_IMPORT_EXEMPTION:
                     continue

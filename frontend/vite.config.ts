@@ -6,7 +6,10 @@ export default defineConfig({
   // Pure-logic tests (src/logic/*.test.ts) run in plain node: no DOM, no React.
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "src/offline/*.test.mjs"],
+    // The offline pack (Pyodide, built by scripts/build_offline.py) is imported by src/offline/equivalence.test.ts
+    // as plain Node modules, not transformed by vite.
+    server: { deps: { external: [/\/public\/pyodide\//] } },
   },
   server: {
     port: 5173,
