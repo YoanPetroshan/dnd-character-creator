@@ -27,6 +27,25 @@ be unchanged first). There is deliberately NO regenerate. ``--freeze`` writes th
     cd server && ../.venv/bin/python tests/i18n_zoo.py --freeze      # first time only
     cd server && ../.venv/bin/python tests/i18n_zoo.py --append      # new cases only
     cd server && ../.venv/bin/python tests/i18n_zoo.py --coverage    # problem / warning id family coverage report
+    cd server && ../.venv/bin/python tests/i18n_zoo.py --rebaseline <SLICE> [--dry-run]   # a deliberate English text change
+
+Controlled rebaseline (T0, 2026-11-05)
+--------------------------------------
+A slice that deliberately changes engine English text (a new message, a reworded one) adds an entry to
+``SNAPSHOT_REBASELINES`` (append-only, like the golden's ``REBASELINES``):
+
+    SNAPSHOT_REBASELINES["G3"] = {"cases": ["g/*cleric*"],                    # fnmatch over zoo case names
+                                  "paths": [r"^cards[.]channel-divinity[.][0-9]+$"],   # regexes over leaf paths
+                                  "why": "one line"}
+
+The ``paths`` allowlist is written from the slice's rule, never copied from the dry-run output. A path is the position
+inside a case's leaves: ``problems[0][1]``, ``pruned[3][1]``, ``disabled.<card> | <option>``, ``cards.<cardId>[0]``,
+``exportGate[0][1]`` (dict keys joined by ``.``, list positions as ``[i]``; an added or removed key or a length change
+is reported at the container / key). ``--rebaseline G3 --dry-run`` prints the diff and writes nothing; without
+``--dry-run`` it re-resolves the zoo, and any change outside the matching cases or outside the allowlist raises before
+anything is written. Cases are never removed or added by a rebaseline (a stored case missing from the zoo is refused;
+new cases go in through ``--append``). There is still NO regenerate. The tuple of registry keys is pinned by
+``tests/test_i18n_snapshot_rebaseline.py``; extend that pin in the same commit.
 
 The whole thing needs the 5etools data (like the golden); tests skip without it.
 """
@@ -34,6 +53,7 @@ from __future__ import annotations
 
 import ast
 import copy
+import fnmatch
 import glob
 import gzip
 import json
@@ -456,8 +476,8 @@ def load_snapshot() -> dict:
     return json.load(gzip.open(SNAPSHOT, "rt")) if SNAPSHOT.exists() else {}
 
 
-def _write(data: dict) -> None:
-    with gzip.open(SNAPSHOT, "wt", compresslevel=9) as f:
+def _write(data: dict, path: pathlib.Path | None = None) -> None:
+    with gzip.open(path or SNAPSHOT, "wt", compresslevel=9) as f:
         json.dump(data, f, sort_keys=True, separators=(",", ":"))
 
 
@@ -483,6 +503,111 @@ def append() -> None:
         old[name] = case_leaves(cases[name], catalog_for(name, catalog))
     _write(old)
     print(f"kept {len(old) - len(new)} stored cases unchanged, added {len(new)}: {new}")
+
+
+# --- controlled rebaseline (T0) ---------------------------------------------------------------------------------------
+
+# Append-only record of deliberate English text changes, see the module docstring. slice id ->
+# {"cases": [fnmatch over zoo case names], "paths": [regexes over leaf paths], "why": one line}.
+SNAPSHOT_REBASELINES: dict[str, dict] = {}
+
+
+class RebaselineError(AssertionError):
+    """A rebaseline broke its allowlist, or a stored case is gone from the zoo."""
+
+
+def diff_paths(old, new, path: str = "") -> list[str]:
+    """Paths where two snapshot leaves differ (dict keys joined by '.', list positions as [i]); an added / removed key
+    is reported at the key, a list of another length at the list."""
+    if isinstance(old, dict) and isinstance(new, dict):
+        out = []
+        for k in sorted(set(old) | set(new)):
+            sub = f"{path}.{k}" if path else str(k)
+            if k not in old or k not in new:
+                out.append(sub)
+            else:
+                out += diff_paths(old[k], new[k], sub)
+        return out
+    if isinstance(old, list) and isinstance(new, list) and len(old) == len(new):
+        out = []
+        for i, (a, b) in enumerate(zip(old, new)):
+            out += diff_paths(a, b, f"{path}[{i}]")
+        return out
+    return [] if old == new else [path]
+
+
+def rebaseline(slice_id: str, *, dry_run: bool = False, catalog=None, rebaselines: dict | None = None, cases: dict | None = None,
+               leaves_for=None, stored: dict | None = None, path: pathlib.Path | None = None, out=print) -> dict:
+    """Re-resolve the zoo under a slice's allowlist (see the module docstring).
+
+    Returns {"changed": {case: [paths]}, "violations": {case: [paths]}, "warnings": [case], "counts": {regex: n}}.
+    A stored case missing from the zoo raises always; outside `dry_run` a violation raises `RebaselineError` before
+    anything is written. The keyword arguments let the tests run it on a synthetic zoo and file."""
+    table = SNAPSHOT_REBASELINES if rebaselines is None else rebaselines
+    if slice_id not in table:
+        raise KeyError(f"unknown rebaseline slice {slice_id!r}: add it to SNAPSHOT_REBASELINES first")
+    spec = table[slice_id]
+    patterns, allowed = spec["cases"], [re.compile(p) for p in spec["paths"]]
+    if catalog is None and (cases is None or leaves_for is None):
+        catalog = load()
+    if cases is None:
+        cases = zoo(catalog)
+    if leaves_for is None:
+        leaves_for = lambda name, draft: case_leaves(draft, catalog_for(name, catalog))  # noqa: E731
+    old = load_snapshot() if stored is None else stored
+    gone = sorted(set(old) - set(cases))
+    if gone:
+        raise RebaselineError(f"the snapshot only grows: stored case(s) missing from the zoo: {gone[:5]}")
+    new, changed, violations, warnings = {}, {}, {}, []
+    counts = {p.pattern: 0 for p in allowed}
+    for name, entry in old.items():
+        now = leaves_for(name, cases[name])
+        paths = diff_paths(entry, now)
+        matched = any(fnmatch.fnmatchcase(name, pat) for pat in patterns)
+        if not paths:
+            new[name] = entry
+            if matched:
+                warnings.append(name)
+            continue
+        if not matched:
+            violations[name] = paths
+            new[name] = entry
+            continue
+        new[name] = now
+        changed[name] = paths
+        for pth in paths:
+            hit = [p for p in allowed if p.search(pth)]
+            if not hit:
+                violations.setdefault(name, []).append(pth)
+            for p in hit[:1]:
+                counts[p.pattern] += 1
+    out(f"snapshot rebaseline {slice_id} ({spec.get('why', '')}){' [dry run]' if dry_run else ''}")
+    out(f"  matching cases changed: {len(changed)} of {len(old)}")
+    for p, n in counts.items():
+        out(f"  {n:5d} changed path(s) match {p}")
+    for name in warnings[:10]:
+        out(f"  WARNING: {name} matches `cases` but did not change (pattern too wide?)")
+    if len(warnings) > 10:
+        out(f"  WARNING: ... and {len(warnings) - 10} more matching cases did not change")
+    for name, paths in changed.items():
+        if dry_run:
+            out(f"  {name}")
+            for pth in paths:
+                out(f"      {'DISALLOWED ' if pth in violations.get(name, []) else ''}{pth}")
+    for name, paths in violations.items():
+        out(f"  VIOLATION {name}: {len(paths)} path(s) outside the allowlist or in an unmatched case, e.g. {paths[:3]}")
+    report = {"changed": changed, "violations": violations, "warnings": warnings, "counts": counts}
+    if dry_run:
+        return report
+    if violations:
+        raise RebaselineError(f"snapshot rebaseline {slice_id}: paths outside the allowlist or unmatched case changed: "
+                              f"{ {n: p[:3] for n, p in violations.items()} }")
+    if changed:
+        _write(new, path)
+        out(f"wrote {len(new)} cases")
+    else:
+        out("nothing changed, snapshot not rewritten")
+    return report
 
 
 # --- coverage of the problem / warning id families --------------------------------------------------------------------
@@ -584,6 +709,11 @@ def main(argv: list[str]) -> None:
         freeze()
     elif argv == ["--append"]:
         append()
+    elif len(argv) in (2, 3) and argv[0] == "--rebaseline" and argv[2:] in ([], ["--dry-run"]):
+        try:
+            rebaseline(argv[1], dry_run=len(argv) == 3)
+        except (KeyError, RebaselineError) as e:
+            raise SystemExit(str(e))
     elif argv == ["--coverage"]:
         snap = load_snapshot() or build_snapshot(load())
         covered, uncovered = coverage(snap)
