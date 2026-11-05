@@ -95,10 +95,6 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Rolled scores (4d6, drop the lowest) must be between 3 and 18.",
         "bg": "Хвърлените стойности (4d6, без най-ниския зар) трябва да са между 3 и 18.",
     },
-    "ability-invalid-number": {
-        "en": "{ab} score {value!r} isn't a valid number; using 10 instead.",
-        "bg": "Стойността {value!r} на {ab} не е валидно число; вместо нея се използва 10.",
-    },
     "ability-out-of-range": {
         "en": "{ab} score {score} is out of the 1-30 range.",
         "bg": "Стойността {score} на {ab} е извън диапазона 1-30.",
@@ -115,10 +111,6 @@ MESSAGES: dict[str, dict[str, str]] = {
     "duplicate-class": {
         "en": "'{cls}' appears more than once in classes — only the first entry is used.",
         "bg": "'{cls}' се среща повече от веднъж в classes — използва се само първият запис.",
-    },
-    "level-invalid-number": {
-        "en": "Level {value!r} for '{cls}' isn't a valid number; using 1 instead.",
-        "bg": "Нивото {value!r} за '{cls}' не е валидно число; вместо него се използва 1.",
     },
     "level-out-of-range": {
         "en": "Level {level} for '{cls}' is out of the 1-20 range; using 1 instead.",

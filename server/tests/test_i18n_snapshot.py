@@ -21,9 +21,7 @@ CHUNKS = 8
 # real catalog: dead after normalize_draft (resolve repeats a check normalize already made), or reachable only with
 # data the bundle does not have. Listed on purpose so a new unreachable site shows up as a failure here.
 KNOWN_GAPS = {
-    # resolve() re-checks a level / ability score that normalize_draft has already coerced: unreachable
-    r"level\-unsupported  ||  Level\ .*?\ for\ '.*?'\ isn't\ a\ valid\ number;\ using\ 1\ instead\.",
-    r"ability\-invalid\-.*?  ||  .*?\ score\ .*?\ isn't\ a\ valid\ number;\ using\ 10\ instead\.",
+    # (G8 removed the two re-checks resolve() used to repeat after normalize_draft: level / ability "isn't a valid number")
     # a species / background feat pick whose feat has a structured prerequisite: no Origin feat in the data has one
     r"feat\-prerequisite\-unmet\-.*?  ||  .*?'s\ prerequisite\ isn't\ met,\ so\ the\ .*?\ pick\ isn't\ applied\.",
     r"feat\-prerequisite\-unmet\-.*?  ||  .*?'s\ prerequisite\ isn't\ met\.",
@@ -96,7 +94,7 @@ def test_trigger_catalog_variants_exist():
 
 def test_problem_and_warning_families_are_covered_except_the_known_gaps(stored):
     covered, uncovered = zoo.coverage(stored)
-    assert len(covered) + len(uncovered) >= 87, "the AST scan found fewer msg(...) problem/warning sites than at I2"
+    assert len(covered) + len(uncovered) >= 85, "the AST scan found fewer msg(...) problem/warning sites than at I2 (87; G8 removed two dead re-checks)"
     assert set(uncovered.values()) == KNOWN_GAPS, sorted(set(uncovered.values()) ^ KNOWN_GAPS)
 
 

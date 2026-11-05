@@ -66,8 +66,9 @@ def test_catalog_keys_are_unique_across_modules_and_counted():
     assert len(MESSAGES) == total  # build() raises on a duplicate; the merged size proves nothing was lost
     assert validate_catalog(require_bg=True) == []
     counts = {n: len(m.MESSAGES) for n, m in MODULES.items()}
-    # floors: a catalog never shrinks silently (problems 88 = 52 + 36, pruned 37, disabled 49, labels 107 at I5)
-    assert counts["problems"] >= 52 and counts["warnings"] >= 36 and counts["pruned"] >= 37
+    # floors: a catalog never shrinks silently (problems 88 = 52 + 36, pruned 37, disabled 49, labels 107 at I5; G8 removed the
+    # two dead re-checks "level-invalid-number" / "ability-invalid-number": problems 50)
+    assert counts["problems"] >= 50 and counts["warnings"] >= 36 and counts["pruned"] >= 37
     assert counts["disabled"] >= 49 and counts["labels"] >= 107
 
 

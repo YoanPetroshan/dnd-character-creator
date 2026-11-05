@@ -5015,13 +5015,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     for idx, entry in enumerate(classes):
         entry_cls_id = entry.get("classId")
         entry_subclass_id = entry.get("subclassId")
-        entry_level = 1
-        raw_level = entry.get("level", 1)
-        try:
-            entry_level = int(raw_level)
-        except (TypeError, ValueError):
-            problems.append({"id": "level-unsupported", "message": msg("level-invalid-number", value=raw_level, cls=entry_cls_id)})
-            entry_level = 1
+        entry_level = entry.get("level", 1)  # G8: an int, normalize_draft coerced it (or the key is absent: 1)
         if not (1 <= entry_level <= 20):
             problems.append({"id": "level-unsupported", "message": msg("level-out-of-range", level=entry_level, cls=entry_cls_id)})
             entry_level = 1
@@ -5564,12 +5558,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
 
     final_scores: dict[str, int] = {}
     for ab in derived_mod.ABILITIES:
-        raw = base_scores.get(ab, 10)
-        try:
-            base_score = int(raw)
-        except (TypeError, ValueError):
-            problems.append({"id": f"ability-invalid-{ab}", "message": msg("ability-invalid-number", ab=ab, value=raw)})
-            base_score = 10
+        base_score = base_scores.get(ab, 10)  # G8: an int, normalize_draft coerced it (or the key is absent: 10)
         final_scores[ab] = base_score + species_bonuses.get(ab, 0) + background_bonuses.get(ab, 0) + feat_bonuses.get(ab, 0)
     for ab in derived_mod.ABILITIES:
         if isinstance(base_scores.get(ab), int) and not isinstance(base_scores.get(ab), bool) and base_scores[ab] > 20:
