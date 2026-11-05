@@ -11,6 +11,7 @@ import pytest
 
 from catalog.official import paths, subclasses as sub_mod
 from catalog.official_source import has_official_classes
+from perf_helpers import assert_fast, measure
 
 needs_classes = pytest.mark.skipif(not has_official_classes(), reason="5etools class files not available")
 
@@ -345,22 +346,18 @@ def test_existing_srd_drafts_resolve_byte_for_byte_the_same_as_without_the_impor
 
 @needs_classes
 def test_resolve_stays_as_fast_as_with_the_srd_only_catalog(catalog):
-    import time
+    """Best-of-N (perf_helpers): a scheduler hiccup under `-n auto` load lands in one lap, never in the best one."""
     srd = _srd_only(catalog)
 
-    def best(cat, sub):
-        draft = _draft("fighter", 20, sub)
-        resolve(draft, cat)
-        t = []
-        for _ in range(4):
-            start = time.perf_counter()
-            for _ in range(50):
-                resolve(draft, cat)
-            t.append(time.perf_counter() - start)
-        return min(t)
-
+    d_off, d_srd = _draft("fighter", 20, "battle-master-phb"), _draft("fighter", 20, "champion")
+    official, srd_only = [], []
+    for _ in range(3):  # interleaved rounds: a busy spell hits both catalogs, and only the best lap of each counts
+        official += measure(lambda: [resolve(d_off, catalog) for _ in range(50)], runs=4, warmup=1)  # one lap = 50 resolves
+        srd_only += measure(lambda: [resolve(d_srd, srd) for _ in range(50)], runs=4, warmup=1)
     # Measured 2026-10-09: 0.157 s for 50 resolves before the import (linear row scans), the dict index must not be slower.
-    assert best(catalog, "battle-master-phb") <= best(srd, "champion") * 1.10 + 0.05
+    assert min(official) <= min(srd_only) * 1.10 + 0.05, (
+        f"best of {len(official)} laps of 50 resolves: official {min(official):.3f} s, SRD-only {min(srd_only):.3f} s")
+    assert_fast(measure(lambda: resolve(_draft("fighter", 20, "battle-master-phb"), catalog), runs=20), "official fighter 20")
 
 
 # ------------------------------------------------------ 11b.4 subclass spells

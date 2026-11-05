@@ -641,6 +641,16 @@ def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
 
+@pytest.mark.filterwarnings("ignore:Possible nested set:FutureWarning")
+def test_every_rebaseline_allowlist_regex_compiles():
+    """The Y2 regexes use `[[]` (a literal bracket), which Python flags as a possible nested set: the entry is frozen
+    (append-only), so the warning is filtered here, where the allowlists are compiled."""
+    for slice_id, spec in REBASELINES.items():
+        assert spec["cases"] and spec["paths"] and spec["why"], slice_id
+        for rx in spec["paths"]:
+            re.compile(rx)
+
+
 def test_rp7_cases_are_the_primary_monk_cases_only():
     """The multiclass Barbarian 3 / Monk 2 (Monk secondary) is not matched, so it must stay byte-identical."""
     names = sorted(_GOLDEN)
