@@ -4,7 +4,7 @@
  * fonts.zip + the four wheels, is NOT part of the boot: `service` must import without it, and it is loaded on demand,
  * before the first part that renders a PDF, like the worker does on the first PDF export):
  *   - every golden case (STRIP applied, canonical JSON equal),
- *   - the 52 export baseline drafts (Markdown / YAML byte-equal by sha256, PDF after /CreationDate + /ID normalising),
+ *   - the 54 export baseline drafts (Markdown / YAML byte-equal by sha256, PDF after /CreationDate + /ID normalising),
  *   - the fixed request list of server/tests/service_requests.py through service.handle (status, content type,
  *     Content-Disposition, body sha256 + length equal to service_baseline.json).
  * Skipped when the pack is absent (build it: `.venv/bin/python scripts/build_offline.py`). The export / request
@@ -118,11 +118,11 @@ json.dumps({"status": status, "loaded": loaded})`),
     expect(r.mismatches).toEqual([]);
   }, 600_000);
 
-  it.skipIf(!hasPython)("matches the 52 export baseline hashes (Markdown, YAML, PDF)", async () => {
+  it.skipIf(!hasPython)("matches the 54 export baseline hashes (Markdown, YAML, PDF)", async () => {
     await loadPdfStack();
     const r = run("harness.exports()");
     timings.exports_s = r.seconds;
-    expect(r.checked).toBe(52);
+    expect(r.checked).toBe(54);
     expect(r.ids).toBe(true);
     expect(r.mismatches).toEqual([]);
   }, 600_000);

@@ -490,7 +490,7 @@ def _note_vars(ctx: Ctx, rc: dict) -> dict:
             "ma_die": (_martial_arts_die(ctx, rc) or "d6") if rc["cls_id"] == "monk" else "d6",
             "spark_dice": spark,
             # RP11
-            "int": int_, "int_min1": int_min1, "dc_str": 8 + pb + str_, "dc_int": 8 + pb + int_, "pb": pb,
+            "int": int_, "str": str_, "int_min1": int_min1, "dc_str": 8 + pb + str_, "dc_int": 8 + pb + int_, "pb": pb,
             "level_plus1": level + 1, "third_level": level // 3, "three_level": 3 * level,
             "half_level_up": (level + 1) // 2, "cha_pb": cha + pb, "moon_ac": 13 + wis, "ward_hp": 2 * level + int_,
             "zealot_dice": zealot, "lands_aid": lands,
@@ -759,6 +759,37 @@ def _subclass_option_notes_2024(ctx: Ctx, rc: dict) -> list[dict]:
     return out
 
 
+def _subclass_pick_resources_2014(ctx: Ctx, rc: dict) -> list[dict]:
+    """G1: a note-only subclass resource per picked option of the 2014 Hunter (Hunter's Prey, Defensive Tactics,
+    Multiattack, Superior Hunter's Defense) and Totem Warrior (Totem Spirit, Aspect of the Beast, Totemic Attunement)
+    cards (`reference_data.SUBCLASS_PICK_RESOURCES_2014`), the 2014 twin of `_subclass_option_notes_2024`. Rulesets
+    "mixed" and "2014" only and only for the selected subclass; needs the feature record in the catalog and the class
+    level at its level. The picked option comes from the resolved card, so a pick the card no longer offers gives
+    nothing. `uses` + `recharge` only where the quoted text states a limit (X2 vocabulary); `dc` only for the Elk."""
+    sub_id = rc.get("subclass_id")
+    if ctx.ruleset == "2024" or not sub_id or not isinstance(ctx.choices, list):
+        return []
+    cards = {c.get("id"): c for c in ctx.choices}
+    out = []
+    for fid, spec in reference_data.SUBCLASS_PICK_RESOURCES_2014.items():
+        if spec["class"] != rc["cls_id"] or spec["subclass"] != sub_id:
+            continue
+        first = _feature_level(ctx, fid)
+        if first is None or rc["level"] < first:
+            continue
+        card = cards.get(f"class:{rc['cls_id']}:{first}:feature:{fid}") or {}
+        values = _note_vars(ctx, rc)
+        for picked in card.get("selected") or []:
+            option = spec["options"].get(picked)
+            if option is None:
+                continue
+            dc = values[option["dc"]] if "dc" in option else None
+            out.append(_resource(rc, f"{spec['label']}: {option['name']}", kind="subclass", uses=option.get("uses"),
+                                 recharge=option.get("recharge"), dc=dc,
+                                 details={"note": option["note"].format(**values)}))
+    return out
+
+
 def _signature_spells(ctx: Ctx, rc: dict) -> list[dict]:
     """Wizard 20 Signature Spells: one cast per picked spell per Short or Long Rest; nothing while unpicked."""
     sig = reference_data.SIGNATURE_SPELLS_2024 if ctx.ruleset == "2024" else reference_data.SIGNATURE_SPELLS_2014
@@ -906,6 +937,7 @@ def resources_for(catalog, resolved_classes: list[dict], modifiers: dict, prof_b
         out += mine + sub
         out += _subclass_tail_2024(ctx, rc, mine + sub)  # RP11: 2024 only, after the class and R6 entries
         out += _subclass_tail_2014(ctx, rc, mine + sub)  # W7: mixed / 2014 only
+        out += _subclass_pick_resources_2014(ctx, rc)  # G1: mixed / 2014 only
         out += _subclass_pick_notes_2024(ctx, rc)  # RP12: 2024 only
         out += _subclass_option_notes_2024(ctx, rc)  # RP13: 2024 only
     # G1: the 2024 Multiclassing chapter has no merge rule and every class text
@@ -935,7 +967,8 @@ def _picked_attack_notes(by_id: dict) -> list[tuple[dict, dict]]:
     for spec in reference_data.SUBCLASS_OPTIONS_2024.values():
         for option in spec["options"].values():
             rid = f"{spec['class']}:{_slug(subclass_options_2024.note_name(spec, option))}"
-            if "attack_note" in option and rid in by_id:
+            # G1: the 2014 Hunter picks share these ids; only the 2024 subclass's own entry carries the 2024 note
+            if "attack_note" in option and rid in by_id and by_id[rid]["source"].get("id") == spec["subclass"]:
                 out.append((spec, option))
     return out
 

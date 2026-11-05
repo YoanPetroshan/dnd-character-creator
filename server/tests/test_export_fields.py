@@ -197,7 +197,13 @@ _EXPECT = {
     "watchers-paladin20-2014": {"resources": ["Aura of the Sentinel", "Vigilant Rebuke", "Mortal Bulwark", "Channel Divinity"]},  # W8c
     "celestial-warlock14-mixed": {"resources": ["Healing Light", "Radiant Soul", "Celestial Resilience", "Searing Vengeance"]},  # W8d
     "psi-warrior11": {"resources": ["Psionic Energy Dice"], "apa": 3},
-    "totem-bear6": {"resources": ["Rage"], "feature_choice": "Bear"},
+    "totem-bear6": {"resources": ["Rage", "Totem Spirit: Bear", "Aspect of the Beast: Bear"], "feature_choice": "Bear"},
+    # G1: the 2014 Totem Warrior 14 (Elk Totemic Attunement DC) and the Hunter 15 with one pick per card
+    "totem-elk14": {"resources": ["Rage", "Totem Spirit: Elk", "Aspect of the Beast: Tiger", "Totemic Attunement: Elk"],
+                    "feature_choice": "Elk"},
+    "hunter15-2014": {"resources": ["Hunter's Prey: Horde Breaker", "Defensive Tactics: Multiattack Defense",
+                                    "Multiattack: Whirlwind Attack", "Superior Hunter's Defense: Uncanny Dodge"],
+                      "feature_choice": "Horde Breaker"},
     "cleric1-thaumaturge-2024": {"feature_choice": "Thaumaturge"},
     # F3b: the C6b..C9b / R9 stages
     "rogue6-2024": {"resources": ["Sneak Attack"], "masteries": True, "expertise": 4, "feature_choice": "Dwarvish",

@@ -10,11 +10,13 @@ _WL_INV_2024 = "class:warlock:1:invocations:xphb-warlock-1-eldritch-invocations"
 _P = "eldritch-invocation-"
 
 
-def _sub(index, level, ruleset="mixed", sub=None, overrides=None, equip=(), marks=(), origin=None, feats=False):
+def _sub(index, level, ruleset="mixed", sub=None, overrides=None, equip=(), marks=(), origin=None, feats=False, once=False):
     spec = {"classes": [(index, level, sub)], "ruleset": ruleset, "overrides": overrides or {},
             "equip": list(equip), "marks": marks}
     if feats:  # FE12: a feat-holding draft (the golden adds it once, under `sources` [])
         spec["feats"] = True
+    if once:  # G1: a draft whose picks a "srd" source filter would hide (SCAG Elk / Tiger): added once, under `sources` []
+        spec["once"] = True
     if origin:  # F3b: (species id, background id) instead of the SRD Human / Acolyte
         spec["origin"] = origin
     return spec
@@ -91,6 +93,19 @@ KITCHEN_SINK: dict[str, dict] = {
         "class:barbarian:3:feature:totem-warrior-phb-3-totem-spirit": ["totem-warrior-phb-3-totem-spirit--bear"],
         "class:barbarian:6:feature:totem-warrior-phb-6-aspect-of-the-beast": [
             "totem-warrior-phb-6-aspect-of-the-beast--bear"]}),
+    # G1: 2014 Totem Warrior 14 with the Elk Totemic Attunement (the only option whose text gives a DC) and the Hunter
+    # Ranger 15 with a pick on each of the four cards; non-2014-only golden cases via --append
+    "totem-elk14": _sub("barbarian", 14, "mixed", sub="totem-warrior-phb", marks=("classes",), once=True, overrides={
+        "class:barbarian:3:feature:totem-warrior-phb-3-totem-spirit": ["totem-warrior-phb-3-totem-spirit--elk"],
+        "class:barbarian:6:feature:totem-warrior-phb-6-aspect-of-the-beast": [
+            "totem-warrior-phb-6-aspect-of-the-beast--tiger"],
+        "class:barbarian:14:feature:totem-warrior-phb-14-totemic-attunement": [
+            "totem-warrior-phb-14-totemic-attunement--elk"]}),
+    "hunter15-2014": _sub("ranger", 15, "2014", sub="hunter", marks=("classes",), overrides={
+        "class:ranger:3:feature:hunters-prey": ["hunters-prey-horde-breaker"],
+        "class:ranger:7:feature:defensive-tactics": ["defensive-tactics-multiattack-defense"],
+        "class:ranger:11:feature:multiattack": ["multiattack-whirlwind-attack"],
+        "class:ranger:15:feature:superior-hunters-defense": ["superior-hunters-defense-uncanny-dodge"]}),
     "cleric1-thaumaturge-2024": _sub("cleric", 1, "2024", marks=("classes", "official"), overrides={
         "class:cleric:1:divine-order": ["xphb-cleric-1-thaumaturge"]}),
     # F3b: the C6b..C9b / R9 stages, 2024 origin (Human, Soldier) so the origin language card is present

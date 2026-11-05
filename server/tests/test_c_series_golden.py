@@ -284,6 +284,22 @@ REBASELINES: dict[str, dict] = {
         ],
         "why": "option source field (SK10 / Y2)",
     },
+    # G1: 2014 Hunter / Totem Warrior pick effects as note-only subclass resources (`SUBCLASS_PICK_RESOURCES_2014`). Rule
+    # matrix: the golden's primary Ranger (level >= 3: the first SRD subclass, Hunter) holds the filler's first-option picks,
+    # Colossus Slayer (Hunter's Prey, Ranger 3), Escape the Horde (Defensive Tactics, Ranger 7), Volley (Multiattack,
+    # Ranger 11) and Evasion (Superior Hunter's Defense, Ranger 15), so Ranger 3 gains one resource, Ranger 11 three and
+    # Ranger 20 four; the Totem Warrior is no primary (the first SRD Barbarian subclass is Berserker), only the
+    # `totem-bear6` kitchen sink picks Bear for Totem Spirit and Aspect of the Beast and gains those two. Nothing else
+    # moves: the picks are already in the stored drafts, so no draft, card or other result path may change. Paths: the new
+    # resources at their roots, and the whole `classResources` list for the Ranger cases whose list was empty before.
+    "G1": {
+        "cases": ["*/src-*/ranger3", "*/src-*/ranger11", "*/src-*/ranger20", "ks/src-*/totem-bear6"],
+        "paths": [
+            r"^result\.derived\.classResources\[(ranger:(hunter-s-prey-colossus-slayer|defensive-tactics-escape-the-horde|multiattack-volley|superior-hunter-s-defense-evasion)|barbarian:(totem-spirit-bear|aspect-of-the-beast-bear))\]$",
+            r"^result\.derived\.classResources$",
+        ],
+        "why": "2014 Hunter and Totem Warrior pick effects as note-only subclass resources (G1)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -350,7 +366,7 @@ def case_drafts(catalog) -> dict[str, dict]:
         if spec["ruleset"] == "2024":
             continue
         # FE12: feat-holding drafts are added once, under `sources` [] (a "srd" filter would hide the feat picks)
-        for src in (([],) if spec.get("feats") else SOURCES):
+        for src in (([],) if spec.get("feats") or spec.get("once") else SOURCES):
             d = ks.base_draft(spec)
             d["sources"] = list(src)
             cases[f"ks/{_label(src)}/{sid}"] = (d, spec["overrides"])
@@ -636,7 +652,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2") and STRIP == ("derived.featResources", "derived.speciesResources")
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1") and STRIP == ("derived.featResources", "derived.speciesResources")
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
@@ -783,7 +799,7 @@ def test_w6_cases_hold_the_2014_class_feature_tail():
               "warlock:eldritch-master"}
     for n, entry in _GOLDEN.items():
         ids = {r["id"] for r in entry["result"]["derived"]["classResources"]}
-        if n not in hit and "/whispers-bard14" not in n and "/watchers-paladin20" not in n and "/celestial-warlock14" not in n:  # W8a / W8c / W8d appended sinks: a Bard 14 holds Song of Rest, a Paladin 20 Divine Smite and Cleansing Touch, a Warlock 14 Mystic Arcanum
+        if n not in hit and "/whispers-bard14" not in n and "/watchers-paladin20" not in n and "/celestial-warlock14" not in n and "/totem-elk14" not in n:  # W8a / W8c / W8d / G1 appended sinks: a Bard 14 holds Song of Rest, a Paladin 20 Divine Smite and Cleansing Touch, a Warlock 14 Mystic Arcanum, a Barbarian 14 Brutal Critical and Relentless Rage
             assert not ids & w6_ids, n
     for n in hit:
         ids = {r["id"] for r in _GOLDEN[n]["result"]["derived"]["classResources"]}
@@ -880,14 +896,43 @@ def test_x2_cases_hold_the_turn_recharge():
     x2_ids = {"rogue:sneak-attack", "cleric:divine-strike-life-domain", "ranger:foe-slayer"}
     for n, entry in _GOLDEN.items():
         resources = entry["result"]["derived"]["classResources"]
-        turn = {r["id"] for r in resources if r["recharge"] in ("turn", "combat", "rage", "other")}
+        turn = {r["id"] for r in resources if r["recharge"] in ("turn", "combat", "rage", "other")
+                and not r["name"].startswith(G1_PICK_LABELS)}  # G1's pick resources have their own pin test
         assert (turn <= x2_ids) and (n in hit or not turn), n
         if n in hit:
             assert turn and all(r["uses"] == 1 and r["recharge"] == "turn" for r in resources if r["id"] in turn), n
 
 
+G1_PICK_LABELS = ("Hunter's Prey: ", "Defensive Tactics: ", "Multiattack: ", "Superior Hunter's Defense: ",
+                  "Totem Spirit: ", "Aspect of the Beast: ", "Totemic Attunement: ")
+
+
+def test_g1_cases_hold_the_2014_pick_resources_and_nothing_else_moved():
+    """G1: the 14 rebaselined cases are the primary Ranger 3 / 11 / 20 (Hunter, first-option picks: Colossus Slayer at 3,
+    + Escape the Horde and Volley at 11, + Evasion at 20) and the `totem-bear6` sink (Totem Spirit and Aspect of the
+    Beast, Bear); the two cases appended with them hold the Elk Totemic Attunement DC and the other Hunter options. Every
+    other case holds no G1 pick resource."""
+    hit = sorted(n for n in _GOLDEN if any(fnmatch.fnmatchcase(n, p) for p in REBASELINES["G1"]["cases"]))
+    assert len(hit) == 14
+    expected = {"ranger3": ["Hunter's Prey: Colossus Slayer"],
+                "ranger11": ["Hunter's Prey: Colossus Slayer", "Defensive Tactics: Escape the Horde", "Multiattack: Volley"],
+                "ranger20": ["Hunter's Prey: Colossus Slayer", "Defensive Tactics: Escape the Horde", "Multiattack: Volley",
+                             "Superior Hunter's Defense: Evasion"],
+                "totem-bear6": ["Totem Spirit: Bear", "Aspect of the Beast: Bear"]}
+    appended = {"totem-elk14": ["Totem Spirit: Elk", "Aspect of the Beast: Tiger", "Totemic Attunement: Elk"],
+                "hunter15-2014": ["Hunter's Prey: Horde Breaker", "Defensive Tactics: Multiattack Defense",
+                                  "Multiattack: Whirlwind Attack", "Superior Hunter's Defense: Uncanny Dodge"]}
+    for n, entry in _GOLDEN.items():
+        names = [r["name"] for r in entry["result"]["derived"]["classResources"] if r["name"].startswith(G1_PICK_LABELS)]
+        key = n.rsplit("/", 1)[-1]
+        assert names == (expected.get(key) or appended.get(key) or []), n
+        assert (n in hit) == (key in expected), n
+    elk = {r["id"]: r for r in _GOLDEN["ks/src-all/totem-elk14"]["result"]["derived"]["classResources"]}
+    assert elk["barbarian:totemic-attunement-elk"]["dc"] == 8 + 5 + 3 + 1 and "DC 17" in elk["barbarian:totemic-attunement-elk"]["details"]["note"]
+
+
 def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
-    """Y2: the rebaseline touched only `options[*].source` (the allowlist); 215 of 251 cases hold a book option, the
+    """Y2: the rebaseline touched only `options[*].source` (the allowlist); 218 of 254 cases hold a book option, the
     other 36 (level 1 / 3 cases without feat, spell or feature options) are byte-identical. Every stored source is a
     non-empty code, and no option outside the book kinds (skills, languages, equipment items) has one."""
     assert REBASELINES["Y2"]["cases"] == ["*"] and len(REBASELINES["Y2"]["paths"]) == 1
@@ -901,7 +946,7 @@ def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
                     assert isinstance(o["source"], str) and o["source"], (name, card["id"], o["id"])
                     assert not o["id"].startswith("skill-") and card["source"]["kind"] != "equipment", (name, card["id"], o["id"])
         with_source += has
-    assert with_source == 215
+    assert with_source == 218
 
 
 if __name__ == "__main__":

@@ -5385,6 +5385,183 @@ ADDITIONAL_SECRETS_2014: dict = {
 }
 
 
+# G1: 2014 Hunter (SRD) and Totem Warrior (PHB) pick effects as note-only subclass resources, the 2014 twin of
+# SUBCLASS_OPTIONS_2024 (RP13). The pick cards already exist (the SRD `subfeature_options` of Hunter's Prey, Defensive
+# Tactics, Multiattack and Superior Hunter's Defense; the `text_options` of the three Totem Warrior features); what a
+# picked option does was not shown. Keyed by the card's feature id (the parent record, whose level is the card's first
+# level); `options` maps the option id (what `choices[].selected` holds) to its entry. `quote` is a verbatim part of the
+# record text (pinned by tests): the option's own child record for the Hunter (`record`), the parent's "Name. text"
+# line for the Totem Warrior. `note` is the entry's text, `uses` + `recharge` (the X2 vocabulary) only where the quoted
+# text states a limit: "only once per turn" / "Once on each of your turns" -> 1 + "turn"; "you can use your reaction"
+# -> 1 + "other" with "Reaction:" first in the note; `dc` names the note variable that holds a DC the text gives
+# ("DC 8 + your Strength bonus + your proficiency bonus", Elk Totemic Attunement only). Ruleset "mixed" / "2014" only.
+def _g1(subclass, cls, label, options):
+    return {"class": cls, "subclass": subclass, "label": label, "options": options}
+
+
+def _g1_child(option_id, name, quote, note, **kw):
+    """A Hunter option: the quote lives in the option's own child record (the option id)."""
+    return option_id, {"name": name, "record": option_id, "quote": quote, "note": note, **kw}
+
+
+def _g1_totem(feature, animal, quote, note, **kw):
+    """A Totem Warrior option: a "<Animal>. text" line of the feature record."""
+    return f"{feature}--{animal.lower()}", {"name": animal, "quote": quote, "note": note, **kw}
+
+
+_TOTEM_SPIRIT = "totem-warrior-phb-3-totem-spirit"
+_TOTEM_ASPECT = "totem-warrior-phb-6-aspect-of-the-beast"
+_TOTEM_ATTUNE = "totem-warrior-phb-14-totemic-attunement"
+
+SUBCLASS_PICK_RESOURCES_2014: dict[str, dict] = {
+    "hunters-prey": _g1("hunter", "ranger", "Hunter's Prey", dict([
+        _g1_child("hunters-prey-colossus-slayer", "Colossus Slayer",
+                  "the creature takes an extra 1d8 damage if it's below its hit point maximum. You can deal this extra "
+                  "damage only once per turn.",
+                  "Once per turn, a weapon attack against a creature below its hit point maximum deals an extra 1d8 damage",
+                  uses=1, recharge="turn"),
+        _g1_child("hunters-prey-giant-killer", "Giant Killer",
+                  "When a Large or larger creature within 5 feet of you hits or misses you with an attack, you can use "
+                  "your reaction to attack that creature immediately after its attack, provided that you can see the creature.",
+                  "Reaction: when a Large or larger creature within 5 feet of you hits or misses you with an attack, attack "
+                  "that creature immediately after its attack, provided that you can see it",
+                  uses=1, recharge="other"),
+        _g1_child("hunters-prey-horde-breaker", "Horde Breaker",
+                  "Once on each of your turns when you make a weapon attack, you can make another attack with the same "
+                  "weapon against a different creature that is within 5 feet of the original target and within range of "
+                  "your weapon.",
+                  "Once on each of your turns when you make a weapon attack, make another attack with the same weapon "
+                  "against a different creature within 5 feet of the original target and within range of your weapon",
+                  uses=1, recharge="turn"),
+    ])),
+    "defensive-tactics": _g1("hunter", "ranger", "Defensive Tactics", dict([
+        _g1_child("defensive-tactics-escape-the-horde", "Escape the Horde",
+                  "Opportunity attacks against you are made with disadvantage.",
+                  "Opportunity attacks against you are made with disadvantage"),
+        _g1_child("defensive-tactics-multiattack-defense", "Multiattack Defense",
+                  "When a creature hits you with an attack, you gain a +4 bonus to AC against all subsequent attacks made "
+                  "by that creature for the rest of the turn.",
+                  "When a creature hits you with an attack, you gain a +4 bonus to AC against all subsequent attacks made "
+                  "by that creature for the rest of the turn"),
+        _g1_child("defensive-tactics-steel-will", "Steel Will",
+                  "You have advantage on saving throws against being frightened.",
+                  "Advantage on saving throws against being frightened"),
+    ])),
+    "multiattack": _g1("hunter", "ranger", "Multiattack", dict([
+        _g1_child("multiattack-volley", "Volley",
+                  "You can use your action to make a ranged attack against any number of creatures within 10 feet of a "
+                  "point you can see within your weapon's range.",
+                  "Action: make a ranged attack against any number of creatures within 10 feet of a point you can see "
+                  "within your weapon's range, with ammunition for each target and a separate attack roll for each target"),
+        _g1_child("multiattack-whirlwind-attack", "Whirlwind Attack",
+                  "You can use your action to make a melee attack against any number of creatures within 5 feet of you, "
+                  "with a separate attack roll for each target.",
+                  "Action: make a melee attack against any number of creatures within 5 feet of you, with a separate "
+                  "attack roll for each target"),
+    ])),
+    "superior-hunters-defense": _g1("hunter", "ranger", "Superior Hunter's Defense", dict([
+        _g1_child("superior-hunters-defense-evasion", "Evasion",
+                  "you instead take no damage if you succeed on the saving throw, and only half damage if you fail.",
+                  "Dexterity saving throws against effects that deal half damage on a success: no damage on a success, "
+                  "half damage on a failure"),
+        _g1_child("superior-hunters-defense-stand-against-the-tide", "Stand Against the Tide",
+                  "When a hostile creature misses you with a melee attack, you can use your reaction to force that "
+                  "creature to repeat the same attack against another creature (other than itself) of your choice.",
+                  "Reaction: when a hostile creature misses you with a melee attack, force it to repeat the same attack "
+                  "against another creature (other than itself) of your choice",
+                  uses=1, recharge="other"),
+        _g1_child("superior-hunters-defense-uncanny-dodge", "Uncanny Dodge",
+                  "When an attacker that you can see hits you with an attack, you can use your reaction to halve the "
+                  "attack's damage against you.",
+                  "Reaction: when an attacker that you can see hits you with an attack, halve the attack's damage "
+                  "against you",
+                  uses=1, recharge="other"),
+    ])),
+    _TOTEM_SPIRIT: _g1("totem-warrior-phb", "barbarian", "Totem Spirit", dict([
+        _g1_totem(_TOTEM_SPIRIT, "Bear", "Bear. While raging, you have resistance to all damage except psychic damage.",
+                  "While raging, resistance to all damage except psychic damage"),
+        _g1_totem(_TOTEM_SPIRIT, "Eagle",
+                  "Eagle. While you're raging and aren't wearing heavy armor, other creatures have disadvantage on "
+                  "opportunity attack rolls against you, and you can use the Dash action as a bonus action on your turn.",
+                  "While raging and not wearing heavy armor, other creatures have disadvantage on opportunity attack rolls "
+                  "against you, and you can use the Dash action as a bonus action on your turn"),
+        _g1_totem(_TOTEM_SPIRIT, "Elk",
+                  "Elk. While you're raging and aren't wearing heavy armor, your walking speed increases by 15 feet.",
+                  "While raging and not wearing heavy armor, your walking speed increases by 15 feet"),
+        _g1_totem(_TOTEM_SPIRIT, "Tiger",
+                  "Tiger. While raging, you can add 10 feet to your long jump distance and 3 feet to your high jump distance.",
+                  "While raging, add 10 feet to your long jump distance and 3 feet to your high jump distance"),
+        _g1_totem(_TOTEM_SPIRIT, "Wolf",
+                  "Wolf. While you're raging, your friends have advantage on melee attack rolls against any creature "
+                  "within 5 feet of you that is hostile to you.",
+                  "While raging, your friends have advantage on melee attack rolls against any creature within 5 feet of "
+                  "you that is hostile to you"),
+    ])),
+    _TOTEM_ASPECT: _g1("totem-warrior-phb", "barbarian", "Aspect of the Beast", dict([
+        _g1_totem(_TOTEM_ASPECT, "Bear",
+                  "Bear. You gain the might of a bear. Your carrying capacity (including maximum load and maximum lift) "
+                  "is doubled, and you have advantage on Strength checks made to push, pull, lift, or break objects.",
+                  "Carrying capacity (including maximum load and maximum lift) is doubled, and advantage on Strength "
+                  "checks made to push, pull, lift, or break objects"),
+        _g1_totem(_TOTEM_ASPECT, "Eagle",
+                  "Eagle. You gain the eyesight of an eagle. You can see up to 1 mile away with no difficulty, able to "
+                  "discern even fine details as though looking at something no more than 100 feet away from you. "
+                  "Additionally, dim light doesn't impose disadvantage on your Wisdom (Perception) checks.",
+                  "See up to 1 mile away with no difficulty, discerning fine details as though looking at something no "
+                  "more than 100 feet away; dim light doesn't impose disadvantage on Wisdom (Perception) checks"),
+        _g1_totem(_TOTEM_ASPECT, "Elk",
+                  "Elk. Whether mounted or on foot, your travel pace is doubled, as is the travel pace of up to ten "
+                  "companions while they're within 60 feet of you and you're not incapacitated.",
+                  "Whether mounted or on foot, your travel pace is doubled, as is the travel pace of up to ten companions "
+                  "while they're within 60 feet of you and you're not incapacitated"),
+        _g1_totem(_TOTEM_ASPECT, "Tiger",
+                  "Tiger. You gain proficiency in two skills from the following list: Athletics, Acrobatics, Stealth, "
+                  "and Survival.",
+                  "Proficiency in two skills from the following list: Athletics, Acrobatics, Stealth, and Survival "
+                  "(not tracked in the proficiencies)"),
+        _g1_totem(_TOTEM_ASPECT, "Wolf",
+                  "Wolf. You gain the hunting sensibilities of a wolf. You can track other creatures while traveling at "
+                  "a fast pace, and you can move stealthily while traveling at a normal pace.",
+                  "You can track other creatures while traveling at a fast pace, and you can move stealthily while "
+                  "traveling at a normal pace"),
+    ])),
+    _TOTEM_ATTUNE: _g1("totem-warrior-phb", "barbarian", "Totemic Attunement", dict([
+        _g1_totem(_TOTEM_ATTUNE, "Bear",
+                  "Bear. While you're raging, any creature within 5 feet of you that's hostile to you has disadvantage on "
+                  "attack rolls against targets other than you or another character with this feature.",
+                  "While raging, any creature within 5 feet of you that's hostile to you has disadvantage on attack rolls "
+                  "against targets other than you or another character with this feature (immune if it can't see or hear "
+                  "you or can't be frightened)"),
+        _g1_totem(_TOTEM_ATTUNE, "Eagle",
+                  "Eagle. While raging, you have a flying speed equal to your current walking speed. This benefit works "
+                  "only in short bursts; you fall if you end your turn in the air and nothing else is holding you aloft.",
+                  "While raging, a flying speed equal to your current walking speed, only in short bursts: you fall if you "
+                  "end your turn in the air and nothing else is holding you aloft"),
+        _g1_totem(_TOTEM_ATTUNE, "Elk",
+                  "Elk. While raging, you can use a bonus action during your move to pass through the space of a Large or "
+                  "smaller creature. That creature must succeed on a Strength saving throw (DC 8 + your Strength bonus + "
+                  "your proficiency bonus) or be knocked prone and take bludgeoning damage equal to 1d12 + your Strength "
+                  "modifier.",
+                  "While raging, use a bonus action during your move to pass through the space of a Large or smaller "
+                  "creature, which must succeed on a Strength saving throw (DC {dc_str}) or be knocked prone and take "
+                  "bludgeoning damage equal to 1d12{str:+d}",
+                  dc="dc_str"),
+        _g1_totem(_TOTEM_ATTUNE, "Tiger",
+                  "Tiger. While you're raging, if you move at least 20 feet in a straight line toward a Large or smaller "
+                  "target right before making a melee weapon attack against it, you can use a bonus action to make an "
+                  "additional melee weapon attack against it.",
+                  "While raging, if you move at least 20 feet in a straight line toward a Large or smaller target right "
+                  "before making a melee weapon attack against it, use a bonus action to make an additional melee weapon "
+                  "attack against it"),
+        _g1_totem(_TOTEM_ATTUNE, "Wolf",
+                  "Wolf. While you're raging, you can use a bonus action on your turn to knock a Large or smaller "
+                  "creature prone when you hit it with melee weapon attack.",
+                  "While raging, use a bonus action on your turn to knock a Large or smaller creature prone when you hit "
+                  "it with a melee weapon attack"),
+    ])),
+}
+
+
 # RP13 (F2, E13): editable build-time option cards of XPHB subclass features (ruleset 2024 only), keyed by the
 # imported XPHB feature record id. Card cid `class:<cls>:<lvl>:feature:<feature id>` (level from the record), option
 # ids `<feature id>--<option key>`, count 1, required. The option list is read from the record text: `quotes` are
