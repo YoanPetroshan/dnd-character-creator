@@ -106,18 +106,18 @@ def test_english_templates_are_the_former_texts():
 def test_nested_card_texts_localize():
     label = msg("label-prefixed", head="Skill Expert", tail=msg("label-ability-score-increase"))
     assert label == "Skill Expert: Ability Score Increase"
-    assert render(label, "bg") == "Skill Expert: Увеличаване на характеристика"
+    assert render(label, "bg") == "Skill Expert: Увеличаване на характеристика (Ability Score Increase)"
     noun = msg("noun-from-list", noun=msg("noun-cantrip", n=2), classes=["Cleric"])
     desc = msg("desc-choose-noun", count=2, noun=noun)
     assert desc == "Choose 2 cantrips from the Cleric list."
-    assert render(desc, "bg") == "Изберете 2 трика от списъка на Cleric."
+    assert render(desc, "bg") == "Изберете 2 трика (Cantrips) от списъка на Cleric."
     spells = msg("noun-school", schools=["Evocation", "Illusion"], noun=msg("noun-spell-levels", n=1, levels=[1]))
     assert msg("desc-choose-noun", count=1, noun=spells) == "Choose 1 Evocation or Illusion level 1 spell."
     assert render(msg("desc-choose-noun", count=1, noun=spells), "bg") == \
         "Изберете 1 заклинание от ниво 1 от школа Evocation или Illusion."
     # a pruned reason nests the card label it quotes
     pruned = msg("pruned-proficient", label=msg("label-skill-proficiencies"), names=["Arcana"])
-    assert render(pruned, "bg").startswith("'Владеене на умения':")
+    assert render(pruned, "bg").startswith("'Владеене на умения (Skill Proficiencies)':")
 
 
 # --- AST guard: no plain-text card text ---------------------------------------------------------------------------------
@@ -263,7 +263,7 @@ def test_a_non_skill_proficiency_envelope_is_relabelled_tool_proficiencies_by_ke
     cls = {"name": "Bard", "multi_classing": {"proficiency_choices": [env]}}
     (tpl,) = resolve_mod._multiclass_proficiency_choice_templates(cls, "bard")
     assert isinstance(tpl["label"], Msg) and tpl["label"].key == "label-tool-proficiencies" and tpl["label"] == "Tool Proficiencies"
-    assert render(tpl["label"], "bg") == "Владеене на инструменти"
+    assert render(tpl["label"], "bg") == "Владеене на инструменти (Tool Proficiencies)"
     skills = {**env, "from": {"option_set_type": "options_array", "options": [
         {"option_type": "reference", "item": {"index": "skill-arcana", "name": "Arcana"}}]}}
     (tpl,) = resolve_mod._multiclass_proficiency_choice_templates({"name": "Bard", "multi_classing": {"proficiency_choices": [skills]}}, "bard")
@@ -391,7 +391,7 @@ def test_unavailable_reasons_are_tagged_messages(catalog):
          {"id": "species:human-xphb:feat-0", "source": {"kind": "species", "id": "human-xphb"}, "status": "pending",
           "count": 1, "options": []}], "2024")
     assert [c["unavailableReason"].key for c in shapes] == ["unavailable-all-closed", "unavailable-no-feat-offered"]
-    assert render(shapes[1]["unavailableReason"], "bg") == "Избраните източници не предлагат талант, затова тук нищо не може да се избере."
+    assert render(shapes[1]["unavailableReason"], "bg") == "Избраните източници не предлагат талант (Feat), затова тук нищо не може да се избере."
 
 
 # --- ?lang=bg end to end ----------------------------------------------------------------------------------------------------
@@ -417,13 +417,13 @@ def test_resolve_lang_bg_returns_bulgarian_card_texts(client):
     e, b = _cards(en), _cards(bg)
     assert set(e) == set(b)
     asi = "class:fighter:4:asi"
-    assert e[asi]["label"] == "Ability Score Improvement" and b[asi]["label"] == "Увеличение на характеристики"
+    assert e[asi]["label"] == "Ability Score Improvement" and b[asi]["label"] == "Увеличение на характеристики (Ability Score Improvement)"
     assert e[asi]["description"].startswith("Increase one ability score by 2") and b[asi]["description"].startswith("Увеличете една")
     # fixed engine cards: the 2024 origin languages, Weapon Mastery, Starting Equipment
     langs = next(cid for cid in e if cid.endswith("languages") and e[cid]["label"] == "Languages")
     assert b[langs]["label"] == "Езици" and b[langs]["description"].startswith("Героят ви знае Common")
     mastery = next(cid for cid in e if cid.endswith("weapon-mastery"))
-    assert b[mastery]["label"] == "Майсторство с оръжия" and "вида оръжия" in b[mastery]["description"]
+    assert b[mastery]["label"] == "Майсторство с оръжия (Weapon Mastery)" and "вида оръжия" in b[mastery]["description"]
     equip = next(cid for cid in e if "equipment-choice" in cid and e[cid]["label"] == "Starting Equipment")
     assert b[equip]["label"] == "Начална екипировка"
     # the description of a starting-equipment card is the data's own text and stays English
@@ -439,9 +439,9 @@ def test_resolve_lang_bg_spell_cards_and_nested_card_labels(client):
     bg = _cards(client.post("/api/resolve?lang=bg", json=draft).get_json())
     assert en["class:wizard:spellbook"]["label"] == "Spellbook" and bg["class:wizard:spellbook"]["label"] == "Книга със заклинания"
     assert en["class:wizard:spells-cantrips"]["label"] == "Cantrips Known"
-    assert bg["class:wizard:spells-cantrips"]["label"] == "Известни трикове"
+    assert bg["class:wizard:spells-cantrips"]["label"] == "Известни трикове (Cantrips Known)"
     assert en["class:wizard:spells-cantrips"]["description"] == "Choose 5 cantrips from the Wizard spell list."
-    assert bg["class:wizard:spells-cantrips"]["description"] == "Изберете 5 трика от списъка със заклинания на Wizard."
+    assert bg["class:wizard:spells-cantrips"]["description"] == "Изберете 5 трика (Cantrips) от списъка със заклинания на Wizard."
     mastery = "class:wizard:18:spell-mastery-1"
     assert en[mastery]["status"] == bg[mastery]["status"] == "unavailable"
     assert en[mastery]["label"] == "Spell Mastery (level 1)" and bg[mastery]["label"] == "Spell Mastery (ниво 1)"

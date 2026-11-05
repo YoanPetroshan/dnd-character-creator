@@ -160,7 +160,7 @@ def test_exports_carry_masteries(catalog):
     res = _res(catalog, [("fighter", 1)], added=[{"itemId": "longsword", "qty": 1, "equipped": True}],
                choices={"fighter": {"class:fighter:weapon-mastery": ["longsword", "dagger", "rapier"]}})
     blocks = extra_blocks(res)
-    assert ("h2", "Майсторство с оръжия") in blocks
+    assert ("h2", "Майсторство с оръжия (Weapon Mastery)") in blocks
     assert ("bullet", "Longsword: Sap") in blocks
     assert any(k == "bullet" and t.startswith("Longsword: +") and "майсторство Sap" in t for k, t in blocks)
 

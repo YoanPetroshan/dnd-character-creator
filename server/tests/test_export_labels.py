@@ -116,8 +116,8 @@ def test_label_rejects_an_unknown_language():
 
 
 def test_plural_forms_of_the_short_rest_regain():
-    assert label("bg", "shortRestRegains", n=1) == "1 използване се възстановява при кратка почивка"
-    assert label("bg", "shortRestRegains", n=3) == "3 използвания се възстановяват при кратка почивка"
+    assert label("bg", "shortRestRegains", n=1) == "1 използване се възстановява при кратка почивка (Short Rest)"
+    assert label("bg", "shortRestRegains", n=3) == "3 използвания се възстановяват при кратка почивка (Short Rest)"
     assert label("en", "shortRestRegains", n=1) == "1 use regained on a short rest"
     assert label("en", "shortRestRegains", n=2) == "2 uses regained on a short rest"
 
@@ -191,7 +191,7 @@ def test_bulgarian_spell_slots_keep_their_english_label_and_english_says_spell_s
     bg, en = to_markdown(res, "bg"), to_markdown(res, "en")
     assert "**Spell Slots:** ниво 1:" in bg
     assert "**Spell Slots:** level 1:" in en
-    assert "Spell Save DC" in en and "Спасяване за заклинание (DC)" in bg
+    assert "Spell Save DC" in en and "DC на спасяването от заклинание (Spell Save DC)" in bg
 
 
 # ---- byte identity of Bulgarian -------------------------------------------------------------------------------------
@@ -263,7 +263,9 @@ def test_export_route_for_every_format_and_language(client, fmt, lang):
     if fmt == "yaml":
         assert not CYRILLIC.search(text) and "armorClass" in text  # no localized labels, the same in both languages
     else:
-        assert ("Armor Class" in text) == (lang == "en") and ("Клас броня (AC)" in text) == (lang == "bg")
+        # T1: the Bulgarian label carries the English term in brackets, so "Armor Class" is looked for outside them
+        assert ("Armor Class" in text.replace("(Armor Class, AC)", "")) == (lang == "en")
+        assert ("Клас броня (Armor Class, AC)" in text) == (lang == "bg")
         assert (CYRILLIC.search(text) is not None) == (lang == "bg")
 
 
@@ -274,7 +276,7 @@ def test_missing_lang_is_bulgarian_and_identical_to_lang_bg(client, fmt):
     norm = normalise_pdf if fmt == "pdf" else (lambda b: b)
     assert norm(omitted.data) == norm(bg.data)
     if fmt == "markdown":
-        assert "Клас броня (AC)" in omitted.data.decode("utf-8")
+        assert "Клас броня (Armor Class, AC)" in omitted.data.decode("utf-8")
 
 
 def test_yaml_is_the_same_in_both_languages(client):

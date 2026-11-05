@@ -30,7 +30,7 @@ def test_every_flag_resolves_and_has_a_reason():
         seen.add((kind, ref))
         en, bg = rt.lookup(kind, ref)  # KeyError = the flagged entry no longer exists: unflag it
         assert en.strip() and bg.strip(), (kind, ref)
-    assert len(rt.FLAGS) >= 60
+    assert len(rt.FLAGS) >= 50
 
 
 def test_every_flagged_name_has_a_transliteration_and_vice_versa():

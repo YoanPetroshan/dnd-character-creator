@@ -26,7 +26,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "pruned-proficient-skill": {
         "en": "'{label}': {names:, } is already a proficient skill; the selection was ignored.",
-        "bg": "'{label}': вече се владее като умение {names:, }; изборът беше пренебрегнат.",
+        "bg": "'{label}': вече се владее като умение (Skill) {names:, }; изборът беше пренебрегнат.",
     },
     "pruned-proficient": {
         "en": "'{label}': {names:, } is already proficient; the selection was ignored.",
@@ -35,20 +35,19 @@ MESSAGES: dict[str, dict[str, str]] = {
     "pruned-iron-mind": {
         "en": ("'{label}': the Wisdom saving throw is not proficient yet, so Iron Mind grants it outright and the stored "
                "selection was ignored."),
-        "bg": ("'{label}': спасителното хвърляне на Мъдрост (WIS) още не се владее, затова Iron Mind го дава директно и "
-               "запазеният избор беше пренебрегнат."),
+        "bg": ("'{label}': спасителното хвърляне (Saving Throw) на Мъдрост (WIS) още не се владее, затова Iron Mind го дава директно и запазеният избор беше пренебрегнат."),
     },
     "pruned-expertise-already": {
         "en": "'{label}': {names:, } already has Expertise; the selection was ignored.",
-        "bg": "'{label}': вече има Expertise {names:, }; изборът беше пренебрегнат.",
+        "bg": "'{label}': вече има експертиза (Expertise) {names:, }; изборът беше пренебрегнат.",
     },
     "pruned-expertise-not-proficient": {
         "en": "'{label}': {names:, } is no longer a proficient skill; the Expertise selection was ignored.",
-        "bg": "'{label}': вече не се владее като умение {names:, }; изборът на Expertise беше пренебрегнат.",
+        "bg": "'{label}': вече не се владее като умение (Skill) {names:, }; изборът на експертиза (Expertise) беше пренебрегнат.",
     },
     "pruned-expertise-already-chosen": {
         "en": "'{label}': {names:, } already has Expertise; the Expertise selection was ignored.",
-        "bg": "'{label}': вече има Expertise {names:, }; изборът на Expertise беше пренебрегнат.",
+        "bg": "'{label}': вече има експертиза (Expertise) {names:, }; изборът на експертиза беше пренебрегнат.",
     },
     # --- spells already held -----------------------------------------------------------------------------------------
     "pruned-bard-known": {
@@ -122,7 +121,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     # --- weapon mastery ------------------------------------------------------------------------------------------------
     "pruned-mastered-through-class": {
         "en": "'{label}': {names:, } is already mastered through a class and was ignored.",
-        "bg": "'{label}': вече е избрано за Майсторство с оръжия чрез клас {names:, }; изборът беше пренебрегнат.",
+        "bg": "'{label}': вече е избрано за Майсторство с оръжия (Weapon Mastery) чрез клас {names:, }; изборът беше пренебрегнат.",
     },
     "pruned-weapon-not-proficient": {
         "en": "'{label}': {names:, } is no longer a proficient weapon and was ignored.",
@@ -134,7 +133,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "pruned-mastery-unavailable-feat": {
         "en": "'{label}': {names:, } is not an available weapon for this feat and was ignored.",
-        "bg": "'{label}': {names:, } не е налично оръжие за този талант (feat); изборът беше пренебрегнат.",
+        "bg": "'{label}': {names:, } не е налично оръжие за този талант (Feat); изборът беше пренебрегнат.",
     },
     # --- ability score caps ----------------------------------------------------------------------------------------------
     "pruned-ability-at-max": {
@@ -151,11 +150,11 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "pruned-asi-feat-ineligible": {
         "en": "'{name}' can't be taken at this Ability Score Improvement and was ignored.",
-        "bg": "'{name}' не може да се вземе при това Увеличение на характеристиките и беше пренебрегнат.",
+        "bg": "'{name}' не може да се вземе при това Увеличение на характеристиките (Ability Score Improvement) и беше пренебрегнат.",
     },
     "pruned-asi-option-closed": {
         "en": "'{label}': {option} is not available ({why}) and was ignored.",
-        "bg": "'{label}': {option} не е наличен ({why}); изборът беше пренебрегнат.",
+        "bg": "'{label}': {option} не е наличен: {why}; изборът беше пренебрегнат.",
     },
     "pruned-ability-closed-item": {
         "en": "{ab} is {why}",

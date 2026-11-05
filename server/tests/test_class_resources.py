@@ -260,15 +260,16 @@ def test_markdown_and_pdf_list_class_resources(catalog):
     res = _res(catalog, [("barbarian", 5), ("rogue", 3)])
     md = to_markdown(res)
     assert "## Ресурси на класа" in md
-    assert "- Rage: 3 (дълга почивка), щета +2" in md
+    assert "- Rage: 3, дълга почивка (Long Rest), щета +2" in md
     assert "- Sneak Attack: 1, 2d6 (на ход)" in md  # X2
     text = "".join(p.extract_text() for p in PdfReader(io.BytesIO(to_pdf(res))).pages)
-    assert "Ресурси на класа" in text and "Rage: 3" in text
+    flat = " ".join(text.split())  # T1: the Bulgarian line is longer and wraps (justified) in the PDF
+    assert "Ресурси на класа" in flat and "Rage: 3," in flat
 
 
 def test_unlimited_rage_is_printed_as_unlimited(catalog):
     md = to_markdown(_res(catalog, [("barbarian", 20)]))
-    assert "- Rage: без ограничение (дълга почивка), щета +4" in md
+    assert "- Rage: без ограничение, дълга почивка (Long Rest), щета +4" in md
 
 
 def test_no_resources_block_for_a_non_resource_class(catalog):

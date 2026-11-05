@@ -194,7 +194,7 @@ def test_degrades_when_the_trait_is_missing_from_the_catalog(catalog, monkeypatc
 
 def test_extra_blocks_list_the_srd_resources(catalog):
     blocks = export_fields.extra_blocks(_res(catalog, "dragonborn", 6, picks=_anc("green")))
-    idx = blocks.index(("h2", "Ресурси от расата"))
+    idx = blocks.index(("h2", "Ресурси от расата (Species)"))
     lines = [t for kind, t in blocks[idx + 1:] if kind == "bullet"]
     assert any("Breath Weapon" in l and "3d6" in l and "ТС" in l for l in lines)
 
@@ -512,6 +512,6 @@ def test_book_entry_degrades_when_its_trait_is_missing_from_the_catalog(catalog,
 @needs_official
 def test_book_resources_reach_the_exports(catalog):
     blocks = export_fields.extra_blocks(_res(catalog, "astral-elf-aag", 5))
-    idx = blocks.index(("h2", "Ресурси от расата"))
+    idx = blocks.index(("h2", "Ресурси от расата (Species)"))
     lines = [t for kind, t in blocks[idx + 1:] if kind == "bullet"]
-    assert any("Starlight Step" in l and "3" in l and "дълга почивка" in l for l in lines)
+    assert any("Starlight Step" in l and "3" in l and "дълга почивка (Long Rest)" in l for l in lines)

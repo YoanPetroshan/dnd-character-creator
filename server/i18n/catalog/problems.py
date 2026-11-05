@@ -56,8 +56,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     "ability-out-of-range-clamped-final": {
         "en": ("{ab} score {n} is out of the 1-30 range; using {clamped} instead. With the species, background and feat "
                "bonuses the final {ab} score is {final}, still outside 1-30."),
-        "bg": ("Стойността {n} на {ab} е извън диапазона 1-30; вместо нея се използва {clamped}. С бонусите от расата, "
-               "произхода и талантите крайната стойност на {ab} е {final} и все още е извън 1-30."),
+        "bg": ("Стойността {n} на {ab} е извън диапазона 1-30; вместо нея се използва {clamped}. С бонусите от расата (Species), произхода (Background) и талантите (Feats) крайната стойност на {ab} е {final} и все още е извън 1-30."),
     },
     "level-invalid-whole": {
         "en": "Level {value!r} for '{cls}' isn't a valid whole number; using 1 instead.",
@@ -147,7 +146,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "unknown-background": {
         "en": "Unknown background '{id}'.",
-        "bg": "Непознат произход '{id}'.",
+        "bg": "Непознат произход (Background) '{id}'.",
     },
     "malformed-species": {
         "en": "'species' must be an object.",
@@ -155,7 +154,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "unknown-species": {
         "en": "Unknown species '{id}'.",
-        "bg": "Непозната раса '{id}'.",
+        "bg": "Непозната раса (Species) '{id}'.",
     },
     "unknown-subspecies": {
         "en": "Unknown subspecies '{id}'.",
@@ -163,7 +162,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "subspecies-mismatch": {
         "en": "'{name}' isn't a subspecies of the selected species.",
-        "bg": "'{name}' не е подраса на избраната раса.",
+        "bg": "'{name}' не е подраса на избраната раса (Species).",
     },
     # --- resolve: feats and prerequisites ---------------------------------------------------------------------
     "feat-duplicate-at-source": {
@@ -215,11 +214,11 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "export-missing-species": {
         "en": "Choose a species first.",
-        "bg": "Първо изберете раса.",
+        "bg": "Първо изберете раса (Species).",
     },
     "export-missing-background": {
         "en": "Choose a background first.",
-        "bg": "Първо изберете произход.",
+        "bg": "Първо изберете произход (Background).",
     },
     "unresolved-choice": {
         "en": "'{label}' isn't fully chosen yet.",

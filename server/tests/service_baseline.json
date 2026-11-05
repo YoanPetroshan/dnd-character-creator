@@ -289,8 +289,8 @@
   "status": 404
  },
  "export-markdown": {
-  "bodyLength": 2149,
-  "bodySha256": "08f8c4974967644bfbeb7a8795ff70d8989bada1a892c524a9476c7f42074e76",
+  "bodyLength": 2373,
+  "bodySha256": "aacc83f97afb027ac9e7c7e086e76db14ed54f471729ce5e6785c34ad94fd126",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''Torvin%20Bracewell.md",
    "Content-Type": "text/markdown; charset=utf-8"
@@ -314,8 +314,8 @@
   "status": 400
  },
  "export-markdown-gate-bg": {
-  "bodyLength": 1032,
-  "bodySha256": "bf0dee850e2773cdc544135557ec5814896429d8d939a1354b9211bbc23c18c0",
+  "bodyLength": 1054,
+  "bodySha256": "3f8556785374027d39084748d9d1f842b0ab3f6d32d38973eef191054b66ef85",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -346,8 +346,8 @@
   "status": 400
  },
  "export-markdown-lang-bg": {
-  "bodyLength": 2149,
-  "bodySha256": "08f8c4974967644bfbeb7a8795ff70d8989bada1a892c524a9476c7f42074e76",
+  "bodyLength": 2373,
+  "bodySha256": "aacc83f97afb027ac9e7c7e086e76db14ed54f471729ce5e6785c34ad94fd126",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''Torvin%20Bracewell.md",
    "Content-Type": "text/markdown; charset=utf-8"
@@ -364,8 +364,8 @@
   "status": 200
  },
  "export-markdown-name-cyrillic": {
-  "bodyLength": 2150,
-  "bodySha256": "9f86f750f22019f722e0cd142b7a48062c398e756d256affcc71828c24ad2763",
+  "bodyLength": 2374,
+  "bodySha256": "6b8a1ea36edb1e14656e4a26f6fded506d47e43f3552407a3e90e25f88e61af4",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''%D0%90%D0%BD%D0%B0_%D0%91%D0%BE%D1%80%D0%B8%D1%81.md",
    "Content-Type": "text/markdown; charset=utf-8"
@@ -373,8 +373,8 @@
   "status": 200
  },
  "export-markdown-name-empty-string": {
-  "bodyLength": 2162,
-  "bodySha256": "fc10dbafda44fe060891d4ffe6d746ffabb05a078511ab0d4a205f91f6b61b71",
+  "bodyLength": 2386,
+  "bodySha256": "b9e830ab9e423a20d7ba55f5f11f256ff67edca910e2538f763c53c2045d0137",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''%D0%B3%D0%B5%D1%80%D0%BE%D0%B9.md",
    "Content-Type": "text/markdown; charset=utf-8"
@@ -390,8 +390,8 @@
   "status": 400
  },
  "export-markdown-name-special": {
-  "bodyLength": 2151,
-  "bodySha256": "90834f245521dedfb579c717a5a84b971666ca25d18a496fed2e86581f6d4bd5",
+  "bodyLength": 2375,
+  "bodySha256": "d1f42ffa3717c9441e747382a2f302b0f8976f80da785609c02652501c7e7b0c",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''A_B_C_D_E__F_G_H_I.md",
    "Content-Type": "text/markdown; charset=utf-8"
@@ -399,8 +399,8 @@
   "status": 200
  },
  "export-markdown-nameless": {
-  "bodyLength": 2162,
-  "bodySha256": "fc10dbafda44fe060891d4ffe6d746ffabb05a078511ab0d4a205f91f6b61b71",
+  "bodyLength": 2386,
+  "bodySha256": "b9e830ab9e423a20d7ba55f5f11f256ff67edca910e2538f763c53c2045d0137",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''character.md",
    "Content-Type": "text/markdown; charset=utf-8"
@@ -408,8 +408,8 @@
   "status": 200
  },
  "export-markdown-nameless-bg": {
-  "bodyLength": 2162,
-  "bodySha256": "fc10dbafda44fe060891d4ffe6d746ffabb05a078511ab0d4a205f91f6b61b71",
+  "bodyLength": 2386,
+  "bodySha256": "b9e830ab9e423a20d7ba55f5f11f256ff67edca910e2538f763c53c2045d0137",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''%D0%B3%D0%B5%D1%80%D0%BE%D0%B9.md",
    "Content-Type": "text/markdown; charset=utf-8"
@@ -434,8 +434,8 @@
   "status": 400
  },
  "export-name-unicode-md-bg": {
-  "bodyLength": 2142,
-  "bodySha256": "cbaea50df47d743bcfa338407a835570e6d9a9c69eac922a4ac2db295d682103",
+  "bodyLength": 2366,
+  "bodySha256": "dfc206e3c107a837d95c3103b9262e70543ff731ce0b106874606bbdf4124637",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''%D0%96%C3%A9%20%F0%9F%90%89.md",
    "Content-Type": "text/markdown; charset=utf-8"
@@ -443,8 +443,8 @@
   "status": 200
  },
  "export-pdf": {
-  "bodyLength": 30416,
-  "bodySha256": "f1300a2e09531dd98d168f157d92faacd7097b0261d11c5260770b30d84d46c4",
+  "bodyLength": 32062,
+  "bodySha256": "4805e7208bc4a06b8e5277bf2adfc045e7f56e7b370ad6fbdb99a568ff71dc80",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''Torvin%20Bracewell.pdf",
    "Content-Type": "application/pdf"
@@ -468,8 +468,8 @@
   "status": 400
  },
  "export-pdf-gate-bg": {
-  "bodyLength": 1032,
-  "bodySha256": "bf0dee850e2773cdc544135557ec5814896429d8d939a1354b9211bbc23c18c0",
+  "bodyLength": 1054,
+  "bodySha256": "3f8556785374027d39084748d9d1f842b0ab3f6d32d38973eef191054b66ef85",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -500,8 +500,8 @@
   "status": 400
  },
  "export-pdf-lang-bg": {
-  "bodyLength": 30416,
-  "bodySha256": "f1300a2e09531dd98d168f157d92faacd7097b0261d11c5260770b30d84d46c4",
+  "bodyLength": 32062,
+  "bodySha256": "4805e7208bc4a06b8e5277bf2adfc045e7f56e7b370ad6fbdb99a568ff71dc80",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''Torvin%20Bracewell.pdf",
    "Content-Type": "application/pdf"
@@ -518,8 +518,8 @@
   "status": 200
  },
  "export-pdf-name-cyrillic": {
-  "bodyLength": 29766,
-  "bodySha256": "de9aa29d022a66b11fcb0babfe7c30dfadd5864b3395e1902d532e0216edbd05",
+  "bodyLength": 32105,
+  "bodySha256": "13236b482021fdc23745158c5fa99697c5de1adf4c172d89a0b78890572a6cb3",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''%D0%90%D0%BD%D0%B0_%D0%91%D0%BE%D1%80%D0%B8%D1%81.pdf",
    "Content-Type": "application/pdf"
@@ -527,8 +527,8 @@
   "status": 200
  },
  "export-pdf-name-empty-string": {
-  "bodyLength": 29700,
-  "bodySha256": "b3fe419fc1bfaeacd7041013228a291a7280e612149d0875ff58b4612e4ace72",
+  "bodyLength": 32041,
+  "bodySha256": "2517e70367205f9717acf18f0a14f84f249a4009da3185af115964558748257d",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''%D0%B3%D0%B5%D1%80%D0%BE%D0%B9.pdf",
    "Content-Type": "application/pdf"
@@ -544,8 +544,8 @@
   "status": 400
  },
  "export-pdf-name-special": {
-  "bodyLength": 30934,
-  "bodySha256": "7b2bd1d1cd67bbe15c6b65cf97159cfb6cff528644a846a46de3b6c4428c9188",
+  "bodyLength": 33245,
+  "bodySha256": "637a4d45ea9f1bb9f5ff8d7517edfaa52e5964691771f3ab9075872128f4656c",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''A_B_C_D_E__F_G_H_I.pdf",
    "Content-Type": "application/pdf"
@@ -553,8 +553,8 @@
   "status": 200
  },
  "export-pdf-nameless": {
-  "bodyLength": 29700,
-  "bodySha256": "b3fe419fc1bfaeacd7041013228a291a7280e612149d0875ff58b4612e4ace72",
+  "bodyLength": 32041,
+  "bodySha256": "2517e70367205f9717acf18f0a14f84f249a4009da3185af115964558748257d",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''character.pdf",
    "Content-Type": "application/pdf"
@@ -562,8 +562,8 @@
   "status": 200
  },
  "export-pdf-nameless-bg": {
-  "bodyLength": 29700,
-  "bodySha256": "b3fe419fc1bfaeacd7041013228a291a7280e612149d0875ff58b4612e4ace72",
+  "bodyLength": 32041,
+  "bodySha256": "2517e70367205f9717acf18f0a14f84f249a4009da3185af115964558748257d",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''%D0%B3%D0%B5%D1%80%D0%BE%D0%B9.pdf",
    "Content-Type": "application/pdf"
@@ -613,8 +613,8 @@
   "status": 400
  },
  "export-yaml-gate-bg": {
-  "bodyLength": 1032,
-  "bodySha256": "bf0dee850e2773cdc544135557ec5814896429d8d939a1354b9211bbc23c18c0",
+  "bodyLength": 1054,
+  "bodySha256": "3f8556785374027d39084748d9d1f842b0ab3f6d32d38973eef191054b66ef85",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -933,8 +933,8 @@
   "status": 200
  },
  "resolve-lang-bg": {
-  "bodyLength": 8862,
-  "bodySha256": "ae294eb996351ef1068888d10500431c591d4038bd2636108036b585339bb3c4",
+  "bodyLength": 8884,
+  "bodySha256": "81c294804a789d531dca29eacca78e575aaef914a348c5619fb988f540ab755c",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -957,8 +957,8 @@
   "status": 200
  },
  "resolve-lang-twice-first-wins": {
-  "bodyLength": 8862,
-  "bodySha256": "ae294eb996351ef1068888d10500431c591d4038bd2636108036b585339bb3c4",
+  "bodyLength": 8884,
+  "bodySha256": "81c294804a789d531dca29eacca78e575aaef914a348c5619fb988f540ab755c",
   "headers": {
    "Content-Type": "application/json"
   },

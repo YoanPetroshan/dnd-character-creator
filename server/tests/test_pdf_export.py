@@ -1,4 +1,5 @@
 import io
+import re
 
 from pypdf import PdfReader
 
@@ -116,12 +117,14 @@ def test_each_casters_spell_save_dc_and_attack_bonus_render_labeled_by_class():
         {"classId": "cleric", "cantrips": [], "known": [], "spellSaveDC": 13, "spellAttackBonus": 5},
     ]
     text = _extract_text(to_pdf(resolution))
-    lines = text.splitlines()
-    wizard_line = next(l for l in lines if "Wizard" in l and "14" in l)
-    cleric_line = next(l for l in lines if "Cleric" in l and "13" in l)
-    assert wizard_line != cleric_line
-    assert "6" in wizard_line
-    assert "5" in cleric_line
+    # T1: the Bulgarian labels carry their English term in brackets, so one caster's line wraps in the PDF; the
+    # lines are joined per caster before checking that each value sits with its own class
+    flat = re.sub(r"\s+", " ", text)
+    wizard = re.search(r"\(Wizard\): 14 .*?\(Wizard\): \+?(\d+)", flat)
+    cleric = re.search(r"\(Cleric\): 13 .*?\(Cleric\): \+?(\d+)", flat)
+    assert wizard and cleric and wizard.group(0) != cleric.group(0)
+    assert wizard.group(1) == "6"
+    assert cleric.group(1) == "5"
 
 
 def test_spell_slots_render_as_a_compact_line():

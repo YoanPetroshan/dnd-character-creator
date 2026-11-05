@@ -175,33 +175,21 @@ def _value(leaf, data, lang="en") -> str:
 # the matching Bulgarian text. Key: "<surface>:<term>:<path>". A fix removes the line; a new finding fails the test.
 _LEGACY = ("Bulgarian UI page / label that has always shown the English word (the SK6-BI LEGACY allowlist; translating it "
            "is a deliberate later change)")
-_RESISTANCE = ("glossary bg is 'Устойчивост'; this surface says 'съпротива' / 'Съпротиви' (an older wording the "
-               "byte-identical rule keeps)")
+# T1 (owner decision 2026-11-05): the feats / resistance / background / species / rest findings of C1 are all fixed (one
+# wording per term, with its English term in brackets); only the Equipment page words are still English in the BG UI, because
+# 'Equipment' / 'Екипировка' is not one of the 29 rows of docs/TERMS-PROPOSAL.md.
 KNOWN_INCONSISTENCIES: dict[str, str] = {
-    # exports (Bulgarian output is pinned byte for byte by tests/export_baseline.json)
-    "export:resistance:secResistances": _RESISTANCE + " (the heading 'Съпротиви и имунитети' also covers immunities)",
-    "export:resistance:resAll": _RESISTANCE,
-    "export:resistance:resSome": _RESISTANCE,
-    # frontend Bulgarian copy
-    "front:resistance:sheet.resources.text.resistancesAllButPsychic": _RESISTANCE,
-    "front:resistance:sheet.defenses.title": _RESISTANCE + " (same heading as the BG export)",
-    "front:feats:choice.groups.general": "feat groups say 'Общи черти' (черти = features); glossary feats = 'Таланти'",
-    "front:feats:choice.groups.origin": "feat group says 'Черти за произход'; glossary feats = 'Таланти', originFeat = 'Талант от произхода'",
-    "front:originFeat:choice.groups.origin": "feat group says 'Черти за произход'; glossary originFeat = 'Талант от произхода'",
-    "front:feats:choice.groups.feat-2014": "feat group says 'Черти (2014)'; glossary feats = 'Таланти'",
-    "front:shortRest:sheet.resources.text.recharge.short-or-long": "false positive: 'кратка или дълга почивка' elides the "
-                                                                    "second 'почивка'; wording is consistent",
+    "front:originFeat:choice.groups.origin": "false positive: the group heading is the plural 'Таланти от произхода (Origin "
+                                             "Feats)' of the singular glossary term 'Талант от произхода'; wording is consistent",
     **{f"front:{term}:{path}": _LEGACY for term, path in [
-        ("species", "nav.steps.species"), ("species", "speciesPage.title"), ("species", "speciesPage.searchLabel"),
-        ("species", "speciesPage.searchPlaceholder"), ("species", "speciesPage.noChoices"), ("species", "exportPage.missing.species"),
-        ("species", "home.rulesetHelp.2014"), ("species", "home.rulesetHelp.2024"), ("species", "home.rulesetHelp.mixed"),
-        ("background", "nav.steps.background"), ("background", "backgroundPage.title"),
-        ("background", "backgroundPage.selectLabel"), ("background", "backgroundPage.choose"),
-        ("background", "backgroundPage.noChoices"), ("background", "backgroundPage.fallbackNote"),
-        ("background", "exportPage.missing.background"), ("originFeat", "backgroundPage.fallbackNote"),
         ("equipment", "nav.steps.equipment"), ("equipment", "equipmentPage.title"),
     ]},
 }
+
+
+def _core(bg: str) -> str:
+    """The Bulgarian wording of a glossary term without its English term in brackets (T1: "Талант (Feat)" -> "Талант")."""
+    return re.sub(r"\s*\([^()]*\)$", "", bg)
 
 
 def _scan_front(front, data) -> set[str]:
@@ -212,7 +200,7 @@ def _scan_front(front, data) -> set[str]:
             continue
         e, b = _value(en[path], data).casefold(), _value(bg[path], data, "bg").casefold()
         for tid, term in data.items():
-            if re.search(r"\b" + re.escape(term["en"].casefold()) + r"(s|es)?\b", e) and term["bg"].casefold() not in b:
+            if re.search(r"\b" + re.escape(term["en"].casefold()) + r"(s|es)?\b", e) and _core(term["bg"]).casefold() not in b:
                 found.add(f"front:{tid}:{path}")
     return found
 
@@ -223,7 +211,7 @@ def _scan_export(data) -> set[str]:
     for path in bg:
         for tid, term in data.items():
             if re.search(r"\b" + re.escape(term["en"].casefold()) + r"(s|es)?\b", en[path].casefold()) \
-                    and term["bg"].casefold() not in bg[path].casefold():
+                    and _core(term["bg"]).casefold() not in bg[path].casefold():
                 found.add(f"export:{tid}:{path}")
     return found
 

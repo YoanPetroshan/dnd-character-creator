@@ -10,28 +10,28 @@ def _line(details, **extra):
 
 def test_rage_resistances_list_damage_types():
     line = _line({"damageBonus": 2, "resistances": ["bludgeoning", "piercing", "slashing"]})
-    assert "съпротива: дробящи, пробождащи, режещи" in line
+    assert "устойчивост (Resistance): дробящи, пробождащи, режещи" in line
 
 
 def test_totem_bear_resistances_summarised():
     types = ["acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing",
              "poison", "radiant", "slashing", "thunder"]
-    assert "съпротива: всички видове щета освен психична" in _line({"resistances": types})
+    assert "устойчивост (Resistance): всички видове щети освен психични" in _line({"resistances": types})
 
 
 def test_short_rest_regains():
-    assert "1 използване се възстановява при кратка почивка" in _line({"shortRestRegains": 1})
+    assert "1 използване се възстановява при кратка почивка (Short Rest)" in _line({"shortRestRegains": 1})
 
 
 def test_spell_slot_and_bonus_action_regains():
-    assert "слот за заклинание" in _line({"spellSlotRegainsUse": True})
-    assert "бонус действие" in _line({"bonusActionRegainsOne": True})
+    assert "използване се възстановява срещу Spell Slot" in _line({"spellSlotRegainsUse": True})
+    assert "бонус действие (Bonus Action)" in _line({"bonusActionRegainsOne": True})
 
 
 def test_arcane_recovery_and_slot_costs():
     line = _line({"maxSlotLevel": 5, "onShortRest": True})
-    assert "при кратка почивка" in line and "слотове до ниво 5" in line
-    assert "слот ниво 1 за 2 т., слот ниво 2 за 3 т." in _line({"slotCosts": {1: 2, 2: 3}})
+    assert "при кратка почивка (Short Rest)" in line and "Spell Slots до ниво 5" in line
+    assert "Spell Slot ниво 1 за 2 т., Spell Slot ниво 2 за 3 т." in _line({"slotCosts": {1: 2, 2: 3}})
 
 
 def test_wild_shape_forms_fly_swim():

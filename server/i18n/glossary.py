@@ -2,8 +2,11 @@
 
 `glossary.json` maps termId -> {"en", "bg", "cite": {"src", "locator"}}.
   en    the wording of the source (2024 Player's Handbook first, SRD second).
-  bg    the Bulgarian rendering the app uses today (UI copy, exports); stored in
-        the case the app prints it, en in the case of the source.
+  bg    the Bulgarian rendering the app uses (UI copy, exports); stored in
+        the case the app prints it, en in the case of the source. Since T1 (2026-11-05) a
+        Bulgarian rules term is followed by its English term in brackets,
+        "Талант (Feat)" (`spellSlots` is English only, see BG_IS_ENGLISH; the terms
+        outside the 29 decided rows have no brackets).
   cite  where the English term is found. Only the term and a locator are stored,
         never book text (copyright).
 

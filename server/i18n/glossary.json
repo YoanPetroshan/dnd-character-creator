@@ -1,7 +1,7 @@
 {
   "abilityScores": {
     "en": "Ability Scores",
-    "bg": "Характеристики",
+    "bg": "Характеристики (Ability Scores)",
     "cite": {
       "src": "phb2024",
       "locator": "Ability Scores"
@@ -9,7 +9,7 @@
   },
   "armorClass": {
     "en": "Armor Class",
-    "bg": "Клас броня (AC)",
+    "bg": "Клас броня (Armor Class, AC)",
     "cite": {
       "src": "phb2024",
       "locator": "Armor Class"
@@ -17,7 +17,7 @@
   },
   "hitPoints": {
     "en": "Hit Points",
-    "bg": "Точки живот",
+    "bg": "Точки живот (Hit Points)",
     "cite": {
       "src": "phb2024",
       "locator": "Hit Points"
@@ -25,7 +25,7 @@
   },
   "hitPointDice": {
     "en": "Hit Point Dice",
-    "bg": "Зарове за живот",
+    "bg": "Зарове за точки живот (Hit Point Dice)",
     "cite": {
       "src": "phb2024",
       "locator": "Hit Point Dice"
@@ -33,7 +33,7 @@
   },
   "proficiencyBonus": {
     "en": "Proficiency Bonus",
-    "bg": "Бонус за умение",
+    "bg": "Бонус за владеене (Proficiency Bonus)",
     "cite": {
       "src": "phb2024",
       "locator": "Proficiency Bonus"
@@ -41,7 +41,7 @@
   },
   "savingThrows": {
     "en": "Saving Throws",
-    "bg": "Спасителни хвърляния",
+    "bg": "Спасителни хвърляния (Saving Throws)",
     "cite": {
       "src": "phb2024",
       "locator": "Saving Throws"
@@ -49,7 +49,7 @@
   },
   "skills": {
     "en": "Skills",
-    "bg": "Умения",
+    "bg": "Умения (Skills)",
     "cite": {
       "src": "phb2024",
       "locator": "Skills"
@@ -97,7 +97,7 @@
   },
   "spellSaveDc": {
     "en": "Spell Save DC",
-    "bg": "Спасяване за заклинание (DC)",
+    "bg": "DC на спасяването от заклинание (Spell Save DC)",
     "cite": {
       "src": "phb2024",
       "locator": "Spell save DC"
@@ -105,7 +105,7 @@
   },
   "spellAttackBonus": {
     "en": "Spell Attack Modifier",
-    "bg": "Бонус за атака",
+    "bg": "Бонус за атака със заклинание (Spell Attack Modifier)",
     "cite": {
       "src": "phb2024",
       "locator": "Spell attack modifier"
@@ -121,7 +121,7 @@
   },
   "cantrips": {
     "en": "Cantrips",
-    "bg": "Трикове",
+    "bg": "Трикове (Cantrips)",
     "cite": {
       "src": "phb2024",
       "locator": "Cantrips"
@@ -145,7 +145,7 @@
   },
   "species": {
     "en": "Species",
-    "bg": "Раса",
+    "bg": "Раса (Species)",
     "cite": {
       "src": "phb2024",
       "locator": "Character Species"
@@ -153,7 +153,7 @@
   },
   "background": {
     "en": "Background",
-    "bg": "Произход",
+    "bg": "Произход (Background)",
     "cite": {
       "src": "phb2024",
       "locator": "Character Backgrounds"
@@ -161,7 +161,7 @@
   },
   "originFeat": {
     "en": "Origin Feat",
-    "bg": "Талант от произхода",
+    "bg": "Талант от произхода (Origin Feat)",
     "cite": {
       "src": "phb2024",
       "locator": "Origin Feats"
@@ -169,7 +169,7 @@
   },
   "feats": {
     "en": "Feats",
-    "bg": "Таланти",
+    "bg": "Таланти (Feats)",
     "cite": {
       "src": "phb2024",
       "locator": "Chapter 5: Feats"
@@ -177,7 +177,7 @@
   },
   "classFeatures": {
     "en": "Class Features",
-    "bg": "Черти и способности",
+    "bg": "Способности на класа (Class Features)",
     "cite": {
       "src": "phb2024",
       "locator": "Class Features"
@@ -201,7 +201,7 @@
   },
   "weaponMastery": {
     "en": "Weapon Mastery",
-    "bg": "Майсторство с оръжия",
+    "bg": "Майсторство с оръжия (Weapon Mastery)",
     "cite": {
       "src": "5etools",
       "locator": "class/class-fighter.json::Weapon Mastery"
@@ -217,7 +217,7 @@
   },
   "senses": {
     "en": "Special Senses",
-    "bg": "Сетива",
+    "bg": "Сетива (Senses)",
     "cite": {
       "src": "phb2024",
       "locator": "Special Senses"
@@ -225,7 +225,7 @@
   },
   "darkvision": {
     "en": "Darkvision",
-    "bg": "тъмно зрение",
+    "bg": "тъмно зрение (Darkvision)",
     "cite": {
       "src": "srd",
       "locator": "5e-SRD-Traits.json::Darkvision"
@@ -233,7 +233,7 @@
   },
   "blindsight": {
     "en": "Blindsight",
-    "bg": "сляпо зрение",
+    "bg": "сляпо зрение (Blindsight)",
     "cite": {
       "src": "phb2024",
       "locator": "Blindsight"
@@ -241,7 +241,7 @@
   },
   "tremorsense": {
     "en": "Tremorsense",
-    "bg": "усещане за вибрации",
+    "bg": "усещане за вибрации (Tremorsense)",
     "cite": {
       "src": "phb2024",
       "locator": "Tremorsense"
@@ -249,7 +249,7 @@
   },
   "truesight": {
     "en": "Truesight",
-    "bg": "истинско зрение",
+    "bg": "истинско зрение (Truesight)",
     "cite": {
       "src": "phb2024",
       "locator": "Truesight"
@@ -257,7 +257,7 @@
   },
   "resistance": {
     "en": "Resistance",
-    "bg": "Устойчивост",
+    "bg": "Устойчивост (Resistance)",
     "cite": {
       "src": "phb2024",
       "locator": "Resistance"
@@ -265,7 +265,7 @@
   },
   "immunity": {
     "en": "Immunity",
-    "bg": "Имунитет",
+    "bg": "Имунитет (Immunity)",
     "cite": {
       "src": "phb2024",
       "locator": "Immunity"
@@ -273,7 +273,7 @@
   },
   "vulnerability": {
     "en": "Vulnerability",
-    "bg": "Уязвимост",
+    "bg": "Уязвимост (Vulnerability)",
     "cite": {
       "src": "phb2024",
       "locator": "Vulnerability"
@@ -281,7 +281,7 @@
   },
   "shortRest": {
     "en": "Short Rest",
-    "bg": "кратка почивка",
+    "bg": "кратка почивка (Short Rest)",
     "cite": {
       "src": "phb2024",
       "locator": "Short Rest"
@@ -289,7 +289,7 @@
   },
   "longRest": {
     "en": "Long Rest",
-    "bg": "дълга почивка",
+    "bg": "дълга почивка (Long Rest)",
     "cite": {
       "src": "phb2024",
       "locator": "Long Rest"
@@ -297,7 +297,7 @@
   },
   "carryingCapacity": {
     "en": "Carrying Capacity",
-    "bg": "Носимост",
+    "bg": "Носимост (Carrying Capacity)",
     "cite": {
       "src": "phb2024",
       "locator": "Carrying Capacity"

@@ -74,13 +74,13 @@ def test_yaml_values_match_resolution(catalog):
 @needs_official
 def test_markdown_lists_new_sections(catalog):
     md = to_markdown(_rich_resolution(catalog))
-    assert "## Черти и способности" in md
+    assert "## Способности на класа (Class Features)" in md
     assert "Sneak Attack (ниво 1)" in md and "Darkvision" in md
-    assert "## Таланти" in md and "Athlete" in md
-    assert "## Експертиза" in md
-    assert "Stealth: " in md and "(експертиза)" in md
-    assert "## Сетива" in md and "тъмно зрение 60 фута" in md
-    assert "## Съпротиви и имунитети" in md and "Poison" in md
+    assert "## Таланти (Feats)" in md and "Athlete" in md
+    assert "## Експертиза (Expertise)" in md
+    assert "Stealth: " in md and "(експертиза, Expertise)" in md
+    assert "## Сетива (Senses)" in md and "тъмно зрение (Darkvision) 60 фута" in md
+    assert "## Устойчивост (Resistance) и имунитети (Immunities)" in md and "Poison" in md
 
 
 def test_markdown_always_prepared_spells(catalog):
@@ -90,7 +90,7 @@ def test_markdown_always_prepared_spells(catalog):
 
 def test_markdown_expertise_marker_only_on_expert_skills(catalog):
     md = to_markdown(_rich_resolution(catalog))
-    assert md.count("(експертиза)") == 2
+    assert md.count("(експертиза, Expertise)") == 2
 
 
 def test_pdf_renders_with_new_sections(catalog):
@@ -138,7 +138,7 @@ def test_markdown_and_pdf_list_attacks_and_capacity(catalog):
     assert "- Dagger: +5, 1d4+3 piercing" in md
     # STR 11 (+0), rogue is proficient with longswords: +2, bare dice
     assert "- Longsword: +2, 1d8 slashing (versatile 1d10)" in md
-    assert "## Носимост" in md and f"{carried}/{capacity} lb" in md
+    assert "## Носимост (Carrying Capacity)" in md and f"{carried}/{capacity} lb" in md
     assert "## Броня" not in md  # leather armor: no stealth disadvantage
     text = "".join(p.extract_text() for p in PdfReader(io.BytesIO(to_pdf(res))).pages)
     assert "Атаки" in text and "Dagger: +5, 1d4+3 piercing" in text and f"{carried}/{capacity} lb" in text
@@ -150,7 +150,7 @@ def test_over_capacity_and_stealth_armor_are_flagged(catalog):
     res["derived"]["stealthDisadvantage"] = True
     md = to_markdown(res)
     assert "130/100 lb (претоварен)" in md
-    assert "## Броня" in md and "Недостатък при Скритост" in md
+    assert "## Броня" in md and "Недостатък (Disadvantage) при Скритост" in md
 
 
 def test_markdown_and_pdf_show_dueling_damage(catalog):
@@ -312,9 +312,9 @@ def _expected_strings(res) -> list[tuple[str, str]]:
         for e in sheet["equipment"][key]:
             out.append(("equipment", e["name"] + (f" x{e['qty']}" if e.get("qty", 1) != 1 else "")))
     if sheet.get("expertiseSkills"):
-        out.append(("expertise heading", "Експертиза"))
+        out.append(("expertise heading", "Експертиза (Expertise)"))
     if "devilsSight" in sheet["senses"]:
-        out.append(("senses.devilsSight", f"дяволско зрение {sheet['senses']['devilsSight']} фута"))
+        out.append(("senses.devilsSight", f"дяволско зрение (Devil's Sight) {sheet['senses']['devilsSight']} фута"))
     for f in sheet["features"]:
         if f.get("choice"):
             out.append(("feature choice", f"{f['name']}" + (f" (ниво {f['level']})" if f.get("level") else "")
@@ -324,14 +324,14 @@ def _expected_strings(res) -> list[tuple[str, str]]:
 
 def test_kitchen_sink_rage_details_are_printed(catalog):
     """F2-A: the Rage resistances and (2024) short-rest regain reach Markdown and PDF."""
-    for sid, want in (("barbarian20-2024", "1 използване се възстановява при кратка почивка"),
-                      ("barbarian20-2014", "съпротива: дробящи, пробождащи, режещи"),
-                      ("totem-bear6", "съпротива: всички видове щета освен психична")):
+    for sid, want in (("barbarian20-2024", "1 използване се възстановява при кратка почивка (Short Rest)"),
+                      ("barbarian20-2014", "устойчивост (Resistance): дробящи, пробождащи, режещи"),
+                      ("totem-bear6", "устойчивост (Resistance): всички видове щети освен психични")):
         res = _sink(sid, catalog)
         assert want in _flat(to_markdown(res)), (sid, want)
         assert want in _pdf_text(res), (sid, want)
     res = _sink("barbarian20-2024", catalog)
-    assert "съпротива: дробящи, пробождащи, режещи" in _flat(to_markdown(res))
+    assert "устойчивост (Resistance): дробящи, пробождащи, режещи" in _flat(to_markdown(res))
 
 
 @pytest.mark.parametrize("sid", list(KITCHEN_SINK))
@@ -466,7 +466,7 @@ def test_kitchen_sink_markdown_and_pdf_share_the_same_blocks(catalog):
 def test_kitchen_sink_2024_stage_lines_reach_every_export(catalog):
     """F3b: spot checks on the C6b..C9b / R9 lines, printed in the book's words in all three formats."""
     for sid, needles in (
-        ("rogue6-2024", ["Thieves' Cant", "Common", "Експертиза", "Stealth: ", "(експертиза)", "майсторство"]),
+        ("rogue6-2024", ["Thieves' Cant", "Common", "Експертиза (Expertise)", "Stealth: ", "(експертиза, Expertise)", "майсторство"]),
         ("sorcerer17-2024", ["Sorcery Points", "Innate Sorcery", "Sorcerous Restoration", "Careful Spell (1 SP)"]),
         ("cleric7-2024", ["Divine Strike", "Blessed Strikes"]),
         ("wizard20-2024", ["Майсторство със заклинания", "Burning Hands (ниво 1)", "Scorching Ray (ниво 2)", "Запазени заклинания", "Fireball (ниво 3)", "Scholar"]),

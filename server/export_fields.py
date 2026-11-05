@@ -117,7 +117,8 @@ def resource_detail_parts(details: dict | None, lang: str = DEFAULT_LANG) -> lis
 
 
 def resource_line(r: dict, lang: str = DEFAULT_LANG) -> str:
-    """One class resource as a bullet: `Rage: 3 (дълга почивка), щета +2` (EN: `Rage: 3 (long rest), damage +2`)."""
+    """One class resource as a bullet: `Rage: 3, дълга почивка (Long Rest), щета +2` (EN: `Rage: 3 (long rest), damage +2`;
+    the Bulgarian recharge word carries its own English term in brackets, so it is not wrapped in parentheses)."""
     parts = []
     if r.get("unlimited"):
         parts.append(label(lang, "unlimited"))
@@ -131,7 +132,10 @@ def resource_line(r: dict, lang: str = DEFAULT_LANG) -> str:
     core = ", ".join(parts)
     recharge = word(lang, "recharge", r.get("recharge"), "") if r.get("recharge") else ""
     if recharge:
-        core = f"{core} ({recharge})" if core else f"({recharge})"
+        if "(" in recharge:  # the Bulgarian word carries its English term in brackets: no second pair of parentheses
+            core = f"{core}, {recharge}" if core else recharge
+        else:
+            core = f"{core} ({recharge})" if core else f"({recharge})"
     note = (r.get("details") or {}).get("note")
     if note:
         core = f"{core}, {note}" if core else note

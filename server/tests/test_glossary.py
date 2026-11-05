@@ -55,7 +55,7 @@ def test_validator_rejects_bad_entries():
 def test_cyrillic_bg_is_not_a_cite_of_book_text():
     # terms and locators only: nothing passage-sized is stored
     for tid, t in DATA.items():
-        assert len(t["en"]) <= 40 and len(t["bg"]) <= 40 and len(t["cite"]["locator"]) <= 60, tid
+        assert len(t["en"]) <= 40 and len(t["bg"]) <= 60 and len(t["cite"]["locator"]) <= 60, tid
 
 
 # --- citations ------------------------------------------------------------------------------
@@ -123,10 +123,10 @@ def test_bg_matches_existing_app_wording():
         assert DATA[sense]["bg"] == bg["senses"][sense]
     assert DATA["shortRest"]["bg"] == ef._RECHARGE_WORDS["short"]
     assert DATA["longRest"]["bg"] == ef._RECHARGE_WORDS["long"]
-    # the damage section labels are "<term> към щета" (XL moved the words to export_labels.py)
-    assert bg["dmgResistances"] == DATA["resistance"]["bg"] + " към щета"
-    assert bg["dmgImmunities"] == DATA["immunity"]["bg"] + " към щета"
-    assert bg["dmgVulnerabilities"] == DATA["vulnerability"]["bg"] + " към щета"
+    # the damage section labels are "<term> към щети" (T1: plural, the term keeps its English word in brackets)
+    assert bg["dmgResistances"] == DATA["resistance"]["bg"] + " към щети"
+    assert bg["dmgImmunities"] == DATA["immunity"]["bg"] + " към щети"
+    assert bg["dmgVulnerabilities"] == DATA["vulnerability"]["bg"] + " към щети"
 
 
 def test_bg_appears_in_exports_or_frontend_copy():

@@ -424,9 +424,9 @@ def test_markdown_and_pdf_print_the_mastery_and_signature_lines(catalog):
     picks = {MASTERY1: ["magic-missile-xphb"], MASTERY2: ["web-xphb"], SIGNATURE: ["fireball-xphb", "fly-xphb"]}
     res = _res(catalog, [_wizard(20, picks)])
     md, pdf = to_markdown(res), _pdf_text(res)
-    assert "**Майсторство със заклинания:** Magic Missile (ниво 1), Web (ниво 2)" in md
+    assert "**Майсторство със заклинания (Spell Mastery):** Magic Missile (ниво 1), Web (ниво 2)" in md
     assert "**Запазени заклинания:** Fireball (ниво 3), Fly (ниво 3)" in md
-    assert "Майсторство със заклинания: Magic Missile (ниво 1), Web (ниво 2)" in pdf
+    assert "Майсторство със заклинания (Spell Mastery): Magic Missile (ниво 1), Web (ниво 2)" in pdf
     assert "Запазени заклинания: Fireball (ниво 3), Fly (ниво 3)" in pdf
     res = _res(catalog, [_wizard(17)])
     assert "Майсторство" not in to_markdown(res) and "Запазени" not in to_markdown(res)

@@ -13,25 +13,23 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "ruleset-2014-background-asi-ignored": {
         "en": "{name} is a 2024 background; under the 2014 rules its ability score increase is ignored.",
-        "bg": "{name} е произход от 2024; според правилата от 2014 увеличението на характеристиките му се пренебрегва.",
+        "bg": "{name} е произход (Background) от 2024; според правилата от 2014 увеличението на характеристиките (Ability Scores) му се пренебрегва.",
     },
     "ruleset-2024-species-asi-ignored": {
         "en": "Under the 2024 rules ability scores come from the background; the species' ability score increase is ignored.",
-        "bg": ("Според правилата от 2024 характеристиките идват от произхода; увеличението на характеристиките "
-               "от расата се пренебрегва."),
+        "bg": ("Според правилата от 2024 характеристиките (Ability Scores) идват от произхода (Background); увеличението на характеристиките от расата (Species) се пренебрегва."),
     },
     "ruleset-2024-background-no-asi": {
         "en": "{name} is a 2014 background and grants no ability score increase under the 2024 rules.",
-        "bg": "{name} е произход от 2014 и не дава увеличение на характеристиките според правилата от 2024.",
+        "bg": "{name} е произход (Background) от 2014 и не дава увеличение на характеристиките (Ability Scores) според правилата от 2024.",
     },
     "ruleset-2024-background-no-origin-feat": {
         "en": "{name} grants no Origin feat, which the 2024 rules expect from a background.",
-        "bg": "{name} не дава талант от произхода (Origin feat), какъвто правилата от 2024 очакват от един произход.",
+        "bg": "{name} не дава талант от произхода (Origin Feat), какъвто правилата от 2024 очакват от един произход (Background).",
     },
     "asi-double-dip-prevented": {
         "en": "The background's ability score increase replaces the species' (both would double-count under the 2024 rules).",
-        "bg": ("Увеличението на характеристиките от произхода замества това от расата "
-               "(според правилата от 2024 иначе щяха да се броят два пъти)."),
+        "bg": ("Увеличението на характеристиките (Ability Scores) от произхода (Background) замества това от расата (Species); според правилата от 2024 иначе щяха да се броят два пъти."),
     },
     "source-hidden": {
         "en": "'{name}' comes from a book that is switched off in Sources; it is still applied.",
@@ -44,12 +42,11 @@ MESSAGES: dict[str, dict[str, str]] = {
     # --- ability scores, hit points, equipment envelopes ------------------------------------------------------
     "ability-above-20": {
         "en": "{ab} base score {value} is above 20, the usual cap for a character's own score.",
-        "bg": "Базовата стойност {value} на {ab} е над 20 — обичайната горна граница за собствената характеристика на героя.",
+        "bg": "Базовата стойност {value} на {ab} е над 20 — обичайната горна граница за собствената характеристика (Ability Score) на героя.",
     },
     "hp-roll-invalid": {
         "en": "The HP roll for {cls} level {level} must be between 1 and {die}; the average was used instead.",
-        "bg": ("Хвърлянето за точки живот за {cls} ниво {level} трябва да е между 1 и {die}; "
-               "вместо него е използвана средната стойност."),
+        "bg": ("Хвърлянето за точки живот (Hit Points) за {cls} ниво {level} трябва да е между 1 и {die}; вместо него е използвана средната стойност."),
     },
     "equipment-envelope-dropped": {
         "en": "{name}'s starting equipment has {n} choice(s) that can't be shown yet and were left out.",
@@ -68,8 +65,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     "armor-not-proficient": {
         "en": ("Not proficient with {name}: disadvantage on STR/DEX ability checks, saves and attack rolls, "
                "and no spellcasting while it is worn."),
-        "bg": ("Нямаш владеене на {name}: недостатък при проверки на характеристики STR/DEX, спасителни хвърляния "
-               "и хвърляния за атака, и не можеш да изричаш заклинания, докато се носи."),
+        "bg": ("Нямаш владеене (Proficiency) на {name}: недостатък (Disadvantage) при проверки на характеристики (Ability Checks) STR/DEX, спасителни хвърляния (Saving Throws) и хвърляния за атака, и не можеш да изричаш заклинания, докато се носи."),
     },
     "armor-strength": {
         "en": "{name} needs Strength {minimum}; below that, speed is reduced by 10 ft.",

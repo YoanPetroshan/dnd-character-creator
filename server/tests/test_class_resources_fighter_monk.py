@@ -316,7 +316,7 @@ def test_exports_carry_attacks_per_action_and_resources(catalog):
     assert doc["attacksPerAction"] == 2
     md = to_markdown(res)
     assert "- Атаки на действие: 2" in md
-    assert "- Ki: 5, ТС 12 (кратка почивка)" in md and "- Second Wind: 1 (кратка или дълга почивка), лекуване 1d10+5" in md
+    assert "- Ki: 5, ТС 12, кратка почивка (Short Rest)" in md and "- Second Wind: 1, кратка почивка (Short Rest) или дълга почивка (Long Rest), лекуване 1d10+5" in md
     text = "".join(p.extract_text() for p in PdfReader(io.BytesIO(to_pdf(res))).pages)
     assert "Атаки на действие: 2" in text
 

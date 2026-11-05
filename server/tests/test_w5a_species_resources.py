@@ -200,6 +200,6 @@ def test_wiring_removed_gives_no_resources(catalog, monkeypatch):
 
 def test_extra_blocks_list_species_resources(catalog):
     blocks = export_fields.extra_blocks(_res(catalog, "dragonborn-xphb", 5, variant="dragonborn-blue"))
-    idx = blocks.index(("h2", "Ресурси от расата"))
+    idx = blocks.index(("h2", "Ресурси от расата (Species)"))
     lines = [t for kind, t in blocks[idx + 1:] if kind == "bullet"]
     assert any("Breath Weapon" in l and "2d10" in l for l in lines)

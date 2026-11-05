@@ -504,7 +504,7 @@ def test_degrades_without_subclass_feature_records(catalog):
 def test_exports_print_the_entries_and_notes(catalog):
     res = _res(catalog, "cleric", 7, "light-xphb", abilities={"WIS": 16})
     line = resource_line(_entry(res, "cleric:warding-flare"))
-    assert line.startswith("Warding Flare: ") and "кратка или дълга почивка" in line
+    assert line.startswith("Warding Flare: ") and "кратка почивка (Short Rest) или дълга почивка (Long Rest)" in line
     cd = resource_line(_entry(res, "cleric:channel-divinity"))
     assert "Radiance of the Dawn" in cd
     pool = resource_line(_entry(_res(catalog, "barbarian", 3, "zealot-xphb"), "barbarian:warrior-of-the-gods"))

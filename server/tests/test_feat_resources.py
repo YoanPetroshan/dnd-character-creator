@@ -409,9 +409,9 @@ def _lucky_res(catalog):
 def test_blocks_carry_the_resource_line_and_the_notes(catalog):
     res = _lucky_res(catalog)
     blocks = export_fields.extra_blocks(res)
-    assert ("h2", "Ресурси от таланти") in blocks
+    assert ("h2", "Ресурси от таланти (Feats)") in blocks
     line = export_fields.resource_line(res["derived"]["featResources"][0])
-    assert line == "Luck Points: 3 (дълга почивка)" and ("bullet", line) in blocks
+    assert line == "Luck Points: 3, дълга почивка (Long Rest)" and ("bullet", line) in blocks
     bullet = next(t for kind, t in blocks if kind == "bullet" and t.startswith("Inspiring Leader"))
     assert " — " in bullet and "8 + 3 = 11 Temporary Hit Points" in bullet
 
@@ -424,14 +424,14 @@ def test_yaml_markdown_and_pdf_print_resources_and_notes(catalog):
     flat = lambda t: re.sub(r"\s+", " ", t)  # noqa: E731
     pdf = flat("\n".join(p.extract_text() for p in PdfReader(io.BytesIO(to_pdf(res))).pages))
     md = flat(to_markdown(res))
-    for text in ("Ресурси от таланти", "Luck Points: 3 (дълга почивка)", "8 + 3 = 11 Temporary Hit Points"):
+    for text in ("Ресурси от таланти (Feats)", "Luck Points: 3, дълга почивка (Long Rest)", "8 + 3 = 11 Temporary Hit Points"):
         assert text in md, text
         assert text in pdf, text
 
 
 def test_a_featless_export_has_no_feat_resource_section(catalog):
     res = _res(catalog, [("fighter", 4)])
-    assert ("h2", "Ресурси от таланти") not in export_fields.extra_blocks(res)
+    assert ("h2", "Ресурси от таланти (Feats)") not in export_fields.extra_blocks(res)
     assert yaml.safe_load(to_yaml(res))["featResources"] == []
 
 

@@ -1945,7 +1945,7 @@ def _feat_choice_templates(feats: list[dict], origin: str | None = None, items: 
             choose = env.get("choose", 1)
             description = msg("desc-feat-expertise", n=choose)
             tpl = build_choice_template(env, f"{cid_prefix}:expertise-choice-{i}", source,
-                                        msg("label-prefixed", head=feat["name"], tail="Expertise"), description=description)
+                                        msg("label-prefixed", head=feat["name"], tail=msg("label-expertise")), description=description)
             if tpl:
                 if feat_effects_data.FEAT_EFFECTS.get(feat["index"], {}).get("lacks_expertise"):
                     tpl["lacksExpertise"] = True  # FE6 (B7): the feat's own text, whatever the ruleset

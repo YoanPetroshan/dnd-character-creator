@@ -387,9 +387,9 @@ def _knight(catalog):
 def test_blocks_carry_the_resource_line_and_the_notes(catalog):
     res = _knight(catalog)
     blocks = export_fields.extra_blocks(res)
-    assert ("h2", "Ресурси от таланти") in blocks
+    assert ("h2", "Ресурси от таланти (Feats)") in blocks
     line = export_fields.resource_line(res["derived"]["featResources"][0])
-    assert line.startswith("Bolstering Rally: 4 (дълга почивка)") and ("bullet", line) in blocks
+    assert line.startswith("Bolstering Rally: 4, дълга почивка (Long Rest)") and ("bullet", line) in blocks
     bullet = next(t for kind, t in blocks if kind == "bullet" and t.startswith("Knight of the Rose"))
     assert "1d8 + 4" in bullet
 
@@ -401,7 +401,7 @@ def test_yaml_markdown_and_pdf_print_the_tail_resources_and_notes(catalog):
     flat = lambda t: re.sub(r"\s+", " ", t)  # noqa: E731
     pdf = flat("\n".join(p.extract_text() for p in PdfReader(io.BytesIO(to_pdf(res))).pages))
     md = flat(to_markdown(res))
-    for text in ("Ресурси от таланти", "Bolstering Rally: 4 (дълга почивка)", "Bolstering Rally (Bonus Action)"):
+    for text in ("Ресурси от таланти (Feats)", "Bolstering Rally: 4, дълга почивка (Long Rest)", "Bolstering Rally (Bonus Action)"):
         assert text in md, text
         assert text in pdf, text
 

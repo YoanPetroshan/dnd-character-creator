@@ -82,7 +82,7 @@ def test_the_prerequisite_reason_nests_its_parts_and_localizes_them():
     assert reason == ("prerequisite not met: requires character level 8; STR 13 or DEX 13; medium armor proficiency; "
                       "the Alert feat")
     assert render(reason, "bg") == ("изискването не е изпълнено: изисква се ниво на героя 8; STR 13 или DEX 13; "
-                                    "владеене на средна броня; талантът (feat) Alert")
+                                    "владеене (Proficiency) на средна броня; талантът (Feat) Alert")
     assert render(msg("disabled-school-limit", free=1, schools=["evocation", "illusion"]), "bg") == \
         "само 1 заклинание може да е извън evocation или illusion на това ниво"
     assert render(msg("disabled-school-limit", free=2, schools=["evocation", "illusion"]), "bg") == \
@@ -94,8 +94,8 @@ def test_a_pruned_reason_nests_the_disabled_reason_it_quotes():
                why=msg("disabled-ability-cap-20"))
     assert made == ("'Ability Score Improvement': Strength is not available (would exceed the ability score cap of 20) "
                     "and was ignored.")
-    assert render(made, "bg") == ("'Ability Score Improvement': Strength не е наличен (би надвишило горната граница от 20 "
-                                  "за характеристика); изборът беше пренебрегнат.")
+    assert render(made, "bg") == ("'Ability Score Improvement': Strength не е наличен: би надвишило горната граница от 20 "
+                                  "за характеристика (Ability Score); изборът беше пренебрегнат.")
     closed = msg("pruned-ability-closed", label="X", items=[msg("pruned-ability-closed-item", ab="STR", why=msg("disabled-feat-ability-max", cap=20))])
     assert closed == "'X': STR is already at maximum (20) and was ignored."
     assert render(closed, "bg") == "'X': STR е вече на максимума (20); изборът беше пренебрегнат."
@@ -329,7 +329,7 @@ def test_resolve_lang_bg_prerequisite_reason_with_nested_parts(client):
     bg = _options(client.post("/api/resolve?lang=bg", json=d).get_json())
     key = "class:fighter:4:asi | feat:abjuration-adept-au"
     assert en[key] == "prerequisite not met: requires the Spellcasting or Pact Magic feature"
-    assert bg[key] == "изискването не е изпълнено: изисква се чертата Spellcasting или Pact Magic"
+    assert bg[key] == "изискването не е изпълнено: изисква се способността (Feature) Spellcasting или Pact Magic"
     key = "class:fighter:4:asi | feat:crossbow-expert-xphb"
     assert en[key] == "prerequisite not met: requires DEX 13"
     assert bg[key] == "изискването не е изпълнено: изисква се DEX 13"

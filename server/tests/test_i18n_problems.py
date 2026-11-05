@@ -288,7 +288,7 @@ def test_export_gate_body_is_bulgarian_with_lang_bg(client):
     assert [p["message"] for p in en.get_json()["problems"]] == [
         "Choose a class first.", "Choose a species first.", "Choose a background first."]
     assert [p["message"] for p in bg.get_json()["problems"]] == [
-        "Първо изберете клас.", "Първо изберете раса.", "Първо изберете произход."]
+        "Първо изберете клас.", "Първо изберете раса (Species).", "Първо изберете произход (Background)."]
     assert [p["id"] for p in bg.get_json()["problems"]] == [p["id"] for p in en.get_json()["problems"]]
 
 

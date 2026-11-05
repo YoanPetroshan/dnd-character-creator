@@ -324,11 +324,11 @@ def test_degrades_without_xphb_feature_records(catalog):
 def test_exports_print_the_notes_and_the_heal(catalog):
     res = _res(catalog, [("monk", 20)])
     line = resource_line(_entry(res, "monk:uncanny-metabolism"))
-    assert line.startswith("Uncanny Metabolism: 1 (дълга почивка), ") and "лекуване 1d12+20" in line
+    assert line.startswith("Uncanny Metabolism: 1, дълга почивка (Long Rest), ") and "лекуване 1d12+20" in line
     sorc = resource_line(_entry(_res(catalog, [("sorcerer", 5)]), "sorcerer:sorcerous-restoration"))
     assert "Short Rest" in sorc and "(2)" in sorc
     wc = resource_line(_entry(_res(catalog, [("druid", 2)]), "druid:wild-companion"))
-    assert wc.startswith("Wild Companion: ") and "(дълга" not in wc
+    assert wc.startswith("Wild Companion: ") and "дълга почивка" not in wc
 
 
 @needs_data
