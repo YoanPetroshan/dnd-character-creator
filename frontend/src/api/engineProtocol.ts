@@ -12,13 +12,15 @@ export type FromWorker =
   | { t: "boot-error"; message: string }
   | { t: "response"; id: number; status: number; contentType: string; headers: Record<string, string>; body: ArrayBuffer }
   | { t: "failure"; id: number; message: string }
+  | { t: "preparing"; what: "pdf" } // unsolicited: the worker started loading it itself (eager mode)
   | { t: "prepared"; what: "pdf" }
   | { t: "prepare-error"; what: "pdf"; message: string };
 
 /** What the UI may show (useEngineStatus). `engine`: "off" = plain fetch (dev / Flask / no WebAssembly / no pack),
  *  "starting" = the worker is booting Pyodide, "ready" = answering, "fallback" = the worker failed, plain fetch now. */
 export type EngineState = "off" | "starting" | "ready" | "fallback";
-/** `pdf`: the PDF stack (fpdf2, Pillow, fonttools, fonts) is loaded on the first PDF export. */
+/** `pdf`: the PDF stack (fpdf2, Pillow, fonttools, fonts) is loaded on the first PDF export (or at boot in eager mode,
+ *  see PDF_MODE in engine.worker.ts); `loading` is what the Export page shows as "preparing PDF". */
 export type PdfState = "idle" | "loading" | "ready";
 export interface EngineSnapshot {
   readonly engine: EngineState;

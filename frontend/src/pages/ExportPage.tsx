@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { apiFetch } from "../api/transport";
+import { useEngineStatus } from "../api/useEngineStatus";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
 import { httpErrorMessage } from "../httpErrors";
@@ -30,6 +31,7 @@ export function ExportPage() {
   const { resolution, loading, error } = useResolutionContext();
   const [exportError, setExportError] = useState<Msg | null>(null);
   const [exportingFormat, setExportingFormat] = useState<ExportFormat | null>(null);
+  const engine = useEngineStatus();
 
   if (!resolution) return <div className="page">{error ? null : t.common.loading}</div>;
 
@@ -184,6 +186,11 @@ export function ExportPage() {
         <Link to="/sheet">{xp.sheetLink}</Link>
       </p>
       {canExport && <p>{xp.ready}</p>}
+      {engine.pdf === "loading" && (
+        <p role="status" data-state="preparing-pdf">
+          {xp.preparingPdf}
+        </p>
+      )}
       {exportError && (
         <p role="alert" className="status--error" data-state="error">
           {renderMsg(t, exportError)}

@@ -93,19 +93,27 @@ describe.skipIf(!packPresent)("worker transport on the real Pyodide engine", () 
     expect((await t.fetch("/api/resolve", { method: "POST", headers: json, body: "[1]" })).status).toBe(400);
   });
 
-  it("exports Markdown, YAML and PDF with Content-Disposition and real bytes", async () => {
+  it("exports Markdown, YAML and PDF with Content-Disposition and real bytes; the PDF stack loads on the first PDF only", async () => {
+    expect(t.store.get().pdf).toBe("idle");
     const md = await t.fetch("/api/export/markdown?lang=en", post("", draft));
     expect(md.status).toBe(200);
     expect(md.headers.get("Content-Type")).toBe("text/markdown; charset=utf-8");
     expect(md.headers.get("Content-Disposition")).toBe("attachment; filename*=UTF-8''Torvin%20Bracewell.md");
     expect(await md.text()).toContain("Fighter");
     expect((await (await t.fetch("/api/export/yaml", post("", draft))).text()).length).toBeGreaterThan(100);
+    expect(t.store.get().pdf).toBe("idle"); // Markdown and YAML did not need the PDF stack
+    const states = [];
+    t.store.subscribe(() => states.push(t.store.get().pdf));
     const pdf = await t.fetch("/api/export/pdf?lang=bg", post("", draft));
     expect(pdf.status).toBe(200);
     expect(pdf.headers.get("Content-Type")).toBe("application/pdf");
     const bytes = new Uint8Array(await (await pdf.blob()).arrayBuffer());
     expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-");
     expect(bytes.length).toBeGreaterThan(5000);
+    expect(states).toEqual(["loading", "ready"]);
+    // the second one reuses the loaded stack
+    expect((await t.fetch("/api/export/pdf", post("", draft))).status).toBe(200);
+    expect(states).toEqual(["loading", "ready"]);
   }, 120_000);
 
   it("an unfinished draft is refused with the problems list (400)", async () => {

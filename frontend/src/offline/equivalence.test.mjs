@@ -1,6 +1,8 @@
 /**
  * O1: the browser engine (Pyodide, the same app.zip the PWA will ship) is proven equal to the native one.
- * Loads Pyodide from public/pyodide in Node, mounts app.zip and runs, against the stored baselines:
+ * Loads Pyodide from public/pyodide in Node, mounts app.zip and runs, against the stored baselines (O3: the PDF stack,
+ * fonts.zip + the four wheels, is NOT part of the boot: `service` must import without it, and it is loaded on demand,
+ * before the first part that renders a PDF, like the worker does on the first PDF export):
  *   - every golden case (STRIP applied, canonical JSON equal),
  *   - the 52 export baseline drafts (Markdown / YAML byte-equal by sha256, PDF after /CreationDate + /ID normalising),
  *   - the fixed request list of server/tests/service_requests.py through service.handle (status, content type,
@@ -28,6 +30,26 @@ const testData = path.join(repo, "server/tests");
 let py;
 let fixtures;
 const timings = {};
+let pdfStack = null;
+
+/** The PDF stack, loaded once on demand (what the worker's `prepare` does). */
+async function loadPdfStack() {
+  pdfStack ??= (async () => {
+    const t = performance.now();
+    py.unpackArchive(bytes(path.join(pack, "fonts.zip")), "zip", { extractDir: "/app" });
+    await py.loadPackage(
+      [
+        "pillow",
+        "fonttools",
+        path.join(pack, "defusedxml-0.7.1-py2.py3-none-any.whl"),
+        path.join(pack, "fpdf2-2.8.8-py3-none-any.whl"),
+      ],
+      { messageCallback: () => {} },
+    );
+    timings.pdf_stack_ms = performance.now() - t;
+  })();
+  return pdfStack;
+}
 
 const bytes = (p) => new Uint8Array(readFileSync(p));
 /** @returns {Report} */
@@ -43,16 +65,6 @@ describe.skipIf(!packPresent)("offline engine equals the native engine", () => {
     const quiet = { messageCallback: () => {} };
     await py.loadPackage(["pyyaml"], quiet);
     py.unpackArchive(bytes(path.join(pack, "app.zip")), "zip", { extractDir: "/app" });
-    py.unpackArchive(bytes(path.join(pack, "fonts.zip")), "zip", { extractDir: "/app" });
-    await py.loadPackage(
-      [
-        "pillow",
-        "fonttools",
-        path.join(pack, "defusedxml-0.7.1-py2.py3-none-any.whl"),
-        path.join(pack, "fpdf2-2.8.8-py3-none-any.whl"),
-      ],
-      quiet,
-    );
     timings.ready_ms = performance.now() - t0;
     py.FS.writeFile("/harness.py", readFileSync(path.join(here, "harness.py"), "utf8"));
     py.runPython("import sys; sys.path.insert(0, '/'); import harness; harness.setup()");
@@ -86,6 +98,18 @@ json.dumps({"health": service.handle("GET", "/api/health")[0], "seconds": time.p
     expect(r.health).toBe(200);
   });
 
+  it("imports service and serves every non-PDF route before the PDF stack is loaded", () => {
+    const r = JSON.parse(
+      py.runPython(`
+import json, sys, service
+status = [service.handle("GET", "/api/catalog")[0], service.handle("GET", "/api/spells/fireball")[0]]
+loaded = sorted(m for m in sys.modules if m.split(".")[0] in ("fpdf", "PIL", "fontTools", "defusedxml"))
+json.dumps({"status": status, "loaded": loaded})`),
+    );
+    expect(r.status).toEqual([200, 200]);
+    expect(r.loaded).toEqual([]);
+  });
+
   it("matches every golden case", () => {
     const r = run("harness.golden()");
     timings.golden_s = r.seconds;
@@ -94,7 +118,8 @@ json.dumps({"health": service.handle("GET", "/api/health")[0], "seconds": time.p
     expect(r.mismatches).toEqual([]);
   }, 600_000);
 
-  it.skipIf(!hasPython)("matches the 52 export baseline hashes (Markdown, YAML, PDF)", () => {
+  it.skipIf(!hasPython)("matches the 52 export baseline hashes (Markdown, YAML, PDF)", async () => {
+    await loadPdfStack();
     const r = run("harness.exports()");
     timings.exports_s = r.seconds;
     expect(r.checked).toBe(52);
@@ -102,7 +127,8 @@ json.dumps({"health": service.handle("GET", "/api/health")[0], "seconds": time.p
     expect(r.mismatches).toEqual([]);
   }, 600_000);
 
-  it.skipIf(!hasPython)("answers the fixed request list through service.handle like the Flask baseline", () => {
+  it.skipIf(!hasPython)("answers the fixed request list through service.handle like the Flask baseline", async () => {
+    await loadPdfStack();
     const r = run("harness.requests()");
     timings.requests_s = r.seconds;
     expect(r.baselineSize).toBe(138);

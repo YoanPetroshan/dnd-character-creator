@@ -202,3 +202,51 @@ def test_engine_catalog_service_import_without_flask_or_pypdf():
     assert done.returncode == 0, done.stderr[-2000:]
     assert "GET /api/health 200" in done.stdout and "POST /api/resolve 200" in done.stdout
     assert "POST /api/export/pdf 400" in done.stdout  # the gate: the whole export path ran without Flask
+
+
+_NO_PDF_STACK_PROBE = r"""
+import json, sys
+BLOCKED = ("fpdf", "PIL", "fontTools", "defusedxml")
+class Block:
+    def find_spec(self, name, path=None, target=None):
+        if name.split(".")[0] in BLOCKED:
+            raise ImportError("blocked: " + name)
+sys.meta_path.insert(0, Block())
+sys.path.insert(0, sys.argv[1])
+sys.path.insert(0, sys.argv[1] + "/tests")
+import service
+from service_requests import exportable_draft
+body = json.dumps(exportable_draft()).encode()
+checks = [
+    ("GET", "/api/health", None, 200), ("GET", "/api/catalog", None, 200), ("GET", "/api/catalog/class/wizard", None, 200),
+    ("GET", "/api/items", None, 200), ("GET", "/api/spells?class=wizard", None, 200), ("GET", "/api/spells/fireball", None, 200),
+    ("POST", "/api/resolve", body, 200), ("POST", "/api/export/yaml", body, 200), ("POST", "/api/export/markdown", body, 200),
+    ("POST", "/api/export/markdown?lang=en", body, 200),
+    ("POST", "/api/export/pdf", b"{}", 400),   # the export gate answers before any PDF is rendered
+    ("GET", "/api/nope", None, 404),
+]
+for method, url, data, want in checks:
+    path, _, query = url.partition("?")
+    status = service.handle(method, path, query, data)[0]
+    assert status == want, (method, url, status)
+loaded = sorted(m for m in sys.modules if m.split(".")[0] in BLOCKED)
+assert not loaded, loaded
+# a real PDF render is the one thing that needs the stack: with it blocked it is the JSON 500, not a crash
+assert service.handle("POST", "/api/export/pdf", "", body)[0] == 500
+print("ok")
+"""
+
+
+def test_everything_but_a_pdf_works_without_the_pdf_stack():
+    """O3: fpdf2, Pillow, fonttools and defusedxml are imported only when a PDF is rendered (the browser worker loads
+    them lazily). With the four blocked, every other route answers, and a PDF render fails as the JSON 500."""
+    done = subprocess.run([sys.executable, "-c", _NO_PDF_STACK_PROBE, str(SERVER)], capture_output=True, text=True, timeout=300, cwd=str(SERVER))
+    assert done.returncode == 0, done.stdout[-1000:] + done.stderr[-2000:]
+    assert done.stdout.strip().endswith("ok")
+
+
+def test_service_does_not_import_the_pdf_stack_at_module_level():
+    tree = ast.parse((SERVER / "service.py").read_text(encoding="utf-8"))
+    top = {(n.module if isinstance(n, ast.ImportFrom) else a.name).split(".")[0]
+           for n in tree.body if isinstance(n, (ast.Import, ast.ImportFrom)) for a in (n.names if isinstance(n, ast.Import) else [n])}
+    assert "pdf_export" not in top and not top & {"fpdf", "PIL", "fontTools", "defusedxml"}

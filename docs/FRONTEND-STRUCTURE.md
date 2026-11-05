@@ -31,7 +31,7 @@ Theme switch: override tokens on `:root[data-theme="..."]` (nothing sets `data-t
   - option row in a picker: `available | disabled | hidden-by-filters`
   - status banner: `error | notice | storage-failed | server-older | pruned | engine-starting`
   - pruned-selection list item (Home): `pruned`
-  - export button: `ready | busy | disabled`; export error line: `error`
+  - export button: `ready | busy | disabled`; export error line: `error`; "preparing PDF" line (offline build, first PDF only): `preparing-pdf`
   - language button: `active | inactive`
 - `data-new="true"` marks a pending choice card (and the header link `.new-choices`) that appeared through a level-up and has not been resolved yet; the card also holds `<span class="choice-card__new">` (text "ново" / "new"). The attribute is absent otherwise.
 - The step-nav link keeps the `active` class (react-router); the badge `step-nav__badge` appears only when steps are unresolved. `data-active="true"` marks the active character in the Home library list.
@@ -66,4 +66,5 @@ Presentational components take props only; logic components read contexts (`useD
 | pruned | Home list of dropped selections `data-state="pruned"`; the status banner `data-state="pruned"` |
 | new | choice card `data-new="true"` + `.choice-card__new` text marker; header link `.new-choices` ("Нови избори: N") |
 | loading / error | headings show an ellipsis while resolving; `StatusBanner` `data-state="error"` |
+| preparing PDF | offline build only: Export page `<p role="status" data-state="preparing-pdf">` while the worker loads the PDF stack for the first PDF export (a second or two); gone when it is loaded |
 | engine starting | offline build only: `StatusBanner` `data-state="engine-starting"` (a `<p class="status-banner" role="status">`, no design) while the in-browser engine boots; gone when it is ready |

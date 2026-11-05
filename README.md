@@ -122,7 +122,7 @@ the Vite dev origin (`http://localhost:5173`).
 ## Offline pack (Pyodide)
 
 The engine can also run in the browser (Pyodide, the same Python code). Slice O1 builds the pack and proves it equal to
-the native engine; O2 runs it in the app (O3 loads the PDF part lazily, the PWA comes in O4).
+the native engine; O2 runs it in the app, O3 loads the PDF part only on the first PDF export (the PWA comes in O4).
 
     .venv/bin/python scripts/build_offline.py          # builds app.zip + fonts.zip, fetches the pinned runtime
     .venv/bin/python scripts/build_offline.py --check  # verify only, no network
@@ -138,7 +138,11 @@ cold start on a phone: `cd frontend && npm run dev:lan`, open `http://<Mac LAN I
 Running the app on the in-browser engine (no server at all): build the pack, then `cd frontend && npm run build:offline
 && npm run preview` (or `npm run dev:offline`). The default `npm run dev` / `npm run build` still talk to the Flask server;
 the offline build asks for the engine through `VITE_OFFLINE_ENGINE=1` (`frontend/.env.offline`) and still falls back to
-the server when the pack is not served or WebAssembly is missing. Details: `docs/superpowers/specs/ARCHITECTURE-CURRENT-STATE.md`, section O1.
+the server when the pack is not served or WebAssembly is missing. The PDF stack (`fonts.zip` plus the fpdf2, Pillow, fonttools
+and defusedxml wheels, about 2.5 MB) is loaded on the first PDF export; `VITE_OFFLINE_PDF=eager` loads it right after boot
+instead (for when O4 precaches it). After any change under `server/` or `chargen/` rebuild the pack
+(`scripts/build_offline.py`): the Node equivalence test reads the built `app.zip`. Details:
+`docs/superpowers/specs/ARCHITECTURE-CURRENT-STATE.md`, sections O1-O3.
 
 ## Test
 

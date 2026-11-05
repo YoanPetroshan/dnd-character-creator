@@ -4,16 +4,26 @@
 import type { Engine } from "./engineCore";
 import type { FromWorker, ToWorker } from "./engineProtocol";
 
-type Request = Extract<ToWorker, { t: "request" }>;
+type Job = Extract<ToWorker, { t: "request" | "prepare" }>;
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-export function createEngineHost(engine: Engine, post: (message: FromWorker, transfer?: Transferable[]) => void) {
-  let queue: Request[] = [];
+export interface HostOptions {
+  /** "eager": start loading the PDF stack as soon as the engine is ready (the files are precached by then, O4). */
+  pdf?: "lazy" | "eager";
+}
+
+export function createEngineHost(engine: Engine, post: (message: FromWorker, transfer?: Transferable[]) => void, options: HostOptions = {}) {
+  let queue: Job[] = [];
   let running = false;
 
   const booted: Promise<boolean> = engine.boot().then(
     () => {
       post({ t: "ready" });
+      if (options.pdf === "eager") {
+        queue.push({ t: "prepare", what: "pdf" });
+        post({ t: "preparing", what: "pdf" });
+        void pump();
+      }
       return true;
     },
     (e: unknown) => {
@@ -29,6 +39,15 @@ export function createEngineHost(engine: Engine, post: (message: FromWorker, tra
       if (!(await booted)) return;
       while (queue.length) {
         const job = queue.shift()!;
+        if (job.t === "prepare") {
+          try {
+            await engine.preparePdf();
+            post({ t: "prepared", what: job.what });
+          } catch (e) {
+            post({ t: "prepare-error", what: job.what, message: errorText(e) });
+          }
+          continue;
+        }
         try {
           const r = engine.call(job.method, job.path, job.query, job.body);
           const body = r.body.buffer as ArrayBuffer;
@@ -46,11 +65,11 @@ export function createEngineHost(engine: Engine, post: (message: FromWorker, tra
   return {
     booted,
     onMessage(m: ToWorker): void {
-      if (m.t === "request") {
+      if (m.t === "request" || m.t === "prepare") {
         queue.push(m);
         void pump();
       } else if (m.t === "cancel") {
-        queue = queue.filter((j) => j.id !== m.id);
+        queue = queue.filter((j) => j.t !== "request" || j.id !== m.id);
       }
     },
   };

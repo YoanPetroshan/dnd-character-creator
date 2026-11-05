@@ -3,7 +3,9 @@
 ``handle(method, path, query, body) -> (status, content_type, headers, body_bytes)`` takes plain values and returns
 plain values, so the same code answers the Flask adapter (``app.py``) and, later, a browser worker running the engine
 offline (docs/superpowers/plans/2026-11-04-offline-pyodide.md). It imports nothing from Flask / werkzeug: only the
-engine, the catalog, the exporters and the standard library (plus pyyaml and fpdf2 through the exporters). It
+engine, the catalog, the exporters and the standard library (plus pyyaml for YAML). The PDF stack (fpdf2, Pillow, fonttools,
+defusedxml) is imported only when a PDF is rendered, so everything else works without it (the browser worker loads it
+on the first PDF export). It
 reproduces what Flask did byte for byte (``jsonify`` defaults: ``sort_keys=True``, ``ensure_ascii=True``, compact
 separators and a trailing newline; the JSON error bodies; ``Content-Disposition`` on exports); the Flask test client
 and ``handle`` are compared over a fixed request list by ``tests/test_service.py`` and ``tests/test_service_baseline.py``.
@@ -42,7 +44,6 @@ from export import to_yaml
 from export_labels import DEFAULT_LANG as EXPORT_DEFAULT_LANG, label as export_label
 from i18n.messages import localize, msg, parse_lang
 from markdown_export import to_markdown
-from pdf_export import to_pdf
 
 log = logging.getLogger("service")
 
@@ -437,10 +438,18 @@ def _pending_export_problems(resolution: dict) -> list[dict]:
     ]
 
 
+def _render_pdf(resolution: dict, lang: str) -> bytes:
+    # imported here, not at module level: pdf_export needs fpdf2 + Pillow + fonttools + defusedxml, which the offline
+    # (Pyodide) build loads on demand; nothing but a PDF export may depend on them.
+    from pdf_export import to_pdf
+
+    return to_pdf(resolution, lang)
+
+
 _EXPORT_RENDERERS = {
     "yaml": (to_yaml, "application/x-yaml", "yaml"),
     "markdown": (to_markdown, "text/markdown; charset=utf-8", "md"),
-    "pdf": (to_pdf, "application/pdf", "pdf"),
+    "pdf": (_render_pdf, "application/pdf", "pdf"),
 }
 
 

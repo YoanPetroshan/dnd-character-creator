@@ -6,6 +6,10 @@
 // dropped); the 30 s timeout rejects with a TimeoutError DOMException and starts only when the request is handed to the
 // booted engine (never while Pyodide is still starting); an engine that cannot be reached rejects with a TypeError, like
 // a failed network request. A worker that cannot boot at all hands the call to the plain-fetch fallback.
+//
+// The PDF stack is not part of the boot: the first POST /api/export/pdf asks the worker to load it (state `pdf:
+// "loading"`, which the Export page shows as "preparing PDF") and is sent when that is done; the timeout of that request
+// starts after the preparation, like after the boot.
 import type { EngineSnapshot, FromWorker, ToWorker } from "./engineProtocol";
 import { createStatusStore, type StatusStore } from "./engineStatus";
 
@@ -98,6 +102,9 @@ export interface WorkerTransportOptions {
   timeoutMs?: number;
 }
 
+/** The one request that needs the PDF stack. */
+export const needsPdfStack = (method: string, path: string): boolean => method === "POST" && path === "/api/export/pdf";
+
 interface Pending {
   resolve(r: Response): void;
   reject(e: unknown): void;
@@ -109,6 +116,26 @@ export function createWorkerTransport(options: WorkerTransportOptions): Transpor
   const pending = new Map<number, Pending>();
   let nextId = 1;
   let worker: WorkerLike | null = null;
+
+  // the PDF stack: loaded on demand (or eagerly by the worker), once
+  let pdfReady: Promise<void> | null = null;
+  let pdfSettle: { resolve(): void; reject(e: unknown): void } | null = null;
+  const startPdf = (): Promise<void> => {
+    if (!pdfReady) {
+      store.set({ pdf: "loading" });
+      pdfReady = new Promise<void>((resolve, reject) => (pdfSettle = { resolve, reject }));
+      pdfReady.catch(() => undefined); // the callers handle it; never an unhandled rejection
+    }
+    return pdfReady;
+  };
+  /** Ask the worker for the PDF stack (idempotent; shared by concurrent exports). */
+  const preparePdf = (): Promise<void> => {
+    if (store.get().pdf === "ready") return Promise.resolve();
+    const fresh = !pdfReady;
+    const p = startPdf();
+    if (fresh) worker?.postMessage({ t: "prepare", what: "pdf" });
+    return p;
+  };
 
   let bootDone!: (ok: boolean) => void;
   const booted = new Promise<boolean>((r) => (bootDone = r));
@@ -127,6 +154,10 @@ export function createWorkerTransport(options: WorkerTransportOptions): Transpor
     store.set({ engine: "fallback" });
     for (const [, p] of pending) p.reject(new TypeError(reason));
     pending.clear();
+    pdfSettle?.reject(new TypeError(reason));
+    pdfSettle = null;
+    pdfReady = null;
+    store.set({ pdf: "idle" });
     try {
       worker?.terminate();
     } catch {
@@ -147,6 +178,20 @@ export function createWorkerTransport(options: WorkerTransportOptions): Transpor
           pending.delete(m.id);
           p.resolve(buildResponse(m.status, m.contentType, m.headers, m.body));
         } // else: aborted or timed out earlier, the reply is dropped
+      } else if (m.t === "preparing") {
+        void startPdf(); // the worker loads it by itself (eager mode)
+      } else if (m.t === "prepared") {
+        void startPdf();
+        store.set({ pdf: "ready" });
+        pdfSettle?.resolve();
+        pdfSettle = null;
+      } else if (m.t === "prepare-error") {
+        // a later export tries again
+        const s = pdfSettle;
+        pdfSettle = null;
+        pdfReady = null;
+        store.set({ pdf: "idle" });
+        s?.reject(new TypeError(`PDF stack failed to load: ${m.message}`));
       } else if (m.t === "failure") {
         const p = pending.get(m.id);
         if (p) {
@@ -162,19 +207,22 @@ export function createWorkerTransport(options: WorkerTransportOptions): Transpor
     settleBoot(false);
   }
 
-  /** Wait for boot; reject early when the caller aborts meanwhile. */
-  function bootOrAbort(signal: AbortSignal | null): Promise<boolean> {
-    if (!signal) return booted;
+  /** Wait for `p`; reject early when the caller aborts meanwhile (the work itself goes on). */
+  function orAbort<T>(p: Promise<T>, signal: AbortSignal | null): Promise<T> {
+    if (!signal) return p;
     if (signal.aborted) return Promise.reject(abortError(signal));
-    return new Promise<boolean>((resolve, reject) => {
+    return new Promise<T>((resolve, reject) => {
       const onAbort = () => reject(abortError(signal));
       signal.addEventListener("abort", onAbort, { once: true });
-      booted.then(
-        (ok) => {
+      p.then(
+        (v) => {
           signal.removeEventListener("abort", onAbort);
-          resolve(ok);
+          resolve(v);
         },
-        reject,
+        (e) => {
+          signal.removeEventListener("abort", onAbort);
+          reject(e);
+        },
       );
     });
   }
@@ -182,10 +230,12 @@ export function createWorkerTransport(options: WorkerTransportOptions): Transpor
   async function fetchViaEngine(input: RequestInfo | URL, init: ApiInit = {}): Promise<Response> {
     const { timeoutMs, ...rest } = init;
     const req = describeRequest(input, rest);
-    if (!(await bootOrAbort(req.signal)) || !worker) return fetchWithTimeout(options.fallback, input, init);
+    if (!(await orAbort(booted, req.signal)) || !worker) return fetchWithTimeout(options.fallback, input, init);
+    if (needsPdfStack(req.method, req.path)) await orAbort(preparePdf(), req.signal);
     const signal = req.signal;
     if (signal?.aborted) throw abortError(signal);
-    const w = worker;
+    const w = worker as WorkerLike | null;
+    if (!w) throw new TypeError("engine worker is gone"); // it crashed while the PDF stack was loading
     const id = nextId++;
     return new Promise<Response>((resolve, reject) => {
       let timer: ReturnType<typeof setTimeout> | undefined;

@@ -41,12 +41,15 @@ const quiet = { messageCallback: () => undefined, errorCallback: () => undefined
 
 export interface Engine {
   boot(): Promise<void>;
+  /** Load the PDF stack (wheels + fonts.zip) once; later calls return the same promise. */
+  preparePdf(): Promise<void>;
   call(method: string, path: string, query: string, body: Uint8Array | null): EngineReply;
 }
 
 export function createEngine(io: EngineIO): Engine {
   let py: PyodideApi;
   let call: any;
+  let pdf: Promise<void> | null = null;
 
   async function loadPdfStack(): Promise<void> {
     py.unpackArchive(await io.readBytes("fonts.zip"), "zip", { extractDir: "/app" });
@@ -58,10 +61,18 @@ export function createEngine(io: EngineIO): Engine {
       py = await io.loadPyodide();
       await py.loadPackage(["pyyaml"], quiet);
       py.unpackArchive(await io.readBytes("app.zip"), "zip", { extractDir: "/app" });
-      // service.py imports pdf_export at module level for now, so the whole PDF stack is needed to import it.
-      await loadPdfStack();
+      // `import service` needs only the engine, the catalog and pyyaml: pdf_export is imported when the first PDF is
+      // rendered, after preparePdf().
       py.runPython(BRIDGE);
       call = py.globals.get("engine_call");
+    },
+    preparePdf() {
+      // a failed load may be retried: the promise is dropped on failure
+      pdf ??= loadPdfStack().catch((e) => {
+        pdf = null;
+        throw e;
+      });
+      return pdf;
     },
     call(method, path, query, body) {
       const raw = call(method, path, query, body ?? undefined);

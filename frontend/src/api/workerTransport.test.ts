@@ -249,6 +249,135 @@ describe("worker transport", () => {
   });
 });
 
+describe("the PDF stack", () => {
+  const pdfPost = (t: ReturnType<typeof make>, extra: RequestInit = {}) =>
+    t.fetch("/api/export/pdf?lang=bg", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", ...extra });
+  const prepares = () => worker.sent.filter((m) => m.t === "prepare");
+
+  it("only a PDF export asks for it: the other routes and exports never do", async () => {
+    const t = make();
+    worker.emit({ t: "ready" });
+    const a = t.fetch("/api/export/markdown", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    const b = t.fetch("/api/export/pdf"); // a GET is not the export
+    await flush();
+    for (const r of worker.requests()) worker.emit(reply(r.id));
+    await Promise.all([a, b]);
+    expect(prepares()).toHaveLength(0);
+    expect(t.store.get().pdf).toBe("idle");
+  });
+
+  it("the first PDF export loads the stack first (state loading), then sends the request, and later ones do not load again", async () => {
+    const t = make();
+    worker.emit({ t: "ready" });
+    const states: string[] = [];
+    t.store.subscribe(() => states.push(t.store.get().pdf));
+    const p = pdfPost(t);
+    await flush();
+    expect(prepares()).toEqual([{ t: "prepare", what: "pdf" }]);
+    expect(worker.requests()).toHaveLength(0); // not before the stack is there
+    expect(t.store.get().pdf).toBe("loading");
+    worker.emit({ t: "prepared", what: "pdf" });
+    await flush();
+    const [req] = worker.requests();
+    expect(req.path).toBe("/api/export/pdf");
+    worker.emit(reply(req.id));
+    expect((await p).status).toBe(200);
+    expect(states).toEqual(["loading", "ready"]);
+    const again = pdfPost(t);
+    await flush();
+    expect(prepares()).toHaveLength(1);
+    worker.emit(reply(worker.requests()[1].id));
+    await again;
+  });
+
+  it("two PDF exports at once share one load", async () => {
+    const t = make();
+    worker.emit({ t: "ready" });
+    const a = pdfPost(t);
+    const b = pdfPost(t);
+    await flush();
+    expect(prepares()).toHaveLength(1);
+    worker.emit({ t: "prepared", what: "pdf" });
+    await flush();
+    for (const r of worker.requests()) worker.emit(reply(r.id));
+    await Promise.all([a, b]);
+  });
+
+  it("the timeout does not count the preparation", async () => {
+    const t = make(30_000);
+    worker.emit({ t: "ready" });
+    const p = pdfPost(t);
+    const settled = vi.fn();
+    p.then(settled, settled);
+    await vi.advanceTimersByTimeAsync(90_000); // a slow first load
+    expect(settled).not.toHaveBeenCalled();
+    worker.emit({ t: "prepared", what: "pdf" });
+    await flush();
+    await vi.advanceTimersByTimeAsync(29_000);
+    expect(settled).not.toHaveBeenCalled();
+    worker.emit(reply(worker.requests()[0].id));
+    expect((await p).status).toBe(200);
+  });
+
+  it("an abort during the preparation rejects with an AbortError; the load goes on and the next export reuses it", async () => {
+    const t = make();
+    worker.emit({ t: "ready" });
+    const c = new AbortController();
+    const caught = pdfPost(t, { signal: c.signal }).catch((e) => e);
+    await flush();
+    c.abort();
+    expect((await caught).name).toBe("AbortError");
+    worker.emit({ t: "prepared", what: "pdf" });
+    const next = pdfPost(t);
+    await flush();
+    expect(prepares()).toHaveLength(1);
+    expect(worker.requests()).toHaveLength(1);
+    worker.emit(reply(worker.requests()[0].id));
+    await next;
+  });
+
+  it("a failed load is a TypeError, the state goes back to idle, and the next export tries again", async () => {
+    const t = make();
+    worker.emit({ t: "ready" });
+    const caught = pdfPost(t).catch((e) => e);
+    await flush();
+    worker.emit({ t: "prepare-error", what: "pdf", message: "wheel missing" });
+    expect(await caught).toBeInstanceOf(TypeError);
+    expect(t.store.get().pdf).toBe("idle");
+    void pdfPost(t).catch(() => undefined);
+    await flush();
+    expect(prepares()).toHaveLength(2);
+  });
+
+  it("eager mode: the worker announces and finishes the load by itself, and no export asks for it", async () => {
+    const t = make();
+    worker.emit({ t: "ready" });
+    worker.emit({ t: "preparing", what: "pdf" });
+    expect(t.store.get().pdf).toBe("loading");
+    worker.emit({ t: "prepared", what: "pdf" });
+    expect(t.store.get().pdf).toBe("ready");
+    const p = pdfPost(t);
+    await flush();
+    expect(prepares()).toHaveLength(0);
+    worker.emit(reply(worker.requests()[0].id));
+    await p;
+  });
+
+  it("an export that arrives while the eager load runs waits for it instead of asking again", async () => {
+    const t = make();
+    worker.emit({ t: "ready" });
+    worker.emit({ t: "preparing", what: "pdf" });
+    const p = pdfPost(t);
+    await flush();
+    expect(worker.requests()).toHaveLength(0);
+    worker.emit({ t: "prepared", what: "pdf" });
+    await flush();
+    expect(prepares()).toHaveLength(0);
+    worker.emit(reply(worker.requests()[0].id));
+    await p;
+  });
+});
+
 describe("plain fetch with a timeout", () => {
   it("passes through without timeoutMs, and strips the extension", async () => {
     const f = vi.fn(async (_i: unknown, init?: RequestInit) => new Response(String(Object.keys(init ?? {}))));
