@@ -1,7 +1,8 @@
 # D&D Character Creator
 
 A web app that builds D&D 5e (2014 SRD) characters and exports them as YAML,
-Markdown or PDF. The UI and the Markdown/PDF exports are in Bulgarian.
+Markdown or PDF. The UI, the engine's messages and the Markdown/PDF exports come in Bulgarian and English
+(Bulgarian is the default); see "Languages and names" below.
 
 The current app is the **v2 builder**: `server/` (Flask JSON API + engine) and
 `frontend/` (React/TypeScript, Vite). The character being built is a
@@ -17,6 +18,43 @@ helpers (`chargen.sync`, `chargen.sources`) that v2 reads.
 
 For how the v2 engine works, read
 `docs/superpowers/specs/ARCHITECTURE-CURRENT-STATE.md`.
+
+## Languages and names
+
+The app speaks Bulgarian (default) and English. Rules texts follow the 2024 Player's Handbook (then the SRD) in English; the
+Bulgarian is the wording the app has always used. Game content from the data (class, species, feat, spell and item names,
+feature names, 5etools descriptions) stays English in both languages on purpose.
+
+**How the switch works.** The BG / EN buttons in the header set a per-device preference
+(`localStorage["dnd-builder-lang-v1"]` = `bg` or `en`; anything else or blocked storage means `bg`) and `<html lang>`. The
+choice survives a reload. The page texts come from the frontend copy catalog (`frontend/src/copy/`); everything the server
+writes comes back in the same language because the frontend appends `?lang=` to its requests.
+
+**`?lang=`.** `POST /api/resolve?lang=bg|en` returns the problems, warnings, pruned reasons, option `disabledReason`s and
+the card labels / descriptions the engine writes in that language (card ids, counts and statuses never change).
+`POST /api/export/<markdown|pdf|yaml>?lang=bg|en` prints the file's labels in that language. Missing `lang` is English for
+`/api/resolve` and the export gate, and Bulgarian for the Markdown / PDF file (the language the exports had before they
+were bilingual). Any other value is a 400. Details: `docs/API.md`.
+
+**Where to add things.**
+
+| To add | Where |
+|---|---|
+| a rules term (Armor Class, Short Rest ...) | `server/i18n/glossary.json` (`en`, `bg`, a citation), then regenerate with `cd server && ../.venv/bin/python -m i18n.glossary` (writes `docs/GLOSSARY.md` and `frontend/src/copy/glossary.gen.ts`) |
+| a text the server writes (problem, warning, pruned reason, disabled reason, card label / description) | a key with `en` and `bg` in `server/i18n/catalog/{problems,warnings,pruned,disabled,labels}.py`, emitted with `msg("<key>", **params)` (never an f-string) |
+| an export label | `server/export_labels.py`, the same key in both `_BG` and `_EN` |
+| a web UI text | the same key in `frontend/src/copy/bg.ts` and `en.ts` (`en.ts` is typed as `Copy`, so a missing key fails `npm run build`); rules terms in `en.ts` read `g.<term>.en` from the glossary |
+| a wording you are unsure about | add it to the flag list in `server/i18n/review_table.py` and regenerate `docs/I18N-REVIEW.md` |
+
+`server/tests/test_i18n_completeness.py` checks all of these layers against each other (both languages complete, glossary
+and copy in step, no plain English left in `?lang=bg` output). `docs/I18N-REVIEW.md` lists the wordings the project owner
+should confirm. The overview with the test map and the known English leftovers is the "i18n" section of
+`docs/superpowers/specs/ARCHITECTURE-CURRENT-STATE.md`.
+
+**Random names.** The dice button next to the character name on Home fills in a random Bulgarian name (first name and a
+surname of the same gender) in Bulgarian, and its official Latin transliteration in English (for example
+"Драгана Вутова" / "Dragana Vutova"). The name lists are in `frontend/src/names/bgNames.ts` (each name carries an origin tag; the
+`christian` origin is excluded by default through `DEFAULT_ORIGINS`), the transliteration in `frontend/src/logic/translit.ts`.
 
 ## Setup
 
