@@ -1,4 +1,323 @@
-"""Engine-written card label / description messages (filled by the I-series; see i18n/catalog/__init__.py)."""
+"""Engine-written card labels, descriptions and `unavailableReason` texts (I5).
+
+`MESSAGES[key] = {"en": template, "bg": template}`. The English templates reproduce the engine's former strings byte for
+byte (the frozen snapshot depends on it, and the engine itself compares a card label with `.key`). The Bulgarian ones keep
+the same placeholders. Key families:
+
+- `label-*`   a card label (or a piece of one); `label-prefixed` is the "{head}: {tail}" shape of a feat's or pact's card.
+- `desc-*`    a card description written by the engine; `noun-*` are the nested pieces of a "Choose N <noun>." sentence
+              (so the Bulgarian word order can differ), `desc-cond-*` the casting-time condition of a Wizard pick.
+- `unavailable-*`  the `unavailableReason` of a card that can never be completed.
+
+Not here, on purpose: feature / class / species / feat / spell names and the labels the data carries (a class feature name
+such as "Divine Order", the text a 5etools record or a starting-equipment envelope supplies) are parameters or plain data
+and stay English; engine rule paraphrases stay English too (decision E4). `{n|one|many}` is the plural filter, `{names: or }`
+joins a list. Rules words follow `i18n/glossary.json` (Bulgarian: owned proficiency = "владеене", cantrip = "трик",
+Weapon Mastery = "Майсторство с оръжия", Prepared Spells = "Подготвени заклинания", Spellbook = "Книга със заклинания").
+"""
 from __future__ import annotations
 
-MESSAGES: dict[str, dict[str, str]] = {}
+MESSAGES: dict[str, dict[str, str]] = {
+    # --- fixed labels ----------------------------------------------------------------------------------------------
+    "label-skill-proficiencies": {"en": "Skill Proficiencies", "bg": "Владеене на умения"},
+    "label-tool-proficiencies": {"en": "Tool Proficiencies", "bg": "Владеене на инструменти"},
+    "label-choice": {"en": "Choice", "bg": "Избор"},
+    "label-skill-proficiency": {"en": "Skill Proficiency", "bg": "Владеене на умение"},
+    "label-tool-proficiency": {"en": "Tool Proficiency", "bg": "Владеене на инструмент"},
+    "label-skill-or-tool-proficiency": {"en": "Skill or Tool Proficiency", "bg": "Владеене на умение или инструмент"},
+    "label-tool-proficiency-category": {"en": "Tool Proficiency ({category})", "bg": "Владеене на инструмент ({category})"},
+    "label-bonus-language": {"en": "Bonus Language", "bg": "Допълнителен език"},
+    "label-languages": {"en": "Languages", "bg": "Езици"},
+    "label-damage-resistance": {"en": "Damage Resistance", "bg": "Устойчивост на щети"},
+    "label-damage-type": {"en": "Damage Type", "bg": "Вид щети"},
+    "label-ability-score-increase": {"en": "Ability Score Increase", "bg": "Увеличаване на характеристика"},
+    "label-asi": {"en": "Ability Score Improvement", "bg": "Увеличение на характеристики"},
+    "label-lineage": {"en": "Lineage / Ancestry", "bg": "Родова линия / Потекло"},
+    "label-size": {"en": "Size", "bg": "Размер"},
+    "label-origin-feat": {"en": "Origin Feat", "bg": "Талант от произхода"},
+    "label-feat": {"en": "Feat", "bg": "Талант"},
+    "label-weapon-mastery": {"en": "Weapon Mastery", "bg": "Майсторство с оръжия"},
+    "label-weapon-proficiencies": {"en": "Weapon Proficiencies", "bg": "Владеене на оръжия"},
+    "label-cantrips-known": {"en": "Cantrips Known", "bg": "Известни трикове"},
+    "label-spells-known": {"en": "Spells Known", "bg": "Известни заклинания"},
+    "label-prepared-spells": {"en": "Prepared Spells", "bg": "Подготвени заклинания"},
+    "label-spellbook": {"en": "Spellbook", "bg": "Книга със заклинания"},
+    "label-starting-equipment": {"en": "Starting Equipment", "bg": "Начална екипировка"},
+    "label-saving-throw": {"en": "Saving Throw", "bg": "Спасително хвърляне"},
+    "label-spellcasting-ability": {"en": "Spellcasting Ability", "bg": "Характеристика за заклинания"},
+    "label-spell-list": {"en": "Spell List", "bg": "Списък със заклинания"},
+    "label-cantrip": {"en": "Cantrip", "bg": "Трик"},
+    "label-spell": {"en": "Spell", "bg": "Заклинание"},
+    "label-cantrips": {"en": "Cantrips", "bg": "Трикове"},
+    "label-rituals": {"en": "Rituals", "bg": "Ритуали"},
+    "label-skill": {"en": "Skill", "bg": "Умение"},
+    "label-artisans-tools": {"en": "Artisan's Tools", "bg": "Инструменти на занаятчия"},
+    "label-pact-weapon": {"en": "Pact Weapon", "bg": "Оръжие на пакта"},
+    "label-circle-spells-land": {"en": "Circle Spells (land type)", "bg": "Circle Spells (вид терен)"},
+    # --- composed labels: a feature or feat name stays a parameter ----------------------------------------------------
+    "label-prefixed": {"en": "{head}: {tail}", "bg": "{head}: {tail}"},
+    "label-feature-level": {"en": "{name} (level {level})", "bg": "{name} (ниво {level})"},
+    # --- descriptions: languages and proficiencies ---------------------------------------------------------------------
+    "desc-origin-languages": {
+        "en": "Your character knows Common plus two languages you choose from the Standard Languages table "
+              "(Player's Handbook 2024, chapter 2).",
+        "bg": "Героят ви знае Common плюс два езика, които избирате от таблицата със стандартни езици "
+              "(Player's Handbook 2024, глава 2).",
+    },
+    "desc-replacement-language": {
+        "en": "You already know {language}, so you learn one language of your choice instead.",
+        "bg": "Вече знаете {language}, затова научавате вместо него един език по ваш избор.",
+    },
+    "desc-feat-languages": {
+        "en": "Choose {n} {n|language|languages} of your choice.",
+        "bg": "Изберете {n} {n|език|езика} по ваш избор.",
+    },
+    "desc-bonus-languages": {
+        "en": "Choose {n} additional {n|language|languages} of your choice.",
+        "bg": "Изберете {n} {n|допълнителен език|допълнителни езика} по ваш избор.",
+    },
+    "desc-feat-proficiencies": {
+        "en": "Choose {n} {n|proficiency|proficiencies} of your choice.",
+        "bg": "Изберете {n} {n|владеене|владеения} по ваш избор.",
+    },
+    "desc-feat-expertise": {
+        "en": "Choose {n} {n|skill|skills} you are proficient in to gain Expertise.",
+        "bg": "Изберете {n} {n|умение|умения}, които владеете, за да получите Expertise.",
+    },
+    "desc-feat-saves": {
+        "en": "Choose {n} {n|ability|abilities} to gain saving throw proficiency in.",
+        "bg": "Изберете {n} {n|характеристика|характеристики}, в чиито спасителни хвърляния да получите владеене.",
+    },
+    "desc-weapon-proficiency-choice": {
+        "en": "Choose {n} {n|weapon|weapons} you gain proficiency with.",
+        "bg": "Изберете {n} {n|оръжие|оръжия}, с които получавате владеене.",
+    },
+    # --- descriptions: ability scores, damage, size, lineage, feats ------------------------------------------------------
+    "desc-asi-option-one": {
+        "en": "Choose one ability score improvement option.",
+        "bg": "Изберете един вариант за увеличение на характеристики.",
+    },
+    "desc-asi-improvement-options": {
+        "en": "Choose {n} ability score improvement {n|option|options}.",
+        "bg": "Изберете {n} {n|вариант|варианта} за увеличение на характеристики.",
+    },
+    "desc-asi-increase": {
+        "en": "Choose {n} ability {n|score|scores} to increase by {bonus}.",
+        "bg": "Изберете {n} {n|характеристика, която да се увеличи|характеристики, които да се увеличат} с {bonus}.",
+    },
+    "desc-asi": {
+        "en": "Increase one ability score by 2, or two ability scores by 1 each — or take a feat instead.",
+        "bg": "Увеличете една характеристика с 2 или две характеристики с по 1 — или вземете талант вместо това.",
+    },
+    "desc-resist-types": {
+        "en": "Choose {n} damage {n|type|types} you resist.",
+        "bg": "Изберете {n} {n|вид щети, на който имате|вида щети, на които имате} устойчивост.",
+    },
+    "desc-resist-type": {
+        "en": "Choose the damage type you resist.",
+        "bg": "Изберете вида щети, на който имате устойчивост.",
+    },
+    "desc-damage-type": {
+        "en": "Choose the damage type this feat applies to.",
+        "bg": "Изберете вида щети, за който важи този талант.",
+    },
+    "desc-giant-strike": {
+        "en": "Choose the giant strike this feat grants.",
+        "bg": "Изберете гигантския удар, който дава този талант.",
+    },
+    "desc-lineage": {
+        "en": "Choose which lineage, ancestry or legacy this species has.",
+        "bg": "Изберете каква родова линия, потекло или наследство има тази раса.",
+    },
+    "desc-size": {"en": "Choose your size.", "bg": "Изберете размера си."},
+    "desc-species-feat": {"en": "Choose {noun}.", "bg": "Изберете {noun}."},
+    "desc-species-feats": {"en": "Choose {count} feats.", "bg": "Изберете {count} таланта."},
+    "noun-origin-feat": {"en": "an Origin feat", "bg": "талант от произхода"},
+    "noun-dark-gift-feat": {"en": "a Dark Gift feat", "bg": "талант Dark Gift"},
+    "noun-feat": {"en": "a feat", "bg": "талант"},
+    "desc-fighting-style-feat": {"en": "Choose a Fighting Style feat.", "bg": "Изберете талант Fighting Style."},
+    "desc-origin-feat": {"en": "Choose an Origin feat.", "bg": "Изберете талант от произхода."},
+    "desc-spell-ability": {
+        "en": "Choose this feat's spellcasting ability.",
+        "bg": "Изберете характеристиката за заклинания на този талант.",
+    },
+    "desc-spell-list": {
+        "en": "Choose which spell list this feat draws from.",
+        "bg": "Изберете от кой списък със заклинания черпи този талант.",
+    },
+    "desc-pick-fighting-style": {
+        "en": "Learn {n} Fighting Style {n|option|options} from the fighter class. It must differ from any style you already have.",
+        "bg": "Научете {n} {n|опция|опции} Fighting Style от класа fighter. Тя трябва да се различава от всеки стил, който вече имате.",
+    },
+    "desc-pick-maneuver": {
+        "en": "Learn {n} {n|maneuver|maneuvers} from those available to the Battle Master.",
+        "bg": "Научете {n} {n|маневра|маневри} от достъпните за Battle Master.",
+    },
+    "desc-pick-metamagic": {
+        "en": "Learn {n} Metamagic {n|option|options} from the sorcerer class.",
+        "bg": "Научете {n} {n|опция|опции} Metamagic от класа sorcerer.",
+    },
+    "desc-pick-invocation": {
+        "en": "Learn {n} {n|Eldritch Invocation|Eldritch Invocations} from the warlock class. "
+              "One with a prerequisite is for a Warlock who meets it.",
+        "bg": "Научете {n} {n|Eldritch Invocation|Eldritch Invocations} от класа warlock. "
+              "Инвокация с изискване е за Warlock, който го изпълнява.",
+    },
+    "desc-invocation-ability": {
+        "en": "The ability you use to cast the invocation's spell (Intelligence, Wisdom or Charisma).",
+        "bg": "Характеристиката, с която изричате заклинанието на инвокацията (Intelligence, Wisdom или Charisma).",
+    },
+    "desc-weapon-mastery-feat": {
+        "en": "Choose {n} {n|kind|kinds} of weapon you are proficient with to use its mastery property. "
+              "You can change the choice after a long rest.",
+        "bg": "Изберете {n} {n|вид оръжие|вида оръжие}, с които владеете, за да използвате свойството му на майсторство. "
+              "Можете да смените избора след дълга почивка.",
+    },
+    "desc-weapon-mastery-class": {
+        "en": "Choose {count} kinds of weapons you are proficient with to use their mastery properties. "
+              "You can change one choice after a long rest.",
+        "bg": "Изберете {count} вида оръжия, с които владеете, за да използвате техните свойства на майсторство. "
+              "Можете да смените един избор след дълга почивка.",
+    },
+    "desc-granted-automatically": {
+        "en": "{names} {n|is|are} granted automatically.",
+        "bg": "{names} {n|се получава|се получават} автоматично.",
+    },
+    "desc-granted-automatically-after": {
+        "en": "{text}\n\n{names} {n|is|are} granted automatically.",
+        "bg": "{text}\n\n{names} {n|се получава|се получават} автоматично.",
+    },
+    # --- descriptions: spells --------------------------------------------------------------------------------------------
+    "desc-choose-noun": {"en": "Choose {count} {noun}.", "bg": "Изберете {count} {noun}."},
+    "noun-cantrip": {"en": "{n|cantrip|cantrips}", "bg": "{n|трик|трика}"},
+    "noun-spell": {"en": "{n|spell|spells}", "bg": "{n|заклинание|заклинания}"},
+    "noun-spell-levels": {
+        "en": "level {levels: or } {n|spell|spells}",
+        "bg": "{n|заклинание|заклинания} от ниво {levels: или }",
+    },
+    "noun-spell-upto": {
+        "en": "level-{max}-or-lower {n|spell|spells}",
+        "bg": "{n|заклинание|заклинания} от ниво {max} или по-ниско",
+    },
+    "noun-school": {"en": "{schools: or } {noun}", "bg": "{noun} от школа {schools: или }"},
+    "noun-from-list": {"en": "{noun} from the {classes: or } list", "bg": "{noun} от списъка на {classes: или }"},
+    "noun-ritual": {"en": "{noun} with the Ritual tag", "bg": "{noun} с етикет Ритуал"},
+    "desc-listed-spells": {
+        "en": "Choose {n} {n|spell|spells} from the listed options.",
+        "bg": "Изберете {n} {n|заклинание|заклинания} от изброените възможности.",
+    },
+    "desc-cantrips-from-list": {
+        "en": "Choose {n} {n|cantrip|cantrips} from the {list} spell list.",
+        "bg": "Изберете {n} {n|трик|трика} от списъка със заклинания на {list}.",
+    },
+    "desc-spells-know": {
+        "en": "Choose {n} {noun} to know from the {list} spell list.",
+        "bg": "Изберете {n} {noun}, които да знаете, от списъка със заклинания на {list}.",
+    },
+    "desc-spells-prepare": {
+        "en": "Choose {n} {noun} to prepare from the {list} spell list.",
+        "bg": "Изберете {n} {noun}, които да подготвите, от списъка със заклинания на {list}.",
+    },
+    "desc-spells-know-book": {
+        "en": "Choose {n} {noun} to know from your spellbook.",
+        "bg": "Изберете {n} {noun}, които да знаете, от вашата книга със заклинания.",
+    },
+    "desc-spells-prepare-book": {
+        "en": "Choose {n} {noun} to prepare from your spellbook.",
+        "bg": "Изберете {n} {noun}, които да подготвите, от вашата книга със заклинания.",
+    },
+    "desc-spellbook-first": {
+        "en": "Choose spells for your spellbook first.",
+        "bg": "Първо изберете заклинания за книгата си със заклинания.",
+    },
+    "desc-spells-secrets": {
+        "en": "{text} Magical Secrets: up to {cap} of them may be spells of any class's list, or another "
+              "class's cantrips; they count in this number.",
+        "bg": "{text} Magical Secrets: до {cap} от тях може да са заклинания от списъка на кой да е клас или "
+              "трикове на друг клас; те се броят в това число.",
+    },
+    "desc-spellbook": {
+        "en": "Choose {count} {noun} for your spellbook (six at level 1, two more for each Wizard level). "
+              "Prepared spells are drawn from the book.",
+        "bg": "Изберете {count} {noun} за книгата си със заклинания (шест на ниво 1, по две повече за всяко ниво на Wizard). "
+              "Подготвените заклинания се черпят от книгата.",
+    },
+    "desc-mystic-arcanum": {
+        "en": "Choose one level-{level} spell from the Warlock spell list as your Mystic Arcanum. "
+              "You can cast it once per long rest without a spell slot.",
+        "bg": "Изберете едно заклинание от ниво {level} от списъка със заклинания на Warlock за вашия Mystic Arcanum. "
+              "Можете да го изречете веднъж на дълга почивка без клетка за заклинание.",
+    },
+    "desc-additional-secrets": {
+        "en": "{text} These picks do not count against the number of spells you know.",
+        "bg": "{text} Тези избори не се броят към броя на заклинанията, които знаете.",
+    },
+    "desc-savant-free": {
+        "en": "{text} Free spellbook spells so far: {count}. They do not count against the spellbook card.",
+        "bg": "{text} Безплатни заклинания в книгата досега: {count}. Те не се броят към картата на книгата със заклинания.",
+    },
+    "desc-wizard-pick-prepared": {
+        "en": "Choose {count} level {level} {count|spell|spells} in your spellbook{condition}. You always have them prepared.",
+        "bg": "Изберете {count} {count|заклинание|заклинания} от ниво {level} във вашата книга със заклинания{condition}. "
+              "Те винаги са подготвени.",
+    },
+    "desc-wizard-pick-cast": {
+        "en": "Choose {count} level {level} {count|spell|spells} in your spellbook{condition}. You can cast them at their "
+              "lowest level without a spell slot while they are prepared.",
+        "bg": "Изберете {count} {count|заклинание|заклинания} от ниво {level} във вашата книга със заклинания{condition}. "
+              "Можете да ги изричате на най-ниското им ниво без клетка за заклинание, докато са подготвени.",
+    },
+    "desc-wizard-pick-none": {
+        "en": "No spell in your spellbook is eligible (level {level}{condition}).",
+        "bg": "Няма подходящо заклинание във вашата книга със заклинания (ниво {level}{condition}).",
+    },
+    "desc-cond-action": {
+        "en": " that have a casting time of an action",
+        "bg": " с време за изпълнение действие",
+    },
+    "desc-cond-time": {
+        "en": " that have a casting time of {time}",
+        "bg": " с време за изпълнение {time}",
+    },
+    # --- descriptions: Warlock pact cards, equipment, choices --------------------------------------------------------------
+    "desc-tome-cantrips": {
+        "en": "Choose {count} cantrips from any class's spell list that you don't already have prepared. "
+              "While the Book of Shadows is on your person you have them prepared and they function as Warlock spells.",
+        "bg": "Изберете {count} трика от списъка със заклинания на кой да е клас, които още нямате подготвени. "
+              "Докато Book of Shadows е у вас, те са подготвени и действат като заклинания на Warlock.",
+    },
+    "desc-tome-rituals": {
+        "en": "Choose {count} level 1 spells with the Ritual tag from any class's spell list that you don't already have prepared. "
+              "While the Book of Shadows is on your person you have them prepared and they function as Warlock spells.",
+        "bg": "Изберете {count} заклинания от ниво 1 с етикет Ритуал от списъка със заклинания на кой да е клас, които още нямате "
+              "подготвени. Докато Book of Shadows е у вас, те са подготвени и действат като заклинания на Warlock.",
+    },
+    "desc-pact-blade": {
+        "en": "Choose the Simple or Martial Melee weapon you conjure and bond with. You are proficient with it "
+              "and can use your Charisma modifier for its attack and damage rolls.",
+        "bg": "Изберете простото или бойното оръжие за близък бой, което призовавате и с което се свързвате. Владеете го "
+              "и можете да използвате модификатора си на Charisma за хвърлянията му за атака и щети.",
+    },
+    "desc-choose-colon": {"en": "Choose {n}: {what}.", "bg": "Изберете {n}: {what}."},
+    "desc-equipment-note": {
+        "en": "{text} (Note: one or more of the original options for this choice aren't available yet and have been left out.)",
+        "bg": "{text} (Забележка: една или повече от първоначалните възможности за този избор още не са налични и са пропуснати.)",
+    },
+    "desc-equipment-note-only": {
+        "en": "(Note: one or more of the original options for this choice aren't available yet and have been left out.)",
+        "bg": "(Забележка: една или повече от първоначалните възможности за този избор още не са налични и са пропуснати.)",
+    },
+    # --- unavailableReason ----------------------------------------------------------------------------------------------
+    "unavailable-no-feat-offered": {
+        "en": "No feat is offered by the selected sources, so nothing can be chosen here.",
+        "bg": "Избраните източници не предлагат талант, затова тук нищо не може да се избере.",
+    },
+    "unavailable-no-option": {
+        "en": "Nothing can be chosen here with the current character: no option is offered yet.",
+        "bg": "С текущия герой тук нищо не може да се избере: още не се предлага нито една възможност.",
+    },
+    "unavailable-all-closed": {
+        "en": "Nothing can be chosen here with the current character: every option is unavailable.",
+        "bg": "С текущия герой тук нищо не може да се избере: всички възможности са недостъпни.",
+    },
+}

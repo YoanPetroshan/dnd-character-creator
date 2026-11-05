@@ -119,8 +119,7 @@ def savant_template(catalog, rc: dict, ruleset: str, max_slot: int, book_ids: li
         level = record.get("level") or 1
         return {
             "id": card_id(rc["cls_id"], level, fid), "source": _source(rc, level), "label": record["name"],
-            "description": (_join(record.get("desc"))
-                            + f" Free spellbook spells so far: {count}. They do not count against the spellbook card."),
+            "description": msg("desc-savant-free", text=_join(record.get("desc")), count=count),
             "count": count, "options": options,
         }
     return None

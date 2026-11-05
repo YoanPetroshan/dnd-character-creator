@@ -256,11 +256,8 @@ def _messy_draft() -> dict:
 
 
 def _without_reasons(resolution: dict) -> dict:
-    """The resolution with every option's disabledReason dropped (it is localized by I4)."""
-    out = dict(resolution)
-    out["choices"] = [{**c, "options": [{k: v for k, v in o.items() if k != "disabledReason"} for o in c.get("options") or []]}
-                      for c in resolution.get("choices") or []]
-    return out
+    """The resolution without its engine-localized card texts (disabledReason since I4, label / description / unavailableReason since I5)."""
+    return zoo.without_localized(resolution)
 
 
 def test_resolve_lang_bg_returns_bulgarian_problems_and_warnings(client):
@@ -278,7 +275,7 @@ def test_resolve_lang_bg_returns_bulgarian_problems_and_warnings(client):
     assert by_id["wielded-main-shield"] != en_by_id["wielded-main-shield"] and "щит" in by_id["wielded-main-shield"]
     assert all(re.search("[А-Яа-я]", t) for t in by_id.values()), by_id
     # everything that is not an engine message is identical in both languages
-    # (the options' disabledReason is localized since I4, so the cards are compared without it)
+    # (the cards' texts are localized since I4 / I5, so the cards are compared without them)
     assert {k: v for k, v in _without_reasons(bg).items() if k not in ("problems", "warnings")} == {
         k: v for k, v in _without_reasons(en).items() if k not in ("problems", "warnings")}
 

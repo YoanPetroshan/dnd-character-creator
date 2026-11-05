@@ -39,6 +39,8 @@ aren't, resolvable.
 """
 from __future__ import annotations
 
+from i18n.messages import msg
+
 from . import reference_data
 
 
@@ -345,8 +347,8 @@ def build_equipment_choice(
                 label_parts.append(_capitalise(nested_desc))
                 subs.append({
                     "id": f"{choice_id}:{this_slot}", "source": source,
-                    "label": f"{label}: {_capitalise(nested_desc)}",
-                    "description": f"Choose {nested.get('choose', 1)}: {nested_desc}.",
+                    "label": msg("label-prefixed", head=label, tail=_capitalise(nested_desc)),
+                    "description": msg("desc-choose-colon", n=nested.get("choose", 1), what=nested_desc),
                     "count": nested.get("choose", 1), "options": nested_options,
                 })
             else:

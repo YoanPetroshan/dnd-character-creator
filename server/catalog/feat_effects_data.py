@@ -69,6 +69,8 @@ Warrior, Druidic Warrior) get their cantrips from the catalog and are scanned as
 """
 from __future__ import annotations
 
+from i18n.messages import msg  # a tagged card description (I5); the table stays plain data otherwise
+
 FEAT_EFFECT_KEYS: frozenset[str] = frozenset({
     "initiative", "hp_per_level", "hp_flat", "walk_bonus", "climb_equals_walk", "ac_formula",
     "medium_armor_dex_cap", "medium_armor_stealth_ok", "ac_bonus_if", "passive_bonus",
@@ -1015,7 +1017,7 @@ FEAT_EFFECTS.update({
                   "on a damage die of such a spell as a 2."]},
     "strike-of-the-giants-bgg": {
         "variant_choice": {
-            "suffix": "giant-type", "label": "Giant Strike", "description": "Choose the giant strike this feat grants.",
+            "suffix": "giant-type", "label": "Giant Strike", "description": msg("desc-giant-strike"),
             "options": [
                 {"id": "cloud", "label": "Cloud Strike", "note": "Extra 1d4 thunder damage; a creature must succeed on a Wisdom save or you become invisible to it until the start of your next turn or until immediately after you make an attack roll or cast a spell."},
                 {"id": "fire", "label": "Fire Strike", "note": "Extra 1d10 fire damage."},

@@ -317,10 +317,8 @@ def test_resolve_lang_bg_returns_bulgarian_disabled_reasons(client):
     assert taken, "the Guard background grants Alert, so Alert is taken at the ASI cards"
     assert {en_r[w] for w in taken} == {"already taken"} and {bg_r[w] for w in taken} == {"вече взето"}
     # nothing else of the resolution depends on the language
-    def rest(res):
-        res = {**res, "choices": [{**c, "options": [{k: v for k, v in o.items() if k != "disabledReason"}
-                                                    for o in c.get("options") or []]} for c in res["choices"]]}
-        return {k: v for k, v in res.items() if k not in ("problems", "warnings", "pruned")}
+    def rest(res):  # (the cards' texts are localized since I5)
+        return {k: v for k, v in zoo.without_localized(res).items() if k not in ("problems", "warnings", "pruned")}
     assert rest(bg) == rest(en)
 
 

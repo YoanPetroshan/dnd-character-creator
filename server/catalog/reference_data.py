@@ -9,6 +9,8 @@ inside each class's proficiency_choices).
 """
 from __future__ import annotations
 
+from i18n.messages import msg
+
 LANGUAGES: list[dict[str, str]] = [
     {"index": "common", "name": "Common"},
     {"index": "dwarvish", "name": "Dwarvish"},
@@ -5344,11 +5346,11 @@ SUBCLASS_PICKS_2024: tuple[dict, ...] = (
      "quote": "You gain proficiency with three skills of your choice."},
     {"subclass": "battle-master-xphb", "class": "fighter", "feature": "battle-master-xphb-3-student-of-war",
      "kind": "tool", "pool": "artisans-tools", "count": 1, "cid": "tool-choice",
-     "label": "Student of War: Artisan's Tools",
+     "label": msg("label-prefixed", head="Student of War", tail=msg("label-artisans-tools")),
      "quote": "You gain proficiency with one type of Artisan's Tools of your choice"},
     {"subclass": "battle-master-xphb", "class": "fighter", "feature": "battle-master-xphb-3-student-of-war",
      "kind": "skills", "pool": "class-level-1:fighter", "count": 1, "cid": "feature",
-     "label": "Student of War: Skill",
+     "label": msg("label-prefixed", head="Student of War", tail=msg("label-skill")),
      "quote": "one skill of your choice from the skills available to Fighters at level 1"},
     {"subclass": "fey-wanderer-xphb", "class": "ranger", "feature": "fey-wanderer-xphb-3-otherworldly-glamour",
      "kind": "skills", "pool": ("skill-deception", "skill-performance", "skill-persuasion"), "count": 1,
@@ -5484,7 +5486,7 @@ SUBCLASS_OPTIONS_2024: dict[str, dict] = {
     # Nature's Ward's damage Resistance (`ward`: the XPHB feature record and, per option, its table row `ward_quote` and
     # `ward_resist`). "Whenever you finish a Long Rest, choose one type of land" - an editable card.
     "land-xphb-3-circle-of-the-land-spells": {
-        "class": "druid", "subclass": "land-xphb", "label": "Circle Spells (land type)",
+        "class": "druid", "subclass": "land-xphb", "label": msg("label-circle-spells-land"),
         "quotes": ("Whenever you finish a Long Rest, choose one type of land: arid, polar, temperate, or tropical.",
                    "you have the spells listed for your Druid level and lower prepared."),
         "ward": {"feature": "land-xphb-10-natures-ward",
@@ -5630,10 +5632,10 @@ SUBCLASS_INNATE_2024: dict[str, dict] = {
 # sheet_key (key on the Wizard sheet.spells entry).
 WIZARD_SPELL_PICKS_2024: dict[str, dict] = {
     "spell-mastery-1": {"feature": "xphb-wizard-18-spell-mastery", "class_level": 18, "spell_level": 1, "count": 1,
-                        "casting_time": "1 action", "label": "Spell Mastery (level 1)", "grant": "Spell Mastery",
+                        "casting_time": "1 action", "label": msg("label-feature-level", name="Spell Mastery", level=1), "grant": "Spell Mastery",
                         "sheet_key": "spellMastery"},
     "spell-mastery-2": {"feature": "xphb-wizard-18-spell-mastery", "class_level": 18, "spell_level": 2, "count": 1,
-                        "casting_time": "1 action", "label": "Spell Mastery (level 2)", "grant": "Spell Mastery",
+                        "casting_time": "1 action", "label": msg("label-feature-level", name="Spell Mastery", level=2), "grant": "Spell Mastery",
                         "sheet_key": "spellMastery"},
     "signature-spells": {"feature": "xphb-wizard-20-signature-spells", "class_level": 20, "spell_level": 3, "count": 2,
                          "casting_time": None, "label": "Signature Spells", "grant": "Signature Spells",
@@ -5654,10 +5656,10 @@ WIZARD_SPELL_PICKS_2024: dict[str, dict] = {
 # name, the sheet.features row).
 WIZARD_SPELL_PICKS_2014: dict[str, dict] = {
     "spell-mastery-1": {"feature": "spell-mastery", "class_level": 18, "spell_level": 1, "count": 1,
-                        "casting_time": None, "label": "Spell Mastery (level 1)", "grant": "Spell Mastery",
+                        "casting_time": None, "label": msg("label-feature-level", name="Spell Mastery", level=1), "grant": "Spell Mastery",
                         "sheet_key": "spellMastery", "always_prepared": False, "feature_name": "Spell Mastery"},
     "spell-mastery-2": {"feature": "spell-mastery", "class_level": 18, "spell_level": 2, "count": 1,
-                        "casting_time": None, "label": "Spell Mastery (level 2)", "grant": "Spell Mastery",
+                        "casting_time": None, "label": msg("label-feature-level", name="Spell Mastery", level=2), "grant": "Spell Mastery",
                         "sheet_key": "spellMastery", "always_prepared": False, "feature_name": "Spell Mastery"},
     "signature-spells": {"feature": "signature-spell", "class_level": 20, "spell_level": 3, "count": 2,
                          "casting_time": None, "label": "Signature Spells", "grant": "Signature Spells",

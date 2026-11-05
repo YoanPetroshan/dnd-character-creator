@@ -1,7 +1,7 @@
 """The message catalog: `MESSAGES[key] = {"en": template, "bg": template}`.
 
-Merged from one module per kind of engine message. Wired in I1, empty on purpose: I2 (problems and warnings), I3 (pruned),
-I4 (disabled reasons) and I5 (labels and descriptions) fill the modules as the emission sites are converted.
+Merged from one module per kind of engine message. Wired in I1; I2 (problems and warnings), I3 (pruned), I4 (disabled
+reasons) and I5 (card labels, descriptions and unavailable reasons) filled the modules as the emission sites were converted.
 A key is unique across the modules; a duplicate raises at import.
 """
 from __future__ import annotations

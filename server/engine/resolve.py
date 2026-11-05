@@ -868,22 +868,23 @@ def _spell_filter_options(catalog: Catalog, flt: dict, sources=None, ruleset: st
     return [{"option_type": "reference", "item": {"index": sp["index"], "name": sp["name"]}} for sp in matches]
 
 
-def _spell_filter_description(count: int, flt: dict) -> str:
+def _spell_filter_description(count: int, flt: dict):
+    """"Choose 2 cantrips from the Cleric list." as a tagged message: the noun is built from nested pieces (count, level,
+    school, class list, Ritual tag) so each language orders them its own way."""
     level = flt.get("level")
     if level == [0]:
-        core = "cantrip"
+        noun = msg("noun-cantrip", n=count)
+    elif level:
+        noun = msg("noun-spell-levels", n=count, levels=list(level))
     else:
-        core = (f"level {' or '.join(str(x) for x in level)} " if level else "") + "spell"
-    if count != 1:
-        core += "s"
-    noun = core
+        noun = msg("noun-spell", n=count)
     if flt.get("school"):
-        noun = " or ".join(x.title() for x in flt["school"]) + " " + noun
+        noun = msg("noun-school", schools=[x.title() for x in flt["school"]], noun=noun)
     if flt.get("class"):
-        noun += " from the " + " or ".join(x.title() for x in flt["class"]) + " list"
+        noun = msg("noun-from-list", noun=noun, classes=[x.title() for x in flt["class"]])
     if flt.get("ritual"):
-        noun += " with the Ritual tag"
-    return f"Choose {count} {noun}."
+        noun = msg("noun-ritual", noun=noun)
+    return msg("desc-choose-noun", count=count, noun=noun)
 
 
 def _feat_spell_choice_templates(
@@ -912,8 +913,8 @@ def _feat_spell_choice_templates(
         if abil:
             templates.append({
                 "id": f"{prefix}:spell-ability", "source": source,
-                "label": f"{feat['name']}: Spellcasting Ability",
-                "description": "Choose this feat's spellcasting ability.", "count": 1,
+                "label": msg("label-prefixed", head=feat["name"], tail=msg("label-spellcasting-ability")),
+                "description": msg("desc-spell-ability"), "count": 1,
                 "options": [{"id": a.lower(), "label": SAVE_ABILITY_NAMES[a.lower()]} for a in abil["choose"]],
             })
         chosen = None
@@ -927,8 +928,8 @@ def _feat_spell_choice_templates(
                 options.append({"id": slug(name), "label": f"{name} ({', '.join(fixed)})" if fixed else name})
             vcid = f"{prefix}:spell-variant"
             variant_card = {
-                "id": vcid, "source": source, "label": f"{feat['name']}: Spell List",
-                "description": "Choose which spell list this feat draws from.",
+                "id": vcid, "source": source, "label": msg("label-prefixed", head=feat["name"], tail=msg("label-spell-list")),
+                "description": msg("desc-spell-list"),
                 "count": 1, "options": options,
             }
             if feat.get("repeatable") and len(variants) > 1:
@@ -957,7 +958,7 @@ def _feat_spell_choice_templates(
                     keep={x for x in picked if isinstance(x, str)} if isinstance(picked, list) else (),
                 )
                 description = _spell_filter_description(count, sc["filter"])
-                kind = "Cantrip" if sc["filter"].get("level") == [0] else "Spell"
+                kind = msg("label-cantrip") if sc["filter"].get("level") == [0] else msg("label-spell")
             else:
                 listed = dict.fromkeys(catalog.resolve_spell_id(sid) for sid in (sc.get("from") or []))
                 options = [
@@ -965,13 +966,13 @@ def _feat_spell_choice_templates(
                     for sid in listed if sid
                 ]
                 count = min(count, len(options))
-                description = f"Choose {count} spell{'s' if count != 1 else ''} from the listed options."
-                kind = "Spell"
+                description = msg("desc-listed-spells", n=count)
+                kind = msg("label-spell")
             if not options or count < 1:
                 continue
             envelope = {"choose": count, "from": {"option_set_type": "options_array", "options": options}}
             tpl = build_choice_template(
-                envelope, f"{prefix}:spell-choice-{i}", source, f"{feat['name']}: {kind}", description=description,
+                envelope, f"{prefix}:spell-choice-{i}", source, msg("label-prefixed", head=feat["name"], tail=kind), description=description,
             )
             if tpl:
                 if sc.get("count_by_level"):
@@ -995,11 +996,11 @@ def _species_ability_bonus_choice_template(race: dict | None, subrace: dict | No
         choose = envelope.get("choose", 1)
         options = envelope.get("from", {}).get("options", [])
         if options and all(o.get("option_type") == "multiple" for o in options):
-            description = "Choose one ability score improvement option."
+            description = msg("desc-asi-option-one")
         else:
             bonus = options[0].get("bonus", 1) if options else 1
-            description = f"Choose {choose} ability score{'s' if choose != 1 else ''} to increase by {bonus}."
-        return build_choice_template(envelope, cid, source, "Ability Score Increase", description=description)
+            description = msg("desc-asi-increase", n=choose, bonus=bonus)
+        return build_choice_template(envelope, cid, source, msg("label-ability-score-increase"), description=description)
     return None
 
 
@@ -1036,8 +1037,8 @@ def _background_ability_bonus_choice_template(bg: dict | None, bg_id: str | None
     cid = f"background:{bg_id}:ability-bonus"
     source = {"kind": "background", "id": bg_id, "label": bg["name"] if bg else ""}
     choose = envelope.get("choose", 1)
-    description = f"Choose {choose} ability score improvement option{'s' if choose != 1 else ''}."
-    return build_choice_template(envelope, cid, source, "Ability Score Improvement", description=description)
+    description = msg("desc-asi-improvement-options", n=choose)
+    return build_choice_template(envelope, cid, source, msg("label-asi"), description=description)
 
 
 def _background_ability_bonus_deltas(envelope: dict, built_options: list[dict]) -> dict[str, list[tuple[str, int]]]:
@@ -1137,8 +1138,8 @@ def _feat_ability_bonus_choice_templates(
         if origin is not None and feat.get("_asi_level") is not None:
             source["level"] = feat["_asi_level"]
         choose = envelope.get("choose", 1)
-        description = f"Choose {choose} ability score{'s' if choose != 1 else ''} to increase by 1."
-        label = f"{feat['name']}: Ability Score Increase"
+        description = msg("desc-asi-increase", n=choose, bonus=1)
+        label = msg("label-prefixed", head=feat["name"], tail=msg("label-ability-score-increase"))
         tpl = build_choice_template(envelope, cid, source, label, description=description)
         if tpl:
             if scores is not None:
@@ -1516,21 +1517,34 @@ def _resolve_asi_selected_feats(
     return asi_feat_picks, feat_deltas_by_cid
 
 
+def _label_is(label, key: str) -> bool:
+    """True when a card label is the tagged catalog message `key` (the engine compares labels by key, never by text, so
+    the comparison does not depend on the wording or on the language)."""
+    return getattr(label, "key", None) == key
+
+
+def _provisional_choice_label(envelope: dict):
+    """The first label of a class proficiency envelope; `_class_choice_templates` relabels a non-skill one afterwards."""
+    kind = envelope.get("type")
+    if kind == "proficiencies":
+        return msg("label-skill-proficiencies")
+    return kind.title() if kind else msg("label-choice")
+
+
 def _class_choice_templates(cls: dict, cls_id: str) -> list[dict]:
     templates = []
     for i, envelope in enumerate(cls.get("proficiency_choices", [])):
         cid = f"class:{cls_id}:1:prof-choice-{i}"
         source = {"kind": "class", "id": cls_id, "label": cls["name"], "level": 1}
-        provisional_label = "Skill Proficiencies" if envelope.get("type") == "proficiencies" else (envelope.get("type") or "Choice").title()
-        tpl = build_choice_template(envelope, cid, source, provisional_label)
+        tpl = build_choice_template(envelope, cid, source, _provisional_choice_label(envelope))
         if not tpl:
             continue
         # Some classes (Bard, Monk) have a SECOND proficiency_choices entry
         # also typed "proficiencies" that isn't actually a skill choice
         # (instruments/tools) — relabel based on what the resolved options
         # actually are, not the envelope's own (misleading) type field.
-        if tpl["options"] and tpl["label"] == "Skill Proficiencies" and not all(o["id"].startswith("skill-") for o in tpl["options"]):
-            tpl["label"] = "Tool Proficiencies"
+        if tpl["options"] and _label_is(tpl["label"], "label-skill-proficiencies") and not all(o["id"].startswith("skill-") for o in tpl["options"]):
+            tpl["label"] = msg("label-tool-proficiencies")
         templates.append(tpl)
     return templates
 
@@ -1546,12 +1560,11 @@ def _multiclass_proficiency_choice_templates(cls: dict, cls_id: str) -> list[dic
     for i, envelope in enumerate(cls.get("multi_classing", {}).get("proficiency_choices", [])):
         cid = f"class:{cls_id}:multiclass-prof-choice-{i}"
         source = {"kind": "class", "id": cls_id, "label": cls["name"]}
-        provisional_label = "Skill Proficiencies" if envelope.get("type") == "proficiencies" else (envelope.get("type") or "Choice").title()
-        tpl = build_choice_template(envelope, cid, source, provisional_label)
+        tpl = build_choice_template(envelope, cid, source, _provisional_choice_label(envelope))
         if not tpl:
             continue
-        if tpl["options"] and tpl["label"] == "Skill Proficiencies" and not all(o["id"].startswith("skill-") for o in tpl["options"]):
-            tpl["label"] = "Tool Proficiencies"
+        if tpl["options"] and _label_is(tpl["label"], "label-skill-proficiencies") and not all(o["id"].startswith("skill-") for o in tpl["options"]):
+            tpl["label"] = msg("label-tool-proficiencies")
         templates.append(tpl)
     return templates
 
@@ -1697,8 +1710,8 @@ def _optional_progression_template(catalog: Catalog, feature: dict, cid: str, so
     if granted_ids:
         tpl["granted"] = [{"id": oid, "label": catalog.features[oid]["name"]} for oid in granted_ids]
         names = ", ".join(g["label"] for g in tpl["granted"])
-        verb = "is" if len(granted_ids) == 1 else "are"
-        tpl["description"] = f"{description}\n\n{names} {verb} granted automatically.".strip()
+        tpl["description"] = (msg("desc-granted-automatically-after", text=description, names=names, n=len(granted_ids))
+                              if description else msg("desc-granted-automatically", names=names, n=len(granted_ids)))
     return tpl
 
 
@@ -1780,7 +1793,7 @@ def _feature_choice_templates(
     return templates
 
 
-def _background_proficiency_choice_label(envelope: dict) -> str:
+def _background_proficiency_choice_label(envelope: dict):
     """Background proficiency-choice envelopes (unlike races') don't come
     attached to a named trait to borrow a label from — backgrounds have no
     trait concept at all — so the label is derived from the envelope's own
@@ -1793,15 +1806,15 @@ def _background_proficiency_choice_label(envelope: dict) -> str:
     from_field = envelope.get("from", {})
     set_type = from_field.get("option_set_type")
     if set_type == "any_skill":
-        return "Skill Proficiency"
+        return msg("label-skill-proficiency")
     if set_type == "any_skill_or_tool":
-        return "Skill or Tool Proficiency"
+        return msg("label-skill-or-tool-proficiency")
     if set_type == "any_tool":
         category = from_field.get("tool_category")
-        return f"Tool Proficiency ({category})" if category else "Tool Proficiency"
+        return msg("label-tool-proficiency-category", category=category) if category else msg("label-tool-proficiency")
     options = from_field.get("options", [])
     first_index = (options[0].get("item") or {}).get("index", "") if options else ""
-    return "Skill Proficiency" if first_index.startswith("skill-") else "Tool Proficiency"
+    return msg("label-skill-proficiency") if first_index.startswith("skill-") else msg("label-tool-proficiency")
 
 
 def _background_choice_templates(bg: dict, bg_id: str) -> list[dict]:
@@ -1814,8 +1827,8 @@ def _background_choice_templates(bg: dict, bg_id: str) -> list[dict]:
         # object has no separate summary text for it either — write a
         # plain, generic description rather than leaving it blank.
         choose = envelope.get("choose", 1)
-        description = f"Choose {choose} language{'s' if choose != 1 else ''} of your choice."
-        tpl = build_choice_template(envelope, cid, source, "Languages", description=description)
+        description = msg("desc-feat-languages", n=choose)
+        tpl = build_choice_template(envelope, cid, source, msg("label-languages"), description=description)
         if tpl:
             templates.append(tpl)
 
@@ -1836,7 +1849,7 @@ def _background_choice_templates(bg: dict, bg_id: str) -> list[dict]:
         source = {"kind": "background", "id": bg_id, "label": bg["name"]}
         label = _background_proficiency_choice_label(prof_envelope)
         choose = prof_envelope.get("choose", 1)
-        description = f"Choose {choose} proficienc{'ies' if choose != 1 else 'y'} of your choice."
+        description = msg("desc-feat-proficiencies", n=choose)
         tpl = build_choice_template(prof_envelope, cid, source, label, description=description)
         if tpl:
             templates.append(tpl)
@@ -1895,8 +1908,8 @@ def _feat_choice_templates(feats: list[dict], origin: str | None = None, items: 
             if feat_level is not None:
                 source["level"] = feat_level
             choose = language_envelope.get("choose", 1)
-            description = f"Choose {choose} language{'s' if choose != 1 else ''} of your choice."
-            label = f"{feat['name']}: Languages"
+            description = msg("desc-feat-languages", n=choose)
+            label = msg("label-prefixed", head=feat["name"], tail=msg("label-languages"))
             tpl = build_choice_template(language_envelope, cid, source, label, description=description)
             if tpl:
                 templates.append(tpl)
@@ -1911,9 +1924,9 @@ def _feat_choice_templates(feats: list[dict], origin: str | None = None, items: 
             if feat_level is not None:
                 source["level"] = feat_level
             base_label = _background_proficiency_choice_label(prof_envelope)
-            label = f"{feat['name']}: {base_label}"
+            label = msg("label-prefixed", head=feat["name"], tail=base_label)
             choose = prof_envelope.get("choose", 1)
-            description = f"Choose {choose} proficienc{'ies' if choose != 1 else 'y'} of your choice."
+            description = msg("desc-feat-proficiencies", n=choose)
             tpl = build_choice_template(prof_envelope, cid, source, label, description=description)
             if tpl:
                 if feat_effects_data.FEAT_EFFECTS.get(feat["index"], {}).get("prof_or_expertise"):
@@ -1930,8 +1943,9 @@ def _feat_choice_templates(feats: list[dict], origin: str | None = None, items: 
             if feat_level is not None:
                 source["level"] = feat_level
             choose = env.get("choose", 1)
-            description = f"Choose {choose} skill{'s' if choose != 1 else ''} you are proficient in to gain Expertise."
-            tpl = build_choice_template(env, f"{cid_prefix}:expertise-choice-{i}", source, f"{feat['name']}: Expertise", description=description)
+            description = msg("desc-feat-expertise", n=choose)
+            tpl = build_choice_template(env, f"{cid_prefix}:expertise-choice-{i}", source,
+                                        msg("label-prefixed", head=feat["name"], tail="Expertise"), description=description)
             if tpl:
                 if feat_effects_data.FEAT_EFFECTS.get(feat["index"], {}).get("lacks_expertise"):
                     tpl["lacksExpertise"] = True  # FE6 (B7): the feat's own text, whatever the ruleset
@@ -1942,8 +1956,9 @@ def _feat_choice_templates(feats: list[dict], origin: str | None = None, items: 
             if feat_level is not None:
                 source["level"] = feat_level
             choose = env.get("choose", 1)
-            description = f"Choose {choose} ability{'s' if choose != 1 else ''} to gain saving throw proficiency in."
-            tpl = build_choice_template(env, f"{cid_prefix}:save-choice-{i}", source, f"{feat['name']}: Saving Throw", description=description)
+            description = msg("desc-feat-saves", n=choose)
+            tpl = build_choice_template(env, f"{cid_prefix}:save-choice-{i}", source,
+                                        msg("label-prefixed", head=feat["name"], tail=msg("label-saving-throw")), description=description)
             if tpl:
                 templates.append(tpl)
         templates += _feat_extra_templates(feat, cid_prefix, feat_level, items, catalog, ruleset)  # FE7, FE8, FE9, RP20
@@ -1951,13 +1966,12 @@ def _feat_choice_templates(feats: list[dict], origin: str | None = None, items: 
 
 
 # FE9: card suffix, label and description per `option_picks` kind.
+# (the label tail is the rules term and stays English; the description is a tagged message built from the count)
 _OPTION_PICK_CARDS = {
-    "fighting-style": ("fighting-style", "Fighting Style",
-                       "Learn {n} Fighting Style option{s} from the fighter class. It must differ from any style you already have."),
-    "maneuver": ("maneuvers", "Maneuvers", "Learn {n} maneuver{s} from those available to the Battle Master."),
-    "metamagic": ("metamagic", "Metamagic", "Learn {n} Metamagic option{s} from the sorcerer class."),
-    "invocation": ("invocation", "Eldritch Invocation",
-                   "Learn {n} Eldritch Invocation{s} from the warlock class. One with a prerequisite is for a Warlock who meets it."),
+    "fighting-style": ("fighting-style", "Fighting Style", lambda n: msg("desc-pick-fighting-style", n=n)),
+    "maneuver": ("maneuvers", "Maneuvers", lambda n: msg("desc-pick-maneuver", n=n)),
+    "metamagic": ("metamagic", "Metamagic", lambda n: msg("desc-pick-metamagic", n=n)),
+    "invocation": ("invocation", "Eldritch Invocation", lambda n: msg("desc-pick-invocation", n=n)),
 }
 _FIGHTER_STYLE_FEATURE = "fighter-fighting-style"
 _BATTLE_MASTER_FEATURE = "battle-master-phb-3-battle-master"
@@ -2045,8 +2059,8 @@ def _feat_extra_templates(feat: dict, cid_prefix: str, feat_level: int | None = 
         source["level"] = feat_level
     templates = []
 
-    def card(suffix: str, label: str, description: str, count: int, options: list[dict], **extra) -> dict:
-        return {"id": f"{cid_prefix}:{suffix}", "source": dict(source), "label": f"{feat['name']}: {label}",
+    def card(suffix: str, label, description, count: int, options: list[dict], **extra) -> dict:
+        return {"id": f"{cid_prefix}:{suffix}", "source": dict(source), "label": msg("label-prefixed", head=feat["name"], tail=label),
                 "description": description, "count": count, "options": options, **extra}
 
     def types(ids):
@@ -2056,12 +2070,11 @@ def _feat_extra_templates(feat: dict, cid_prefix: str, feat_level: int | None = 
     if spec:
         n = spec["count"]
         templates.append(card(
-            "resistance-choice", "Damage Resistance",
-            f"Choose {n} damage type{'s' if n != 1 else ''} you resist.", n, types(spec["options"])))
+            "resistance-choice", msg("label-damage-resistance"), msg("desc-resist-types", n=n), n, types(spec["options"])))
     spec = effect.get("damage_type_choice")
     if spec:
         extra = {"distinctGroup": feat_effects_mod._name_key(feat)} if spec.get("distinct_across_repeats") else {}
-        templates.append(card("damage-type", "Damage Type", "Choose the damage type this feat applies to.", 1,
+        templates.append(card("damage-type", msg("label-damage-type"), msg("desc-damage-type"), 1,
                               types(spec["options"]), **extra))
     spec = effect.get("variant_choice")
     if spec:
@@ -2072,17 +2085,18 @@ def _feat_extra_templates(feat: dict, cid_prefix: str, feat_level: int | None = 
         options = _option_pick_options(catalog, spec["kind"], ruleset)
         if options:
             n = spec["count"]
-            suffix, label, text = _OPTION_PICK_CARDS[spec["kind"]]
-            templates.append(card(suffix, label, text.format(n=n, s="s" if n != 1 else ""), n, options))
+            suffix, label, describe = _OPTION_PICK_CARDS[spec["kind"]]
+            templates.append(card(suffix, label, describe(n), n, options))
             if spec["kind"] == "invocation":
-                templates.append(card("invocation-ability", "Spellcasting Ability",
-                                      "The ability you use to cast the invocation's spell (Intelligence, Wisdom or Charisma).", 1,
+                templates.append(card("invocation-ability", msg("label-spellcasting-ability"),
+                                      msg("desc-invocation-ability"), 1,
                                       [{"id": a.lower(), "label": name} for a, name in
                                        (("INT", "Intelligence"), ("WIS", "Wisdom"), ("CHA", "Charisma"))]))
-    for key, suffix, label, text in (
-            ("weapon_proficiency_choice", "weapon-choice", "Weapon Proficiencies", "Choose {n} weapon{s} you gain proficiency with."),
-            ("mastery_choice", "weapon-mastery", "Weapon Mastery",
-             "Choose {n} kind{s} of weapon you are proficient with to use its mastery property. You can change the choice after a long rest.")):
+    for key, suffix, make_label, make_desc in (
+            ("weapon_proficiency_choice", "weapon-choice", lambda: msg("label-weapon-proficiencies"),
+             lambda n: msg("desc-weapon-proficiency-choice", n=n)),
+            ("mastery_choice", "weapon-mastery", lambda: msg("label-weapon-mastery"),
+             lambda n: msg("desc-weapon-mastery-feat", n=n))):
         spec = effect.get(key)
         if not spec or not items:
             continue
@@ -2098,7 +2112,7 @@ def _feat_extra_templates(feat: dict, cid_prefix: str, feat_level: int | None = 
                 options.append({"id": item["index"], "label": item["name"]})
         if options:
             n = spec["count"]
-            templates.append(card(suffix, label, text.format(n=n, s="s" if n != 1 else ""), n, options))
+            templates.append(card(suffix, make_label(), make_desc(n), n, options))
     return templates
 
 
@@ -2706,8 +2720,8 @@ def _species_variant_template(race: dict | None, race_id: str | None) -> dict | 
     return {
         "id": f"species:{race_id}:variant",
         "source": {"kind": "species", "id": race_id, "label": race["name"]},
-        "label": "Lineage / Ancestry",
-        "description": "Choose which lineage, ancestry or legacy this species has.",
+        "label": msg("label-lineage"),
+        "description": msg("desc-lineage"),
         "count": 1,
         "options": [{"id": v["id"], "label": v["name"]} for v in race["variants"]],
     }
@@ -2732,8 +2746,8 @@ def _species_size_template(race: dict | None, race_id: str | None) -> dict | Non
     return {
         "id": f"species:{race_id}:size",
         "source": {"kind": "species", "id": race_id, "label": race["name"]},
-        "label": "Size",
-        "description": "Choose your size.",
+        "label": msg("label-size"),
+        "description": msg("desc-size"),
         "count": 1,
         "options": [{"id": s.lower(), "label": s} for s in race["size_options"]],
     }
@@ -2789,7 +2803,7 @@ def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrac
             prof_cid = f"species:{race_id}:trait:{trait['index']}:proficiency-choice"
             prof_source = {"kind": "species", "id": race_id, "label": race["name"]}
             prof_choose = prof_envelope.get("choose", 1)
-            prof_description = f"Choose {prof_choose} proficienc{'ies' if prof_choose != 1 else 'y'} of your choice."
+            prof_description = msg("desc-feat-proficiencies", n=prof_choose)
             prof_tpl = build_choice_template(
                 prof_envelope, prof_cid, prof_source, trait["name"], description=prof_description
             )
@@ -2803,7 +2817,7 @@ def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrac
             lang_tpl = build_choice_template(
                 lang_envelope, f"species:{race_id}:trait:{trait['index']}:languages",
                 {"kind": "species", "id": race_id, "label": race["name"]}, trait["name"],
-                description=f"Choose {lang_choose} additional language{'s' if lang_choose != 1 else ''} of your choice.",
+                description=msg("desc-bonus-languages", n=lang_choose),
             )
             if lang_tpl:
                 templates.append(lang_tpl)
@@ -2845,8 +2859,8 @@ def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrac
             cid = f"species:{race_id}:subspecies:{src_id}:languages"
         source = {"kind": "species", "id": race_id, "label": race["name"]}
         choose = envelope.get("choose", 1)
-        description = f"Choose {choose} additional language{'s' if choose != 1 else ''} of your choice."
-        tpl = build_choice_template(envelope, cid, source, "Bonus Language", description=description)
+        description = msg("desc-bonus-languages", n=choose)
+        tpl = build_choice_template(envelope, cid, source, msg("label-bonus-language"), description=description)
         if tpl:
             templates.append(tpl)
 
@@ -2860,7 +2874,7 @@ def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrac
             continue
         cid = f"species:{race_id}:resistance" if src is race else f"species:{race_id}:subspecies:{src_id}:resistance"
         source = {"kind": "species", "id": race_id, "label": race["name"]}
-        tpl = build_choice_template(envelope, cid, source, "Damage Resistance", description="Choose the damage type you resist.")
+        tpl = build_choice_template(envelope, cid, source, msg("label-damage-resistance"), description=msg("desc-resist-type"))
         if tpl:
             templates.append(tpl)
 
@@ -2934,11 +2948,12 @@ def _species_feat_choice_template(
             option["disabledReason"] = _taken_reason(feat, taken)
         options.append(option)
     count = grant["count"]
-    noun = {"O": "an Origin feat", "DG": "a Dark Gift feat"}.get(grant["category"], "a feat")
+    noun = (msg("noun-origin-feat") if grant["category"] == "O"
+            else msg("noun-dark-gift-feat") if grant["category"] == "DG" else msg("noun-feat"))
     return {
         "id": cid, "source": {"kind": kind, "id": race_id, "label": race["name"]},
-        "label": "Origin Feat" if grant["category"] == "O" else "Feat",
-        "description": f"Choose {noun}." if count == 1 else f"Choose {count} feats.",
+        "label": msg("label-origin-feat") if grant["category"] == "O" else msg("label-feat"),
+        "description": msg("desc-species-feat", noun=noun) if count == 1 else msg("desc-species-feats", count=count),
         "count": count, "options": options,
     }
 
@@ -3647,8 +3662,8 @@ def _asi_choice_templates(
             options.append(option)
         source = {"kind": "class", "id": cls_id, "label": cls_name, "level": lvl}
         templates.append({
-            "id": cid, "source": source, "label": "Ability Score Improvement",
-            "description": "Increase one ability score by 2, or two ability scores by 1 each — or take a feat instead.",
+            "id": cid, "source": source, "label": msg("label-asi"),
+            "description": msg("desc-asi"),
             "count": 1,
             "options": options,
         })
@@ -3837,7 +3852,7 @@ def _fighting_style_templates(
         templates.append({
             "id": cid, "source": {"kind": "class", "id": cls_id, "label": rc["cls"]["name"], "level": lvl},
             "label": feature["name"],
-            "description": _join_desc(text_feature.get("desc")) or "Choose a Fighting Style feat.",
+            "description": _join_desc(text_feature.get("desc")) or msg("desc-fighting-style-feat"),
             "count": 1, "options": options,
         })
     return templates
@@ -3999,7 +4014,7 @@ def _lessons_card(catalog: Catalog, rc: dict, cid: str, inst: str, source: dict,
     return {
         "id": cid, "source": source,
         "label": class_choices_2024.instance_label(catalog, inst),
-        "description": _join_desc(record.get("desc")) or "Choose an Origin feat.",
+        "description": _join_desc(record.get("desc")) or msg("desc-origin-feat"),
         "count": 1, "options": options,
     }
 
@@ -4036,11 +4051,11 @@ def _equipment_choice_templates(
             source["level"] = 1
         envelope = {**envelope, "keep_counts": True}  # RPX3: the counts of the rules text, in every ruleset (was 2024 only)
         if items is not None and _envelope_needs_expansion(envelope):
-            tpl, dependents = build_equipment_choice(envelope, cid, source, "Starting Equipment", items)
+            tpl, dependents = build_equipment_choice(envelope, cid, source, msg("label-starting-equipment"), items)
             if tpl and dependents:
                 dependents_by_choice[cid] = dependents
         else:
-            tpl = build_choice_template(envelope, cid, source, "Starting Equipment")
+            tpl = build_choice_template(envelope, cid, source, msg("label-starting-equipment"))
         if not tpl:
             dropped_envelopes += 1
             continue
@@ -4052,7 +4067,8 @@ def _equipment_choice_templates(
                         del option["quantities"]
         original_option_count = len((envelope.get("from") or {}).get("options", []))
         if original_option_count and len(tpl["options"]) < original_option_count:
-            tpl["description"] = (tpl["description"] + " (Note: one or more of the original options for this choice aren't available yet and have been left out.)").strip()
+            tpl["description"] = (msg("desc-equipment-note", text=tpl["description"]) if tpl["description"]
+                                  else msg("desc-equipment-note-only"))
         templates.append(tpl)
     return templates, dropped_envelopes, dependents_by_choice
 
@@ -4116,9 +4132,8 @@ def _additional_secrets_templates(catalog: Catalog, rc: dict, spellcasting: dict
         "option_set_type": "options_array",
         "options": _additional_secrets_options(catalog, _highest_spell_slot_level(spellcasting), sources, ruleset, kept)}}
     source = {"kind": "class", "id": rc["cls_id"], "label": rc["cls"]["name"], "level": feature.get("level") or 6}
-    description = (" ".join(feature.get("desc") or [])
-                   + " These picks do not count against the number of spells you know.")
-    tpl = build_choice_template(envelope, cid, source, spec["label"], description=description.strip())
+    description = msg("desc-additional-secrets", text=" ".join(feature.get("desc") or []))
+    tpl = build_choice_template(envelope, cid, source, spec["label"], description=description)
     if tpl is None:
         return []
     _tag_spell_level_groups(catalog, tpl)
@@ -4326,10 +4341,10 @@ def _wizard_spellbook_template(
     options = _spell_options_up_to(catalog, cls_id, max_spell_level, sources, ruleset, keep)
     added = _add_mark_options(catalog, options, mark_ids, max_spell_level, sources, ruleset, keep)  # RP19 Spells of the Mark
     envelope = {"choose": count, "from": {"option_set_type": "options_array", "options": options}}
-    level_word = "level 1 spell" if max_spell_level == 1 else f"level-{max_spell_level}-or-lower spell"
-    description = (f"Choose {count} {level_word}s for your spellbook (six at level 1, two more for each Wizard level). "
-                   "Prepared spells are drawn from the book.")
-    tpl = build_choice_template(envelope, f"class:{cls_id}:spellbook", source, "Spellbook", description=description)
+    noun = (msg("noun-spell-levels", n=count, levels=[1]) if max_spell_level == 1
+            else msg("noun-spell-upto", n=count, max=max_spell_level))
+    description = msg("desc-spellbook", count=count, noun=noun)
+    tpl = build_choice_template(envelope, f"class:{cls_id}:spellbook", source, msg("label-spellbook"), description=description)
     _tag_spell_level_groups(catalog, tpl)
     _label_mark_options(tpl, added)
     return tpl
@@ -4413,8 +4428,8 @@ def _spell_choice_templates(
             "options": _spell_options(catalog, list_id, 0, sources, ruleset, _kept(f"class:{cls_id}:spells-cantrips")),
         }}
         cid = f"class:{cls_id}:spells-cantrips"
-        description = f"Choose {cantrips_known} cantrip{'s' if cantrips_known != 1 else ''} from the {list_name} spell list."
-        tpl = build_choice_template(envelope, cid, source, "Cantrips Known", description=description)
+        description = msg("desc-cantrips-from-list", n=cantrips_known, list=list_name)
+        tpl = build_choice_template(envelope, cid, source, msg("label-cantrips-known"), description=description)
         if tpl:
             _tag_spell_level_groups(catalog, tpl)
             for opt in tpl["options"]:
@@ -4488,16 +4503,19 @@ def _spell_choice_templates(
         }}
         cid = f"class:{cls_id}:spells-known"
         is_known_caster = spellcasting.get("spells_known") is not None and spellcasting.get("spells_kind", "known") == "known"
-        label = "Spells Known" if is_known_caster else "Prepared Spells"
-        verb = "know" if is_known_caster else "prepare"
-        level_word = "spell" if max_spell_level == 1 else f"level-{max_spell_level}-or-lower spell"
-        description = f"Choose {known_count} {level_word}{'s' if known_count != 1 else ''} to {verb} from the {list_name} spell list."
-        if wizard_book is not None:
-            description = (f"Choose {known_count} {level_word}{'s' if known_count != 1 else ''} to {verb} from your spellbook."
-                           if wizard_book else "Choose spells for your spellbook first.")
+        label = msg("label-spells-known") if is_known_caster else msg("label-prepared-spells")
+        noun = (msg("noun-spell", n=known_count) if max_spell_level == 1
+                else msg("noun-spell-upto", n=known_count, max=max_spell_level))
+        if wizard_book is None:
+            description = (msg("desc-spells-know", n=known_count, noun=noun, list=list_name) if is_known_caster
+                           else msg("desc-spells-prepare", n=known_count, noun=noun, list=list_name))
+        elif wizard_book:
+            description = (msg("desc-spells-know-book", n=known_count, noun=noun) if is_known_caster
+                           else msg("desc-spells-prepare-book", n=known_count, noun=noun))
+        else:
+            description = msg("desc-spellbook-first")
         if secrets_cap and wizard_book is None and list_id == cls_id:
-            description += (f" Magical Secrets: up to {secrets_cap} of them may be spells of any class's list, or another "
-                            "class's cantrips; they count in this number.")
+            description = msg("desc-spells-secrets", text=description, cap=secrets_cap)
         tpl = build_choice_template(envelope, cid, source, label, description=description)
         if tpl is not None and mark_added:
             _label_mark_options(tpl, mark_added)
@@ -4569,9 +4587,8 @@ def _weapon_mastery_template(catalog: Catalog, rc: dict, ruleset: str) -> list[d
     return [{
         "id": f"class:{cls_id}:weapon-mastery",
         "source": {"kind": "class", "id": cls_id, "label": rc["cls"]["name"], "level": 1},
-        "label": "Weapon Mastery",
-        "description": f"Choose {count} kinds of weapons you are proficient with to use their mastery properties. "
-                       "You can change one choice after a long rest.",
+        "label": msg("label-weapon-mastery"),
+        "description": msg("desc-weapon-mastery-class", count=count),
         "count": count,
         "options": options,
     }]
@@ -4663,9 +4680,8 @@ def _mystic_arcanum_templates(catalog: Catalog, rc: dict, sources=None, ruleset:
         }}
         source = {"kind": "class", "id": "warlock", "label": rc["cls"]["name"], "level": gained_at}
         tpl = build_choice_template(
-            envelope, cid, source, f"Mystic Arcanum (level {spell_level})",
-            description=f"Choose one level-{spell_level} spell from the Warlock spell list as your Mystic Arcanum. "
-                        "You can cast it once per long rest without a spell slot.",
+            envelope, cid, source, msg("label-feature-level", name="Mystic Arcanum", level=spell_level),
+            description=msg("desc-mystic-arcanum", level=spell_level),
         )
         if tpl:
             _tag_spell_level_groups(catalog, tpl)

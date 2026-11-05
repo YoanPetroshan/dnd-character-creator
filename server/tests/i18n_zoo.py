@@ -424,6 +424,19 @@ def leaves(resolution: dict) -> dict:
     }
 
 
+LOCALIZED_CARD_KEYS = ("label", "description", "unavailableReason")
+
+
+def without_localized(resolution: dict) -> dict:
+    """The resolution with every engine-localized card text dropped (card label / description / unavailableReason and
+    each option's disabledReason; I4, I5), to compare the rest of two languages' resolutions."""
+    out = dict(resolution)
+    out["choices"] = [{**{k: v for k, v in c.items() if k not in LOCALIZED_CARD_KEYS},
+                       "options": [{k: v for k, v in o.items() if k != "disabledReason"} for o in c.get("options") or []]}
+                      for c in resolution.get("choices") or []]
+    return out
+
+
 def catalog_for(name: str, catalog):
     """The catalog a zoo case resolves against: the real one, or a degraded variant for a few triggers."""
     variant = TRIGGER_CATALOG.get(name[len("t/"):]) if name.startswith("t/") else None
@@ -524,17 +537,20 @@ def declared_families() -> dict[str, str]:
 
 SERVER_FILES = sorted(glob.glob(str(SERVER / "engine" / "*.py"))) + [str(SERVER / n) for n in (
     "app.py", "export.py", "export_fields.py", "markdown_export.py", "pdf_export.py")]
+# I5: the catalog modules that write card texts (a label of a data table, the equipment card builder); the earlier guards
+# scan SERVER_FILES only (data tables carry plain "reason" keys of their own)
+CATALOG_FILES = [str(SERVER / n) for n in ("catalog/choices.py", "catalog/reference_data.py", "catalog/feat_effects_data.py")]
 
 
-def server_trees():
-    for path in SERVER_FILES:
+def server_trees(*, with_catalog: bool = False):
+    for path in SERVER_FILES + (CATALOG_FILES if with_catalog else []):
         yield path, ast.parse(pathlib.Path(path).read_text(encoding="utf-8"))
 
 
-def msg_calls() -> list[tuple]:
+def msg_calls(*, with_catalog: bool = False) -> list[tuple]:
     """(file, line, key, keyword names, has ** splat) for every `msg("<key>", ...)` call in the server code."""
     out = []
-    for path, tree in server_trees():
+    for path, tree in server_trees(with_catalog=with_catalog):
         for node in ast.walk(tree):
             if _is_msg_call(node):
                 out.append((pathlib.Path(path).name, node.lineno, node.args[0].value,

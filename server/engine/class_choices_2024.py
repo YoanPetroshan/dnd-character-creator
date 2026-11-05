@@ -162,9 +162,8 @@ def origin_language_templates(bg: dict | None, bg_id: str | None, ruleset: str) 
     return [{
         "id": ORIGIN_LANGUAGES_CID,
         "source": {"kind": "background", "id": bg_id, "label": bg.get("name", "")},
-        "label": "Languages",
-        "description": ("Your character knows Common plus two languages you choose from the Standard "
-                        "Languages table (Player's Handbook 2024, chapter 2)."),
+        "label": msg("label-languages"),
+        "description": msg("desc-origin-languages"),
         "count": ORIGIN_LANGUAGES_PICKS,
         "options": [{"id": l["index"], "label": l["name"]} for l in LANGUAGES_2024_STANDARD if l["index"] != "common"],
     }]
@@ -191,9 +190,8 @@ def feat_replacement_language_template(feat: dict, cid_prefix: str, feat_level: 
     return {
         "id": f"{cid_prefix}:languages",
         "source": source,
-        "label": f"{feat['name']}: {rule['label']}",
-        "description": (f"You already know {rule['language'].capitalize()}, so you learn one language of your "
-                        "choice instead."),
+        "label": msg("label-prefixed", head=feat["name"], tail=rule["label"]),
+        "description": msg("desc-replacement-language", language=rule["language"].capitalize()),
         "count": 1,
         "options": [{"id": l["index"], "label": l["name"]} for l in LANGUAGES_2024_STANDARD + LANGUAGES_2024_RARE],
     }
@@ -923,14 +921,18 @@ def wizard_spell_pick_templates(catalog, class_level: int, book_ids: list[str], 
              and (spec["casting_time"] is None or catalog.spells[sid].get("casting_time") == spec["casting_time"])),
             key=lambda s: s["name"])
         cid = spell_pick_cid(slug, spec)
-        condition = f" that have a casting time of {spec['casting_time'].replace('1 ', 'an ')}" if spec["casting_time"] else ""
-        description = (f"Choose {spec['count']} level {spec['spell_level']} spell{'s' if spec['count'] != 1 else ''} in your "
-                       f"spellbook{condition}. " + ("You always have them prepared." if spec.get("always_prepared", True)
-                                                    else "You can cast them at their lowest level without a spell "
-                                                         "slot while they are prepared."))
+        if not spec["casting_time"]:
+            condition = ""
+        elif spec["casting_time"] == "1 action":
+            condition = msg("desc-cond-action")
+        else:
+            condition = msg("desc-cond-time", time=spec["casting_time"].replace("1 ", "an "))
+        description = (msg("desc-wizard-pick-prepared", count=spec["count"], level=spec["spell_level"], condition=condition)
+                       if spec.get("always_prepared", True)
+                       else msg("desc-wizard-pick-cast", count=spec["count"], level=spec["spell_level"], condition=condition))
         if not spells:
-            description = ("Choose spells for your spellbook first." if not book_ids
-                           else f"No spell in your spellbook is eligible (level {spec['spell_level']}{condition}).")
+            description = (msg("desc-spellbook-first") if not book_ids
+                           else msg("desc-wizard-pick-none", level=spec["spell_level"], condition=condition))
         tpl = {"id": cid, "source": {**source, "level": spec["class_level"]}, "label": spec["label"],
                "description": description, "count": spec["count"],
                "options": [{"id": s["index"], "label": s["name"]} for s in spells]}
@@ -1302,7 +1304,7 @@ def target_templates(catalog, rc: dict | None, instances: list[str], candidates:
         name = instance_label(catalog, inst)
         out.append({
             "id": dependent_cid(inst, "cantrip", prefix), "source": dict(holder["source"]) if holder else _target_source(rc),
-            "label": f"{name}: Cantrip",
+            "label": msg("label-prefixed", head=name, tail=msg("label-cantrip")),
             "description": ((catalog.features.get(base) or {}).get("desc") or [""])[0], "count": 1, "options": options,
         })
     return out
@@ -1326,8 +1328,7 @@ def tome_templates(catalog, rc: dict | None, instances: list[str], spell_options
     if TOME_ID not in instances:
         return []
     out = []
-    for kind, spec, label, noun in (("cantrips", TOME_CANTRIPS, "Cantrips", "cantrips"),
-                                    ("rituals", TOME_RITUALS, "Rituals", "level 1 spells with the Ritual tag")):
+    for kind, spec in (("cantrips", TOME_CANTRIPS), ("rituals", TOME_RITUALS)):
         options = []
         for o in spell_options(spec["filter"]):
             sid = o["item"]["index"]
@@ -1337,9 +1338,10 @@ def tome_templates(catalog, rc: dict | None, instances: list[str], spell_options
             options.append(opt)
         out.append({
             "id": dependent_cid(TOME_ID, kind, holder["prefix"] if holder else DEPENDENT_PREFIX),
-            "source": dict(holder["source"]) if holder else {**_target_source(rc), "level": 1}, "label": f"Pact of the Tome: {label}",
-            "description": f"Choose {spec['count']} {noun} from any class's spell list that you don't already have prepared. "
-                           "While the Book of Shadows is on your person you have them prepared and they function as Warlock spells.",
+            "source": dict(holder["source"]) if holder else {**_target_source(rc), "level": 1}, "label": msg("label-prefixed", head="Pact of the Tome",
+                         tail=msg("label-cantrips") if kind == "cantrips" else msg("label-rituals")),
+            "description": (msg("desc-tome-cantrips", count=spec["count"]) if kind == "cantrips"
+                            else msg("desc-tome-rituals", count=spec["count"])),
             "count": spec["count"], "options": options,
         })
     return out
@@ -1376,9 +1378,8 @@ def blade_template(catalog, rc: dict | None, instances: list[str], holder: dict 
         return []
     return [{
         "id": dependent_cid(BLADE_ID, "weapon", holder["prefix"] if holder else DEPENDENT_PREFIX),
-        "source": dict(holder["source"]) if holder else {**_target_source(rc), "level": 1}, "label": "Pact of the Blade: Pact Weapon",
-        "description": "Choose the Simple or Martial Melee weapon you conjure and bond with. You are proficient with it "
-                       "and can use your Charisma modifier for its attack and damage rolls.",
+        "source": dict(holder["source"]) if holder else {**_target_source(rc), "level": 1}, "label": msg("label-prefixed", head="Pact of the Blade", tail=msg("label-pact-weapon")),
+        "description": msg("desc-pact-blade"),
         "count": 1, "options": [{"id": i["index"], "label": i["name"]} for i in weapons],
     }]
 
@@ -1553,11 +1554,10 @@ def mark_unavailable(choices: list[dict], ruleset: str) -> list[dict]:
             # W3 / F9: the draft's `sources` hide every feat the species grant could offer (e.g. the Human
             # Origin feat with no book that has Origin feats): the card can never be filled, so it must not block.
             c = {**c, "status": "unavailable",
-                 "unavailableReason": "No feat is offered by the selected sources, so nothing can be chosen here."}
+                 "unavailableReason": msg("unavailable-no-feat-offered")}
         elif (c["status"] == "pending" and c["count"] > 0 and in_scope
                 and not any(not o.get("disabled") for o in c["options"])):
-            reason = ("Nothing can be chosen here with the current character: " +
-                      ("no option is offered yet." if not c["options"] else "every option is unavailable."))
+            reason = msg("unavailable-no-option") if not c["options"] else msg("unavailable-all-closed")
             c = {**c, "status": "unavailable", "unavailableReason": reason}
         out.append(c)
     return out

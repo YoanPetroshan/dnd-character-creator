@@ -214,8 +214,6 @@ def test_resolve_lang_bg_returns_bulgarian_pruned_reasons(client):
     assert bg_by_id["class:fighter:bogus"] == "'class:fighter:bogus' вече не се прилага към текущия герой и беше пренебрегнат."
     assert en_by_id["equipment:worn:armor"] == "Chain Mail is no longer in the inventory and was removed from the worn armor slot."
     assert bg_by_id["equipment:worn:armor"] == "Chain Mail вече не е в инвентара и беше премахнат от мястото (носен: броня)."
-    def rest(res):  # (the options' disabledReason is localized since I4)
-        res = {**res, "choices": [{**c, "options": [{k: v for k, v in o.items() if k != "disabledReason"}
-                                                    for o in c.get("options") or []]} for c in res["choices"]]}
-        return {k: v for k, v in res.items() if k not in ("problems", "warnings", "pruned")}
+    def rest(res):  # (the cards' texts are localized since I4 / I5)
+        return {k: v for k, v in zoo.without_localized(res).items() if k not in ("problems", "warnings", "pruned")}
     assert rest(bg) == rest(en)
