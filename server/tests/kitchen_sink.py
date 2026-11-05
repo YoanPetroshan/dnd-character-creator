@@ -112,6 +112,10 @@ KITCHEN_SINK: dict[str, dict] = {
         "class:sorcerer:3:feature:metamagic-1": ["metamagic-twinned-spell", "opt-seeking-spell-tce"],
         "class:sorcerer:10:feature:metamagic-2": ["metamagic-heightened-spell"],
         "class:sorcerer:17:feature:metamagic-3": ["opt-transmuted-spell-tce"]}),
+    # G3: Cleric 6 (Life) + Paladin 3 (Devotion) under 2014: one merged Channel Divinity (PHB 164) whose note keeps both
+    # classes' options; non-2024, so part of the golden via --append
+    "cleric6-paladin3-2014": {**_sub("cleric", 6, "2014", marks=("classes",)),
+                              "classes": [("cleric", 6, "life"), ("paladin", 3, "devotion")]},
     "cleric1-thaumaturge-2024": _sub("cleric", 1, "2024", marks=("classes", "official"), overrides={
         "class:cleric:1:divine-order": ["xphb-cleric-1-thaumaturge"]}),
     # F3b: the C6b..C9b / R9 stages, 2024 origin (Human, Soldier) so the origin language card is present

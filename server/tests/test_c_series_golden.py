@@ -814,7 +814,7 @@ def test_w6_cases_hold_the_2014_class_feature_tail():
               "warlock:eldritch-master"}
     for n, entry in _GOLDEN.items():
         ids = {r["id"] for r in entry["result"]["derived"]["classResources"]}
-        if n not in hit and "/whispers-bard14" not in n and "/watchers-paladin20" not in n and "/celestial-warlock14" not in n and "/totem-elk14" not in n:  # W8a / W8c / W8d / G1 appended sinks: a Bard 14 holds Song of Rest, a Paladin 20 Divine Smite and Cleansing Touch, a Warlock 14 Mystic Arcanum, a Barbarian 14 Brutal Critical and Relentless Rage
+        if n not in hit and "/whispers-bard14" not in n and "/watchers-paladin20" not in n and "/celestial-warlock14" not in n and "/totem-elk14" not in n and "/cleric6-paladin3-2014" not in n:  # W8a / W8c / W8d / G1 / G3 appended sinks (G3: a Cleric 6 holds Disciple of Life, a Paladin 3 Divine Smite): a Bard 14 holds Song of Rest, a Paladin 20 Divine Smite and Cleansing Touch, a Warlock 14 Mystic Arcanum, a Barbarian 14 Brutal Critical and Relentless Rage
             assert not ids & w6_ids, n
     for n in hit:
         ids = {r["id"] for r in _GOLDEN[n]["result"]["derived"]["classResources"]}
@@ -836,7 +836,7 @@ def test_w7_cases_hold_the_2014_subclass_tail():
               "wizard:empowered-evocation", "wizard:overchannel"}
     for n, entry in _GOLDEN.items():
         ids = {r["id"] for r in entry["result"]["derived"]["classResources"]}
-        if n not in hit:  # (the W8a sink holds no SRD subclass entry either)
+        if n not in hit and "/cleric6-paladin3-2014" not in n:  # (the W8a sink holds no SRD subclass entry either; the G3 sink holds the Life and Devotion ones)
             assert not ids & w7_ids, n
         elif "warlock20" in n and "/multi" not in n:
             assert {"warlock:dark-one-s-blessing", "warlock:dark-one-s-own-luck", "warlock:hurl-through-hell"} <= ids, n
@@ -977,9 +977,26 @@ def test_g2_cases_hold_the_metamagic_costs_and_nothing_else_moved():
                     assert len(ids) == 10 and "opt-seeking-spell-tce" in ids and "opt-transmuted-spell-tce" in ids, n
 
 
+def test_g3_no_rebaseline_and_the_merged_channel_divinity_sink_holds_both_notes():
+    """G3: no stored case moved (no golden case holds two Channel Divinity classes and the Divine Intervention lockouts
+    were already in the notes), so there is no REBASELINES entry; the Cleric 6 / Paladin 3 sink was appended instead.
+    Every other case holds at most one Channel Divinity entry without a class label."""
+    assert "G3" not in REBASELINES
+    for n, entry in _GOLDEN.items():
+        cds = [r for r in entry["result"]["derived"]["classResources"] if r["name"] == "Channel Divinity"]
+        merged = "classes" in (cds[0]["details"] if cds else {}) if len(cds) == 1 else False
+        notes = [(r.get("details") or {}).get("note") or "" for r in cds]
+        if n.rsplit("/", 1)[-1] == "cleric6-paladin3-2014":
+            assert len(cds) == 1 and cds[0]["details"]["classes"] == ["cleric", "paladin"], n
+            note = cds[0]["details"]["note"]
+            assert note.startswith("Cleric: Turn Undead") and " | Paladin: " in note and "Sacred Weapon" in note, n
+        else:
+            assert not merged and not any(x.startswith(("Cleric:", "Paladin:")) for x in notes), n
+
+
 def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
     """Y2: the rebaseline touched only `options[*].source` (the allowlist); 218 of the first 254 cases hold a book option (the
-    G2 case appended later holds one too: 219 of 255), the other 36 (level 1 / 3 cases without feat, spell or feature options) are byte-identical. Every stored source is a
+    G2 and G3 cases appended later hold one too: 221 of 257), the other 36 (level 1 / 3 cases without feat, spell or feature options) are byte-identical. Every stored source is a
     non-empty code, and no option outside the book kinds (skills, languages, equipment items) has one."""
     assert REBASELINES["Y2"]["cases"] == ["*"] and len(REBASELINES["Y2"]["paths"]) == 1
     with_source = 0
@@ -992,7 +1009,7 @@ def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
                     assert isinstance(o["source"], str) and o["source"], (name, card["id"], o["id"])
                     assert not o["id"].startswith("skill-") and card["source"]["kind"] != "equipment", (name, card["id"], o["id"])
         with_source += has
-    assert with_source == 219  # 218 + the G2 sorcerer17-metamagic-2014 case
+    assert with_source == 221  # 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases
 
 
 if __name__ == "__main__":

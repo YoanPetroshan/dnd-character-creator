@@ -973,7 +973,8 @@ def resources_for(catalog, resolved_classes: list[dict], modifiers: dict, prof_b
 def _merge_channel_divinity(resources: list[dict]) -> list[dict]:
     """PHB 164: Channel Divinity from several classes is one feature; the extra
     class adds effect options, not uses. Keep one entry, uses = max over the
-    classes (first class on a tie), at the position of the winning class."""
+    classes (first class on a tie), at the position of the winning class; G3: its
+    note holds the notes of every class, each labelled with the class name."""
     cds = [r for r in resources if r["name"] == "Channel Divinity"]
     if len(cds) < 2:
         return resources
@@ -981,7 +982,14 @@ def _merge_channel_divinity(resources: list[dict]) -> list[dict]:
     for r in cds[1:]:
         if (r["uses"] or 0) > (best["uses"] or 0):
             best = r
-    best = {**best, "details": {**(best.get("details") or {}), "classes": [r["classId"] for r in cds]}}
+    details = {**(best.get("details") or {}), "classes": [r["classId"] for r in cds]}
+    # G3: each class's Channel Divinity options are in its note; the merged entry keeps all of them, class-labelled
+    # (only when more than one class has a note; a lone note stays as it was).
+    notes = [(r["source"]["label"], (r.get("details") or {}).get("note")) for r in cds]
+    notes = [(label, note) for label, note in notes if note]
+    if len(notes) > 1:
+        details["note"] = " | ".join(f"{label}: {note}" for label, note in notes)
+    best = {**best, "details": details}
     return [best if r["name"] == "Channel Divinity" and r["classId"] == best["classId"] else r
             for r in resources if r["name"] != "Channel Divinity" or r["classId"] == best["classId"]]
 
