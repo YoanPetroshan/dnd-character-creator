@@ -57,17 +57,25 @@ describe("randomName", () => {
       expect(maleF.has(randomName("bg", r, "m").split(" ")[0])).toBe(true);
     }
   });
-  it("never uses christian-tagged names by default, and does when asked", () => {
+  it("uses christian-tagged names by default, never the forbidden ones, and the opt-out filter excludes them", () => {
     const r = mulberry32(5);
+    const firsts = new Set<string>();
+    const surs = new Set<string>();
     for (let i = 0; i < 3000; i++) {
       const [first, sur] = randomName("bg", r).split(" ");
+      firsts.add(first);
+      surs.add(sur);
+      expect(first).not.toMatch(/^Христ/);
+      expect(sur).not.toMatch(/^Христ/);
+    }
+    expect([...firsts].some((f) => christian.has(f))).toBe(true);
+    expect([...surs].some((s) => christianS.has(s))).toBe(true);
+    const optOut = ["bulgar", "slavic", "dynastic"] as const;
+    for (let i = 0; i < 3000; i++) {
+      const [first, sur] = randomName("bg", r, undefined, optOut).split(" ");
       expect(christian.has(first), first).toBe(false);
       expect(christianS.has(sur), sur).toBe(false);
     }
-    const all = ["bulgar", "slavic", "dynastic", "christian"] as const;
-    const seen = new Set<string>();
-    for (let i = 0; i < 3000; i++) seen.add(randomName("bg", r, undefined, all).split(" ")[1]);
-    expect([...seen].some((s) => christianS.has(s))).toBe(true);
   });
   it("copes with rng returning values at the edges", () => {
     expect(randomName("bg", () => 0, "m")).toBeTruthy();

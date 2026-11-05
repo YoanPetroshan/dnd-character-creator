@@ -98,11 +98,11 @@ FLAGS: list[tuple[str, str, str, str]] = [
     ("name", "Райна", "N1", "Popular and Slavic by form, but often tied to a Christian-era figure."),
     ("name", "Калина", "N1", "Popular, Slavic by form (with Румяна)."),
     ("name", "Румяна", "N1", "Popular, Slavic by form (with Калина)."),
-    ("name", "Калоян", "N1", "Tagged christian (excluded by default); could arguably count as medieval Bulgarian (Калоянов too)."),
-    ("name", "Кънчев", "N1", "Tagged christian (excluded by default); could arguably count as medieval Bulgarian."),
-    ("name", "Кераца", "N1", "Tagged christian: a folk form of a Greek root."),
-    ("name", "Гергана", "N1", "Tagged christian: a folk form of a Greek root."),
-    ("name", "Тонка", "N1", "Tagged christian: a folk form of a Greek root."),
+    ("name", "Калоян", "N1", "Tagged christian (included by default since 2026-11-05); could arguably count as medieval Bulgarian (Калоянов too)."),
+    ("name", "Кънчев", "N1", "Tagged christian (included by default since 2026-11-05); could arguably count as medieval Bulgarian."),
+    ("name", "Кераца", "N1", "Tagged christian (included by default): a folk form of a Greek root."),
+    ("name", "Гергана", "N1", "Tagged christian (included by default): a folk form of a Greek root."),
+    ("name", "Тонка", "N1", "Tagged christian (included by default): a folk form of a Greek root."),
 ]
 
 # Official streamlined transliteration of the flagged names (what the English dice button prints).

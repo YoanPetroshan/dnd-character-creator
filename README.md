@@ -54,7 +54,7 @@ should confirm. The overview with the test map and the known English leftovers i
 **Random names.** The dice button next to the character name on Home fills in a random Bulgarian name (first name and a
 surname of the same gender) in Bulgarian, and its official Latin transliteration in English (for example
 "Драгана Вутова" / "Dragana Vutova"). The name lists are in `frontend/src/names/bgNames.ts` (each name carries an origin tag; the
-`christian` origin is excluded by default through `DEFAULT_ORIGINS`), the transliteration in `frontend/src/logic/translit.ts`.
+`christian` origin is included by default through `DEFAULT_ORIGINS`; no name or title of God or Christ, such as Христо, is in any list), the transliteration in `frontend/src/logic/translit.ts`.
 
 ## Setup
 

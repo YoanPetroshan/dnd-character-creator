@@ -10,12 +10,25 @@ describe("name lists", () => {
     expect(inc(FEMALE_FIRST).length).toBeGreaterThanOrEqual(30);
     expect(inc(SURNAMES).length).toBeGreaterThanOrEqual(50);
   });
-  it("the default filter excludes christian and nothing else is lost", () => {
-    expect(DEFAULT_ORIGINS).not.toContain("christian");
+  it("christian-tagged names are included by default, and an opt-out filter still works", () => {
+    expect(DEFAULT_ORIGINS).toContain("christian");
+    const optOut = (l: readonly { origin: string }[]) => l.filter((x) => x.origin !== "christian");
     for (const l of [MALE_FIRST, FEMALE_FIRST, SURNAMES] as readonly (readonly { origin: string }[])[]) {
       expect(l.some((x) => x.origin === "christian")).toBe(true);
-      expect(inc(l).every((x) => x.origin !== "christian")).toBe(true);
-      expect(inc(l).length).toBe(l.filter((x) => x.origin !== "christian").length);
+      expect(inc(l).length).toBe(l.length);
+      expect(optOut(l).length).toBeLessThan(l.length);
+      expect(optOut(l).every((x) => x.origin !== "christian")).toBe(true);
+    }
+    // the opt-out lists alone still meet the minimum counts
+    expect(optOut(MALE_FIRST).length).toBeGreaterThanOrEqual(30);
+    expect(optOut(FEMALE_FIRST).length).toBeGreaterThanOrEqual(30);
+    expect(optOut(SURNAMES).length).toBeGreaterThanOrEqual(50);
+  });
+  it("never lists a name or title of God / Christ (owner rule)", () => {
+    const all = [...MALE_FIRST.map((x) => x.bg), ...FEMALE_FIRST.map((x) => x.bg), ...SURNAMES.flatMap((x) => [x.m, x.f])];
+    for (const w of all) expect(w, w).not.toMatch(/^Христ/);
+    for (const bad of ["Христо", "Христов", "Христова", "Христина", "Християн", "Исус", "Исусов", "Месия", "Господ", "Бог", "Богов"]) {
+      expect(all, bad).not.toContain(bad);
     }
   });
   it("have no duplicates", () => {

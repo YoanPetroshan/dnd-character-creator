@@ -8,8 +8,10 @@
 //   bulgar    - Proto-Bulgar khans and nobles
 //   slavic    - old Slavic names
 //   dynastic  - medieval dynastic names, some of Cuman/Turkic root (Асен, Шишман) or disputed etymology (?)
-//   christian - Greek/Hebrew/Latin roots (Иван, Георги, ...). Tagged, but EXCLUDED by default (decision E1);
-//               flip DEFAULT_ORIGINS below to include them.
+//   christian - Greek/Hebrew/Latin roots (Иван, Георги, ...). Tagged and INCLUDED by default (owner decision,
+//               2026-11-05, reversing E1); remove "christian" from DEFAULT_ORIGINS below to opt out.
+//               Owner rule: no name or title of God / Christ from the Bible in any list (Христо, Христов, Христина,
+//               ... must never appear); bgNames.test.ts pins this.
 //
 // Comments: "ADD" = added by the executor beyond the planner's list (for the user to review);
 //           "?" = disputed or uncertain etymology/authenticity (for the user to review).
@@ -20,8 +22,8 @@ export type Gender = "m" | "f";
 export interface FirstName { bg: string; origin: Origin }
 export interface Surname { m: string; f: string; origin: Origin }
 
-/** The one switch: origins the dice may use. Add "christian" to include Иван, Георги, Иванов, Петров, ... */
-export const DEFAULT_ORIGINS: readonly Origin[] = ["bulgar", "slavic", "dynastic"];
+/** The one switch: origins the dice may use. Includes christian (Иван, Георги, Иванов, Петров, ...); drop "christian" to opt out. */
+export const DEFAULT_ORIGINS: readonly Origin[] = ["bulgar", "slavic", "dynastic", "christian"];
 
 const n = (bg: string, origin: Origin): FirstName => ({ bg, origin });
 const s = (m: string, f: string, origin: Origin): Surname => ({ m, f, origin });
@@ -46,9 +48,9 @@ export const MALE_FIRST: readonly FirstName[] = [
   n("Ратимир", "slavic"), n("Първан", "slavic"), n("Вълчан", "slavic"), n("Ясен", "slavic"),
   n("Гостун", "bulgar"), // ADD, ? (khan of the Dulo list, etymology disputed)
   n("Умор", "bulgar"), // ADD, ? (khan of the Dulo list, etymology disputed)
-  // christian (excluded by default)
+  // christian (included by default; no names or titles of God / Christ)
   n("Симеон", "christian"), n("Самуил", "christian"), n("Калоян", "christian"), n("Иван", "christian"),
-  n("Христо", "christian"), n("Васил", "christian"), n("Георги", "christian"),
+  n("Васил", "christian"), n("Георги", "christian"),
 ];
 
 export const FEMALE_FIRST: readonly FirstName[] = [
@@ -63,7 +65,7 @@ export const FEMALE_FIRST: readonly FirstName[] = [
   // ADD (executor): feminine forms of the male Slavic compounds and old Slavic nature names
   n("Веселина", "slavic"), n("Мирослава", "slavic"), n("Добромира", "slavic"), n("Станимира", "slavic"),
   n("Ясена", "slavic"), n("Лъчезара", "slavic"), n("Пламена", "slavic"), n("Радостина", "slavic"),
-  // christian (excluded by default)
+  // christian (included by default; no names or titles of God / Christ)
   n("Кераца", "christian"), n("Гергана", "christian"), n("Тонка", "christian"),
 ];
 
@@ -94,8 +96,8 @@ export const SURNAMES: readonly Surname[] = [
   sr("Събев", "slavic"), sr("Мирков", "slavic"), sr("Вутов", "slavic"), sr("Цонев", "slavic"),
   sr("Дражев", "slavic"), sr("Благоев", "slavic"), sr("Миланов", "slavic"), sr("Борилов", "dynastic"),
   sr("Севаров", "bulgar"), sr("Драгомиров", "slavic"), sr("Светославов", "slavic"), sr("Радославов", "slavic"),
-  // christian (excluded by default)
+  // christian (included by default; no names or titles of God / Christ)
   sr("Иванов", "christian"), sr("Петров", "christian"), sr("Георгиев", "christian"), sr("Димитров", "christian"),
-  sr("Христов", "christian"), sr("Йорданов", "christian"), sr("Даскалов", "christian"),
+  sr("Йорданов", "christian"), sr("Даскалов", "christian"),
   sr("Калоянов", "christian"), sr("Кънчев", "christian"),
 ];

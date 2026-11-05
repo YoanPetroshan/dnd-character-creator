@@ -89,10 +89,10 @@ How to read it: **Key** says where the text lives (kind and name), **EN** and **
 | 57 | `name:Райна` | Rayna | Райна | Popular and Slavic by form, but often tied to a Christian-era figure. (N1) | |
 | 58 | `name:Калина` | Kalina | Калина | Popular, Slavic by form (with Румяна). (N1) | |
 | 59 | `name:Румяна` | Rumyana | Румяна | Popular, Slavic by form (with Калина). (N1) | |
-| 60 | `name:Калоян` | Kaloyan | Калоян | Tagged christian (excluded by default); could arguably count as medieval Bulgarian (Калоянов too). (N1) | |
-| 61 | `name:Кънчев` | Kanchev | Кънчев | Tagged christian (excluded by default); could arguably count as medieval Bulgarian. (N1) | |
-| 62 | `name:Кераца` | Keratsa | Кераца | Tagged christian: a folk form of a Greek root. (N1) | |
-| 63 | `name:Гергана` | Gergana | Гергана | Tagged christian: a folk form of a Greek root. (N1) | |
-| 64 | `name:Тонка` | Tonka | Тонка | Tagged christian: a folk form of a Greek root. (N1) | |
+| 60 | `name:Калоян` | Kaloyan | Калоян | Tagged christian (included by default since 2026-11-05); could arguably count as medieval Bulgarian (Калоянов too). (N1) | |
+| 61 | `name:Кънчев` | Kanchev | Кънчев | Tagged christian (included by default since 2026-11-05); could arguably count as medieval Bulgarian. (N1) | |
+| 62 | `name:Кераца` | Keratsa | Кераца | Tagged christian (included by default): a folk form of a Greek root. (N1) | |
+| 63 | `name:Гергана` | Gergana | Гергана | Tagged christian (included by default): a folk form of a Greek root. (N1) | |
+| 64 | `name:Тонка` | Tonka | Тонка | Tagged christian (included by default): a folk form of a Greek root. (N1) | |
 
 64 rows. Slices: I0 glossary, I2-I5 server messages, XL exports, SK6-BI web UI texts, N1 names, C1 the consistency audit (`server/tests/test_i18n_completeness.py`, `KNOWN_INCONSISTENCIES`).
