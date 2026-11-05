@@ -16,83 +16,81 @@ How to read it: **Key** says where the text lives (kind and name), **EN** and **
 | 4 | `glossary:proficiencyBonus` | Proficiency Bonus | Бонус за умение | 'Бонус за умение' uses the word that is also the Bulgarian for 'Skills' ('Умения'); is that the wording you want? (C1) | |
 | 5 | `glossary:spellAttackBonus` | Spell Attack Modifier | Бонус за атака | English follows the 2024 PHB ('Spell Attack Modifier'); the Bulgarian is the app's older 'Бонус за атака' (no 'spell', 'бонус' not 'модификатор'). (I0) | |
 | 6 | `glossary:spellSaveDc` | Spell Save DC | Спасяване за заклинание (DC) | 'Спасяване за заклинание (DC)' mixes a Bulgarian phrase with the English abbreviation DC. (C1) | |
-| 7 | `glossary:spellSlots` | Spell Slots | Клетки за заклинания | Glossary and the web UI say 'Клетки за заклинания'; the Bulgarian PDF/Markdown export prints 'Spell Slots' (its output is pinned byte for byte, so it was not changed). (C1) | |
-| 8 | `glossary:cantrips` | Cantrips | Трикове | Glossary plural is 'Трикове'; the server messages count with 'трик / трика'. 'Трик' for 'cantrip' is the app's own rendering. (I4) | |
-| 9 | `glossary:resistance` | Resistance | Устойчивост | Glossary 'Устойчивост'; resource lines and one heading in the UI and exports say 'съпротива' / 'Съпротиви' (see the rows below). (C1) | |
+| 7 | `glossary:cantrips` | Cantrips | Трикове | Glossary plural is 'Трикове'; the server messages count with 'трик / трика'. 'Трик' for 'cantrip' is the app's own rendering. (I4) | |
+| 8 | `glossary:resistance` | Resistance | Устойчивост | Glossary 'Устойчивост'; resource lines and one heading in the UI and exports say 'съпротива' / 'Съпротиви' (see the rows below). (C1) | |
 
 ## Exports (Markdown / PDF labels)
 
 | # | Key | EN | BG | Why uncertain (slice) | Your call |
 |---|---|---|---|---|---|
-| 10 | `export:spellSlots` | Spell Slots | Spell Slots | Bulgarian export prints the English 'Spell Slots' (kept so the Bulgarian output stays byte-identical). (XL) | |
-| 11 | `export:pactSlots` | Pact Magic Slots | Pact Magic Slots | Bulgarian export prints the English 'Pact Magic Slots' (same reason). (XL) | |
-| 12 | `export:attackVersatile` | versatile {dice} | versatile {dice} | Bulgarian export keeps the English attack tag 'versatile'. (XL) | |
-| 13 | `export:attackOffhand` | off hand {dice} | off hand {dice} | Bulgarian export keeps the English attack tag 'off hand'. (XL) | |
-| 14 | `export:attackRange` | range {range} | range {range} | Bulgarian export keeps the English attack tag 'range'. (XL) | |
-| 15 | `export:secResistances` | Resistances and Immunities | Съпротиви и имунитети | Heading 'Съпротиви и имунитети' vs the glossary's 'Устойчивост' (the line labels below it say 'Устойчивост към щета'). (C1) | |
-| 16 | `export:resAll` | resistance: all damage types except psychic | съпротива: всички видове щета освен психична | 'съпротива' vs the glossary's 'Устойчивост'. (C1) | |
-| 17 | `export:resSome` | resistance: {types} | съпротива: {types} | 'съпротива' vs the glossary's 'Устойчивост'. (C1) | |
+| 9 | `export:pactSlots` | Pact Magic Slots | Pact Magic Slots | Bulgarian export prints the English 'Pact Magic Slots' (English on purpose, like 'Spell Slots'). (XL) | |
+| 10 | `export:attackVersatile` | versatile {dice} | versatile {dice} | Bulgarian export keeps the English attack tag 'versatile'. (XL) | |
+| 11 | `export:attackOffhand` | off hand {dice} | off hand {dice} | Bulgarian export keeps the English attack tag 'off hand'. (XL) | |
+| 12 | `export:attackRange` | range {range} | range {range} | Bulgarian export keeps the English attack tag 'range'. (XL) | |
+| 13 | `export:secResistances` | Resistances and Immunities | Съпротиви и имунитети | Heading 'Съпротиви и имунитети' vs the glossary's 'Устойчивост' (the line labels below it say 'Устойчивост към щета'). (C1) | |
+| 14 | `export:resAll` | resistance: all damage types except psychic | съпротива: всички видове щета освен психична | 'съпротива' vs the glossary's 'Устойчивост'. (C1) | |
+| 15 | `export:resSome` | resistance: {types} | съпротива: {types} | 'съпротива' vs the glossary's 'Устойчивост'. (C1) | |
 
 ## Messages from the server (problems, warnings, pruned reasons, disabled reasons, card texts)
 
 | # | Key | EN | BG | Why uncertain (slice) | Your call |
 |---|---|---|---|---|---|
-| 18 | `msg:label-damage-resistance` | Damage Resistance | Устойчивост на щети | 'Устойчивост на щети' here, 'Устойчивост към щета' in the sheet and export lines: 'на' vs 'към', plural vs singular. (C1) | |
-| 19 | `msg:label-prefixed` | {head}: {tail} | {head}: {tail} | '{head}: {tail}': the tail is a rules term with no translation yet (Expertise, Fighting Style, Maneuvers, Metamagic, Eldritch Invocation), so Bulgarian shows it in English. (I5) | |
-| 20 | `msg:disabled-already-known` | already known | вече се знае | 'вече се знае' (already known) as the short reason under an option. (I4) | |
-| 21 | `msg:disabled-already-proficient` | already proficient | вече се владее | 'вече се владее' (already proficient): 'владеене' as 'proficiency' is the app's existing choice. (I4) | |
-| 22 | `msg:disabled-already-taken-from` | already taken ({where}) | вече взето ({where}) | 'вече взето ({where})': 'взето' (taken) for a feat/option already picked. (I4) | |
-| 23 | `msg:disabled-already-mastered` | already mastered | вече усвоено (Майсторство с оръжия) | 'вече усвоено (Майсторство с оръжия)': 'усвоено' is new wording for 'already mastered'. (I4) | |
-| 24 | `msg:disabled-requires-warlock-level` | requires warlock level {level} | изисква ниво {level} на warlock | 'изисква ниво N на warlock': class name left in English. (I4) | |
-| 25 | `msg:disabled-requires-cantrip` | requires the {spell} cantrip | изисква трика {spell} | 'изисква трика {spell}': 'трик' for 'cantrip', in the accusative. (I4) | |
-| 26 | `msg:prereq-feat-category` | a feat of a required category | талант (feat) от нужната категория | 'талант (feat) от нужната категория': the English word is added in brackets to help the reader. (I4) | |
-| 27 | `msg:prereq-martial` | martial weapon proficiency | владеене на бойни оръжия (martial) | 'владеене на бойни оръжия (martial)': 'бойни оръжия' for 'martial weapons'. (I4) | |
-| 28 | `msg:pruned-proficient` | '{label}': {names:, } is already proficient; the selection was ignored. | '{label}': вече се владее {names:, }; изборът беше пренебрегнат. | 'вече се владее {names}': the name list follows the sentence head, so one wording fits one or many names. (I3) | |
-| 29 | `msg:pruned-known-ignored` | '{label}': {names:, } is already known and was ignored. | '{label}': вече се знае {names:, }; изборът беше пренебрегнат. | 'вече се знае {names}': same pattern as above. (I3) | |
-| 30 | `msg:over-selected` | '{label}' allows {count} selection(s) but {submitted} were submitted. | '{label}' позволява {count} {count\|избор\|избора}, но са подадени {submitted}. | '{count\|избор\|избора}': plural forms chosen by the engine; English keeps 'selection(s)'. (I2) | |
-| 31 | `msg:pruned-wizard-not-in-spellbook` | '{id}': {n} stored prepared spell(s) are not in your spellbook and were ignored: {names:, }. | '{id}': {n} {n\|запазено подготвено заклинание не е\|запазени подготвени заклинания не са} в книгата със заклинания (spellbook) и {n\|е пренебрегнато\|са пренебрегнати}: {names:, }. | Long sentence with two plural-agreement parts ('запазено ... не е' / 'запазени ... не са'); worth a native read. (I3) | |
-| 32 | `msg:disabled-school-limit` | only {free} spell(s) may come from outside {schools: or } at this level | само {free} {free\|заклинание може да е\|заклинания могат да са} извън {schools: или } на това ниво | Plural agreement of 'заклинание може да е / заклинания могат да са' and 'или' between two schools. (I4) | |
-| 33 | `msg:noun-cantrip` | {n\|cantrip\|cantrips} | {n\|трик\|трика} | '{n\|трик\|трика}' is the building block of every 'Choose N cantrips' sentence. (I5) | |
-| 34 | `msg:desc-species-feats` | Choose {count} feats. | Изберете {count} таланта. | 'Изберете {count} таланта': the count form of 'талант' (not 'черти'). (I5) | |
+| 16 | `msg:label-damage-resistance` | Damage Resistance | Устойчивост на щети | 'Устойчивост на щети' here, 'Устойчивост към щета' in the sheet and export lines: 'на' vs 'към', plural vs singular. (C1) | |
+| 17 | `msg:label-prefixed` | {head}: {tail} | {head}: {tail} | '{head}: {tail}': the tail is a rules term with no translation yet (Expertise, Fighting Style, Maneuvers, Metamagic, Eldritch Invocation), so Bulgarian shows it in English. (I5) | |
+| 18 | `msg:disabled-already-known` | already known | вече се знае | 'вече се знае' (already known) as the short reason under an option. (I4) | |
+| 19 | `msg:disabled-already-proficient` | already proficient | вече се владее | 'вече се владее' (already proficient): 'владеене' as 'proficiency' is the app's existing choice. (I4) | |
+| 20 | `msg:disabled-already-taken-from` | already taken ({where}) | вече взето ({where}) | 'вече взето ({where})': 'взето' (taken) for a feat/option already picked. (I4) | |
+| 21 | `msg:disabled-already-mastered` | already mastered | вече усвоено (Майсторство с оръжия) | 'вече усвоено (Майсторство с оръжия)': 'усвоено' is new wording for 'already mastered'. (I4) | |
+| 22 | `msg:disabled-requires-warlock-level` | requires warlock level {level} | изисква ниво {level} на warlock | 'изисква ниво N на warlock': class name left in English. (I4) | |
+| 23 | `msg:disabled-requires-cantrip` | requires the {spell} cantrip | изисква трика {spell} | 'изисква трика {spell}': 'трик' for 'cantrip', in the accusative. (I4) | |
+| 24 | `msg:prereq-feat-category` | a feat of a required category | талант (feat) от нужната категория | 'талант (feat) от нужната категория': the English word is added in brackets to help the reader. (I4) | |
+| 25 | `msg:prereq-martial` | martial weapon proficiency | владеене на бойни оръжия (martial) | 'владеене на бойни оръжия (martial)': 'бойни оръжия' for 'martial weapons'. (I4) | |
+| 26 | `msg:pruned-proficient` | '{label}': {names:, } is already proficient; the selection was ignored. | '{label}': вече се владее {names:, }; изборът беше пренебрегнат. | 'вече се владее {names}': the name list follows the sentence head, so one wording fits one or many names. (I3) | |
+| 27 | `msg:pruned-known-ignored` | '{label}': {names:, } is already known and was ignored. | '{label}': вече се знае {names:, }; изборът беше пренебрегнат. | 'вече се знае {names}': same pattern as above. (I3) | |
+| 28 | `msg:over-selected` | '{label}' allows {count} selection(s) but {submitted} were submitted. | '{label}' позволява {count} {count\|избор\|избора}, но са подадени {submitted}. | '{count\|избор\|избора}': plural forms chosen by the engine; English keeps 'selection(s)'. (I2) | |
+| 29 | `msg:pruned-wizard-not-in-spellbook` | '{id}': {n} stored prepared spell(s) are not in your spellbook and were ignored: {names:, }. | '{id}': {n} {n\|запазено подготвено заклинание не е\|запазени подготвени заклинания не са} в книгата със заклинания (spellbook) и {n\|е пренебрегнато\|са пренебрегнати}: {names:, }. | Long sentence with two plural-agreement parts ('запазено ... не е' / 'запазени ... не са'); worth a native read. (I3) | |
+| 30 | `msg:disabled-school-limit` | only {free} spell(s) may come from outside {schools: or } at this level | само {free} {free\|заклинание може да е\|заклинания могат да са} извън {schools: или } на това ниво | Plural agreement of 'заклинание може да е / заклинания могат да са' and 'или' between two schools. (I4) | |
+| 31 | `msg:noun-cantrip` | {n\|cantrip\|cantrips} | {n\|трик\|трика} | '{n\|трик\|трика}' is the building block of every 'Choose N cantrips' sentence. (I5) | |
+| 32 | `msg:desc-species-feats` | Choose {count} feats. | Изберете {count} таланта. | 'Изберете {count} таланта': the count form of 'талант' (not 'черти'). (I5) | |
 
 ## Web UI texts
 
 | # | Key | EN | BG | Why uncertain (slice) | Your call |
 |---|---|---|---|---|---|
-| 35 | `copy:choice.groups.general` | General Feats | Общи черти | Feat group 'Общи черти': glossary says feats are 'Таланти'. (C1) | |
-| 36 | `copy:choice.groups.origin` | Origin Feats | Черти за произход | Feat group 'Черти за произход': glossary says 'Талант от произхода'. (C1) | |
-| 37 | `copy:choice.groups.feat-2014` | Feats (2014) | Черти (2014) | Feat group 'Черти (2014)': glossary says 'Таланти'. (C1) | |
-| 38 | `copy:sheet.defenses.title` | Resistances and Immunities | Съпротиви и имунитети | 'Съпротиви и имунитети' vs the glossary's 'Устойчивост' (same heading as the export). (C1) | |
-| 39 | `copy:sheet.resources.text.resistancesAllButPsychic` | resistance: all damage types except Psychic | съпротива: всички видове щета освен психична | 'съпротива' vs the glossary's 'Устойчивост'. (C1) | |
-| 40 | `copy:nav.steps.home` | Home | Home | Page names that the Bulgarian UI has always shown in English (the LEGACY list): translating them is a deliberate later change. (SK6-BI) | |
-| 41 | `copy:nav.steps.background` | Background | Background | English in the Bulgarian UI on purpose (LEGACY); glossary 'Произход'. (SK6-BI) | |
-| 42 | `copy:nav.steps.species` | Species | Species | English in the Bulgarian UI on purpose (LEGACY); glossary 'Раса'. (SK6-BI) | |
-| 43 | `copy:nav.steps.abilities` | Abilities | Abilities | English in the Bulgarian UI on purpose (LEGACY); glossary 'Характеристики'. (SK6-BI) | |
-| 44 | `copy:nav.steps.equipment` | Equipment | Equipment | English in the Bulgarian UI on purpose (LEGACY); glossary 'Екипировка'. (SK6-BI) | |
-| 45 | `copy:nav.steps.export` | Export | Export | English in the Bulgarian UI on purpose (LEGACY). (SK6-BI) | |
-| 46 | `copy:backgroundPage.choose` | — choose a background — | — избери background — | '— избери background —': mixes the English word into a Bulgarian sentence (LEGACY). (SK6-BI) | |
-| 47 | `copy:exportPage.missing.species` | Choose a species. | Избери species. | 'Избери species.': the English word inside a Bulgarian sentence (LEGACY). (SK6-BI) | |
-| 48 | `copy:speciesPage.noChoices` | There are no choices for this species. | Няма избори за този species. | 'Няма избори за този species.': the English word inside a Bulgarian sentence (LEGACY). (SK6-BI) | |
+| 33 | `copy:choice.groups.general` | General Feats | Общи черти | Feat group 'Общи черти': glossary says feats are 'Таланти'. (C1) | |
+| 34 | `copy:choice.groups.origin` | Origin Feats | Черти за произход | Feat group 'Черти за произход': glossary says 'Талант от произхода'. (C1) | |
+| 35 | `copy:choice.groups.feat-2014` | Feats (2014) | Черти (2014) | Feat group 'Черти (2014)': glossary says 'Таланти'. (C1) | |
+| 36 | `copy:sheet.defenses.title` | Resistances and Immunities | Съпротиви и имунитети | 'Съпротиви и имунитети' vs the glossary's 'Устойчивост' (same heading as the export). (C1) | |
+| 37 | `copy:sheet.resources.text.resistancesAllButPsychic` | resistance: all damage types except Psychic | съпротива: всички видове щета освен психична | 'съпротива' vs the glossary's 'Устойчивост'. (C1) | |
+| 38 | `copy:nav.steps.home` | Home | Home | Page names that the Bulgarian UI has always shown in English (the LEGACY list): translating them is a deliberate later change. (SK6-BI) | |
+| 39 | `copy:nav.steps.background` | Background | Background | English in the Bulgarian UI on purpose (LEGACY); glossary 'Произход'. (SK6-BI) | |
+| 40 | `copy:nav.steps.species` | Species | Species | English in the Bulgarian UI on purpose (LEGACY); glossary 'Раса'. (SK6-BI) | |
+| 41 | `copy:nav.steps.abilities` | Abilities | Abilities | English in the Bulgarian UI on purpose (LEGACY); glossary 'Характеристики'. (SK6-BI) | |
+| 42 | `copy:nav.steps.equipment` | Equipment | Equipment | English in the Bulgarian UI on purpose (LEGACY); glossary 'Екипировка'. (SK6-BI) | |
+| 43 | `copy:nav.steps.export` | Export | Export | English in the Bulgarian UI on purpose (LEGACY). (SK6-BI) | |
+| 44 | `copy:backgroundPage.choose` | — choose a background — | — избери background — | '— избери background —': mixes the English word into a Bulgarian sentence (LEGACY). (SK6-BI) | |
+| 45 | `copy:exportPage.missing.species` | Choose a species. | Избери species. | 'Избери species.': the English word inside a Bulgarian sentence (LEGACY). (SK6-BI) | |
+| 46 | `copy:speciesPage.noChoices` | There are no choices for this species. | Няма избори за този species. | 'Няма избори за този species.': the English word inside a Bulgarian sentence (LEGACY). (SK6-BI) | |
 
 ## Random names (the dice button)
 
 | # | Key | EN | BG | Why uncertain (slice) | Your call |
 |---|---|---|---|---|---|
-| 49 | `name:Пресиан` | Presian | Пресиан | Planner marked it '?'. (N1) | |
-| 50 | `name:Ивайло` | Ivaylo | Ивайло | Planner marked it '?'. (N1) | |
-| 51 | `name:Борил` | Boril | Борил | Planner marked it '?'. (N1) | |
-| 52 | `name:Асен` | Asen | Асен | Cuman/Turkic dynastic root kept (Асенов as the surname). (N1) | |
-| 53 | `name:Шишман` | Shishman | Шишман | Cuman/Turkic dynastic root kept (Шишманов as the surname). (N1) | |
-| 54 | `name:Гостун` | Gostun | Гостун | Added with doubt: khan name, etymology disputed. (N1) | |
-| 55 | `name:Умор` | Umor | Умор | Added with doubt: khan name, etymology disputed. (N1) | |
-| 56 | `name:Левски` | Levski | Левски | Added with doubt: a nickname that became a surname; Левска as the female form. (N1) | |
-| 57 | `name:Райна` | Rayna | Райна | Popular and Slavic by form, but often tied to a Christian-era figure. (N1) | |
-| 58 | `name:Калина` | Kalina | Калина | Popular, Slavic by form (with Румяна). (N1) | |
-| 59 | `name:Румяна` | Rumyana | Румяна | Popular, Slavic by form (with Калина). (N1) | |
-| 60 | `name:Калоян` | Kaloyan | Калоян | Tagged christian (included by default since 2026-11-05); could arguably count as medieval Bulgarian (Калоянов too). (N1) | |
-| 61 | `name:Кънчев` | Kanchev | Кънчев | Tagged christian (included by default since 2026-11-05); could arguably count as medieval Bulgarian. (N1) | |
-| 62 | `name:Кераца` | Keratsa | Кераца | Tagged christian (included by default): a folk form of a Greek root. (N1) | |
-| 63 | `name:Гергана` | Gergana | Гергана | Tagged christian (included by default): a folk form of a Greek root. (N1) | |
-| 64 | `name:Тонка` | Tonka | Тонка | Tagged christian (included by default): a folk form of a Greek root. (N1) | |
+| 47 | `name:Пресиан` | Presian | Пресиан | Planner marked it '?'. (N1) | |
+| 48 | `name:Ивайло` | Ivaylo | Ивайло | Planner marked it '?'. (N1) | |
+| 49 | `name:Борил` | Boril | Борил | Planner marked it '?'. (N1) | |
+| 50 | `name:Асен` | Asen | Асен | Cuman/Turkic dynastic root kept (Асенов as the surname). (N1) | |
+| 51 | `name:Шишман` | Shishman | Шишман | Cuman/Turkic dynastic root kept (Шишманов as the surname). (N1) | |
+| 52 | `name:Гостун` | Gostun | Гостун | Added with doubt: khan name, etymology disputed. (N1) | |
+| 53 | `name:Умор` | Umor | Умор | Added with doubt: khan name, etymology disputed. (N1) | |
+| 54 | `name:Левски` | Levski | Левски | Added with doubt: a nickname that became a surname; Левска as the female form. (N1) | |
+| 55 | `name:Райна` | Rayna | Райна | Popular and Slavic by form, but often tied to a Christian-era figure. (N1) | |
+| 56 | `name:Калина` | Kalina | Калина | Popular, Slavic by form (with Румяна). (N1) | |
+| 57 | `name:Румяна` | Rumyana | Румяна | Popular, Slavic by form (with Калина). (N1) | |
+| 58 | `name:Калоян` | Kaloyan | Калоян | Tagged christian (included by default since 2026-11-05); could arguably count as medieval Bulgarian (Калоянов too). (N1) | |
+| 59 | `name:Кънчев` | Kanchev | Кънчев | Tagged christian (included by default since 2026-11-05); could arguably count as medieval Bulgarian. (N1) | |
+| 60 | `name:Кераца` | Keratsa | Кераца | Tagged christian (included by default): a folk form of a Greek root. (N1) | |
+| 61 | `name:Гергана` | Gergana | Гергана | Tagged christian (included by default): a folk form of a Greek root. (N1) | |
+| 62 | `name:Тонка` | Tonka | Тонка | Tagged christian (included by default): a folk form of a Greek root. (N1) | |
 
-64 rows. Slices: I0 glossary, I2-I5 server messages, XL exports, SK6-BI web UI texts, N1 names, C1 the consistency audit (`server/tests/test_i18n_completeness.py`, `KNOWN_INCONSISTENCIES`).
+62 rows. Slices: I0 glossary, I2-I5 server messages, XL exports, SK6-BI web UI texts, N1 names, C1 the consistency audit (`server/tests/test_i18n_completeness.py`, `KNOWN_INCONSISTENCIES`).

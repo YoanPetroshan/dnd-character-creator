@@ -20,7 +20,7 @@ Rules terms in two languages. English follows the wording of the sources (2024 P
 | `passiveInvestigation` | Passive Investigation | Пасивно разследване | 2024 PHB | Passive Perception |
 | `spellSaveDc` | Spell Save DC | Спасяване за заклинание (DC) | 2024 PHB | Spell save DC |
 | `spellAttackBonus` | Spell Attack Modifier | Бонус за атака | 2024 PHB | Spell attack modifier |
-| `spellSlots` | Spell Slots | Клетки за заклинания | 2024 PHB | Spell Slots |
+| `spellSlots` | Spell Slots | Spell Slots | 2024 PHB | Spell Slots |
 | `cantrips` | Cantrips | Трикове | 2024 PHB | Cantrips |
 | `preparedSpells` | Prepared Spells | Подготвени заклинания | 2024 PHB | text:Prepared Spells |
 | `spellbook` | Spellbook | Книга със заклинания | 2024 PHB | text:Spellbook |

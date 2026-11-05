@@ -41,12 +41,10 @@ FLAGS: list[tuple[str, str, str, str]] = [
     ("glossary", "proficiencyBonus", "C1", "'Бонус за умение' uses the word that is also the Bulgarian for 'Skills' ('Умения'); is that the wording you want?"),
     ("glossary", "spellAttackBonus", "I0", "English follows the 2024 PHB ('Spell Attack Modifier'); the Bulgarian is the app's older 'Бонус за атака' (no 'spell', 'бонус' not 'модификатор')."),
     ("glossary", "spellSaveDc", "C1", "'Спасяване за заклинание (DC)' mixes a Bulgarian phrase with the English abbreviation DC."),
-    ("glossary", "spellSlots", "C1", "Glossary and the web UI say 'Клетки за заклинания'; the Bulgarian PDF/Markdown export prints 'Spell Slots' (its output is pinned byte for byte, so it was not changed)."),
     ("glossary", "cantrips", "I4", "Glossary plural is 'Трикове'; the server messages count with 'трик / трика'. 'Трик' for 'cantrip' is the app's own rendering."),
     ("glossary", "resistance", "C1", "Glossary 'Устойчивост'; resource lines and one heading in the UI and exports say 'съпротива' / 'Съпротиви' (see the rows below)."),
     # ---- exports (XL) -----------------------------------------------------------------------------------------------
-    ("export", "spellSlots", "XL", "Bulgarian export prints the English 'Spell Slots' (kept so the Bulgarian output stays byte-identical)."),
-    ("export", "pactSlots", "XL", "Bulgarian export prints the English 'Pact Magic Slots' (same reason)."),
+    ("export", "pactSlots", "XL", "Bulgarian export prints the English 'Pact Magic Slots' (English on purpose, like 'Spell Slots')."),
     ("export", "attackVersatile", "XL", "Bulgarian export keeps the English attack tag 'versatile'."),
     ("export", "attackOffhand", "XL", "Bulgarian export keeps the English attack tag 'off hand'."),
     ("export", "attackRange", "XL", "Bulgarian export keeps the English attack tag 'range'."),

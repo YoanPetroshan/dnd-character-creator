@@ -246,7 +246,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Choose one level-{level} spell from the Warlock spell list as your Mystic Arcanum. "
               "You can cast it once per long rest without a spell slot.",
         "bg": "Изберете едно заклинание от ниво {level} от списъка със заклинания на Warlock за вашия Mystic Arcanum. "
-              "Можете да го изречете веднъж на дълга почивка без клетка за заклинание.",
+              "Можете да го изречете веднъж на дълга почивка без Spell Slot.",
     },
     "desc-additional-secrets": {
         "en": "{text} These picks do not count against the number of spells you know.",
@@ -265,7 +265,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Choose {count} level {level} {count|spell|spells} in your spellbook{condition}. You can cast them at their "
               "lowest level without a spell slot while they are prepared.",
         "bg": "Изберете {count} {count|заклинание|заклинания} от ниво {level} във вашата книга със заклинания{condition}. "
-              "Можете да ги изричате на най-ниското им ниво без клетка за заклинание, докато са подготвени.",
+              "Можете да ги изричате на най-ниското им ниво без Spell Slot, докато са подготвени.",
     },
     "desc-wizard-pick-none": {
         "en": "No spell in your spellbook is eligible (level {level}{condition}).",

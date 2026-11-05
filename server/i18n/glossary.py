@@ -45,6 +45,10 @@ def load(path: pathlib.Path = GLOSSARY_JSON) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+# Terms whose Bulgarian wording is the English term on purpose (owner decision 2026-11-05): bg must equal en.
+BG_IS_ENGLISH = frozenset({"spellSlots"})
+
+
 def validate(data: object) -> list[str]:
     """Structural errors of a glossary mapping (empty list = valid)."""
     if not isinstance(data, dict) or not data:
@@ -63,7 +67,8 @@ def validate(data: object) -> list[str]:
                 errors.append(f"{tid}: {k} must be a non-empty trimmed string")
         if isinstance(term["en"], str) and _CYRILLIC.search(term["en"]):
             errors.append(f"{tid}: en contains Cyrillic")
-        if isinstance(term["bg"], str) and term["bg"] and not _CYRILLIC.search(term["bg"]):
+        if (isinstance(term["bg"], str) and term["bg"] and not _CYRILLIC.search(term["bg"])
+                and not (tid in BG_IS_ENGLISH and term["bg"] == term["en"])):
             errors.append(f"{tid}: bg has no Cyrillic")
         cite = term["cite"]
         if not isinstance(cite, dict) or set(cite) != {"src", "locator"}:

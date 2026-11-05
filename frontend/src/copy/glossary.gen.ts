@@ -16,7 +16,7 @@ export const glossary = {
   passiveInvestigation: { en: "Passive Investigation", bg: "Пасивно разследване" },
   spellSaveDc: { en: "Spell Save DC", bg: "Спасяване за заклинание (DC)" },
   spellAttackBonus: { en: "Spell Attack Modifier", bg: "Бонус за атака" },
-  spellSlots: { en: "Spell Slots", bg: "Клетки за заклинания" },
+  spellSlots: { en: "Spell Slots", bg: "Spell Slots" },
   cantrips: { en: "Cantrips", bg: "Трикове" },
   preparedSpells: { en: "Prepared Spells", bg: "Подготвени заклинания" },
   spellbook: { en: "Spellbook", bg: "Книга със заклинания" },

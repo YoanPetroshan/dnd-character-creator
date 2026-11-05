@@ -123,17 +123,20 @@ describe("scripts", () => {
     "you",
   ]);
 
+  // Game terms kept in English on purpose (owner decision 2026-11-05): "Spell Slots" (glossary spellSlots, as in the BG export).
+  const TERMS = new Set("Spell Slots".split(" "));
+
   it("the legacy list has no stale entries (every word is still printed by the Bulgarian UI)", () => {
     const used = new Set<string>();
     for (const [, text] of outputs(BG)) for (const w of text.match(/[A-Za-z]+/g) ?? []) used.add(w);
-    expect([...LEGACY].filter((w) => !used.has(w))).toEqual([]);
+    expect([...LEGACY, ...TERMS].filter((w) => !used.has(w))).toEqual([]);
   });
 
   it("bg.ts uses Latin words only from the allowlist (permanent abbreviations + legacy English)", () => {
     const unknown = new Set<string>();
     for (const [path, text] of outputs(BG)) {
       if (path === "common.dateLocale") continue; // a locale tag, not text
-      for (const w of text.match(/[A-Za-z]+/g) ?? []) if (!PERMANENT.has(w) && !LEGACY.has(w)) unknown.add(`${w} (${path})`);
+      for (const w of text.match(/[A-Za-z]+/g) ?? []) if (!PERMANENT.has(w) && !LEGACY.has(w) && !TERMS.has(w)) unknown.add(`${w} (${path})`);
     }
     expect([...unknown].sort()).toEqual([]);
   });
@@ -186,9 +189,9 @@ describe("rules terms come from the glossary", () => {
       expect(get(en, path)).toBe(glossary[term].en);
     });
   }
-  it("the spell slots heading is the same text everywhere in bg ('Клетки за заклинания')", () => {
-    expect(bg.sheet.spells.slotsTitle).toBe("Клетки за заклинания");
-    expect(glossary.spellSlots.bg).toBe("Клетки за заклинания");
+  it("the spell slots heading is the same text everywhere in bg ('Spell Slots', as in the BG export)", () => {
+    expect(bg.sheet.spells.slotsTitle).toBe("Spell Slots");
+    expect(glossary.spellSlots.bg).toBe("Spell Slots");
   });
 });
 

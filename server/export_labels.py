@@ -8,9 +8,8 @@ plural filter ``{n|one|many}``, see ``i18n.messages.format_template``); ``label(
 * English: the wording of the sources (2024 Player's Handbook first, SRD second); a rules term is the ``en`` of the
   term in ``i18n/glossary.json`` (a test pins the link for every term that has one), the rest is plain English.
 * Bulgarian: byte for byte what the exports printed before they were bilingual (the baseline test pins it), so a rules
-  term equals the glossary ``bg`` where the export used it. Two BG labels deliberately stay English as they were:
-  "Spell Slots" and "Pact Magic Slots" (the frontend writes "Клетки за заклинания"; changing the export means
-  regenerating tests/export_baseline.json on purpose).
+  term equals the glossary ``bg`` where the export used it. Two BG labels are English on purpose: "Spell Slots"
+  (also the glossary bg and the web UI since 2026-11-05) and "Pact Magic Slots".
 * Game terms the data supplies (class / species / feat / spell / item / skill / language names) are not labels: they
   stay English in both languages.
 

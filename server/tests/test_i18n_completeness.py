@@ -96,7 +96,11 @@ def test_every_glossary_term_has_english_and_bulgarian():
     assert len(data) >= 40
     for tid, term in data.items():
         assert term["en"].strip() and term["bg"].strip(), tid
-        assert not CYRILLIC.search(term["en"]) and CYRILLIC.search(term["bg"]), tid
+        assert not CYRILLIC.search(term["en"]), tid
+        if tid in glossary.BG_IS_ENGLISH:
+            assert term["bg"] == term["en"], tid  # owner decision 2026-11-05: the English term is the Bulgarian one
+        else:
+            assert CYRILLIC.search(term["bg"]), tid
 
 
 def test_the_frontend_glossary_holds_exactly_what_glossary_json_holds():
@@ -175,8 +179,6 @@ _RESISTANCE = ("glossary bg is 'Устойчивост'; this surface says 'съ
                "byte-identical rule keeps)")
 KNOWN_INCONSISTENCIES: dict[str, str] = {
     # exports (Bulgarian output is pinned byte for byte by tests/export_baseline.json)
-    "export:spellSlots:spellSlots": "BG export prints 'Spell Slots'; glossary and the frontend say 'Клетки за заклинания' "
-                                    "(XL hard constraint: BG export byte-identical; fix = two labels + WRITE_EXPORT_BASELINE=1)",
     "export:resistance:secResistances": _RESISTANCE + " (the heading 'Съпротиви и имунитети' also covers immunities)",
     "export:resistance:resAll": _RESISTANCE,
     "export:resistance:resSome": _RESISTANCE,

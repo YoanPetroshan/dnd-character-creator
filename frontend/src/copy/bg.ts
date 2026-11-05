@@ -234,7 +234,7 @@ export const bg = {
 
     spells: {
       title: "Заклинания",
-      slotsTitle: "Клетки за заклинания",
+      slotsTitle: "Spell Slots",
       slotsShared: "общи за всички класове",
       pactTitle: "Магия на договора",
       slotLine: (level: number, count: number) => `ниво ${level}: ${count}`,
