@@ -36,11 +36,20 @@ the card labels / descriptions the engine writes in that language (card ids, cou
 `/api/resolve` and the export gate, and Bulgarian for the Markdown / PDF file (the language the exports had before they
 were bilingual). Any other value is a 400. Details: `docs/API.md`.
 
+**Rules terms in Bulgarian carry the English term in brackets (T1, owner decision 2026-11-05).** Wherever a Bulgarian rules
+term is used as a term (web UI, server messages, export labels, glossary) it is followed by the English term: `Талант (Feat)`,
+`Устойчивост (Resistance)`, `кратка почивка (Short Rest)`, `Клас броня (Armor Class, AC)`. Verbs and connecting words have no
+brackets (`вече се владее`, `изричам`) and inside one message the brackets stand at the first occurrence of a term. Where the
+decision is to keep the English word (`Spell Slots`, `Fighting Style`, `Metamagic`, `Maneuvers`, `Eldritch Invocation`, `Mystic
+Arcanum`) the term stays English with no brackets. The English UI, exports and messages are unchanged. The English terms that may
+stand in brackets are the list in `server/i18n/bracket_terms.py` (the same list is in `frontend/src/copy/bg.ts`'s guard,
+`copyGuards.test.ts`); a new term needs an entry there, in the glossary and in the 29-row table `server/i18n/terms_table.py`.
+
 **Where to add things.**
 
 | To add | Where |
 |---|---|
-| a rules term (Armor Class, Short Rest ...) | `server/i18n/glossary.json` (`en`, `bg`, a citation), then regenerate with `cd server && ../.venv/bin/python -m i18n.glossary` (writes `docs/GLOSSARY.md` and `frontend/src/copy/glossary.gen.ts`) |
+| a rules term (Armor Class, Short Rest ...) | `server/i18n/glossary.json` (`en`, `bg` = the Bulgarian term followed by the English term in brackets, a citation), then regenerate with `cd server && ../.venv/bin/python -m i18n.glossary` (writes `docs/GLOSSARY.md` and `frontend/src/copy/glossary.gen.ts`) |
 | a text the server writes (problem, warning, pruned reason, disabled reason, card label / description) | a key with `en` and `bg` in `server/i18n/catalog/{problems,warnings,pruned,disabled,labels}.py`, emitted with `msg("<key>", **params)` (never an f-string) |
 | an export label | `server/export_labels.py`, the same key in both `_BG` and `_EN` |
 | a web UI text | the same key in `frontend/src/copy/bg.ts` and `en.ts` (`en.ts` is typed as `Copy`, so a missing key fails `npm run build`); rules terms in `en.ts` read `g.<term>.en` from the glossary |
@@ -48,8 +57,7 @@ were bilingual). Any other value is a 400. Details: `docs/API.md`.
 
 `server/tests/test_i18n_completeness.py` checks all of these layers against each other (both languages complete, glossary
 and copy in step, no plain English left in `?lang=bg` output). `docs/I18N-REVIEW.md` lists the wordings the project owner
-should confirm. `docs/TERMS-PROPOSAL.md` (generated) is a proposal table of the
-rules terms that are inconsistent or could be English or Bulgarian; it changes nothing by itself. The overview with the test map and the known English leftovers is the "i18n" section of
+should confirm. `docs/TERMS-PROPOSAL.md` (generated) records the owner's decision on the 29 rules terms (T1, 2026-11-05). The overview with the test map and the known English leftovers is the "i18n" section of
 `docs/superpowers/specs/ARCHITECTURE-CURRENT-STATE.md`.
 
 **Random names.** The dice button next to the character name on Home fills in a random Bulgarian name (first name and a
