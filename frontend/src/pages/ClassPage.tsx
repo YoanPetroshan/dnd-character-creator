@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { apiFetch } from "../api/transport";
 import { StepProblems } from "../components/StepProblems";
 import { MAX_TOTAL_LEVEL, totalLevel, useDraft } from "../DraftContext";
 import { useT } from "../LanguageContext";
@@ -47,7 +48,7 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
     if (sourcesKey) params.set("sources", sourcesKey);
     if (selectedSubclassId) params.set("include", selectedSubclassId);
     const query = params.toString();
-    fetch(`/api/catalog/class/${classId}${query ? `?${query}` : ""}`)
+    apiFetch(`/api/catalog/class/${classId}${query ? `?${query}` : ""}`)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();

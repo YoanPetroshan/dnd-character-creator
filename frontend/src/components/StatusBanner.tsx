@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { useEngineStatus } from "../api/useEngineStatus";
 import { useDraft } from "../DraftContext";
 import { useT } from "../LanguageContext";
 import { renderMsg } from "../logic/messages";
@@ -15,9 +16,15 @@ export function StatusBanner() {
   const { notices, storageFailed, dismissNotice, unsavedRaw } = useDraft();
   const { resolution, error, retry } = useResolutionContext();
   const health = useServerHealth();
+  const engine = useEngineStatus();
   const prunedCount = resolution?.pruned.length ?? 0;
   return (
     <>
+      {engine.engine === "starting" && (
+        <p className="status-banner" role="status" data-state="engine-starting">
+          {t.status.engineStarting}
+        </p>
+      )}
       {error && (
         <p className="status-banner" role="alert" data-state="error">
           {t.status.calcError(renderMsg(t, error))}

@@ -335,6 +335,7 @@ export const bg = {
       "Черновата не може да се запази в браузъра (пълно или забранено хранилище). Изтегли я от Home като файл, за да не я загубиш.",
     pruned: (n: number) => `Отпаднали избори: ${n}.`,
     serverOlder: "Сървърът е по-стара версия от приложението и може да не разпознае всички данни на героя. Обнови сървъра.",
+    engineStarting: "Стартира се двигателят на приложението… Първото стартиране може да отнеме няколко секунди.",
     seeInHome: "Виж в Home",
   },
 
@@ -610,6 +611,7 @@ export const bg = {
     stealthDisadvantage: "armor: disadvantage on Stealth",
     pendingEquipment: (n: number) => `Не всички избори за екипировка са направени (${n}) — това не блокира експорта.`,
     ready: "Всичко е готово за експорт.",
+    preparingPdf: "Подготвя се PDF… Първото подготвяне може да отнеме няколко секунди.",
     downloading: "Изтегляне…",
     download: (format: string) => `Изтегли ${format}`,
     missing: { class: "Избери клас.", species: "Избери species.", background: "Избери background." },

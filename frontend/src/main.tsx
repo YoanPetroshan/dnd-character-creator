@@ -2,12 +2,16 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
+import { startEngine } from "./api/transport";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { DraftProvider } from "./DraftContext";
 import { LanguageProvider } from "./LanguageContext";
 import { LibraryProvider } from "./LibraryContext";
 import "./index.css";
 import "./print.css";
+
+// Start the in-browser engine (if this build uses it) while the first screen is drawn.
+startEngine();
 
 const rootElement = document.getElementById("root");
 if (!rootElement) throw new Error("#root element not found");

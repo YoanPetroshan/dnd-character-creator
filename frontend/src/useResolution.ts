@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { apiFetch, isTimeoutError } from "./api/transport";
 import { useLang } from "./LanguageContext";
 import { withLang } from "./logic/langQuery";
 import type { Draft, Resolution } from "./types";
@@ -26,19 +27,16 @@ export function useResolution(draft: Draft): ResolutionState & { retry: () => vo
 
   useEffect(() => {
     const controller = new AbortController();
-    let timedOut = false;
-    const timeout = setTimeout(() => {
-      timedOut = true;
-      controller.abort();
-    }, REQUEST_TIMEOUT_MS);
     const timer = setTimeout(() => {
       const id = ++requestId.current;
       setState((s) => ({ ...s, loading: true, error: null }));
-      fetch(withLang("/api/resolve", lang), {
+      apiFetch(withLang("/api/resolve", lang), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(draft),
         signal: controller.signal,
+        // counted from the moment the request is sent (with the in-browser engine: after it has booted)
+        timeoutMs: REQUEST_TIMEOUT_MS,
       })
         .then(async (resp) => {
           if (!resp.ok) {
@@ -59,9 +57,9 @@ export function useResolution(draft: Draft): ResolutionState & { retry: () => vo
         .catch((err: unknown) => {
           if (id !== requestId.current) return;
           // A superseded request is aborted by the cleanup below; only a
-          // timeout abort reaches here with the current id still set.
+          // timeout reaches here with the current id still set.
           let message: Msg;
-          if (timedOut) message = msg("net.timeout");
+          if (isTimeoutError(err)) message = msg("net.timeout");
           else if (err instanceof TypeError) message = msg("net.offline");
           else message = toMsg(err);
           // keep the last good resolution: only the error line changes
@@ -71,7 +69,6 @@ export function useResolution(draft: Draft): ResolutionState & { retry: () => vo
 
     return () => {
       clearTimeout(timer);
-      clearTimeout(timeout);
       controller.abort();
       // an aborted in-flight request must not leave a stuck "loading"
       requestId.current++;

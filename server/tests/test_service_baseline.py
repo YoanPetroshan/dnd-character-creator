@@ -52,11 +52,22 @@ def send(client, method, url, body, ctype):
     return client.open(url, **kwargs)
 
 
+# GET /api is answered by Flask's SPA catch-all with frontend/dist/index.html, whose bytes change with every frontend
+# build (content-hashed asset names). The baseline pins the index.html of the O0 build, kept here, so a frontend change
+# does not move this test: it serves that fixed file instead of the live dist.
+SPA_FIXTURE = pathlib.Path(__file__).with_name("spa_dist")
+
+
 @pytest.fixture(scope="module")
 def client():
     app.config["TESTING"] = True
-    with app.test_client() as c:
-        yield c
+    before = app.config.get("FRONTEND_DIST")
+    app.config["FRONTEND_DIST"] = str(SPA_FIXTURE)
+    try:
+        with app.test_client() as c:
+            yield c
+    finally:
+        app.config["FRONTEND_DIST"] = before
 
 
 def _current(client) -> dict:

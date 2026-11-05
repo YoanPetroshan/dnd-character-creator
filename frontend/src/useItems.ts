@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { apiFetch } from "./api/transport";
 import { MsgError, msg, toMsg, type Msg } from "./logic/messages";
 
 export interface CatalogItem {
@@ -37,7 +38,7 @@ export function useItems(
       if (query) params.set("q", query);
       if (ruleset !== "mixed") params.set("ruleset", ruleset);
       if (sourcesKey) params.set("sources", sourcesKey);
-      fetch(`/api/items?${params.toString()}`)
+      apiFetch(`/api/items?${params.toString()}`)
         .then((resp) => {
           if (!resp.ok) throw new MsgError(msg("items.failed", { status: resp.status }));
           return resp.json() as Promise<{ items: CatalogItem[] }>;

@@ -331,6 +331,7 @@ export const en: Copy = {
       "The draft cannot be saved in the browser (storage is full or blocked). Download it from Home as a file so you do not lose it.",
     pruned: (n: number) => `Dropped choices: ${n}.`,
     serverOlder: "The server is an older version than the app and may not understand all of the character's data. Update the server.",
+    engineStarting: "Starting the app engine… The first start can take a few seconds.",
     seeInHome: "See in Home",
   },
 
@@ -501,6 +502,7 @@ export const en: Copy = {
     stealthDisadvantage: "armor: disadvantage on Stealth",
     pendingEquipment: (n: number) => `Not all equipment choices have been made (${n}) — this does not block the export.`,
     ready: "Everything is ready for export.",
+    preparingPdf: "Preparing the PDF… The first time can take a few seconds.",
     downloading: "Downloading…",
     download: (format: string) => `Download ${format}`,
     missing: { class: "Choose a class.", species: "Choose a species.", background: "Choose a background." },

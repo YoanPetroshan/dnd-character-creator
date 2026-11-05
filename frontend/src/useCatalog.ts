@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { apiFetch } from "./api/transport";
 import { MsgError, msg, toMsg, type Msg } from "./logic/messages";
 
 export interface CatalogClass {
@@ -59,7 +60,7 @@ const EMPTY_STATE: CatalogState = {
 };
 
 async function fetchCatalog(query: string): Promise<CatalogData> {
-  const resp = await fetch(`/api/catalog${query}`);
+  const resp = await apiFetch(`/api/catalog${query}`);
   if (!resp.ok) throw new MsgError(msg("catalog.failed", { status: resp.status }));
   return (await resp.json()) as CatalogData;
 }

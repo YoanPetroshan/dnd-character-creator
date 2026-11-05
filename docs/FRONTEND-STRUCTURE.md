@@ -29,7 +29,7 @@ Theme switch: override tokens on `:root[data-theme="..."]` (nothing sets `data-t
 - `data-state` = the UI state of an element, one value per element:
   - choice card: `expanded | collapsed`
   - option row in a picker: `available | disabled | hidden-by-filters`
-  - status banner: `error | notice | storage-failed | server-older | pruned`
+  - status banner: `error | notice | storage-failed | server-older | pruned | engine-starting`
   - pruned-selection list item (Home): `pruned`
   - export button: `ready | busy | disabled`; export error line: `error`
   - language button: `active | inactive`
@@ -50,6 +50,7 @@ Presentational components take props only; logic components read contexts (`useD
 | Spells | `SpellLibrary` | cantrip / known / detail browser | spell lists from `useSpells` |
 | Sheet (presentational) | `components/sheet/*` (`SheetView` composes the 23 sections, each in a `SectionFrame` with `data-section`) | read-only character sheet | the resolution's `sheet` / `derived` |
 | Random name | `names/bgNames.ts`, `logic/randomName.ts`, `logic/translit.ts`; button `.name-dice` on Home (`type="button"`, `aria-label` from `t.home.randomName`, 44 px in `touch.css`, no state attribute) | name data and generation are not UI text and not in the catalog | |
+| API transport | `api/transport.ts` (`apiFetch`, selection), `api/workerTransport.ts` (Response mapping, timeout, abort), `api/engineCore.ts` / `engineHost.ts` (Pyodide + message loop), `engine.worker.ts`, `api/useEngineStatus.ts` | every `/api` call of the app goes through `apiFetch` (fetch's signature); in the offline build the in-browser engine answers | `ApiInit` = `RequestInit` + `timeoutMs` |
 | Copy | `copy/bg.ts`, `copy/en.ts` | all UI text; nothing in a component is hard-coded | |
 
 ## States a designer must cover
@@ -65,3 +66,4 @@ Presentational components take props only; logic components read contexts (`useD
 | pruned | Home list of dropped selections `data-state="pruned"`; the status banner `data-state="pruned"` |
 | new | choice card `data-new="true"` + `.choice-card__new` text marker; header link `.new-choices` ("Нови избори: N") |
 | loading / error | headings show an ellipsis while resolving; `StatusBanner` `data-state="error"` |
+| engine starting | offline build only: `StatusBanner` `data-state="engine-starting"` (a `<p class="status-banner" role="status">`, no design) while the in-browser engine boots; gone when it is ready |

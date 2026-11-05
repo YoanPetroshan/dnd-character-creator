@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { apiFetch } from "../api/transport";
 import { useDraft } from "../DraftContext";
 import { useResolutionContext } from "../ResolutionContext";
 import { httpErrorMessage } from "../httpErrors";
@@ -40,7 +41,7 @@ export function ExportPage() {
     setExportingFormat(format);
     setExportError(null);
     try {
-      const resp = await fetch(withLang(config.endpoint, lang), {
+      const resp = await apiFetch(withLang(config.endpoint, lang), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(draft),

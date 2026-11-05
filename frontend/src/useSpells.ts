@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { apiFetch } from "./api/transport";
 import { MsgError, msg, toMsg, type Msg } from "./logic/messages";
 
 export interface CatalogSpell {
@@ -28,7 +29,7 @@ export interface SpellDetail extends CatalogSpell {
 }
 
 export async function fetchSpellDetail(id: string, signal?: AbortSignal): Promise<SpellDetail> {
-  const resp = await fetch(`/api/spells/${encodeURIComponent(id)}`, { signal });
+  const resp = await apiFetch(`/api/spells/${encodeURIComponent(id)}`, { signal });
   if (!resp.ok) throw new MsgError(msg("spell.failed", { status: resp.status }));
   return (await resp.json()) as SpellDetail;
 }
@@ -67,7 +68,7 @@ export function useSpells(
       if (query) params.set("q", query);
       if (ruleset !== "mixed") params.set("ruleset", ruleset);
       if (sourcesKey) params.set("sources", sourcesKey);
-      fetch(`/api/spells?${params.toString()}`)
+      apiFetch(`/api/spells?${params.toString()}`)
         .then((resp) => {
           if (!resp.ok) throw new MsgError(msg("spells.failed", { status: resp.status }));
           return resp.json() as Promise<{ spells: CatalogSpell[] }>;
