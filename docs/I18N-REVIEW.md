@@ -92,5 +92,23 @@ How to read it: **Key** says where the text lives (kind and name), **EN** and **
 | 60 | `name:Кераца` | Keratsa | Кераца | Tagged christian (included by default): a folk form of a Greek root. (N1) | |
 | 61 | `name:Гергана` | Gergana | Гергана | Tagged christian (included by default): a folk form of a Greek root. (N1) | |
 | 62 | `name:Тонка` | Tonka | Тонка | Tagged christian (included by default): a folk form of a Greek root. (N1) | |
+| 63 | `name:Богомил` | Bogomil | Богомил | N2 doubtful, accepted by the owner: contains 'Бог' but is not a Biblical name of God. (N2) | |
+| 64 | `name:Божидар` | Bozhidar | Божидар | N2 doubtful, accepted by the owner: contains 'Бог' (gift of God), not a name of God. (N2) | |
+| 65 | `name:Богоров` | Bogorov | Богоров | N2 doubtful, accepted by the owner: Revival surname (Ivan Bogorov) containing 'Бог'. (N2) | |
+| 66 | `name:Спас` | Spas | Спас | N2 doubtful, accepted by the owner: from 'спасение', could read as religious (Saviour). Спасов is the surname. (N2) | |
+| 67 | `name:Анастас` | Anastas | Анастас | N2 doubtful, accepted by the owner: 'resurrection', possible Christ association. (N2) | |
+| 68 | `name:Ильо` | Ilyo | Ильо | N2 doubtful, accepted by the owner: from Илия (Hebrew 'Yahweh is my God'); Илиев is the surname. (N2) | |
+| 69 | `name:Ангел` | Angel | Ангел | N2 doubtful, accepted by the owner: haiduk voivoda name, borderline religious. (N2) | |
+| 70 | `name:Чавдар` | Chavdar | Чавдар | N2 doubtful, accepted by the owner: haiduk voivoda; etymology disputed (Turkic 'rye'?). Чавдаров is the surname. (N2) | |
+| 71 | `name:Заманов` | Zamanov | Заманов | N2 doubtful, accepted by the owner: root 'zaman' is Turkish 'time'. (N2) | |
+| 72 | `name:Боримечка` | Borimechka | Боримечка | N2 doubtful, accepted by the owner: a jocular nickname (Под игото); the female form is the same word. (N2) | |
+| 73 | `name:Кралич` | Kralich | Кралич | N2 doubtful, accepted by the owner: pseudonym; the female form is the same word. (N2) | |
+| 74 | `name:Попович` | Popovich | Попович | N2 doubtful, accepted by the owner: -ич surname; the female form is the same word. (N2) | |
+| 75 | `name:Берон` | Beron | Берон | N2 doubtful, accepted by the owner: Petar Beron; the female form is the same word (disputed). (N2) | |
+| 76 | `name:Какалов` | Kakalov | Какалов | N2 doubtful, accepted by the owner: sounds like 'кака' in Bulgarian. (N2) | |
+| 77 | `name:Живков` | Zhivkov | Живков | N2 doubtful, accepted by the owner: politically loaded (Todor Zhivkov). (N2) | |
+| 78 | `name:Смирненски` | Smirnenski | Смирненски | N2 doubtful, accepted by the owner: pen name from Smyrna (a Greek town); Смирненска is the female form. (N2) | |
+| 79 | `name:Гроздан` | Grozdan | Гроздан | N2 doubtful, accepted by the owner. (N2) | |
+| 80 | `name:Нечо` | Necho | Нечо | N2 doubtful, accepted by the owner: from memory (0.6), not verified online. (N2) | |
 
-62 rows. Slices: I0 glossary, I2-I5 server messages, XL exports, SK6-BI web UI texts, N1 names, C1 the consistency audit (`server/tests/test_i18n_completeness.py`, `KNOWN_INCONSISTENCIES`).
+80 rows. Slices: I0 glossary, I2-I5 server messages, XL exports, SK6-BI web UI texts, N1 names, C1 the consistency audit (`server/tests/test_i18n_completeness.py`, `KNOWN_INCONSISTENCIES`).

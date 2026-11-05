@@ -55,7 +55,7 @@ rules terms that are inconsistent or could be English or Bulgarian; it changes n
 **Random names.** The dice button next to the character name on Home fills in a random Bulgarian name (first name and a
 surname of the same gender) in Bulgarian, and its official Latin transliteration in English (for example
 "Драгана Вутова" / "Dragana Vutova"). The name lists are in `frontend/src/names/bgNames.ts` (each name carries an origin tag; the
-`christian` origin is included by default through `DEFAULT_ORIGINS`; no name or title of God or Christ, such as Христо, is in any list), the transliteration in `frontend/src/logic/translit.ts`.
+every origin (bulgar, slavic, dynastic, christian, folklore, revival, literary) is included by default through `DEFAULT_ORIGINS`: 118 male and 103 female first names, 155 surnames; no name or title of God or Christ, such as Христо, is in any list), the transliteration in `frontend/src/logic/translit.ts`.
 
 ## Setup
 

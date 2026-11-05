@@ -101,6 +101,25 @@ FLAGS: list[tuple[str, str, str, str]] = [
     ("name", "Кераца", "N1", "Tagged christian (included by default): a folk form of a Greek root."),
     ("name", "Гергана", "N1", "Tagged christian (included by default): a folk form of a Greek root."),
     ("name", "Тонка", "N1", "Tagged christian (included by default): a folk form of a Greek root."),
+    # ---- random names (N2: owner added all research candidates; only the doubtful ones are listed) -----------------------
+    ("name", "Богомил", "N2", "N2 doubtful, accepted by the owner: contains 'Бог' but is not a Biblical name of God."),
+    ("name", "Божидар", "N2", "N2 doubtful, accepted by the owner: contains 'Бог' (gift of God), not a name of God."),
+    ("name", "Богоров", "N2", "N2 doubtful, accepted by the owner: Revival surname (Ivan Bogorov) containing 'Бог'."),
+    ("name", "Спас", "N2", "N2 doubtful, accepted by the owner: from 'спасение', could read as religious (Saviour). Спасов is the surname."),
+    ("name", "Анастас", "N2", "N2 doubtful, accepted by the owner: 'resurrection', possible Christ association."),
+    ("name", "Ильо", "N2", "N2 doubtful, accepted by the owner: from Илия (Hebrew 'Yahweh is my God'); Илиев is the surname."),
+    ("name", "Ангел", "N2", "N2 doubtful, accepted by the owner: haiduk voivoda name, borderline religious."),
+    ("name", "Чавдар", "N2", "N2 doubtful, accepted by the owner: haiduk voivoda; etymology disputed (Turkic 'rye'?). Чавдаров is the surname."),
+    ("name", "Заманов", "N2", "N2 doubtful, accepted by the owner: root 'zaman' is Turkish 'time'."),
+    ("name", "Боримечка", "N2", "N2 doubtful, accepted by the owner: a jocular nickname (Под игото); the female form is the same word."),
+    ("name", "Кралич", "N2", "N2 doubtful, accepted by the owner: pseudonym; the female form is the same word."),
+    ("name", "Попович", "N2", "N2 doubtful, accepted by the owner: -ич surname; the female form is the same word."),
+    ("name", "Берон", "N2", "N2 doubtful, accepted by the owner: Petar Beron; the female form is the same word (disputed)."),
+    ("name", "Какалов", "N2", "N2 doubtful, accepted by the owner: sounds like 'кака' in Bulgarian."),
+    ("name", "Живков", "N2", "N2 doubtful, accepted by the owner: politically loaded (Todor Zhivkov)."),
+    ("name", "Смирненски", "N2", "N2 doubtful, accepted by the owner: pen name from Smyrna (a Greek town); Смирненска is the female form."),
+    ("name", "Гроздан", "N2", "N2 doubtful, accepted by the owner."),
+    ("name", "Нечо", "N2", "N2 doubtful, accepted by the owner: from memory (0.6), not verified online."),
 ]
 
 # Official streamlined transliteration of the flagged names (what the English dice button prints).
@@ -108,6 +127,7 @@ TRANSLITERATION: dict[str, str] = {
     "Пресиан": "Presian", "Ивайло": "Ivaylo", "Борил": "Boril", "Асен": "Asen", "Шишман": "Shishman", "Гостун": "Gostun",
     "Умор": "Umor", "Левски": "Levski", "Райна": "Rayna", "Калина": "Kalina", "Румяна": "Rumyana", "Калоян": "Kaloyan",
     "Кънчев": "Kanchev", "Кераца": "Keratsa", "Гергана": "Gergana", "Тонка": "Tonka",
+    "Богомил": "Bogomil", "Божидар": "Bozhidar", "Богоров": "Bogorov", "Спас": "Spas", "Анастас": "Anastas", "Ильо": "Ilyo", "Ангел": "Angel", "Чавдар": "Chavdar", "Заманов": "Zamanov", "Боримечка": "Borimechka", "Кралич": "Kralich", "Попович": "Popovich", "Берон": "Beron", "Какалов": "Kakalov", "Живков": "Zhivkov", "Смирненски": "Smirnenski", "Гроздан": "Grozdan", "Нечо": "Necho",
 }
 
 KINDS = ("glossary", "export", "msg", "copy", "name")
