@@ -56,6 +56,8 @@ EXPORT_OMITTED: dict[str, str] = {
     "sheet.equipment.slots.current.shield": "implied: the shield in use follows the '(екипиран)' tag and the 'Носено' line, which print when set",
     "sheet.weaponMasteries.[].itemId": _ID,
     "sheet.innateSpells.[].spellId": _ID, "sheet.innateSpells.[].featId": _ID,
+    "sheet.innateSpells.[].usesMax": "implied: G6, the printed `uses` text ('1/day', '3/long rest') states the same count",
+    "sheet.innateSpells.[].recharge": "implied: G6, the printed `uses` text names the same rest ('/day', '/long rest')",
     "sheet.spells.[].cantrips.[].id": _ID, "sheet.spells.[].known.[].id": _ID, "sheet.spells.[].spellbook.[].id": _ID,
     "sheet.spells.[].mysticArcanum.[].id": _ID, "sheet.spells.[].pactOfTheTome.[].id": _ID,
     "sheet.spells.[].spellMastery.[].id": _ID, "sheet.spells.[].signatureSpells.[].id": _ID,

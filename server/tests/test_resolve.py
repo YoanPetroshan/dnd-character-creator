@@ -922,6 +922,7 @@ def test_race_innate_spells_resolve_against_the_bundled_srd_catalog(catalog):
     assert grants["Lesser Restoration"] == {
         "spellId": "lesser-restoration", "name": "Lesser Restoration",
         "level": 3, "uses": "1/day", "ability": "CHA", "variant": None,
+        "usesMax": 1, "recharge": "long",  # G6: additive, parsed from the uses text
     }
     assert grants["Daylight"]["spellId"] == "daylight"
     assert grants["Daylight"]["level"] == 5
@@ -4586,6 +4587,7 @@ def test_asi_feat_innate_spell_inherit_ability(catalog):
     assert {
         "spellId": "detect-thoughts", "name": "Detect Thoughts", "level": None, "uses": "1/day",
         "ability": {"choose": ["INT", "WIS", "CHA"]}, "variant": None, "featId": "telepathic-xphb",
+        "usesMax": 1, "recharge": "long",  # G6
     } in r["sheet"]["innateSpells"]
     fc["class:fighter:4:asi:feat:telepathic-xphb:ability-bonus"] = ["wis"]
     r2 = resolve(draft, catalog)

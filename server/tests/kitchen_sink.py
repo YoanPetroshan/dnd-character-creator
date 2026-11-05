@@ -124,6 +124,9 @@ KITCHEN_SINK: dict[str, dict] = {
             "opt-fire-rune-tce", "opt-stone-rune-tce", "opt-frost-rune-tce", "opt-hill-rune-tce", "opt-storm-rune-tce"]}),
     "genie-warlock14-2014": _sub("warlock", 14, "2014", sub="genie-tce", marks=("classes",), once=True),
     "war-wizard6-2014": _sub("wizard", 6, "2014", sub="war-xge", marks=("classes",), once=True),
+    # G6: the PHB Tiefling (Thaumaturgy at will from `known`, Hellish Rebuke 1/day, Darkness 1/day) with usesMax / recharge
+    # on the limited entries; non-2024, `once` because a "srd" source filter hides the PHB species
+    "tiefling-phb5-2014": _sub("wizard", 5, "2014", marks=("classes", "official"), once=True, origin=("tiefling-phb", "acolyte")),
     # G3: Cleric 6 (Life) + Paladin 3 (Devotion) under 2014: one merged Channel Divinity (PHB 164) whose note keeps both
     # classes' options; non-2024, so part of the golden via --append
     "cleric6-paladin3-2014": {**_sub("cleric", 6, "2014", marks=("classes",)),

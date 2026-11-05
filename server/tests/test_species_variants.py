@@ -54,7 +54,7 @@ def test_elf_xphb_variants(catalog):
     wood = variants[2]
     assert wood["speed"] == 35 and variants[0]["speed"] is None
     assert variants[0]["darkvision"] == 120
-    assert sorted(s["name"] for s in variants[0]["innate_spells"]) == ["Darkness", "Faerie Fire"]
+    assert sorted(s["name"] for s in variants[0]["innate_spells"]) == ["Dancing Lights", "Darkness", "Faerie Fire"]  # G6: + the `known` cantrip
 
 
 def test_tiefling_xphb_variants_carry_resistance_and_spells(catalog):
@@ -103,7 +103,7 @@ def test_unpicked_lineage_is_pending_and_grants_no_lineage_spells(catalog):
 
 def test_drow_lineage_grants_only_its_spells_and_darkvision(catalog):
     res = _run(catalog, "elf-xphb", {"species:elf-xphb:variant": ["drow-lineage"]})
-    assert _spell_names(res) == ["Darkness", "Faerie Fire"]
+    assert _spell_names(res) == ["Dancing Lights", "Darkness", "Faerie Fire"]  # G6: Dancing Lights is the lineage's `known` cantrip
     assert res["sheet"]["species"]["variant"] == {"id": "drow-lineage", "name": "Drow Lineage"}
     assert res["sheet"]["senses"]["darkvision"] == 120
     assert _choice(res, "species:elf-xphb:variant")["status"] == "resolved"
@@ -112,7 +112,7 @@ def test_drow_lineage_grants_only_its_spells_and_darkvision(catalog):
 def test_wood_elf_lineage_raises_speed(catalog):
     res = _run(catalog, "elf-xphb", {"species:elf-xphb:variant": ["wood-elf-lineage"]})
     assert res["derived"]["speed"] == 35 and res["derived"]["speeds"] == {"walk": 35}
-    assert _spell_names(res) == ["Longstrider", "Pass Without Trace"]
+    assert _spell_names(res) == ["Druidcraft", "Longstrider", "Pass Without Trace"]  # G6: Druidcraft is the lineage's `known` cantrip
     assert res["sheet"]["senses"]["darkvision"] == 60
 
 
@@ -120,7 +120,7 @@ def test_tiefling_legacy_replaces_the_resistance_choice(catalog):
     res = _run(catalog, "tiefling-xphb", {"species:tiefling-xphb:variant": ["infernal-legacy"]})
     assert _choice(res, "species:tiefling-xphb:resistance") is None  # the legacy decides it
     assert res["sheet"]["damageModifiers"]["resistances"] == ["fire"]
-    assert _spell_names(res) == ["Darkness", "Hellish Rebuke"]
+    assert _spell_names(res) == ["Darkness", "Fire Bolt", "Hellish Rebuke", "Thaumaturgy"]  # G6: + the legacy's `known` cantrips
 
 
 def test_dragonborn_colour_sets_the_resistance(catalog):

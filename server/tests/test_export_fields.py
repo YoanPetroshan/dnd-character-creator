@@ -206,6 +206,8 @@ _EXPECT = {
                       "feature_choice": "Horde Breaker"},
     # G2: Sorcerer 17 under 2014, a Metamagic pick on each card (Twinned Spell "spell level", the TCE Seeking / Transmuted)
     "sorcerer17-metamagic-2014": {"resources": ["Sorcery Points"], "feature_choice": "Twinned Spell"},
+    # G6: PHB Tiefling 5, three innate spells (Thaumaturgy at will, Hellish Rebuke and Darkness 1/day)
+    "tiefling-phb5-2014": {"innate": True},
     # G4: the discipline ki costs, the runes as resources, Limited Wish (recharge other) and Power Surge (INT pool)
     "four-elements17-2014": {"resources": ["Ki", "Disciple of the Elements"], "feature_choice": "Fist of Four Thunders"},
     "rune-knight15-2014": {"resources": ["Rune Carver", "Rune Carver: Fire Rune", "Rune Carver: Stone Rune"], "feature_choice": "Fire Rune"},

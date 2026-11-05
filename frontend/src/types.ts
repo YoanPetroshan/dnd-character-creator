@@ -182,6 +182,10 @@ export interface SheetInnateSpell {
   name: string;
   level: number | null;
   uses: string;
+  /** G6: the number of casts when the `uses` text states a count and a rest ("1/day", "3/long rest"); absent for "at-will", "prepared" ... */
+  usesMax?: number;
+  /** G6: the rest that restores the casts (same values as a class resource); present together with `usesMax`. */
+  recharge?: "long" | "short" | "short-or-long";
   ability: Ability | null;
   variant: string | null;
   /** Origin label, e.g. "Eldritch Invocation". */

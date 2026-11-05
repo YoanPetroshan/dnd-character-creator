@@ -125,7 +125,7 @@ def test_sheet_omitted_entries_have_a_known_category_and_a_reason():
     cats = Counter(r.split(":")[0] for r in SHEET_OMITTED.values())
     assert set(cats) <= {"id", "dup", "ui", "flag"}, cats
     assert all(": " in r and len(r.split(": ", 1)[1]) > 10 for r in SHEET_OMITTED.values())
-    assert len(SHEET_OMITTED) <= 16, "keep the omitted table small"  # G4: 14 -> 16 (two dups)
+    assert len(SHEET_OMITTED) <= 16, "keep the omitted table small"  # G4: 14 -> 16 (two dups); G6 listed its two in EXPORT_OMITTED instead
 
 
 def test_coverage_sections_are_the_typescript_section_keys():

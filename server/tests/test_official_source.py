@@ -533,7 +533,8 @@ def test_innate_spells_multi_entry_race_tags_each_grant_with_its_variant_name():
     variants = {g["variant"] for g in tiefling_xphb["innate_spells"]}
     assert variants == {"Abyssal", "Chthonic", "Infernal"}
     abyssal_grants = [g["name"] for g in tiefling_xphb["innate_spells"] if g["variant"] == "Abyssal"]
-    assert sorted(abyssal_grants) == ["Hold Person", "Ray Of Sickness"]
+    # G6: the legacy's `known` cantrips (Thaumaturgy + Poison Spray) are granted too, at will
+    assert sorted(abyssal_grants) == ["Hold Person", "Poison Spray", "Ray Of Sickness", "Thaumaturgy"]
 
 
 def test_a_race_with_no_additional_spells_gets_an_empty_innate_spells_list():

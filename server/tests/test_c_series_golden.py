@@ -1029,6 +1029,24 @@ def test_g4_no_rebaseline_and_the_four_sinks_hold_the_new_resources():
     assert seen == sinks
 
 
+def test_g6_no_rebaseline_and_only_the_tiefling_sink_holds_a_limited_innate_spell():
+    """G6: no stored case moved (the only innate spells in the first 261 golden cases are the Warlock invocations' "at-will" ones,
+    which get neither new field), so there is no REBASELINES entry; the PHB Tiefling 5 sink was appended instead. Every
+    innate entry is additive: `usesMax` and `recharge` appear together, only on a "N/day" or "N/<rest>" text."""
+    assert "G6" not in REBASELINES
+    for n, entry in _GOLDEN.items():
+        innate = entry["result"]["sheet"].get("innateSpells") or []
+        for e in innate:
+            assert ("usesMax" in e) == ("recharge" in e) == (e["uses"] not in ("at-will",)), (n, e)
+        limited = [e["name"] for e in innate if "usesMax" in e]
+        if n.rsplit("/", 1)[-1] == "tiefling-phb5-2014":
+            assert [e["name"] for e in innate] == ["Thaumaturgy", "Hellish Rebuke", "Darkness"], n
+            assert limited == ["Hellish Rebuke", "Darkness"], n
+            assert all(e["usesMax"] == 1 and e["recharge"] == "long" for e in innate if "usesMax" in e), n
+        else:
+            assert not limited, n
+
+
 def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
     """Y2: the rebaseline touched only `options[*].source` (the allowlist); 218 of the first 254 cases hold a book option (the
     G2, G3 and G4 cases appended later hold one too: 225 of 261), the other 36 (level 1 / 3 cases without feat, spell or feature options) are byte-identical. Every stored source is a
@@ -1044,7 +1062,7 @@ def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
                     assert isinstance(o["source"], str) and o["source"], (name, card["id"], o["id"])
                     assert not o["id"].startswith("skill-") and card["source"]["kind"] != "equipment", (name, card["id"], o["id"])
         with_source += has
-    assert with_source == 225  # 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
+    assert with_source == 226  # the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
 
 
 if __name__ == "__main__":

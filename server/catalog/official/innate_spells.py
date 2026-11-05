@@ -98,6 +98,32 @@ def _innate_spell_ability(ability_raw) -> str | dict | None:
     return None
 
 
+def _known_cantrips(known, ability, variant) -> list[dict]:
+    """G6: the fixed cantrips of an `additionalSpells[].known` block ("known": {"1": ["thaumaturgy#c"]}, the PHB Tiefling's
+    Thaumaturgy, the Drow's Dancing Lights, the Aasimar's Light ...) as at-will innate grants, with the entry's ability and
+    variant tag. Only a plain string flagged "#c" (5etools' cantrip tag) is read; every other `known` shape is a different
+    mechanic and stays out: a spell without "#c" (Eladrin Misty Step, Mark of Warding Alarm / Mage Armor, Deep Gnome),
+    a `rest` / `choose` object (the High Elf's cantrip pick, Firbolg Hidden Step ...)."""
+    out: list[dict] = []
+    if not isinstance(known, dict):
+        return out
+    for level_key, names in known.items():
+        try:
+            level = int(level_key)
+        except (TypeError, ValueError):
+            continue
+        if not isinstance(names, list):
+            continue
+        for raw_name in names:
+            if not (isinstance(raw_name, str) and raw_name.endswith("#c")):
+                continue
+            clean = _clean_innate_spell_name(raw_name)
+            if clean:
+                out.append({"name": clean.title(), "spell_id": slug(clean), "level": level, "uses": "at-will",
+                            "ability": ability, "variant": variant})
+    return out
+
+
 def _innate_spells_from_5etools(race_raw: dict) -> list[dict]:
     """Converts 5etools' `additionalSpells` field into a flat list of
     innate-spell grants — ONLY the `innate` sub-key of each entry (this
@@ -142,11 +168,12 @@ def _innate_spells_from_5etools(race_raw: dict) -> list[dict]:
     for entry in race_raw.get("additionalSpells") or []:
         if not isinstance(entry, dict):
             continue
+        variant = entry.get("name") if isinstance(entry.get("name"), str) else None
+        ability = _innate_spell_ability(entry.get("ability"))
+        results.extend(_known_cantrips(entry.get("known"), ability, variant))  # G6
         innate = entry.get("innate")
         if not isinstance(innate, dict):
             continue
-        variant = entry.get("name") if isinstance(entry.get("name"), str) else None
-        ability = _innate_spell_ability(entry.get("ability"))
         for level_key, level_value in innate.items():
             try:
                 level = int(level_key)

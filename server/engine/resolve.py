@@ -69,7 +69,7 @@ from . import attacks as attacks_mod
 from . import class_choices_2024
 from . import subclass_options_2024
 from . import option_source as option_source_mod
-from . import subclass_innate_2024
+from . import innate_uses, subclass_innate_2024
 from . import subclass_spells_2024
 from . import class_resources as class_resources_mod
 from . import species_resources as species_resources_mod
@@ -645,7 +645,9 @@ def _species_innate_spells(race: dict | None, subrace: dict | None, catalog: Cat
     for effect in _srd_trait_effects(race, subrace):
         for entry in effect.get("innate_spells", []):
             innate.append(_innate_entry_to_sheet(entry, catalog))
-    return innate
+    # G6: the race and its subrace may both list the same at-will cantrip (Tiefling and its MTF subraces: Thaumaturgy); an
+    # identical entry adds nothing, so only the first is kept.
+    return [e for i, e in enumerate(innate) if e not in innate[:i]]
 
 
 def _species_trait_spell_choices(race: dict | None, subrace: dict | None, catalog: Catalog,
@@ -6744,6 +6746,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                      + [{**_innate_entry_to_sheet(e, catalog), "source": e["source_label"],  # RP18
                          **({"note": e["note"]} if e.get("note") else {})}
                         for e in subclass_innate_2024.innate_entries(catalog, resolved_classes, ruleset, modifiers)])
+    innate_spells = [innate_uses.with_limit(e) for e in innate_spells]  # G6: usesMax + recharge from the `uses` text
 
     refs_by_class = {
         rc["cls_id"]: _cumulative_feature_refs(catalog, rc["cls_id"], rc["subclass_id"], rc["level"])

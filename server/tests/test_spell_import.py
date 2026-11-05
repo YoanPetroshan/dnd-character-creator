@@ -100,10 +100,10 @@ VISIBLE = {"mixed": 557, "2014": 525, "2024": 557}  # unfiltered, per draft rule
 TWIN_PAIRS = 379  # spells printed in both a 2014 book (or the SRD) and a 2024 one
 NO_CLASS_DATA = 16  # EGW 15 + GGR Encode Thoughts: absent from sources.json
 ALIASES_TOTAL = 49  # 17 SRD renames + 32 bare slugs of 2024-only spells
-SRD_ONLY_UNRESOLVED_INNATE = {  # distinct innate spell ids no SRD spell matches (13)
+SRD_ONLY_UNRESOLVED_INNATE = {  # distinct innate spell ids no SRD spell matches (13; G6: + the `known` cantrips gust, shape-water, blade-ward = 16)
     "armor-of-agathys", "battle-familiar", "beast-sense", "crown-of-madness", "friends", "hex", "ice-knife",
     "ottos-irresistible-dance", "ray-of-sickness", "searing-smite", "tensers-floating-disk", "thunderclap",
-    "wall-of-water",
+    "wall-of-water", "gust", "shape-water", "blade-ward",
 }
 
 
@@ -306,7 +306,7 @@ def _innate_spell_ids(catalog):
 def test_unresolved_innate_spell_refs_go_from_13_to_1(catalog):
     ids = _innate_spell_ids(catalog)
     srd_ids = {k for k, v in catalog.spells.items() if v["source"] == "SRD"}
-    assert {i for i in ids if i not in srd_ids} == SRD_ONLY_UNRESOLVED_INNATE and len(SRD_ONLY_UNRESOLVED_INNATE) == 13
+    assert {i for i in ids if i not in srd_ids} == SRD_ONLY_UNRESOLVED_INNATE and len(SRD_ONLY_UNRESOLVED_INNATE) == 16
     assert {i for i in ids if catalog.resolve_spell_id(i) is None} == {"battle-familiar"}  # an Unearthed Arcana spell
 
 
