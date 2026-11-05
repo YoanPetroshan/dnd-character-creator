@@ -300,6 +300,21 @@ REBASELINES: dict[str, dict] = {
         ],
         "why": "2014 Hunter and Totem Warrior pick effects as note-only subclass resources (G1)",
     },
+    # G2: 2014 Metamagic costs (`details.metamagicCosts` + the 2024-shaped `details.metamagic` on sorcerer:sorcery-points) and
+    # the two TCE options the SRD list lacks (Seeking Spell, Transmuted Spell), offered by the three SRD Metamagic cards.
+    # Rule matrix: the golden's primary Sorcerer 3 / 11 / 20 (cards at level 3, 10, 17; the filler's first-option picks are
+    # already stored) and the multiclass Warlock 5 / Sorcerer 3 gain the two details keys (the picked options, so a
+    # level-3 Sorcerer gets two) and the two new options on each Metamagic card the class has. Sorcerer 1 has no card or
+    # points, the 2024 Sorcerer is untouched, no pick, count or draft may change. Paths: the added options at their roots
+    # and the two added details keys.
+    "G2": {
+        "cases": ["*/src-*/sorcerer3", "*/src-*/sorcerer11", "*/src-*/sorcerer20", "*/src-*/multi-warlock5-sorcerer3"],
+        "paths": [
+            r"^result\.choices\[class:sorcerer:(3|10|17):feature:metamagic-[123]\]\.options\[opt-(seeking|transmuted)-spell-tce\]$",
+            r"^result\.derived\.classResources\[sorcerer:sorcery-points\]\.details\.(metamagicCosts|metamagic)$",
+        ],
+        "why": "2014 Metamagic costs on Sorcery Points and the TCE Seeking / Transmuted Spell options (G2)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -652,7 +667,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1") and STRIP == ("derived.featResources", "derived.speciesResources")
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2") and STRIP == ("derived.featResources", "derived.speciesResources")
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
@@ -931,9 +946,40 @@ def test_g1_cases_hold_the_2014_pick_resources_and_nothing_else_moved():
     assert elk["barbarian:totemic-attunement-elk"]["dc"] == 8 + 5 + 3 + 1 and "DC 17" in elk["barbarian:totemic-attunement-elk"]["details"]["note"]
 
 
+def test_g2_cases_hold_the_metamagic_costs_and_nothing_else_moved():
+    """G2: the 16 rebaselined cases are the primary Sorcerer 3 / 11 / 20 and the multiclass Warlock 5 / Sorcerer 3 (x
+    mixed / 2014 x src-all / src-srd); each holds the costs of the stored first-option picks of the level-3 card
+    (Careful and Distant Spell, 1 point each; the stored Sorcerer 11 / 20 drafts have no pick on the later cards) and
+    the two TCE options on every Metamagic card. The case appended with them holds Twinned ("spell level"), Seeking, Heightened and Transmuted."""
+    hit = sorted(n for n in _GOLDEN if any(fnmatch.fnmatchcase(n, p) for p in REBASELINES["G2"]["cases"]))
+    assert len(hit) == 16
+    first = ["metamagic-careful-spell", "metamagic-distant-spell"]
+    expected = {"sorcerer3": first, "multi-warlock5-sorcerer3": first, "sorcerer11": first, "sorcerer20": first}
+    for n, entry in _GOLDEN.items():
+        key = n.rsplit("/", 1)[-1]
+        sp = [r for r in entry["result"]["derived"]["classResources"] if r["id"] == "sorcerer:sorcery-points"]
+        costs = sp[0]["details"].get("metamagicCosts") if sp else None
+        if n.startswith("ks/") and key == "sorcerer17-metamagic-2014":
+            assert costs == {"metamagic-twinned-spell": "spell level", "opt-seeking-spell-tce": 2,
+                             "metamagic-heightened-spell": 3, "opt-transmuted-spell-tce": 1}, n
+            assert [m["name"] for m in sp[0]["details"]["metamagic"]] == ["Twinned Spell", "Seeking Spell", "Heightened Spell",
+                                                                          "Transmuted Spell"]
+            continue
+        if n.startswith("2024/") or n.startswith("ks/"):
+            assert not costs, n
+            continue
+        assert (n in hit) == (key in expected), n
+        assert costs == ({o: 1 for o in expected[key]} if key in expected else None), n
+        if key in expected:
+            for card in entry["result"]["choices"]:
+                if card["id"].startswith("class:sorcerer:") and ":feature:metamagic-" in card["id"]:
+                    ids = [o["id"] for o in card["options"]]
+                    assert len(ids) == 10 and "opt-seeking-spell-tce" in ids and "opt-transmuted-spell-tce" in ids, n
+
+
 def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
-    """Y2: the rebaseline touched only `options[*].source` (the allowlist); 218 of 254 cases hold a book option, the
-    other 36 (level 1 / 3 cases without feat, spell or feature options) are byte-identical. Every stored source is a
+    """Y2: the rebaseline touched only `options[*].source` (the allowlist); 218 of the first 254 cases hold a book option (the
+    G2 case appended later holds one too: 219 of 255), the other 36 (level 1 / 3 cases without feat, spell or feature options) are byte-identical. Every stored source is a
     non-empty code, and no option outside the book kinds (skills, languages, equipment items) has one."""
     assert REBASELINES["Y2"]["cases"] == ["*"] and len(REBASELINES["Y2"]["paths"]) == 1
     with_source = 0
@@ -946,7 +992,7 @@ def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
                     assert isinstance(o["source"], str) and o["source"], (name, card["id"], o["id"])
                     assert not o["id"].startswith("skill-") and card["source"]["kind"] != "equipment", (name, card["id"], o["id"])
         with_source += has
-    assert with_source == 218
+    assert with_source == 219  # 218 + the G2 sorcerer17-metamagic-2014 case
 
 
 if __name__ == "__main__":

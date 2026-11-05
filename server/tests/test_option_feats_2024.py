@@ -193,7 +193,9 @@ def test_pools_under_mixed_and_2014_are_the_fe9_ones(catalog, ruleset):
     inv = ea_card(run(catalog, "wizard", 4, EA, ruleset=ruleset))
     assert _ids(inv) == [r["index"] for r in f["eldritch-invocations"]["feature_specific"]["invocations"]] and len(inv["options"]) == 32
     mm = _card(run(catalog, "wizard", 4, MMA, ruleset=ruleset), cid_of("wizard", 4, MMA, "metamagic"))
-    assert len(mm["options"]) == 8 and all(o["id"].startswith("metamagic-") for o in mm["options"])
+    # G2: the eight SRD options plus Seeking Spell and Transmuted Spell (TCE)
+    assert len(mm["options"]) == 10 and all(o["id"].startswith(("metamagic-", "opt-")) for o in mm["options"])
+    assert {o["id"] for o in mm["options"] if not o["id"].startswith("metamagic-")} == {"opt-seeking-spell-tce", "opt-transmuted-spell-tce"}
     ma = _card(run(catalog, "wizard", 4, MA, ruleset=ruleset), cid_of("wizard", 4, MA, "maneuvers"))
     assert len(ma["options"]) == 23 and all(o["id"].endswith("-phb") or o["id"].endswith("-tce") for o in ma["options"])
 
@@ -364,7 +366,7 @@ def test_srd_only_catalog_falls_back_to_the_srd_pools(catalog):
     bare.features = {k: v for k, v in catalog.features.items() if not (k.startswith("opt-") and k.endswith("-xphb"))}
     r = run(bare, "wizard", 4, EA)
     assert len(ea_card(r)["options"]) == 32
-    assert len(_card(run(bare, "wizard", 4, MMA), cid_of("wizard", 4, MMA, "metamagic"))["options"]) == 8
+    assert len(_card(run(bare, "wizard", 4, MMA), cid_of("wizard", 4, MMA, "metamagic"))["options"]) == 10  # G2: + the two TCE options
     assert len(_card(run(bare, "wizard", 4, MA), cid_of("wizard", 4, MA, "maneuvers"))["options"]) == 23
 
 

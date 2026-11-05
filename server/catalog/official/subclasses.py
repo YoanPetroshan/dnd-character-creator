@@ -578,6 +578,29 @@ def convert_class_optional_features_2024(raw_options, resolve_spell) -> dict[str
     return out
 
 
+def convert_metamagic_options_2014(raw_options, srd_features) -> dict[str, dict]:
+    """G2: `opt-<slug>-<source>` records for the 2014 Metamagic options (featureType MM, not XPHB) that the SRD does not
+    have: the vendored data holds Seeking Spell and Transmuted Spell (TCE). An option whose SRD twin
+    (`metamagic-<slug>`, the eight PHB options) is in `srd_features` is skipped, so nothing is imported twice.
+    Record: {index, name, desc, source, ruleset "2014", feature_types} (no `prerequisite_level` key: its own family,
+    apart from the subclass option records of `convert_optional_features`)."""
+    out: dict[str, dict] = {}
+    for raw in raw_options or []:
+        if not isinstance(raw, dict) or not raw.get("name") or raw.get("source") in (None, "XPHB"):
+            continue
+        if "MM" not in (raw.get("featureType") or []) or raw["source"] in RULESET_2024_SOURCES:
+            continue
+        if f"metamagic-{slug(raw['name'])}" in srd_features:
+            continue
+        fid = f"opt-{slug(raw['name'])}-{raw['source'].lower()}"
+        out.setdefault(fid, {
+            "index": fid, "name": raw["name"], "desc": _flatten_entries(raw.get("entries") or []),
+            "source": raw["source"], "ruleset": "2014",
+            "feature_types": list(raw.get("featureType") or []),
+        })
+    return out
+
+
 def _required_option_ids(raw_required, options: dict) -> dict[str, list[str]]:
     """`{"3": ["Elemental Attunement|PHB"]}` -> `{"3": ["opt-elemental-attunement-phb"]}`
     (the id rule of convert_optional_features); unknown options are dropped."""

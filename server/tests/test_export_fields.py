@@ -204,6 +204,8 @@ _EXPECT = {
     "hunter15-2014": {"resources": ["Hunter's Prey: Horde Breaker", "Defensive Tactics: Multiattack Defense",
                                     "Multiattack: Whirlwind Attack", "Superior Hunter's Defense: Uncanny Dodge"],
                       "feature_choice": "Horde Breaker"},
+    # G2: Sorcerer 17 under 2014, a Metamagic pick on each card (Twinned Spell "spell level", the TCE Seeking / Transmuted)
+    "sorcerer17-metamagic-2014": {"resources": ["Sorcery Points"], "feature_choice": "Twinned Spell"},
     "cleric1-thaumaturge-2024": {"feature_choice": "Thaumaturge"},
     # F3b: the C6b..C9b / R9 stages
     "rogue6-2024": {"resources": ["Sneak Attack"], "masteries": True, "expertise": 4, "feature_choice": "Dwarvish",

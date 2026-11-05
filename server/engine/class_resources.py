@@ -357,7 +357,32 @@ def _sorcerer(ctx: Ctx, rc: dict) -> list[dict]:
         picked = class_choices_2024.metamagic_details(ctx.catalog, ctx.choices)
         if picked:
             details["metamagic"] = picked
+    else:  # G2: mixed / 2014, the picked SRD / TCE Metamagic options and their costs
+        costs_2014 = _metamagic_costs_2014(ctx)
+        if costs_2014:
+            details["metamagicCosts"] = {oid: cost for oid, _name, cost in costs_2014}
+            details["metamagic"] = [{"name": name, "cost": cost} for _oid, name, cost in costs_2014]  # the 2024 shape: exports / SPA print it
     return [_resource(rc, "Sorcery Points", uses=points, recharge="long", details=details or None)]
+
+
+_SRD_METAMAGIC_CARD = re.compile(r"^class:sorcerer:\d+:feature:metamagic-\d+$")
+
+
+def _metamagic_costs_2014(ctx: Ctx) -> list[tuple[str, str, int | str]]:
+    """G2: [(option id, name, cost)] of the Metamagic options picked on the SRD Sorcerer cards (3 / 10 / 17), in card then
+    pick order, for the options `reference_data.METAMAGIC_COSTS_2014` knows. [] without a pick."""
+    if not isinstance(ctx.choices, list):
+        return []
+    out = []
+    for card in ctx.choices:
+        if not _SRD_METAMAGIC_CARD.match(str(card.get("id"))):
+            continue
+        for oid in card.get("selected") or []:
+            spec = reference_data.METAMAGIC_COSTS_2014.get(oid)
+            record = ctx.catalog.features.get(oid)
+            if spec and record:
+                out.append((oid, record["name"].removeprefix("Metamagic: "), spec["cost"]))
+    return out
 
 
 def _wizard(ctx: Ctx, rc: dict) -> list[dict]:

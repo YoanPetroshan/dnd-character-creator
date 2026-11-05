@@ -37,6 +37,7 @@ SHEET_OMITTED: dict[str, str] = {
     "derived.speciesResources.[].details.damageType": _NOTE,
     "derived.speciesResources.[].details.save": _NOTE,
     "derived.speciesResources.[].details.shape": _NOTE,
+    "derived.classResources.[].details.metamagicCosts.*": "dup: G2, the same picks and costs are shown through details.metamagic (names with costs)",
     "sheet.equipment.slots.armor.[].name": "ui: candidates of the worn-armor picker; the sheet shows only the armor that is worn",
     "sheet.equipment.slots.shield.[].name": "ui: candidates of the shield picker; the sheet shows only whether a shield is used",
     "sheet.equipment.slots.hands.[].name": "ui: candidates of the hand picker; the sheet shows only what is wielded",

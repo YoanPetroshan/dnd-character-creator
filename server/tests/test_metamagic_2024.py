@@ -157,7 +157,7 @@ def test_xphb_optional_feature_data(catalog):
     assert f["opt-pact-of-the-tome-xphb"]["spells"]["known_choose"][0]["count"] == 3
     assert f["opt-lessons-of-the-first-ones-xphb"]["feat_progression"]
     # nothing but the 38 new records changed in the opt-* family (76 existed before)
-    assert len([k for k in f if k.startswith("opt-")]) == 76 + 38
+    assert len([k for k in f if k.startswith("opt-")]) == 76 + 38 + 2  # +2 TCE Metamagic options (G2)
 
 
 @needs_data
@@ -267,11 +267,12 @@ def test_sorcery_points_resource_lists_metamagic_costs(catalog):
 
 
 @needs_data
-def test_mixed_resource_has_no_metamagic_detail(catalog):
+def test_mixed_resource_has_the_2014_costs_not_the_2024_ones(catalog):
     srd = "class:sorcerer:3:feature:metamagic-1"
     res = _res(catalog, [("sorcerer", 3, {srd: ["metamagic-careful-spell", "metamagic-distant-spell"]})], ruleset="mixed")
     sp = next(r for r in res["derived"]["classResources"] if r["name"] == "Sorcery Points")
-    assert "metamagic" not in (sp.get("details") or {})
+    # G2: the 2014 picks carry their own costs (tests/test_metamagic_costs_2014.py), 1 point each here
+    assert sp["details"]["metamagicCosts"] == {"metamagic-careful-spell": 1, "metamagic-distant-spell": 1}
 
 
 # ---- degrade and isolation -------------------------------------------------------------------

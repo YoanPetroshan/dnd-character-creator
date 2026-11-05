@@ -106,6 +106,12 @@ KITCHEN_SINK: dict[str, dict] = {
         "class:ranger:7:feature:defensive-tactics": ["defensive-tactics-multiattack-defense"],
         "class:ranger:11:feature:multiattack": ["multiattack-whirlwind-attack"],
         "class:ranger:15:feature:superior-hunters-defense": ["superior-hunters-defense-uncanny-dodge"]}),
+    # G2: Sorcerer 17 under 2014 with a pick on each Metamagic card, including the two TCE options (Seeking, Transmuted)
+    # and Twinned (cost "spell level"); non-2024, so part of the golden via --append
+    "sorcerer17-metamagic-2014": _sub("sorcerer", 17, "2014", marks=("classes",), once=True, overrides={
+        "class:sorcerer:3:feature:metamagic-1": ["metamagic-twinned-spell", "opt-seeking-spell-tce"],
+        "class:sorcerer:10:feature:metamagic-2": ["metamagic-heightened-spell"],
+        "class:sorcerer:17:feature:metamagic-3": ["opt-transmuted-spell-tce"]}),
     "cleric1-thaumaturge-2024": _sub("cleric", 1, "2024", marks=("classes", "official"), overrides={
         "class:cleric:1:divine-order": ["xphb-cleric-1-thaumaturge"]}),
     # F3b: the C6b..C9b / R9 stages, 2024 origin (Human, Soldier) so the origin language card is present

@@ -1763,6 +1763,8 @@ def _feature_choice_templates(
         if specific.get("subfeature_options"):
             cid = f"class:{cls_id}:{lvl}:feature:{feature['index']}"
             tpl = build_choice_template(specific["subfeature_options"], cid, source, feature["name"], description=description)
+            if tpl and feature["index"] in reference_data.SRD_METAMAGIC_FEATURES:  # G2: the TCE options
+                tpl["options"] = _with_extra_metamagic(catalog, tpl["options"], "Metamagic: ")
         elif specific.get("expertise_options"):
             # "expertise-choice" in the cid is what the expertise gate and the
             # proficiency scans key off (the same marker feat expertise uses).
@@ -1976,6 +1978,24 @@ _OPTION_PICK_CARDS = {
 _FIGHTER_STYLE_FEATURE = "fighter-fighting-style"
 _BATTLE_MASTER_FEATURE = "battle-master-phb-3-battle-master"
 _SRD_METAMAGIC_FEATURE = "metamagic-1"
+
+
+def _with_extra_metamagic(catalog: Catalog, options: list[dict], prefix: str) -> list[dict]:
+    """G2: the SRD Metamagic options (the eight PHB ones) plus the 2014 options the SRD lacks that the vendored data has
+    (Seeking Spell and Transmuted Spell, TCE; `catalog.features` holds them only with the official data), in name order.
+    `prefix` is the SRD label prefix ("Metamagic: " on the Sorcerer cards, none on the Metamagic Adept feat card)."""
+    extra = [f for f in catalog.features.values()
+             if "MM" in (f.get("feature_types") or []) and f.get("ruleset") == "2014" and f["index"].startswith("opt-")]
+    if not extra:
+        return options
+    new = []
+    for rec in extra:
+        option = {"id": rec["index"], "label": prefix + rec["name"]}
+        desc = _join_desc(rec.get("desc"))
+        if desc:
+            option["description"] = desc
+        new.append(option)
+    return sorted(options + new, key=lambda o: o["label"].removeprefix(prefix))
 _SRD_INVOCATIONS_FEATURE = "eldritch-invocations"
 
 
@@ -2033,7 +2053,7 @@ def _option_pick_options(catalog: Catalog, kind: str, ruleset: str = "mixed") ->
         if desc:
             option["description"] = desc
         options.append(option)
-    return options
+    return _with_extra_metamagic(catalog, options, "") if kind == "metamagic" else options
 
 
 def _feat_extra_templates(feat: dict, cid_prefix: str, feat_level: int | None = None, items: dict | None = None,

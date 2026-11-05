@@ -151,7 +151,7 @@ def test_pools(catalog):
     mm = _card(run(catalog, "wizard", 4, MMA), cid_of("wizard", 4, MMA, "metamagic"))
     assert [o["label"] for o in mm["options"]] == [
         "Careful Spell", "Distant Spell", "Empowered Spell", "Extended Spell", "Heightened Spell",
-        "Quickened Spell", "Subtle Spell", "Twinned Spell"]
+        "Quickened Spell", "Seeking Spell", "Subtle Spell", "Transmuted Spell", "Twinned Spell"]  # G2: + the TCE options
     inv = _card(run(catalog, "wizard", 4, EA), cid_of("wizard", 4, EA, "invocation"))
     refs = f["eldritch-invocations"]["feature_specific"]["invocations"]
     assert [o["id"] for o in inv["options"]] == [r["index"] for r in refs]

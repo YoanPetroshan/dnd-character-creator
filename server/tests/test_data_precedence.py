@@ -17,7 +17,7 @@ from catalog.official import paths
 
 REAL_SYNCED = Path("~/.claude/dnd/.data/official").expanduser()  # captured before HOME is faked
 FIXTURE_RACES = {"race": [{"name": "Fixtureling", "source": "PHB"}]}
-FULL = dict(classes=12, levels=961, features=1783, subclasses=176, races=153, subraces=96,
+FULL = dict(classes=12, levels=961, features=1785, subclasses=176, races=153, subraces=96,
             traits=1086, backgrounds=136, items=244, spells=936, feats=305, spell_twins=758, classes_2024=12)
 SRD = dict(spells=319, races=9, feats=0, subclasses=12, levels=290, features=407)
 

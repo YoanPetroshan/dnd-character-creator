@@ -202,6 +202,7 @@ from .official.class_chassis import convert_class_chassis_2024, convert_class_sp
 from .official.subclasses import (  # noqa: F401
     convert_subclasses,
     convert_class_optional_features_2024,
+    convert_metamagic_options_2014,
     subclass_twins_from,
     unresolved_spell_refs,
     load_class_2024_progressions,

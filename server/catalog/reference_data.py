@@ -1309,6 +1309,25 @@ SORCERER_2024_CREATING_SLOTS: list[tuple[int, int, int]] = [
     (5, 7, 9),
 ]
 
+# G2: 2014 Metamagic costs in Sorcery Points (`details.metamagicCosts` of sorcerer:sorcery-points, picked options only).
+# Option id (the SRD Metamagic feature records, `metamagic-<slug>`, and the TCE records `opt-<slug>-tce`) ->
+# {"cost": the number, or the exact text when the cost is not a number (Twinned Spell: "spell level"), "quote": the
+# verbatim sentence of the record that states it (pinned by tests/test_metamagic_costs_2014.py)}. The vendored
+# optionalfeatures.json `consumes` agrees where it has an amount (Heightened 3, Quickened 2, Seeking 2).
+METAMAGIC_COSTS_2014: dict[str, dict] = {
+    "metamagic-careful-spell": {"cost": 1, "quote": "To do so, you spend 1 sorcery point and choose a number of those creatures"},
+    "metamagic-distant-spell": {"cost": 1, "quote": "you can spend 1 sorcery point to double the range of the spell"},
+    "metamagic-empowered-spell": {"cost": 1, "quote": "you can spend 1 sorcery point to reroll a number of the damage dice"},
+    "metamagic-extended-spell": {"cost": 1, "quote": "you can spend 1 sorcery point to double its duration"},
+    "metamagic-heightened-spell": {"cost": 3, "quote": "you can spend 3 sorcery points to give one target of the spell disadvantage"},
+    "metamagic-quickened-spell": {"cost": 2, "quote": "you can spend 2 sorcery points to change the casting time to 1 bonus action"},
+    "metamagic-subtle-spell": {"cost": 1, "quote": "you can spend 1 sorcery point to cast it without any somatic or verbal components"},
+    "metamagic-twinned-spell": {"cost": "spell level",
+                                "quote": "you can spend a number of sorcery points equal to the spell's level to target a second creature"},
+    "opt-seeking-spell-tce": {"cost": 2, "quote": "you can spend 2 sorcery points to reroll the"},
+    "opt-transmuted-spell-tce": {"cost": 1, "quote": "you can spend 1 sorcery point to change that damage type"},
+}
+
 # --- Class resources (R9, decision E14): the 2024 resource tail, prose-only ---
 # No XPHB class table column carries these numbers (columns: barbarian rages / rage-damage / weapon-mastery,
 # bard bardic-die, cleric + paladin channel-divinity, druid wild-shape, fighter second-wind / weapon-mastery,
@@ -5265,6 +5284,9 @@ EXPERTISE_2024: dict[str, dict] = {
         "skills": ["skill-arcana", "skill-history", "skill-investigation", "skill-medicine", "skill-nature", "skill-religion"],
     },
 }
+
+# G2: the three SRD (2014) Metamagic cards of the Sorcerer (levels 3, 10 and 17).
+SRD_METAMAGIC_FEATURES = ("metamagic-1", "metamagic-2", "metamagic-3")
 
 # SRD (2014) class cards that the 2024 cards replace; skipped under ruleset "2024" only when the
 # replacing XPHB feature exists in the catalog. The Ranger's Favored Enemy / Natural Explorer
