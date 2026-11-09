@@ -147,6 +147,12 @@ def test_drafts_without_worn_or_wielded_resolve_exactly_as_before_g2(catalog, na
                     o.pop("quantities")
                 o["label"] = re.sub(r"^\d+x ", "", o["label"]) if card["id"].endswith(tuple(f"equipment-choice-{i}" for i in range(9))) else o["label"]
     _neutralise_class_feature_tails(now, baseline)
+    for res in (now, baseline):  # VF2.4b: a known language is disabled "already known" in the species / background cards (the pre-G2 baseline has none)
+        for card in res["choices"]:
+            if card["source"]["kind"] in ("species", "background") and card["id"].endswith(":languages"):
+                for o in card["options"]:
+                    o.pop("disabled", None)
+                    o.pop("disabledReason", None)
     assert now == baseline
 
 

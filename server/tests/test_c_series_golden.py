@@ -366,6 +366,20 @@ REBASELINES: dict[str, dict] = {
         ],
         "why": "official species fixed languages and language pick cards (VF2.4)",
     },
+    # VF2.4b: the ordinary species / background language cards are gated like the class and origin ones: a language the character
+    # already knows (a fixed grant, an earlier species card pick) is disabled "already known" and a stored duplicate pick is
+    # dropped, so the filler's first-option picks of the stored cases (Common and Dwarvish for the Acolyte, again Common for the
+    # SRD Human) are replaced by the next enabled languages. Rule: a stored case may change only the species / background language
+    # cards (their subtree under `result.choices`), the filler's picks in the draft, and the languages list of the sheet.
+    "VF2c": {
+        "cases": ["*"],
+        "paths": [
+            r"^result\.choices\[(species|background):[^\].]+(:subspecies:[^\].]+)?(:trait:[^\].]+)?:languages\]",
+            r"^draft\.(species|background)\.choices\.(species|background):[^.]+:languages",
+            r"^result\.sheet\.proficiencies\.languages$",
+        ],
+        "why": "species and background language cards gated against the known languages (VF2.4b)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -718,7 +732,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a", "VF2b") and STRIP == ()
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a", "VF2b", "VF2c") and STRIP == ()
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 

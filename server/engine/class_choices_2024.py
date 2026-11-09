@@ -213,11 +213,20 @@ def _feat_card_position(c: dict, class_order) -> tuple[int, int]:
     return (order.index(m.group(1)) if m.group(1) in order else len(order), c["source"].get("level") or 0)
 
 
+def is_origin_pick_card(c: dict) -> bool:
+    """VF2.4b: an ordinary species / background language pick card (Human "Bonus Language", the 2014 Acolyte's two languages,
+    High Elf's Extra Language ...), as opposed to the C8 origin card and the feat / class cards."""
+    return (c["source"]["kind"] in ("species", "background") and c["id"].endswith(":languages")
+            and not is_origin_language_card(c))
+
+
 def gate_languages(choices: list[dict], fixed_languages, class_order: list[str] = (), positioned_fixed=()) -> list[dict]:
     """Disable ("already known") and drop stored picks of languages the character already knows.
-    Priority: `fixed_languages` (species / background / origin feats / Common), picks of every other
-    origin language card (background / species / origin feat cards), the C8 origin card, then class
-    language cards by (class order, class level).
+    Priority: `fixed_languages` (species / background / origin feats / Common), the ordinary species cards, then the
+    ordinary background cards (VF2.4b: they are gated too -- a language the character already knows is disabled "already
+    known" and a stored duplicate pick is dropped with a `pruned` entry; the species comes first, so on a clash the
+    background card loses), picks of the origin feat cards, the C8 origin card, then class language cards by (class
+    order, class level).
     F3a-5: `positioned_fixed` = [((class position, class level), language)] are fixed grants (class
     features, Lessons / ASI feats) and ASI feat language picks counted only for cards at or after
     their position, so an earlier pick wins and the later duplicate is blamed.
@@ -227,7 +236,8 @@ def gate_languages(choices: list[dict], fixed_languages, class_order: list[str] 
     everything earlier in the build). Otherwise the card is removed and a stored pick is reported.
     Mutates `choices`; returns non-blocking `pruned` entries in `choices` order."""
     repl = [i for i, c in enumerate(choices) if is_feat_replacement_language_card(c)]
-    idxs = [i for i, c in enumerate(choices) if is_class_language_card(c) or is_origin_language_card(c)]
+    idxs = [i for i, c in enumerate(choices)
+            if is_class_language_card(c) or is_origin_language_card(c) or is_origin_pick_card(c)]
     if not idxs and not repl:
         return []
     known: set[str] = set(fixed_languages)
@@ -238,7 +248,8 @@ def gate_languages(choices: list[dict], fixed_languages, class_order: list[str] 
                 and not is_origin_language_card(c) and not is_feat_replacement_language_card(c)):
             pos = card_position(c, class_order) if c["source"]["kind"] == "feat" else (-1, 0)
             if pos is None or pos == (-1, 0):
-                known.update(c["selected"])
+                if not is_origin_pick_card(c):  # VF2.4b: a species / background card is gated below, in its turn
+                    known.update(c["selected"])
                 pick_known.update(c["selected"])
             else:
                 positioned += [(pos, lang) for lang in c["selected"]]
@@ -303,7 +314,7 @@ def gate_languages(choices: list[dict], fixed_languages, class_order: list[str] 
 
     def pos_of(i):
         c = choices[i]
-        if is_origin_language_card(c):
+        if is_origin_language_card(c) or is_origin_pick_card(c):
             return (-1, 0)
         if is_feat_replacement_language_card(c):
             return _feat_card_position(c, class_order)
@@ -311,7 +322,11 @@ def gate_languages(choices: list[dict], fixed_languages, class_order: list[str] 
         cid = src.get("id")
         return (class_order.index(cid) if cid in class_order else len(class_order), src.get("level") or 0)
 
-    for i in sorted(idxs + later_repl, key=lambda i: (*pos_of(i), i)):
+    def origin_rank(i):  # VF2.4b: species cards before background cards before the C8 card (all at the origin position)
+        c = choices[i]
+        return 0 if is_origin_pick_card(c) and c["source"]["kind"] == "species" else 1 if is_origin_pick_card(c) else 2
+
+    for i in sorted(idxs + later_repl, key=lambda i: (*pos_of(i), origin_rank(i), i)):
         if i in later_repl:
             settle_replacement(i, set(known))
             if i not in removed:

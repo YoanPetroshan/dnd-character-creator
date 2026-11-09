@@ -842,3 +842,75 @@ def test_vf2_4_the_frontend_language_names_mirror_the_backend_table():
     front = {m.group(1) or m.group(2): m.group(3).replace("\\'", "'") for m in
              re.finditer(r'^\s*(?:"([a-z-]+)"|([a-z]+)): "((?:[^"\\]|\\.)*)",\s*$', block, re.M)}
     assert front == ref.LANGUAGE_NAMES
+
+
+# ---------------------------------------------------------------- VF2.4b ordinary species / background language cards are gated
+def _lang_cards_all(res):
+    return {c["id"]: c for c in res["choices"] if c["id"].endswith(":languages")}
+
+
+def _disabled(card):
+    return {o["id"] for o in card["options"] if o.get("disabled")}
+
+
+def _picks(draft, species=None, background=None):
+    if species:
+        draft["species"]["choices"] = dict(species)
+    if background:
+        draft["background"]["choices"] = dict(background)
+    return draft
+
+
+def test_vf2_4b_a_known_fixed_language_is_disabled_in_the_background_card(catalog):
+    res = resolve(_draft([("wizard", 1)], species="human"), catalog)   # SRD Human knows Common
+    bg = _lang_cards_all(res)["background:acolyte:languages"]
+    assert _disabled(bg) == {"common"}
+    assert next(o for o in bg["options"] if o["id"] == "common")["disabledReason"]
+    # PHB Tiefling: Common and Infernal
+    res = resolve(_draft([("wizard", 1)], species="tiefling-phb"), catalog)
+    assert _disabled(_lang_cards_all(res)["background:acolyte:languages"]) == {"common", "infernal"}
+
+
+def test_vf2_4b_the_species_card_does_not_offer_what_the_species_gives(catalog):
+    res = resolve(_draft([("wizard", 1)], species="half-elf-phb"), catalog)
+    card = _lang_cards_all(res)["species:half-elf-phb:languages"]
+    assert _disabled(card) == {"common", "elvish"}
+    res = resolve(_draft([("wizard", 1)], species="elf-phb", subspecies="elf-phb-high-phb"), catalog)
+    assert _disabled(_lang_cards_all(res)["species:elf-phb:subspecies:elf-phb-high-phb:languages"]) == {"common", "elvish"}
+
+
+def test_vf2_4b_a_stored_duplicate_pick_is_dropped_with_a_pruned_entry(catalog):
+    d = _picks(_draft([("wizard", 1)], species="human"), background={"background:acolyte:languages": ["common", "draconic"]})
+    res = resolve(d, catalog)
+    bg = _lang_cards_all(res)["background:acolyte:languages"]
+    assert bg["selected"] == ["draconic"] and bg["status"] == "pending"
+    assert [p["choiceId"] for p in res["pruned"]] == ["background:acolyte:languages"]
+    assert res["sheet"]["proficiencies"]["languages"] == ["common", "draconic"]
+
+
+def test_vf2_4b_species_picks_win_against_the_background_and_the_same_language_twice_is_one(catalog):
+    d = _picks(_draft([("wizard", 1)], species="human"), species={"species:human:languages": ["draconic"]},
+               background={"background:acolyte:languages": ["draconic", "elvish"]})
+    res = resolve(d, catalog)
+    cards = _lang_cards_all(res)
+    assert cards["species:human:languages"]["selected"] == ["draconic"] and cards["species:human:languages"]["status"] == "resolved"
+    assert cards["background:acolyte:languages"]["selected"] == ["elvish"] and "draconic" in _disabled(cards["background:acolyte:languages"])
+    assert res["sheet"]["proficiencies"]["languages"] == ["common", "draconic", "elvish"]
+    # a clean choice stays resolved and unpruned
+    ok = resolve(_picks(_draft([("wizard", 1)], species="human"), species={"species:human:languages": ["draconic"]},
+                        background={"background:acolyte:languages": ["elvish", "giant"]}), catalog)
+    assert not ok["pruned"] and all(c["status"] == "resolved" for c in _lang_cards_all(ok).values())
+
+
+def test_vf2_4b_the_filler_style_first_enabled_picks_give_distinct_languages(catalog):
+    """The T1 finding: 3 picks (Acolyte 2 + Human 1) ended as 2 languages. Choosing the first enabled option of each card in turn
+    now gives Common (fixed) plus three distinct languages."""
+    d = _draft([("wizard", 1)], species="human-phb")
+    for _ in range(4):
+        res = resolve(d, catalog)
+        for cid, card in _lang_cards_all(res).items():
+            if card["status"] == "pending":
+                pick = [o["id"] for o in card["options"] if not o.get("disabled")][: card["count"]]
+                (d["species"] if card["source"]["kind"] == "species" else d["background"])["choices"][cid] = pick
+    res = resolve(d, catalog)
+    assert len(res["sheet"]["proficiencies"]["languages"]) == 4 and all(c["status"] == "resolved" for c in _lang_cards_all(res).values())

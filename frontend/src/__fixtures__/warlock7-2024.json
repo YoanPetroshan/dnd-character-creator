@@ -55,7 +55,9 @@
      "common",
      "common-sign-language",
      "draconic",
-     "dwarvish"
+     "dwarvish",
+     "elvish",
+     "giant"
     ],
     "armor": [
      "light-armor"

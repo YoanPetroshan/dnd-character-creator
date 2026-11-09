@@ -548,6 +548,18 @@ SNAPSHOT_REBASELINES: dict[str, dict] = {
                   r"^disabled[.]origin:languages [|] [a-z-]+$"],
         "why": "official species language pick cards (VF2.4)",
     },
+    # VF2.4b: the ordinary species / background language cards are gated against the languages already known: the options of a
+    # known language carry `disabledReason` "already known" (the leaf `disabled.<card> | <option>`), and a stored duplicate
+    # pick of a zoo draft is reported in `pruned`. Every zoo draft with a species or background language card can gain them.
+    # The 2024 C8 origin card and the 2024 class language cards (Thieves' Cant, Deft Explorer) disable the languages the species
+    # / background cards picked, which are other ones now (`disabled.origin:languages | <language>`, `disabled.class:...`).
+    "VF2c": {
+        "cases": ["*"],
+        "paths": [r"^disabled[.](species|background):[^ ]+:languages [|] [a-z-]+$", r"^pruned(\[[0-9]+\])*$",
+                  r"^disabled[.](origin:languages|class:[a-z]+:[0-9]+:languages:[a-z0-9-]+) [|] [a-z-]+$",
+                  r"^exportGate(\[[0-9]+\])*$"],   # a stored duplicate pick (Common is fixed under 2024) leaves its card pending
+        "why": "species and background language cards gated against the known languages (VF2.4b)",
+    },
 }
 
 

@@ -54,7 +54,9 @@
     ],
     "languages": [
      "common",
-     "dwarvish"
+     "dwarvish",
+     "elvish",
+     "giant"
     ],
     "armor": [
      "light-armor"
