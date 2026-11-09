@@ -247,10 +247,17 @@ def test_the_vendored_text_says_same_list(catalog):
 
 @needs_data
 def test_no_own_variant_card_and_no_spell_cards_until_the_base_picks(catalog):
+    # F1: Sage's Magic Initiate has its list fixed by the background (a single-option card): that counts as picked even
+    # though it was never clicked. The base feat taken at the ASI (free list) is the one that waits for its pick.
     res = _mc(catalog, {})
     mc = _cards(res, "magic-connoisseur-au")
-    assert not [i for i in mc if i.endswith(":spell-variant") or ":spell-choice-" in i]
+    assert not [i for i in mc if i.endswith(":spell-variant")] and len([i for i in mc if ":spell-choice-" in i]) == 2
     assert "feat:magic-initiate-xphb:spell-variant" in _cards(res, "magic-initiate")
+    asi = {"class:wizard:4:asi": ["feat:magic-initiate-xphb"], "class:wizard:8:asi": ["feat:magic-connoisseur-au"],
+           "class:wizard:8:asi:feat:magic-connoisseur-au:ability-bonus": ["int"]}
+    res = resolve(_draft("wizard", 8, None, bg="soldier-xphb", class_choices=asi), catalog)
+    mc = _cards(res, "magic-connoisseur-au")
+    assert not [i for i in mc if i.endswith(":spell-variant") or ":spell-choice-" in i]
 
 
 @needs_data

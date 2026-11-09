@@ -736,15 +736,31 @@ def _feat_cid_prefix(feat: dict) -> str:
     return feat.get("_asi_origin") or feat.get("_species_origin") or f"feat:{feat['index']}"
 
 
-def _followed_variants(feats: list[dict], raw_choices: dict) -> dict[str, str | None]:
+class _FollowedVariants(dict):
+    """`_followed_variants`' result: {dependent feat index: variant slug | None}, plus `cards` = {dependent feat index:
+    [candidate list slugs]} for a dependent that has its OWN list card (F1: the character holds more than one base feat)."""
+    cards: dict[str, list[str]]
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.cards = {}
+
+
+def _followed_variants(feats: list[dict], raw_choices: dict, variant_hints: dict | None = None,
+                       hinted_feats=()) -> "_FollowedVariants":
     """G5: {dependent feat index: variant slug} for the held feats that FOLLOW another held feat's spell list. A feat whose
     effect entry has ``ability_from`` (RP5) and that has `spell_variants` of its own (Magic Connoisseur: "Choose a level 1
     and a level 2 spell from the same list you selected for the Magic Initiate feat's cantrips") takes the list the base
     feat picked; it then has no `:spell-variant` card of its own. The value is None while the base feat's list is not
     picked yet (the dependent offers no spell cards until it is) or when the picked list is not one of the dependent's.
     `raw_choices` is the union of the draft's raw selections (every cid is unique across classes / background / species).
-    Only the base's variant card is read; a base feat that is not held leaves the dependent with its own card."""
-    out: dict[str, str | None] = {}
+    Only the base's variant card is read; a base feat that is not held leaves the dependent with its own card.
+    F1: (a) a base feat whose list is FIXED by its background (`variant_hints`, the single-option card: Acolyte's Magic
+    Initiate Cleric) counts as picked though it was never clicked, for the holders in `hinted_feats`; (b) with MORE THAN ONE
+    base feat held (XPHB Magic Initiate is repeatable, a different list each time) the dependent gets its own
+    `:spell-variant` card limited to the lists the holders picked (`.cards`), and follows that pick."""
+    out = _FollowedVariants()
+    hints = variant_hints or {}
     for feat in feats:
         base = feat_effects_mod.ability_from(feat_effects_data.FEAT_EFFECTS.get(feat.get("index")))
         if not base or not feat.get("spell_variants") or feat["index"] in out:
@@ -753,15 +769,42 @@ def _followed_variants(feats: list[dict], raw_choices: dict) -> dict[str, str | 
         if not holders:
             continue
         own = {slug(v) for v in feat["spell_variants"]}
-        picked = None
+        picks: list[str] = []
         for holder in holders:
             valid = [slug(v) for v in holder["spell_variants"]]
             raw = raw_choices.get(f"{_feat_cid_prefix(holder)}:spell-variant")
             picked = next((slug(x) for x in raw if isinstance(x, str) and slug(x) in valid), None) if isinstance(raw, list) else None
-            if picked:
-                break
-        out[feat["index"]] = picked if picked in own else None
+            hint = hints.get(holder["index"])
+            if picked is None and hint and any(holder is h for h in hinted_feats) and slug(hint) in valid:
+                picked = slug(hint)  # the background fixes the list: a single-option card
+            if picked and picked not in picks:
+                picks.append(picked)
+        if len(holders) == 1:
+            out[feat["index"]] = picks[0] if picks and picks[0] in own else None
+            continue
+        candidates = [x for x in picks if x in own]
+        raw = raw_choices.get(f"{_feat_cid_prefix(feat)}:spell-variant")
+        chosen = next((slug(x) for x in raw if isinstance(x, str) and slug(x) in candidates), None) if isinstance(raw, list) else None
+        out[feat["index"]] = chosen
+        out.cards[feat["index"]] = candidates
     return out
+
+
+def _base_holder(feat: dict, base: str, choices: list[dict], feats) -> dict | None:
+    """The held copy of the base feat a dependent follows (RP5 / G5). F1: with several copies (Magic Initiate, a different
+    list each time) it is the one whose list the dependent took; a copy whose list is fixed by its background has no
+    stored pick, so it is the one left when no stored pick matches."""
+    holders = [f for f in feats if f["index"] == base]
+    if len(holders) < 2:
+        return holders[0] if holders else None
+    by_id = {c["id"]: c for c in choices}
+
+    def picked(f):
+        sel = (by_id.get(f"{_feat_cid_prefix(f)}:spell-variant") or {}).get("selected") or []
+        return slug(sel[0]) if sel else None
+    want = picked(feat)
+    return (next((h for h in holders if want and picked(h) == want), None)
+            or next((h for h in holders if picked(h) is None), None) or holders[0])
 
 
 def _feat_spell_ability(feat: dict, ability, choices: list[dict], feats=(), _follow: bool = True):
@@ -778,7 +821,7 @@ def _feat_spell_ability(feat: dict, ability, choices: list[dict], feats=(), _fol
     Connoisseur) takes the ability chosen for that base feat while the base feat is held."""
     base = feat_effects_mod.ability_from(feat_effects_data.FEAT_EFFECTS.get(feat.get("index")))
     if base and _follow:
-        other = next((f for f in feats if f["index"] == base), None)
+        other = _base_holder(feat, base, choices, feats)
         first = next((e["ability"] for e in ((other or {}).get("innate_spells") or []) + ((other or {}).get("spell_choices") or [])
                       if e.get("ability") is not None), None)
         if other is not None and first is not None:
@@ -994,6 +1037,16 @@ def _feat_spell_choice_templates(
             # G5: the list is the base feat's pick (`_followed_variants`): no card of its own, and no spell cards until
             # the base feat has picked a list this feat offers.
             chosen = follow_variants[feat["index"]]
+            candidates = getattr(follow_variants, "cards", {}).get(feat["index"])
+            if candidates is not None:
+                # F1: several base feats are held: the player chooses among the lists they picked
+                offered_lists = [v for v in variants if slug(v) in candidates]
+                templates.append({
+                    "id": f"{prefix}:spell-variant", "source": source,
+                    "label": msg("label-prefixed", head=feat["name"], tail=msg("label-spell-list")),
+                    "description": msg("desc-spell-list"), "count": 1,
+                    "options": [{"id": slug(v), "label": v} for v in offered_lists],
+                })
             if chosen is None:
                 continue
         elif variants:
@@ -5533,7 +5586,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         raw_all_choices.update(rc_["class_choices"])
     raw_all_choices.update(bg_grant_choices_raw)
     raw_all_choices.update(species_choices_raw)
-    variant_follow = _followed_variants(background_feats + species_feats + fs_feats + asi_feat_picks, raw_all_choices)
+    variant_follow = _followed_variants(background_feats + species_feats + fs_feats + asi_feat_picks, raw_all_choices,
+                                        (bg.get("feat_variant_hints") if bg else None) or {}, background_feats)
     lessons_feats = lessons_resolver.picks + ea_lessons.picks  # RP20: Lessons held through Eldritch Adept follow the Warlock's
     for dup in skipped_srd_styles:  # G1
         problems.append({

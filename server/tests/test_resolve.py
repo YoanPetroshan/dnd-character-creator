@@ -4816,13 +4816,14 @@ def _mc_draft(extra, mi_variant=True, **kw):
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
-def test_magic_connoisseur_has_no_variant_card_and_waits_for_the_magic_initiate_list(catalog):
+def test_magic_connoisseur_has_no_variant_card_and_follows_a_fixed_magic_initiate_list(catalog):
     res = resolve(_mc_draft({}, mi_variant=False), catalog)
     assert _choice(res, _MC + "spell-variant") is None  # G5: the list is Magic Initiate's, not a second pick
     base = _choice(res, "feat:magic-initiate-xphb:spell-variant")
     assert base["status"] == "pending" and [o["id"] for o in base["options"]] == ["cleric-spells"]
-    assert [c for c in res["choices"] if c["id"].startswith(_MC) and ":spell-choice-" in c["id"]] == []
-    assert _feat_spells(res, "magic-connoisseur-au") == []
+    # F1: the background fixes the list (a single-option card), so it counts as picked though it was never clicked
+    assert len([c for c in res["choices"] if c["id"].startswith(_MC) and ":spell-choice-" in c["id"]]) == 2
+    assert _feat_spells(res, "magic-connoisseur-au") == []  # nothing picked from them yet
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
