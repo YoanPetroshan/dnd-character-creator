@@ -135,7 +135,9 @@ def test_bg_appears_in_exports_or_frontend_copy():
     corpus += (SERVER.parent / "frontend" / "src" / "copy" / "bg.ts").read_text(encoding="utf-8")
     # originFeat: the app has no Bulgarian label for it today (the page text says "Origin feat"); the
     # rendering is new, introduced with the I-series.
-    new_wording = {"originFeat"}
+    # draconicAncestry / breathWeapon (VF3.2): printed by the server catalog (the dragon-colour card text, `desc-dragon-colour`),
+    # not by the exports or bg.ts.
+    new_wording = {"originFeat", "draconicAncestry", "breathWeapon"}
     missing = [tid for tid, t in DATA.items() if tid not in new_wording and t["bg"].lower() not in corpus.lower()]
     assert missing == [], "bg wording not used anywhere in the app: " + ", ".join(missing)
 

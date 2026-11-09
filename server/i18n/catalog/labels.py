@@ -154,7 +154,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "desc-dragon-colour": {
         "en": "Choose the dragon of your Draconic Ancestry; it sets the damage type, area and saving throw of your Breath Weapon.",
-        "bg": "Изберете дракона от таблицата за драконово потекло; той определя вида щети, зоната и спасителния хвърлей (Saving Throw) на дъха ви.",
+        "bg": "Изберете дракона от таблицата за драконово потекло (Draconic Ancestry); той определя вида щети, зоната и спасителния хвърлей (Saving Throw) на дъха (Breath Weapon) ви.",
     },
     "desc-species-cantrip": {
         "en": "Choose which cantrip this species knows.",

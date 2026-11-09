@@ -14,8 +14,8 @@ import re
 
 BRACKET_TERMS = frozenset({
     "Ability", "Ability Checks", "Ability Score", "Ability Score Improvement", "Ability Score Increase", "Ability Scores",
-    "Armor Class", "Background", "Blindsight", "Bonus Action", "Cantrip", "Cantrips", "Cantrips Known",
-    "Carrying Capacity", "Class Features", "Darkvision", "Devil's Sight", "Disadvantage", "Expertise", "Feat",
+    "Armor Class", "Background", "Blindsight", "Bonus Action", "Breath Weapon", "Cantrip", "Cantrips", "Cantrips Known",
+    "Carrying Capacity", "Class Features", "Darkvision", "Devil's Sight", "Disadvantage", "Draconic Ancestry", "Expertise", "Feat",
     "Feat Prerequisites", "Feats", "Feature", "Features", "General Feats", "Hit Point Dice", "Hit Points", "Immunities",
     "Immunity", "Long Rest", "Origin Feat", "Origin Feats", "Other Expertise", "Proficiencies", "Proficiency",
     "Proficiency Bonus", "Resistance", "Saving Throw", "Saving Throws", "Senses", "Short Rest", "Skill",

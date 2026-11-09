@@ -44,5 +44,7 @@ Rules terms in two languages. English follows the wording of the sources (2024 P
 | `shortRest` | Short Rest | кратка почивка (Short Rest) | 2024 PHB | Short Rest |
 | `longRest` | Long Rest | дълга почивка (Long Rest) | 2024 PHB | Long Rest |
 | `carryingCapacity` | Carrying Capacity | Носимост (Carrying Capacity) | 2024 PHB | Carrying Capacity |
+| `draconicAncestry` | Draconic Ancestry | Драконово потекло (Draconic Ancestry) | SRD | 5e-SRD-Traits.json::Draconic Ancestry |
+| `breathWeapon` | Breath Weapon | Дъх (Breath Weapon) | SRD | 5e-SRD-Traits.json::Breath Weapon |
 | `feet` | feet | фута | 2024 PHB | text:30 feet |
 | `gold` | GP | зл. | 2024 PHB | text:Gold Piece (GP) |

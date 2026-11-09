@@ -54,7 +54,7 @@ def test_the_frontend_guard_holds_the_same_list():
 DECIDED = ("abilityScores", "armorClass", "hitPoints", "hitPointDice", "proficiencyBonus", "savingThrows", "skills",
            "spellSaveDc", "spellAttackBonus", "cantrips", "species", "background", "originFeat", "feats", "classFeatures",
            "weaponMastery", "senses", "darkvision", "blindsight", "tremorsense", "truesight", "resistance", "immunity",
-           "vulnerability", "shortRest", "longRest", "carryingCapacity")
+           "vulnerability", "shortRest", "longRest", "carryingCapacity", "draconicAncestry", "breathWeapon")  # the last two: VF3.2
 
 
 def test_the_decided_glossary_terms_end_with_their_english_term():
@@ -99,6 +99,10 @@ def test_a_term_bracket_appears_once_per_text():
     assert again == []
 
 
+# English texts that always had a bracketed term of their own (an English gloss, not the T1 rule); VF3.2 registered the term, the English is untouched.
+EN_OWN_BRACKETS = {("msg:label-dragon-colour", "Draconic Ancestry")}
+
+
 def test_the_english_side_has_no_brackets_of_terms_and_no_cyrillic():
     """EN mode is unchanged: the English catalogs, labels and copy carry no bracketed term and no Cyrillic."""
     texts = [(f"msg:{k}", v["en"]) for k, v in MESSAGES.items()]
@@ -110,4 +114,21 @@ def test_the_english_side_has_no_brackets_of_terms_and_no_cyrillic():
     for where, text in texts:
         assert not CYRILLIC.search(text), where
         for inner in BRACKET.findall(text):
+            if (where, inner) in EN_OWN_BRACKETS:
+                continue
             assert not any(p.strip() in BRACKET_TERMS for p in inner.split(",")), (where, inner)
+
+
+def test_vf32_draconic_ancestry_and_breath_weapon_carry_their_english_terms():
+    """VF3.2 (owner): 'Драконово потекло (Draconic Ancestry)' and 'Дъх (Breath Weapon)'; only the dragon-colour card text printed them,
+    and only that Bulgarian text changed (the English text and the Bulgarian label are untouched)."""
+    data = glossary.load()
+    assert data["draconicAncestry"]["bg"] == "Драконово потекло (Draconic Ancestry)"
+    assert data["breathWeapon"]["bg"] == "Дъх (Breath Weapon)"
+    assert {"Draconic Ancestry", "Breath Weapon"} <= BRACKET_TERMS
+    m = MESSAGES["desc-dragon-colour"]
+    assert m["bg"] == ("Изберете дракона от таблицата за драконово потекло (Draconic Ancestry); той определя вида щети, зоната и "
+                       "спасителния хвърлей (Saving Throw) на дъха (Breath Weapon) ви.")
+    assert m["en"] == "Choose the dragon of your Draconic Ancestry; it sets the damage type, area and saving throw of your Breath Weapon."
+    assert MESSAGES["label-dragon-colour"] == {"en": "Dragon Colour (Draconic Ancestry)", "bg": "Цвят на дракона"}
+    assert bracket_problems(m["bg"]) == []

@@ -303,6 +303,22 @@
       "locator": "Carrying Capacity"
     }
   },
+  "draconicAncestry": {
+    "en": "Draconic Ancestry",
+    "bg": "Драконово потекло (Draconic Ancestry)",
+    "cite": {
+      "src": "srd",
+      "locator": "5e-SRD-Traits.json::Draconic Ancestry"
+    }
+  },
+  "breathWeapon": {
+    "en": "Breath Weapon",
+    "bg": "Дъх (Breath Weapon)",
+    "cite": {
+      "src": "srd",
+      "locator": "5e-SRD-Traits.json::Breath Weapon"
+    }
+  },
   "feet": {
     "en": "feet",
     "bg": "фута",

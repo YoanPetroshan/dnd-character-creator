@@ -313,6 +313,22 @@ TERMS: tuple[Term, ...] = (
          "DONE (wording kept, brackets added): Сетива (Senses), тъмно зрение (Darkvision), сляпо зрение (Blindsight), усещане "
          "за вибрации (Tremorsense), истинско зрение (Truesight), дяволско зрение (Devil's Sight).",
          ((r"сетива|(тъмно|сляпо|истинско|дяволско) зрение|усещане за вибрации", r"senses|darkvision|blindsight|truesight|devil|tremorsense"),), None),
+    Term("Draconic Ancestry", "draconicAncestry",
+         (("драконово потекло", r"драконово потекло"),),
+         ("Драконово потекло", "Драконов произход", "Draconic Ancestry (keep English)"),
+         "Драконово потекло.",
+         "The Dragonborn trait that picks the dragon type (colour); the dragon-colour card text already said 'драконово потекло'. "
+         "Added by the owner after T1 (VF3.2).",
+         "DONE (VF3.2): Драконово потекло (Draconic Ancestry).",
+         ((r"драконово потекло", r"draconic ancestry"),), None),
+    Term("Breath Weapon", "breathWeapon",
+         (("дъх", r"\bдъх\w*"),),
+         ("Дъх", "Дихателно оръжие", "Breath Weapon (keep English)"),
+         "Дъх.",
+         "The Dragonborn trait whose damage type, area and saving throw follow the Draconic Ancestry; the dragon-colour card text "
+         "already said 'дъха ви'. Added by the owner after T1 (VF3.2).",
+         "DONE (VF3.2): Дъх (Breath Weapon).",
+         ((r"\bдъх\w*", r"breath weapon"),), None),
 )
 
 # (row English term, "<surface>:<key>") -> reason. A text that has the Bulgarian noun but no bracket for it, on purpose.

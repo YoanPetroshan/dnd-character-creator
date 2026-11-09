@@ -40,6 +40,8 @@ export const glossary = {
   shortRest: { en: "Short Rest", bg: "кратка почивка (Short Rest)" },
   longRest: { en: "Long Rest", bg: "дълга почивка (Long Rest)" },
   carryingCapacity: { en: "Carrying Capacity", bg: "Носимост (Carrying Capacity)" },
+  draconicAncestry: { en: "Draconic Ancestry", bg: "Драконово потекло (Draconic Ancestry)" },
+  breathWeapon: { en: "Breath Weapon", bg: "Дъх (Breath Weapon)" },
   feet: { en: "feet", bg: "фута" },
   gold: { en: "GP", bg: "зл." },
 } as const;
