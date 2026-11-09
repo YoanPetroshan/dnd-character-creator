@@ -36,7 +36,7 @@ def _draft(classes, ruleset="2014", species="human", subspecies=None, scores=Non
     base.update(scores or {})
     sp = {"id": species, "choices": {}}
     if subspecies:
-        sp["subraceId"] = subspecies
+        sp["subspeciesId"] = subspecies
     return {"name": "t", "ruleset": ruleset, "sources": list(sources), "classes": entries,
             "background": {"id": background, "choices": {}}, "species": sp,
             "abilities": {"method": "manual", "base": base},
@@ -154,3 +154,28 @@ def test_vf1_3_chartest_t3_specs_now_settle():
     for spec_id in ("t3-030-ability-limits-high-2014", "t3-056-ability-limits-high-2024"):
         s = next(x for x in matrix.generate("T3", 0) if x.id == spec_id)
         spec_mod.resolve_spec(s, catalog)  # raises FillStuck when the card cannot be settled
+
+
+# ---------------------------------------------------------------- VF1.4 Draconblood / Ravenite replace Damage Resistance
+def test_vf1_4_data_both_egw_subraces_overwrite_damage_resistance():
+    subs = [r for r in json.load(open(DATA / "races.json"))["subrace"]
+            if r.get("raceName") == "Dragonborn" and r.get("source") == "EGW" and r["name"] in ("Draconblood", "Ravenite")]
+    assert len(subs) == 2
+    for r in subs:
+        assert r["resist"] is None
+        assert "Damage Resistance" in [e.get("data", {}).get("overwrite") for e in r["entries"] if isinstance(e, dict)]
+
+
+@pytest.mark.parametrize("sub", ["dragonborn-phb-draconblood-egw", "dragonborn-phb-ravenite-egw"])
+@pytest.mark.parametrize("ruleset", ["2014", "mixed"])
+def test_vf1_4_no_resistance_card_and_no_pick_based_resistance(catalog, sub, ruleset):
+    res = resolve(_draft([("wizard", 1)], ruleset=ruleset, species="dragonborn-phb", subspecies=sub), catalog)
+    ids = [c["id"] for c in res["choices"] if c["source"]["kind"] == "species"]
+    assert "species:dragonborn-phb:resistance" not in ids
+    assert "species:dragonborn-phb:draconic-ancestry" in ids  # the breath weapon still follows the ancestry card
+    assert res["sheet"]["damageModifiers"]["resistances"] == []
+
+
+def test_vf1_4_the_phb_dragonborn_and_other_subraces_keep_the_resistance_card(catalog):
+    res = resolve(_draft([("wizard", 1)], species="dragonborn-phb"), catalog)
+    assert "species:dragonborn-phb:resistance" in [c["id"] for c in res["choices"]]

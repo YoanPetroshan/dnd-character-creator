@@ -3157,9 +3157,12 @@ def _species_choice_templates(catalog: Catalog, race: dict, race_id: str, subrac
     # A race whose variants fix the resistance (Dragonborn colour, Tiefling
     # legacy) is decided by the variant pick instead of a separate choice.
     variant_decides_resistance = any(v.get("resist") for v in race.get("variants") or [])
+    # VF1.4: a subrace whose own entry replaces the race's "Damage Resistance" trait (5etools `data.overwrite`, kept as
+    # `overwrites_traits`: EGW Draconblood and Ravenite) has no resistance pick of the race either.
+    resistance_replaced = "damage resistance" in {n.lower() for n in (subrace or {}).get("overwrites_traits") or []}
     for src, src_id in ((race, race_id), (subrace, subrace.get("index") if subrace else None)):
         envelope = src.get("resist_options") if src else None
-        if not envelope or (src is race and variant_decides_resistance):
+        if not envelope or (src is race and (variant_decides_resistance or resistance_replaced)):
             continue
         cid = f"species:{race_id}:resistance" if src is race else f"species:{race_id}:subspecies:{src_id}:resistance"
         source = {"kind": "species", "id": race_id, "label": race["name"]}

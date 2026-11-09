@@ -1116,7 +1116,7 @@ def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
                     assert isinstance(o["source"], str) and o["source"], (name, card["id"], o["id"])
                     assert not o["id"].startswith("skill-") and card["source"]["kind"] != "equipment", (name, card["id"], o["id"])
         with_source += has
-    assert with_source == 238  # the VF1.2 bard9-skill-empowerment-2014 case; the VF1.1 glory-tce-paladin7-2014 case; the four B1 PHB Dragonborn sinks (black, green, brass, white); the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
+    assert with_source == 239  # the VF1.4 dragonborn-phb-draconblood-fighter6-2014 case; the VF1.2 bard9-skill-empowerment-2014 case; the VF1.1 glory-tce-paladin7-2014 case; the four B1 PHB Dragonborn sinks (black, green, brass, white); the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
 
 
 def test_b2_feat_and_species_resources_are_guarded_not_stripped():
@@ -1146,6 +1146,17 @@ def test_vf1_2_bard_skill_empowerment_sink_has_no_skill_from_the_spell():
     card = next(c for c in res["choices"] if c["id"] == "class:bard:spells-known")
     assert "skill-empowerment" in card["selected"]
     assert "skill-empowerment" not in res["sheet"]["proficiencies"]["skills"]
+
+
+def test_vf1_4_draconblood_sink_has_no_resistance_card():
+    """VF1.4: no stored case holds Draconblood / Ravenite (no rebaseline); the appended sink has no resistance card or
+    resistance, and its Breath Weapon follows the Gold ancestry (fire, a 15-foot cone, Dex.)."""
+    name = next(n for n in _GOLDEN if n.endswith("/dragonborn-phb-draconblood-fighter6-2014"))
+    res = _GOLDEN[name]["result"]
+    assert "species:dragonborn-phb:resistance" not in [c["id"] for c in res["choices"]]
+    assert res["sheet"]["damageModifiers"]["resistances"] == []
+    bw = next(r for r in res["derived"]["speciesResources"] if r["name"] == "Breath Weapon")
+    assert (bw["details"]["damageType"], bw["details"]["save"], bw["details"]["shape"]) == ("fire", "DEX", "a 15-foot cone")
 
 
 if __name__ == "__main__":

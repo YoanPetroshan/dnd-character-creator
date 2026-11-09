@@ -172,6 +172,11 @@ KITCHEN_SINK: dict[str, dict] = {
     # VF1.2: a Bard 9 who knows the XGE spell Skill Empowerment (id `skill-empowerment`): not a skill proficiency. `once`
     "bard9-skill-empowerment-2014": _sub("bard", 9, "2014", marks=("classes", "official", "spells"), once=True,
                                          overrides={"class:bard:spells-known": ["skill-empowerment"]}),
+    # VF1.4: EGW Draconblood replaces Damage Resistance (no resistance card) and keeps the breath weapon of the Draconic
+    # Ancestry card (Gold: fire, 15 ft. cone, Dex.). Non-2014-only `once` (a "srd" filter hides the books)
+    "dragonborn-phb-draconblood-fighter6-2014": _sub("fighter", 6, "2014", marks=("classes", "official"), once=True,
+                                                     origin=("dragonborn-phb", "acolyte", "dragonborn-phb-draconblood-egw"), overrides={
+        "species:dragonborn-phb:draconic-ancestry": ["gold"]}),
     # G3: Cleric 6 (Life) + Paladin 3 (Devotion) under 2014: one merged Channel Divinity (PHB 164) whose note keeps both
     # classes' options; non-2024, so part of the golden via --append
     "cleric6-paladin3-2014": {**_sub("cleric", 6, "2014", marks=("classes",)),

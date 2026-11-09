@@ -220,6 +220,8 @@ _EXPECT = {
     "glory-tce-paladin7-2014": {},
     # VF1.2: a Bard 9 knowing the spell Skill Empowerment (no skill proficiency from it)
     "bard9-skill-empowerment-2014": {},
+    # VF1.4: EGW Draconblood, no Damage Resistance card; the breath weapon follows the Gold ancestry
+    "dragonborn-phb-draconblood-fighter6-2014": {"species_resources": ["Breath Weapon", "Forceful Presence"]},
     # G7: Haunted One, the either-or card resolved to Survivor
     "haunted-one-fighter3-2014": {"feats": ["survivor-rhw"]},
     # G4: the discipline ki costs, the runes as resources, Limited Wish (recharge other) and Power Surge (INT pool)

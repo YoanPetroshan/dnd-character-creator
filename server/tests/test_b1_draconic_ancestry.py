@@ -202,10 +202,16 @@ def test_the_egw_subraces_get_the_card_with_all_ten_colours(catalog, sub):
 
 
 @needs_data
-def test_the_egw_resistance_card_is_unchanged(catalog):
-    """Reported, not fixed here: the data replaces Damage Resistance for these subraces, the engine still offers and applies it."""
-    res = resolve(_draft(sub="dragonborn-phb-ravenite-egw", choices={RES: ["fire"]}), catalog)
-    assert _card(res, RES)["status"] == "resolved" and res["sheet"]["damageModifiers"]["resistances"] == ["fire"]
+@pytest.mark.parametrize("sub", ["dragonborn-phb-draconblood-egw", "dragonborn-phb-ravenite-egw"])
+def test_the_egw_resistance_card_is_gone(catalog, sub):
+    """VF1.4 (was pinned as "unchanged" in B1): the data replaces Damage Resistance for these subraces (`data.overwrite`), so the
+    card is not offered and a stored pick grants no resistance (it is reported as a stale pick). The breath weapon still
+    uses the Draconic Ancestry card."""
+    res = resolve(_draft(sub=sub, choices={RES: ["fire"], ANC: ["gold"]}), catalog)
+    assert _card(res, RES) is None
+    assert res["sheet"]["damageModifiers"]["resistances"] == []
+    assert any(p["choiceId"] == RES for p in res["pruned"])
+    assert _bw(res)["details"]["damageType"] == "fire" and _bw(res)["details"]["shape"] == "a 15-foot cone"
 
 
 @needs_data
