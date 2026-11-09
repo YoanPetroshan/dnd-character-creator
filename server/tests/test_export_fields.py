@@ -218,6 +218,8 @@ _EXPECT = {
     "two-magic-initiate-connoisseur-wizard8-2014": {"innate": True, "feats": ["magic-initiate-xphb", "magic-connoisseur-au"]},
     # VF1.1: Oath of Glory (TCE) Paladin 7, Aura of Alacrity: the speed line carries the +10
     "glory-tce-paladin7-2014": {},
+    # VF1.2: a Bard 9 knowing the spell Skill Empowerment (no skill proficiency from it)
+    "bard9-skill-empowerment-2014": {},
     # G7: Haunted One, the either-or card resolved to Survivor
     "haunted-one-fighter3-2014": {"feats": ["survivor-rhw"]},
     # G4: the discipline ki costs, the runes as resources, Limited Wish (recharge other) and Power Surge (INT pool)

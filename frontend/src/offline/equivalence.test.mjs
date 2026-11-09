@@ -118,11 +118,11 @@ json.dumps({"status": status, "loaded": loaded})`),
     expect(r.mismatches).toEqual([]);
   }, 600_000);
 
-  it.skipIf(!hasPython)("matches the 72 export baseline hashes (Markdown, YAML, PDF)", async () => {
+  it.skipIf(!hasPython)("matches the 73 export baseline hashes (Markdown, YAML, PDF)", async () => {
     await loadPdfStack();
     const r = run("harness.exports()");
     timings.exports_s = r.seconds;
-    expect(r.checked).toBe(72);
+    expect(r.checked).toBe(73);
     expect(r.ids).toBe(true);
     expect(r.mismatches).toEqual([]);
   }, 600_000);

@@ -65,3 +65,38 @@ def test_vf1_1_glory_tce_6_has_no_bonus(catalog):
     a = resolve(_draft([("paladin", 6, "glory-tce")]), catalog)["derived"]["speeds"]
     b = resolve(_draft([("paladin", 6, "devotion")]), catalog)["derived"]["speeds"]
     assert a["walk"] == b["walk"]
+
+
+# ---------------------------------------------------------------- VF1.2 a spell id starting with "skill-" is not a skill
+def _skill_ids(catalog):
+    from catalog import reference_data
+    return set(reference_data.SKILL_ABILITY)
+
+
+def test_vf1_2_skill_empowerment_is_a_spell_not_a_skill(catalog):
+    """spells-xge.json Skill Empowerment is a spell; the engine took every selected id starting with 'skill-' as a skill."""
+    spells = json.load(open(DATA / "spells" / "spells-xge.json"))["spell"]
+    assert any(s["name"] == "Skill Empowerment" and s["level"] == 5 for s in spells)
+    for ruleset in ("2014", "mixed", "2024"):
+        d = _draft([("bard", 9)], ruleset=ruleset)
+        d["classes"][0]["choices"] = {"class:bard:spells-known": ["skill-empowerment"]}
+        res = resolve(d, catalog)
+        card = next(c for c in res["choices"] if c["id"] == "class:bard:spells-known")
+        assert "skill-empowerment" in card["selected"], ruleset
+        skills = res["sheet"]["proficiencies"]["skills"]
+        assert "skill-empowerment" not in skills, ruleset
+        assert set(skills) <= _skill_ids(catalog), ruleset
+        assert "skill-empowerment" not in {k for k in res["derived"]["skills"]}, ruleset
+
+
+def test_vf1_2_no_skill_option_of_a_proficiency_card_is_blocked_by_a_spell_id(catalog):
+    """The duplicate-skill gate reads the picked skills of other cards: a Bard 9 with the spell picked offers the same
+    skill options (none disabled for a 'duplicate' of the spell id) as without it."""
+    def options(pick):
+        d = _draft([("bard", 9)], ruleset="2014")
+        if pick:
+            d["classes"][0]["choices"] = {"class:bard:spells-known": ["skill-empowerment"]}
+        res = resolve(d, catalog)
+        return {c["id"]: [(o["id"], o.get("disabled")) for o in c["options"]] for c in res["choices"]
+                if c["options"] and all(o["id"].startswith("skill-") and o["id"] != "skill-empowerment" for o in c["options"])}
+    assert options(True) == options(False)

@@ -2396,12 +2396,18 @@ def _prof_or_expertise_priors(choices: list[dict], resolved_feats: list[dict], f
             else:
                 before = pos(c) <= here
             if before:
-                prior.update(s for s in c["selected"] if s.startswith("skill-"))
+                prior.update(s for s in c["selected"] if _is_skill_id(s))
         for f in resolved_feats:  # fixed skill grants of ASI feats sit at their ASI level
             if f.get("_asi_cid") and (_feat_build_position(f, class_order) or last) <= here:
                 prior.update(p for p in _feat_proficiency_ids([f]) if p.startswith("skill-"))
         priors[card["id"]] = prior
     return priors
+
+
+def _is_skill_id(pick: str) -> bool:
+    """VF1.2: a real skill id (one of the 18 `reference_data.SKILL_ABILITY` keys). A prefix test is not enough: the XGE
+    spell Skill Empowerment has the id `skill-empowerment` and is a legal pick of Bard / Sorcerer / Wizard spell cards."""
+    return pick in reference_data.SKILL_ABILITY
 
 
 def _proficiency_grants(choices: list[dict], catalog: Catalog, resolved_classes: list[dict], resolved_feats: list[dict],
@@ -2469,7 +2475,7 @@ def _gate_duplicate_skill_picks(choices: list[dict], class_order: list[str]) -> 
             pruned.append({"choiceId": c["id"], "reason": msg(
                 "pruned-proficient", label=c["label"], names=[labels.get(d, d) for d in dup])})
         choices[i] = {**c, "options": options, "selected": kept, "status": "resolved" if len(kept) == c["count"] else "pending"}
-        held.update(s for s in kept if s.startswith("skill-"))
+        held.update(s for s in kept if _is_skill_id(s))
     return pruned
 
 
@@ -2501,7 +2507,7 @@ def _gate_positioned_proficiencies(choices: list[dict], catalog: Catalog, resolv
             if at is None or at > pos:
                 continue
             is_prof_card = "prof-choice-" in c["id"] or "proficiency-choice" in c["id"]
-            prior.update(s for s in c["selected"] if s.startswith("skill-") or is_prof_card)
+            prior.update(s for s in c["selected"] if _is_skill_id(s) or is_prof_card)
         if class_choices_2024.is_primal_knowledge_card(card):
             pruned += class_choices_2024.gate_primal_knowledge(choices, prior)
             name = "Primal Knowledge"
@@ -6550,7 +6556,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         # proficient), so they never feed this set.
         if (c["source"]["kind"] in ("class", "species", "background", "feat") and "expertise-choice" not in c["id"]
                 and not class_choices_2024.is_positioned_proficiency_card(c)):  # C6b-2 / RP12: gated against the others below
-            proficient_skills.update(s for s in c["selected"] if s.startswith("skill-"))
+            proficient_skills.update(s for s in c["selected"] if _is_skill_id(s))
     fixed_origin_skills: set[str] = set()  # F3a-4: grants that predate every class level
     if bg:
         proficient_skills.update(p["index"] for p in bg.get("starting_proficiencies", []) if p["index"].startswith("skill-"))
@@ -6579,7 +6585,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         choices, catalog, resolved_classes, resolved_feats, bg, race, subrace, xphb_effects, pk_class_order)
     for c in choices:
         if class_choices_2024.is_positioned_proficiency_card(c):
-            proficient_skills.update(s for s in c["selected"] if s.startswith("skill-"))
+            proficient_skills.update(s for s in c["selected"] if _is_skill_id(s))
 
     proficient_armor: set[str] = set()
     proficient_weapons: set[str] = set()
