@@ -1322,8 +1322,10 @@ METAMAGIC_COSTS_2014: dict[str, dict] = {
     "metamagic-heightened-spell": {"cost": 3, "quote": "you can spend 3 sorcery points to give one target of the spell disadvantage"},
     "metamagic-quickened-spell": {"cost": 2, "quote": "you can spend 2 sorcery points to change the casting time to 1 bonus action"},
     "metamagic-subtle-spell": {"cost": 1, "quote": "you can spend 1 sorcery point to cast it without any somatic or verbal components"},
-    "metamagic-twinned-spell": {"cost": "spell level",
-                                "quote": "you can spend a number of sorcery points equal to the spell's level to target a second creature"},
+    # F1: the cost text carries the cantrip rule of the same sentence ("(1 sorcery point if the spell is a cantrip)").
+    "metamagic-twinned-spell": {"cost": "spell level, 1 for a cantrip",
+                                "quote": "you can spend a number of sorcery points equal to the spell's level to target a second creature "
+                                         "in range with the same spell (1 sorcery point if the spell is a cantrip)"},
     "opt-seeking-spell-tce": {"cost": 2, "quote": "you can spend 2 sorcery points to reroll the"},
     "opt-transmuted-spell-tce": {"cost": 1, "quote": "you can spend 1 sorcery point to change that damage type"},
 }

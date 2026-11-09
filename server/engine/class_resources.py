@@ -370,7 +370,8 @@ _SRD_METAMAGIC_CARD = re.compile(r"^class:sorcerer:\d+:feature:metamagic-\d+$")
 
 def _metamagic_costs_2014(ctx: Ctx) -> list[tuple[str, str, int | str]]:
     """G2: [(option id, name, cost)] of the Metamagic options picked on the SRD Sorcerer cards (3 / 10 / 17), in card then
-    pick order, for the options `reference_data.METAMAGIC_COSTS_2014` knows. [] without a pick."""
+    pick order, for the options `reference_data.METAMAGIC_COSTS_2014` knows. [] without a pick. F1: the options picked on a
+    Metamagic Adept feat card (`...:metamagic`, kind feat, bare option labels) follow, a duplicate of a Sorcerer pick once."""
     if not isinstance(ctx.choices, list):
         return []
     out = []
@@ -381,6 +382,16 @@ def _metamagic_costs_2014(ctx: Ctx) -> list[tuple[str, str, int | str]]:
             spec = reference_data.METAMAGIC_COSTS_2014.get(oid)
             record = ctx.catalog.features.get(oid)
             if spec and record:
+                out.append((oid, record["name"].removeprefix("Metamagic: "), spec["cost"]))
+    have = {oid for oid, _n, _c in out}
+    for card in ctx.choices:
+        if (card.get("source") or {}).get("kind") != "feat" or not str(card.get("id")).endswith(":metamagic"):
+            continue
+        for oid in card.get("selected") or []:
+            spec = reference_data.METAMAGIC_COSTS_2014.get(oid)
+            record = ctx.catalog.features.get(oid)
+            if spec and record and oid not in have:
+                have.add(oid)
                 out.append((oid, record["name"].removeprefix("Metamagic: "), spec["cost"]))
     return out
 

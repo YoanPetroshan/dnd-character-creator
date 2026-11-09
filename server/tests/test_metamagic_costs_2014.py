@@ -4,7 +4,7 @@ Governing texts (the SRD Metamagic feature records and optionalfeatures.json MM 
 verbatim quote in `reference_data.METAMAGIC_COSTS_2014`, pinned by `test_every_quote_is_in_its_record`):
   Careful 1, Distant 1, Empowered 1, Extended 1, Heightened 3, Quickened 2, Subtle 1 sorcery point(s)
   Twinned    "a number of sorcery points equal to the spell's level (1 sorcery point if the spell is a cantrip)"
-             -> the exact text "spell level"
+             -> the exact text "spell level, 1 for a cantrip" (F1; the quoted sentence ends "(1 sorcery point if the spell is a cantrip)")
   Seeking Spell (TCE) 2, Transmuted Spell (TCE) 1: in the vendored optionalfeatures.json (20 MM records), absent from
              the SRD list, so they are imported (`convert_metamagic_options_2014`, ids `opt-seeking-spell-tce`,
              `opt-transmuted-spell-tce`) and offered by the three SRD Sorcerer cards and the Metamagic Adept feat.
@@ -41,7 +41,7 @@ C3 = "class:sorcerer:17:feature:metamagic-3"
 COSTS = {
     "metamagic-careful-spell": 1, "metamagic-distant-spell": 1, "metamagic-empowered-spell": 1,
     "metamagic-extended-spell": 1, "metamagic-heightened-spell": 3, "metamagic-quickened-spell": 2,
-    "metamagic-subtle-spell": 1, "metamagic-twinned-spell": "spell level",
+    "metamagic-subtle-spell": 1, "metamagic-twinned-spell": "spell level, 1 for a cantrip",
     "opt-seeking-spell-tce": 2, "opt-transmuted-spell-tce": 1,
 }
 NAMES = {"metamagic-careful-spell": "Careful Spell", "metamagic-distant-spell": "Distant Spell",
@@ -87,7 +87,7 @@ def test_every_quote_is_in_its_record(catalog):
         if isinstance(spec["cost"], int):  # the number is in the quoted sentence
             assert f"spend {spec['cost']} sorcery point" in spec["quote"], oid
         else:
-            assert spec["cost"] == "spell level" and "equal to the spell's level" in spec["quote"], oid
+            assert spec["cost"] == "spell level, 1 for a cantrip" and "equal to the spell's level" in spec["quote"] and "(1 sorcery point if the spell is a cantrip)" in spec["quote"], oid
 
 
 @needs_data
@@ -140,7 +140,7 @@ def test_srd_only_catalog_is_unchanged(monkeypatch):
     res = resolve(_draft(3, {C1: ["metamagic-quickened-spell", "metamagic-twinned-spell"]}), bare)
     card = next(c for c in res["choices"] if c["id"] == C1)
     assert len(card["options"]) == 8
-    assert _sp(res)["details"]["metamagicCosts"] == {"metamagic-quickened-spell": 2, "metamagic-twinned-spell": "spell level"}
+    assert _sp(res)["details"]["metamagicCosts"] == {"metamagic-quickened-spell": 2, "metamagic-twinned-spell": "spell level, 1 for a cantrip"}
 
 
 # ---- cards -----------------------------------------------------------------------------------------------------------
@@ -188,9 +188,9 @@ def test_cards_and_pick_order_and_only_picked(catalog):
     assert list(d["metamagicCosts"]) == ["opt-transmuted-spell-tce", "metamagic-heightened-spell",
                                          "metamagic-twinned-spell", "opt-seeking-spell-tce"]
     assert d["metamagicCosts"] == {"opt-transmuted-spell-tce": 1, "metamagic-heightened-spell": 3,
-                                   "metamagic-twinned-spell": "spell level", "opt-seeking-spell-tce": 2}
+                                   "metamagic-twinned-spell": "spell level, 1 for a cantrip", "opt-seeking-spell-tce": 2}
     assert d["metamagic"] == [{"name": "Transmuted Spell", "cost": 1}, {"name": "Heightened Spell", "cost": 3},
-                              {"name": "Twinned Spell", "cost": "spell level"}, {"name": "Seeking Spell", "cost": 2}]
+                              {"name": "Twinned Spell", "cost": "spell level, 1 for a cantrip"}, {"name": "Seeking Spell", "cost": 2}]
 
 
 @needs_data
@@ -240,8 +240,8 @@ def test_metamagic_adept_pool_has_the_tce_options(catalog):
 def test_export_line_prints_the_costs_in_both_languages(catalog):
     res = _go(catalog, 3, {C1: ["metamagic-twinned-spell", "opt-seeking-spell-tce"]})
     sp = _sp(res)
-    assert "metamagic: Twinned Spell (spell level), Seeking Spell (2)" in resource_line(sp, "en")
-    assert "метамагия: Twinned Spell (spell level), Seeking Spell (2)" in resource_line(sp, "bg")
+    assert "metamagic: Twinned Spell (spell level, 1 for a cantrip), Seeking Spell (2)" in resource_line(sp, "en")
+    assert "метамагия: Twinned Spell (spell level, 1 for a cantrip), Seeking Spell (2)" in resource_line(sp, "bg")
 
 
 @needs_data
@@ -250,3 +250,44 @@ def test_resolve_stays_fast(catalog):
                         C3: ["opt-seeking-spell-tce"]})
     resolve(copy.deepcopy(draft), catalog)
     assert_fast(measure(lambda: resolve(copy.deepcopy(draft), catalog)), "sorcerer 17 with four Metamagic picks")
+
+
+# ---- F1 (review of G2) ---------------------------------------------------------------------------------------------
+
+ADEPT = "class:sorcerer:4:asi:feat:metamagic-adept-tce:metamagic"
+
+
+@needs_data
+def test_twinned_spell_cost_text_carries_the_cantrip_rule(catalog):
+    """SRD / PHB text: "equal to the spell's level to target a second creature in range with the same spell (1 sorcery
+    point if the spell is a cantrip)": the cost is the spell's level, 1 for a cantrip."""
+    assert "(1 sorcery point if the spell is a cantrip)" in _text(catalog, "metamagic-twinned-spell")
+    res = _go(catalog, 3, {C1: ["metamagic-twinned-spell"]})
+    assert _sp(res)["details"]["metamagicCosts"] == {"metamagic-twinned-spell": "spell level, 1 for a cantrip"}
+    assert _sp(res)["details"]["metamagic"] == [{"name": "Twinned Spell", "cost": "spell level, 1 for a cantrip"}]
+
+
+@needs_data
+def test_metamagic_adept_picks_join_the_sorcerer_costs_2014(catalog):
+    draft = _draft(8, {C1: ["metamagic-careful-spell", "metamagic-distant-spell"], "class:sorcerer:4:asi": ["feat:metamagic-adept-tce"],
+                       ADEPT: ["metamagic-quickened-spell", "metamagic-twinned-spell"]})
+    details = _sp(resolve(draft, catalog))["details"]
+    assert details["metamagicCosts"] == {"metamagic-careful-spell": 1, "metamagic-distant-spell": 1, "metamagic-quickened-spell": 2,
+                                         "metamagic-twinned-spell": "spell level, 1 for a cantrip"}
+    assert [m["name"] for m in details["metamagic"]] == ["Careful Spell", "Distant Spell", "Quickened Spell", "Twinned Spell"]
+
+
+@needs_data
+def test_a_metamagic_adept_pick_that_repeats_a_sorcerer_pick_is_listed_once(catalog):
+    draft = _draft(8, {C1: ["metamagic-careful-spell", "metamagic-distant-spell"], "class:sorcerer:4:asi": ["feat:metamagic-adept-tce"],
+                       ADEPT: ["metamagic-careful-spell"]})
+    names = [m["name"] for m in _sp(resolve(draft, catalog))["details"]["metamagic"]]
+    assert names.count("Careful Spell") == 1
+
+
+@needs_data
+def test_metamagic_adept_without_a_pick_or_under_2024_adds_nothing(catalog):
+    draft = _draft(8, {C1: ["metamagic-careful-spell"], "class:sorcerer:4:asi": ["feat:metamagic-adept-tce"]})
+    assert _sp(resolve(draft, catalog))["details"]["metamagicCosts"] == {"metamagic-careful-spell": 1}
+    res = resolve(_draft(8, {}, ruleset="2024"), catalog)
+    assert "metamagicCosts" not in (_sp(res).get("details") or {})

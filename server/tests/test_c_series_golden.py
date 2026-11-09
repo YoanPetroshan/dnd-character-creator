@@ -315,6 +315,18 @@ REBASELINES: dict[str, dict] = {
         ],
         "why": "2014 Metamagic costs on Sorcery Points and the TCE Seeking / Transmuted Spell options (G2)",
     },
+    # F1 (review of G2): Twinned Spell costs "a number of sorcery points equal to the spell's level (1 sorcery point if the
+    # spell is a cantrip)"; the cost text was "spell level" and is now "spell level, 1 for a cantrip". Rule: every stored 2014
+    # Sorcerer that picked Twinned Spell changes that ONE string, in `metamagicCosts` and in the 2024-shaped `metamagic` list
+    # entry; no other key, case or pick moves. Only the sorcerer17 sink holds Twinned (the filler's first options never do).
+    "F1": {
+        "cases": ["ks/src-all/sorcerer17-metamagic-2014"],
+        "paths": [
+            r"^result\.derived\.classResources\[sorcerer:sorcery-points\]\.details\.metamagicCosts\.metamagic-twinned-spell$",
+            r"^result\.derived\.classResources\[sorcerer:sorcery-points\]\.details\.metamagic\[[0-9]+\]\.cost$",
+        ],
+        "why": "Twinned Spell cost text carries the cantrip rule (F1)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -667,7 +679,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2") and STRIP == ("derived.featResources", "derived.speciesResources")
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1") and STRIP == ("derived.featResources", "derived.speciesResources")
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
@@ -961,7 +973,7 @@ def test_g2_cases_hold_the_metamagic_costs_and_nothing_else_moved():
         sp = [r for r in entry["result"]["derived"]["classResources"] if r["id"] == "sorcerer:sorcery-points"]
         costs = sp[0]["details"].get("metamagicCosts") if sp else None
         if n.startswith("ks/") and key == "sorcerer17-metamagic-2014":
-            assert costs == {"metamagic-twinned-spell": "spell level", "opt-seeking-spell-tce": 2,
+            assert costs == {"metamagic-twinned-spell": "spell level, 1 for a cantrip", "opt-seeking-spell-tce": 2,
                              "metamagic-heightened-spell": 3, "opt-transmuted-spell-tce": 1}, n
             assert [m["name"] for m in sp[0]["details"]["metamagic"]] == ["Twinned Spell", "Seeking Spell", "Heightened Spell",
                                                                           "Transmuted Spell"]
