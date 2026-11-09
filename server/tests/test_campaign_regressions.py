@@ -914,3 +914,80 @@ def test_vf2_4b_the_filler_style_first_enabled_picks_give_distinct_languages(cat
                 (d["species"] if card["source"]["kind"] == "species" else d["background"])["choices"][cid] = pick
     res = resolve(d, catalog)
     assert len(res["sheet"]["proficiencies"]["languages"]) == 4 and all(c["status"] == "resolved" for c in _lang_cards_all(res).values())
+
+
+# ---------------------------------------------------------------- VF2.5 a subspecies' replaced race traits are not listed
+def _species_features(res):
+    return [f["name"] for f in res["sheet"]["features"] if f["source"]["kind"] == "species"]
+
+
+def _overwriting_subraces(catalog):
+    return {sid: s for sid, s in catalog.subraces.items() if s.get("overwrites_traits")}
+
+
+def test_vf2_5_the_pairs(catalog):
+    pairs = _overwriting_subraces(catalog)
+    assert len(pairs) == 33   # 33 official subraces replace at least one race trait (56 replaced trait names)
+    assert sum(len(s["overwrites_traits"]) for s in pairs.values()) == 56
+
+
+def test_vf2_5_every_replaced_race_trait_is_listed_only_as_the_subraces_own(catalog):
+    checked = 0
+    for sid, sub in _overwriting_subraces(catalog).items():
+        race = catalog.races[sub["race"]["index"]]
+        res = resolve(_draft([("wizard", 1)], species=race["index"], subspecies=sid), catalog)
+        names = _species_features(res)
+        own = [t["name"] for t in sub["racial_traits"]]
+        race_names = [t["name"] for t in race["traits"]]
+        for replaced in sub["overwrites_traits"]:
+            if replaced in own:
+                # the subspecies' own trait stays, once per trait of that name in the subspecies
+                assert names.count(replaced) == own.count(replaced), (sid, replaced, names)
+            else:
+                assert replaced not in names, (sid, replaced, names)
+            checked += 1
+        # nothing else of the race is lost
+        for name in race_names:
+            if name not in sub["overwrites_traits"] and not name.startswith("Skill Proficiency") and name != "Tool Proficiency":
+                assert name in names, (sid, name)
+    assert checked == 56
+
+
+def test_vf2_5_draconblood_and_ravenite(catalog):
+    for sid, own in (("dragonborn-phb-draconblood-egw", "Forceful Presence"), ("dragonborn-phb-ravenite-egw", "Vengeful Assault")):
+        names = _species_features(resolve(_draft([("wizard", 1)], species="dragonborn-phb", subspecies=sid), catalog))
+        assert "Damage Resistance" not in names and own in names and names.count("Draconic Ancestry") == 1, (sid, names)
+        assert "Breath Weapon" in names
+    # the PHB base Dragonborn and its other lineages keep the race's traits
+    base = _species_features(resolve(_draft([("wizard", 1)], species="dragonborn-phb"), catalog))
+    assert "Damage Resistance" in base and base.count("Draconic Ancestry") == 1
+
+
+def test_vf2_5_tiefling_legacy_replaces_infernal_legacy(catalog):
+    fierna = _species_features(resolve(_draft([("wizard", 1)], species="tiefling-phb", subspecies="tiefling-phb-fierna-mtf"), catalog))
+    assert "Infernal Legacy" not in fierna and "Legacy of Phlegethos" in fierna and "Hellish Resistance" in fierna
+    asmodeus = _species_features(resolve(_draft([("wizard", 1)], species="tiefling-phb", subspecies="tiefling-phb-asmodeus-mtf"), catalog))
+    assert "Infernal Legacy" in asmodeus   # no replacing entry: kept
+
+
+def test_vf2_5_custom_lineage_variable_trait_darkvision_lists_no_skill_proficiency(catalog):
+    def variant_draft(variant):
+        d = _draft([("wizard", 1)], species="custom-lineage-tce")
+        if variant:
+            d["species"]["choices"] = {"species:custom-lineage-tce:variant": [variant]}
+        return d
+    names = _species_features(resolve(variant_draft("darkvision"), catalog))
+    assert "Variable Trait" in names and "Skill Proficiency" not in names, names
+    skill = _species_features(resolve(variant_draft("skill-proficiency"), catalog))
+    assert "Skill Proficiency" in skill and "Variable Trait" in skill
+    # no variant picked yet: both choices are possible, the entry stays until the pick
+    assert "Skill Proficiency" in _species_features(resolve(variant_draft(None), catalog))
+
+
+def test_vf2_5_kobold_variants_that_drop_the_skill_pick_list_no_skill_proficiency(catalog):
+    def names(variant):
+        d = _draft([("wizard", 1)], species="kobold-mpmm")
+        d["species"]["choices"] = {"species:kobold-mpmm:variant": [variant]}
+        return _species_features(resolve(d, catalog))
+    assert "Skill Proficiency" in names("craftiness")
+    assert "Skill Proficiency" not in names("defiance") and "Skill Proficiency" not in names("draconic-sorcery")

@@ -380,6 +380,17 @@ REBASELINES: dict[str, dict] = {
         ],
         "why": "species and background language cards gated against the known languages (VF2.4b)",
     },
+    # VF2.5: a subspecies that replaces a race trait (5etools `data.overwrite`: Draconblood / Ravenite Damage Resistance, the MTF /
+    # SCAG Tiefling legacies' Infernal Legacy, the Deep Gnome Languages ...) lists only the replacing text in `sheet.features`; the
+    # variant that drops the skill pick no longer lists the synthetic "Skill Proficiency" trait. Rule: only a stored case whose
+    # subspecies has `overwrites_traits` (the Draconblood Dragonborn and the Fierna / Winged Tieflings) changes, and only the
+    # species rows of the `sheet.features` list.
+    "VF2d": {
+        "cases": ["ks/src-all/dragonborn-phb-draconblood-fighter6-2014", "ks/src-all/tiefling-fierna-wizard5-2014",
+                  "ks/src-all/tiefling-winged-wizard5-2014"],
+        "paths": [r"^result\.sheet\.features(\[[0-9]+\])*(\.[A-Za-z]+)?$"],
+        "why": "the species traits a subspecies replaces are not listed (VF2.5)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -732,7 +743,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a", "VF2b", "VF2c") and STRIP == ()
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a", "VF2b", "VF2c", "VF2d") and STRIP == ()
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 

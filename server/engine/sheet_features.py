@@ -151,7 +151,7 @@ def _xphb_class_rows(catalog, cls_id: str, class_level: int) -> list[tuple[int, 
 
 
 def build_features(catalog, resolved_classes, refs_by_class, race, race_id, subrace, bg, bg_id, feats, choices,
-                   ruleset: str = "mixed") -> list[dict]:
+                   ruleset: str = "mixed", species_variant: dict | None = None) -> list[dict]:
     out: list[dict] = []
     class_choices = _class_choice_labels(choices)
     fs_labels = _fighting_style_labels(choices) if ruleset == "2024" else {}
@@ -249,6 +249,9 @@ def build_features(catalog, resolved_classes, refs_by_class, race, race_id, subr
         refs = list(race.get("traits", [])) + (list(subrace.get("racial_traits", [])) if subrace else [])
         seen_traits: set[str] = set()
         by_name: dict[str, dict] = {}  # VF1.8: the entry already listed for a trait name of this species
+        race_refs = {r["index"] for r in race.get("traits", [])}
+        replaced = set((subrace or {}).get("overwrites_traits") or [])  # VF2.5: 5etools `data.overwrite` of the subspecies' entries
+        skill_pick_removed = "skillProficiencies" in (species_variant or {}).get("removes", [])
         for ref in refs:
             trait = catalog.traits.get(ref["index"])
             if not trait or not trait.get("name") or ref["index"] in seen_traits:
@@ -256,6 +259,14 @@ def build_features(catalog, resolved_classes, refs_by_class, race, race_id, subr
             seen_traits.add(ref["index"])
             labels = [_strip_prefix(l, trait["name"]) for l in
                       _prefixed_labels(choices, "species", f"species:{race_id}:trait:{ref['index']}")]
+            if ref["index"] in race_refs and trait["name"] in replaced and not labels:
+                # VF2.5: the subspecies replaces this race trait (Draconblood / Ravenite lose Damage Resistance, a Tiefling legacy
+                # Infernal Legacy, the Deep Gnome Languages ...): only the replacing text is listed. A trait that holds a pick stays.
+                continue
+            if skill_pick_removed and ref["index"].endswith("-trait-choice-skill-proficiency"):
+                # VF2.5: the selected variant drops the species' skill proficiency (Custom Lineage's Darkvision, Kobold's
+                # Defiance / Draconic Sorcery): the synthetic pick trait is not a feature of this character
+                continue
             if "-trait-choice-" in ref["index"] and trait["name"] in by_name:
                 # VF1.8: the synthetic proficiency-choice trait ("Tool Proficiency") of a race whose own entries already
                 # have a trait of that name (PHB Dwarf): one line, the pick label on it.
