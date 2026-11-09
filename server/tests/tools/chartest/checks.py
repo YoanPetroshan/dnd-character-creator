@@ -167,6 +167,9 @@ class Ctx:
         self.prefs = draft.get("preferences") or {}
         picks = [v for c in draft["classes"] for vs in (c.get("choices") or {}).values() if isinstance(vs, list) for v in vs]
         self.thaumaturge = any(isinstance(v, str) and ("thaumaturge" in v or "magician" in v) for v in picks)
+        # the extra cantrip belongs to the class that offers the pick: Cleric Thaumaturge, Druid Magician
+        self.thaumaturge_cleric = any(isinstance(v, str) and "thaumaturge" in v for v in picks)
+        self.magician_druid = any(isinstance(v, str) and "magician" in v for v in picks)
 
     def has_feat(self, name: str) -> bool:
         return name.lower() in self.feat_names
@@ -329,7 +332,10 @@ def c_skills(x: Ctx):
         a = x.der["skills"].get(sk)
         if a not in allowed:
             bad[sk] = (e, a)
-    return [R("SKILLS", not bad, "mod + PB (proficient) + PB (expertise) (+ half PB: Jack of All Trades / Remarkable Athlete)", bad or "ok",
+    unknown = sorted(profs - set(SKILL_ABILITY))  # expertise may name a tool (Rogue / Bard: thieves' tools), proficiencies may not  # a spell / option id leaked into the proficiency list (skill-empowerment)
+    if unknown:
+        bad["unknown-skill-ids"] = unknown
+    return [R("SKILLS", not bad, "mod + PB (proficient) + PB (expertise) (+ half PB: Jack of All Trades / Remarkable Athlete); only the 18 skill ids", bad or "ok",
               "PHB p.174-175 skill bonus; Rogue / Bard expertise doubles PB")]
 
 
@@ -467,7 +473,7 @@ def c_cantrips(x: Ctx):
         if exp is None or (exp == 0 and not card):
             continue
         act = card["count"] if card else 0
-        if x.thaumaturge and cid == "cleric" or x.thaumaturge and cid == "druid":
+        if (x.thaumaturge_cleric and cid == "cleric") or (x.magician_druid and cid == "druid"):
             exp += 1  # 2024 Thaumaturge / Magician: one extra cantrip
         out.append(R("CANTRIPS", act == exp, exp, act, f"class-{cid}.json cantripProgression / 'Cantrips' column at level {lvl}"))
     return out
@@ -542,14 +548,50 @@ def c_ac(x: Ctx):
             opts["draconic"] = 13 + dex  # PHB 2014 / SRD Draconic Resilience
         if x.subclass_is("sorcerer", "draconic sorcery") and x.class_level("sorcerer") >= 3:
             opts["draconic"] = 10 + dex + x.mods["CHA"]  # XPHB Draconic Sorcery, Draconic Resilience
+    picks = [v for c in x.draft["classes"] for vs in (c.get("choices") or {}).values() if isinstance(vs, list) for v in vs]
+    if not armor:
+        # Warlock invocation Armor of Shadows (PHB: "cast mage armor on yourself at will"; XPHB: without a spell slot) and the
+        # Dragon Hide feat (XGE: "AC 13 + Dex") give a second unarmored formula; the best one applies, never summed
+        if any(isinstance(v, str) and "armor-of-shadows" in v for v in picks) or x.has_feat("dragon hide"):
+            opts["armor-of-shadows / dragon hide"] = 13 + dex
     best = max(opts.values())
     best += 2 if shield else 0
     allowed = {best}
-    picks = [v for c in x.draft["classes"] for vs in (c.get("choices") or {}).values() if isinstance(vs, list) for v in vs]
     if armor and any(isinstance(v, str) and "defense" in v and ("style" in v or v.startswith("feat:")) for v in picks):
         allowed.add(best + 1)
     return [R("AC", x.der["armorClass"] in allowed, f"{best} best of {opts}{' + shield 2' if shield else ''}", x.der["armorClass"],
               "PHB p.14, 144-145, class Unarmored Defense; one formula at a time, the best applies (Defense style +1 in armor)")]
+
+
+_FEAT_SPEED_RE = re.compile(
+    r"(?:(?:\{@variantrule Speed\|XPHB\}|[Ss]peed) increases by|[Ii]ncrease your (?:walking )?(?:\{@variantrule Speed\|XPHB\}|speed) by) (\d+) feet")
+
+
+def feat_speed_bonus(feat_name: str, ruleset: str) -> int:
+    """Flat walking-speed bonus of a feat from its own text ("Your Speed increases by 5 feet": Mark of Passage,
+    Transmuted Anatomy, Speedy, Mobile). Conditional rider sentences (Charger: "when you take the Dash action") and
+    Epic Boons are not flat bonuses of the sheet speed and are skipped."""
+    raw = raw_feat(feat_name, ruleset)
+    if not raw or raw.get("category") == "EB":
+        return 0
+    def strings(o):
+        if isinstance(o, str):
+            yield o
+        elif isinstance(o, dict):
+            for v in o.values():
+                yield from strings(v)
+        elif isinstance(o, list):
+            for v in o:
+                yield from strings(v)
+
+    total = 0
+    for sentence in (t for text in strings(raw.get("entries", [])) for t in re.split(r"(?<=\.)\s", text)):
+        if "Dash" in sentence:
+            continue
+        m = _FEAT_SPEED_RE.search(sentence)
+        if m:
+            total += int(m.group(1))
+    return total
 
 
 @check("SPEED")
@@ -587,6 +629,7 @@ def c_speed(x: Ctx):
             exp += 10  # XPHB Ranger 6 Roving
     if x.subclass_is("paladin", "glory") and x.class_level("paladin") >= 7:
         exp += 10  # Oath of Glory, Aura of Alacrity
+    exp += sum(feat_speed_bonus(f["name"], x.ruleset) for f in x.sheet.get("feats", []))  # Mark of Passage, Speedy, Mobile ...
     allowed = {exp}
     if heavy and armor.get("strength") and x.ab["STR"] < int(armor["strength"]):
         allowed = {exp - 10}
@@ -730,7 +773,15 @@ def c_mc_prof(x: Ctx):
     for i in range(1, len(x.classes)):
         gained = (x.raw[i].get("multiclassing") or {}).get("proficienciesGained", {}).get("armor", [])
         heavy_ok = heavy_ok or any("heavy" in a for a in gained)
-    explained = heavy_ok or x.has_feat("heavily armored") or any(
+    # a subclass feature up to the class level that says "proficiency with ... heavy armor" (Life, Nature, Tempest, War, Order,
+    # Twilight, Forge, the PSA Solidarity / Strength / Zeal domains ...), read from the class file instead of a name list
+    sub_heavy = any(
+        re.search(r"proficiency with (?:martial weapons and )?heavy armor", json.dumps(f.get("entries", [])))
+        for i, (cid, lvl, _s) in enumerate(x.classes) for f in raw_subclass_features(cid, x.sub[i]) if f.get("level", 1) <= lvl)
+    # 2024 Cleric Divine Order: Protector ("Trained with Martial weapons and ... Heavy armor")
+    picks = [v for c in x.draft["classes"] for vs in (c.get("choices") or {}).values() if isinstance(vs, list) for v in vs]
+    protector = any(isinstance(v, str) and "cleric" in v and "protector" in v for v in picks)
+    explained = heavy_ok or x.has_feat("heavily armored") or sub_heavy or protector or any(
         c[2] and any(k in c[2].lower() for k in ("life", "forge", "war", "tempest", "order", "twilight", "death", "grave", "nature"))
         for c in x.classes) or x.sheet["species"].get("id", "").startswith("mountain")
     has = "heavy-armor" in x.sheet["proficiencies"]["armor"]

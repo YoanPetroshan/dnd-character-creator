@@ -321,3 +321,107 @@ def test_the_harness_does_not_touch_the_golden_baselines():
     src = "".join(p.read_text(encoding="utf-8") for p in pathlib.Path(checks.__file__).parent.glob("*.py"))
     assert "golden" not in src.replace("never touches golden", "")
     assert golden.exists()
+
+
+# ---------------------------------------------------------------- VC T3 campaign: oracle / harness fixes
+def _run(token, catalog, exports=False):
+    spec = runner.find_spec(token, catalog)[0]
+    return runner.run_spec(spec, catalog, exports=exports, gaps=[])
+
+
+def _failed(rec):
+    return {r["check"] for r in rec["results"]}
+
+
+@pytest.mark.parametrize("feat,bonus", [
+    ("Mark of Passage", 5), ("Transmuted Anatomy", 5), ("Squat Nimbleness", 5), ("Speedy", 10), ("Mobile", 10),
+    ("Charger", 0), ("Alert", 0), ("Boon of Speed", 0),
+])
+def test_feat_speed_bonus_reads_the_feat_text(feat, bonus):
+    assert checks.feat_speed_bonus(feat, "2024" if feat in ("Speedy", "Charger", "Alert", "Boon of Speed") else "2014") == bonus
+
+
+def test_speed_check_counts_a_speed_feat_and_still_catches_a_wrong_speed(catalog):
+    rec = _run("t3-041-arcane-trickster-levels-13-2024", catalog)  # Elf (Zendikar) 30 + Transmuted Anatomy 5
+    assert "SPEED" not in _failed(rec) and rec["res"]["derived"]["speed"] == 35
+    d, res = rec["draft"], copy.deepcopy(rec["res"])
+    res["derived"]["speed"] = 30
+    assert "SPEED" in {r["check"] for r in checks.run_checks(d, res) if not r["ok"]}
+
+
+def test_heavy_armor_specs_really_wear_plate_armor(catalog):
+    assert any(i["itemId"] == "plate-armor" for s in matrix.generate("T3", 0, 64) for i in s.equip)
+    assert not any(i["itemId"] == "plate" for s in matrix.generate("T3", 0, 64) for i in s.equip)
+    rec = _run("t3-046-heavy-armor-under-str-2024", catalog)  # STR 8 in plate (STR 15): AC 18, Deep Gnome 20 + 5 - 10
+    assert rec["res"]["derived"]["armorClass"] == 18 and rec["res"]["derived"]["speed"] == 15
+    assert _failed(rec) == set()
+
+
+def test_ac_check_counts_armor_of_shadows(catalog):
+    assert "AC" not in _failed(_run("t2-007-sor10-war10-2014", catalog))  # Warlock 10, Armor of Shadows: 13 + DEX
+    assert "AC" not in _failed(_run("t2-008-sor19-war1-2024", catalog))
+
+
+def test_thaumaturge_cantrip_goes_to_the_cleric_only(catalog):
+    assert "CANTRIPS" not in _failed(_run("t2-046-cle3-dru2-2024", catalog))  # Thaumaturge Cleric 3 + plain Druid 2
+
+
+def test_mc_prof_explains_protector_and_psa_domain_heavy_armor(catalog):
+    for token in ("t2-076-bar19-cle1-2024", "t2-074-cle2-pal3-2014", "t2-108-cle19-bar1-2014"):
+        assert "MC-PROF" not in _failed(_run(token, catalog)), token
+
+
+def test_skills_check_rejects_a_non_skill_id_but_allows_tool_expertise(samples):
+    d, res = samples["fighter20"]
+    bad = copy.deepcopy(res)
+    bad["sheet"]["proficiencies"]["skills"].append("skill-empowerment")
+    assert "SKILLS" in {r["check"] for r in checks.run_checks(d, bad) if not r["ok"]}
+    ok = copy.deepcopy(res)
+    ok["sheet"]["expertiseSkills"] = [*ok["sheet"].get("expertiseSkills", []), "thieves-tools"]
+    assert "SKILLS" not in {r["check"] for r in checks.run_checks(d, ok) if not r["ok"]}
+
+
+def test_pruned_detector_ignores_stale_filler_picks_and_cap_notes_but_reports_a_persistent_prune(catalog):
+    from engine.resolve import resolve
+    assert "W-PRUNED" not in _failed(_run("t1-065-fig2-2024", catalog))   # Kobold skill pick vs Draconic Sorcery variant
+    assert "W-PRUNED" not in _failed(_run("t3-044-feat-asi-caps-2024", catalog))  # "STR is already at maximum (20)"
+    spec = runner.find_spec("t1-065-fig2-2024", catalog)[0]
+    draft, res = S.resolve_spec(spec, catalog, resolve)
+    assert res["pruned"] and "choiceId" in res["pruned"][0]
+    persistent = lambda d, c: {"pruned": res["pruned"]}  # noqa: E731  (the prune survives removing the pick: an engine defect)
+    out = [r for r in weird.detect(spec, draft, res, persistent, catalog, exports=False) if r["check"] == "W-PRUNED"][0]
+    assert not out["ok"] and "no longer applies" in json.dumps(out["actual"]) and "None" not in json.dumps(out["actual"])
+
+
+def test_numbers_detector_survives_a_missing_speed(samples, catalog):
+    draft, res = samples["fighter20"]
+    spec = GOOD["fighter20"]
+    none_speed = copy.deepcopy(res)
+    none_speed["derived"]["speed"] = None
+    out = {r["check"]: r for r in weird.detect(spec, draft, none_speed, None, None, exports=False)}
+    assert not out["W-NUMBERS"]["ok"]  # reported, not a TypeError
+    none_speed["problems"].append({"id": "unknown-species", "message": "x"})
+    out = {r["check"]: r for r in weird.detect(spec, draft, none_speed, None, None, exports=False)}
+    assert out["W-NUMBERS"]["ok"]  # an unknown species has no speed to report
+
+
+def test_the_unknown_species_weird_spec_no_longer_crashes_the_detector(catalog):
+    spec = [s for s in weird.generate(0, 50) if "swap_species" in s.weird][0]
+    rec = runner.run_spec(spec, catalog, exports=False)
+    assert "W-EXC" not in _failed(rec)
+
+
+def test_w9_filter_drops_only_the_verified_non_defects():
+    res = {"sheet": {"name": "Hero \U0001f409"}}
+    fails = ["sheet.startingGold = 0 missing from the Markdown", "sheet.startingGold = 5 missing from the PDF",
+             "sheet.name = 'Hero \U0001f409' missing from the PDF", "sheet.name = 'Hero \U0001f409' missing from the Markdown",
+             "derived.classResources.[].details.damageTypes = 'Cold' missing from the Markdown"]
+    assert weird._w9_unexplained(fails, res) == fails[1:2] + fails[3:]
+
+
+def test_rewarded_ruined_feat_options_leaf_is_a_tagged_known_gap():
+    gaps = runner.load_known_gaps()
+    r = {"check": "W-W9", "expected": "x", "actual": ["sheet.featOptions.[] = 'lucky' missing from the Markdown"]}
+    assert runner.known_gap(r, CharSpec(id="k"), gaps) == "KG-bmt-feat-options"
+    r["actual"] = ["sheet.proficiencies.skills.[] = 'skill-empowerment' missing from the Markdown"]
+    assert runner.known_gap(r, CharSpec(id="k"), gaps) is None

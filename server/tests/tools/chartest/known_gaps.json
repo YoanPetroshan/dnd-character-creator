@@ -69,5 +69,13 @@
    "feature": "spell-school-limit"
   },
   "note": "EK / AT spell school restriction needs pick wiring (DEFERRED pick, Sections W7/W8 scan): the first-option filler picks out-of-school spells."
+ },
+ {
+  "tag": "KG-bmt-feat-options",
+  "rule": "W-W9",
+  "match": {
+   "feature": "sheet.featoptions"
+  },
+  "note": "Rewarded / Ruined (BMT) offer a feat choice that is a bare id list in sheet.featOptions, not a card (ARCHITECTURE G7 Deferred: Rewarded / Ruined stay open)."
  }
 ]

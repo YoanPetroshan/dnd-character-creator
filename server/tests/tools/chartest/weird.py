@@ -39,9 +39,14 @@ def detect(spec: CharSpec, draft: dict, res: dict, resolve=None, catalog=None, e
             continue  # weights are legitimately large (pushDragLift 15 x STR)
         if isinstance(v, (int, float)) and not isinstance(v, bool) and (v != v or v < -10 or v > 400):
             bad.append((p, v))
+    degraded = any(p.get("id") == "unknown-species" for p in res.get("problems", []))  # no species record: no speed to report
     for key, lo, hi in (("hitPointMax", 1, 1500), ("armorClass", 1, 40), ("speed", 0, 400), ("proficiencyBonus", 2, 6)):
-        if not lo <= der.get(key, lo) <= hi:
-            bad.append((key, der.get(key)))
+        v = der.get(key, lo)
+        if v is None:
+            if not (degraded and key == "speed"):
+                bad.append((key, None))  # a missing number is a finding, not a crash of the detector
+        elif not lo <= v <= hi:
+            bad.append((key, v))
     out.append(_w("W-NUMBERS", not bad, "no absurd / negative derived numbers", bad[:5] or "ok"))
     # empty sections
     empty = [k for k in ("features", "classes") if not sheet.get(k)] + (["savingThrows"] if not sheet["proficiencies"]["savingThrows"] else []) \
@@ -64,7 +69,9 @@ def detect(spec: CharSpec, draft: dict, res: dict, resolve=None, catalog=None, e
         if spec.sources or (spec.tags and spec.tags[0] == "T3"):
             warns = []  # narrow sources / edge cases warn on purpose
         out.append(_w("W-WARN", not warns, "no warnings on a filled legal draft", warns[:5] or "ok"))
-        out.append(_w("W-PRUNED", not res["pruned"], "nothing pruned on a fresh draft", [p.get("id") if isinstance(p, dict) else p for p in res["pruned"]][:5] or "ok"))
+        flagged = _unexplained_pruned(draft, res, resolve, catalog)
+        out.append(_w("W-PRUNED", not flagged, "nothing pruned on a fresh draft (stale filler picks and cap notes excepted)",
+                      [f"{p.get('choiceId')}: {p.get('reason')}" if isinstance(p, dict) else p for p in flagged][:5] or "ok"))
     # ruleset leakage
     if spec.ruleset == "2014":
         leak = [f["id"] for f in sheet.get("feats", []) if f["id"].endswith("-xphb")]
@@ -84,6 +91,60 @@ def detect(spec: CharSpec, draft: dict, res: dict, resolve=None, catalog=None, e
         out.append(_w("W-PERF", best <= 50, "resolve best of 3 <= 50 ms", f"{best:.1f} ms"))
     if exports:
         out += _export_checks(res)
+    return out
+
+
+def _strip_choices(obj, ids: set):
+    """Remove the given choice ids from every ``choices`` mapping of a draft (in place)."""
+    if isinstance(obj, dict):
+        ch = obj.get("choices")
+        if isinstance(ch, dict):
+            for i in ids:
+                ch.pop(i, None)
+        for v in obj.values():
+            _strip_choices(v, ids)
+    elif isinstance(obj, list):
+        for v in obj:
+            _strip_choices(v, ids)
+
+
+def _unexplained_pruned(draft: dict, res: dict, resolve, catalog) -> list:
+    """``pruned`` entries on a filled draft that are not benign.  Two shapes are benign and not reported:
+    an ability increase the engine ignored at the 20 cap ("... is already at maximum ... ignored", the manual 19 / 20 base
+    specs), and a stale pick the filler stored while its card existed and a later pick made the card vanish (Kobold skill vs
+    the Draconic Sorcery variant): removing those picks leaves a draft that resolves without any pruned entry."""
+    pruned = [p for p in res.get("pruned") or [] if not (isinstance(p, dict) and "already at maximum" in str(p.get("reason", "")))]
+    if not pruned or resolve is None:
+        return pruned
+    ids = {p.get("choiceId") for p in pruned if isinstance(p, dict) and p.get("choiceId")}
+    if len(ids) != len(pruned):
+        return pruned
+    d2 = copy.deepcopy(draft)
+    _strip_choices(d2, ids)
+    again = [p for p in resolve(d2, catalog).get("pruned") or [] if not (isinstance(p, dict) and "already at maximum" in str(p.get("reason", "")))]
+    return again
+
+
+def _w9_unexplained(fails: list[str], res: dict) -> list[str]:
+    """Drop the W9 leaves that are not export defects (each verified against the exporter, see the VC T3 campaign notes):
+    * ``sheet.startingGold = 0``: export_fields prints the gold line only when the amount is non-zero;
+    * ``details.spellSlotRegainsUse = True``: printed as the label "spellSlotRegainsUse" (export_fields.resource_detail_parts),
+      the audit's FLAG_TEXT table just has no entry for it;
+    * a character name with glyphs outside the bundled DejaVu font (emoji, CJK) in the PDF: fpdf2 drops those glyphs, the
+      remaining characters are printed (pinned by the harness test)."""
+    from export_labels import label
+    import markdown_export
+    name = (res.get("sheet") or {}).get("name") or ""
+    exotic = any(ord(c) > 0xFFFF or 0x2E80 <= ord(c) <= 0x9FFF or ord(c) in (0x202E, 0x202D) for c in name)
+    out = []
+    for f in fails:
+        if f.startswith("sheet.startingGold = 0 "):
+            continue
+        if "details.spellSlotRegainsUse = True" in f and label("bg", "spellSlotRegainsUse") in markdown_export.to_markdown(res):
+            continue
+        if exotic and f.startswith("sheet.name = ") and f.endswith("missing from the PDF"):
+            continue
+        out.append(f)
     return out
 
 
@@ -108,7 +169,8 @@ def _export_checks(res: dict) -> list[dict]:
         try:
             import test_export_completeness as w9
             fails, _used = w9.audit(res, "bg")
-            out.append(_w("W-W9", not fails, "every sheet / derived leaf reaches Markdown and PDF (W9 matcher)", fails[:4] or "ok", "tests/test_export_completeness.py audit"))
+            fails = _w9_unexplained(fails, res)
+            out.append(_w("W-W9", not fails, "every sheet / derived leaf reaches Markdown and PDF (W9 matcher)", fails or "ok", "tests/test_export_completeness.py audit"))
         except ImportError:
             pass
     except Exception as e:

@@ -230,7 +230,7 @@ def _t3(pools, seed):
         add("feat-asi-caps", rs, [("fighter", 12)], abilities={"method": "manual", "base": {"STR": 19, "DEX": 19, "CON": 19, "INT": 8, "WIS": 8, "CHA": 8}, "priority": []})
         add("half-feat-at-cap", rs, [("fighter", 8)], abilities={"method": "manual", "base": {"STR": 20, "DEX": 20, "CON": 20, "INT": 8, "WIS": 8, "CHA": 8}, "priority": []})
         add("heavy-armor-under-str", rs, [("fighter", 3)], abilities={"method": "manual", "base": {"STR": 8, "DEX": 14, "CON": 14, "INT": 10, "WIS": 10, "CHA": 10}, "priority": []},
-            equip=[{"itemId": "plate", "qty": 1, "equipped": True}])
+            equip=[{"itemId": "plate-armor", "qty": 1, "equipped": True}])
         add("duplicate-proficiencies", rs, [("rogue", 3), ("bard", 2)])
         add("duplicate-proficiencies-2", rs, [("ranger", 3), ("rogue", 1)])
         add("rolled-hp-edge-min", rs, [("wizard", 10)], hp={"type": "manual", "rolls": {str(l): 1 for l in range(1, 11)}})
