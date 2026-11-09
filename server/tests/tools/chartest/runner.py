@@ -38,6 +38,8 @@ def known_gap(result: dict, spec: CharSpec, gaps: list[dict]) -> str | None:
         m = g.get("match", {})
         if "class" in m and m["class"] not in [c[0] for c in spec.classes]:
             continue
+        if "ruleset" in m and spec.ruleset not in ([m["ruleset"]] if isinstance(m["ruleset"], str) else m["ruleset"]):
+            continue
         if "subclass" in m and not any(c[2] and m["subclass"] in c[2] for c in spec.classes):
             continue
         if "feature" in m and m["feature"] not in text:

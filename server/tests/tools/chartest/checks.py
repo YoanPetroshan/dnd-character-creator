@@ -529,6 +529,42 @@ def _armor_ac(x: Ctx):
     return armor, bool(cur.get("shield")), cur
 
 
+_SPECIES_AC_RE = re.compile(
+    r"(?:your |a )?(?:base )?(?:AC|Armor Class) (?:is(?: equal to)?|equals|of) (\d+)(?: \+ (?:your )?(Dexterity|Constitution) modifier)?",
+    re.I)
+_SPECIES_AC_BONUS_RE = re.compile(r"\+(\d+) bonus to (?:your )?(?:AC|Armor Class)", re.I)
+
+
+def species_armor(race: dict) -> tuple[dict, int]:
+    """(unarmored formulas, flat bonus) a race record states in its trait text: Autognome / Thri-kreen `13 + Dex`, Lizardfolk `13 + Dex`,
+    Locathah `12 + Dex`, Loxodon `12 + Con`, Goblin (PSZ) `11 + Dex`, Tortle base AC 17; flat: Warforged +1, Lizardfolk (DMG) +3,
+    Troglodyte +1. A bonus that applies only while shifted (Beasthide) or in a shell (Shell Defense) is not a flat bonus."""
+    formulas, flat = {}, 0
+    ab = {"Dexterity": "DEX", "Constitution": "CON"}
+
+    def walk(e, name=""):
+        nonlocal flat
+        if isinstance(e, dict):
+            for x in [*e.get("entries", []), *e.get("items", [])]:
+                walk(x, e.get("name", name))
+        elif isinstance(e, list):
+            for x in e:
+                walk(x, name)
+        elif isinstance(e, str):
+            if name in ("Shell Defense", "Shifting Feature"):
+                return
+            m = _SPECIES_AC_RE.search(e)
+            if m and re.search(r"AC|Armor Class", e) and ("armor" in e.lower() or "shell" in e.lower()):
+                label = "natural-or-armor" if "can use your natural armor" in e else "natural"
+                formulas[label] = (int(m.group(1)), ab.get(m.group(2)))
+            b = _SPECIES_AC_BONUS_RE.search(e)
+            if b:
+                flat += int(b.group(1))
+
+    walk(race)
+    return formulas, flat
+
+
 @check("AC")
 def c_ac(x: Ctx):
     armor, shield, cur = _armor_ac(x)
@@ -548,13 +584,26 @@ def c_ac(x: Ctx):
             opts["draconic"] = 13 + dex  # PHB 2014 / SRD Draconic Resilience
         if x.subclass_is("sorcerer", "draconic sorcery") and x.class_level("sorcerer") >= 3:
             opts["draconic"] = 10 + dex + x.mods["CHA"]  # XPHB Draconic Sorcery, Draconic Resilience
+    flat = 0
+    race = raw_race_of(x.sheet["species"])
+    if race and not (x.sheet["species"].get("subspecies") or x.sheet["species"].get("variant")):
+        base_ac, flat = species_armor(race)
+        for label, (n, ab) in base_ac.items():
+            # "When you aren't wearing armor" (Autognome, Thri-kreen, Goblin PSZ, Tortle) or, where the text says so, also the
+            # better of natural armor and worn armor (Lizardfolk, Locathah, Loxodon)
+            if not armor or label == "natural-or-armor":
+                opts[label] = n + (x.mods[ab] if ab else 0)
+    if not armor and not shield and x.subclass_is("bard", "dance") and x.class_level("bard") >= 3:
+        # XPHB College of Dance, Unarmored Defense: "Your base Armor Class equals 10 plus your Dexterity and Charisma modifiers"
+        # (its parent Dazzling Footwork: only "While you aren't wearing armor or wielding a Shield")
+        opts["dance"] = 10 + dex + x.mods["CHA"]
     picks = [v for c in x.draft["classes"] for vs in (c.get("choices") or {}).values() if isinstance(vs, list) for v in vs]
     if not armor:
         # Warlock invocation Armor of Shadows (PHB: "cast mage armor on yourself at will"; XPHB: without a spell slot) and the
         # Dragon Hide feat (XGE: "AC 13 + Dex") give a second unarmored formula; the best one applies, never summed
         if any(isinstance(v, str) and "armor-of-shadows" in v for v in picks) or x.has_feat("dragon hide"):
             opts["armor-of-shadows / dragon hide"] = 13 + dex
-    best = max(opts.values())
+    best = max(opts.values()) + flat
     best += 2 if shield else 0
     allowed = {best}
     if armor and any(isinstance(v, str) and "defense" in v and ("style" in v or v.startswith("feat:")) for v in picks):
@@ -594,16 +643,21 @@ def feat_speed_bonus(feat_name: str, ruleset: str) -> int:
     return total
 
 
-@check("SPEED")
-def c_speed(x: Ctx):
-    sp = x.sheet["species"]
-    race = None
+def raw_race_of(sp: dict) -> dict | None:
+    """The 5etools race record of a sheet species (`<name>` for PHB / XPHB, else `<name>-<source>`)."""
     rid = sp.get("id") or ""
     for r in raw_races()["race"]:
         key = r["name"].lower().replace(" ", "-")
         if rid == key and r["source"] in ("PHB", "XPHB") or rid == f"{key}-{r['source'].lower()}":
-            race = r
-            break
+            return r
+    return None
+
+
+@check("SPEED")
+def c_speed(x: Ctx):
+    sp = x.sheet["species"]
+    rid = sp.get("id") or ""
+    race = raw_race_of(sp)
     if race is None or sp.get("subspecies") or sp.get("variant"):
         return []  # lineages / variants restate or change the speed in their own text: not modelled by this check
     s = race.get("speed")

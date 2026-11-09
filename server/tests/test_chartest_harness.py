@@ -425,3 +425,62 @@ def test_rewarded_ruined_feat_options_leaf_is_a_tagged_known_gap():
     assert runner.known_gap(r, CharSpec(id="k"), gaps) == "KG-bmt-feat-options"
     r["actual"] = ["sheet.proficiencies.skills.[] = 'skill-empowerment' missing from the Markdown"]
     assert runner.known_gap(r, CharSpec(id="k"), gaps) is None
+
+
+# ---------------------------------------------------------------- VC T2/T4 campaign: AC oracle (species natural armor, College of Dance)
+def _spec_json(base_token, catalog, **changes):
+    d = json.loads(runner.find_spec(base_token, catalog)[0].to_json())
+    d.update(changes)
+    return json.dumps(d)
+
+
+@pytest.mark.parametrize("name,source,formulas,flat", [
+    ("Lizardfolk", "MPMM", {"natural-or-armor": (13, "DEX")}, 0),
+    ("Lizardfolk", "DMG", {}, 3),
+    ("Locathah", "LR", {"natural-or-armor": (12, "DEX")}, 0),
+    ("Loxodon", "GGR", {"natural-or-armor": (12, "CON")}, 0),
+    ("Autognome", "AAG", {"natural": (13, "DEX")}, 0),
+    ("Thri-kreen", "AAG", {"natural": (13, "DEX")}, 0),
+    ("Tortle", "MPMM", {"natural": (17, None)}, 0),    # Shell Defense (+4 in the shell) is not a standing bonus
+    ("Warforged", "ERLW", {}, 1),
+    ("Troglodyte", "DMG", {}, 1),
+    ("Human", "PHB", {}, 0),
+])
+def test_species_armor_reads_the_trait_text(name, source, formulas, flat):
+    race = next(r for r in checks.raw_races()["race"] if r["name"] == name and r["source"] == source)
+    assert checks.species_armor(race) == (formulas, flat)
+
+
+def test_ac_check_expects_the_species_natural_armor_and_the_flat_bonus(catalog):
+    from engine.resolve import resolve
+    # Wizard 1 with no armor: expected = formula(DEX modifier read from the resolved sheet)
+    cases = {"lizardfolk-mpmm": lambda dex, con: 13 + dex, "tortle-mpmm": lambda dex, con: 17,
+             "warforged-erlw": lambda dex, con: 11 + dex, "human": lambda dex, con: 10 + dex}
+    for species, formula in cases.items():
+        tok = _spec_json("t2-044-fig1-pal19-2014", catalog, id="ac-" + species, species=species, subspecies=None,
+                         classes=[["wizard", 1, None]],
+                         abilities={"method": "manual", "base": {"STR": 14, "DEX": 15, "CON": 14, "INT": 10, "WIS": 10, "CHA": 10}, "priority": []})
+        spec = runner.find_spec(tok, catalog)[0]
+        d, res = S.resolve_spec(spec, catalog, resolve)
+        right, wrong = copy.deepcopy(res), copy.deepcopy(res)
+        ab = res["sheet"]["abilities"]
+        ac = formula((ab["DEX"] - 10) // 2, (ab["CON"] - 10) // 2)
+        right["derived"]["armorClass"], wrong["derived"]["armorClass"] = ac, ac - 1
+        assert "AC" not in {r["check"] for r in checks.run_checks(d, right) if not r["ok"]}, species
+        assert "AC" in {r["check"] for r in checks.run_checks(d, wrong) if not r["ok"]}, species
+
+
+def test_ac_check_expects_college_of_dance_unarmored_defense_and_tags_the_known_gap_outside_2024(catalog):
+    rec = _run(_spec_json("t2-054-bar4-pal3-mixed", catalog, id="dance-2024", ruleset="2024"), catalog)
+    assert rec["res"]["derived"]["armorClass"] == 12  # DEX 11 (+0), CHA 14 (+2): 10 + 0 + 2, no armor in the 2024 bard kit
+    assert "AC" not in _failed(rec)
+    wrong = copy.deepcopy(rec["res"])
+    wrong["derived"]["armorClass"] = 10
+    assert "AC" in {r["check"] for r in checks.run_checks(rec["draft"], wrong) if not r["ok"]}
+    gaps = runner.load_known_gaps()
+    result = {"check": "AC", "expected": "12", "actual": 10}
+    for sub, rs, tag in [("dance-xphb", "mixed", "KG-xphb-effects-2024-only"), ("draconic-sorcery-xphb", "2014", "KG-xphb-effects-2024-only"),
+                         ("dance-xphb", "2024", None), ("draconic-sorcery-xphb", "2024", None)]:
+        cls = [("bard", 4, sub)] if "dance" in sub else [("sorcerer", 3, sub)]
+        spec = CharSpec(id="x", ruleset=rs, classes=cls)
+        assert runner.known_gap(result, spec, gaps) == tag, (sub, rs)

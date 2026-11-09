@@ -77,5 +77,29 @@
    "feature": "sheet.featoptions"
   },
   "note": "Rewarded / Ruined (BMT) offer a feat choice that is a bare id list in sheet.featOptions, not a card (ARCHITECTURE G7 Deferred: Rewarded / Ruined stay open)."
+ },
+ {
+  "tag": "KG-xphb-effects-2024-only",
+  "rule": "AC",
+  "match": {
+   "subclass": "draconic-sorcery",
+   "ruleset": [
+    "mixed",
+    "2014"
+   ]
+  },
+  "note": "XPHB subclass numbers (Draconic Sorcery Draconic Resilience, College of Dance Unarmored Defense, XPHB Glory 7 ...) apply only under ruleset 2024 (RP2 design, features.xphb_effects_2024; ARCHITECTURE VF1 'Out of scope here')."
+ },
+ {
+  "tag": "KG-xphb-effects-2024-only",
+  "rule": "AC",
+  "match": {
+   "subclass": "dance",
+   "ruleset": [
+    "mixed",
+    "2014"
+   ]
+  },
+  "note": "XPHB subclass numbers (Draconic Sorcery Draconic Resilience, College of Dance Unarmored Defense, XPHB Glory 7 ...) apply only under ruleset 2024 (RP2 design, features.xphb_effects_2024; ARCHITECTURE VF1 'Out of scope here')."
  }
 ]
