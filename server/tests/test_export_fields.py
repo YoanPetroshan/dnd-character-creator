@@ -229,6 +229,8 @@ _EXPECT = {
     "mark-of-handling-wizard5-2014": {"innate": True},
     # VF2.1: species Armor Class (natural armor, fixed Tortle base, Warforged +1)
     "lizardfolk-mpmm-wizard3-2014": {}, "tortle-ttp-wizard3-2014": {}, "warforged-erlw-wizard3-2014": {},
+    # VF2.2: Harengon, initiative with the Proficiency Bonus
+    "harengon-mpmm-wizard3-2014": {},
     # VF1.8: PHB Dwarf, one Tool Proficiency line
     "dwarf-phb-wizard3-2014": {},
     # G7: Haunted One, the either-or card resolved to Survivor

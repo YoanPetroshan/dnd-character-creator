@@ -75,6 +75,7 @@ from . import class_resources as class_resources_mod
 from . import species_resources as species_resources_mod
 from . import derived as derived_mod
 from . import equipment as equipment_mod
+from . import species_traits as species_traits_mod
 from . import worn as worn_mod
 from . import feat_effects as feat_effects_mod
 from . import feat_spell_tables
@@ -6926,6 +6927,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     if speeds.get("walk") and feat_effects_mod.climb_equals_walk(feat_inst):  # FE1 Athlete (XPHB)
         speeds = {**speeds, "climb": max(speeds.get("climb", 0), speeds["walk"])}
     feat_init_bonus, feat_init_pb = feat_effects_mod.initiative_parts(feat_inst)
+    feat_init_pb = feat_init_pb or bool(species_traits_mod.rows(race, subrace, reference_data.SPECIES_INITIATIVE_PB))  # VF2.2 Hare-Trigger
     base_speed = speeds.get("walk")
     # Attacks, carrying capacity and armor warnings (Slice 9). Size is the
     # selected species size (Slice 8d), else the race's own, else Medium.

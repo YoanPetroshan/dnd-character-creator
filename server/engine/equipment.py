@@ -54,19 +54,10 @@ def armor_class_from_gear(
 
 
 def species_ac_specs(race: dict | None, subrace: dict | None) -> list[dict]:
-    """VF2.1: the `reference_data.SPECIES_AC` rows of the traits the species holds (race traits and the subrace's own), minus the
-    ones the subrace replaces (`overwrites_traits`, F1.2)."""
+    """VF2.1: the `reference_data.SPECIES_AC` rows of the traits the species holds."""
     from catalog import reference_data
-    if not race:
-        return []
-    replaced = set((subrace or {}).get("overwrites_traits") or [])
-    out, seen = [], set()
-    for ref in list(race.get("traits") or []) + list((subrace or {}).get("racial_traits") or []):
-        spec = reference_data.SPECIES_AC.get(ref.get("index"))
-        if spec and ref["index"] not in seen and ref.get("name") not in replaced:
-            seen.add(ref["index"])
-            out.append(spec)
-    return out
+    from . import species_traits
+    return species_traits.rows(race, subrace, reference_data.SPECIES_AC)
 
 
 _ARMOR_PROFICIENCY = {"Light": "light-armor", "Medium": "medium-armor", "Heavy": "heavy-armor"}

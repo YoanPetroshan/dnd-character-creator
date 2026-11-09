@@ -562,3 +562,50 @@ def test_vf2_1_the_best_formula_wins_never_summed(catalog):
 def test_vf2_1_the_flat_bonus_adds_to_the_best_formula(catalog):
     # Lizardfolk (DMG) +3 on top of the Monk formula 16
     assert _ac(catalog, "lizardfolk-dmg", {"DEX": 14, "WIS": 18}, (), classes=(("monk", 1),)) == 19
+
+
+# ---------------------------------------------------------------- VF2.2 Harengon Hare-Trigger
+VF2_2 = {"harengon-mpmm-trait-1": ("Harengon", "MPMM"), "harengon-wbtw-trait-1": ("Harengon", "WBtW")}
+HARE_TRIGGER = "You can add your proficiency bonus to your initiative rolls."
+
+
+def test_vf2_2_table_is_exactly_the_records(catalog):
+    from catalog import reference_data as ref
+    assert set(ref.SPECIES_INITIATIVE_PB) == set(VF2_2)
+    for tid, (name, source) in VF2_2.items():
+        assert ref.SPECIES_INITIATIVE_PB[tid]["quote"] == HARE_TRIGGER
+        assert HARE_TRIGGER in _race_strings(name, source), tid
+        trait = next(t for t in catalog.races[tid.rsplit("-trait-", 1)[0]]["traits"] if t["index"] == tid)
+        assert trait["name"] == "Hare-Trigger"
+    # no other race record states a proficiency-bonus initiative
+    hits = {(r["name"], r["source"]) for r in _races_json()["race"]
+            if any(_re.search(r"proficiency bonus to (your )?initiative", s) for s in _race_strings(r["name"], r["source"]))}
+    assert hits == set(VF2_2.values())
+
+
+def _init(catalog, species, classes=(("fighter", 1),), scores=None, ruleset="2014", **kw):
+    d = _draft(list(classes), ruleset=ruleset, species=species, scores={"DEX": 14, **(scores or {})}, **kw)
+    return resolve(d, catalog)["derived"]
+
+
+@pytest.mark.parametrize("species", ["harengon-mpmm", "harengon-wbtw"])
+@pytest.mark.parametrize("ruleset", ["2014", "mixed", "2024"])
+def test_vf2_2_harengon_adds_the_proficiency_bonus_to_initiative(catalog, species, ruleset):
+    der = _init(catalog, species, ruleset=ruleset)
+    other = _init(catalog, "dwarf", ruleset=ruleset)  # control: no initiative trait
+    dex = der["abilityModifiers"]["DEX"]
+    assert der["initiative"] == dex + der["proficiencyBonus"] == dex + 2
+    assert other["initiative"] == other["abilityModifiers"]["DEX"]
+
+
+def test_vf2_2_the_bonus_grows_with_the_proficiency_bonus(catalog):
+    der = _init(catalog, "harengon-mpmm", classes=(("fighter", 9),))
+    assert der["proficiencyBonus"] == 4 and der["initiative"] == der["abilityModifiers"]["DEX"] + 4
+
+
+def test_vf2_2_it_replaces_the_half_bonus_of_jack_of_all_trades(catalog):
+    # Jack of All Trades (Bard 2) adds half the bonus only to a check that lacks the proficiency bonus: with Hare-Trigger it has it
+    bard = _init(catalog, "harengon-mpmm", classes=(("bard", 2),))
+    assert bard["initiative"] == bard["abilityModifiers"]["DEX"] + bard["proficiencyBonus"]
+    plain = _init(catalog, "dwarf", classes=(("bard", 2),))
+    assert plain["initiative"] == plain["abilityModifiers"]["DEX"] + 1

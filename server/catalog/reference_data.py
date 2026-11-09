@@ -1106,6 +1106,15 @@ SPECIES_AC: dict[str, dict] = {
 }
 
 
+# VF2.2: a species trait that lets the character add the Proficiency Bonus to initiative rolls (Harengon Hare-Trigger, MPMM and
+# WBtW). Like Alert (XPHB) the full bonus replaces the Jack of All Trades / Remarkable Athlete half bonus; two sources of the same
+# "add your proficiency bonus" do not double. `quote` is the sentence of the record, pinned in tests/test_campaign_regressions.py.
+SPECIES_INITIATIVE_PB: dict[str, dict] = {
+    "harengon-mpmm-trait-1": {"race": "harengon-mpmm", "quote": "You can add your proficiency bonus to your initiative rolls."},
+    "harengon-wbtw-trait-1": {"race": "harengon-wbtw", "quote": "You can add your proficiency bonus to your initiative rolls."},
+}
+
+
 # Fixed proficiency grants of a subclass (the SRD feature text is prose only).
 # Only subclasses whose grant is a fixed list belong here; Lore Bard's three
 # free skills are a choice (RP12: SUBCLASS_PICKS_2024, ruleset 2024).
