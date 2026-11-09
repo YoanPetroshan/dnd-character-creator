@@ -52,7 +52,6 @@ SHEET_OMITTED: dict[str, str] = {
 # exercises the sections with synthetic resolutions where it can.
 UNSEEN_OK = {
     "sheet.equipment.narrativeItems.[]": "no audited draft has narrative items; the section code prints the list",
-    "sheet.species.subspecies.name": "audited species have a null subspecies leaf, never an object",
 }
 
 

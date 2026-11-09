@@ -137,6 +137,21 @@ KITCHEN_SINK: dict[str, dict] = {
     # `once` because a "srd" filter hides the RHW background and feats
     "haunted-one-fighter3-2014": _sub("fighter", 3, "2014", marks=("classes", "official"), once=True,
                                       origin=("human", "haunted-one-rhw")),
+    # F1: Astral Elf (AAG): exactly one of Dancing Lights / Light / Sacred Flame (the species cantrip card) and the species
+    # spellcasting-ability card; the MTF Fierna and the SCAG Winged Tiefling (the legacy REPLACES Infernal Legacy: Friends /
+    # Charm Person / Suggestion, none for Winged); Magic Connoisseur with two Magic Initiate holders (Sage's fixed Wizard
+    # list and the ASI copy with the Cleric list): its own list card. Non-2024, `once` (a "srd" filter hides the books)
+    "astral-elf-wizard5-2014": _sub("wizard", 5, "2014", marks=("classes", "official"), once=True, origin=("astral-elf-aag", "acolyte")),
+    "tiefling-fierna-wizard5-2014": _sub("wizard", 5, "2014", marks=("classes", "official"), once=True,
+                                         origin=("tiefling-phb", "acolyte", "tiefling-phb-fierna-mtf")),
+    "tiefling-winged-wizard5-2014": _sub("wizard", 5, "2014", marks=("classes", "official"), once=True,
+                                         origin=("tiefling-phb", "acolyte", "tiefling-phb-variant;-winged-scag")),
+    "two-magic-initiate-connoisseur-wizard8-2014": _sub("wizard", 8, "mixed", marks=("classes", "official"), once=True,
+                                                         origin=("human-xphb", "sage-xphb"), overrides={
+        "class:wizard:4:asi": ["feat:magic-initiate-xphb"],
+        "class:wizard:4:asi:feat:magic-initiate-xphb:spell-variant": ["cleric-spells"],
+        "class:wizard:8:asi": ["feat:magic-connoisseur-au"],
+        "class:wizard:8:asi:feat:magic-connoisseur-au:spell-variant": ["wizard-spells"]}),
     # G3: Cleric 6 (Life) + Paladin 3 (Devotion) under 2014: one merged Channel Divinity (PHB 164) whose note keeps both
     # classes' options; non-2024, so part of the golden via --append
     "cleric6-paladin3-2014": {**_sub("cleric", 6, "2014", marks=("classes",)),
@@ -213,7 +228,8 @@ def base_draft(spec: dict) -> dict:
         classes.append(c)
     return {"name": "Кухненска мивка", "ruleset": spec["ruleset"], "sources": [],
             "abilities": {"method": "manual", "base": dict(_BASE)},
-            "species": {"id": spec.get("origin", ("human", "acolyte"))[0], "choices": {}},
+            "species": {"id": spec.get("origin", ("human", "acolyte"))[0], "choices": {},
+                        **({"subspeciesId": spec["origin"][2]} if len(spec.get("origin", ())) > 2 else {})},  # F1: an optional subspecies
             "background": {"id": spec.get("origin", ("human", "acolyte"))[1], "choices": {}},
             "equipment": {"choices": {}, "added": copy.deepcopy(spec["equip"]), "skipped": False},
             "classes": classes}

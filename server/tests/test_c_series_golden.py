@@ -1057,6 +1057,10 @@ def test_g6_no_rebaseline_and_only_the_tiefling_sink_holds_a_limited_innate_spel
             assert all(e["usesMax"] == 1 and e["recharge"] == "long" for e in innate if "usesMax" in e), n
         elif n.rsplit("/", 1)[-1] == "rune-carver-wizard9-2014":  # G5: Rune Shaper's three 1/day rows
             assert limited == ["Comprehend Languages", "Fog Cloud", "Goodberry"], n
+        elif n.rsplit("/", 1)[-1] == "two-magic-initiate-connoisseur-wizard8-2014":  # F1: Magic Initiate / Connoisseur 1/day rows
+            assert len(limited) == 4, n
+        elif n.rsplit("/", 1)[-1] == "tiefling-fierna-wizard5-2014":  # F1: the MTF legacy replaces Infernal Legacy
+            assert [e["name"] for e in innate] == ["Friends", "Charm Person", "Suggestion"] and limited == ["Charm Person", "Suggestion"], n
         else:
             assert not limited, n
 
@@ -1100,7 +1104,7 @@ def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
                     assert isinstance(o["source"], str) and o["source"], (name, card["id"], o["id"])
                     assert not o["id"].startswith("skill-") and card["source"]["kind"] != "equipment", (name, card["id"], o["id"])
         with_source += has
-    assert with_source == 228  # the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
+    assert with_source == 232  # the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
 
 
 if __name__ == "__main__":
@@ -1118,3 +1122,23 @@ if __name__ == "__main__":
         regenerate()
     else:
         sys.exit("pass --append (add new cases only), --rebaseline <SLICE> [--dry-run] or --regenerate (rewrite everything) to change the golden file")
+
+
+def test_f1_sinks_hold_the_species_picks_and_the_connoisseur_card():
+    """F1: the four appended sinks. Astral Elf: one of the three cantrips (the filler took the first) with the ability card
+    resolved; MTF Fierna: Friends / Charm Person / Suggestion only; SCAG Winged: no innate spell; two Magic Initiate holders:
+    the Connoisseur's own list card (Wizard) with its two spell cards."""
+    def entry(key):
+        return next(e for n, e in _GOLDEN.items() if n.endswith("/" + key))["result"]
+    astral = entry("astral-elf-wizard5-2014")
+    assert [(e["name"], e["ability"]) for e in astral["sheet"]["innateSpells"]] == [("Dancing Lights", "INT")]
+    cards = {c["id"]: c for c in astral["choices"]}
+    assert cards["species:astral-elf-aag:innate-cantrip"]["status"] == "resolved"
+    assert cards["species:astral-elf-aag:spell-ability"]["status"] == "resolved"
+    assert [e["name"] for e in entry("tiefling-fierna-wizard5-2014")["sheet"]["innateSpells"]] == ["Friends", "Charm Person", "Suggestion"]
+    assert entry("tiefling-winged-wizard5-2014")["sheet"]["innateSpells"] == []
+    mc = entry("two-magic-initiate-connoisseur-wizard8-2014")
+    cards = {c["id"]: c for c in mc["choices"]}
+    assert cards["class:wizard:8:asi:feat:magic-connoisseur-au:spell-variant"]["selected"] == ["wizard-spells"]
+    assert [o["id"] for o in cards["class:wizard:8:asi:feat:magic-connoisseur-au:spell-variant"]["options"]] == ["cleric-spells", "wizard-spells"]
+    assert sum(1 for i in cards if ":magic-connoisseur-au:spell-choice-" in i) == 2

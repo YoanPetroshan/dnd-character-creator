@@ -210,6 +210,12 @@ _EXPECT = {
     "tiefling-phb5-2014": {"innate": True},
     # G5: Rune Shaper (Rune Carver background), Comprehend Languages and two rune spells, 1/day each
     "rune-carver-wizard9-2014": {"innate": True},
+    # F1: Astral Elf (one of three cantrips), the MTF Fierna legacy (Friends / Charm Person / Suggestion), the SCAG Winged
+    # Tiefling (no innate spells), Magic Connoisseur with two Magic Initiate holders
+    "astral-elf-wizard5-2014": {"innate": True},
+    "tiefling-fierna-wizard5-2014": {"innate": True},
+    "tiefling-winged-wizard5-2014": {},
+    "two-magic-initiate-connoisseur-wizard8-2014": {"innate": True, "feats": ["magic-initiate-xphb", "magic-connoisseur-au"]},
     # G7: Haunted One, the either-or card resolved to Survivor
     "haunted-one-fighter3-2014": {"feats": ["survivor-rhw"]},
     # G4: the discipline ki costs, the runes as resources, Limited Wish (recharge other) and Power Surge (INT pool)

@@ -43,6 +43,7 @@ _FLAG = "flag: boolean that only drives engine/UI behaviour; the visible effect 
 EXPORT_OMITTED: dict[str, str] = {
     # ---- machine ids (the YAML carries them; the sheet prints the names)
     "sheet.background.id": _ID, "sheet.species.id": _ID, "sheet.species.variant.id": _ID,
+    "sheet.species.subspecies.id": _ID,  # F1: the first audited draft with a subspecies (MTF Fierna)
     "sheet.classes.[].subclass.id": _ID,
     "sheet.feats.[].id": _ID, "sheet.feats.[].origin": "id: where the feat came from (internal enum); the feat name is printed",
     "sheet.grantedFeats.[]": _IDLIST,

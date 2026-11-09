@@ -39,7 +39,7 @@ pytestmark = pytest.mark.skipif(not official.has_official(), reason="5etools off
 PENDING_CEILING = 0
 # Raised only by FE12 (additive golden cases that hold feats): feats-mixed-fighter14, feats-2014-rogue16 and
 # feats-mixed-wizard8, each under `sources` [] (the golden's `--append` mode added them; no existing case changed).
-GOLDEN_FEAT_CASES = 5  # FE12: three feat sinks; G5: the Rune Carver Wizard 9 sink (Rune Shaper); G7: the Haunted One sink (Survivor)
+GOLDEN_FEAT_CASES = 6  # F1: the two-Magic-Initiate Connoisseur sink; FE12: three feat sinks; G5: the Rune Carver Wizard 9 sink (Rune Shaper); G7: the Haunted One sink (Survivor)
 GOLDEN = pathlib.Path(__file__).parent / "golden" / "c_series_mixed_2014_baseline.json.gz"
 
 
