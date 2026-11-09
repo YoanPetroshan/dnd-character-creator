@@ -153,6 +153,8 @@ NEGATIVE = {
     "MC-PROF": ("ranger4-sorcerer3", lambda d, r: r["sheet"]["proficiencies"]["armor"].append("heavy-armor")),
     "DUPLICATES": ("fighter20", _dup_language),
     "FEAT-PREREQ": ("fighter19-feats", _grappler),
+    "CARRY": ("fighter20", _bump(["derived", "carryingCapacity", "capacity"], 15)),
+    "LANGUAGES": ("fighter20", lambda d, r: r["sheet"]["proficiencies"]["languages"].remove("common")),
 }
 
 
@@ -484,3 +486,53 @@ def test_ac_check_expects_college_of_dance_unarmored_defense_and_tags_the_known_
         cls = [("bard", 4, sub)] if "dance" in sub else [("sorcerer", 3, sub)]
         spec = CharSpec(id="x", ruleset=rs, classes=cls)
         assert runner.known_gap(result, spec, gaps) == tag, (sub, rs)
+
+
+# ---------------------------------------------------------------- VC T2 b9-14 / T1 b0-6: initiative (Hare-Trigger), carrying capacity (Powerful Build), species languages
+def _species_sample(catalog, species, ruleset="2014", wiz_base=None, **changes):
+    from engine.resolve import resolve
+    base = wiz_base or {"STR": 16, "DEX": 15, "CON": 14, "INT": 10, "WIS": 10, "CHA": 10}
+    tok = _spec_json("t2-044-fig1-pal19-2014", catalog, id="vc-" + species, species=species, subspecies=None, ruleset=ruleset,
+                     classes=[["wizard", 1, None]], abilities={"method": "manual", "base": base, "priority": []}, **changes)
+    spec = runner.find_spec(tok, catalog)[0]
+    return S.resolve_spec(spec, catalog, resolve)
+
+
+def _rules_failing(draft, res):
+    return {r["check"] for r in checks.run_checks(draft, res) if not r["ok"]}
+
+
+def test_initiative_check_requires_the_harengon_hare_trigger_bonus(catalog):
+    d, res = _species_sample(catalog, "harengon-mpmm")
+    dex, pb = res["derived"]["abilityModifiers"]["DEX"], res["derived"]["proficiencyBonus"]
+    right, wrong = copy.deepcopy(res), copy.deepcopy(res)
+    right["derived"]["initiative"], wrong["derived"]["initiative"] = dex + pb, dex
+    assert "INITIATIVE" not in _rules_failing(d, right)
+    assert "INITIATIVE" in _rules_failing(d, wrong)
+    d2, res2 = _species_sample(catalog, "human")
+    assert res2["derived"]["initiative"] == res2["derived"]["abilityModifiers"]["DEX"]
+    assert "INITIATIVE" not in _rules_failing(d2, res2)
+
+
+@pytest.mark.parametrize("species,factor", [("orc-mpmm", 2), ("firbolg-vgm", 2), ("human", 1)])
+def test_carry_check_doubles_the_capacity_for_powerful_build(catalog, species, factor):
+    d, res = _species_sample(catalog, species)
+    cap = res["sheet"]["abilities"]["STR"] * 15 * factor
+    right, wrong = copy.deepcopy(res), copy.deepcopy(res)
+    right["derived"]["carryingCapacity"].update(capacity=cap, pushDragLift=cap * 2)
+    wrong["derived"]["carryingCapacity"].update(capacity=cap // factor if factor > 1 else cap + 15, pushDragLift=cap * 2)
+    assert "CARRY" not in _rules_failing(d, right), species
+    assert "CARRY" in _rules_failing(d, wrong), species
+
+
+def test_languages_check_wants_the_fixed_species_languages_outside_2024(catalog):
+    d, res = _species_sample(catalog, "tiefling-phb")
+    right, wrong = copy.deepcopy(res), copy.deepcopy(res)
+    right["sheet"]["proficiencies"]["languages"] = ["common", "infernal"]
+    wrong["sheet"]["proficiencies"]["languages"] = ["common"]
+    assert "LANGUAGES" not in _rules_failing(d, right)
+    hit = [r for r in checks.run_checks(d, wrong) if r["check"] == "LANGUAGES" and not r["ok"]]
+    assert hit and hit[0]["actual"]["missing"] == ["infernal"]
+    d24, res24 = _species_sample(catalog, "tiefling-phb", ruleset="2024")
+    res24["sheet"]["proficiencies"]["languages"] = ["common"]
+    assert "LANGUAGES" not in _rules_failing(d24, res24)

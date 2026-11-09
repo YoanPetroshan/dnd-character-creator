@@ -352,6 +352,9 @@ def c_passives(x: Ctx):
     return [R("PASSIVES", not bad, "10 + skill bonus (+5 Observant)", bad or "ok", "PHB p.175 passive checks = 10 + modifiers")]
 
 
+_HARE_TRIGGER_RE = re.compile(r"add your proficiency bonus to your initiative", re.I)
+
+
 @check("INITIATIVE")
 def c_init(x: Ctx):
     opts = []
@@ -374,6 +377,9 @@ def c_init(x: Ctx):
     if x.subclass_is("fighter", "") and any(c[2] and "psi" in c[2].lower() for c in x.classes):
         opts.append(0)
     allowed = {x.mods["DEX"] + s for s in _subset_sums(opts)}
+    race = raw_race_of(x.sheet["species"])
+    if race and _HARE_TRIGGER_RE.search(json.dumps(race.get("entries", []))):
+        allowed = {a + x.pb for a in allowed}  # Harengon Hare-Trigger: "add your proficiency bonus to your initiative rolls"
     return [R("INITIATIVE", x.der["initiative"] in allowed, f"DEX mod {x.mods['DEX']} (+ explained bonuses)", x.der["initiative"],
               "PHB p.177 initiative = DEX modifier; Alert / Jack of All Trades / Tactical Wit add")]
 
@@ -859,6 +865,46 @@ def c_dups(x: Ctx):
         bad["features"] = sorted(map(str, dup_f))[:3]
     return [R("DUPLICATES", not bad, "no duplicate skills / tools / languages / feats / features", bad or "ok",
               "PHB p.175: a duplicate proficiency is replaced by another choice; a feature is listed once")]
+
+
+_SIZES = ["Tiny", "Small", "Medium", "Large", "Huge", "Gargantuan"]
+_SIZE_FACTOR = {"Tiny": 0.5, "Small": 1, "Medium": 1, "Large": 2, "Huge": 4, "Gargantuan": 8}
+_ONE_SIZE_LARGER_RE = re.compile(r"(?:count as|counts as) one size larger when determining your carrying capacity", re.I)
+
+
+@check("CARRY")
+def c_carry(x: Ctx):
+    """PHB p.176 Carrying Capacity: STR x 15, each size above Medium doubles it, Tiny halves it; Powerful Build / Equine Build /
+    Hippo Build (Bugbear, Firbolg, Goliath, Orc, Loxodon, Centaur, Giff) count as one size larger. Push, drag and lift = twice."""
+    size = x.sheet["species"].get("size") or "Medium"
+    if size not in _SIZES:
+        size = "Medium"
+    race = raw_race_of(x.sheet["species"])
+    if race and _ONE_SIZE_LARGER_RE.search(json.dumps(race.get("entries", []))):
+        size = _SIZES[min(_SIZES.index(size) + 1, len(_SIZES) - 1)]
+    exp = x.ab["STR"] * 15 * _SIZE_FACTOR[size]
+    cc = x.der["carryingCapacity"]
+    ok = cc["capacity"] == exp and cc["pushDragLift"] == exp * 2
+    return [R("CARRY", ok, f"capacity {exp:g}, push/drag/lift {exp * 2:g} (STR {x.ab['STR']} x 15, size {size})", {k: cc[k] for k in ("capacity", "pushDragLift")},
+              "PHB p.176 Carrying Capacity / Size and Strength; species Powerful Build text: \"count as one size larger when determining your carrying capacity\"")]
+
+
+_LANG_SKIP = {"other", "anyStandard", "any", "anyRare", "anyExotic", "standard", "rare", "choose"}
+
+
+@check("LANGUAGES")
+def c_languages(x: Ctx):
+    """The fixed languages of the species record (races.json `languageProficiencies`: Dwarf Common + Dwarvish, Tiefling Common +
+    Infernal) are on the sheet. Not checked under ruleset 2024: the 2024 origin gives Common plus two chosen languages and a 2014
+    species used there is judged by the owner (see the VC T1 report)."""
+    race = raw_race_of(x.sheet["species"])
+    if x.ruleset == "2024" or not race:
+        return [R("LANGUAGES", True, "n/a", "n/a", "races.json languageProficiencies")]
+    fixed = sorted({k for e in race.get("languageProficiencies") or [] for k, v in e.items() if v is True and k not in _LANG_SKIP})
+    have = set(x.sheet["proficiencies"]["languages"])
+    missing = [lang for lang in fixed if lang not in have]
+    return [R("LANGUAGES", not missing, f"fixed species languages {fixed} on the sheet", {"missing": missing, "sheet": sorted(have)},
+              f"races.json {race['name']} ({race['source']}) languageProficiencies / Languages trait text")]
 
 
 @check("FEAT-PREREQ")
