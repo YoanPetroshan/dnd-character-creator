@@ -222,6 +222,16 @@ def _race_from_5etools(raw: dict, traits_by_index: dict[str, dict]) -> dict | No
     }
 
 
+def _overwritten_trait_names(raw: dict) -> list[str]:
+    """F1: names of the parent-race traits the subrace's entries replace: `entries[].data.overwrite` (a trait name string)."""
+    out: list[str] = []
+    for entry in raw.get("entries") or []:
+        name = ((entry.get("data") or {}).get("overwrite")) if isinstance(entry, dict) else None
+        if isinstance(name, str) and name not in out:
+            out.append(name)
+    return out
+
+
 def _subrace_from_5etools(raw: dict, race_ids: set[str], traits_by_index: dict[str, dict]) -> dict | None:
     if "_copy" in raw or "name" not in raw:
         return None
@@ -275,6 +285,10 @@ def _subrace_from_5etools(raw: dict, race_ids: set[str], traits_by_index: dict[s
         # same race-then-subrace-additions relationship Task 5 already
         # established for resist/immune/vulnerable).
         "innate_spells": _innate_spells_from_5etools(raw),
+        # F1: the parent-race traits this subrace's own entries REPLACE (5etools `entries[].data.overwrite`, e.g. the MTF
+        # Tiefling legacies replace "Infernal Legacy"); engine.resolve._species_innate_spells drops the race's innate
+        # spells that trait granted.
+        "overwrites_traits": _overwritten_trait_names(raw),
     }
 
 

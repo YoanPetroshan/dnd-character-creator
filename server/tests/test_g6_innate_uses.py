@@ -131,9 +131,9 @@ def test_a_tiefling_subrace_does_not_list_thaumaturgy_twice(catalog):
     entries = _innate(catalog, species="tiefling-phb", sub="tiefling-phb-zariel-mtf")
     names = [e["name"] for e in entries]
     assert names.count("Thaumaturgy") == 1 and {"Searing Smite", "Branding Smite"} <= set(names)
-    # a subrace with another cantrip adds it next to the race's Thaumaturgy
+    # F1: a subrace with another cantrip REPLACES the race's Infernal Legacy (Thaumaturgy included): test_f1_tiefling_overwrite
     levistus = [e["name"] for e in _innate(catalog, species="tiefling-phb", sub="tiefling-phb-levistus-mtf")]
-    assert "Ray Of Frost" in [n.title() for n in levistus] and levistus.count("Thaumaturgy") == 1
+    assert "Ray Of Frost" in [n.title() for n in levistus] and "Thaumaturgy" not in levistus
 
 
 @needs_data

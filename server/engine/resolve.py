@@ -593,6 +593,22 @@ def _species_equal_walk_modes(race: dict | None, subrace: dict | None) -> list[s
     return [mode for mode, value in modes.items() if value is True]
 
 
+def _subrace_replaces_spell_trait(race: dict, subrace: dict | None, catalog: Catalog, entry: dict) -> bool:
+    """F1: True when the subrace's entries replace (5etools `data.overwrite`, kept as `overwrites_traits`) a trait of the
+    parent race whose text names this innate spell: the PHB Tiefling's Infernal Legacy (Thaumaturgy, Hellish Rebuke,
+    Darkness) is replaced by every MTF legacy and by the SCAG Devil's Tongue / Hellfire / Winged variants."""
+    names = {n.lower() for n in (subrace or {}).get("overwrites_traits") or []}
+    if not names:
+        return False
+    spell = str(entry.get("name") or "").lower()
+    for ref in race.get("traits", []):
+        if ref.get("name", "").lower() in names:
+            text = " ".join((catalog.traits.get(ref["index"]) or {}).get("desc") or []).lower()
+            if spell and spell in text:
+                return True
+    return False
+
+
 def _species_innate_spells(race: dict | None, subrace: dict | None, catalog: Catalog,
                            variant: dict | None = None) -> list[dict]:
     """Merges innate_spells from BOTH race and subrace — same race-then-
@@ -639,14 +655,16 @@ def _species_innate_spells(race: dict | None, subrace: dict | None, catalog: Cat
                 continue
             if src is race and "additionalSpells" in (variant or {}).get("removes", []):
                 continue  # e.g. Kobold's Craftiness / Defiance legacies
+            if src is race and _subrace_replaces_spell_trait(race, subrace, catalog, entry):
+                continue  # F1: the MTF / SCAG Tiefling legacies replace Infernal Legacy
             innate.append(_innate_entry_to_sheet(entry, catalog))
     for entry in (variant or {}).get("innate_spells", []):
         innate.append(_innate_entry_to_sheet(entry, catalog))
     for effect in _srd_trait_effects(race, subrace):
         for entry in effect.get("innate_spells", []):
             innate.append(_innate_entry_to_sheet(entry, catalog))
-    # G6: the race and its subrace may both list the same at-will cantrip (Tiefling and its MTF subraces: Thaumaturgy); an
-    # identical entry adds nothing, so only the first is kept.
+    # G6: the race and its subrace may both list the same entry (the SCAG "Variant; Infernal Legacy" repeats the PHB
+    # Tiefling's whole set, and replaces nothing); an identical entry adds nothing, so only the first is kept.
     return [e for i, e in enumerate(innate) if e not in innate[:i]]
 
 
