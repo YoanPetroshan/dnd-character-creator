@@ -54,6 +54,7 @@ export const LANGUAGE_NAMES: Record<string, string> = {
   ignan: "Ignan",
   keldon: "Keldon",
   khenra: "Khenra",
+  kraul: "Kraul",
   "kor-silent-speech": "Kor silent speech",
   leonin: "Leonin",
   loxodon: "Loxodon",

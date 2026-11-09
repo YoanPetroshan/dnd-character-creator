@@ -201,6 +201,9 @@ KITCHEN_SINK: dict[str, dict] = {
     # VF2.4: fixed species languages (Kenku DMG: Common and Auran) and the language pick card of the PHB Human. `once`
     "kenku-dmg-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("kenku-dmg", "acolyte")),
     "human-phb-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("human-phb", "acolyte")),
+    # VF4.2: Selesnya Initiate (GGR), the language card offers Elvish, Loxodon or Sylvan (no "other" placeholder). Non-2024, `once`
+    "selesnya-initiate-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True,
+                                          origin=("human-phb", "selesnya-initiate-ggr")),
     # VF4.1: a Silverquill Student (SCC) holds the Strixhaven Initiate feat with the college fixed by the background. Non-2024, `once`
     "silverquill-student-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True,
                                             origin=("human-phb", "silverquill-student-scc")),

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
-from catalog.reference_data import BACKGROUND_FEATS_FROM_TEXT, BACKGROUND_FEAT_VARIANT_FROM_TEXT, ruleset_for_edition
+from catalog.reference_data import BACKGROUND_FEATS_FROM_TEXT, BACKGROUND_FEAT_VARIANT_FROM_TEXT, BACKGROUND_OTHER_LANGUAGES, ruleset_for_edition
 from .common import _ability_bonus_options_from_5etools_weighted_pair, slug
 from .background_equipment import starting_equipment_options_2024_from_5etools
 from .equipment import _fixed_starting_equipment_from_5etools, _starting_equipment_options_from_5etools
@@ -232,7 +232,9 @@ def _background_from_5etools(raw: dict) -> dict | None:
     restored = BACKGROUND_FEATS_FROM_TEXT.get(f"{raw['name']}|{raw.get('source', '')}".lower())
     if restored and not raw.get("feats"):  # W4: the record's text names a feat its data omits
         raw = {**raw, "feats": restored["grant"]}
-    fixed_languages, language_options = _language_grants_from_5etools(raw)
+    # VF4.2: the placeholder "other" of a choose.from list is the language the record's Languages line names
+    fixed_languages, language_options = _language_grants_from_5etools(
+        raw, None, tuple((BACKGROUND_OTHER_LANGUAGES.get(index) or {}).get("names") or ()))
     fixed_equipment, fixed_gold, fixed_narrative_items = _fixed_starting_equipment_from_5etools(raw)
     feats, feat_options, feat_refs = _feats_from_5etools(raw)
     feat_grants = _species_feat_grants_from_5etools(raw)

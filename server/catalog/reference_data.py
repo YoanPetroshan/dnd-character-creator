@@ -5486,12 +5486,24 @@ SPECIES_OTHER_LANGUAGES: dict[str, dict] = {
     "merfolk-psz-ixalan;-green-psx": {"names": ["Merfolk"], "quote": "You can speak, read, and write Common Trade Pidgin (if it exists in your campaign), Merfolk, and one additional language of your choice."},
 }
 
+# VF4.2: the four GGR backgrounds whose `languageProficiencies` choose.from list holds the placeholder "other" (Boros
+# Legionnaire, Golgari Agent, Izzet Engineer, Selesnya Initiate). The record's own "Languages:" line names the language
+# ("Choose one of Elvish, Loxodon, or Sylvan"); `names` replace the placeholder in the pick card, in place. Keyed by the
+# catalog background id; `quote` is that line (pinned by a test). Display names only, the pick pool LANGUAGES is unchanged.
+BACKGROUND_OTHER_LANGUAGES: dict[str, dict] = {
+    "boros-legionnaire-ggr": {"names": ["Minotaur"], "quote": "Choose one of Celestial, Draconic, Goblin, or Minotaur"},
+    "golgari-agent-ggr": {"names": ["Kraul"], "quote": "Choose one of Elvish, Giant, or Kraul"},
+    "izzet-engineer-ggr": {"names": ["Vedalken"], "quote": "Choose one of Draconic, Goblin, or Vedalken"},
+    "selesnya-initiate-ggr": {"names": ["Loxodon"], "quote": "Choose one of Elvish, Loxodon, or Sylvan"},
+}
+
 # id -> display name of every language any ruleset can produce (exports read this).
 LANGUAGE_NAMES: dict[str, str] = {
     lang["index"]: lang["name"] for lang in LANGUAGES + LANGUAGES_2024_STANDARD + LANGUAGES_2024_RARE
 }
 LANGUAGE_NAMES.update(SPECIES_DIALECT_LANGUAGES)
 LANGUAGE_NAMES.update({n.lower().replace(" ", "-"): n for row in SPECIES_OTHER_LANGUAGES.values() for n in row["names"]})
+LANGUAGE_NAMES.update({n.lower().replace(" ", "-"): n for row in BACKGROUND_OTHER_LANGUAGES.values() for n in row["names"]})  # VF4.2
 
 # XPHB class features that grant languages (texts read from catalog.features on 2026-10-10):
 #   Rogue 1 Thieves' Cant   "You know Thieves' Cant and one other language of your choice, which you choose

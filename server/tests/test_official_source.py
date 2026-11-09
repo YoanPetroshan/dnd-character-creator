@@ -847,9 +847,9 @@ def test_enumerated_named_list_language_choice_with_other_handled_sanely():
     assert envelope["choose"] == 1
     assert envelope["from"]["option_set_type"] == "options_array"
     option_ids = {o["item"]["index"] for o in envelope["from"]["options"]}
-    assert option_ids == {"celestial", "draconic", "goblin", "other"}
-    other_option = next(o for o in envelope["from"]["options"] if o["item"]["index"] == "other")
-    assert other_option["item"]["name"] == "Other"
+    # VF4.2: the placeholder "other" is the language the record's Languages line names ("... Goblin, or Minotaur")
+    assert option_ids == {"celestial", "draconic", "goblin", "minotaur"}
+    assert [o["item"]["name"] for o in envelope["from"]["options"]] == ["Celestial", "Draconic", "Goblin", "Minotaur"]
 
 
 def test_fixed_grant_combined_with_a_separate_any_standard_entry():

@@ -1079,3 +1079,73 @@ def test_vf4_1_a_stored_foreign_college_is_not_taken(catalog):
     res = resolve(d, catalog)
     known = {s["id"] if isinstance(s, dict) and "id" in s else s.get("spellId") for s in res["sheet"].get("innateSpells", [])}
     assert {"light", "thaumaturgy"} <= known
+
+
+# ---------------------------------------------------------------- VF4.2 background language pick "other"
+_BG_OTHER = {  # background index -> (the language the record's own Languages line names for "other", the sentence)
+    "boros-legionnaire-ggr": ("Minotaur", "Choose one of Celestial, Draconic, Goblin, or Minotaur"),
+    "golgari-agent-ggr": ("Kraul", "Choose one of Elvish, Giant, or Kraul"),
+    "izzet-engineer-ggr": ("Vedalken", "Choose one of Draconic, Goblin, or Vedalken"),
+    "selesnya-initiate-ggr": ("Loxodon", "Choose one of Elvish, Loxodon, or Sylvan"),
+}
+
+
+def _language_lines(rec):
+    out = []
+
+    def walk(o):
+        if isinstance(o, dict):
+            if str(o.get("name", "")).startswith("Languages"):
+                out.append(_flat_text(o.get("entry")))
+            for v in o.values():
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+    walk(rec["entries"])
+    return out
+
+
+def test_vf4_2_data_exactly_four_backgrounds_carry_other_and_their_text_names_it():
+    from catalog.official.common import slug
+    found = {}
+    for r in _backgrounds_json():
+        for e in r.get("languageProficiencies") or []:
+            if e.get("other") or "other" in (e.get("choose") or {}).get("from", []):
+                found[f"{slug(r['name'])}-{r['source'].lower()}"] = r
+    assert sorted(found) == sorted(_BG_OTHER)
+    for bid, (name, sentence) in _BG_OTHER.items():
+        assert sentence in _language_lines(found[bid]), bid
+
+
+@pytest.mark.parametrize("bid", sorted(_BG_OTHER))
+def test_vf4_2_the_other_option_is_the_named_language(catalog, bid):
+    from catalog import reference_data as ref
+    name, sentence = _BG_OTHER[bid]
+    listed = [n.strip().rstrip(".") for n in sentence.replace("Choose one of ", "").replace(", or ", ", ").replace(" or ", ", ").split(", ")]
+    opts = catalog.backgrounds[bid]["language_options"]["from"]["options"]
+    assert [o["item"]["name"] for o in opts] == listed and name in listed
+    assert "other" not in [o["item"]["index"] for o in opts]
+    assert ref.LANGUAGE_NAMES[name.lower()] == name
+    d = _draft([("fighter", 1)], ruleset="2014", background=bid)
+    card_id = f"background:{bid}:languages"
+    d["background"]["choices"] = {card_id: [name.lower()]}
+    res = resolve(d, catalog)
+    assert name.lower() in res["sheet"]["proficiencies"]["languages"] and "other" not in res["sheet"]["proficiencies"]["languages"]
+    card = next(c for c in res["choices"] if c["id"] == card_id)
+    assert [o["id"] for o in card["options"]] == [n.lower() for n in listed] and card["status"] == "resolved"
+
+
+def test_vf4_2_no_background_offers_or_grants_other_as_a_language(catalog):
+    """The scan the finding asked for: no catalog background offers or grants the placeholder id."""
+    for bid, bg in catalog.backgrounds.items():
+        assert "other" not in [x["index"] if isinstance(x, dict) else x for x in bg.get("languages") or []], bid
+        opts = ((bg.get("language_options") or {}).get("from") or {}).get("options") or []
+        assert "other" not in [o["item"]["index"] for o in opts], bid
+
+
+def test_vf4_2_the_reference_table_is_the_pinned_set():
+    from catalog import reference_data as ref
+    assert set(ref.BACKGROUND_OTHER_LANGUAGES) == set(_BG_OTHER)
+    for bid, row in ref.BACKGROUND_OTHER_LANGUAGES.items():
+        assert row["names"] == [_BG_OTHER[bid][0]] and row["quote"] == _BG_OTHER[bid][1]

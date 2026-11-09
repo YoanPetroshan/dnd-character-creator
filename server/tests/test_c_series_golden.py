@@ -1172,7 +1172,7 @@ def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
                     assert isinstance(o["source"], str) and o["source"], (name, card["id"], o["id"])
                     assert not o["id"].startswith("skill-") and card["source"]["kind"] != "equipment", (name, card["id"], o["id"])
         with_source += has
-    assert with_source == 253  # the VF4.1 silverquill-student-wizard3-2014 case; the VF2.6 mark-of-scribing-wizard5-2014 case; the two VF2.4 kenku-dmg-wizard3-2014 and human-phb-wizard3-2014 cases; the VF2.3 loxodon-ggr-wizard3-2014 case; the VF2.2 harengon-mpmm-wizard3-2014 case; the three VF2.1 species-AC sinks (lizardfolk-mpmm, tortle-ttp, warforged-erlw wizard3-2014); the VF1.8 dwarf-phb-wizard3-2014 case; the four VF1.5 / VF1.6 wizard5 innate-frequency sinks (Firbolg MPMM / VGM, Eladrin DMG, Mark of Handling); the VF1.4 dragonborn-phb-draconblood-fighter6-2014 case; the VF1.2 bard9-skill-empowerment-2014 case; the VF1.1 glory-tce-paladin7-2014 case; the four B1 PHB Dragonborn sinks (black, green, brass, white); the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
+    assert with_source == 254  # the VF4.2 selesnya-initiate-wizard3-2014 case; the VF4.1 silverquill-student-wizard3-2014 case; the VF2.6 mark-of-scribing-wizard5-2014 case; the two VF2.4 kenku-dmg-wizard3-2014 and human-phb-wizard3-2014 cases; the VF2.3 loxodon-ggr-wizard3-2014 case; the VF2.2 harengon-mpmm-wizard3-2014 case; the three VF2.1 species-AC sinks (lizardfolk-mpmm, tortle-ttp, warforged-erlw wizard3-2014); the VF1.8 dwarf-phb-wizard3-2014 case; the four VF1.5 / VF1.6 wizard5 innate-frequency sinks (Firbolg MPMM / VGM, Eladrin DMG, Mark of Handling); the VF1.4 dragonborn-phb-draconblood-fighter6-2014 case; the VF1.2 bard9-skill-empowerment-2014 case; the VF1.1 glory-tce-paladin7-2014 case; the four B1 PHB Dragonborn sinks (black, green, brass, white); the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
 
 
 def test_b2_feat_and_species_resources_are_guarded_not_stripped():
@@ -1243,6 +1243,15 @@ def test_vf4_1_silverquill_student_sink_holds_only_the_silverquill_college():
     card = next(c for c in res["choices"] if c["id"] == "feat:strixhaven-initiate-scc:spell-variant")
     assert [o["id"] for o in card["options"]] == ["silverquill-1", "silverquill-2", "silverquill-3"] and card["status"] == "resolved"
     assert {"sacred-flame", "thaumaturgy"} <= {e["spellId"] for e in res["sheet"]["innateSpells"]}
+
+
+def test_vf4_2_selesnya_initiate_sink_offers_loxodon_not_other():
+    """VF4.2: no stored case held a GGR guild background with the "other" language (no rebaseline); the sink's card offers
+    Elvish, Loxodon, Sylvan and no placeholder, and the sheet stores real language ids only."""
+    res = next(e for n, e in _GOLDEN.items() if n.endswith("/selesnya-initiate-wizard3-2014"))["result"]
+    card = next(c for c in res["choices"] if c["id"] == "background:selesnya-initiate-ggr:languages")
+    assert [o["id"] for o in card["options"]] == ["elvish", "loxodon", "sylvan"] and card["selected"] == ["elvish"]
+    assert "other" not in res["sheet"]["proficiencies"]["languages"]
 
 
 def test_vf1_8_dwarf_phb_sink_lists_tool_proficiency_once():

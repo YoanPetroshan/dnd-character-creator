@@ -235,6 +235,8 @@ _EXPECT = {
     "loxodon-ggr-wizard3-2014": {},
     # VF2.4: fixed species languages and a species language pick
     "kenku-dmg-wizard3-2014": {"languages": ["common", "auran"]}, "human-phb-wizard3-2014": {"languages": ["common"]},
+    # VF4.2: Selesnya Initiate, the named language pick
+    "selesnya-initiate-wizard3-2014": {"languages": ["common"]},
     # VF4.1: Silverquill Student, Strixhaven Initiate with the college fixed
     "silverquill-student-wizard3-2014": {"innate": True},
     # VF2.6: Mark of Scribing innate frequencies
