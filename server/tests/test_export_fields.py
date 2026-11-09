@@ -243,6 +243,8 @@ _EXPECT = {
     "sorcerer17-2024": {"resources": ["Sorcery Points", "Innate Sorcery", "Sorcerous Restoration"],
                         "feature_choice": "Careful Spell (1 SP)", "languages": ["common"]},
     "cleric7-2024": {"resources": ["Channel Divinity", "Divine Strike"], "feature_choice": "Divine Strike"},
+    # VF1.7: Primal Strike's damage types (the line "damage types: Cold, Fire, Lightning, or Thunder") reach every export
+    "druid7-primal-strike-2024": {"resources": ["Primal Strike"]},
     "wizard20-2024": {"resources": ["Arcane Recovery"], "spellbook": True, "spell_mastery": 2, "signature": 2,
                       "expertise": 1, "feature_choice": "Arcana"},
     "ranger9-2024": {"masteries": True, "expertise": 3, "feature_choice": "Elvish", "languages": ["common", "elvish"]},

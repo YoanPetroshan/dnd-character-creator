@@ -113,6 +113,8 @@ def resource_detail_parts(details: dict | None, lang: str = DEFAULT_LANG) -> lis
     options = d.get("perRageOptions")
     if options:
         parts.append(label(lang, "perRageOptions", items="; ".join(f"{o['name']}: {o['effect']}" for o in options)))
+    if isinstance(d.get("damageTypes"), str) and d["damageTypes"]:  # VF1.7: Divine Strike / Primal Strike ("Cold, Fire, Lightning, or Thunder")
+        parts.append(label(lang, "damageTypesLine", types=d["damageTypes"]))
     return parts
 
 

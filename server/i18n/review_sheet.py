@@ -762,6 +762,7 @@ EXPORT_LINES: dict[str, tuple[dict, str]] = {
     "slotCost": ({"lvl": 2, "n": 3}, "- Font of Magic: 5, @"), "knownForms": ({"n": 4}, "- Wild Shape: 2, @"),
     "metamagic": ({"items": "Quickened Spell (2), Twinned Spell (1)"}, "- Metamagic: 3, @"),
     "perRageOptions": ({"items": "Bear: ...; Eagle: ..."}, "- Rage: 3, @"),
+    "damageTypesLine": ({"types": "Cold, Fire, Lightning, or Thunder"}, "- Primal Strike: 1d8, @"),
 }
 _EXPORT_FAMILY_LINES = {
     "recharge": "- Rage: 3, @, щета +2   (с „(“ в думата се слага запетая, без скоби — в скоби: „(@)“)",

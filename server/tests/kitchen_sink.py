@@ -200,6 +200,9 @@ KITCHEN_SINK: dict[str, dict] = {
     "sorcerer17-2024": _sub("sorcerer", 17, "2024", marks=("classes", "official", "spells"), origin=_XPHB_ORIGIN),
     "cleric7-2024": _sub("cleric", 7, "2024", marks=("classes", "official", "spells"), origin=_XPHB_ORIGIN, overrides={
         "class:cleric:7:feature:xphb-cleric-7-blessed-strikes": ["opt-divine-strike-xphb"]}),
+    # VF1.7: Druid 7 Elemental Fury: Primal Strike (the damage types reach the Markdown / PDF)
+    "druid7-primal-strike-2024": _sub("druid", 7, "2024", marks=("classes", "official", "spells"), origin=_XPHB_ORIGIN, overrides={
+        "class:druid:7:feature:xphb-druid-7-elemental-fury": ["xphb-druid-7-primal-strike"]}),
     "wizard20-2024": _sub("wizard", 20, "2024", marks=("classes", "official", "spells"), origin=_XPHB_ORIGIN, overrides={
         "class:wizard:spellbook": ["fireball-xphb", "counterspell-xphb", "fly-xphb", "haste-xphb", "scorching-ray-xphb"],
         "class:wizard:spells-known": ["burning-hands-xphb", "scorching-ray-xphb", "fireball-xphb"],

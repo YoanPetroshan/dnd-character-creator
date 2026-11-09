@@ -70,13 +70,13 @@
   "yaml": "eeabcbdee9b2a4db721f74f619c0f1cd01582dd15dc9baa03abf03e86fe1f343"
  },
  "cleric7-2024": {
-  "markdown": "05039031c113c53183047a6c10882ab8e1644aaac96b211865c2fff6cd330eaa",
-  "pdf": "38c42ba055e53c1fb2b3c2f3357de39e4dabc62504b19d7df36387f39c6dd3df",
+  "markdown": "027f205d7d4d7c554724284beef96c88a3b1770853312e013ae6c304de090bbf",
+  "pdf": "757df1c65dfb589b7851452fb2071fbb54a03a484f9f9e34e780e94b663ea23d",
   "yaml": "961b6bdd17246ecdc0a7b53bdf68613eabcf3083da58b87519cecd6b2db2e63e"
  },
  "cleric7-light-2024": {
-  "markdown": "ff53bf92dcb5b4909a0dc47f23a75e264098e967eb81e2c968d9000badab5065",
-  "pdf": "1a88ab2d699925af6543aa37eb7a6321cad617c58d1f707f2f63e2c04317c6e3",
+  "markdown": "0814294fbcebc9374e9237a93abef56ab04c494f4154cd64d5961b702e977ec8",
+  "pdf": "cb41188c55a7b15a02b027caeed0c07c111686ad1b5bea89e8adda9e1a9f9bb7",
   "yaml": "d7f94eefb7621ec12b5cc13e21915b5ceed767683b522823092f281adf105251"
  },
  "dragonborn-phb-black-fighter6-2014": {
@@ -113,6 +113,11 @@
   "markdown": "c355e8df0d56b7fba853d83e8fcbcb767843eea90db4c1c3e6ee3d2d5363cc10",
   "pdf": "b1ad1f9b1e406e53237433cf76060dc3e790517f227bfdf0ae6eed6b4bd6b83d",
   "yaml": "1118ef6af86e2e7165bdb7d188ec7190a9db80516b1084f78d1816c68bdc5ffb"
+ },
+ "druid7-primal-strike-2024": {
+  "markdown": "dc51d12629dacd07d9ab9d4d071ee2486a4b3b356fffdda4a7614f626c0db2aa",
+  "pdf": "330f019495aa5d712ddf68e519657b478b61aa6f8684174765f83eeb5d7b5e01",
+  "yaml": "8210018deebe5e564c62d6e6ec27ced3ff7a9a0b8f84d55e78e767f82c813d3c"
  },
  "eladrin-dmg-wizard5-2014": {
   "markdown": "22e365b556f79416f6a16f27384f008b63b727dee93823ba0b7c9b148fa8df8e",

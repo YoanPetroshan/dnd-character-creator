@@ -293,3 +293,34 @@ def test_vf1_5_every_bare_innate_list_is_either_at_will_by_text_or_limited_by_te
                     ("Yuan-ti Pureblood", "VGM", None), ("Earth", "MPMM", "Genasi"),
                     ("Variant; Mark of Detection", "ERLW", "Half-Elf"), ("Variant; Mark of Finding", "ERLW", "Half-Orc"),
                     ("Variant; Mark of Finding", "ERLW", "Human"), ("Mark of Healing", "ERLW", "Halfling")}
+
+
+# ---------------------------------------------------------------- VF1.7 Primal Strike / Divine Strike damage types in the exports
+def _strike_result(catalog, cls, level, cid, option):
+    d = _draft([(cls, level)], ruleset="2024", species="human-xphb", scores={"WIS": 16})
+    d["classes"][0]["choices"] = {cid: [option]}
+    return resolve(d, catalog)
+
+
+def test_vf1_7_primal_strike_damage_types_reach_markdown_and_pdf(catalog):
+    import markdown_export
+    import pdf_export
+    from export_labels import label
+    res = _strike_result(catalog, "druid", 7, "class:druid:7:feature:xphb-druid-7-elemental-fury", "xphb-druid-7-primal-strike")
+    strike = next(r for r in res["derived"]["classResources"] if r["name"] == "Primal Strike")
+    assert strike["details"]["damageTypes"] == "Cold, Fire, Lightning, or Thunder"
+    for lang in ("en", "bg"):
+        line = label(lang, "damageTypesLine", types=strike["details"]["damageTypes"])
+        assert "Cold, Fire, Lightning, or Thunder" in line
+        md = markdown_export.to_markdown(res, lang=lang) if "lang" in markdown_export.to_markdown.__code__.co_varnames else markdown_export.to_markdown(res)
+        assert line in md, lang
+    assert label("en", "damageTypesLine", types="X") == "damage types: X"
+    assert label("bg", "damageTypesLine", types="X") == "типове щети: X"
+
+
+def test_vf1_7_divine_strike_uses_the_same_fragment(catalog):
+    import markdown_export
+    from export_labels import label
+    res = _strike_result(catalog, "cleric", 7, "class:cleric:7:feature:xphb-cleric-7-blessed-strikes", "xphb-cleric-7-divine-strike")
+    strike = next(r for r in res["derived"]["classResources"] if r["name"] == "Divine Strike")
+    assert label("bg", "damageTypesLine", types=strike["details"]["damageTypes"]) in markdown_export.to_markdown(res)
