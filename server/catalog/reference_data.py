@@ -278,6 +278,10 @@ CLASS_FEATURE_EFFECTS: dict[str, dict] = {
     "aura-of-protection": {"save_bonus_ability": "CHA", "save_bonus_min": 1},
     "diamond-soul": {"save_proficiency": "all"},
     "fast-movement": {"speed_bonus_unless_heavy_armor": 10},
+    # VF1.1: TCE Oath of Glory 7 "Your walking speed increases by 10 feet." (unconditional; the ally clause stays text).
+    # Quote-pinned against the vendored subclassFeature in tests/test_campaign_regressions.py. The XPHB twin is
+    # CLASS_FEATURE_EFFECTS_2024 (ruleset 2024 only, RP2); this one is keyed by the TCE record and applies in every ruleset.
+    "glory-tce-7-aura-of-alacrity": {"speed_bonus_flat": 10},
 }
 
 # RP2 (B2): fixed numeric effects of XPHB class and subclass features, ruleset "2024" only. Keyed by the

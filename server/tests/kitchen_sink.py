@@ -167,6 +167,8 @@ KITCHEN_SINK: dict[str, dict] = {
     "dragonborn-phb-white-fighter16-2014": _sub("fighter", 16, "2014", marks=("classes", "official"), once=True,
                                                 origin=("dragonborn-phb", "acolyte"), overrides={
         "species:dragonborn-phb:resistance": ["cold"], "species:dragonborn-phb:draconic-ancestry": ["white"]}),
+    # VF1.1: Oath of Glory (TCE) Paladin 7: Aura of Alacrity +10 ft of walking speed in every ruleset. Non-2024, `once`
+    "glory-tce-paladin7-2014": _sub("paladin", 7, "2014", sub="glory-tce", marks=("classes", "official"), once=True),
     # G3: Cleric 6 (Life) + Paladin 3 (Devotion) under 2014: one merged Channel Divinity (PHB 164) whose note keeps both
     # classes' options; non-2024, so part of the golden via --append
     "cleric6-paladin3-2014": {**_sub("cleric", 6, "2014", marks=("classes",)),

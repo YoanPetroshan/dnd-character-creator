@@ -838,7 +838,7 @@ def test_w6_cases_hold_the_2014_class_feature_tail():
               "warlock:eldritch-master"}
     for n, entry in _GOLDEN.items():
         ids = {r["id"] for r in entry["result"]["derived"]["classResources"]}
-        if n not in hit and "/whispers-bard14" not in n and "/watchers-paladin20" not in n and "/celestial-warlock14" not in n and "/totem-elk14" not in n and "/cleric6-paladin3-2014" not in n and "/four-elements17-2014" not in n and "/genie-warlock14-2014" not in n:  # W8a / W8c / W8d / G1 / G3 / G4 appended sinks (G4: a Monk 17 holds Deflect Missiles, Slow Fall and Stunning Strike, a Warlock 14 Mystic Arcanum) (G3: a Cleric 6 holds Disciple of Life, a Paladin 3 Divine Smite): a Bard 14 holds Song of Rest, a Paladin 20 Divine Smite and Cleansing Touch, a Warlock 14 Mystic Arcanum, a Barbarian 14 Brutal Critical and Relentless Rage
+        if n not in hit and "/whispers-bard14" not in n and "/watchers-paladin20" not in n and "/celestial-warlock14" not in n and "/totem-elk14" not in n and "/cleric6-paladin3-2014" not in n and "/four-elements17-2014" not in n and "/genie-warlock14-2014" not in n and "/glory-tce-paladin7-2014" not in n:  # W8a / W8c / W8d / G1 / G3 / G4 appended sinks (G4: a Monk 17 holds Deflect Missiles, Slow Fall and Stunning Strike, a Warlock 14 Mystic Arcanum) (G3: a Cleric 6 holds Disciple of Life, a Paladin 3 Divine Smite): a Bard 14 holds Song of Rest, a Paladin 20 Divine Smite and Cleansing Touch, a Warlock 14 Mystic Arcanum, a Barbarian 14 Brutal Critical and Relentless Rage
             assert not ids & w6_ids, n
     for n in hit:
         ids = {r["id"] for r in _GOLDEN[n]["result"]["derived"]["classResources"]}
@@ -1116,7 +1116,7 @@ def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
                     assert isinstance(o["source"], str) and o["source"], (name, card["id"], o["id"])
                     assert not o["id"].startswith("skill-") and card["source"]["kind"] != "equipment", (name, card["id"], o["id"])
         with_source += has
-    assert with_source == 236  # the four B1 PHB Dragonborn sinks (black, green, brass, white); the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
+    assert with_source == 237  # the VF1.1 glory-tce-paladin7-2014 case; the four B1 PHB Dragonborn sinks (black, green, brass, white); the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
 
 
 def test_b2_feat_and_species_resources_are_guarded_not_stripped():
@@ -1127,6 +1127,16 @@ def test_b2_feat_and_species_resources_are_guarded_not_stripped():
     for name, entry in _GOLDEN.items():
         d = entry["result"]["derived"]
         assert isinstance(d["featResources"], list) and isinstance(d["speciesResources"], list), name
+
+
+def test_vf1_1_glory_tce_sink_holds_aura_of_alacrity():
+    """VF1.1: no stored case moved (none holds a TCE Glory Paladin 7), so there is no `REBASELINES["VF1"]` entry for this fix; the
+    appended sink `glory-tce-paladin7-2014` has the Oath of Glory (TCE) walking speed +10 (a Human 30 ft. + 10; no armor worn)."""
+    name = next(n for n in _GOLDEN if n.endswith("/glory-tce-paladin7-2014"))
+    res = _GOLDEN[name]["result"]
+    assert res["sheet"]["classes"][0]["subclass"]["id"] == "glory-tce"
+    base = next(e for n, e in _GOLDEN.items() if n.endswith("/paladin6") or n.endswith("/paladin6-2014"))["result"]["derived"]["speeds"]["walk"]
+    assert res["derived"]["speeds"]["walk"] == base + 10
 
 
 if __name__ == "__main__":
