@@ -11,7 +11,7 @@ import sys
 import time
 import urllib.parse
 
-STRIP = ("derived.featResources", "derived.speciesResources")  # = STRIP of server/tests/test_c_series_golden.py
+STRIP = ()  # = STRIP (empty since B2) of server/tests/test_c_series_golden.py
 # Flask answers GET /api with the SPA catch-all, not the API's 404; the service is not the SPA (as in test_service.py).
 NOT_API = {"api-root"}
 

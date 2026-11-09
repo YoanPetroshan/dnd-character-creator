@@ -88,7 +88,8 @@ MULTICLASS = {
 # "derived.featResources": FE3 additive key (feat resources, e.g. Lucky), always [] for the feat-less golden
 # drafts; user-approved feat-effects series (decision F-D1). Both sides are stripped, nothing else changes.
 # "derived.speciesResources": W5a additive key (species trait resources), always [] for the golden drafts (SRD Human).
-STRIP: tuple[str, ...] = ("derived.featResources", "derived.speciesResources")
+# B2 (2026-11-09): both keys left STRIP; the golden now guards them (REBASELINES["B2"] stored the current values), so STRIP is empty again.
+STRIP: tuple[str, ...] = ()
 
 # RP6 / P0: append-only record of deliberate mixed / 2014 changes, see the module docstring. slice id ->
 # {"cases": [fnmatch over case names], "paths": [regexes over normalized paths], "why": one line}. Append-only; one entry per deliberate change.
@@ -326,6 +327,17 @@ REBASELINES: dict[str, dict] = {
             r"^result\.derived\.classResources\[sorcerer:sorcery-points\]\.details\.metamagic\[[0-9]+\]\.cost$",
         ],
         "why": "Twinned Spell cost text carries the cantrip rule (F1)",
+    },
+    # B2 (owner decision 2026-11-09): `derived.featResources` and `derived.speciesResources` leave `STRIP`, so the baseline
+    # guards them. Rule: every stored case may gain the two keys (the older cases were written before W5a / FE3 and lack
+    # them) or move their values; no other path may change. Allowlist = exactly the two path families.
+    "B2": {
+        "cases": ["*"],
+        "paths": [
+            r"^result[.]derived[.]featResources",
+            r"^result[.]derived[.]speciesResources",
+        ],
+        "why": "feat and species resources guarded by the golden (STRIP emptied, B2)",
     },
 }
 
@@ -679,7 +691,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1") and STRIP == ("derived.featResources", "derived.speciesResources")
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2") and STRIP == ()
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
@@ -1105,6 +1117,16 @@ def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
                     assert not o["id"].startswith("skill-") and card["source"]["kind"] != "equipment", (name, card["id"], o["id"])
         with_source += has
     assert with_source == 232  # the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
+
+
+def test_b2_feat_and_species_resources_are_guarded_not_stripped():
+    """B2: STRIP is empty, every stored case holds both keys (a list), and the rebaseline allowlist is exactly the two families."""
+    assert STRIP == ()
+    assert REBASELINES["B2"]["cases"] == ["*"]
+    assert REBASELINES["B2"]["paths"] == [r"^result[.]derived[.]featResources", r"^result[.]derived[.]speciesResources"]
+    for name, entry in _GOLDEN.items():
+        d = entry["result"]["derived"]
+        assert isinstance(d["featResources"], list) and isinstance(d["speciesResources"], list), name
 
 
 if __name__ == "__main__":
