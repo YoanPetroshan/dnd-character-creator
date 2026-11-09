@@ -48,6 +48,14 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "{ab} base score {value} is above 20, the usual cap for a character's own score.",
         "bg": "Базовата стойност {value} на {ab} е над 20 — обичайната горна граница за собствената характеристика (Ability Score) на героя.",
     },
+    "ability-final-above-20": {
+        "en": "{ab} is {value} (base {base} plus species, background and feat bonuses), above 20, the usual cap for a character's own score; the manual score is kept.",
+        "bg": "Характеристиката (Ability Score) {ab} е {value} (базова {base} плюс бонусите от вид (Species), произход (Background) и таланти (Feats)) — над 20, обичайната горна граница; ръчната стойност се запазва.",
+    },
+    "equipment-unknown-item": {
+        "en": "Equipment item '{item}' is not in the catalog and was ignored.",
+        "bg": "Предметът „{item}“ не е в каталога и беше пренебрегнат.",
+    },
     "hp-roll-invalid": {
         "en": "The HP roll for {cls} level {level} must be between 1 and {die}; the average was used instead.",
         "bg": ("Хвърлянето за точки живот (Hit Points) за {cls} ниво {level} трябва да е между 1 и {die}; вместо него е използвана средната стойност."),

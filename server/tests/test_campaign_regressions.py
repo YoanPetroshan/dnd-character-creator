@@ -362,3 +362,61 @@ def test_vf1_8_no_species_lists_a_proficiency_choice_name_twice(catalog):
             if dup:
                 bad.append((rid, sub, dup))
     assert bad == []
+
+
+# ---------------------------------------------------------------- VF1.9 (a) a final score above 20, (b) an unknown equipment item
+def _warning_ids(res):
+    return [w["id"] for w in res["warnings"]]
+
+
+def test_vf1_9a_final_score_above_20_from_base_plus_species_bonus_warns(catalog):
+    """Manual scores stay an override; the cap-20 note fires for the FINAL score too (campaign t3-018 / t3-019: 19 + 2, 20 + 2)."""
+    d = _draft([("fighter", 1)], ruleset="2014", species="dwarf", subspecies="hill-dwarf", scores={"CON": 19, "WIS": 20})
+    res = resolve(d, catalog)
+    final = res["sheet"]["abilities"]
+    assert final["CON"] == 21 and final["WIS"] == 21  # Hill Dwarf: CON +2, WIS +1; the engine keeps the manual override
+    ids = _warning_ids(res)
+    assert "ability-final-above-20-CON" in ids and "ability-final-above-20-WIS" in ids
+    assert len(ids) == len(set(ids))
+    msg_ = next(w["message"] for w in res["warnings"] if w["id"] == "ability-final-above-20-CON")
+    assert "CON" in msg_ and "21" in msg_ and "19" in msg_
+
+
+def test_vf1_9a_no_warning_at_or_below_20_and_no_double_report_above_a_base_over_20(catalog):
+    res = resolve(_draft([("fighter", 1)], ruleset="2014", species="dwarf", subspecies="hill-dwarf", scores={"CON": 18}), catalog)
+    assert res["sheet"]["abilities"]["CON"] == 20
+    assert not [i for i in _warning_ids(res) if "above-20" in i]
+    res = resolve(_draft([("fighter", 1)], ruleset="2014", scores={"STR": 22}), catalog)  # base 22: the existing base warning only
+    assert [i for i in _warning_ids(res) if "above-20" in i] == ["ability-above-20-STR"]
+
+
+def test_vf1_9a_primal_champion_and_epic_boons_are_not_reported(catalog):
+    """Barbarian 20 (Primal Champion +4, cap 24) with 20 STR: the class feature, not a manual score, raises it."""
+    res = resolve(_draft([("barbarian", 20)], ruleset="2014", scores={"STR": 19}), catalog)  # Human +1 = 20, Primal Champion +4 = 24
+    assert res["sheet"]["abilities"]["STR"] == 24
+    assert not [i for i in _warning_ids(res) if "above-20" in i]
+
+
+def test_vf1_9_messages_exist_in_both_languages():
+    from i18n.messages import msg, render
+    final = msg("ability-final-above-20", ab="CON", value=21, base=19)
+    assert "CON" in final and "21" in final and "19" in final
+    bg = render(final, "bg")
+    assert bg != str(final) and "21" in bg and "CON" in bg
+    item = msg("equipment-unknown-item", item="plate")
+    assert "plate" in item and "plate" in render(item, "bg") and render(item, "bg") != str(item)
+
+
+def test_vf1_9b_unknown_equipment_item_warns_instead_of_vanishing(catalog):
+    d = _draft([("fighter", 3)], ruleset="2024", species="human-xphb", added=["plate", "plate-armor"])
+    res = resolve(d, catalog)
+    ids = _warning_ids(res)
+    assert ids.count("equipment-unknown-item-0") == 1 and "equipment-unknown-item-1" not in ids
+    assert [e["itemId"] for e in res["sheet"]["equipment"]["added"]] == ["plate-armor"] if "added" in res["sheet"]["equipment"] else True
+    assert "plate" in next(w["message"] for w in res["warnings"] if w["id"] == "equipment-unknown-item-0")
+    assert res["problems"] == []
+
+
+def test_vf1_9b_no_warning_for_known_items(catalog):
+    res = resolve(_draft([("fighter", 1)], added=["longsword"]), catalog)
+    assert not [i for i in _warning_ids(res) if i.startswith("equipment-unknown-item")]

@@ -561,6 +561,8 @@ MESSAGE_SAMPLES: dict[str, dict] = {
     "ruleset-2024-background-no-asi": {"name": "Acolyte (2014)"}, "ruleset-2024-background-no-origin-feat": {"name": "Sage (2014)"},
     "source-hidden": {"name": "Tasha's Cauldron of Everything"}, "feat-hidden-by-filters": {"feat": "Fey Touched"},
     "dark-gift-needs-ravenloft": {"feat": "Mist Walker"},
+    "ability-final-above-20": {"ab": "CON", "value": 21, "base": 19},
+    "equipment-unknown-item": {"item": "plate"},
     "ability-above-20": {"ab": "STR", "value": 22}, "hp-roll-invalid": {"cls": "Fighter", "level": 3, "die": 10},
     "equipment-envelope-dropped": {"name": "Fighter", "n": 1},
     "armor-not-proficient": {"name": "Plate Armor"}, "armor-strength": {"name": "Plate Armor", "minimum": 15},

@@ -295,6 +295,7 @@ _add("dragon-colour-no-longer-offered", lambda: dict(base(), ruleset="2014", spe
 _add("feat-hidden-by-filters-asi", lambda: dict(_asi(**{"4": ["feat:lucky-xphb"]}), sources=["srd"]))
 _add("asi-over-cap", lambda: dict(_asi(**{"4": ["ability-str", "ability-str"]}),
                                   abilities={"method": "manual", "base": dict(_ABIL, STR=20)}))
+_add("equipment-unknown-item", lambda: dict(base(), equipment={"choices": {}, "added": [{"itemId": "plate", "qty": 1}], "skipped": False}))
 _add("asi-bad-pick", lambda: _asi(**{"4": ["not-a-valid-asi-pick"]}))
 _add("origin-feat-hidden", lambda: dict(base(ruleset="2024"), sources=["srd"],
                                         species={"id": "human-xphb", "choices": {}},
@@ -527,6 +528,13 @@ SNAPSHOT_REBASELINES: dict[str, dict] = {
         "cases": ["clear/ks/src-all/haunted-one-fighter3-2014"],
         "paths": [r"^exportGate(\[[0-9]+\])*$"],
         "why": "either-or background feat card resolves to the plain feat by default (F1.3)",
+    },
+    # VF1.9a: the new non-blocking warning `ability-final-above-20-<AB>` (a manual base plus species / background / feat bonuses
+    # ends above 20); the `t/asi-over-cap` trigger starts at 20 / 19 manual scores, so its warnings list gains the new entries.
+    "VF1": {
+        "cases": ["t/asi-over-cap"],
+        "paths": [r"^warnings(\[[0-9]+\])*$"],
+        "why": "ability-final-above-20 warning (VF1.9a)",
     },
 }
 

@@ -5819,6 +5819,12 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     for ab in derived_mod.ABILITIES:
         if isinstance(base_scores.get(ab), int) and not isinstance(base_scores.get(ab), bool) and base_scores[ab] > 20:
             warnings.append({"id": f"ability-above-20-{ab}", "message": msg("ability-above-20", ab=ab, value=base_scores[ab])})
+        elif final_scores[ab] > 20 and isinstance(base_scores.get(ab), int):
+            # VF1.9: the FINAL score (manual base + species + background + origin-feat bonuses; the later ASI walk caps at 20 and
+            # Primal Champion / Epic Boon raise it on purpose, so they are not looked at) is above the usual cap. The manual
+            # score is an override and is kept; this only says so.
+            warnings.append({"id": f"ability-final-above-20-{ab}",
+                             "message": msg("ability-final-above-20", ab=ab, value=final_scores[ab], base=base_scores[ab])})
     for ab, score in final_scores.items():
         if 1 <= score <= 30:
             continue
@@ -6381,12 +6387,15 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         added_raw = []
 
     added_resolved = []
-    for entry in added_raw:
+    for entry_index, entry in enumerate(added_raw):
         if not isinstance(entry, dict):
             continue
         item_id = entry.get("itemId")
         item = catalog.items.get(item_id) if isinstance(item_id, str) else None
         if not item:
+            # VF1.9: an unknown item id (a typo, or an item of a book the catalog lacks) was dropped without a word
+            warnings.append({"id": f"equipment-unknown-item-{entry_index}",
+                             "message": msg("equipment-unknown-item", item=str(item_id))})
             continue
         added_resolved.append({
             "itemId": item_id, "name": item["name"],
