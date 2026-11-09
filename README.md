@@ -177,6 +177,20 @@ the pure modules the pages call (export gate parity with `server/app.py` `_pendi
 routing, source toggling, file names, ability math, draft merge/sanitize and the draft reducer). There are no component or
 browser tests; the pages are checked by hand at 375 px (see `docs/superpowers/specs/REAL-DEVICE-CHECKLIST.md`).
 
+**Character-test harness (VC0).** `server/tests/tools/chartest/` is a tool for the verification campaign, not a test
+module. It generates characters (matrix tiers T1 single class 180, T2 two classes 150, T3 targeted ~64, T4 three classes 9,
+plus an odd-draft generator), fills every pending choice deterministically, resolves them in-process and compares the
+numbers with an independent oracle (`checks.py`, which reads only the raw vendored JSON). A tester agent runs, from
+`server/tests`:
+
+    ../../.venv/bin/python -m tools.chartest run --tier T3 --batch 0 --size 10 --out ../../scratch/findings.jsonl
+    ../../.venv/bin/python -m tools.chartest explain <spec-id> <RULE>     # expected vs actual, inputs, citation
+    ../../.venv/bin/python -m tools.chartest show <spec-id>               # ~60-line readable sheet
+    ../../.venv/bin/python -m tools.chartest gen --tier T2 --batch 3      # the specs as JSON lines
+    ../../.venv/bin/python -m tools.chartest gaps                         # documented known gaps (tags)
+
+Exact instructions, severity rules and what not to touch: `docs/CAMPAIGN-PROTOCOL.md`. Tests: `server/tests/test_chartest_harness.py`.
+
 Python dependencies are pinned in `server/requirements.txt` (the repo-root `requirements.txt` only includes it, so one install covers both suites). The frontend is locked by
 `frontend/package-lock.json`.
 

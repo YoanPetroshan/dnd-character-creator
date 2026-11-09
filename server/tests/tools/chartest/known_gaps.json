@@ -1,0 +1,73 @@
+[
+ {
+  "tag": "KG-thirsting-blade-count",
+  "rule": "ATTACKS-PER-ACTION",
+  "match": {
+   "class": "warlock"
+  },
+  "note": "Thirsting Blade attack count is a note, not an attack-row option (ARCHITECTURE Known gaps after RP22: per-attack riders)."
+ },
+ {
+  "tag": "KG-optional-features",
+  "rule": "FEATURES-PRESENT",
+  "match": {},
+  "note": "Optional class features from other books (TCE Cantrip Versatility ...) are skipped by the oracle by design; report only base-chassis features."
+ },
+ {
+  "tag": "KG-wild-shape-forms",
+  "rule": "*",
+  "match": {
+   "feature": "wild shape"
+  },
+  "note": "Wild Shape known forms and the Beast Master companion stat block are not in the data (label / count only)."
+ },
+ {
+  "tag": "KG-ravenloft-dark-gift",
+  "rule": "FEAT-PREREQ",
+  "match": {
+   "feat": "dark gift"
+  },
+  "note": "The Ravenloft prerequisite on Dark Gift feats is not checked (deferred list (e))."
+ },
+ {
+  "tag": "KG-fighting-initiate-2024",
+  "rule": "*",
+  "match": {
+   "feature": "fighting initiate"
+  },
+  "note": "Fighting Initiate keeps the six SRD styles under 2024 (open question 24)."
+ },
+ {
+  "tag": "KG-mercy-skill",
+  "rule": "*",
+  "match": {
+   "class": "monk",
+   "subclass": "mercy"
+  },
+  "note": "Mercy has no replacement skill card (open question 23)."
+ },
+ {
+  "tag": "KG-innate-uses",
+  "rule": "*",
+  "match": {
+   "feature": "innate"
+  },
+  "note": "Innate-spell use tracking shows uses text only (deferred (c))."
+ },
+ {
+  "tag": "KG-short-rest-choices",
+  "rule": "*",
+  "match": {
+   "feature": "planar adaptation"
+  },
+  "note": "Choices that last one rest (Planar Adaptation, Zhentarim Tactics) are notes, not cards."
+ },
+ {
+  "tag": "KG-subclass-spell-school",
+  "rule": "W-PROBLEMS",
+  "match": {
+   "feature": "spell-school-limit"
+  },
+  "note": "EK / AT spell school restriction needs pick wiring (DEFERRED pick, Sections W7/W8 scan): the first-option filler picks out-of-school spells."
+ }
+]
