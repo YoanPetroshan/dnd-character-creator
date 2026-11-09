@@ -186,6 +186,8 @@ KITCHEN_SINK: dict[str, dict] = {
                                      origin=("elf-phb", "acolyte", "elf-phb-eladrin-dmg")),
     "mark-of-handling-wizard5-2014": _sub("wizard", 5, "2014", marks=("classes", "official"), once=True,
                                           origin=("human-phb", "acolyte", "human-phb-mark-of-handling-erlw")),
+    # VF1.8: the PHB Dwarf lists Tool Proficiency once (with the picked tool). Non-2024, `once`
+    "dwarf-phb-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("dwarf-phb", "acolyte")),
     # G3: Cleric 6 (Life) + Paladin 3 (Devotion) under 2014: one merged Channel Divinity (PHB 164) whose note keeps both
     # classes' options; non-2024, so part of the golden via --append
     "cleric6-paladin3-2014": {**_sub("cleric", 6, "2014", marks=("classes",)),

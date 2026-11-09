@@ -1119,7 +1119,7 @@ def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
                     assert isinstance(o["source"], str) and o["source"], (name, card["id"], o["id"])
                     assert not o["id"].startswith("skill-") and card["source"]["kind"] != "equipment", (name, card["id"], o["id"])
         with_source += has
-    assert with_source == 243  # the four VF1.5 / VF1.6 wizard5 innate-frequency sinks (Firbolg MPMM / VGM, Eladrin DMG, Mark of Handling); the VF1.4 dragonborn-phb-draconblood-fighter6-2014 case; the VF1.2 bard9-skill-empowerment-2014 case; the VF1.1 glory-tce-paladin7-2014 case; the four B1 PHB Dragonborn sinks (black, green, brass, white); the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
+    assert with_source == 244  # the VF1.8 dwarf-phb-wizard3-2014 case; the four VF1.5 / VF1.6 wizard5 innate-frequency sinks (Firbolg MPMM / VGM, Eladrin DMG, Mark of Handling); the VF1.4 dragonborn-phb-draconblood-fighter6-2014 case; the VF1.2 bard9-skill-empowerment-2014 case; the VF1.1 glory-tce-paladin7-2014 case; the four B1 PHB Dragonborn sinks (black, green, brass, white); the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
 
 
 def test_b2_feat_and_species_resources_are_guarded_not_stripped():
@@ -1175,6 +1175,13 @@ def test_vf1_5_6_innate_frequency_sinks():
     assert innate("firbolg-vgm-wizard5-2014") == {"detect-magic": either, "disguise-self": either}
     assert innate("eladrin-dmg-wizard5-2014") == {"misty-step": either}
     assert innate("mark-of-handling-wizard5-2014") == {"animal-friendship": either, "speak-with-animals": either}
+
+
+def test_vf1_8_dwarf_phb_sink_lists_tool_proficiency_once():
+    """VF1.8: no stored case held the PHB Dwarf (no rebaseline); the appended sink has one Tool Proficiency feature, with the pick."""
+    name = next(n for n in _GOLDEN if n.endswith("/dwarf-phb-wizard3-2014"))
+    tools = [f for f in _GOLDEN[name]["result"]["sheet"]["features"] if f["name"] == "Tool Proficiency"]
+    assert len(tools) == 1 and tools[0].get("choice")
 
 
 if __name__ == "__main__":

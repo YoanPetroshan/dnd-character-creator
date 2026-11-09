@@ -248,6 +248,7 @@ def build_features(catalog, resolved_classes, refs_by_class, race, race_id, subr
         source = {"kind": "species", "id": race_id, "label": race["name"]}
         refs = list(race.get("traits", [])) + (list(subrace.get("racial_traits", [])) if subrace else [])
         seen_traits: set[str] = set()
+        by_name: dict[str, dict] = {}  # VF1.8: the entry already listed for a trait name of this species
         for ref in refs:
             trait = catalog.traits.get(ref["index"])
             if not trait or not trait.get("name") or ref["index"] in seen_traits:
@@ -255,7 +256,16 @@ def build_features(catalog, resolved_classes, refs_by_class, race, race_id, subr
             seen_traits.add(ref["index"])
             labels = [_strip_prefix(l, trait["name"]) for l in
                       _prefixed_labels(choices, "species", f"species:{race_id}:trait:{ref['index']}")]
-            out.append(_entry(source, trait["name"], None, labels))
+            if "-trait-choice-" in ref["index"] and trait["name"] in by_name:
+                # VF1.8: the synthetic proficiency-choice trait ("Tool Proficiency") of a race whose own entries already
+                # have a trait of that name (PHB Dwarf): one line, the pick label on it.
+                kept = by_name[trait["name"]]
+                if labels:
+                    kept["choice"] = list(kept.get("choice") or []) + labels
+                continue
+            entry = _entry(source, trait["name"], None, labels)
+            by_name.setdefault(trait["name"], entry)
+            out.append(entry)
 
     feature = (bg or {}).get("feature") or {}
     if bg and feature.get("name"):

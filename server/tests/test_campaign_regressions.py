@@ -324,3 +324,41 @@ def test_vf1_7_divine_strike_uses_the_same_fragment(catalog):
     res = _strike_result(catalog, "cleric", 7, "class:cleric:7:feature:xphb-cleric-7-blessed-strikes", "xphb-cleric-7-divine-strike")
     strike = next(r for r in res["derived"]["classResources"] if r["name"] == "Divine Strike")
     assert label("bg", "damageTypesLine", types=strike["details"]["damageTypes"]) in markdown_export.to_markdown(res)
+
+
+# ---------------------------------------------------------------- VF1.8 PHB Dwarf lists Tool Proficiency once
+def test_vf1_8_data_phb_dwarf_has_one_tool_proficiency_entry():
+    d = _record("race", "Dwarf", "PHB")
+    assert [e["name"] for e in d["entries"] if isinstance(e, dict) and e.get("name") == "Tool Proficiency"] == ["Tool Proficiency"]
+
+
+@pytest.mark.parametrize("ruleset", ["2014", "mixed"])
+def test_vf1_8_dwarf_phb_tool_proficiency_listed_once_with_the_pick(catalog, ruleset):
+    cid = "species:dwarf-phb:trait:dwarf-phb-trait-choice-tool-proficiency:proficiency-choice"
+    d = _draft([("wizard", 1)], ruleset=ruleset, species="dwarf-phb")
+    d["species"]["choices"] = {cid: ["smiths-tools"]}
+    res = resolve(d, catalog)
+    tools = [f for f in res["sheet"]["features"] if f["name"] == "Tool Proficiency"]
+    assert len(tools) == 1
+    assert tools[0].get("choice") == ["Smith's Tools"]  # the pick label stays on the single entry
+    unpicked = [f for f in resolve(_draft([("wizard", 1)], ruleset=ruleset, species="dwarf-phb"), catalog)["sheet"]["features"]
+                if f["name"] == "Tool Proficiency"]
+    assert len(unpicked) == 1 and "choice" not in unpicked[0]
+
+
+def test_vf1_8_no_species_lists_a_proficiency_choice_name_twice(catalog):
+    """Every species and subspecies of the catalog: a synthetic proficiency-choice trait never repeats the name of the
+    species' own trait (the dwarf-phb case). (Other repeated names are a subrace replacing a race trait, e.g. Draconblood's
+    Draconic Ancestry, and are not this defect.)"""
+    from collections import Counter
+    bad = []
+    for rid, race in catalog.races.items():
+        subs = [None] + [s["index"] for s in catalog.subraces.values() if (s.get("race") or {}).get("index") == rid]
+        for sub in subs:
+            d = _draft([("wizard", 1)], ruleset="2014", species=rid, subspecies=sub)
+            res = resolve(d, catalog)
+            names = Counter(f["name"] for f in res["sheet"]["features"] if f["source"]["kind"] == "species")
+            dup = [n for n, c in names.items() if c > 1 and n in ("Tool Proficiency", "Skill Proficiency")]
+            if dup:
+                bad.append((rid, sub, dup))
+    assert bad == []
