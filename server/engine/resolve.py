@@ -1279,6 +1279,14 @@ def _feat_ability_bonus_choice_templates(
                     if asi_mod.asi_exceeds_cap(deltas_by_option.get(option["id"], []), scores, cap):
                         option["disabled"] = True
                         option["disabledReason"] = msg("disabled-feat-ability-max", cap=cap)
+                if tpl["options"] and all(o.get("disabled") for o in tpl["options"]):
+                    # VF1.3: every score the feat may raise is already at its cap. PHB p.165 "Increase the chosen score by
+                    # 1, to a maximum of 20": the +1 is simply lost, the feat is still taken. A card with no enabled
+                    # option could never be settled (the character stayed blocked), so the options stay pickable; the
+                    # pick changes nothing and the existing `pruned-ability-at-max` note says so.
+                    for option in tpl["options"]:
+                        option.pop("disabled", None)
+                        option.pop("disabledReason", None)
             pairs.append((tpl, feat))
     return pairs
 
@@ -5980,6 +5988,13 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             fixed_clamped_notes.append({
                 "choiceId": skipped_cid,
                 "reason": msg("pruned-ability-at-max", name=skipped_feat["name"], ab=fixed_names,
+                              cap=_feat_ability_cap(skipped_feat))})
+        fixed_abs = set(_feat_ability_bonuses([skipped_feat]))
+        lost_choice = [ab for ab, _ in asi_feat_deltas_by_cid.get(skipped_cid, []) if ab not in fixed_abs]
+        if lost_choice:  # VF1.3: the chosen +1 of a feat whose every ability is at the cap is lost (the feat is still taken)
+            fixed_clamped_notes.append({
+                "choiceId": f"{skipped_feat['_asi_origin']}:ability-bonus",
+                "reason": msg("pruned-ability-at-max", name=skipped_feat["name"], ab=", ".join(lost_choice),
                               cap=_feat_ability_cap(skipped_feat))})
     problems += _feat_prerequisite_problems(
         resolved_feats, total_level, final_scores, use_feat_prereqs, background_chosen_ability_deltas_by_instance,

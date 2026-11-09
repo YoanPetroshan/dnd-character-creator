@@ -100,3 +100,57 @@ def test_vf1_2_no_skill_option_of_a_proficiency_card_is_blocked_by_a_spell_id(ca
         return {c["id"]: [(o["id"], o.get("disabled")) for o in c["options"]] for c in res["choices"]
                 if c["options"] and all(o["id"].startswith("skill-") and o["id"] != "skill-empowerment" for o in c["options"])}
     assert options(True) == options(False)
+
+
+# ---------------------------------------------------------------- VF1.3 a feat's ability-bonus card at the 20 cap
+def _all20(catalog, feat, ruleset="2014", species="dragonborn-(metallic)-ftd", pick=None, cls=("barbarian", 4), extra=None):
+    d = _draft([cls], ruleset=ruleset, scores={a: 20 for a in ABS}, species=species)
+    choices = {f"class:{cls[0]}:{cls[1]}:asi": [f"feat:{feat}"]}
+    if pick:
+        choices[f"class:{cls[0]}:{cls[1]}:asi:feat:{feat}:ability-bonus"] = pick
+    d["classes"][0]["choices"] = choices
+    return resolve(d, catalog)
+
+
+@pytest.mark.parametrize("feat,ab", [("warlike-familiar-au", "str"), ("transmutation-adept-au", "int")])
+def test_vf1_3_half_feat_card_is_satisfiable_with_every_score_at_20(catalog, feat, ab):
+    """PHB p.165 "Increase the chosen score by 1, to a maximum of 20": at 20 the +1 is lost, the feat is still taken and the
+    card can be settled (it stayed pending with every option disabled)."""
+    cid = f"class:barbarian:4:asi:feat:{feat}:ability-bonus"
+    pending = next(c for c in _all20(catalog, feat)["choices"] if c["id"] == cid)
+    assert pending["status"] == "pending" and pending["options"] and not any(o.get("disabled") for o in pending["options"])
+    res = _all20(catalog, feat, pick=[ab])
+    card = next(c for c in res["choices"] if c["id"] == cid)
+    assert card["status"] == "resolved" and card["selected"] == [ab]
+    assert res["sheet"]["abilities"] == {a: 20 for a in ABS}
+    assert any(feat in json.dumps(f) for f in res["sheet"]["feats"])
+    notes = [p for p in res["pruned"] if p["choiceId"] == cid]
+    assert len(notes) == 1 and f"{ab.upper()} is already at maximum (20)" in notes[0]["reason"]
+    assert res["problems"] == []
+
+
+def test_vf1_3_partial_cap_still_disables_only_the_capped_options(catalog):
+    d = _draft([("barbarian", 4)], ruleset="2014", scores={**{a: 14 for a in ABS}, "STR": 20, "DEX": 20}, species="dragonborn-(metallic)-ftd")
+    d["classes"][0]["choices"] = {"class:barbarian:4:asi": ["feat:athlete-phb"]}
+    d["abilities"]["base"]["DEX"] = 14
+    res = resolve(d, catalog)
+    card = next(c for c in res["choices"] if c["id"].endswith("athlete-phb:ability-bonus"))
+    flags = {o["id"]: bool(o.get("disabled")) for o in card["options"]}
+    assert flags == {"str": True, "dex": False}
+    d["abilities"]["base"]["DEX"] = 20
+    d["classes"][0]["choices"] = {"class:barbarian:4:asi": ["feat:warlike-familiar-au"]}
+    res = resolve(d, catalog)
+    card = next(c for c in res["choices"] if c["id"].endswith("warlike-familiar-au:ability-bonus"))
+    flags = {o["id"]: bool(o.get("disabled")) for o in card["options"]}
+    assert flags["str"] and flags["dex"] and not flags["con"]
+
+
+def test_vf1_3_chartest_t3_specs_now_settle():
+    """The two campaign specs (t3-030 2014, t3-056 2024) were FillStuck."""
+    import sys
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+    from tools.chartest import matrix, spec as spec_mod
+    catalog = load()
+    for spec_id in ("t3-030-ability-limits-high-2014", "t3-056-ability-limits-high-2024"):
+        s = next(x for x in matrix.generate("T3", 0) if x.id == spec_id)
+        spec_mod.resolve_spec(s, catalog)  # raises FillStuck when the card cannot be settled
