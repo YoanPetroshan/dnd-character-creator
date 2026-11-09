@@ -499,7 +499,7 @@ def test_innate_spells_choice_shaped_ability_is_preserved_as_a_candidate_list():
     assert grants[0]["name"] == "Gust Of Wind"
     assert grants[0]["spell_id"] == "gust-of-wind"
     assert grants[0]["level"] == 3
-    assert grants[0]["uses"] == "at-will"
+    assert grants[0]["uses"] == "1/day"  # VF1.5: the bare list is limited by the trait text (once, then a long rest)
     assert grants[0]["ability"] == {"choose": ["INT", "WIS", "CHA"]}
 
 

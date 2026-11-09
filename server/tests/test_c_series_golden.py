@@ -1073,6 +1073,9 @@ def test_g6_no_rebaseline_and_only_the_tiefling_sink_holds_a_limited_innate_spel
             assert len(limited) == 4, n
         elif n.rsplit("/", 1)[-1] == "tiefling-fierna-wizard5-2014":  # F1: the MTF legacy replaces Infernal Legacy
             assert [e["name"] for e in innate] == ["Friends", "Charm Person", "Suggestion"] and limited == ["Charm Person", "Suggestion"], n
+        elif n.rsplit("/", 1)[-1] in ("firbolg-mpmm-wizard5-2014", "firbolg-vgm-wizard5-2014", "eladrin-dmg-wizard5-2014",
+                                      "mark-of-handling-wizard5-2014"):  # VF1.5 / VF1.6: the limits come from the trait text / `known` + `rest`
+            assert limited and all(e["usesMax"] == 1 for e in innate if "usesMax" in e), n
         else:
             assert not limited, n
 
@@ -1116,7 +1119,7 @@ def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
                     assert isinstance(o["source"], str) and o["source"], (name, card["id"], o["id"])
                     assert not o["id"].startswith("skill-") and card["source"]["kind"] != "equipment", (name, card["id"], o["id"])
         with_source += has
-    assert with_source == 239  # the VF1.4 dragonborn-phb-draconblood-fighter6-2014 case; the VF1.2 bard9-skill-empowerment-2014 case; the VF1.1 glory-tce-paladin7-2014 case; the four B1 PHB Dragonborn sinks (black, green, brass, white); the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
+    assert with_source == 243  # the four VF1.5 / VF1.6 wizard5 innate-frequency sinks (Firbolg MPMM / VGM, Eladrin DMG, Mark of Handling); the VF1.4 dragonborn-phb-draconblood-fighter6-2014 case; the VF1.2 bard9-skill-empowerment-2014 case; the VF1.1 glory-tce-paladin7-2014 case; the four B1 PHB Dragonborn sinks (black, green, brass, white); the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
 
 
 def test_b2_feat_and_species_resources_are_guarded_not_stripped():
@@ -1157,6 +1160,21 @@ def test_vf1_4_draconblood_sink_has_no_resistance_card():
     assert res["sheet"]["damageModifiers"]["resistances"] == []
     bw = next(r for r in res["derived"]["speciesResources"] if r["name"] == "Breath Weapon")
     assert (bw["details"]["damageType"], bw["details"]["save"], bw["details"]["shape"]) == ("fire", "DEX", "a 15-foot cone")
+
+
+def test_vf1_5_6_innate_frequency_sinks():
+    """VF1.5 / VF1.6: no stored case held these species (no rebaseline). The appended sinks: Firbolg MPMM Detect Magic and
+    Disguise Self once per long rest; Firbolg VGM the same two, Eladrin Misty Step and Mark of Handling Animal Friendship /
+    Speak with Animals once per short or long rest."""
+    def innate(key):
+        res = next(e for n, e in _GOLDEN.items() if n.endswith("/" + key))["result"]
+        return {e["spellId"]: (e["uses"], e.get("usesMax"), e.get("recharge")) for e in res["sheet"]["innateSpells"]}
+    long_ = ("1/day", 1, "long")
+    either = ("1/short or long rest", 1, "short-or-long")
+    assert innate("firbolg-mpmm-wizard5-2014") == {"detect-magic": long_, "disguise-self": long_}
+    assert innate("firbolg-vgm-wizard5-2014") == {"detect-magic": either, "disguise-self": either}
+    assert innate("eladrin-dmg-wizard5-2014") == {"misty-step": either}
+    assert innate("mark-of-handling-wizard5-2014") == {"animal-friendship": either, "speak-with-animals": either}
 
 
 if __name__ == "__main__":

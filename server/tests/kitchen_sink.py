@@ -177,6 +177,15 @@ KITCHEN_SINK: dict[str, dict] = {
     "dragonborn-phb-draconblood-fighter6-2014": _sub("fighter", 6, "2014", marks=("classes", "official"), once=True,
                                                      origin=("dragonborn-phb", "acolyte", "dragonborn-phb-draconblood-egw"), overrides={
         "species:dragonborn-phb:draconic-ancestry": ["gold"]}),
+    # VF1.5 / VF1.6: innate spells whose frequency comes from the trait text (Firbolg MPMM: Detect Magic / Disguise Self once
+    # per long rest) or from the `known` + `rest` shape (Firbolg VGM, Eladrin DMG, Mark of Handling: once per short or long
+    # rest). Non-2024, `once`
+    "firbolg-mpmm-wizard5-2014": _sub("wizard", 5, "2014", marks=("classes", "official"), once=True, origin=("firbolg-mpmm", "acolyte")),
+    "firbolg-vgm-wizard5-2014": _sub("wizard", 5, "2014", marks=("classes", "official"), once=True, origin=("firbolg-vgm", "acolyte")),
+    "eladrin-dmg-wizard5-2014": _sub("wizard", 5, "2014", marks=("classes", "official"), once=True,
+                                     origin=("elf-phb", "acolyte", "elf-phb-eladrin-dmg")),
+    "mark-of-handling-wizard5-2014": _sub("wizard", 5, "2014", marks=("classes", "official"), once=True,
+                                          origin=("human-phb", "acolyte", "human-phb-mark-of-handling-erlw")),
     # G3: Cleric 6 (Life) + Paladin 3 (Devotion) under 2014: one merged Channel Divinity (PHB 164) whose note keeps both
     # classes' options; non-2024, so part of the golden via --append
     "cleric6-paladin3-2014": {**_sub("cleric", 6, "2014", marks=("classes",)),

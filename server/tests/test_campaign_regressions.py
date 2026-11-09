@@ -179,3 +179,117 @@ def test_vf1_4_no_resistance_card_and_no_pick_based_resistance(catalog, sub, rul
 def test_vf1_4_the_phb_dragonborn_and_other_subraces_keep_the_resistance_card(catalog):
     res = resolve(_draft([("wizard", 1)], species="dragonborn-phb"), catalog)
     assert "species:dragonborn-phb:resistance" in [c["id"] for c in res["choices"]]
+
+
+# ---------------------------------------------------------------- VF1.5 / VF1.6 innate spells: the frequency of the trait text
+# Verified against races.json before the code. A bare `innate` level list has no frequency wrapper; the converter read it as
+# at-will. The trait entries of the same record state the limit:
+#   Aarakocra MPMM Wind Caller, Firbolg MPMM, Genasi (Earth) MPMM Merge with Stone, Variant Mark of Detection / Finding,
+#   Mark of Healing: "Once you cast ... you can't ... again until you finish a long rest";
+#   Yuan-ti MPMM / VGM: "You can cast animal friendship an unlimited number of times" (genuinely at-will, unchanged).
+# `known: {"1": {"rest": {"1": [...]}}}` (Firbolg VGM, Eladrin DMG, Mark of Handling) is read as one cast per short or long rest.
+def _entries_text(rec) -> str:
+    out = []
+
+    def walk(e):
+        if isinstance(e, str):
+            out.append(e)
+        elif isinstance(e, dict):
+            for k in ("entries", "items", "rows"):
+                for x in e.get(k) or []:
+                    walk(x)
+        elif isinstance(e, list):
+            for x in e:
+                walk(x)
+    walk(rec.get("entries") or [])
+    return "\n".join(out)
+
+
+def _races_json():
+    return json.load(open(DATA / "races.json"))
+
+
+def _record(kind, name, source, race=None):
+    return next(r for r in _races_json()[kind] if r.get("name") == name and r.get("source") == source
+                and (race is None or r.get("raceName") == race))
+
+
+def test_vf1_5_data_the_trait_texts_state_the_limits():
+    must = [("race", "Aarakocra", "MPMM", None, "you can't do so again until you finish a long rest"),
+            ("race", "Firbolg", "MPMM", None, "you can't cast that spell with it again until you finish a long rest"),
+            ("subrace", "Earth", "MPMM", "Genasi", "you can't do so again until you finish a long rest"),
+            ("subrace", "Variant; Mark of Detection", "ERLW", "Half-Elf", "you can't cast that spell with it again until you finish a long rest"),
+            ("subrace", "Variant; Mark of Finding", "ERLW", "Half-Orc", "you can't cast that spell with it again until you finish a long rest"),
+            ("subrace", "Variant; Mark of Finding", "ERLW", "Human", "you can't cast that spell with it again until you finish a long rest"),
+            ("subrace", "Mark of Healing", "ERLW", None, "you can't cast that spell with it again until you finish a long rest"),
+            ("race", "Firbolg", "VGM", None, "you can't cast it again with this trait until you finish a short or long rest"),
+            ("subrace", "Eladrin", "DMG", None, "You regain the ability to do so when you finish a short or long rest"),
+            ("subrace", "Mark of Handling", "ERLW", None, "you can't cast that spell with it again until you finish a short or long rest")]
+    for kind, name, source, race, quote in must:
+        assert quote in _entries_text(_record(kind, name, source, race)), (name, source)
+    for name, source in (("Yuan-Ti", "MPMM"), ("Yuan-ti Pureblood", "VGM")):
+        assert "unlimited number of times" in _entries_text(_record("race", name, source))
+
+
+def _innate(catalog, species, subspecies=None):
+    res = resolve(_draft([("wizard", 3)], species=species, subspecies=subspecies, ruleset="2014"), catalog)
+    return {e["spellId"]: e for e in res["sheet"]["innateSpells"]}
+
+
+LONG = ("1/day", 1, "long")
+EITHER = ("1/short or long rest", 1, "short-or-long")
+AT_WILL = ("at-will", None, None)
+
+# (species, subspecies) -> {spell id: (uses, usesMax, recharge)}
+VF1_EXPECTED = {
+    ("aarakocra-mpmm", None): {"gust-of-wind": LONG},
+    ("firbolg-mpmm", None): {"detect-magic": LONG, "disguise-self": LONG},
+    ("genasi-mpmm", "genasi-mpmm-earth-mpmm"): {"blade-ward": AT_WILL, "pass-without-trace": LONG},
+    ("half-elf-phb", "half-elf-phb-variant;-mark-of-detection-erlw"): {
+        "detect-magic": LONG, "detect-poison-and-disease": LONG, "see-invisibility": LONG},
+    ("half-orc-phb", "half-orc-phb-variant;-mark-of-finding-erlw"): {"hunters-mark": LONG, "locate-object": LONG},
+    ("human-phb", "human-phb-variant;-mark-of-finding-erlw"): {"hunters-mark": LONG, "locate-object": LONG},
+    ("halfling-phb", "halfling-phb-mark-of-healing-erlw"): {"cure-wounds": LONG, "lesser-restoration": LONG},
+    ("firbolg-vgm", None): {"detect-magic": EITHER, "disguise-self": EITHER},
+    ("elf-phb", "elf-phb-eladrin-dmg"): {"misty-step": EITHER},
+    ("human-phb", "human-phb-mark-of-handling-erlw"): {"animal-friendship": EITHER, "speak-with-animals": EITHER},
+}
+
+
+@pytest.mark.parametrize("key", sorted(VF1_EXPECTED, key=str))
+def test_vf1_5_6_innate_frequency_follows_the_record(catalog, key):
+    got = _innate(catalog, *key)
+    for spell_id, (uses, mx, recharge) in VF1_EXPECTED[key].items():
+        assert spell_id in got, (key, spell_id, sorted(got))
+        e = got[spell_id]
+        assert e["uses"] == uses, (key, spell_id, e["uses"])
+        assert e.get("usesMax") == mx and e.get("recharge") == recharge, (key, spell_id)
+
+
+@pytest.mark.parametrize("species", ["yuan-ti-mpmm", "yuan-ti-pureblood-vgm"])
+def test_vf1_5_unlimited_animal_friendship_stays_at_will(catalog, species):
+    got = _innate(catalog, species)
+    assert got["animal-friendship"]["uses"] == "at-will" and "usesMax" not in got["animal-friendship"]
+    assert got["suggestion"]["uses"] == "1/day"
+
+
+def test_vf1_5_phb_tiefling_cantrip_and_other_at_will_cantrips_do_not_move(catalog):
+    got = _innate(catalog, "tiefling-phb")
+    assert got["thaumaturgy"]["uses"] == "at-will"
+    assert got["hellish-rebuke"]["uses"] == "1/day"
+
+
+def test_vf1_5_every_bare_innate_list_is_either_at_will_by_text_or_limited_by_text():
+    """Exhaustive over the vendored records: every bare list entry (no frequency wrapper) of races and subraces is in
+    VF1_EXPECTED (limited) or is one of the two Yuan-ti records ("unlimited number of times")."""
+    seen = set()
+    for kind in ("race", "subrace"):
+        for r in _races_json()[kind]:
+            for ent in r.get("additionalSpells") or []:
+                inn = ent.get("innate")
+                if isinstance(inn, dict) and any(isinstance(v, list) for v in inn.values()):
+                    seen.add((r["name"], r.get("source"), r.get("raceName")))
+    assert seen == {("Aarakocra", "MPMM", None), ("Firbolg", "MPMM", None), ("Yuan-Ti", "MPMM", None),
+                    ("Yuan-ti Pureblood", "VGM", None), ("Earth", "MPMM", "Genasi"),
+                    ("Variant; Mark of Detection", "ERLW", "Half-Elf"), ("Variant; Mark of Finding", "ERLW", "Half-Orc"),
+                    ("Variant; Mark of Finding", "ERLW", "Human"), ("Mark of Healing", "ERLW", "Halfling")}

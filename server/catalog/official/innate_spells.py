@@ -1,6 +1,8 @@
 """Split from official_source.py (Slice 11.0), unchanged code: innate_spells."""
 from __future__ import annotations
 
+import re
+
 from .common import slug
 
 
@@ -32,7 +34,11 @@ def _innate_spell_uses_and_names(level_value) -> tuple[str, list[str]]:
       Detect Magic/Disguise Self on itself at will; Yuan-Ti's Animal
       Friendship at will), confirmed against 5etools' own convention and
       cross-checked against the actual PHB/MPMM rules text for several of
-      these races.
+      these races. VF1.5: NOT always: the trait text can limit a bare list
+      (Firbolg MPMM, Aarakocra MPMM Wind Caller ...: "you can't cast that
+      spell with it again until you finish a long rest"); this function
+      still returns "at-will" for the shape and `_innate_spells_from_5etools`
+      replaces it per spell with `_text_limited_uses`.
     - `{"daily": {"1": [...]}}` — usable a limited number of times per
       long rest. This is the overwhelming majority shape (96/97 real
       dict-wrapped entries across races AND subraces).
@@ -74,6 +80,47 @@ def _innate_spell_uses_and_names(level_value) -> tuple[str, list[str]]:
             if isinstance(names, list):
                 return "1/day", [n for n in names if isinstance(n, str)]
     return "at-will", []
+
+
+_TEXT_LIMIT = re.compile(r"can(?:'|\u2019)t [^.]*?until you finish a (short or long|long|short) rest", re.IGNORECASE)
+_TEXT_LIMIT_LABEL = {"long": "1/day", "short or long": "1/short or long rest", "short": "1/short rest"}
+
+
+def _entries_strings(entries) -> list[str]:
+    """Every text string of a record's `entries` tree (nested `entries` / `items` / `rows`)."""
+    out: list[str] = []
+    stack = [entries]
+    while stack:
+        node = stack.pop()
+        if isinstance(node, str):
+            out.append(node)
+        elif isinstance(node, dict):
+            for key in ("entries", "items", "rows"):
+                stack.append(node.get(key) or [])
+        elif isinstance(node, list):
+            stack.extend(node)
+    return out
+
+
+def _text_limited_uses(raw_name: str, record: dict) -> str:
+    """VF1.5: the frequency of a spell from a BARE `innate` list (no `daily` / `rest` wrapper). The bare list is at-will
+    unless the trait text that names the spell limits it: "Once you cast either of these spells with this trait, you can't
+    cast that spell with it again until you finish a long rest" (Firbolg MPMM, Aarakocra MPMM Wind Caller, Earth Genasi MPMM,
+    the Mark of Detection / Finding / Healing variants). The sentence must sit in the same entry string as the
+    `{@spell <name>}` reference. "an unlimited number of times" (Yuan-ti Animal Friendship) has no such sentence and stays
+    at-will. Returns "1/day" (long rest), "1/short or long rest", "1/short rest" or "at-will"."""
+    ref = "{@spell " + _clean_innate_spell_name(raw_name).lower()
+    for text in _entries_strings(record.get("entries")):
+        low = text.lower()
+        if ref + "}" not in low and ref + "|" not in low:
+            continue
+        sentence = next((x for x in re.split(r"(?<=[.!?])\s+", text) if ref in x.lower()), "")
+        if re.search(r"unlimited|at will", sentence, re.IGNORECASE):
+            return "at-will"  # "You can cast animal friendship an unlimited number of times" (the limit is the next spell's)
+        match = _TEXT_LIMIT.search(text)
+        if match:
+            return _TEXT_LIMIT_LABEL[match.group(1).lower()]
+    return "at-will"
 
 
 def _innate_spell_ability(ability_raw) -> str | dict | None:
@@ -121,6 +168,31 @@ def _known_cantrips(known, ability, variant) -> list[dict]:
             if clean:
                 out.append({"name": clean.title(), "spell_id": slug(clean), "level": level, "uses": "at-will",
                             "ability": ability, "variant": variant})
+    return out
+
+
+def _known_rest_spells(known, ability, variant) -> list[dict]:
+    """VF1.6: `known: {"1": {"rest": {"1": [spells]}}}` (Firbolg VGM, Eladrin DMG, Mark of Handling ERLW): spells the
+    character casts once per short or long rest ("Once you cast either spell, you can't cast it again with this trait until
+    you finish a short or long rest"). The same wrapper shape the `innate.rest` entry has (Mark of Scribing); read as innate
+    grants "1/short or long rest" (the G6 vocabulary). Other `known` values (cantrip strings, `choose`) are not touched."""
+    out: list[dict] = []
+    if not isinstance(known, dict):
+        return out
+    for level_key, value in known.items():
+        try:
+            level = int(level_key)
+        except (TypeError, ValueError):
+            continue
+        wrapper = value.get("rest") if isinstance(value, dict) else None
+        names = wrapper.get("1") if isinstance(wrapper, dict) else None
+        if not isinstance(names, list):
+            continue
+        for raw_name in names:
+            clean = _clean_innate_spell_name(raw_name) if isinstance(raw_name, str) else ""
+            if clean:
+                out.append({"name": clean.title(), "spell_id": slug(clean), "level": level,
+                            "uses": "1/short or long rest", "ability": ability, "variant": variant})
     return out
 
 
@@ -175,6 +247,7 @@ def _innate_spells_from_5etools(race_raw: dict) -> list[dict]:
         ability = _innate_spell_ability(entry.get("ability"))
         start = len(results)
         results.extend(_known_cantrips(entry.get("known"), ability, variant))  # G6
+        results.extend(_known_rest_spells(entry.get("known"), ability, variant))  # VF1.6
         innate = entry.get("innate")
         if not isinstance(innate, dict):
             _tag_alternative(results, start, alternatives and variant is None)
@@ -193,7 +266,8 @@ def _innate_spells_from_5etools(race_raw: dict) -> list[dict]:
                     "name": clean.title(),
                     "spell_id": slug(clean),
                     "level": level,
-                    "uses": uses,
+                    # VF1.5: a bare list has no wrapper; the trait text may limit it (Firbolg MPMM ...)
+                    "uses": _text_limited_uses(raw_name, race_raw) if isinstance(level_value, list) else uses,
                     "ability": ability,
                     "variant": variant,
                 })

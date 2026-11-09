@@ -222,6 +222,11 @@ _EXPECT = {
     "bard9-skill-empowerment-2014": {},
     # VF1.4: EGW Draconblood, no Damage Resistance card; the breath weapon follows the Gold ancestry
     "dragonborn-phb-draconblood-fighter6-2014": {"species_resources": ["Breath Weapon", "Forceful Presence"]},
+    # VF1.5 / VF1.6: innate spells limited by the trait text / the known + rest shape
+    "firbolg-mpmm-wizard5-2014": {"innate": True},
+    "firbolg-vgm-wizard5-2014": {"innate": True},
+    "eladrin-dmg-wizard5-2014": {"innate": True},
+    "mark-of-handling-wizard5-2014": {"innate": True},
     # G7: Haunted One, the either-or card resolved to Survivor
     "haunted-one-fighter3-2014": {"feats": ["survivor-rhw"]},
     # G4: the discipline ki costs, the runes as resources, Limited Wish (recharge other) and Power Surge (INT pool)
