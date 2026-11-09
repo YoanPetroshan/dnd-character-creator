@@ -39,6 +39,10 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "{feat} is outside the current ruleset/sources but stays selected.",
         "bg": "{feat} е извън текущия набор от правила/източници, но остава избран.",
     },
+    "dark-gift-needs-ravenloft": {
+        "en": "{feat} is a Dark Gift feat, which officially needs a Ravenloft campaign, and the RHW book is switched off in Sources; it is still applied.",
+        "bg": "{feat} е талант (Feat) Dark Gift, който по правилата изисква кампания Ravenloft, а книгата RHW е изключена в Източници; все пак се прилага.",
+    },
     # --- ability scores, hit points, equipment envelopes ------------------------------------------------------
     "ability-above-20": {
         "en": "{ab} base score {value} is above 20, the usual cap for a character's own score.",

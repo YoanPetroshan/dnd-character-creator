@@ -1503,6 +1503,26 @@ def _feat_offered(feat: dict, sources, ruleset: str = "mixed") -> bool:
     return _source_allowed(feat, sources) and ruleset_allows(feat, "feat", ruleset)
 
 
+def _needs_ravenloft(feat: dict) -> bool:
+    """B3: the feat's data prerequisite names a campaign and it is Ravenloft (all nine RHW Dark Gift feats: `prerequisite:
+    [{"campaign": ["Ravenloft"]}]`)."""
+    return any(isinstance(p, dict) and "Ravenloft" in (p.get("campaign") or ()) for p in feat.get("prerequisite") or ())
+
+
+def _dark_gift_ravenloft_warnings(feats: list[dict], sources) -> list[dict]:
+    """B3 (owner decision 2026-11-09): a NON-BLOCKING warning for each held Dark Gift feat while the RHW book is switched off in
+    `sources` (the app has no campaign setting; an empty `sources` list means every book is on). Nothing is removed or disabled."""
+    if _source_allowed({"source": "RHW"}, sources):
+        return []
+    out, seen = [], set()
+    for feat in feats:
+        if feat["index"] in seen or not _needs_ravenloft(feat):
+            continue
+        seen.add(feat["index"])
+        out.append({"id": f"dark-gift-needs-ravenloft-{feat['index']}", "message": msg("dark-gift-needs-ravenloft", feat=feat["name"])})
+    return out
+
+
 def _fi_seen_add(seen: dict[str, str], catalog: Catalog, feat: dict, stored, ruleset: str) -> None:
     """RP4 (A4): under ruleset 2024 a held Fighting Initiate style joins `seen` as `name:<style>` at the feat's
     position, so a LATER Fighting Style feat card / ASI pick of the same-named FS feat is the duplicate (first holder
@@ -6982,6 +7002,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         rc["cls_id"]: _cumulative_feature_refs(catalog, rc["cls_id"], rc["subclass_id"], rc["level"])
         for rc in resolved_classes if rc["cls"] and rc["cls_id"]
     }
+    warnings += _dark_gift_ravenloft_warnings(resolved_feats, draft.get("sources"))
     sheet_feats = sheet_features_mod.feats_summary(resolved_feats, choices, feat_effects_mod.notes(feat_inst, feat_numbers))
 
     sheet = {
