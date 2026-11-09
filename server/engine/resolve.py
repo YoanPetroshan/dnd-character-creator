@@ -3066,13 +3066,14 @@ def _species_feat_pool(catalog: Catalog, category: str | None, sources, ruleset:
     `keep`: stored option ids (`feat:<index>`); one whose category fits the
     grant stays in the pool even when ruleset/sources hide it (the caller
     flags it `hiddenByFilters`). G7: `include` (catalog feat indexes) joins the pool whatever its category: the plain feat
-    of an either-or grant ("Survivor or a Dark Gift feat"), still subject to the sources filter."""
+    of an either-or grant ("Survivor or a Dark Gift feat"). F1: it is offered whatever the sources / ruleset filters say (the
+    caller flags it `hiddenByFilters`), so a background that is held always has its plain feat."""
     allowed = {category} if category is not None else {"", "G", "O"}
     kept = {k[len("feat:"):] for k in keep if isinstance(k, str) and k.startswith("feat:")}
     pool = [
         f for f in catalog.feats.values()
         if (((f.get("category") or "") in allowed and f["name"] != "Ability Score Improvement") or f["index"] in include)
-        and (_feat_offered(f, sources, ruleset) or f["index"] in kept)
+        and (_feat_offered(f, sources, ruleset) or f["index"] in kept or f["index"] in include)
     ]
     return pool
 
@@ -3132,6 +3133,20 @@ def _species_feat_choice_template(
                         else msg("desc-species-feat", noun=noun) if count == 1 else msg("desc-species-feats", count=count)),
         "count": count, "options": options,
     }
+
+
+def _either_or_default_pick(template: dict, grant: dict, raw_choices: dict) -> str | None:
+    """F1: the option id an either-or feat card (G7: Haunted One / Investigator, "Survivor or a Dark Gift feat") takes when
+    the draft stores NO pick for it: the plain feat (`include[0]`), as before G7, so a saved draft or a sources filter that
+    hides every Dark Gift never loses it. A stored pick of any kind (even a stale one) is left alone."""
+    include = grant.get("include") or ()
+    if not include:
+        return None
+    stored = raw_choices.get(template["id"])
+    if isinstance(stored, list) and any(isinstance(x, str) for x in stored):
+        return None
+    option = next((o for o in template["options"] if o["id"] == f"feat:{include[0]}"), None)
+    return option["id"] if option and not option.get("disabled") else None
 
 
 def _resolve_species_selected_feats(template: dict, species_choices: dict, catalog: Catalog,
@@ -5429,6 +5444,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # the character holds from the background alone.
     species_feat_templates: list[dict] = []
     species_feats: list[dict] = []
+    either_or_defaults: dict[str, list[str]] = {}  # F1: {card id: [plain feat option id]} for an unpicked either-or card
     bg_grant_choices_raw = background_dict.get("choices") if isinstance(background_dict.get("choices"), dict) else {}
     bg_feat_slots = _background_feat_grant_slots(bg, bg_id)
 
@@ -5457,6 +5473,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 keep=owner_raw.get(slot_cid) if isinstance(owner_raw.get(slot_cid), list) else (), kind=slot_kind,
             )
             species_feat_templates.append(tpl)
+            default_pick = _either_or_default_pick(tpl, grant, owner_raw)
+            if default_pick:  # F1: no stored pick on an either-or card: the plain feat (Survivor / Sharp Eye)
+                owner_raw = {**owner_raw, slot_cid: [default_pick]}
+                either_or_defaults[slot_cid] = [default_pick]
             picked = _resolve_species_selected_feats(tpl, owner_raw, catalog, problems, background_grant=slot_kind == "background")
             for feat in picked:
                 if not _feat_offered(feat, draft.get("sources"), ruleset):
@@ -6054,6 +6074,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     all_selections.update(background_dict.get("choices") or {})
     all_selections.update(species.get("choices") or {})
     all_selections.update(equipment_choices_raw or {})
+    all_selections.update(either_or_defaults)  # F1: the default is shown as the card's selection (the draft is not touched)
 
     # RP20 (A3b): the dependents of an Eldritch Adept pick (target cantrips, Pact of the Tome, Pact of the Blade) under
     # ruleset 2024: the C7c builders with the feat card as the holder. Built here because every feat card exists now

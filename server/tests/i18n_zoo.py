@@ -517,6 +517,13 @@ SNAPSHOT_REBASELINES: dict[str, dict] = {
         "paths": [r"^cards[.]species:[a-z0-9-]+:(spell-ability|innate-cantrip)$", r"^exportGate(\[[0-9]+\])*$"],
         "why": "species spellcasting-ability / alternative-cantrip cards (F1)",
     },
+    # F1.3: the either-or feat card (Haunted One / Investigator) is resolved by default (Survivor / Sharp Eye) instead of pending:
+    # the "clear" variant of the Haunted One sink (no stored choices) no longer waits on that card, so only its export gate moves.
+    "F1b": {
+        "cases": ["clear/ks/src-all/haunted-one-fighter3-2014"],
+        "paths": [r"^exportGate(\[[0-9]+\])*$"],
+        "why": "either-or background feat card resolves to the plain feat by default (F1.3)",
+    },
 }
 
 

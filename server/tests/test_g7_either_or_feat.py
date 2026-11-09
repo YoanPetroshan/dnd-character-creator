@@ -11,9 +11,10 @@ is the same wildcard Mist Wanderer / Spirit Medium carry alone.
 Rule matrix:
   converter       feats [] / feat_refs [] / feat_options [], feat_grants [{count 1, category DG, include [<plain feat ref>]}]
   card            background:<id>:feat-0 (the W4 machinery), kind background, count 1, options = the plain feat FIRST, then the 9
-                  Dark Gifts; description "Choose Survivor or a Dark Gift feat."; pending until picked (no default grant)
+                  Dark Gifts; description "Choose Survivor or a Dark Gift feat."
+                  F1: NO stored pick = the plain feat (the card shows it selected, the sheet holds it), as before G7
   pick the plain feat   the sheet holds it (origin background); pick a Dark Gift   only that one (never both)
-  sources without RHW   the card has no option at all -> `unavailable` (W3 rule), never pending, no feat
+  sources without RHW   F1: the plain feat stays (flagged hiddenByFilters, the Dark Gifts are hidden): the character keeps it
   S2 taken map    the picked feat is disabled on the later species Origin card; all three rulesets alike
   untouched       Mist Wanderer / Spirit Medium (no `include`), every other background, ASI cards"""
 from __future__ import annotations
@@ -107,10 +108,11 @@ def test_card_offers_the_plain_feat_first_then_the_dark_gifts(catalog, bid, rule
     _name, feat, feat_name = CASES[bid]
     res = resolve(_draft(bid, ruleset=ruleset), catalog)
     card = _card(res, bid)
-    assert card["source"]["kind"] == "background" and card["count"] == 1 and card["status"] == "pending"
+    assert card["source"]["kind"] == "background" and card["count"] == 1 and card["status"] == "resolved"
+    assert card["selected"] == [f"feat:{feat}"]  # F1: the default
     assert [o["id"] for o in card["options"]] == [f"feat:{feat}"] + [f"feat:{d}" for d in DG]
     assert str(card["description"]) == f"Choose {feat_name} or a Dark Gift feat."
-    assert _feat_ids(res) == []  # no unconditional grant any more
+    assert _feat_ids(res) == [feat]
     assert res["warnings"] == [] or all("origin-feat" not in w["id"] for w in res["warnings"])
 
 
@@ -142,12 +144,64 @@ def test_only_one_pick_counts(catalog, bid):
 
 
 @pytest.mark.parametrize("bid", sorted(CASES))
-def test_sources_without_rhw_make_the_card_unavailable(catalog, bid):
-    res = resolve(_draft(bid, sources=["srd", "xphb"]), catalog)
+@pytest.mark.parametrize("sources", [["srd", "xphb"], ["srd"], ["xphb"]])
+def test_sources_without_rhw_keep_the_plain_feat(catalog, bid, sources):
+    """F1 (was: the card was `unavailable` with 0 options and the character had no feat at all)."""
+    _name, feat, _fn = CASES[bid]
+    res = resolve(_draft(bid, sources=sources), catalog)
     card = _card(res, bid)
-    assert card["options"] == [] and card["status"] == "unavailable" and card["unavailableReason"]
-    assert _feat_ids(res) == []
+    assert [o["id"] for o in card["options"]] == [f"feat:{feat}"] and card["options"][0]["hiddenByFilters"] is True
+    assert card["status"] == "resolved" and card["selected"] == [f"feat:{feat}"] and not card.get("unavailableReason")
+    assert _feat_ids(res) == [feat]
     assert not [c for c in res["choices"] if c["status"] == "pending" and c["id"].endswith(":feat-0")]
+    assert any(w["id"] == f"feat-hidden-by-filters-background:{bid}:feat-0" for w in res["warnings"])  # the warning, not a loss
+
+
+@pytest.mark.parametrize("bid", sorted(CASES))
+def test_a_saved_complete_draft_without_a_pick_still_has_the_plain_feat(catalog, bid):
+    """The G7 migration: a draft saved before G7 holds the background with no `:feat-0` key (its choices object is empty or
+    holds other keys) and must resolve to the feat the background always granted."""
+    _name, feat, _fn = CASES[bid]
+    for ruleset in ("2014", "mixed", "2024"):
+        for choices in ({}, {"background:other:feat-0": ["feat:x"]}, {f"background:{bid}:feat-0": []}):
+            res = resolve(_draft(bid, choices=choices, ruleset=ruleset), catalog)
+            assert _feat_ids(res) == [feat], (ruleset, choices)
+            assert res["sheet"]["grantedFeats"] == [feat]
+
+
+@pytest.mark.parametrize("bid", sorted(CASES))
+def test_a_dark_gift_replaces_the_default_and_never_adds_to_it(catalog, bid):
+    _name, feat, _fn = CASES[bid]
+    res = resolve(_draft(bid, choices={f"background:{bid}:feat-0": ["feat:watchers-rhw"]}), catalog)
+    assert _feat_ids(res) == ["watchers-rhw"]
+    assert _card(res, bid)["selected"] == ["feat:watchers-rhw"]
+    # with RHW off the Dark Gift is hidden: the stored pick is kept by the filter exception and still wins
+    res = resolve(_draft(bid, choices={f"background:{bid}:feat-0": ["feat:watchers-rhw"]}, sources=["srd"]), catalog)
+    assert _feat_ids(res) == ["watchers-rhw"]
+
+
+@pytest.mark.parametrize("bid", sorted(CASES))
+def test_the_default_is_not_taken_when_the_plain_feat_is_disabled(catalog, bid):
+    """Prerequisites on (the Dark Gifts and the plain feat have none): the default is the plain feat; a stale stored id is
+    left alone (no default is invented over a stored value)."""
+    _name, feat, _fn = CASES[bid]
+    res = resolve(_draft(bid, choices={f"background:{bid}:feat-0": ["feat:no-such-feat"]}), catalog)
+    assert _feat_ids(res) == []
+
+
+def test_the_default_only_applies_to_the_either_or_backgrounds(catalog):
+    res = resolve(_draft("mist-wanderer-rhw"), catalog)
+    card = _card(res, "mist-wanderer-rhw")
+    assert card["status"] == "pending" and card["selected"] == [] and _feat_ids(res) == []
+
+
+def test_kitchen_sink_filler_path(catalog):
+    """The filler path of the kitchen-sink sinks (tests/kitchen_sink.py `fill`, which stores the first option of a pending
+    card) is unaffected: the card is already resolved by the default, with Survivor, and the filled sink holds it once."""
+    import kitchen_sink
+    res = resolve(kitchen_sink.build("haunted-one-fighter3-2014", catalog, resolve), catalog)
+    assert [f["id"] for f in res["sheet"]["feats"]] == ["survivor-rhw"]
+    assert _card(res, "haunted-one-rhw")["selected"] == ["feat:survivor-rhw"]
 
 
 @pytest.mark.parametrize("bid", sorted(CASES))
