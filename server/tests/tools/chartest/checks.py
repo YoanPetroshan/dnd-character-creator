@@ -541,6 +541,16 @@ _SPECIES_AC_RE = re.compile(
 _SPECIES_AC_BONUS_RE = re.compile(r"\+(\d+) bonus to (?:your )?(?:AC|Armor Class)", re.I)
 
 
+_TAG_RE = re.compile(r"\{@\w+ ([^|}]*)[^}]*\}")
+_NO_ARMOR_RE = re.compile(r"can't wear (?:light, medium, or heavy |any )?armor|gain no benefit from wearing armor", re.I)
+
+
+def species_ignores_armor(race: dict | None) -> bool:
+    """True when the race text says worn armor gives nothing: Tortle MPMM "You can't wear light, medium, or heavy armor", Tortle
+    TTP "You gain no benefit from wearing armor". The natural AC (and a shield) is all that counts then."""
+    return bool(race and _NO_ARMOR_RE.search(_TAG_RE.sub(r"\1", json.dumps(race.get("entries", [])))))
+
+
 def species_armor(race: dict) -> tuple[dict, int]:
     """(unarmored formulas, flat bonus) a race record states in its trait text: Autognome / Thri-kreen `13 + Dex`, Lizardfolk `13 + Dex`,
     Locathah `12 + Dex`, Loxodon `12 + Con`, Goblin (PSZ) `11 + Dex`, Tortle base AC 17; flat: Warforged +1, Lizardfolk (DMG) +3,
@@ -559,6 +569,7 @@ def species_armor(race: dict) -> tuple[dict, int]:
         elif isinstance(e, str):
             if name in ("Shell Defense", "Shifting Feature"):
                 return
+            e = _TAG_RE.sub(r"\1", e)  # `+1 bonus to your {@variantrule Armor Class|XPHB}` (Warforged, EFA)
             m = _SPECIES_AC_RE.search(e)
             if m and re.search(r"AC|Armor Class", e) and ("armor" in e.lower() or "shell" in e.lower()):
                 label = "natural-or-armor" if "can use your natural armor" in e else "natural"
@@ -575,6 +586,9 @@ def species_armor(race: dict) -> tuple[dict, int]:
 def c_ac(x: Ctx):
     armor, shield, cur = _armor_ac(x)
     dex = x.mods["DEX"]
+    race = raw_race_of(x.sheet["species"])
+    if species_ignores_armor(race):
+        armor = None  # Tortle: worn armor gives no benefit, only the natural armor 17 and a shield count
     opts = {}
     if armor:
         t = str(armor.get("type", "")).split("|")[0]
@@ -586,12 +600,13 @@ def c_ac(x: Ctx):
             opts["barbarian"] = 10 + dex + x.mods["CON"]
         if x.class_level("monk") and not shield:
             opts["monk"] = 10 + dex + x.mods["WIS"]
-        if x.subclass_is("sorcerer", "draconic") and not x.subclass_is("sorcerer", "draconic sorcery"):
+        # the XPHB subclass "Draconic Sorcery" (shortName Draconic) has the catalog id `draconic-xphb`; PHB Draconic Bloodline `draconic`
+        xphb_draconic = any(c[0] == "sorcerer" and c[2] and c[2].lower().endswith("-xphb") and "draconic" in c[2].lower() for c in x.classes)
+        if x.subclass_is("sorcerer", "draconic") and not xphb_draconic and not x.subclass_is("sorcerer", "draconic sorcery"):
             opts["draconic"] = 13 + dex  # PHB 2014 / SRD Draconic Resilience
-        if x.subclass_is("sorcerer", "draconic sorcery") and x.class_level("sorcerer") >= 3:
+        if (xphb_draconic or x.subclass_is("sorcerer", "draconic sorcery")) and x.class_level("sorcerer") >= 3:
             opts["draconic"] = 10 + dex + x.mods["CHA"]  # XPHB Draconic Sorcery, Draconic Resilience
     flat = 0
-    race = raw_race_of(x.sheet["species"])
     if race and not (x.sheet["species"].get("subspecies") or x.sheet["species"].get("variant")):
         base_ac, flat = species_armor(race)
         for label, (n, ab) in base_ac.items():
@@ -869,7 +884,7 @@ def c_dups(x: Ctx):
 
 _SIZES = ["Tiny", "Small", "Medium", "Large", "Huge", "Gargantuan"]
 _SIZE_FACTOR = {"Tiny": 0.5, "Small": 1, "Medium": 1, "Large": 2, "Huge": 4, "Gargantuan": 8}
-_ONE_SIZE_LARGER_RE = re.compile(r"(?:count as|counts as) one size larger when determining your carrying capacity", re.I)
+_ONE_SIZE_LARGER_RE = re.compile(r"(?:count as|counts as) one size larger when determining your carrying (?:capacity|weight)", re.I)
 
 
 @check("CARRY")

@@ -82,7 +82,7 @@
   "tag": "KG-xphb-effects-2024-only",
   "rule": "AC",
   "match": {
-   "subclass": "draconic-sorcery",
+   "subclass": "draconic-xphb",
    "ruleset": [
     "mixed",
     "2014"

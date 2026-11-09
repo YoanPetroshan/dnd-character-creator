@@ -445,6 +445,7 @@ def _spec_json(base_token, catalog, **changes):
     ("Thri-kreen", "AAG", {"natural": (13, "DEX")}, 0),
     ("Tortle", "MPMM", {"natural": (17, None)}, 0),    # Shell Defense (+4 in the shell) is not a standing bonus
     ("Warforged", "ERLW", {}, 1),
+    ("Warforged", "EFA", {}, 1),                      # `+1 bonus to your {@variantrule Armor Class|XPHB}`: the tag is stripped
     ("Troglodyte", "DMG", {}, 1),
     ("Human", "PHB", {}, 0),
 ])
@@ -481,8 +482,8 @@ def test_ac_check_expects_college_of_dance_unarmored_defense_and_tags_the_known_
     assert "AC" in {r["check"] for r in checks.run_checks(rec["draft"], wrong) if not r["ok"]}
     gaps = runner.load_known_gaps()
     result = {"check": "AC", "expected": "12", "actual": 10}
-    for sub, rs, tag in [("dance-xphb", "mixed", "KG-xphb-effects-2024-only"), ("draconic-sorcery-xphb", "2014", "KG-xphb-effects-2024-only"),
-                         ("dance-xphb", "2024", None), ("draconic-sorcery-xphb", "2024", None)]:
+    for sub, rs, tag in [("dance-xphb", "mixed", "KG-xphb-effects-2024-only"), ("draconic-xphb", "2014", "KG-xphb-effects-2024-only"),
+                         ("dance-xphb", "2024", None), ("draconic-xphb", "2024", None)]:
         cls = [("bard", 4, sub)] if "dance" in sub else [("sorcerer", 3, sub)]
         spec = CharSpec(id="x", ruleset=rs, classes=cls)
         assert runner.known_gap(result, spec, gaps) == tag, (sub, rs)
@@ -536,3 +537,51 @@ def test_languages_check_wants_the_fixed_species_languages_outside_2024(catalog)
     d24, res24 = _species_sample(catalog, "tiefling-phb", ruleset="2024")
     res24["sheet"]["proficiencies"]["languages"] = ["common"]
     assert "LANGUAGES" not in _rules_failing(d24, res24)
+
+
+# ---------------------------------------------------------------- VC T1 b7-17: oracle fixes after VF2 (Goliath carrying weight, Warforged EFA +1, Tortle armor)
+def test_carry_check_reads_the_mpmm_goliath_carrying_weight_wording(catalog):
+    race = next(r for r in checks.raw_races()["race"] if r["name"] == "Goliath" and r["source"] == "MPMM")
+    assert checks._ONE_SIZE_LARGER_RE.search(json.dumps(race["entries"]))
+    d, res = _species_sample(catalog, "goliath-mpmm")
+    cap = res["sheet"]["abilities"]["STR"] * 15 * 2
+    right, wrong = copy.deepcopy(res), copy.deepcopy(res)
+    right["derived"]["carryingCapacity"].update(capacity=cap, pushDragLift=cap * 2)
+    wrong["derived"]["carryingCapacity"].update(capacity=cap // 2, pushDragLift=cap)
+    assert "CARRY" not in _rules_failing(d, right)
+    assert "CARRY" in _rules_failing(d, wrong)
+
+
+def test_ac_check_expects_the_warforged_efa_tagged_bonus_and_the_tortle_ignoring_armor(catalog):
+    from engine.resolve import resolve
+    assert checks.species_ignores_armor(next(r for r in checks.raw_races()["race"] if r["name"] == "Tortle" and r["source"] == "MPMM"))
+    assert checks.species_ignores_armor(next(r for r in checks.raw_races()["race"] if r["name"] == "Tortle" and r["source"] == "TTP"))
+    assert not checks.species_ignores_armor(next(r for r in checks.raw_races()["race"] if r["name"] == "Warforged" and r["source"] == "ERLW"))
+    for species, ruleset in [("tortle-mpmm", "2014"), ("warforged-efa", "2024")]:
+        tok = _spec_json("t2-044-fig1-pal19-2014", catalog, id="ac-" + species, species=species, subspecies=None, ruleset=ruleset,
+                         classes=[["fighter", 1, None]],
+                         abilities={"method": "manual", "base": {"STR": 14, "DEX": 14, "CON": 14, "INT": 10, "WIS": 10, "CHA": 10}, "priority": []},
+                         equip=[{"itemId": "chain-mail", "qty": 1, "equipped": True}])
+        spec = runner.find_spec(tok, catalog)[0]
+        d, res = S.resolve_spec(spec, catalog, resolve)
+        # the engine's own number for the two real characters must satisfy the oracle (it did not before the fix)
+        assert "AC" not in _rules_failing(d, res), (species, res["derived"]["armorClass"])
+        wrong = copy.deepcopy(res)
+        wrong["derived"]["armorClass"] += 1
+        assert "AC" in _rules_failing(d, wrong), species
+
+
+def test_ac_check_uses_the_xphb_draconic_sorcery_formula_for_the_real_subclass_id(catalog):
+    # the XPHB subclass is `draconic-xphb` (name "Draconic Sorcery"), the PHB one `draconic`: 10 + DEX + CHA vs 13 + DEX
+    for ruleset, sub, formula in [("2024", "draconic-xphb", lambda dex, cha: 10 + dex + cha), ("2014", "draconic", lambda dex, cha: 13 + dex)]:
+        rec = _run(_spec_json("t1-145-sor3-mixed", catalog, id="drac-" + ruleset, ruleset=ruleset, classes=[["sorcerer", 3, sub]]), catalog)
+        mods = rec["res"]["derived"]["abilityModifiers"]
+        exp = formula(mods["DEX"], mods["CHA"])
+        right, wrong = copy.deepcopy(rec["res"]), copy.deepcopy(rec["res"])
+        right["derived"]["armorClass"], wrong["derived"]["armorClass"] = exp, exp - 1
+        assert "AC" not in _rules_failing(rec["draft"], right), (ruleset, sub)
+        assert "AC" in _rules_failing(rec["draft"], wrong), (ruleset, sub)
+    # mixed: the engine applies no XPHB effects (11 instead of 13), tagged KG-xphb-effects-2024-only
+    rec = _run(_spec_json("t1-145-sor3-mixed", catalog, id="drac-mixed"), catalog)
+    hit = [r for r in rec["results"] if r["check"] == "AC"]
+    assert hit and runner.known_gap(hit[0], rec["spec"], runner.load_known_gaps()) == "KG-xphb-effects-2024-only"
