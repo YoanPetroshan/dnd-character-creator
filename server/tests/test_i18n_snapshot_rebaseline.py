@@ -10,7 +10,7 @@ import pytest
 
 import i18n_zoo as zoo
 
-PINNED = ()  # extend (append) in the same commit as every new SNAPSHOT_REBASELINES entry
+PINNED = ("F1",)  # extend (append) in the same commit as every new SNAPSHOT_REBASELINES entry
 
 
 def _leaf(msg="x", extra=None):

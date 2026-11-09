@@ -609,8 +609,26 @@ def _subrace_replaces_spell_trait(race: dict, subrace: dict | None, catalog: Cat
     return False
 
 
+_ALL_ALTERNATIVES = "*"
+
+
 def _species_innate_spells(race: dict | None, subrace: dict | None, catalog: Catalog,
-                           variant: dict | None = None) -> list[dict]:
+                           variant: dict | None = None, alt: str | None = None, ability: str | None = None) -> list[dict]:
+    """The species' innate-spell sheet entries (`_species_innate_entries`), with the F1 resolution of the two open picks:
+    `alt` is the picked alternative cantrip (Astral Elf: exactly one of three; None = not picked yet, so none of them) and
+    `ability` the picked spellcasting ability for the entries whose data lists candidates (`{"choose": [INT, WIS, CHA]}`):
+    the picked one, else None (never the raw candidate dict; the card lists the candidates)."""
+    out = []
+    for entry in _species_innate_entries(race, subrace, catalog, variant, alt):
+        raw = entry["ability"]
+        if isinstance(raw, dict) and raw.get("choose"):
+            entry = {**entry, "ability": ability if ability in raw["choose"] else None}
+        out.append(entry)
+    return out
+
+
+def _species_innate_entries(race: dict | None, subrace: dict | None, catalog: Catalog,
+                            variant: dict | None = None, alt: str | None = None) -> list[dict]:
     """Merges innate_spells from BOTH race and subrace — same race-then-
     subrace-additions relationship _species_damage_modifiers already
     merges (subraces carry their OWN additionalSpells independently, e.g.
@@ -657,6 +675,8 @@ def _species_innate_spells(race: dict | None, subrace: dict | None, catalog: Cat
                 continue  # e.g. Kobold's Craftiness / Defiance legacies
             if src is race and _subrace_replaces_spell_trait(race, subrace, catalog, entry):
                 continue  # F1: the MTF / SCAG Tiefling legacies replace Infernal Legacy
+            if entry.get("alt") and alt != _ALL_ALTERNATIVES and entry["alt"] != alt:
+                continue  # F1: one of several alternative cantrips (Astral Elf): only the picked one
             innate.append(_innate_entry_to_sheet(entry, catalog))
     for entry in (variant or {}).get("innate_spells", []):
         innate.append(_innate_entry_to_sheet(entry, catalog))
@@ -2802,6 +2822,80 @@ def _species_variant_template(race: dict | None, race_id: str | None) -> dict | 
         "count": 1,
         "options": [{"id": v["id"], "label": v["name"]} for v in race["variants"]],
     }
+
+
+def _species_alternatives(race: dict | None, subrace: dict | None, catalog: Catalog) -> list[dict]:
+    """F1: the alternative cantrips of a species whose data lists several unnamed `additionalSpells` entries (Astral Elf:
+    Dancing Lights / Light / Sacred Flame), as [{"id": slug, "name"}] in data order."""
+    out: list[dict] = []
+    for src in (race, subrace):
+        for entry in (src or {}).get("innate_spells") or []:
+            alt = entry.get("alt")
+            if alt and all(o["id"] != alt for o in out):
+                out.append({"id": alt, "name": _innate_entry_to_sheet(entry, catalog)["name"]})
+    return out
+
+
+def _species_cantrip_template(race: dict | None, subrace: dict | None, catalog: Catalog, race_id: str | None) -> dict | None:
+    """F1: the pick of ONE of the alternative cantrips (Astral Elf: Astral Fire) ."""
+    options = _species_alternatives(race, subrace, catalog) if race and race_id else []
+    if not options:
+        return None
+    return {
+        "id": f"species:{race_id}:innate-cantrip",
+        "source": {"kind": "species", "id": race_id, "label": race["name"]},
+        "label": msg("label-species-cantrip"),
+        "description": msg("desc-species-cantrip"),
+        "count": 1,
+        "options": [{"id": o["id"], "label": o["name"]} for o in options],
+    }
+
+
+def _selected_species_alternative(race: dict | None, subrace: dict | None, catalog: Catalog, species_choices: dict,
+                                  race_id: str | None) -> str | None:
+    """The picked alternative cantrip id, or None (unpicked / not offered)."""
+    tpl = _species_cantrip_template(race, subrace, catalog, race_id)
+    raw = species_choices.get(tpl["id"]) if tpl else None
+    valid = {o["id"] for o in (tpl or {}).get("options", [])}
+    return next((x for x in raw if isinstance(x, str) and x in valid), None) if isinstance(raw, list) else None
+
+
+def _species_spell_ability_candidates(race: dict | None, subrace: dict | None, catalog: Catalog,
+                                      variant: dict | None) -> list[str]:
+    """F1: the candidate spellcasting abilities (data: `ability: {"choose": [...]}`) of the species' innate entries, in
+    data order; [] when every entry has a fixed ability or there is none."""
+    out: list[str] = []
+    for entry in _species_innate_entries(race, subrace, catalog, variant, _ALL_ALTERNATIVES):
+        raw = entry["ability"]
+        if isinstance(raw, dict):
+            out += [a for a in raw.get("choose") or [] if a not in out]
+    return out
+
+
+def _species_spell_ability_template(race: dict | None, subrace: dict | None, catalog: Catalog, variant: dict | None,
+                                    race_id: str | None) -> dict | None:
+    """F1: the spellcasting-ability pick of a species whose innate spells list candidates (MPMM Aasimar / Firbolg ...,
+    XPHB Elf / Tiefling lineages, Genasi): one pick for all the species' spells, the way the rules text says "choose the
+    ability when you select the ...". Same card shape as a feat's `:spell-ability`."""
+    options = _species_spell_ability_candidates(race, subrace, catalog, variant) if race and race_id else []
+    if not options:
+        return None
+    return {
+        "id": f"species:{race_id}:spell-ability",
+        "source": {"kind": "species", "id": race_id, "label": race["name"]},
+        "label": msg("label-prefixed", head=race["name"], tail=msg("label-spellcasting-ability")),
+        "description": msg("desc-species-spell-ability"), "count": 1,
+        "options": [{"id": a.lower(), "label": SAVE_ABILITY_NAMES[a.lower()]} for a in options],
+    }
+
+
+def _selected_species_spell_ability(race: dict | None, subrace: dict | None, catalog: Catalog, variant: dict | None,
+                                    species_choices: dict, race_id: str | None) -> str | None:
+    tpl = _species_spell_ability_template(race, subrace, catalog, variant, race_id)
+    raw = species_choices.get(tpl["id"]) if tpl else None
+    valid = {o["id"] for o in (tpl or {}).get("options", [])}
+    pick = next((x for x in raw if isinstance(x, str) and x in valid), None) if isinstance(raw, list) else None
+    return pick.upper() if pick else None
 
 
 def _selected_species_variant(race: dict | None, species_choices: dict, race_id: str | None) -> dict | None:
@@ -5206,6 +5300,8 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # Slice 8b: the selected lineage / ancestry / legacy of a race with `variants`.
     species_variant = _selected_species_variant(race, species_choices_raw, race_id)
     species_size = _species_size(race, species_choices_raw, race_id)
+    species_alt = _selected_species_alternative(race, subrace, catalog, species_choices_raw, race_id)  # F1
+    species_spell_ability = _selected_species_spell_ability(race, subrace, catalog, species_variant, species_choices_raw, race_id)  # F1
     use_prerequisites_prefs = (draft.get("preferences") or {}).get("usePrerequisites", {})
     use_feat_prereqs = bool(use_prerequisites_prefs.get("feats"))
 
@@ -5221,7 +5317,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     held.fighting_style = any(_class_has_fighting_style(catalog, rc) for rc in resolved_classes if rc["cls"] and rc["cls_id"])  # C3
     held.race_names, held.subrace_names, held.size = _held_race_state(race, subrace, species_size)
     held.can_cast_spell = held.has_spellcasting_feature or bool(
-        _species_innate_spells(race, subrace, catalog, species_variant)
+        _species_innate_spells(race, subrace, catalog, species_variant, species_alt, species_spell_ability)
     )
     # FIXED proficiency grants only (class, race/subrace traits, background);
     # proficiency CHOICE selections aren't available before the ASI walk.
@@ -5899,6 +5995,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         species_size_tpl = _species_size_template(race, race_id)
         if species_size_tpl:
             choice_templates.append(species_size_tpl)
+        for species_spell_tpl in (_species_cantrip_template(race, subrace, catalog, race_id),  # F1
+                                  _species_spell_ability_template(race, subrace, catalog, species_variant, race_id)):
+            if species_spell_tpl:
+                choice_templates.append(species_spell_tpl)
         choice_templates += _species_choice_templates(catalog, race, race_id, subrace, species_variant)
         if species_ability_choice_tpl:
             choice_templates.append(species_ability_choice_tpl)
@@ -6192,7 +6292,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     spells_summary: list[dict] = []
     if ruleset == "2024":  # RP17: Improved Illusions applies only when Minor Illusion is known from another source
         pruned += subclass_spells_2024.gate_improved_illusions(choices, catalog, [
-            e["spellId"] for e in (_species_innate_spells(race, subrace, catalog, species_variant)
+            e["spellId"] for e in (_species_innate_spells(race, subrace, catalog, species_variant, species_alt, species_spell_ability)
                                    + _species_trait_spell_choices(race, subrace, catalog, choices)
                                    + _feat_innate_spells(resolved_feats, catalog, choices, follow_variants=variant_follow)) if e.get("spellId")])
     selections_now = {c["id"]: c["selected"] for c in choices}
@@ -6790,7 +6890,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             senses[sense_kind] = sense_range
     senses = feat_effects_mod.add_senses(senses, feat_inst)  # FE4 Keenness of the Stone Giant (adds to the final range)
     senses = features_mod.class_senses(senses, effects)  # RP2 Darkvision +60, Blindsight 30
-    innate_spells = (_species_innate_spells(race, subrace, catalog, species_variant)
+    innate_spells = (_species_innate_spells(race, subrace, catalog, species_variant, species_alt, species_spell_ability)
                      + _species_trait_spell_choices(race, subrace, catalog, choices)
                      + _feat_innate_spells(resolved_feats, catalog, choices, feat_effects_mod.innate_patches(feat_inst, feat_numbers), follow_variants=variant_follow)
                      + [{**_innate_entry_to_sheet(e, catalog), "featId": e["featId"], "source": e["source_label"], "note": e["note"]}  # RP19

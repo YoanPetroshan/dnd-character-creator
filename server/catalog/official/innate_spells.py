@@ -165,14 +165,19 @@ def _innate_spells_from_5etools(race_raw: dict) -> list[dict]:
     "uses" ("at-will" | "1/day"), "ability" (see
     _innate_spell_ability), "variant" (str | None)}."""
     results: list[dict] = []
-    for entry in race_raw.get("additionalSpells") or []:
-        if not isinstance(entry, dict):
-            continue
+    entries = [e for e in race_raw.get("additionalSpells") or [] if isinstance(e, dict)]
+    # F1: SEVERAL UNNAMED entries are alternatives of one pick (Astral Elf / AAG: three entries, each one `known` cantrip,
+    # "Astral Fire: you know one of the following cantrips of your choice"), not three grants: each grant carries the
+    # slug of its entry's first spell as `alt`, and engine.resolve offers the pick.
+    alternatives = sum(1 for e in entries if not isinstance(e.get("name"), str)) > 1
+    for entry in entries:
         variant = entry.get("name") if isinstance(entry.get("name"), str) else None
         ability = _innate_spell_ability(entry.get("ability"))
+        start = len(results)
         results.extend(_known_cantrips(entry.get("known"), ability, variant))  # G6
         innate = entry.get("innate")
         if not isinstance(innate, dict):
+            _tag_alternative(results, start, alternatives and variant is None)
             continue
         for level_key, level_value in innate.items():
             try:
@@ -192,7 +197,17 @@ def _innate_spells_from_5etools(race_raw: dict) -> list[dict]:
                     "ability": ability,
                     "variant": variant,
                 })
+        _tag_alternative(results, start, alternatives and variant is None)
     return results
+
+
+def _tag_alternative(results: list[dict], start: int, active: bool) -> None:
+    """F1: marks the grants appended since `start` (one `additionalSpells` entry) with `alt` = the slug of the entry's
+    first spell when the entry is one of several unnamed alternatives."""
+    if active and len(results) > start:
+        alt = results[start]["spell_id"]
+        for grant in results[start:]:
+            grant["alt"] = alt
 
 
 _SPELL_SCHOOL_CODES = {

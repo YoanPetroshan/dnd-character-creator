@@ -509,7 +509,15 @@ def append() -> None:
 
 # Append-only record of deliberate English text changes, see the module docstring. slice id ->
 # {"cases": [fnmatch over zoo case names], "paths": [regexes over leaf paths], "why": one line}.
-SNAPSHOT_REBASELINES: dict[str, dict] = {}
+SNAPSHOT_REBASELINES: dict[str, dict] = {
+    # F1: a species whose innate spells list candidate abilities (Fairy, Aasimar, Firbolg ... MPMM / XPHB lineages / Genasi)
+    # gets one `species:<id>:spell-ability` card; the pending card is a new key under `cards` and moves the export gate list.
+    "F1": {
+        "cases": ["t/fly-armor-*"],
+        "paths": [r"^cards[.]species:[a-z0-9-]+:(spell-ability|innate-cantrip)$", r"^exportGate(\[[0-9]+\])*$"],
+        "why": "species spellcasting-ability / alternative-cantrip cards (F1)",
+    },
+}
 
 
 class RebaselineError(AssertionError):

@@ -995,20 +995,21 @@ def test_subrace_innate_spells_merge_with_the_parent_race_on_the_sheet(catalog):
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
-def test_choice_shaped_innate_ability_is_a_disclosed_candidate_list_not_a_crash(catalog):
-    # Aarakocra/MPMM's innate-spell ability is {"choose": ["int", "wis",
-    # "cha"]} — the majority real shape (confirmed empirically,
-    # 2026-09-24). Not resolved to a single committed ability (no new
-    # choice-resolution machinery — same scope line Task 5 drew for
-    # choice-shaped resistances), but carried through as a candidate list,
-    # not dropped or crashed on.
+def test_choice_shaped_innate_ability_is_a_species_card_not_a_raw_dict(catalog):
+    # Aarakocra/MPMM's innate-spell ability is {"choose": ["int", "wis", "cha"]}. F1: the species gets a
+    # `species:<id>:spell-ability` card with those candidates; until it is picked the sheet ability is None (never the raw
+    # candidate dict), after it the picked ability.
     draft = _fighter_acolyte_human_draft(sources=["mpmm"], species={"id": "aarakocra-mpmm", "choices": {}})
     resolution = resolve(draft, catalog)
     assert resolution["problems"] == []
     grants = resolution["sheet"]["innateSpells"]
     assert len(grants) == 1
     assert grants[0]["name"] == "Gust of Wind"
-    assert grants[0]["ability"] == {"choose": ["INT", "WIS", "CHA"]}
+    assert grants[0]["ability"] is None
+    card = next(c for c in resolution["choices"] if c["id"] == "species:aarakocra-mpmm:spell-ability")
+    assert [o["id"] for o in card["options"]] == ["int", "wis", "cha"] and card["status"] == "pending"
+    draft["species"]["choices"] = {"species:aarakocra-mpmm:spell-ability": ["wis"]}
+    assert resolve(draft, catalog)["sheet"]["innateSpells"][0]["ability"] == "WIS"
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")

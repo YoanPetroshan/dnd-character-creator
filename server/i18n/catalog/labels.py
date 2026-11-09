@@ -37,6 +37,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     "label-asi": {"en": "Ability Score Improvement", "bg": "Увеличение на характеристики (Ability Score Improvement)"},
     "label-lineage": {"en": "Lineage / Ancestry", "bg": "Родова линия / Потекло"},
     "label-size": {"en": "Size", "bg": "Размер"},
+    "label-species-cantrip": {"en": "Cantrip", "bg": "Трик (Cantrip)"},
     "label-origin-feat": {"en": "Origin Feat", "bg": "Талант от произхода (Origin Feat)"},
     "label-feat": {"en": "Feat", "bg": "Талант (Feat)"},
     "label-weapon-mastery": {"en": "Weapon Mastery", "bg": "Майсторство с оръжия (Weapon Mastery)"},
@@ -145,6 +146,14 @@ MESSAGES: dict[str, dict[str, str]] = {
     "desc-spell-ability": {
         "en": "Choose this feat's spellcasting ability.",
         "bg": "Изберете характеристиката (Ability Score) за заклинания на този талант (Feat).",
+    },
+    "desc-species-spell-ability": {
+        "en": "Choose the spellcasting ability for this species' spells.",
+        "bg": "Изберете характеристиката (Ability) за заклинанията на тази раса (Species).",
+    },
+    "desc-species-cantrip": {
+        "en": "Choose which cantrip this species knows.",
+        "bg": "Изберете кой трик (Cantrip) познава тази раса (Species).",
     },
     "desc-spell-list": {
         "en": "Choose which spell list this feat draws from.",
