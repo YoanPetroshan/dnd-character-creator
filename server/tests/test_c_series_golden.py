@@ -391,6 +391,16 @@ REBASELINES: dict[str, dict] = {
         "paths": [r"^result\.sheet\.features(\[[0-9]+\])*(\.[A-Za-z]+)?$"],
         "why": "the species traits a subspecies replaces are not listed (VF2.5)",
     },
+    # VF4.3: the SRD Paladin starting-equipment line "(b) any simple melee weapon" (PHB p.82) offers the simple MELEE
+    # weapons only (it offered the ranged ones too). Rule matrix: the cases whose FIRST class is the Paladin (the
+    # equipment cards belong to the primary class; the Cleric 6 / Paladin 3 multiclass must not move), the card
+    # `class:paladin:1:equipment-choice-1` holds the option `any-simple-melee-weapons` where it held `any-simple-weapons`;
+    # the filler picks the first option (javelins), so nothing else moves.
+    "VF4a": {
+        "cases": ["*/src-*/paladin[0-9]*", "ks/src-*/paladin6", "ks/src-*/watchers-paladin20-2014", "ks/src-all/glory-tce-paladin7-2014"],
+        "paths": [r"^result\.choices\[class:paladin:1:equipment-choice-1\]\.options\[any-simple(-melee)?-weapons\]$"],
+        "why": "the SRD Paladin (b) any simple melee weapon offers only simple melee weapons (VF4.3)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -743,7 +753,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a", "VF2b", "VF2c", "VF2d") and STRIP == ()
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a", "VF2b", "VF2c", "VF2d", "VF4a") and STRIP == ()
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
@@ -1252,6 +1262,16 @@ def test_vf4_2_selesnya_initiate_sink_offers_loxodon_not_other():
     card = next(c for c in res["choices"] if c["id"] == "background:selesnya-initiate-ggr:languages")
     assert [o["id"] for o in card["options"]] == ["elvish", "loxodon", "sylvan"] and card["selected"] == ["elvish"]
     assert "other" not in res["sheet"]["proficiencies"]["languages"]
+
+
+def test_vf4a_primary_paladin_cases_hold_the_simple_melee_option_and_nothing_else_moved():
+    """VF4.3 (REBASELINES["VF4a"]): the 21 cases whose first class is the Paladin offer `any-simple-melee-weapons` in the (b)
+    pick; the Cleric 6 / Paladin 3 multiclass (Paladin secondary, no equipment card) is not among them."""
+    hit = sorted(n for n in _GOLDEN if any(fnmatch.fnmatchcase(n, p) for p in REBASELINES["VF4a"]["cases"]))
+    assert len(hit) == 21 and not any("cleric6-paladin3" in n for n in hit)
+    for n in hit:
+        card = next(c for c in _GOLDEN[n]["result"]["choices"] if c["id"] == "class:paladin:1:equipment-choice-1")
+        assert [o["id"] for o in card["options"]] == ["javelin", "any-simple-melee-weapons"], n
 
 
 def test_vf1_8_dwarf_phb_sink_lists_tool_proficiency_once():

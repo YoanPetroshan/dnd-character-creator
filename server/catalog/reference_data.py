@@ -1300,6 +1300,14 @@ DATA_OVERRIDES: dict[str, dict] = {
                            "defect": "[{\"strixhaven initiate|scc\": true}] carries no variant while the entry says \"must choose Lorehold within it\""},
         "reason": "the record's own sentence names the college; the table restores the variant hint the Magic Initiate backgrounds carry",
     },
+    "srd-paladin-simple-melee-weapon": {
+        "what": "SRD Paladin starting equipment (b) \"any simple melee weapon\" offers the simple MELEE weapons only",
+        "where": "catalog.loader:_follow_melee_description",
+        "raw_record_pin": {"file": "chargen/data/srd/5e-SRD-Classes.json (not under official_dir)",
+                           "record": "class paladin starting_equipment_options[1]",
+                           "defect": "desc \"(a) five javelins or (b) any simple melee weapon\" but the nested pick is `any simple weapon` / simple-weapons"},
+        "reason": "the line's own description and PHB p.82 (class file: weaponSimpleMelee) say melee; the description wins",
+    },
     "pact-of-the-chain-ritual": {
         "what": "Pact of the Chain (XPHB) Find Familiar is an at-will innate spell",
         "where": "engine.class_choices_2024:_INNATE_USES_2024",

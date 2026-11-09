@@ -27,6 +27,27 @@ def _load_srd(filename: str) -> list[dict]:
     return records
 
 
+def _follow_melee_description(classes: list[dict]) -> list[dict]:
+    """VF4.3: a starting-equipment weapon pick whose own line says "melee" keeps the melee category. The SRD Paladin line
+    "(b) any simple melee weapon" (PHB p.82) is stored with the nested pick `any simple weapon` /
+    `simple-weapons`, so a ranged Sling could be taken; the description wins (the vendored class file says
+    `weaponSimpleMelee`). Only the Paladin differs in the data (a test audits every class)."""
+    for cls in classes:
+        for env in cls.get("starting_equipment_options") or []:
+            desc = (env.get("desc") or "").lower()
+            if "melee weapon" not in desc or env["from"].get("option_set_type") != "options_array":
+                continue
+            for opt in env["from"]["options"]:
+                nested = opt.get("choice") if opt.get("option_type") == "choice" else None
+                category = ((nested or {}).get("from") or {}).get("equipment_category")
+                if category and category["index"] in ("simple-weapons", "martial-weapons"):
+                    family = category["index"].split("-")[0]
+                    category.update(index=f"{family}-melee-weapons", name=f"{family.title()} Melee Weapons",
+                                    url=f"/api/2014/equipment-categories/{family}-melee-weapons")
+                    nested["desc"] = f"any {family} melee weapon"
+    return classes
+
+
 def _index_by(items: list[dict], key: str = "index") -> dict[str, dict]:
     return {item[key]: item for item in items}
 
@@ -256,7 +277,7 @@ def load() -> Catalog:
     spells, spell_aliases, spell_twins = _load_spells()
 
     catalog = Catalog(
-        classes=_index_by(_load("5e-SRD-Classes.json")),
+        classes=_index_by(_follow_melee_description(_load("5e-SRD-Classes.json"))),
         levels=_load("5e-SRD-Levels.json"),
         features=_index_by(_load("5e-SRD-Features.json")),
         subclasses=_index_by(_load("5e-SRD-Subclasses.json")),

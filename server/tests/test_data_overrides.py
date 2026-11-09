@@ -89,6 +89,16 @@ def check_scc_students():
         assert row["quote"] in json.dumps(bg["entries"])
 
 
+def check_srd_paladin():
+    import pathlib
+    path = pathlib.Path(__file__).resolve().parents[2] / "chargen" / "data" / "srd" / "5e-SRD-Classes.json"
+    paladin = next(c for c in json.loads(path.read_text(encoding="utf-8")) if c["index"] == "paladin")
+    env = paladin["starting_equipment_options"][1]
+    nested = next(o["choice"] for o in env["from"]["options"] if o["option_type"] == "choice")
+    assert env["desc"] == "(a) five javelins or (b) any simple melee weapon"
+    assert nested["from"]["equipment_category"]["index"] == "simple-weapons" and nested["desc"] == "any simple weapon"
+
+
 def check_chain():
     opt = _find(_load("optionalfeatures.json", "optionalfeature"), "Pact of the Chain", "XPHB")
     assert opt["additionalSpells"][0]["innate"]["_"] == {"ritual": ["find familiar|xphb"]}
@@ -105,6 +115,7 @@ CHECKS = {
     "harper-agent-thieves-cant": check_harper,
     "genie-touched-feat": check_genie,
     "scc-student-feat-college": check_scc_students,
+    "srd-paladin-simple-melee-weapon": check_srd_paladin,
     "pact-of-the-chain-ritual": check_chain,
 }
 

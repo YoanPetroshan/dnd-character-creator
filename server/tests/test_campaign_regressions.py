@@ -1149,3 +1149,55 @@ def test_vf4_2_the_reference_table_is_the_pinned_set():
     assert set(ref.BACKGROUND_OTHER_LANGUAGES) == set(_BG_OTHER)
     for bid, row in ref.BACKGROUND_OTHER_LANGUAGES.items():
         assert row["names"] == [_BG_OTHER[bid][0]] and row["quote"] == _BG_OTHER[bid][1]
+
+
+# ---------------------------------------------------------------- VF4.3 2014 Paladin: "any simple melee weapon"
+_SRD_DIR = pathlib.Path(__file__).resolve().parents[2] / "chargen" / "data" / "srd"
+
+
+def _srd_class_equipment():
+    out = []
+    for cls in json.load(open(_SRD_DIR / "5e-SRD-Classes.json")):
+        for i, env in enumerate(cls.get("starting_equipment_options") or []):
+            for opt in env["from"].get("options", []) if env["from"].get("option_set_type") == "options_array" else []:
+                nested = opt.get("choice") if opt.get("option_type") == "choice" else None
+                if nested:
+                    out.append((cls["index"], i, env["desc"], nested["desc"], nested["from"]["equipment_category"]["index"]))
+    return out
+
+
+def test_vf4_3_data_the_phb_paladin_line_says_simple_melee():
+    recs = json.load(open(DATA / "class" / "class-paladin.json"))["class"]
+    phb = next(r for r in recs if r["name"] == "Paladin" and r["source"] == "PHB")
+    assert {"a": [{"item": "javelin|phb", "quantity": 5}], "b": [{"equipmentType": "weaponSimpleMelee"}]} in phb["startingEquipment"]["defaultData"]
+    srd = [row for row in _srd_class_equipment() if row[0] == "paladin" and "melee" in row[2]]
+    # the SRD record disagrees with its own description: (b) any simple MELEE weapon, category simple-weapons
+    assert srd == [("paladin", 1, "(a) five javelins or (b) any simple melee weapon", "any simple weapon", "simple-weapons")]
+
+
+def test_vf4_3_every_other_srd_weapon_pick_agrees_with_its_description():
+    """The audit: the description's melee / simple / martial words match the category in every SRD class except the Paladin."""
+    bad = []
+    for cid, _, desc, nested_desc, cat in _srd_class_equipment():
+        if "weapon" not in nested_desc:
+            continue
+        want = ("martial" if "martial" in desc else "simple") + ("-melee" if "melee" in desc else "") + "-weapons"
+        if cat != want:
+            bad.append((cid, desc, cat))
+    assert bad == [("paladin", "(a) five javelins or (b) any simple melee weapon", "simple-weapons")]
+
+
+def test_vf4_3_paladin_pick_offers_only_simple_melee_weapons(catalog):
+    res = resolve(_draft([("paladin", 1)], ruleset="2014"), catalog)
+    card = next(c for c in res["choices"] if c["id"] == "class:paladin:1:equipment-choice-1")
+    assert [o["id"] for o in card["options"]] == ["javelin", "any-simple-melee-weapons"]
+    d = _draft([("paladin", 1)], ruleset="2014")
+    d["equipment"]["choices"] = {"class:paladin:1:equipment-choice-1": ["any-simple-melee-weapons"]}
+    res = resolve(d, catalog)
+    sub = next(c for c in res["choices"] if c["id"].startswith("class:paladin:1:equipment-choice-1:"))
+    offered = {o["id"] for o in sub["options"]}
+    assert "club" in offered and "mace" in offered and "sling" not in offered and "dart" not in offered
+    assert all(catalog.items[i]["weapon_range"] == "Melee" and catalog.items[i]["weapon_category"] == "Simple" for i in offered)
+    # the Druid and Ranger lines already name the melee category
+    druid = next(c for c in resolve(_draft([("druid", 1)], ruleset="2014"), catalog)["choices"] if c["id"] == "class:druid:1:equipment-choice-1")
+    assert [o["id"] for o in druid["options"]] == ["scimitar", "any-simple-melee-weapons"]

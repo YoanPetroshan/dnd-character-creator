@@ -153,6 +153,10 @@ def test_drafts_without_worn_or_wielded_resolve_exactly_as_before_g2(catalog, na
                 for o in card["options"]:
                     o.pop("disabled", None)
                     o.pop("disabledReason", None)
+    for res in (now, baseline):  # VF4.3: the Paladin (b) pick is the simple MELEE category now (the pre-G2 baseline offers any simple weapon)
+        for card in res["choices"]:
+            if card["id"] == "class:paladin:1:equipment-choice-1":
+                card["options"] = [o for o in card["options"] if o["id"] not in ("any-simple-weapons", "any-simple-melee-weapons")]
     assert now == baseline
 
 
