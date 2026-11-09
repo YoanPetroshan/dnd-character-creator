@@ -186,6 +186,14 @@ KITCHEN_SINK: dict[str, dict] = {
                                      origin=("elf-phb", "acolyte", "elf-phb-eladrin-dmg")),
     "mark-of-handling-wizard5-2014": _sub("wizard", 5, "2014", marks=("classes", "official"), once=True,
                                           origin=("human-phb", "acolyte", "human-phb-mark-of-handling-erlw")),
+    # VF2.1: species Armor Class from the trait text (leather + shield: the 13 + DEX natural armor of the MPMM Lizardfolk wins; the Tortle
+    # ignores worn armor; the Warforged +1 stays in armor). Non-2024, `once`
+    "lizardfolk-mpmm-wizard3-2014": {**_sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("lizardfolk-mpmm", "acolyte")),
+                                      "equip": [{"itemId": "leather-armor", "qty": 1, "equipped": True}, {"itemId": "shield", "qty": 1, "equipped": True}]},
+    "tortle-ttp-wizard3-2014": {**_sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("tortle-ttp", "acolyte")),
+                                 "equip": [{"itemId": "chain-mail", "qty": 1, "equipped": True}]},
+    "warforged-erlw-wizard3-2014": {**_sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("warforged-erlw", "acolyte")),
+                                     "equip": [{"itemId": "chain-mail", "qty": 1, "equipped": True}]},
     # VF1.8: the PHB Dwarf lists Tool Proficiency once (with the picked tool). Non-2024, `once`
     "dwarf-phb-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("dwarf-phb", "acolyte")),
     # G3: Cleric 6 (Life) + Paladin 3 (Devotion) under 2014: one merged Channel Divinity (PHB 164) whose note keeps both

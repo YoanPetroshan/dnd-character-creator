@@ -420,3 +420,145 @@ def test_vf1_9b_unknown_equipment_item_warns_instead_of_vanishing(catalog):
 def test_vf1_9b_no_warning_for_known_items(catalog):
     res = resolve(_draft([("fighter", 1)], added=["longsword"]), catalog)
     assert not [i for i in _warning_ids(res) if i.startswith("equipment-unknown-item")]
+
+
+# ---------------------------------------------------------------- VF2.1 species natural armor / flat AC bonuses
+import re as _re  # noqa: E402
+
+
+def _plain(text) -> str:
+    """5etools text with the {@tag shown|...} markup reduced to the shown word(s)."""
+    s = " ".join(text) if isinstance(text, list) else text
+    return _re.sub(r"\{@\w+ ([^|}]*)[^}]*\}", r"\1", s)
+
+
+def _race_strings(name, source):
+    rec = next(r for r in _races_json()["race"] if r["name"] == name and r["source"] == source)
+    out = []
+
+    def walk(o):
+        if isinstance(o, str):
+            out.append(_plain(o))
+        elif isinstance(o, dict):
+            for v in o.get("entries", []) + o.get("items", []) + ([o["entry"]] if "entry" in o else []):
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+    walk(rec.get("entries", []))
+    return out
+
+
+# trait id -> (record name, source, kind, base, abilities, sentence quoted from the record)
+VF2_1 = {
+    "autognome-aag-trait-1": ("Autognome", "AAG", "unarmored", 13, ("DEX",),
+                              "While you aren't wearing armor, your base Armor Class is 13 + your Dexterity modifier."),
+    "thri-kreen-aag-trait-2": ("Thri-kreen", "AAG", "unarmored", 13, ("DEX",),
+                               "While you aren't wearing armor, your carapace gives you a base Armor Class of 13 + your Dexterity modifier."),
+    "goblin-psz-trait-5": ("Goblin", "PSZ", "unarmored", 11, ("DEX",),
+                           "when you are wearing no armor, your AC is equal to 11 + your Dexterity modifier."),
+    "lizardfolk-mpmm-trait-4": ("Lizardfolk", "MPMM", "natural", 13, ("DEX",),
+                                "When you aren't wearing armor, your base AC is 13 + Dexterity modifier. You can use your natural armor to "
+                                "determine your AC if the armor you wear would leave you with a lower AC."),
+    "lizardfolk-vgm-trait-7": ("Lizardfolk", "VGM", "natural", 13, ("DEX",),
+                               "When you aren't wearing armor, your AC is 13 + your Dexterity modifier. You can use your natural armor to "
+                               "determine your AC if the armor you wear would leave you with a lower AC."),
+    "locathah-lr-trait-2": ("Locathah", "LR", "natural", 12, ("DEX",),
+                            "When you aren't wearing armor, your AC is 12 + your Dexterity modifier. You can use your natural armor to "
+                            "determine your AC if the armor you wear would leave you with a lower AC."),
+    "loxodon-ggr-trait-5": ("Loxodon", "GGR", "natural", 12, ("CON",),
+                            "When you aren't wearing armor, your AC is 12 + your Constitution modifier. You can use your natural armor to "
+                            "determine your AC if the armor you wear would leave you with a lower AC."),
+    "tortle-mpmm-trait-3": ("Tortle", "MPMM", "fixed", 17, (),
+                            "Your shell provides you a base AC of 17 (your Dexterity modifier doesn't affect this number). "
+                            "You can't wear light, medium, or heavy armor, but if you are using a shield, you can apply the shield's bonus as normal."),
+    "tortle-ttp-trait-6": ("Tortle", "TTP", "fixed", 17, (),
+                           "it gives you a base AC of 17 (your Dexterity modifier doesn't affect this number). You gain no benefit from "
+                           "wearing armor, but if you are using a shield, you can apply the shield's bonus as normal."),
+    "lizardfolk-dmg-trait-1": ("Lizardfolk", "DMG", "flat", 3, (), "granting you a +3 bonus to Armor Class."),
+    "troglodyte-dmg-trait-3": ("Troglodyte", "DMG", "flat", 1, (), "Your thick hide grants you a +1 bonus to Armor Class."),
+    "warforged-erlw-trait-5": ("Warforged", "ERLW", "flat", 1, (), "You gain a +1 bonus to Armor Class."),
+    "warforged-efa-trait-1": ("Warforged", "EFA", "flat", 1, (), "You gain a +1 bonus to your Armor Class."),
+}
+
+
+def test_vf2_1_the_table_is_exactly_the_records(catalog):
+    from catalog import reference_data as ref
+    assert set(ref.SPECIES_AC) == set(VF2_1), set(ref.SPECIES_AC) ^ set(VF2_1)
+    for tid, (name, source, kind, base, abilities, sentence) in VF2_1.items():
+        entry = ref.SPECIES_AC[tid]
+        assert (entry["kind"], entry["base"], tuple(entry["abilities"]), entry["quote"]) == (kind, base, abilities, sentence), tid
+        assert any(sentence in s for s in _race_strings(name, source)), (tid, "quote not in the record")
+        assert tid in [t["index"] for t in catalog.races[tid.rsplit("-trait-", 1)[0]]["traits"]]
+
+
+def test_vf2_1_no_other_unconditional_ac_text_in_the_species_records():
+    """Every race record sentence that states a base AC / a flat AC bonus is in the table or listed here as conditional / not an
+    AC of the character (shifted forms, Shell Defense withdrawn, a Prestidigitation device with AC 5, the Simic Carapace pick)."""
+    from catalog import reference_data as ref
+    covered = {(v[0], v[1]) for v in VF2_1.values()}
+    allowed_other = {("Shifter", "EFA"), ("Shifter", "MPMM"), ("Gnome", "XPHB"), ("Simic Hybrid", "GGR")}
+    found = set()
+    for rec in _races_json()["race"]:
+        for s in _race_strings(rec["name"], rec["source"]):
+            if _re.search(r"\bAC\b|Armor Class", s):
+                found.add((rec["name"], rec["source"]))
+    # Tortle holds a second AC sentence (Shell Defense) next to its table row
+    assert found - covered == allowed_other, found - covered - allowed_other
+    assert ref.SPECIES_AC
+
+
+AC_ITEMS = {"leather": "leather-armor", "chain": "chain-mail", "plate": "plate-armor", "shield": "shield"}
+
+
+def _ac(catalog, species, scores, added=(), classes=(("fighter", 1),), ruleset="2014"):
+    d = _draft(list(classes), ruleset=ruleset, species=species, scores=scores, added=added)
+    return resolve(d, catalog)["derived"]["armorClass"]
+
+
+@pytest.mark.parametrize("species,scores,armor,expected", [
+    # unarmored formula only without armor: Autognome / Thri-kreen 13 + DEX (+2), Goblin PSZ 11 + DEX
+    ("autognome-aag", {"DEX": 14}, (), 15), ("autognome-aag", {"DEX": 14}, ("shield",), 17),
+    ("autognome-aag", {"DEX": 14}, ("leather-armor",), 13), ("autognome-aag", {"DEX": 14}, ("chain-mail",), 16),
+    ("thri-kreen-aag", {"DEX": 14}, (), 15), ("thri-kreen-aag", {"DEX": 14}, ("leather-armor", "shield"), 15),
+    ("goblin-psz", {"DEX": 14}, (), 13), ("goblin-psz", {"DEX": 14}, ("chain-mail",), 16),
+    # natural armor, better of natural and worn armor, shield as normal: Lizardfolk 13 + DEX, Locathah 12 + DEX, Loxodon 12 + CON
+    ("lizardfolk-mpmm", {"DEX": 14}, (), 15), ("lizardfolk-vgm", {"DEX": 14}, (), 15),
+    ("lizardfolk-mpmm", {"DEX": 14}, ("leather-armor",), 15), ("lizardfolk-mpmm", {"DEX": 14}, ("plate-armor",), 18),
+    ("lizardfolk-mpmm", {"DEX": 14}, ("shield",), 17), ("lizardfolk-mpmm", {"DEX": 14}, ("leather-armor", "shield"), 17),
+    ("lizardfolk-mpmm", {"DEX": 14}, ("plate-armor", "shield"), 20),
+    ("locathah-lr", {"DEX": 14}, (), 14), ("locathah-lr", {"DEX": 14}, ("leather-armor",), 14), ("locathah-lr", {"DEX": 14}, ("chain-mail",), 16),
+    ("loxodon-ggr", {"CON": 14, "DEX": 8}, (), 15), ("loxodon-ggr", {"CON": 14, "DEX": 8}, ("leather-armor", "shield"), 17),  # GGR Loxodon CON +2
+    ("loxodon-ggr", {"CON": 14}, ("chain-mail",), 16),
+    # Tortle: base AC 17, DEX does not affect it, armor gives no benefit, a shield adds
+    ("tortle-mpmm", {"DEX": 14}, (), 17), ("tortle-mpmm", {"DEX": 8}, (), 17), ("tortle-mpmm", {"DEX": 14}, ("shield",), 19),
+    ("tortle-ttp", {"DEX": 14}, (), 17), ("tortle-ttp", {"DEX": 14}, ("plate-armor",), 17), ("tortle-ttp", {"DEX": 14}, ("plate-armor", "shield"), 19),
+    # flat bonuses, also in armor
+    ("lizardfolk-dmg", {"DEX": 14}, (), 15), ("lizardfolk-dmg", {"DEX": 14}, ("leather-armor",), 16),
+    ("troglodyte-dmg", {"DEX": 14}, (), 13), ("troglodyte-dmg", {"DEX": 14}, ("chain-mail", "shield"), 19),
+    ("warforged-erlw", {"DEX": 14}, (), 13), ("warforged-erlw", {"DEX": 14}, ("plate-armor",), 19),
+    # unchanged
+    ("human", {"DEX": 14}, (), 12), ("human", {"DEX": 14}, ("leather-armor",), 13),
+])
+def test_vf2_1_species_ac(catalog, species, scores, armor, expected):
+    got = _ac(catalog, species, scores, armor)
+    assert got == expected, (species, scores, armor, got)
+
+
+def test_vf2_1_warforged_efa_plus_one_under_2024(catalog):
+    assert _ac(catalog, "warforged-efa", {"DEX": 14}, (), ruleset="2024") == 13
+    assert _ac(catalog, "warforged-efa", {"DEX": 14}, ("plate-armor",), ruleset="2024") == 19
+
+
+def test_vf2_1_the_best_formula_wins_never_summed(catalog):
+    # Monk Unarmored Defense 10 + DEX + WIS (+4) = 16 against the lizardfolk 13 + DEX = 15: the better one, not both
+    assert _ac(catalog, "lizardfolk-mpmm", {"DEX": 14, "WIS": 18}, (), classes=(("monk", 1),)) == 16
+    # the Barbarian 10 + DEX + CON (14 -> +2) = 14 loses against 15
+    assert _ac(catalog, "lizardfolk-mpmm", {"DEX": 14, "CON": 14}, (), classes=(("barbarian", 1),)) == 15
+    # the Tortle's fixed 17 against a Monk 10 + DEX + WIS = 16
+    assert _ac(catalog, "tortle-mpmm", {"DEX": 14, "WIS": 18}, (), classes=(("monk", 1),)) == 17
+
+
+def test_vf2_1_the_flat_bonus_adds_to_the_best_formula(catalog):
+    # Lizardfolk (DMG) +3 on top of the Monk formula 16
+    assert _ac(catalog, "lizardfolk-dmg", {"DEX": 14, "WIS": 18}, (), classes=(("monk", 1),)) == 19

@@ -6977,6 +6977,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             equipped_items, modifiers["DEX"], features_mod.ac_formulas(effects) + feat_effects_mod.ac_formulas(feat_inst),
             modifiers, features_mod.armored_ac_bonus(effects),
             medium_dex_cap=feat_effects_mod.medium_armor_dex_cap(feat_inst, final_scores.get("DEX", 10)),  # FE4
+            species_ac=equipment_mod.species_ac_specs(race, subrace),  # VF2.1
         ) + feat_effects_mod.ac_bonus(feat_inst, gear.hands, equipped_items),  # FE4 (needs equipment.wielded)
         "speed": base_speed,  # walking speed; `speeds` carries every mode
         "speeds": speeds,

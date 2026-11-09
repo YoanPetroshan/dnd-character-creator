@@ -1061,6 +1061,51 @@ FLY_ARMOR_BAN: dict[str, dict] = {
 }
 
 
+# VF2.1: Armor Class a species trait states in its own text (trait id -> record). `kind`: "unarmored" = `base` + the abilities'
+# modifiers while no body armor is worn; "natural" = the same, and ALSO usable when the armor worn would leave a lower AC (Lizardfolk,
+# Locathah, Loxodon: "You can use your natural armor to determine your AC if the armor you wear would leave you with a lower AC");
+# "fixed" = a base AC that armor does not change (Tortle: "You can't wear ..." / "You gain no benefit from wearing armor"); "flat" =
+# a +`base` bonus on top of whatever AC applies, armor included (Lizardfolk DMG, Troglodyte, Warforged). A shield adds in every
+# kind ("A shield's benefits apply as normal"). Several formulas never sum: the best applies (PHB 2024 / GGR "AC Calculations
+# Don't Stack"). Not here (conditional / not an AC of the character): Shifter and Beasthide (while shifted), Tortle Shell Defense
+# (withdrawn), Simic Hybrid Carapace (an enhancement pick), the AC 5 of the Gnome clockwork devices. `quote` is the sentence of the
+# record (tags stripped), pinned in tests/test_campaign_regressions.py.
+SPECIES_AC: dict[str, dict] = {
+    "autognome-aag-trait-1": {"race": "autognome-aag", "kind": "unarmored", "base": 13, "abilities": ("DEX",),
+                              "quote": "While you aren't wearing armor, your base Armor Class is 13 + your Dexterity modifier."},
+    "thri-kreen-aag-trait-2": {"race": "thri-kreen-aag", "kind": "unarmored", "base": 13, "abilities": ("DEX",),
+                               "quote": "While you aren't wearing armor, your carapace gives you a base Armor Class of 13 + your Dexterity modifier."},
+    "goblin-psz-trait-5": {"race": "goblin-psz", "kind": "unarmored", "base": 11, "abilities": ("DEX",),
+                           "quote": "when you are wearing no armor, your AC is equal to 11 + your Dexterity modifier."},
+    "lizardfolk-mpmm-trait-4": {"race": "lizardfolk-mpmm", "kind": "natural", "base": 13, "abilities": ("DEX",),
+                                "quote": "When you aren't wearing armor, your base AC is 13 + Dexterity modifier. You can use your natural armor to "
+                                         "determine your AC if the armor you wear would leave you with a lower AC."},
+    "lizardfolk-vgm-trait-7": {"race": "lizardfolk-vgm", "kind": "natural", "base": 13, "abilities": ("DEX",),
+                               "quote": "When you aren't wearing armor, your AC is 13 + your Dexterity modifier. You can use your natural armor to "
+                                        "determine your AC if the armor you wear would leave you with a lower AC."},
+    "locathah-lr-trait-2": {"race": "locathah-lr", "kind": "natural", "base": 12, "abilities": ("DEX",),
+                            "quote": "When you aren't wearing armor, your AC is 12 + your Dexterity modifier. You can use your natural armor to "
+                                     "determine your AC if the armor you wear would leave you with a lower AC."},
+    "loxodon-ggr-trait-5": {"race": "loxodon-ggr", "kind": "natural", "base": 12, "abilities": ("CON",),
+                            "quote": "When you aren't wearing armor, your AC is 12 + your Constitution modifier. You can use your natural armor to "
+                                     "determine your AC if the armor you wear would leave you with a lower AC."},
+    "tortle-mpmm-trait-3": {"race": "tortle-mpmm", "kind": "fixed", "base": 17, "abilities": (),
+                            "quote": "Your shell provides you a base AC of 17 (your Dexterity modifier doesn't affect this number). "
+                                     "You can't wear light, medium, or heavy armor, but if you are using a shield, you can apply the shield's bonus as normal."},
+    "tortle-ttp-trait-6": {"race": "tortle-ttp", "kind": "fixed", "base": 17, "abilities": (),
+                           "quote": "it gives you a base AC of 17 (your Dexterity modifier doesn't affect this number). You gain no benefit from "
+                                    "wearing armor, but if you are using a shield, you can apply the shield's bonus as normal."},
+    "lizardfolk-dmg-trait-1": {"race": "lizardfolk-dmg", "kind": "flat", "base": 3, "abilities": (),
+                               "quote": "granting you a +3 bonus to Armor Class."},
+    "troglodyte-dmg-trait-3": {"race": "troglodyte-dmg", "kind": "flat", "base": 1, "abilities": (),
+                               "quote": "Your thick hide grants you a +1 bonus to Armor Class."},
+    "warforged-erlw-trait-5": {"race": "warforged-erlw", "kind": "flat", "base": 1, "abilities": (),
+                               "quote": "You gain a +1 bonus to Armor Class."},
+    "warforged-efa-trait-1": {"race": "warforged-efa", "kind": "flat", "base": 1, "abilities": (),
+                              "quote": "You gain a +1 bonus to your Armor Class."},
+}
+
+
 # Fixed proficiency grants of a subclass (the SRD feature text is prose only).
 # Only subclasses whose grant is a fixed list belong here; Lore Bard's three
 # free skills are a choice (RP12: SUBCLASS_PICKS_2024, ruleset 2024).

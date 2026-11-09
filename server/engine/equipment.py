@@ -9,7 +9,7 @@ from i18n.messages import msg
 
 def armor_class_from_gear(
     equipped_items: list[dict], dex_modifier: int, formulas=(), modifiers: dict | None = None, armored_bonus: int = 0,
-    medium_dex_cap: int | None = None,
+    medium_dex_cap: int | None = None, species_ac=(),
 ) -> int:
     """equipped_items are raw catalog item dicts for whatever's worn/held.
     `formulas` are alternative unarmored AC formulas (class features:
@@ -17,8 +17,14 @@ def armor_class_from_gear(
     armor, a formula that disallows shields is dropped when a shield is
     held, and the best candidate wins (never summed). `armored_bonus`
     (Fighting Style: Defense) applies only while wearing body armor. `medium_dex_cap`
-    (Medium Armor Master) raises the DEX cap of Medium body armor to that value."""
-    body_armor = next(
+    (Medium Armor Master) raises the DEX cap of Medium body armor to that value. `species_ac` (VF2.1, `species_ac_specs`):
+    the AC a species trait states -- "unarmored" / "natural" formulas join `formulas` (no body armor), a "natural" one also
+    competes with the worn armor, a "fixed" one (Tortle) makes body armor count for nothing, a "flat" one adds at the end."""
+    flat = sum(s["base"] for s in species_ac if s["kind"] == "flat")
+    natural = [s for s in species_ac if s["kind"] == "natural"]
+    formulas = list(formulas) + [{"base": s["base"], "abilities": s["abilities"], "allows_shield": True}
+                                 for s in species_ac if s["kind"] in ("unarmored", "natural", "fixed")]
+    body_armor = None if any(s["kind"] == "fixed" for s in species_ac) else next(
         (i for i in equipped_items if i.get("equipment_category", {}).get("index") == "armor" and i.get("armor_category") != "Shield"),
         None,
     )
@@ -33,7 +39,9 @@ def armor_class_from_gear(
             if medium_dex_cap is not None and max_bonus is not None and body_armor.get("armor_category") == "Medium":
                 max_bonus = max(max_bonus, medium_dex_cap)
             base += dex_modifier if max_bonus is None else min(dex_modifier, max_bonus)
-        return base + shield_ac + armored_bonus
+        worn = base + shield_ac + armored_bonus
+        mods = modifiers or {}
+        return max([worn] + [s["base"] + sum(mods.get(ab, 0) for ab in s["abilities"]) + shield_ac for s in natural]) + flat
 
     best = 10 + dex_modifier + shield_ac
     mods = modifiers or {}
@@ -42,7 +50,23 @@ def armor_class_from_gear(
             continue
         value = f["base"] + sum(mods.get(ab, 0) for ab in f["abilities"]) + shield_ac
         best = max(best, value)
-    return best
+    return best + flat
+
+
+def species_ac_specs(race: dict | None, subrace: dict | None) -> list[dict]:
+    """VF2.1: the `reference_data.SPECIES_AC` rows of the traits the species holds (race traits and the subrace's own), minus the
+    ones the subrace replaces (`overwrites_traits`, F1.2)."""
+    from catalog import reference_data
+    if not race:
+        return []
+    replaced = set((subrace or {}).get("overwrites_traits") or [])
+    out, seen = [], set()
+    for ref in list(race.get("traits") or []) + list((subrace or {}).get("racial_traits") or []):
+        spec = reference_data.SPECIES_AC.get(ref.get("index"))
+        if spec and ref["index"] not in seen and ref.get("name") not in replaced:
+            seen.add(ref["index"])
+            out.append(spec)
+    return out
 
 
 _ARMOR_PROFICIENCY = {"Light": "light-armor", "Medium": "medium-armor", "Heavy": "heavy-armor"}
