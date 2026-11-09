@@ -9,8 +9,9 @@ VERIFIED against the vendored optionalfeatures.json first:
 Where the row exists: only the 2024 chassis has a pact weapon pick (C7c / E5: the card `...:opt-pact-of-the-blade-xphb:weapon`),
 so only 2024 has a pact weapon attack row, and the row note (`PACT_WEAPON_ROW_NOTES_2024`, added by C7c) is already there; B4 pins
 its text against the records and the count. The 2014 invocation has no weapon pick in this app (`test_no_pact_weapon_outside_ruleset_2024`):
-there is no row to annotate, its note stays on the invocation resource (`INVOCATION_EFFECTS` `thirsting-blade`). The clause
-"(not on top of Extra Attack)" is the PHB 2024 Multiclassing rule (not in the vendored records), kept from C7c as is."""
+there is no row to annotate, its note stays on the invocation resource (`INVOCATION_EFFECTS` `thirsting-blade`). VF3.1 (owner,
+2026-11-09): the clause "(not on top of Extra Attack)" that C7c added is the PHB 2024 Multiclassing rule, which is not in the vendored
+records, so the note is trimmed to the record text."""
 from __future__ import annotations
 
 import json
@@ -49,9 +50,15 @@ def test_quote_pin_the_records(raw):
         "The Extra Attack of your {@optfeature Thirsting Blade|XPHB} invocation confers two extra attacks rather than one."]
 
 
+def test_row_note_has_no_clause_outside_the_records():
+    """VF3.1: no pact weapon row note carries the Multiclassing clause (not in the records)."""
+    for text in reference_data.PACT_WEAPON_ROW_NOTES_2024.values():
+        assert "not on top of" not in text
+
+
 def test_row_note_texts_follow_the_records():
     notes = reference_data.PACT_WEAPON_ROW_NOTES_2024
-    assert notes[THIRST] == "Thirsting Blade: attack twice with the Attack action (not on top of Extra Attack)"
+    assert notes[THIRST] == "Thirsting Blade: attack twice with the Attack action"
     assert notes[DEVOUR] == "Devouring Blade: Thirsting Blade confers two extra attacks rather than one"
     # the 2014 and 2024 invocation resource notes say the same thing as their records
     assert reference_data.INVOCATION_EFFECTS["eldritch-invocation-thirsting-blade"]["note"] == (
@@ -70,7 +77,7 @@ def _blade(catalog, level, picks, **kw):
 def test_2024_row_carries_the_note_and_the_count_stays_out(catalog):
     with_t = _blade(catalog, 5, [BLADE, THIRST])
     without = _blade(catalog, 5, [BLADE])
-    assert "Thirsting Blade: attack twice with the Attack action (not on top of Extra Attack)" in _row(with_t)["notes"]
+    assert "Thirsting Blade: attack twice with the Attack action" in _row(with_t)["notes"]
     assert not any("Thirsting" in n for n in _row(without)["notes"])
     for key in ("attackBonus", "damage", "ability", "proficient"):  # information only: the numbers do not move
         assert _row(with_t)[key] == _row(without)[key], key
@@ -83,7 +90,7 @@ def test_2024_devouring_blade_adds_its_note_and_still_no_count(catalog):
     r = _blade(catalog, 12, [BLADE, THIRST, DEVOUR])
     notes = _row(r)["notes"]
     assert "Devouring Blade: Thirsting Blade confers two extra attacks rather than one" in notes
-    assert notes.index("Thirsting Blade: attack twice with the Attack action (not on top of Extra Attack)") < notes.index(
+    assert notes.index("Thirsting Blade: attack twice with the Attack action") < notes.index(
         "Devouring Blade: Thirsting Blade confers two extra attacks rather than one")
     assert r["derived"]["attacksPerAction"] == 1
 
@@ -92,7 +99,7 @@ def test_a_real_extra_attack_class_keeps_its_own_count(catalog):
     fighter5 = {"classId": "fighter", "level": 5, "subclassId": "champion", "choices": {}}
     r = _blade(catalog, 5, [BLADE, THIRST], classes_before=(fighter5,))
     assert r["derived"]["attacksPerAction"] == 2  # the Fighter's Extra Attack; Thirsting Blade adds nothing on top
-    assert "Thirsting Blade: attack twice with the Attack action (not on top of Extra Attack)" in _row(r)["notes"]
+    assert "Thirsting Blade: attack twice with the Attack action" in _row(r)["notes"]
 
 
 @pytest.mark.parametrize("ruleset", ["2014", "mixed"])
