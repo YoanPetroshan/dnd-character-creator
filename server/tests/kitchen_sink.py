@@ -201,6 +201,9 @@ KITCHEN_SINK: dict[str, dict] = {
     # VF2.4: fixed species languages (Kenku DMG: Common and Auran) and the language pick card of the PHB Human. `once`
     "kenku-dmg-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("kenku-dmg", "acolyte")),
     "human-phb-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("human-phb", "acolyte")),
+    # VF2.6: Mark of Scribing, Comprehend Languages once per short or long rest (Magic Mouth stays 1/day). Non-2024, `once`
+    "mark-of-scribing-wizard5-2014": _sub("wizard", 5, "2014", marks=("classes", "official"), once=True,
+                                          origin=("gnome-phb", "acolyte", "gnome-phb-mark-of-scribing-erlw")),
     # VF1.8: the PHB Dwarf lists Tool Proficiency once (with the picked tool). Non-2024, `once`
     "dwarf-phb-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("dwarf-phb", "acolyte")),
     # G3: Cleric 6 (Life) + Paladin 3 (Devotion) under 2014: one merged Channel Divinity (PHB 164) whose note keeps both

@@ -235,6 +235,8 @@ _EXPECT = {
     "loxodon-ggr-wizard3-2014": {},
     # VF2.4: fixed species languages and a species language pick
     "kenku-dmg-wizard3-2014": {"languages": ["common", "auran"]}, "human-phb-wizard3-2014": {"languages": ["common"]},
+    # VF2.6: Mark of Scribing innate frequencies
+    "mark-of-scribing-wizard5-2014": {"innate": True},
     # VF1.8: PHB Dwarf, one Tool Proficiency line
     "dwarf-phb-wizard3-2014": {},
     # G7: Haunted One, the either-or card resolved to Survivor

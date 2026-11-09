@@ -559,7 +559,7 @@ def test_innate_spells_rest_wrapper_is_handled_the_same_as_daily_not_dropped():
     scribing = next(s for s in subraces if s["index"] == "gnome-phb-mark-of-scribing-erlw")
     grants = {g["name"]: g for g in scribing["innate_spells"]}
     assert grants["Comprehend Languages"]["level"] == 1
-    assert grants["Comprehend Languages"]["uses"] == "1/day"
+    assert grants["Comprehend Languages"]["uses"] == "1/short or long rest"  # VF2.6 (was 1/day: the text says short or long rest)
     assert grants["Comprehend Languages"]["spell_id"] == "comprehend-languages"
     assert grants["Magic Mouth"]["level"] == 3
     assert grants["Magic Mouth"]["uses"] == "1/day"

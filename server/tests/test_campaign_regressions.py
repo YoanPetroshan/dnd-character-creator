@@ -991,3 +991,30 @@ def test_vf2_5_kobold_variants_that_drop_the_skill_pick_list_no_skill_proficienc
         return _species_features(resolve(d, catalog))
     assert "Skill Proficiency" in names("craftiness")
     assert "Skill Proficiency" not in names("defiance") and "Skill Proficiency" not in names("draconic-sorcery")
+
+
+# ---------------------------------------------------------------- VF2.6 Mark of Scribing: comprehend languages recharges on a short or long rest
+def test_vf2_6_data_only_mark_of_scribing_uses_the_innate_rest_wrapper():
+    wrappers = []
+    for rec in _races_json()["race"] + _races_json()["subrace"]:
+        for entry in rec.get("additionalSpells") or []:
+            for level, value in (entry.get("innate") or {}).items():
+                if isinstance(value, dict) and "rest" in value:
+                    wrappers.append((rec["name"], rec["source"], level))
+    assert wrappers == [("Mark of Scribing", "ERLW", "1")]
+    rec = next(r for r in _races_json()["subrace"] if r.get("name") == "Mark of Scribing")
+    text = " ".join(_plain(e) for e in rec["entries"][1]["entries"])
+    assert ("You can also cast comprehend languages once with this trait, and you regain the ability to cast it when you finish "
+            "a short or long rest.") in text
+    assert "cast the magic mouth spell with this trait, and you regain the ability to cast it when you finish a long rest" in text
+
+
+def test_vf2_6_comprehend_languages_is_once_per_short_or_long_rest(catalog):
+    res = resolve(_draft([("wizard", 5)], species="gnome-phb", subspecies="gnome-phb-mark-of-scribing-erlw"), catalog)
+    by_spell = {e["spellId"]: e for e in res["sheet"]["innateSpells"]}
+    comprehend = by_spell["comprehend-languages"]
+    assert (comprehend["uses"], comprehend["usesMax"], comprehend["recharge"]) == ("1/short or long rest", 1, "short-or-long")
+    # Magic Mouth (3rd level): "when you finish a long rest" -> unchanged
+    mouth = by_spell["magic-mouth"]
+    assert (mouth["uses"], mouth["usesMax"], mouth["recharge"]) == ("1/day", 1, "long")
+    assert by_spell["message"]["uses"] == "at-will"

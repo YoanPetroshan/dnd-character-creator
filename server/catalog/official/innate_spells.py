@@ -44,7 +44,8 @@ def _innate_spell_uses_and_names(level_value) -> tuple[str, list[str]]:
       dict-wrapped entries across races AND subraces).
     - `{"rest": {"1": [...]}}` — the ONE real exception (Mark of
       Scribing/ERLW, a subrace of Gnome/PHB, level 1: `{"rest": {"1":
-      ["comprehend languages"]}}`). The PREVIOUS version of this
+      ["comprehend languages"]}}`; VF2.6: read as "1/short or long rest",
+      the cadence its text states, no longer as "1/day"). The PREVIOUS version of this
       docstring claimed the wrapper key was "ALWAYS daily" — that claim
       was false, disproven by this exact record in this exact file.
       Mark of Scribing's own flavor text ("you can also cast comprehend
@@ -73,12 +74,17 @@ def _innate_spell_uses_and_names(level_value) -> tuple[str, list[str]]:
         return "at-will", [n for n in level_value if isinstance(n, str)]
     if isinstance(level_value, dict):
         wrapper = level_value.get("daily")
-        if not isinstance(wrapper, dict):
-            wrapper = level_value.get("rest")
         if isinstance(wrapper, dict):
             names = wrapper.get("1")
             if isinstance(names, list):
                 return "1/day", [n for n in names if isinstance(n, str)]
+        # VF2.6: the `rest` wrapper (Mark of Scribing's Comprehend Languages) is the short-or-long-rest cadence its text states
+        # ("you regain the ability to cast it when you finish a short or long rest"), as the `known.rest` wrapper of VF1.6
+        wrapper = level_value.get("rest")
+        if isinstance(wrapper, dict):
+            names = wrapper.get("1")
+            if isinstance(names, list):
+                return "1/short or long rest", [n for n in names if isinstance(n, str)]
     return "at-will", []
 
 

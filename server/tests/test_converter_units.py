@@ -53,7 +53,7 @@ def test_clean_innate_spell_name():
 def test_uses_and_names_shapes():
     assert _innate_spell_uses_and_names(["a", "b"]) == ("at-will", ["a", "b"])
     assert _innate_spell_uses_and_names({"daily": {"1": ["a"]}}) == ("1/day", ["a"])
-    assert _innate_spell_uses_and_names({"rest": {"1": ["a"]}}) == ("1/day", ["a"])
+    assert _innate_spell_uses_and_names({"rest": {"1": ["a"]}}) == ("1/short or long rest", ["a"])  # VF2.6: the text states short or long rest
     assert _innate_spell_uses_and_names({"weird": 1}) == ("at-will", [])
 
 

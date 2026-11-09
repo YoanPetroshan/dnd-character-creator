@@ -1126,7 +1126,7 @@ def test_g6_no_rebaseline_and_only_the_tiefling_sink_holds_a_limited_innate_spel
         elif n.rsplit("/", 1)[-1] == "tiefling-fierna-wizard5-2014":  # F1: the MTF legacy replaces Infernal Legacy
             assert [e["name"] for e in innate] == ["Friends", "Charm Person", "Suggestion"] and limited == ["Charm Person", "Suggestion"], n
         elif n.rsplit("/", 1)[-1] in ("firbolg-mpmm-wizard5-2014", "firbolg-vgm-wizard5-2014", "eladrin-dmg-wizard5-2014",
-                                      "mark-of-handling-wizard5-2014"):  # VF1.5 / VF1.6: the limits come from the trait text / `known` + `rest`
+                                      "mark-of-handling-wizard5-2014", "mark-of-scribing-wizard5-2014"):  # VF1.5 / VF1.6 / VF2.6: the limits come from the trait text / `known` + `rest`
             assert limited and all(e["usesMax"] == 1 for e in innate if "usesMax" in e), n
         else:
             assert not limited, n
@@ -1171,7 +1171,7 @@ def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
                     assert isinstance(o["source"], str) and o["source"], (name, card["id"], o["id"])
                     assert not o["id"].startswith("skill-") and card["source"]["kind"] != "equipment", (name, card["id"], o["id"])
         with_source += has
-    assert with_source == 251  # the two VF2.4 kenku-dmg-wizard3-2014 and human-phb-wizard3-2014 cases; the VF2.3 loxodon-ggr-wizard3-2014 case; the VF2.2 harengon-mpmm-wizard3-2014 case; the three VF2.1 species-AC sinks (lizardfolk-mpmm, tortle-ttp, warforged-erlw wizard3-2014); the VF1.8 dwarf-phb-wizard3-2014 case; the four VF1.5 / VF1.6 wizard5 innate-frequency sinks (Firbolg MPMM / VGM, Eladrin DMG, Mark of Handling); the VF1.4 dragonborn-phb-draconblood-fighter6-2014 case; the VF1.2 bard9-skill-empowerment-2014 case; the VF1.1 glory-tce-paladin7-2014 case; the four B1 PHB Dragonborn sinks (black, green, brass, white); the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
+    assert with_source == 252  # the VF2.6 mark-of-scribing-wizard5-2014 case; the two VF2.4 kenku-dmg-wizard3-2014 and human-phb-wizard3-2014 cases; the VF2.3 loxodon-ggr-wizard3-2014 case; the VF2.2 harengon-mpmm-wizard3-2014 case; the three VF2.1 species-AC sinks (lizardfolk-mpmm, tortle-ttp, warforged-erlw wizard3-2014); the VF1.8 dwarf-phb-wizard3-2014 case; the four VF1.5 / VF1.6 wizard5 innate-frequency sinks (Firbolg MPMM / VGM, Eladrin DMG, Mark of Handling); the VF1.4 dragonborn-phb-draconblood-fighter6-2014 case; the VF1.2 bard9-skill-empowerment-2014 case; the VF1.1 glory-tce-paladin7-2014 case; the four B1 PHB Dragonborn sinks (black, green, brass, white); the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
 
 
 def test_b2_feat_and_species_resources_are_guarded_not_stripped():
@@ -1227,6 +1227,13 @@ def test_vf1_5_6_innate_frequency_sinks():
     assert innate("firbolg-vgm-wizard5-2014") == {"detect-magic": either, "disguise-self": either}
     assert innate("eladrin-dmg-wizard5-2014") == {"misty-step": either}
     assert innate("mark-of-handling-wizard5-2014") == {"animal-friendship": either, "speak-with-animals": either}
+
+
+def test_vf2_6_mark_of_scribing_sink():
+    """VF2.6: no stored case held the Mark of Scribing (no rebaseline); the sink has Comprehend Languages once per short or long rest."""
+    res = next(e for n, e in _GOLDEN.items() if n.endswith("/mark-of-scribing-wizard5-2014"))["result"]
+    got = {e["spellId"]: (e["uses"], e.get("usesMax"), e.get("recharge")) for e in res["sheet"]["innateSpells"]}
+    assert got["comprehend-languages"] == ("1/short or long rest", 1, "short-or-long") and got["magic-mouth"] == ("1/day", 1, "long")
 
 
 def test_vf1_8_dwarf_phb_sink_lists_tool_proficiency_once():

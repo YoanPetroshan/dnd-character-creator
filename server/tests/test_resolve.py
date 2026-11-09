@@ -973,7 +973,7 @@ def test_rest_wrapped_innate_spell_resolves_on_the_sheet_not_silently_dropped(ca
     grants = {g["name"]: g for g in resolution["sheet"]["innateSpells"]}
     assert grants["Comprehend Languages"]["spellId"] == "comprehend-languages"
     assert grants["Comprehend Languages"]["level"] == 1
-    assert grants["Comprehend Languages"]["uses"] == "1/day"
+    assert grants["Comprehend Languages"]["uses"] == "1/short or long rest"  # VF2.6 (was 1/day: the text says short or long rest)
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
