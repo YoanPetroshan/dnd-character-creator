@@ -1052,7 +1052,9 @@ def _feat_spell_choice_templates(
                 continue
         elif variants:
             hinted = variant_hints.get(feat["index"])
-            offered = [v for v in variants if v == hinted] or variants
+            # VF4.1: a hint is a whole variant name (Magic Initiate "Cleric Spells") or the prefix of several (Strixhaven
+            # Initiate "Lorehold" -> "Lorehold 1" .. "Lorehold 3": the college is fixed, the cantrip pair is still picked)
+            offered = [v for v in variants if hinted and (v == hinted or v.startswith(f"{hinted} "))] or variants
             options = []
             for name in offered:
                 fixed = [e["name"] for e in feat.get("innate_spells", []) if e.get("variant") == name]

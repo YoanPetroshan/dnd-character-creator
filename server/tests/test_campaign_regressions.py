@@ -1018,3 +1018,64 @@ def test_vf2_6_comprehend_languages_is_once_per_short_or_long_rest(catalog):
     mouth = by_spell["magic-mouth"]
     assert (mouth["uses"], mouth["usesMax"], mouth["recharge"]) == ("1/day", 1, "long")
     assert by_spell["message"]["uses"] == "at-will"
+
+
+# ---------------------------------------------------------------- VF4.1 SCC Student backgrounds fix the Strixhaven Initiate college
+def _backgrounds_json():
+    return json.load(open(DATA / "backgrounds.json"))["background"]
+
+
+def _flat_text(x) -> str:
+    if isinstance(x, str):
+        return x
+    if isinstance(x, list):
+        return " ".join(_flat_text(i) for i in x)
+    if isinstance(x, dict):
+        return " ".join(_flat_text(v) for v in x.values())
+    return ""
+
+
+_COLLEGES = ("Lorehold", "Prismari", "Quandrix", "Silverquill", "Witherbloom")
+
+
+def test_vf4_1_data_the_student_backgrounds_name_their_college_in_the_feat_sentence():
+    recs = {r["name"]: r for r in _backgrounds_json() if r["source"] == "SCC"}
+    for college in _COLLEGES:
+        rec = recs[f"{college} Student"]
+        assert rec["feats"] == [{"strixhaven initiate|scc": True}]  # the data carries no variant, only the text does
+        assert f"You gain the {{@feat Strixhaven Initiate|SCC}} feat and must choose {college} within it." in _flat_text(rec["entries"])
+
+
+def test_vf4_1_the_fixed_variant_sentences_are_exactly_the_pinned_set():
+    """Every background whose text fixes a feat variant ('must choose X within it' / 'must choose X for the feat'):
+    the five SCC students and Astral Drifter (AAG). Nothing else in the data says it."""
+    import re
+    found = sorted(r["name"] for r in _backgrounds_json()
+                   if re.search(r"must choose \w+ (within it|for the feat)", _flat_text(r.get("entries"))))
+    assert found == ["Astral Drifter", "Lorehold Student", "Prismari Student", "Quandrix Student", "Silverquill Student",
+                     "Witherbloom Student"]
+
+
+@pytest.mark.parametrize("college", _COLLEGES)
+def test_vf4_1_student_background_fixes_the_college_card(catalog, college):
+    bid = f"{college.lower()}-student-scc"
+    assert catalog.backgrounds[bid]["feat_variant_hints"] == {"strixhaven-initiate-scc": college}
+    res = resolve(_draft([("fighter", 1)], ruleset="mixed", background=bid), catalog)
+    card = next(c for c in res["choices"] if c["id"] == "feat:strixhaven-initiate-scc:spell-variant")
+    assert [o["id"] for o in card["options"]] == [f"{college.lower()}-{n}" for n in (1, 2, 3)]
+
+
+def test_vf4_1_a_stored_foreign_college_is_not_taken(catalog):
+    """The t1-070 finding: a Lorehold Student got Witherbloom spells. A stored Witherbloom pick is now ignored."""
+    d = _draft([("fighter", 1)], ruleset="mixed", background="lorehold-student-scc")
+    d["background"]["choices"] = {"feat:strixhaven-initiate-scc:spell-variant": ["witherbloom-1"],
+                                  "feat:strixhaven-initiate-scc:spell-ability": ["int"]}
+    res = resolve(d, catalog)
+    card = next(c for c in res["choices"] if c["id"] == "feat:strixhaven-initiate-scc:spell-variant")
+    assert card["status"] == "pending"
+    names = {e["spellId"] for e in res["sheet"].get("innateSpells", [])}
+    assert not names & {"chill-touch", "druidcraft", "spare-the-dying"}
+    d["background"]["choices"]["feat:strixhaven-initiate-scc:spell-variant"] = ["lorehold-2"]
+    res = resolve(d, catalog)
+    known = {s["id"] if isinstance(s, dict) and "id" in s else s.get("spellId") for s in res["sheet"].get("innateSpells", [])}
+    assert {"light", "thaumaturgy"} <= known

@@ -80,6 +80,15 @@ def check_genie():
     assert "Magic Initiate|XPHB} (Wizard)" in json.dumps(bg["entries"])
 
 
+def check_scc_students():
+    from catalog.reference_data import BACKGROUND_FEAT_VARIANT_FROM_TEXT as table
+    for key, row in table.items():
+        name, _, source = key.partition("|")
+        bg = _bg(name.title(), source.upper())
+        assert bg["feats"] == [{"strixhaven initiate|scc": True}]
+        assert row["quote"] in json.dumps(bg["entries"])
+
+
 def check_chain():
     opt = _find(_load("optionalfeatures.json", "optionalfeature"), "Pact of the Chain", "XPHB")
     assert opt["additionalSpells"][0]["innate"]["_"] == {"ritual": ["find familiar|xphb"]}
@@ -95,6 +104,7 @@ CHECKS = {
     "echoing-soul-skill-count": check_echoing_soul,
     "harper-agent-thieves-cant": check_harper,
     "genie-touched-feat": check_genie,
+    "scc-student-feat-college": check_scc_students,
     "pact-of-the-chain-ritual": check_chain,
 }
 

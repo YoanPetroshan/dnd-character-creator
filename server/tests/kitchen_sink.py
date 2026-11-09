@@ -201,6 +201,9 @@ KITCHEN_SINK: dict[str, dict] = {
     # VF2.4: fixed species languages (Kenku DMG: Common and Auran) and the language pick card of the PHB Human. `once`
     "kenku-dmg-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("kenku-dmg", "acolyte")),
     "human-phb-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("human-phb", "acolyte")),
+    # VF4.1: a Silverquill Student (SCC) holds the Strixhaven Initiate feat with the college fixed by the background. Non-2024, `once`
+    "silverquill-student-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True,
+                                            origin=("human-phb", "silverquill-student-scc")),
     # VF2.6: Mark of Scribing, Comprehend Languages once per short or long rest (Magic Mouth stays 1/day). Non-2024, `once`
     "mark-of-scribing-wizard5-2014": _sub("wizard", 5, "2014", marks=("classes", "official"), once=True,
                                           origin=("gnome-phb", "acolyte", "gnome-phb-mark-of-scribing-erlw")),

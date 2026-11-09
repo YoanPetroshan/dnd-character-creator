@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
-from catalog.reference_data import BACKGROUND_FEATS_FROM_TEXT, ruleset_for_edition
+from catalog.reference_data import BACKGROUND_FEATS_FROM_TEXT, BACKGROUND_FEAT_VARIANT_FROM_TEXT, ruleset_for_edition
 from .common import _ability_bonus_options_from_5etools_weighted_pair, slug
 from .background_equipment import starting_equipment_options_2024_from_5etools
 from .equipment import _fixed_starting_equipment_from_5etools, _starting_equipment_options_from_5etools
@@ -284,7 +284,9 @@ def _background_from_5etools(raw: dict) -> dict | None:
         "feat_refs": feat_refs,
         # feat-additional-spells plan: {feat ref: variant name} for
         # spell-list-restricted grants ("magic initiate; cleric|xphb").
-        "feat_variant_hints": _feat_variant_hints_from_5etools(raw),
+        # VF4.1: a variant the record's text fixes while its `feats` key carries none (Strixhaven students: the college)
+        "feat_variant_hints": {**(BACKGROUND_FEAT_VARIANT_FROM_TEXT.get(f"{raw['name']}|{raw.get('source', '')}".lower()) or {}).get("hints", {}),
+                               **_feat_variant_hints_from_5etools(raw)},
     }
 
 

@@ -1210,6 +1210,20 @@ BACKGROUND_FEATS_FROM_TEXT: dict[str, dict] = {
     },
 }
 
+# VF4.1: a background whose TEXT fixes the variant (spell list / college) of the feat it grants while the `feats` key carries
+# none ("You gain the Strixhaven Initiate feat and must choose Lorehold within it."; Astral Drifter: "... Magic Initiate
+# feat from the Player's Handbook and must choose cleric for the feat."). Key = "name|source" lowercased; `hints` =
+# {feat ref: variant hint} in the shape `_feat_variant_hints_from_5etools` makes (a Magic Initiate variant is
+# "<List> Spells"; a Strixhaven Initiate hint is the college, which prefixes its three variants "Lorehold 1" ... "Lorehold 3");
+# `quote` is the record's own sentence (pinned by a test against the vendored data).
+BACKGROUND_FEAT_VARIANT_FROM_TEXT: dict[str, dict] = {
+    f"{college.lower()} student|scc": {
+        "hints": {"strixhaven-initiate-scc": college},
+        "quote": f"You gain the {{@feat Strixhaven Initiate|SCC}} feat and must choose {college} within it.",
+    }
+    for college in ("Lorehold", "Prismari", "Quandrix", "Silverquill", "Witherbloom")
+}
+
 # FE6 (B4): 5etools says `languageProficiencies: [{"thieves' cant": true}]` for Harper Agent (FRHoF) and the
 # converter used to drop the unknown key. index -> language ids ("You know Thieves' Cant."). Display names come
 # from LANGUAGE_NAMES (the 2024 rare table, C6b-2).
@@ -1278,6 +1292,13 @@ DATA_OVERRIDES: dict[str, dict] = {
         "raw_record_pin": {"file": "backgrounds.json", "record": "background Genie Touched|FRHoF",
                            "defect": "no `feats` field although its entries line says \"Magic Initiate|XPHB (Wizard)\""},
         "reason": "the record's own text names the feat; the table restores the raw-shaped `feats` list",
+    },
+    "scc-student-feat-college": {
+        "what": "The five SCC Student backgrounds (Lorehold, Prismari, Quandrix, Silverquill, Witherbloom) fix the Strixhaven Initiate college",
+        "where": "catalog.reference_data:BACKGROUND_FEAT_VARIANT_FROM_TEXT",
+        "raw_record_pin": {"file": "backgrounds.json", "record": "background Lorehold Student|SCC (and the four other colleges) feats",
+                           "defect": "[{\"strixhaven initiate|scc\": true}] carries no variant while the entry says \"must choose Lorehold within it\""},
+        "reason": "the record's own sentence names the college; the table restores the variant hint the Magic Initiate backgrounds carry",
     },
     "pact-of-the-chain-ritual": {
         "what": "Pact of the Chain (XPHB) Find Familiar is an at-will innate spell",
