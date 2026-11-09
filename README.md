@@ -127,8 +127,7 @@ the Vite dev origin (`http://localhost:5173`).
   changing the host, port or scheme makes the draft "disappear" (it is still under the old origin). Export the draft
   first.
 - The data ships in the repository, so no sync step is needed on the host.
-- A `Dockerfile` and `.dockerignore` are included, but **untested** (Docker is not installed on the development
-  machine).
+- There is no Docker image: `scripts/start.sh` is the supported way to run the app.
 
 ## Offline pack (Pyodide)
 
