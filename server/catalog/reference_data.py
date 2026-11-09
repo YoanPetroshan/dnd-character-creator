@@ -735,11 +735,16 @@ SPECIES_RESOURCES_2014.update({
     "dragonborn-phb-trait-3": _e("dragonborn-phb", "Breath Weapon", 1, "short-or-long",
         "Action: exhale destructive energy ({damage_type}); size, shape and the saving throw follow your Draconic "
         "Ancestry; {dice} damage on a failed save and half as much on a success",
-        ("The DC for this saving throw equals 8 + your Constitution modifier + your proficiency bonus",
+        ("Your draconic ancestry determines the size, shape, and damage type of the exhalation",
+         "the type of which is determined by your draconic ancestry",
+         "The DC for this saving throw equals 8 + your Constitution modifier + your proficiency bonus",
          "A creature takes 2d6 damage on a failed save, and half as much damage on a successful one",
          "The damage increases to 3d6 at 6th level, 4d6 at 11th level, and 5d6 at 16th level",
          "you can't use it again until you complete a short or long rest"),
-        dc="CON", damage_type="ancestry", dice_by_level=((1, "2d6"), (6, "3d6"), (11, "4d6"), (16, "5d6"))),
+        dc="CON", damage_type="ancestry", dice_by_level=((1, "2d6"), (6, "3d6"), (11, "4d6"), (16, "5d6")),
+        phb_ancestry=True,
+        note_picked="Action: exhale destructive energy in {shape}, {save} saving throw, {dice} {damage_type} damage on a "
+                    "failed save and half as much on a success"),
     "dragonborn-phb-draconblood-egw-trait-1": _e("dragonborn-phb", "Forceful Presence", 1, "short-or-long",
         "Advantage on a Charisma (Intimidation or Persuasion) check",
         ("you can do so with advantage", "you can't do so again until you finish a short or long rest")),
@@ -932,6 +937,37 @@ SPECIES_RESOURCES_2014.update({
         "You can breathe underwater for up to 1 hour",
         ("you can breathe underwater for up to 1 hour", "you can't use this trait again until you finish a long rest")),
 })
+
+# B1: the PHB Dragonborn's Draconic Ancestry table (the 10 rows of the PHB race entry, `races.json` "Draconic Ancestry"
+# table: Dragon | Damage Type | Breath Weapon). `row` is the verbatim data row (tests/test_b1_draconic_ancestry.py compares
+# it with the vendored record); the other fields are read from that row: `damage` the damage type, `shape` / `length` /
+# `width` the area ("5 by 30 ft. line" = a line 30 feet long and 5 feet wide; "15 ft. cone" = a 15-foot cone, no width),
+# `save` the ability of the saving throw ("Dex. save" / "Con. save"). The damage type alone does not name the dragon
+# (fire = Brass, Gold, Red), hence the card `species:dragonborn-phb:draconic-ancestry`.
+DRACONIC_ANCESTRY_PHB: dict[str, dict] = {
+    "black": {"name": "Black", "damage": "acid", "shape": "line", "length": 30, "width": 5, "save": "DEX",
+              "row": ("Black", "Acid", "5 by 30 ft. line (Dex. save)")},
+    "blue": {"name": "Blue", "damage": "lightning", "shape": "line", "length": 30, "width": 5, "save": "DEX",
+             "row": ("Blue", "Lightning", "5 by 30 ft. line (Dex. save)")},
+    "brass": {"name": "Brass", "damage": "fire", "shape": "line", "length": 30, "width": 5, "save": "DEX",
+              "row": ("Brass", "Fire", "5 by 30 ft. line (Dex. save)")},
+    "bronze": {"name": "Bronze", "damage": "lightning", "shape": "line", "length": 30, "width": 5, "save": "DEX",
+               "row": ("Bronze", "Lightning", "5 by 30 ft. line (Dex. save)")},
+    "copper": {"name": "Copper", "damage": "acid", "shape": "line", "length": 30, "width": 5, "save": "DEX",
+               "row": ("Copper", "Acid", "5 by 30 ft. line (Dex. save)")},
+    "gold": {"name": "Gold", "damage": "fire", "shape": "cone", "length": 15, "width": None, "save": "DEX",
+             "row": ("Gold", "Fire", "15 ft. cone (Dex. save)")},
+    "green": {"name": "Green", "damage": "poison", "shape": "cone", "length": 15, "width": None, "save": "CON",
+              "row": ("Green", "Poison", "15 ft. cone (Con. save)")},
+    "red": {"name": "Red", "damage": "fire", "shape": "cone", "length": 15, "width": None, "save": "DEX",
+            "row": ("Red", "Fire", "15 ft. cone (Dex. save)")},
+    "silver": {"name": "Silver", "damage": "cold", "shape": "cone", "length": 15, "width": None, "save": "CON",
+               "row": ("Silver", "Cold", "15 ft. cone (Con. save)")},
+    "white": {"name": "White", "damage": "cold", "shape": "cone", "length": 15, "width": None, "save": "CON",
+              "row": ("White", "Cold", "15 ft. cone (Con. save)")},
+}
+# The species records that hold the PHB table: the PHB Dragonborn and, through it, its EGW subraces (Draconblood, Ravenite).
+DRACONIC_ANCESTRY_RACES: tuple[str, ...] = ("dragonborn-phb",)
 
 # X2: the resource recharge vocabulary. `long` / `short` / `short-or-long` are rests; `turn` ("Once per turn"), `combat`
 # ("only once per combat"), `rage` ("only once per rage") and `other` (any other stated condition, written out in

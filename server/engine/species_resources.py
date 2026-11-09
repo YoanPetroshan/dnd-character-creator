@@ -98,8 +98,19 @@ def resources(catalog, race: dict | None, race_id: str | None, subrace: dict | N
             entry["die"] = spec["die"]
         if spec.get("shape"):
             details["shape"] = values["shape"] = spec["shape"]
+        phb_row = None
+        if spec.get("phb_ancestry"):  # B1: the PHB Dragonborn's Draconic Ancestry card (the dragon colour) decides all three
+            phb_row = reference_data.DRACONIC_ANCESTRY_PHB.get(_selected(choices, f"species:{race_id}:draconic-ancestry"))
+            if phb_row:
+                details["save"] = phb_row["save"]
+                values["save"] = _ABILITY_WORD[phb_row["save"]]
+                length = f"{phb_row['length']}-foot {phb_row['shape']}"
+                details["shape"] = values["shape"] = (f"a {length} that is {phb_row['width']} feet wide" if phb_row["width"]
+                                                      else f"a {length}")
         if spec.get("damage_type") == "ancestry":
             picked = ((variant or {}).get("resist") or [None])[0]
+            if phb_row:
+                picked = phb_row["damage"]
             if not picked and srd_breath:
                 picked = srd_breath["damage"][0]["damage_type"]["index"]
             elif not picked:  # PHB Dragonborn: the species resistance pick is the ancestry's damage type
@@ -118,6 +129,8 @@ def resources(catalog, race: dict | None, race_id: str | None, subrace: dict | N
                                   else "choose a Giant Ancestry")
         if unpicked_ancestry:  # WF: no ancestry yet: say so instead of splicing placeholder words into the sentence
             note_template = _unpicked_note(note_template, bool(spec.get("srd_ancestry") and not srd_breath))
+        if phb_row:
+            note_template = spec["note_picked"]
         details["note"] = note_template.format(**values)
         entry["details"] = details
         out.append(entry)

@@ -37,6 +37,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     "label-asi": {"en": "Ability Score Improvement", "bg": "Увеличение на характеристики (Ability Score Improvement)"},
     "label-lineage": {"en": "Lineage / Ancestry", "bg": "Родова линия / Потекло"},
     "label-size": {"en": "Size", "bg": "Размер"},
+    "label-dragon-colour": {"en": "Dragon Colour (Draconic Ancestry)", "bg": "Цвят на дракона"},
     "label-species-cantrip": {"en": "Cantrip", "bg": "Трик (Cantrip)"},
     "label-origin-feat": {"en": "Origin Feat", "bg": "Талант от произхода (Origin Feat)"},
     "label-feat": {"en": "Feat", "bg": "Талант (Feat)"},
@@ -150,6 +151,10 @@ MESSAGES: dict[str, dict[str, str]] = {
     "desc-species-spell-ability": {
         "en": "Choose the spellcasting ability for this species' spells.",
         "bg": "Изберете характеристиката (Ability) за заклинанията на тази раса (Species).",
+    },
+    "desc-dragon-colour": {
+        "en": "Choose the dragon of your Draconic Ancestry; it sets the damage type, area and saving throw of your Breath Weapon.",
+        "bg": "Изберете дракона от таблицата за драконово потекло; той определя вида щети, зоната и спасителния хвърлей (Saving Throw) на дъха ви.",
     },
     "desc-species-cantrip": {
         "en": "Choose which cantrip this species knows.",

@@ -290,6 +290,8 @@ _add("fighting-style-duplicate", lambda: dict(base(), classes=[{"classId": "figh
 _add("feat-duplicate-asi", lambda: _asi(**{"4": ["feat:lucky-xphb"], "6": ["feat:lucky-xphb"]}))
 _add("dark-gift-needs-ravenloft", lambda: dict(base(), sources=["srd"], background={"id": "mist-wanderer-rhw", "choices": {
     "background:mist-wanderer-rhw:feat-0": ["feat:mist-walker-rhw"]}}))
+_add("dragon-colour-no-longer-offered", lambda: dict(base(), ruleset="2014", species={"id": "dragonborn-phb", "choices": {
+    "species:dragonborn-phb:resistance": ["cold"], "species:dragonborn-phb:draconic-ancestry": ["red"]}}))
 _add("feat-hidden-by-filters-asi", lambda: dict(_asi(**{"4": ["feat:lucky-xphb"]}), sources=["srd"]))
 _add("asi-over-cap", lambda: dict(_asi(**{"4": ["ability-str", "ability-str"]}),
                                   abilities={"method": "manual", "base": dict(_ABIL, STR=20)}))

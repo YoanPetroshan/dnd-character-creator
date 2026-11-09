@@ -1116,7 +1116,7 @@ def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
                     assert isinstance(o["source"], str) and o["source"], (name, card["id"], o["id"])
                     assert not o["id"].startswith("skill-") and card["source"]["kind"] != "equipment", (name, card["id"], o["id"])
         with_source += has
-    assert with_source == 232  # the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
+    assert with_source == 236  # the four B1 PHB Dragonborn sinks (black, green, brass, white); the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
 
 
 def test_b2_feat_and_species_resources_are_guarded_not_stripped():
@@ -1164,3 +1164,20 @@ def test_f1_sinks_hold_the_species_picks_and_the_connoisseur_card():
     assert cards["class:wizard:8:asi:feat:magic-connoisseur-au:spell-variant"]["selected"] == ["wizard-spells"]
     assert [o["id"] for o in cards["class:wizard:8:asi:feat:magic-connoisseur-au:spell-variant"]["options"]] == ["cleric-spells", "wizard-spells"]
     assert sum(1 for i in cards if ":magic-connoisseur-au:spell-choice-" in i) == 2
+
+
+def test_b1_no_rebaseline_and_the_four_phb_dragonborn_sinks_hold_the_ancestry_card():
+    """B1: the stored `dragonborn6-2014` golden case is the SRD Dragonborn (ancestry subtrait card), not the PHB one, so no
+    stored case moved and `REBASELINES` has no `B1` entry. The four appended PHB Dragonborn sinks hold the new
+    `species:dragonborn-phb:draconic-ancestry` card, resolved, with the breath weapon's damage type, area and save."""
+    assert "B1" not in REBASELINES
+    assert all(e["result"]["sheet"]["species"]["id"] == "dragonborn" for n, e in _GOLDEN.items() if n.endswith("/dragonborn6-2014"))
+    expect = {"black": ("acid", "DEX", "a 30-foot line that is 5 feet wide", "3d6"), "green": ("poison", "CON", "a 15-foot cone", "3d6"),
+              "brass": ("fire", "DEX", "a 30-foot line that is 5 feet wide", "4d6"), "white": ("cold", "CON", "a 15-foot cone", "5d6")}
+    for color, (damage, save, shape, dice) in expect.items():
+        name = next(n for n in _GOLDEN if n.rsplit("/", 1)[-1].startswith(f"dragonborn-phb-{color}-"))
+        res = _GOLDEN[name]["result"]
+        card = next(c for c in res["choices"] if c["id"] == "species:dragonborn-phb:draconic-ancestry")
+        assert card["status"] == "resolved" and card["selected"] == [color], name
+        bw = next(r for r in res["derived"]["speciesResources"] if r["name"] == "Breath Weapon")
+        assert (bw["details"]["damageType"], bw["details"]["save"], bw["details"]["shape"], bw["dice"]) == (damage, save, shape, dice), name

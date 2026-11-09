@@ -152,6 +152,21 @@ KITCHEN_SINK: dict[str, dict] = {
         "class:wizard:4:asi:feat:magic-initiate-xphb:spell-variant": ["cleric-spells"],
         "class:wizard:8:asi": ["feat:magic-connoisseur-au"],
         "class:wizard:8:asi:feat:magic-connoisseur-au:spell-variant": ["wizard-spells"]}),
+    # B1: the PHB Dragonborn with its Draconic Ancestry (dragon colour) card: Black (acid, 5 by 30 ft. line, Dex.), Green
+    # (poison, 15 ft. cone, Con.), Brass (fire, a LINE: fire alone does not name the dragon) at 11 (4d6), White (cold, cone,
+    # Con.) at 16 (5d6). Non-2024, `once` (a "srd" filter hides the PHB species)
+    "dragonborn-phb-black-fighter6-2014": _sub("fighter", 6, "2014", marks=("classes", "official"), once=True,
+                                               origin=("dragonborn-phb", "acolyte"), overrides={
+        "species:dragonborn-phb:resistance": ["acid"], "species:dragonborn-phb:draconic-ancestry": ["black"]}),
+    "dragonborn-phb-green-fighter6-2014": _sub("fighter", 6, "2014", marks=("classes", "official"), once=True,
+                                               origin=("dragonborn-phb", "acolyte"), overrides={
+        "species:dragonborn-phb:resistance": ["poison"], "species:dragonborn-phb:draconic-ancestry": ["green"]}),
+    "dragonborn-phb-brass-fighter11-2014": _sub("fighter", 11, "2014", marks=("classes", "official"), once=True,
+                                                origin=("dragonborn-phb", "acolyte"), overrides={
+        "species:dragonborn-phb:resistance": ["fire"], "species:dragonborn-phb:draconic-ancestry": ["brass"]}),
+    "dragonborn-phb-white-fighter16-2014": _sub("fighter", 16, "2014", marks=("classes", "official"), once=True,
+                                                origin=("dragonborn-phb", "acolyte"), overrides={
+        "species:dragonborn-phb:resistance": ["cold"], "species:dragonborn-phb:draconic-ancestry": ["white"]}),
     # G3: Cleric 6 (Life) + Paladin 3 (Devotion) under 2014: one merged Channel Divinity (PHB 164) whose note keeps both
     # classes' options; non-2024, so part of the golden via --append
     "cleric6-paladin3-2014": {**_sub("cleric", 6, "2014", marks=("classes",)),

@@ -262,6 +262,11 @@ _EXPECT.update({
     "goliath5-2024": {"species_resources": ["Giant Ancestry", "Large Form"]},
     # W5b: the SRD Dragonborn (2014)
     "dragonborn6-2014": {"species_resources": ["Breath Weapon"]},
+    # B1: the PHB Dragonborn with a Draconic Ancestry colour: the breath weapon line carries the area and the save
+    "dragonborn-phb-black-fighter6-2014": {"species_resources": ["Breath Weapon"]},
+    "dragonborn-phb-green-fighter6-2014": {"species_resources": ["Breath Weapon"]},
+    "dragonborn-phb-brass-fighter11-2014": {"species_resources": ["Breath Weapon"]},
+    "dragonborn-phb-white-fighter16-2014": {"species_resources": ["Breath Weapon"]},
     # FE12: feat effects reach every export (notes, resources, attack-row notes, feat picks)
     "feats-mixed-fighter14": {"feats": ["alert-phb", "tough-phb", "great-weapon-master-phb", "lucky-phb", "observant-phb"],
                               "feat_resources": ["Luck Points"], "attack_note": "Great Weapon Master: before you attack",

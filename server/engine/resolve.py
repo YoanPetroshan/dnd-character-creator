@@ -2983,6 +2983,37 @@ def _selected_species_variant(race: dict | None, species_choices: dict, race_id:
     return next((by_id[s] for s in raw if isinstance(s, str) and s in by_id), None)
 
 
+def _draconic_ancestry_row_label(row: tuple) -> str:
+    return f"{row[0]}: {row[1]}, {row[2]}"  # the verbatim table cells: "Red: Fire, 15 ft. cone (Dex. save)"
+
+
+def _species_draconic_ancestry_template(race: dict | None, race_id: str | None, subrace: dict | None,
+                                        species_choices: dict) -> dict | None:
+    """B1: the PHB Dragonborn's Draconic Ancestry (the dragon colour), one of the 10 table rows
+    (`reference_data.DRACONIC_ANCESTRY_PHB`). The resistance pick (`species:<id>:resistance`, a damage type) does not name
+    the dragon (fire = Brass, Gold, Red), so the card follows it: once a valid resistance is picked only the colours of
+    that damage type are offered (a stored colour of another type is then reported as `pruned-no-longer-offered` and the
+    card is pending). The EGW subraces (Draconblood, Ravenite) replace the Damage Resistance and Draconic Ancestry traits
+    and keep the breath weapon, which the ancestry table still decides: all ten colours, not filtered."""
+    if not (race and race_id in reference_data.DRACONIC_ANCESTRY_RACES):
+        return None
+    options = list(reference_data.DRACONIC_ANCESTRY_PHB.items())
+    replaced = {n.lower() for n in (subrace or {}).get("overwrites_traits") or []}
+    if "draconic ancestry" not in replaced:
+        raw = species_choices.get(f"species:{race_id}:resistance")
+        pick = next((x for x in raw if isinstance(x, str)), None) if isinstance(raw, list) else None
+        if pick in {row["damage"] for _, row in options}:
+            options = [(cid, row) for cid, row in options if row["damage"] == pick]
+    return {
+        "id": f"species:{race_id}:draconic-ancestry",
+        "source": {"kind": "species", "id": race_id, "label": race["name"]},
+        "label": msg("label-dragon-colour"),
+        "description": msg("desc-dragon-colour"),
+        "count": 1,
+        "options": [{"id": cid, "label": _draconic_ancestry_row_label(row["row"])} for cid, row in options],
+    }
+
+
 def _species_size_template(race: dict | None, race_id: str | None) -> dict | None:
     """The size pick for a race that lists more than one size (Small or Medium)."""
     if not (race and race_id and race.get("size_options")):
@@ -6094,6 +6125,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
             if species_spell_tpl:
                 choice_templates.append(species_spell_tpl)
         choice_templates += _species_choice_templates(catalog, race, race_id, subrace, species_variant)
+        draconic_tpl = _species_draconic_ancestry_template(race, race_id, subrace, species_choices_raw)  # B1
+        if draconic_tpl:
+            choice_templates.append(draconic_tpl)
         if species_ability_choice_tpl:
             choice_templates.append(species_ability_choice_tpl)
     equipment_dependents: dict[str, dict[str, list[dict]]] = {}
