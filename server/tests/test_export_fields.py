@@ -231,6 +231,8 @@ _EXPECT = {
     "lizardfolk-mpmm-wizard3-2014": {}, "tortle-ttp-wizard3-2014": {}, "warforged-erlw-wizard3-2014": {},
     # VF2.2: Harengon, initiative with the Proficiency Bonus
     "harengon-mpmm-wizard3-2014": {},
+    # VF2.3: Loxodon, carrying capacity one size larger
+    "loxodon-ggr-wizard3-2014": {},
     # VF1.8: PHB Dwarf, one Tool Proficiency line
     "dwarf-phb-wizard3-2014": {},
     # G7: Haunted One, the either-or card resolved to Survivor

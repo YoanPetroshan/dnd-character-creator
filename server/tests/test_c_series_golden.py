@@ -339,6 +339,16 @@ REBASELINES: dict[str, dict] = {
         ],
         "why": "feat and species resources guarded by the golden (STRIP emptied, B2)",
     },
+    # VF2.3: a species whose trait says "you count as one size larger when determining your carrying capacity" (Powerful Build and
+    # kin) doubles the capacity (STR x 15 x 2, Medium -> Large) and the push / drag / lift weight. Rule: only a stored case whose
+    # species holds such a trait moves (the two VF1.5 Firbolg sinks, MPMM and VGM), and only the two numbers of the block.
+    "VF2a": {
+        "cases": ["ks/src-all/firbolg-mpmm-wizard5-2014", "ks/src-all/firbolg-vgm-wizard5-2014"],
+        "paths": [
+            r"^result\.derived\.carryingCapacity\.(capacity|pushDragLift)$",
+        ],
+        "why": "Powerful Build counts one size larger for the carrying capacity (VF2.3)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -691,7 +701,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2") and STRIP == ()
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a") and STRIP == ()
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
@@ -1119,7 +1129,7 @@ def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
                     assert isinstance(o["source"], str) and o["source"], (name, card["id"], o["id"])
                     assert not o["id"].startswith("skill-") and card["source"]["kind"] != "equipment", (name, card["id"], o["id"])
         with_source += has
-    assert with_source == 248  # the VF2.2 harengon-mpmm-wizard3-2014 case; the three VF2.1 species-AC sinks (lizardfolk-mpmm, tortle-ttp, warforged-erlw wizard3-2014); the VF1.8 dwarf-phb-wizard3-2014 case; the four VF1.5 / VF1.6 wizard5 innate-frequency sinks (Firbolg MPMM / VGM, Eladrin DMG, Mark of Handling); the VF1.4 dragonborn-phb-draconblood-fighter6-2014 case; the VF1.2 bard9-skill-empowerment-2014 case; the VF1.1 glory-tce-paladin7-2014 case; the four B1 PHB Dragonborn sinks (black, green, brass, white); the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
+    assert with_source == 249  # the VF2.3 loxodon-ggr-wizard3-2014 case; the VF2.2 harengon-mpmm-wizard3-2014 case; the three VF2.1 species-AC sinks (lizardfolk-mpmm, tortle-ttp, warforged-erlw wizard3-2014); the VF1.8 dwarf-phb-wizard3-2014 case; the four VF1.5 / VF1.6 wizard5 innate-frequency sinks (Firbolg MPMM / VGM, Eladrin DMG, Mark of Handling); the VF1.4 dragonborn-phb-draconblood-fighter6-2014 case; the VF1.2 bard9-skill-empowerment-2014 case; the VF1.1 glory-tce-paladin7-2014 case; the four B1 PHB Dragonborn sinks (black, green, brass, white); the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
 
 
 def test_b2_feat_and_species_resources_are_guarded_not_stripped():

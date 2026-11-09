@@ -196,6 +196,8 @@ KITCHEN_SINK: dict[str, dict] = {
                                      "equip": [{"itemId": "chain-mail", "qty": 1, "equipped": True}]},
     # VF2.2: the Harengon adds the Proficiency Bonus to initiative (Hare-Trigger). Non-2024, `once`
     "harengon-mpmm-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("harengon-mpmm", "acolyte")),
+    # VF2.3: Powerful Build counts the character one size larger for the carrying capacity (and, with VF2.1, natural armor 12 + CON). `once`
+    "loxodon-ggr-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("loxodon-ggr", "acolyte")),
     # VF1.8: the PHB Dwarf lists Tool Proficiency once (with the picked tool). Non-2024, `once`
     "dwarf-phb-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("dwarf-phb", "acolyte")),
     # G3: Cleric 6 (Life) + Paladin 3 (Devotion) under 2014: one merged Channel Divinity (PHB 164) whose note keeps both

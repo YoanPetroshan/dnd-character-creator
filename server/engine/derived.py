@@ -126,13 +126,17 @@ def passive_skill(skills: dict[str, int], skill_id: str) -> int:
     return 10 + skills.get(skill_id, 0)
 
 
-_SIZE_CAPACITY_MULTIPLIER = {"Tiny": 0.5, "Small": 1, "Medium": 1, "Large": 2}
+_SIZES = ("Tiny", "Small", "Medium", "Large", "Huge", "Gargantuan")
+_SIZE_CAPACITY_MULTIPLIER = {"Tiny": 0.5, "Small": 1, "Medium": 1, "Large": 2, "Huge": 4, "Gargantuan": 8}  # PHB p.176 Size and Strength
 
 
-def carrying_capacity(str_score: int, size: str | None) -> int | float:
-    """Carrying capacity in pounds: STR x 15, halved for Tiny, doubled for
-    Large; every other (or unknown) size counts as x1."""
-    value = str_score * 15 * _SIZE_CAPACITY_MULTIPLIER.get(size or "Medium", 1)
+def carrying_capacity(str_score: int, size: str | None, size_steps: int = 0) -> int | float:
+    """Carrying capacity in pounds: STR x 15, halved for Tiny, doubled for Large, x4 Huge, x8 Gargantuan (PHB p.176); an
+    unknown size counts as Medium. `size_steps` (VF2.3, Powerful Build / Equine Build / Hippo Build: "you count as one size larger
+    when determining your carrying capacity and the weight you can push, drag, or lift") moves the size up the ladder first."""
+    size = size if size in _SIZES else "Medium"
+    size = _SIZES[min(_SIZES.index(size) + max(size_steps, 0), len(_SIZES) - 1)]
+    value = str_score * 15 * _SIZE_CAPACITY_MULTIPLIER[size]
     return int(value) if value == int(value) else value
 
 
@@ -177,7 +181,7 @@ def pack_weights_from_contents(items: dict) -> dict:
 
 
 def carrying_summary(str_score: int, size: str | None, entries: list[dict], items: dict,
-                     weights: dict | None = None) -> dict:
-    capacity = carrying_capacity(str_score, size)
+                     weights: dict | None = None, size_steps: int = 0) -> dict:
+    capacity = carrying_capacity(str_score, size, size_steps)
     carried = equipment_weight(entries, items, weights)
     return {"capacity": capacity, "pushDragLift": capacity * 2, "carried": carried, "overCapacity": carried > capacity}

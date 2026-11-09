@@ -154,7 +154,8 @@ def test_carrying_capacity_by_size():
     assert derived.carrying_capacity(16, "Large") == 480  # 16 x 15 x 2
     assert derived.carrying_capacity(16, "Tiny") == 120  # 16 x 15 x 0.5
     assert derived.carrying_capacity(7, "Tiny") == 52.5
-    assert derived.carrying_capacity(10, "Gargantuan") == 150  # unlisted sizes use x1
+    assert derived.carrying_capacity(10, "Gargantuan") == 1200  # PHB p.176: Huge x4, Gargantuan x8 (VF2.3; an unknown size is Medium)
+    assert derived.carrying_capacity(10, "Colossal") == 150
     assert derived.carrying_capacity(30, "Medium") == 450
 
 

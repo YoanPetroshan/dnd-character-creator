@@ -609,3 +609,70 @@ def test_vf2_2_it_replaces_the_half_bonus_of_jack_of_all_trades(catalog):
     assert bard["initiative"] == bard["abilityModifiers"]["DEX"] + bard["proficiencyBonus"]
     plain = _init(catalog, "dwarf", classes=(("bard", 2),))
     assert plain["initiative"] == plain["abilityModifiers"]["DEX"] + 1
+
+
+# ---------------------------------------------------------------- VF2.3 "count as one size larger" (Powerful Build and kin)
+# race record -> trait name (every race record whose entries say it; found by scanning races.json, `_copy` records are not imported)
+VF2_3 = {
+    "bugbear-erlw": "Powerful Build", "bugbear-mpmm": "Powerful Build", "bugbear-vgm": "Powerful Build",
+    "centaur-ggr": "Equine Build", "centaur-mpmm": "Equine Build",
+    "firbolg-mpmm": "Powerful Build", "firbolg-vgm": "Powerful Build",
+    "giff-aag": "Hippo Build",
+    "goliath-mpmm": "Little Giant", "goliath-vgm": "Powerful Build", "goliath-xphb": "Powerful Build",
+    "loxodon-ggr": "Powerful Build",
+    "orc-erlw": "Powerful Build", "orc-mpmm": "Powerful Build", "orc-vgm": "Powerful Build",
+}
+
+
+def test_vf2_3_data_every_record_with_the_text(catalog):
+    raw = {f"{r['name'].lower().replace(' ', '-')}-{r['source'].lower()}": r for r in _races_json()["race"]}
+    found = {}
+    for rid, rec in raw.items():
+        if "_copy" in rec:
+            continue
+        for s in _race_strings(rec["name"], rec["source"]):
+            if _re.search(r"count as one size larger when determining your carrying (capacity|weight)", s):
+                found[rid] = s
+    assert set(found) == set(VF2_3), set(found) ^ set(VF2_3)
+    assert "carrying weight" in found["goliath-mpmm"]  # the record's own wording of the MPMM Little Giant
+    # the same scan over the imported trait texts, by trait: the engine reads these, not a name list
+    by_catalog = {rid for rid, r in catalog.races.items()
+                  if any(_re.search(r"count as one size larger when determining your carrying (capacity|weight)",
+                                    " ".join(catalog.traits[t["index"]]["desc"])) for t in r["traits"])}
+    assert by_catalog == set(VF2_3)
+    assert not any(" ".join(catalog.traits[t["index"]]["desc"]).count("size larger when determining") for s in catalog.subraces.values()
+                   for t in s["racial_traits"])
+
+
+def _carry(catalog, species, ruleset="2014", strength=14):
+    res = resolve(_draft([("fighter", 1)], ruleset=ruleset, species=species, scores={"STR": strength}), catalog)
+    return res["derived"]["carryingCapacity"], res["sheet"]["abilities"], res
+
+
+@pytest.mark.parametrize("species", sorted(VF2_3))
+@pytest.mark.parametrize("ruleset", ["2014", "2024"])
+def test_vf2_3_capacity_and_push_drag_lift_double(catalog, species, ruleset):
+    cc, _a, res = _carry(catalog, species, ruleset)
+    strength = res["sheet"]["abilities"]["STR"]
+    size = res["sheet"]["species"]["size"]
+    assert size == "Medium", (species, size)  # the table below relies on Medium -> Large (x2)
+    assert cc["capacity"] == strength * 15 * 2 and cc["pushDragLift"] == strength * 15 * 4, (species, cc, strength)
+
+
+def test_vf2_3_control_species_without_the_trait_are_unchanged(catalog):
+    for species in ("human", "dwarf", "halfling", "tortle-mpmm", "lizardfolk-mpmm", "goblin-mpmm"):
+        cc, _a, res = _carry(catalog, species)
+        strength = res["sheet"]["abilities"]["STR"]
+        size = res["sheet"]["species"]["size"] or "Medium"
+        assert cc["capacity"] == strength * 15 * (0.5 if size == "Tiny" else 1), (species, cc)
+
+
+def test_vf2_3_the_size_ladder_for_derived():
+    from engine import derived
+    assert derived.carrying_capacity(10, "Medium", size_steps=1) == 300      # Large x2
+    assert derived.carrying_capacity(10, "Small", size_steps=1) == 150       # Medium x1
+    assert derived.carrying_capacity(10, "Tiny", size_steps=1) == 150        # Small x1
+    assert derived.carrying_capacity(10, "Large", size_steps=1) == 600       # Huge x4
+    assert derived.carrying_capacity(10, "Gargantuan", size_steps=1) == 1200  # no size above Gargantuan: x8 stays
+    assert derived.carrying_capacity(10, "Huge") == 600 and derived.carrying_capacity(10, "Gargantuan") == 1200
+    assert derived.carrying_summary(10, "Medium", [], {}, size_steps=1)["pushDragLift"] == 600
