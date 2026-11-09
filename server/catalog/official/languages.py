@@ -8,7 +8,7 @@ from .common import slug
 _LANGUAGES_BY_INDEX = {lang["index"]: lang for lang in LANGUAGES}
 
 
-def _language_ref_from_key(key: str) -> dict | None:
+def _language_ref_from_key(key: str, extra_names: dict[str, str] | None = None) -> dict | None:
     """Looks up a 5etools language slug (a fixed-grant object key like
     "giant", or a choose.from list entry like "deep speech") against
     reference_data.LANGUAGES, returning the SRD-shaped {index, name, url}
@@ -20,11 +20,13 @@ def _language_ref_from_key(key: str) -> dict | None:
     LANGUAGES' own entry)."""
     lang = _LANGUAGES_BY_INDEX.get(slug(key))
     if lang is None:
+        if extra_names and slug(key) in extra_names:  # VF2.4: a Primordial dialect named by a species record (display name only)
+            return {"index": slug(key), "name": extra_names[slug(key)], "url": ""}
         return None
     return {"index": lang["index"], "name": lang["name"], "url": ""}
 
 
-def _language_choice_option_from_5etools(name: str) -> dict:
+def _language_choice_option_from_5etools(name: str, other: tuple = ()) -> dict | list[dict]:
     """Converts ONE entry of a background language choice's `choose.from`
     list into an options_array 'reference' option — the SAME mechanism
     _skill_choice_envelope_from_5etools/_tool_choice_envelope_from_5etools
@@ -37,6 +39,8 @@ def _language_choice_option_from_5etools(name: str) -> dict:
     list, which would make it indistinguishable from a real anyStandard
     wildcard option."""
     if name.lower() == "other":
+        if other:  # VF2.4: the species record names the language in its text (Simic Hybrid: Elvish or Vedalken)
+            return [{"option_type": "reference", "item": {"index": slug(n), "name": n, "url": ""}} for n in other]
         return {"option_type": "reference", "item": {"index": "other", "name": "Other", "url": ""}}
     lang = _language_ref_from_key(name)
     if lang is not None:
@@ -50,7 +54,8 @@ def _language_choice_option_from_5etools(name: str) -> dict:
     return {"option_type": "reference", "item": {"index": slug(name), "name": name.title(), "url": ""}}
 
 
-def _language_grants_from_5etools(raw: dict) -> tuple[list[dict], dict | None]:
+def _language_grants_from_5etools(raw: dict, extra_names: dict[str, str] | None = None,
+                                  other: tuple = ()) -> tuple[list[dict], dict | None]:
     """Converts a background's `languageProficiencies` field into
     (fixed_grants, language_options_envelope) — the SRD-shaped
     `bg["languages"]` / `bg["language_options"]` fields resolve.py already
@@ -133,6 +138,9 @@ def _language_grants_from_5etools(raw: dict) -> tuple[list[dict], dict | None]:
     is fully representable in this model regardless of which reading is
     picked — disclosed here, and in the Task 3 report, for the controller
     to decide whether it's worth a dedicated follow-up."""
+    # VF2.4 (species records only; backgrounds and feats pass nothing): `extra_names` = Primordial dialect keys
+    # ({"auran": true}) that become fixed grants; `other` = the language names the record's text gives for its
+    # `other: true` flag (a fixed grant) or for an "other" entry of a `choose.from` list.
     fixed: list[dict] = []
     any_count = 0
     choose_count = 0
@@ -147,8 +155,13 @@ def _language_grants_from_5etools(raw: dict) -> tuple[list[dict], dict | None]:
         for key, value in entry.items():
             if key in ("anyStandard", "choose"):
                 continue
+            if key == "other" and value is True:
+                for name in other:
+                    fixed.append({"index": slug(name), "name": name, "url": ""})
+                    entry_granted_fixed = True
+                continue
             if value is True:
-                lang = _language_ref_from_key(key)
+                lang = _language_ref_from_key(key, extra_names)
                 if lang is not None:
                     fixed.append(lang)
                     entry_granted_fixed = True
@@ -172,7 +185,9 @@ def _language_grants_from_5etools(raw: dict) -> tuple[list[dict], dict | None]:
             choose_count += choose.get("count", 1)
             saw_choice = True
             entry_has_wildcard = True
-            choose_options.extend(_language_choice_option_from_5etools(name) for name in choose.get("from", []))
+            for name in choose.get("from", []):
+                opt = _language_choice_option_from_5etools(name, other)
+                choose_options.extend(opt if isinstance(opt, list) else [opt])
 
         if entry_granted_fixed and not entry_has_wildcard:
             saw_fixed_only_entry = True

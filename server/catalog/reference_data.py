@@ -5430,10 +5430,47 @@ LANGUAGES_2024_RARE: list[dict[str, str]] = [
     {"index": "thieves-cant", "name": "Thieves' Cant"},
     {"index": "undercommon", "name": "Undercommon"},
 ]
+# VF2.4: languages the 2014 species records grant that the pick pool (LANGUAGES) does not hold. Display names only: they are
+# never offered in a pick card. (a) The Primordial dialects the records key by name ({"auran": true} Kenku DMG / VGM,
+# {"aquan": true} Locathah, Merfolk DMG, Sea Elf, Tortle TTP, {"terran": true} Deep Gnome DMG, ...); "ignan" completes the
+# set (no record uses it yet). (b) The record's `other: true` ("another language, named in the text": Aven, Gith, Quori ...)
+# -- `names` are written in the quoted sentence of the record's own Languages trait, which a test pins. Keyed by the catalog
+# race / subrace id. `other` also stands for Vedalken in the Simic Hybrid choice ("your choice of Elvish or Vedalken").
+SPECIES_DIALECT_LANGUAGES: dict[str, str] = {"auran": "Auran", "aquan": "Aquan", "ignan": "Ignan", "terran": "Terran"}
+SPECIES_OTHER_LANGUAGES: dict[str, dict] = {
+    "aarakocra-eepc": {"names": ["Aarakocra"], "quote": "You can speak, read, and write Common, Aarakocra, and Auran."},
+    "aven-psa": {"names": ["Aven"], "quote": "You can speak, read, and write Common and Aven."},
+    "aven-psd": {"names": ["Aven"], "quote": "You can speak, read, and write Common and Aven."},
+    "bullywug-dmg": {"names": ["Bullywug"], "quote": "You can speak, read, and write Bullywug."},
+    "gith-mtf": {"names": ["Gith"], "quote": "You can speak, read, and write Common and Gith."},
+    "grung-oga": {"names": ["Grung"], "quote": "You can speak, read, and write Grung."},
+    "kalashtar-erlw": {"names": ["Quori"], "quote": "You can speak, read, and write Common, Quori, and one other language of your choice."},
+    "khenra-psa": {"names": ["Khenra"], "quote": "You can speak, read, and write Common and Khenra."},
+    "kor-psz": {"names": ["Kor silent speech"], "quote": "You can speak, read, and write Common, and communicate in the silent speech of the Kor."},
+    "leonin-mot": {"names": ["Leonin"], "quote": "You can speak, read, and write Common and Leonin."},
+    "loxodon-ggr": {"names": ["Loxodon"], "quote": "You can speak, read, and write Common and Loxodon."},
+    "merfolk-psz": {"names": ["Merfolk"], "quote": "You can speak, read, and write Common, Merfolk, and one extra language of your choice."},
+    "minotaur-ggr": {"names": ["Minotaur"], "quote": "You can speak, read, and write Common and Minotaur."},
+    "minotaur-(amonkhet)-psa": {"names": ["Minotaur"], "quote": "You can speak, read, and write Common and Minotaur."},
+    "naga-psa": {"names": ["Naga"], "quote": "You can speak, read, and write Common and Naga."},
+    "simic-hybrid-ggr": {"names": ["Vedalken"], "quote": "You can speak, read, and write Common and your choice of Elvish or Vedalken."},
+    "siren-psx": {"names": ["Siren"],
+                  "quote": "You can speak, read, and write Common Trade Pidgin (if it exists in your campaign) and Siren."},
+    "troglodyte-dmg": {"names": ["Troglodyte"], "quote": "You can speak, read, and write Troglodyte."},
+    "vampire-psz": {"names": ["Vampire"], "quote": "You can speak, read, and write Common and Vampire."},
+    "vedalken-ggr": {"names": ["Vedalken"], "quote": "You can speak, read, and write Common, Vedalken, and one other language of your choice."},
+    "vedalken-psk": {"names": ["Vedalken"], "quote": "You can speak, read, and write Common and Vedalken."},
+    "human-phb-keldon-psd": {"names": ["Keldon"], "quote": "You can speak, read, and write Common and Keldon."},
+    "merfolk-psz-ixalan;-blue-psx": {"names": ["Merfolk"], "quote": "You can speak, read, and write Common Trade Pidgin (if it exists in your campaign), Merfolk, and one additional language of your choice."},
+    "merfolk-psz-ixalan;-green-psx": {"names": ["Merfolk"], "quote": "You can speak, read, and write Common Trade Pidgin (if it exists in your campaign), Merfolk, and one additional language of your choice."},
+}
+
 # id -> display name of every language any ruleset can produce (exports read this).
 LANGUAGE_NAMES: dict[str, str] = {
     lang["index"]: lang["name"] for lang in LANGUAGES + LANGUAGES_2024_STANDARD + LANGUAGES_2024_RARE
 }
+LANGUAGE_NAMES.update(SPECIES_DIALECT_LANGUAGES)
+LANGUAGE_NAMES.update({n.lower().replace(" ", "-"): n for row in SPECIES_OTHER_LANGUAGES.values() for n in row["names"]})
 
 # XPHB class features that grant languages (texts read from catalog.features on 2026-10-10):
 #   Rogue 1 Thieves' Cant   "You know Thieves' Cant and one other language of your choice, which you choose

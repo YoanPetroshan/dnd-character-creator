@@ -536,6 +536,18 @@ SNAPSHOT_REBASELINES: dict[str, dict] = {
         "paths": [r"^warnings(\[[0-9]+\])*$"],
         "why": "ability-final-above-20 warning (VF1.9a)",
     },
+    # VF2.4: an official (non-SRD) 2014 species with an `anyStandard` / `choose` language entry (PHB Human and Half-Elf, Custom
+    # Lineage, Warforged ERLW, Tabaxi, Changeling ...) gains the card `species:<id>[:subspecies:<sub>]:languages`; the pending card
+    # is a new key under `cards` and moves the export gate list. Under ruleset 2024 the C8 origin card disables the options of a
+    # fixed language the species now gives ("already known"): `disabled.origin:languages | <language>`. Cases: every zoo case
+    # that holds such a species (selected by the paths: a case without one has no diff).
+    "VF2b": {
+        "cases": ["*/ks/src-all/dragonborn-phb-*", "*/ks/src-all/eladrin-dmg-wizard5-2014", "*/ks/src-all/firbolg-vgm-wizard5-2014",
+                  "*/ks/src-all/mark-of-handling-wizard5-2014", "*/ks/src-all/warforged-erlw-wizard3-2014"],
+        "paths": [r"^cards[.]species:[a-z0-9-]+(:subspecies:[a-z0-9;()-]+)?:languages$", r"^exportGate(\[[0-9]+\])*$",
+                  r"^disabled[.]origin:languages [|] [a-z-]+$"],
+        "why": "official species language pick cards (VF2.4)",
+    },
 }
 
 

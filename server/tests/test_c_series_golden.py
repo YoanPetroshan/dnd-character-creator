@@ -349,6 +349,23 @@ REBASELINES: dict[str, dict] = {
         ],
         "why": "Powerful Build counts one size larger for the carrying capacity (VF2.3)",
     },
+    # VF2.4: an official (non-SRD) 2014 species gives the fixed languages of its record (`languageProficiencies`) and a pick
+    # card for each `anyStandard` / `choose` entry. Rule: a stored case whose species or subspecies record carries
+    # `languageProficiencies` and whose fixed languages were not already all in the sheet (the filler's Acolyte picks hid
+    # the overlap) gains them in `sheet.proficiencies.languages`; a record with a pick (Human PHB Mark of Handling, Warforged
+    # ERLW) also gains the species language card (the root of `choices[species:<id>:languages]`) and the filler's first-option
+    # pick for it in the draft. No other path.
+    "VF2b": {
+        "cases": ["ks/src-all/dragonborn-phb-*", "ks/src-all/eladrin-dmg-wizard5-2014", "ks/src-all/firbolg-vgm-wizard5-2014",
+                  "ks/src-all/loxodon-ggr-wizard3-2014", "ks/src-all/mark-of-handling-wizard5-2014", "ks/src-all/tiefling-*",
+                  "ks/src-all/tortle-ttp-wizard3-2014", "ks/src-all/warforged-erlw-wizard3-2014"],
+        "paths": [
+            r"^result\.sheet\.proficiencies\.languages$",
+            r"^result\.choices\[species:[^\].]+(:subspecies:[^\].]+)?:languages\]",
+            r"^draft\.species\.choices\.species:[^.]+:languages",
+        ],
+        "why": "official species fixed languages and language pick cards (VF2.4)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -701,7 +718,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a") and STRIP == ()
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a", "VF2b") and STRIP == ()
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
@@ -1129,7 +1146,7 @@ def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
                     assert isinstance(o["source"], str) and o["source"], (name, card["id"], o["id"])
                     assert not o["id"].startswith("skill-") and card["source"]["kind"] != "equipment", (name, card["id"], o["id"])
         with_source += has
-    assert with_source == 249  # the VF2.3 loxodon-ggr-wizard3-2014 case; the VF2.2 harengon-mpmm-wizard3-2014 case; the three VF2.1 species-AC sinks (lizardfolk-mpmm, tortle-ttp, warforged-erlw wizard3-2014); the VF1.8 dwarf-phb-wizard3-2014 case; the four VF1.5 / VF1.6 wizard5 innate-frequency sinks (Firbolg MPMM / VGM, Eladrin DMG, Mark of Handling); the VF1.4 dragonborn-phb-draconblood-fighter6-2014 case; the VF1.2 bard9-skill-empowerment-2014 case; the VF1.1 glory-tce-paladin7-2014 case; the four B1 PHB Dragonborn sinks (black, green, brass, white); the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
+    assert with_source == 251  # the two VF2.4 kenku-dmg-wizard3-2014 and human-phb-wizard3-2014 cases; the VF2.3 loxodon-ggr-wizard3-2014 case; the VF2.2 harengon-mpmm-wizard3-2014 case; the three VF2.1 species-AC sinks (lizardfolk-mpmm, tortle-ttp, warforged-erlw wizard3-2014); the VF1.8 dwarf-phb-wizard3-2014 case; the four VF1.5 / VF1.6 wizard5 innate-frequency sinks (Firbolg MPMM / VGM, Eladrin DMG, Mark of Handling); the VF1.4 dragonborn-phb-draconblood-fighter6-2014 case; the VF1.2 bard9-skill-empowerment-2014 case; the VF1.1 glory-tce-paladin7-2014 case; the four B1 PHB Dragonborn sinks (black, green, brass, white); the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
 
 
 def test_b2_feat_and_species_resources_are_guarded_not_stripped():

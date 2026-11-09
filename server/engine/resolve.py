@@ -6811,8 +6811,10 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     # F3a-5: class fixed languages and Lessons / ASI feat languages count from their (class, level) position on, so
     # an earlier pick wins and the later duplicate is blamed; origin feats, species, background and Common come first.
     lang_class_order = [rc["cls_id"] for rc in resolved_classes if rc["cls"]]
+    # VF2.4: the fixed languages of an official subrace (High Elf, Deep Gnome ...) count like the race's
     fixed_languages = [lang["index"] for lang in (bg.get("languages", []) if bg else [])] + \
         [lang["index"] for lang in (race.get("languages", []) if race else [])] + \
+        [lang["index"] for lang in ((subrace or {}).get("languages") or [])] + \
         _feat_languages([f for f in resolved_feats if not _feat_build_position(f, lang_class_order)]) + \
         class_choices_2024.fixed_origin_languages(ruleset)  # C8: Common
     positioned_languages = class_choices_2024.fixed_class_language_entries(catalog, resolved_classes, ruleset) + [

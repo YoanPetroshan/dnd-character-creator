@@ -198,6 +198,9 @@ KITCHEN_SINK: dict[str, dict] = {
     "harengon-mpmm-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("harengon-mpmm", "acolyte")),
     # VF2.3: Powerful Build counts the character one size larger for the carrying capacity (and, with VF2.1, natural armor 12 + CON). `once`
     "loxodon-ggr-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("loxodon-ggr", "acolyte")),
+    # VF2.4: fixed species languages (Kenku DMG: Common and Auran) and the language pick card of the PHB Human. `once`
+    "kenku-dmg-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("kenku-dmg", "acolyte")),
+    "human-phb-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("human-phb", "acolyte")),
     # VF1.8: the PHB Dwarf lists Tool Proficiency once (with the picked tool). Non-2024, `once`
     "dwarf-phb-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("dwarf-phb", "acolyte")),
     # G3: Cleric 6 (Life) + Paladin 3 (Devotion) under 2014: one merged Channel Divinity (PHB 164) whose note keeps both

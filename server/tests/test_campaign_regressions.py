@@ -676,3 +676,169 @@ def test_vf2_3_the_size_ladder_for_derived():
     assert derived.carrying_capacity(10, "Gargantuan", size_steps=1) == 1200  # no size above Gargantuan: x8 stays
     assert derived.carrying_capacity(10, "Huge") == 600 and derived.carrying_capacity(10, "Gargantuan") == 1200
     assert derived.carrying_summary(10, "Medium", [], {}, size_steps=1)["pushDragLift"] == 600
+
+
+# ---------------------------------------------------------------- VF2.4 fixed species languages and language picks of official species
+_LANG_POOL = {"common", "dwarvish", "elvish", "giant", "gnomish", "goblin", "halfling", "orc", "abyssal", "celestial", "draconic",
+              "deep speech", "infernal", "primordial", "sylvan", "undercommon"}
+_LANG_DIALECTS = {"auran", "aquan", "ignan", "terran"}   # Primordial dialects named by the records; not in the pick pool
+_LANG_NON_KEYS = {"other", "anyStandard", "any", "choose"}
+
+
+def _species_records():
+    """(catalog id, kind, record) of every non-copy race / subrace of races.json that carries languageProficiencies."""
+    from catalog.official.common import slug
+    out = []
+    for r in _races_json()["race"]:
+        if "_copy" not in r and r.get("languageProficiencies"):
+            out.append((f"{slug(r['name'])}-{r['source'].lower()}", "race", r))
+    for r in _races_json()["subrace"]:
+        if "_copy" not in r and r.get("name") and r.get("languageProficiencies"):
+            rid = f"{slug(r['raceName'])}-{r['raceSource'].lower()}"
+            out.append((f"{rid}-{slug(r['name'])}-{r['source'].lower()}", "subrace", r))
+    return out
+
+
+def test_vf2_4_data_no_2024_species_record_carries_fixed_languages():
+    xphb = [r["name"] for r in _races_json()["race"] if r["source"] == "XPHB" and r.get("languageProficiencies")]
+    assert xphb == []   # 2024 species give no languages: the origin gives Common plus two picks
+    assert [r["name"] for r in _races_json()["race"] if r["source"] in ("EFA", "MPMM", "FTD") and r.get("languageProficiencies")] == []
+
+
+def test_vf2_4_the_other_language_names_are_exactly_the_records_with_other(catalog):
+    from catalog import reference_data as ref
+    wanted = set()
+    for cid, kind, rec in _species_records():
+        has_other = any(e.get("other") or "other" in (e.get("choose") or {}).get("from", []) for e in rec["languageProficiencies"])
+        if has_other and cid in (catalog.races if kind == "race" else catalog.subraces):
+            wanted.add(cid)
+    assert set(ref.SPECIES_OTHER_LANGUAGES) == wanted, set(ref.SPECIES_OTHER_LANGUAGES) ^ wanted
+    by_id = {cid: (kind, rec) for cid, kind, rec in _species_records()}
+    for cid, row in ref.SPECIES_OTHER_LANGUAGES.items():
+        kind, rec = by_id[cid]
+        strings = []
+
+        def walk(o):
+            if isinstance(o, str):
+                strings.append(_plain(o))
+            elif isinstance(o, dict):
+                for v in o.get("entries", []) + o.get("items", []) + ([o["entry"]] if "entry" in o else []):
+                    walk(v)
+            elif isinstance(o, list):
+                for v in o:
+                    walk(v)
+        walk(rec.get("entries", []))
+        assert any(row["quote"] in s for s in strings), (cid, row["quote"])
+        for name in row["names"]:
+            assert name.split(" ")[0] in row["quote"], (cid, name)   # the name is written in the quoted sentence
+            assert ref.LANGUAGE_NAMES[_slug(name)] == name
+
+
+def _slug(name: str) -> str:
+    from catalog.official.common import slug
+    return slug(name)
+
+
+def test_vf2_4_the_dialect_names_are_display_names_only():
+    from catalog import reference_data as ref
+    for key, name in (("auran", "Auran"), ("aquan", "Aquan"), ("ignan", "Ignan"), ("terran", "Terran")):
+        assert ref.LANGUAGE_NAMES[key] == name
+    assert len(ref.LANGUAGES) == 16 and not _LANG_DIALECTS & {l["index"] for l in ref.LANGUAGES}   # the pick pool is unchanged
+
+
+def _expected_fixed(cid, rec, catalog):
+    from catalog import reference_data as ref
+    out = set()
+    for e in rec["languageProficiencies"]:
+        for k, v in e.items():
+            if v is True and k not in _LANG_NON_KEYS:
+                out.add(_slug(k))
+        if e.get("other"):
+            out |= {_slug(n) for n in ref.SPECIES_OTHER_LANGUAGES[cid]["names"]}
+    return out
+
+
+def _lang_ids(res):
+    return set(res["sheet"]["proficiencies"]["languages"])
+
+
+@pytest.mark.parametrize("ruleset", ["2014", "mixed", "2024"])
+def test_vf2_4_every_official_species_has_its_fixed_languages(catalog, ruleset):
+    checked = 0
+    for cid, kind, rec in _species_records():
+        if kind == "race":
+            if cid not in catalog.races:
+                continue
+            d = _draft([("wizard", 1)], ruleset=ruleset, species=cid)
+        else:
+            if cid not in catalog.subraces:
+                continue
+            d = _draft([("wizard", 1)], ruleset=ruleset, species=catalog.subraces[cid]["race"]["index"], subspecies=cid)
+        res = resolve(d, catalog)
+        expect = _expected_fixed(cid, rec, catalog)
+        assert expect <= _lang_ids(res), (cid, ruleset, expect - _lang_ids(res))
+        checked += 1
+    assert checked >= 60
+
+
+def test_vf2_4_the_named_findings(catalog):
+    kenku = _lang_ids(resolve(_draft([("wizard", 1)], species="kenku-dmg"), catalog))
+    assert {"common", "auran"} <= kenku
+    tiefling = _lang_ids(resolve(_draft([("wizard", 1)], species="tiefling-phb"), catalog))
+    assert {"common", "infernal"} <= tiefling
+    # Troglodyte: "Troglodyte" only, no Common
+    trog = _lang_ids(resolve(_draft([("wizard", 1)], species="troglodyte-dmg"), catalog))
+    assert trog == {"troglodyte"}
+    # Tortle (TTP) Aquan + Common; Locathah the same
+    assert {"common", "aquan"} <= _lang_ids(resolve(_draft([("wizard", 1)], species="tortle-ttp"), catalog))
+    # Deep Gnome (DMG): Gnomish, Terran, Undercommon (no Common)
+    assert _lang_ids(resolve(_draft([("wizard", 1)], species="gnome-(deep)-dmg"), catalog)) == {"gnomish", "terran", "undercommon"}
+
+
+def _lang_cards(res):
+    return {c["id"]: c for c in res["choices"] if c["id"].endswith(":languages") and c["source"]["kind"] == "species"}
+
+
+def test_vf2_4_language_pick_cards_of_the_official_species(catalog):
+    res = resolve(_draft([("wizard", 1)], species="human-phb"), catalog)
+    card = _lang_cards(res)["species:human-phb:languages"]
+    assert card["count"] == 1 and card["status"] == "pending" and len(card["options"]) == 16
+    assert "common" in _lang_ids(res)
+    half = _lang_cards(resolve(_draft([("wizard", 1)], species="half-elf-phb"), catalog))
+    assert half["species:half-elf-phb:languages"]["count"] == 1
+    # two picks: Changeling (ERLW) and Aetherborn (PSK) say "anyStandard: 2"
+    for sp in ("changeling-erlw", "aetherborn-psk"):
+        assert _lang_cards(resolve(_draft([("wizard", 1)], species=sp), catalog))[f"species:{sp}:languages"]["count"] == 2, sp
+    # a subrace pick (High Elf PHB: "one extra language of your choice")
+    high = resolve(_draft([("wizard", 1)], species="elf-phb", subspecies="elf-phb-high-phb"), catalog)
+    assert _lang_cards(high)["species:elf-phb:subspecies:elf-phb-high-phb:languages"]["count"] == 1
+    # the pick is a language of the character
+    d = _draft([("wizard", 1)], species="human-phb")
+    d["species"]["choices"] = {"species:human-phb:languages": ["draconic"]}
+    assert "draconic" in _lang_ids(resolve(d, catalog))
+
+
+def test_vf2_4_simic_hybrid_other_is_vedalken(catalog):
+    card = _lang_cards(resolve(_draft([("wizard", 1)], species="simic-hybrid-ggr"), catalog))["species:simic-hybrid-ggr:languages"]
+    assert [o["id"] for o in card["options"]] == ["elvish", "vedalken"] and card["count"] == 1
+
+
+def test_vf2_4_srd_species_are_unchanged(catalog):
+    res = resolve(_draft([("wizard", 1)], species="half-elf"), catalog)
+    assert _lang_ids(res) == {"common", "elvish"} and "species:half-elf:languages" in _lang_cards(res)
+
+
+def test_vf2_4_a_2014_species_keeps_its_languages_under_2024_and_the_origin_picks_stay(catalog):
+    res = resolve(_draft([("wizard", 1)], ruleset="2024", species="tiefling-phb", background="acolyte"), catalog)
+    assert {"common", "infernal"} <= _lang_ids(res)
+
+
+def test_vf2_4_the_frontend_language_names_mirror_the_backend_table():
+    """Every language id a sheet can hold has the same display name in `frontend/src/logic/labels.ts` (game content is not translated)."""
+    import re
+    from catalog import reference_data as ref
+    labels = (pathlib.Path(__file__).resolve().parents[2] / "frontend" / "src" / "logic" / "labels.ts").read_text(encoding="utf-8")
+    block = labels.split("export const LANGUAGE_NAMES: Record<string, string> = {", 1)[1].split("};", 1)[0]
+    front = {m.group(1) or m.group(2): m.group(3).replace("\\'", "'") for m in
+             re.finditer(r'^\s*(?:"([a-z-]+)"|([a-z]+)): "((?:[^"\\]|\\.)*)",\s*$', block, re.M)}
+    assert front == ref.LANGUAGE_NAMES

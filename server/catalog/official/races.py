@@ -4,9 +4,10 @@ from __future__ import annotations
 from pathlib import Path
 import json
 import re
-from catalog.reference_data import ruleset_for_edition
+from catalog.reference_data import SPECIES_DIALECT_LANGUAGES, SPECIES_OTHER_LANGUAGES, ruleset_for_edition
 from .common import _ability_bonus_options_from_5etools, _ability_bonuses_from_5etools, _condition_immunities_from_5etools, _damage_modifiers_from_5etools, _darkvision_from_5etools, _speed_from_5etools, slug
 from .innate_spells import _innate_spells_from_5etools
+from .languages import _language_grants_from_5etools
 from .proficiencies import _attach_choice_proficiencies, _attach_fixed_proficiencies, _proficiencies_from_5etools
 
 
@@ -30,6 +31,14 @@ def _species_feat_grants_from_5etools(raw: dict) -> list[dict]:
             if len(cats) == 1 and isinstance(count, int) and not isinstance(count, bool):
                 grants.append({"count": count, "category": cats[0]})
     return grants
+
+
+def _species_languages_from_5etools(raw: dict, index: str) -> tuple[list[dict], dict | None]:
+    """VF2.4: (fixed languages, pick envelope) of a race / subrace record: the same conversion backgrounds use (`slug: true`
+    fixed, `anyStandard` / `choose` picks), plus the Primordial dialects and the named `other` languages (reference_data
+    SPECIES_DIALECT_LANGUAGES / SPECIES_OTHER_LANGUAGES). 2024 species records carry none."""
+    names = tuple((SPECIES_OTHER_LANGUAGES.get(index) or {}).get("names") or ())
+    return _language_grants_from_5etools(raw, SPECIES_DIALECT_LANGUAGES, names)
 
 
 def _variant_slug(name: str) -> str:
@@ -191,6 +200,7 @@ def _race_from_5etools(raw: dict, traits_by_index: dict[str, dict]) -> dict | No
 
     resist, immune, vulnerable = _damage_modifiers_from_5etools(raw)
     walk, movement = _speed_from_5etools(raw.get("speed"))
+    fixed_languages, language_options = _species_languages_from_5etools(raw, index)
 
     return {
         "index": index, "name": raw["name"],
@@ -203,7 +213,7 @@ def _race_from_5etools(raw: dict, traits_by_index: dict[str, dict]) -> dict | No
         "ability_bonuses": _ability_bonuses_from_5etools(raw.get("ability", [])),
         "ability_bonus_options": _ability_bonus_options_from_5etools(raw.get("ability", []), raw.get("lineage")),
         "alignment": "", "age": "", "size": size, "size_options": size_options, "size_description": "",
-        "languages": [], "language_desc": "",
+        "languages": fixed_languages, "language_options": language_options, "language_desc": "",
         "traits": trait_refs,
         "source": raw.get("source", ""),  # NEW field, SRD races don't have it (implicitly "SRD") — Task 6 uses this for filtering/labeling
         "ruleset": ruleset_for_edition(raw),
@@ -253,9 +263,11 @@ def _subrace_from_5etools(raw: dict, race_ids: set[str], traits_by_index: dict[s
 
     resist, immune, vulnerable = _damage_modifiers_from_5etools(raw)
     walk, movement = _speed_from_5etools(raw.get("speed"))
+    fixed_languages, language_options = _species_languages_from_5etools(raw, index)
 
     return {
         "index": index, "name": raw["name"],
+        "languages": fixed_languages, "language_options": language_options,
         "race": {"index": race_index, "name": race_name, "url": ""},
         "source": raw.get("source", ""),
         "desc": "",
