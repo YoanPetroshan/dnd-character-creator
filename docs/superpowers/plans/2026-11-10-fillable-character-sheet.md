@@ -1,0 +1,35 @@
+# Plan: fillable D&D Beyond-style character sheet PDF (Opus planner, 2026-11-10, HEAD ec5149e)
+
+Reference files (owner's Downloads, NOT committed): `Petroshan_143888056.pdf` (Rogue 4) and `Petroshan_151360029.pdf` (Paladin 6, filled spell page). Both are D&D Beyond 2024 sheets: 5 pages, ~366 text fields + 8 buttons, US Letter 612x792, no /AcroForm in the catalog, `/DA /Helv` (Latin-only; their Cyrillic renders as garbage).
+
+## Owner decisions
+- Replicate layout, box positions, field set/order and page split as faithfully as practical (layout and forms are standard). EXCLUDED: D&D Beyond / WotC logo, ribbon and dragon artwork, WotC copyright footer. Own plain headings and footer.
+- **Paper: A4** (owner choice, 2026-11-10). Geometry is kept in the reference's Letter points; the renderer applies one uniform scale s = 595.28/612 = 0.9727 (width) and centres vertically (offset (841.89 - 792*s)/2). Field rects, font sizes and frames all go through the same transform. Letter variant is a possible follow-up, not now.
+- Defaults accepted for the other planner questions: clean ASCII field names (not DDB's verbatim); print full feature text; keep the simple PDF route next to the new sheet; Player Name / Gender / Appearance stay blank editable fields (no draft schema change); PREP "P" = always prepared/granted, "O" = prepared by choice; 1A/1BA/1R and C/R stay language-neutral with a BG(EN) legend; one shared identity field across pages if the viewer spike passes.
+
+## Decisions from the planner (evidence in the planner report, summarised)
+- fpdf2 2.8.8 draws (no form fields). **pypdf 6.18.1 post-processes**: adds /AcroForm, /DR, Tx widgets, checkbox appearances (own vector /Yes /Off streams), NeedAppearances=false with a real appearance stream per field. pypdf is already in server/requirements.txt but NOT in the Pyodide distribution: pin `pypdf-6.18.1-py3-none-any.whl` (pure Python, ~0.33 MB) in `scripts/offline_manifest.json` with size+sha256 from the PyPI JSON, add to `PDF_WHEELS` in `frontend/src/api/engineCore.ts`.
+- **Cyrillic in fields only works with one setup**: the form font resource must be the regular DejaVu subset that also contains an invisible charset line drawn on the page (`TextMode.INVISIBLE`: ASCII, U+0400-045F, `–—’“”•…№●○`). Otherwise pypdf silently writes `?` (0x3f). Tests: warnings as errors, and no `3f` glyph code in appearance streams.
+- pypdf wraps only when font size is 0: pre-wrap ourselves with fpdf2 measurements (same font), draw the appearance from wrapped text, store the original text in /V.
+- Determinism: pypdf escapes the date (`D\072...`), so the renderer takes a `created: datetime` argument; fixed date => byte-identical output.
+- Field names: ASCII, no dots. Identity fields (CharacterName, ClassLevel, Species, Background, PlayerName, ExperiencePoints) are one field with several widgets if slice S0 passes; fallback page suffix.
+
+## Route and modules (additive; old PDF route and its baselines stay frozen)
+- `POST /api/export/sheet?lang=bg|en` -> `application/pdf`, same gate, language handling and 200-char name cut as the other formats; lazy import like `_render_pdf`. Frontend: `needsPdfStack` also matches it; second button on ExportPage ("Лист за игра (форма)" / "Character sheet (form)"; old one called the simple PDF).
+- `server/sheet_layout.py` (geometry data, Letter points), `sheet_data.py` (pure: resolution+catalog+lang -> ordered FieldValue list + overflow chunks), `sheet_form.py` (pypdf step), `sheet_pdf.py` (`to_sheet(resolution, lang, catalog, created)`: draws frames/titles/labels, paginates, calls apply). Shared label helpers move from pdf_export.py into export_fields.py with identical output.
+- Labels: new family `LABELS[lang]["sheet"]` in export_labels.py, T1 rule (Bulgarian term + English in brackets; EN English only); new bracket terms into i18n/bracket_terms.py; data strings (class, spell, item names, ranges, durations) stay English.
+- Tests to change: `test_service_source_imports_no_framework` allow-list, `test_everything_but_a_pdf_works_without_the_pdf_stack` (also block pypdf; old PDF never loads pypdf), `test_no_cyrillic_literal_is_left_in_the_exporters` (include new modules).
+
+## Field map (summary; full table in the planner report in the session transcript)
+Page 1: header, 6 abilities + mods, 6 save marks/values, 18 skills (mark P/E, value, ability), 3 custom skills, passives, senses, initiative, AC, defenses, inspiration checkbox, proficiency bonus, spell DC bars, speed, HP (max filled; current/temp blank), hit dice, death-save checkboxes, proficiencies and training (=== Armor === style headings), actions (2 columns), 6 weapon rows (+ attack/save cantrips). Page 2: features flow (3 columns), coins, weight/capacity/push-drag-lift, equipment rows 0-25, attuned (blank). Page 3: features 4-6, equipment rows 26-55. Page 4: appearance/personality/ideals/bonds/flaws/backstory/allies/notes/portrait frame. Page 5+: spell groups per `sheet.spells` entry: Prep, Name, Source, Save/Atk, Time, Range, Comp, Duration, Ref (source code; page numbers do not exist in data), Notes; 50 rows/page, level header never last on a page, one row per spell (dedupe merges sources/notes). Overflow: shrink small boxes to 6 pt then continue in the features flow; continuation pages for features, equipment, notes, spells.
+
+## Slices (sequential; one commit each; gates every slice: server -n auto, DND_OFFICIAL_DATA=none, root, build+vitest when frontend changes)
+- S0 viewer spike (dev script, no app code): Cyrillic single/multiline field, shared field on 2 pages, checkbox; check Chrome/pdfium, Firefox/pdf.js, Preview (Acrobat by the owner); record in ARCHITECTURE.
+- S1 offline pin for the pypdf wheel (manifest, PDF_WHEELS, rebuild pack, Node test imports pypdf after preparePdf, blocked-list test).
+- S2 layout data + `scripts/dev_extract_sheet_layout.py <ref.pdf>` (prints rects as Python literals; reference PDF stays out of the repo).
+- S3 form writer (read-back via get_fields, checkbox /V /AS, no `3f`, /AcroForm /DR, NeedAppearances false, pre-wrap, byte determinism, round trip, <400 ms for 400 fields).
+- S4 sheet_data mapping (table-driven tests on kitchen-sink drafts; feature-description coverage report).
+- S5 page 1. S6 pages 2-3 + flow + equipment + continuations (lossless flow test at level 20). S7 page 4 + notes continuation. S8 spell pages. S9 route + frontend + docs + appended service requests (existing service_baseline entries must not move). S10 `sheet_baseline.json` (WRITE_SHEET_BASELINE=1 merge-only), O1 Node hashes, rebuild pack, Pyodide timing (<1.5 s level 20). S11 visual check next to the reference, ARCHITECTURE, owner review.
+
+## Risks
+Viewer differences (Preview/Acrobat font substitution for glyphs outside the subset: S0 decides); silent `?` substitution (guarded); pypdf internals (pin + upgrade test); feature-description lookup is heuristic (no description rather than a wrong one); size/speed (~300-500 KB, ~1 s in Pyodide); split text not linked between columns; printed rules text from the bundled data is in the user's own file.
