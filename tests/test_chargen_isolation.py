@@ -58,7 +58,7 @@ LOCAL_MODULES = {p.stem for p in ROOT.glob("*.py")} | {"chargen", "tests"}
 # inside server/ itself — an `import engine` anywhere else in the repo is
 # still exactly the violation this test is designed to flag.
 # "service" is server/service.py, the framework-free API (O0); "app" is server/app.py (the root app.py was removed in D-5, so it is no longer a LOCAL_MODULES stem).
-SERVER_LOCAL_MODULES = {"app", "catalog", "engine", "export", "export_fields", "markdown_export", "pdf_export", "test_export", "kitchen_sink", "c7c_helpers", "perf_helpers", "test_feat_tail", "test_types_drift", "test_resolve_fuzz", "test_export_completeness", "i18n", "i18n_zoo", "export_labels", "test_export_baseline", "test_export_labels", "test_pdf_export", "test_i18n_completeness", "service", "test_service", "service_requests", "test_service_baseline", "tools", "chartest", "test_chartest_harness", "test_export_completeness"}
+SERVER_LOCAL_MODULES = {"app", "catalog", "engine", "export", "export_fields", "markdown_export", "pdf_export", "test_export", "kitchen_sink", "c7c_helpers", "perf_helpers", "test_feat_tail", "test_types_drift", "test_resolve_fuzz", "test_export_completeness", "i18n", "i18n_zoo", "export_labels", "test_export_baseline", "test_export_labels", "test_pdf_export", "test_i18n_completeness", "service", "test_service", "service_requests", "test_service_baseline", "tools", "chartest", "test_chartest_harness", "test_export_completeness", "sheet_layout", "sheet_form", "sheet_data"}
 
 # O1: the two offline-pack files that drive the server packages from outside server/ (the fixture emitter runs natively
 # with server/ and server/tests on sys.path; the harness runs inside Pyodide with the app mounted at /app/server).
