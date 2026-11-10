@@ -62,7 +62,7 @@ SERVER_LOCAL_MODULES = {"app", "catalog", "engine", "export", "export_fields", "
 
 # O1: the two offline-pack files that drive the server packages from outside server/ (the fixture emitter runs natively
 # with server/ and server/tests on sys.path; the harness runs inside Pyodide with the app mounted at /app/server).
-OFFLINE_SERVER_USERS = {pathlib.Path("scripts") / "offline_fixtures.py", pathlib.Path("frontend") / "src" / "offline" / "harness.py"}
+OFFLINE_SERVER_USERS = {pathlib.Path("scripts") / "offline_fixtures.py", pathlib.Path("scripts") / "dev_sample_sheets.py", pathlib.Path("frontend") / "src" / "offline" / "harness.py"}
 
 # The one lazy import chargen/cli.py is allowed to keep — see module
 # docstring above and final-review.md's I6/Minor 7.

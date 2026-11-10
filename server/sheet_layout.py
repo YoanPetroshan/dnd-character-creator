@@ -300,6 +300,6 @@ FRAMES: tuple[Frame, ...] = (
     Frame("backstory", 4, (33.1, 32.5, 202.5, 410.5), "backstory", ("Backstory",)),
     Frame("notes1", 4, (224.0, 32.3, 398.6, 410.3), "notes", ("Notes1",)),
     Frame("notes2", 4, (402.6, 31.9, 577.3, 409.8), "notes", ("Notes2",)),
-    Frame("spell_header", 5, (43.0, 700.0, 560.0, 742.0), "", ()),
-    Frame("spell_grid", 5, (25.0, 49.0, 582.0, 644.0), "", ()),
+    Frame("spell_header", 5, (43.0, 694.0, 560.0, 742.0), "", ()),
+    Frame("spell_grid", 5, (25.0, 49.0, 582.0, 652.0), "", ()),
 )

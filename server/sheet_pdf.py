@@ -18,6 +18,7 @@ from fpdf.enums import TextMode
 import sheet_layout as L
 from export_labels import DEFAULT_LANG, check_lang, label, sheet_label
 from sheet_data import FlowBlock, SheetData, build_sheet_data
+from export_fields import fmt_spell_slots
 from sheet_form import CHARSET, LEADING, PAD, apply_form, charset_for, wrap_text
 
 FONT_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
@@ -381,6 +382,96 @@ class Sheet:
                 self.values[name] = texts[start + c] if start + c < len(texts) else ""
                 self.fields.append(L.Field(name, "multi", (L.Widget(page, rect),), "left", 7.0))
 
+    # ---- spell pages ----
+    def spell_pages(self) -> None:
+        """One group (class / innate) after the other, 50 slots per page; a level header is never the last slot of a page."""
+        d, lang = self.doc, self.lang
+        derived = self.resolution["derived"]
+        slot_parts = []
+        if derived.get("spellSlots"):
+            slot_parts.append(f"{label(lang, 'spellSlots')}: {fmt_spell_slots(derived['spellSlots'], lang)}")
+        if derived.get("warlockSpellSlots"):
+            slot_parts.append(f"{label(lang, 'pactSlots')}: {fmt_spell_slots(derived['warlockSpellSlots'], lang)}")
+        number = 0
+        for group in self.data.spell_groups:
+            rows = list(group.rows)
+            at = 0
+            first = True
+            while at < len(rows) or first:
+                take = rows[at:at + L.SPELL_SLOTS]
+                if len(take) == L.SPELL_SLOTS and take[-1].kind == "header":
+                    take = take[:-1]
+                at += len(take)
+                first = False
+                number += 1
+                self.one_spell_page(number, group, take, slot_parts if group.key != "innate" else [], continued=at > len(take))
+
+    def one_spell_page(self, n: int, group, rows, slot_parts, continued: bool) -> None:
+        d, lang = self.doc, self.lang
+        page = self.new_page("spells")
+        fields = L.spell_fields(n, page)
+        values: dict[str, str] = {f.name: "" for f in fields}
+        values[f"Spell{n}_Class"] = group.title
+        values[f"Spell{n}_Ability"] = group.ability
+        values[f"Spell{n}_SaveDc"] = group.save_dc
+        values[f"Spell{n}_Attack"] = group.attack
+        for slot, row in enumerate(rows):
+            if row.kind == "header":
+                values[f"Spell{n}_{slot:02d}_Name"] = row.cells["Name"]
+                continue
+            cells = {key: str(row.cells.get(key, "")) for key, *_ in L.SPELL_COLUMNS}
+            moved = []
+            for key, x0, x1, _al in L.SPELL_COLUMNS:
+                if key == "Notes":
+                    continue
+                short = self.shorten(cells[key], x1 - x0)
+                if short != cells[key]:
+                    moved.append(cells[key])  # the full text continues in the Notes box
+                    cells[key] = short
+            if moved:
+                cells["Notes"] = ", ".join([x for x in (cells["Notes"], *moved) if x])
+            cells["Notes"] = self.shorten(cells["Notes"], 578.8 - 422.6)
+            for key, text in cells.items():
+                values[f"Spell{n}_{slot:02d}_{key}"] = text
+        d.box((43.0, 694.0, 560.0, 742.0), 0.9, radius=4)
+        d.box((25.0, 49.0, 582.0, 652.0), 0.9, radius=4)
+        for slot, row in enumerate(rows):  # a darker band behind each level header
+            if row.kind == "header":
+                y0, y1 = L.spell_slot_y(slot)
+                d.box((28.0, y0 - 0.5, 580.0, y1 + 0.5), 0.2, fill=(205, 205, 205), color=(205, 205, 205))
+        d.set_fill_color(*LIGHT)
+        for f in fields:
+            for w in f.widgets:
+                d.box(w.rect, 0.3, fill=LIGHT, color=(160, 160, 160))
+        for slot, row in enumerate(rows):
+            if row.kind == "header":
+                y0, y1 = L.spell_slot_y(slot)
+                d.box((41.9, y0, 148.1, y1), 0.3, fill=(205, 205, 205), color=(205, 205, 205))
+        for key, text in (("Ability", "spAbility"), ("SaveDc", "spDc"), ("Attack", "spAttack"), ("Class", "spClass")):
+            rect = next(f for f in fields if f.name == f"Spell{n}_{key}").widgets[0].rect
+            d.put(sheet_label(lang, text).upper(), rect[0], rect[1] - 6.5, 4.8, "center" if key != "Class" else "left", rect[2] - rect[0], bold=True, color=GREY, minimum=3.2)
+        top = L.SPELL_SLOT_TOP + 3
+        for key, x0, x1, _al in L.SPELL_COLUMNS:
+            d.put(sheet_label(lang, "sp" + key).upper() if key != "Prep" else sheet_label(lang, "spPrep").upper(), x0, top, 4.8, "left", x1 - x0, bold=True, color=GREY, minimum=3.0)
+        if slot_parts:
+            d.put("   ".join(slot_parts), 47.5, 684.0, 7, "left", 510, color=(0, 0, 0))
+        if continued:
+            d.put(sheet_label(lang, "headContinued", title=group.title), 47.5, 668.0, 7, "left", 510, bold=True, color=GREY)
+        for i, line in enumerate(wrap_text(lambda t: d.width(t, 5.0), sheet_label(lang, "legend"), 552.0)[:3]):
+            d.put(line, 28.0, 41.5 - 6.0 * i, 5.0, "left", 552.0, color=GREY, minimum=3.2)
+        self.fields.extend(fields)
+        self.values.update(values)
+
+    def shorten(self, text: str, width: float, size: float = 6.5) -> str:
+        """``text`` cut with an ellipsis until it fits one line of a ``width`` box at 0.6 of ``size`` (what apply_form shrinks to)."""
+        small = size * 0.6
+        inner = (width - 2 * PAD / S) * 0.985
+        if not text or self.doc.width(text, small) <= inner:
+            return text
+        while text and self.doc.width(text + "\u2026", small) > inner:
+            text = text[:-1]
+        return text.rstrip() + "\u2026"
+
     def build(self) -> bytes:
         self.page1()
         self.pages23()
@@ -388,6 +479,7 @@ class Sheet:
         self.equipment_pages()
         self.page4()
         self.notes_pages()
+        self.spell_pages()
         self.finish_pages()
         base = bytes(self.doc.output())
         texts = [v for v in self.values.values() if isinstance(v, str)] + [self.name]
