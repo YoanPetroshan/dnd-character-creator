@@ -25,13 +25,14 @@ The texts are English and meant for humans; clients branch on the status code (a
 
 | Status | Body | Cause |
 | --- | --- | --- |
+| 400 | `{"error": "The request body is nested too deeply (at most 64 levels)."}` | the body of `/api/resolve` or `/api/export/<fmt>` nests brackets deeper than 64 levels (a draft has about 8), parseable or not; checked on the raw text before parsing |
 | 400 | `{"error": "draft must be a JSON object"}` | the body of `/api/resolve` or `/api/export/<fmt>` is JSON but not an object (list, string, number, boolean) |
 | 400 | `{"error": "'level' must be an integer"}` | `/api/spells?level=` is not an integer |
 | 400 | `{"error": "'lang' must be 'bg' or 'en'"}` | `/api/resolve` or `/api/export/<fmt>` with a `lang` other than `bg` / `en` |
 | 400 | `{"problems": [...]}` | export gate, see below |
 | 404 | `{"error": "not found"}` | unknown class / background / species / spell id, or an unknown `/api/...` path |
 | 404 | `{"error": "unknown export format '<fmt>'"}` | `/api/export/<fmt>` with a format other than `yaml`, `markdown`, `pdf` |
-| 413 | `{"error": "<text>"}` | request body over 1 MB |
+| 413 | `{"error": "The data value transmitted exceeds the capacity limit."}` | request body over 1,000,000 bytes (the two draft routes, after their `lang` check); Flask enforces it, and so do `service.handle` and the offline worker (`frontend/src/api/bodyGuard.ts` checks size and depth before the bytes enter WebAssembly) |
 | 500 | `{"error": "The server couldn't process this character. Check the draft and try again."}` | unexpected failure (logged on the server) |
 
 An absent, empty or unparseable body of the two POST routes counts as an empty draft `{}` (a valid draft), not an error.
@@ -82,7 +83,7 @@ One spell with `desc`, `higherLevel`, `material`, `castingCondition`, `classes`,
 
 ### `POST /api/export/<fmt>`
 
-`fmt` is `yaml`, `markdown` or `pdf`. Body: a draft. The draft is resolved and the **export gate** is applied; when it passes the response is the file (`application/x-yaml`, `text/markdown`, `application/pdf`) with `Content-Disposition: attachment; filename*=UTF-8''<name>.<ext>`.
+`fmt` is `yaml`, `markdown` or `pdf`. Body: a draft. The draft is resolved and the **export gate** is applied; when it passes the response is the file (`application/x-yaml`, `text/markdown`, `application/pdf`) with `Content-Disposition: attachment; filename*=UTF-8''<name>.<ext>`. `<name>` is the draft's `name` (`character`, or the language's word with `lang`, when it is empty) with `\ / : * ? " < > |` replaced by `_`, cut to the first 200 characters (the sheet title inside the Markdown / PDF keeps the whole name) and percent-encoded; a lone UTF-16 surrogate (`"\ud800"`, valid JSON) in any text of the draft becomes U+FFFD before the export is written (it used to be a 500).
 
 Export gate: the export is refused with 400 `{"problems": [...]}` when the resolution has any `problems`, or when:
 

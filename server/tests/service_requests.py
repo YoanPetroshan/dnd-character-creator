@@ -162,6 +162,13 @@ def _build() -> list[tuple]:
     add("api-post-spells", "POST", "/api/spells", _j({}), JSON)
     add("api-post-class", "POST", "/api/catalog/class/fighter", _j({}), JSON)
     add("api-patch-spell", "PATCH", "/api/spells/fireball")
+    # VF7.6: a lone-surrogate name, a very long name, a body nested too deeply, a body over the 1 MB limit
+    for fmt in ("yaml", "markdown", "pdf"):
+        post(f"export-{fmt}-name-lone-surrogate", f"/api/export/{fmt}", exportable_draft("\ud800"))
+        post(f"export-{fmt}-name-5000-chars", f"/api/export/{fmt}", exportable_draft("N" * 5000))
+    add("resolve-body-nested-450k", "POST", "/api/resolve", b"[" * 450000, JSON)
+    add("export-yaml-body-nested-70", "POST", "/api/export/yaml", b'{"name":' + b"[" * 70 + b"]" * 70 + b"}", JSON)
+    add("resolve-body-over-1mb", "POST", "/api/resolve", b'{"name":"' + b"x" * 1_000_001 + b'"}', JSON)
     return reqs
 
 

@@ -131,8 +131,8 @@ json.dumps({"status": status, "loaded": loaded})`),
     await loadPdfStack();
     const r = run("harness.requests()");
     timings.requests_s = r.seconds;
-    expect(r.baselineSize).toBe(138);
-    expect(r.checked).toBe(137); // all but GET /api, which Flask answers with the SPA catch-all
+    expect(r.baselineSize).toBe(147);
+    expect(r.checked).toBe(146); // all but GET /api, which Flask answers with the SPA catch-all
     expect(r.mismatches).toEqual([]);
     expect(fixtures).toBeDefined();
   }, 600_000);

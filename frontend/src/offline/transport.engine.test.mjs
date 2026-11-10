@@ -122,6 +122,31 @@ describe.skipIf(!packPresent)("worker transport on the real Pyodide engine", () 
     expect((await r.json()).problems.length).toBeGreaterThan(0);
   });
 
+  it("VF7.6: hostile bodies get the server's answers: lone-surrogate names export, 413 over 1 MB, 400 when nested too deeply", async () => {
+    // a lone surrogate in the name (valid JSON) used to be a 500 on every export; the file name is the replacement character
+    const raw = JSON.stringify(draft).replace('"Torvin Bracewell"', '"\\ud800"');
+    const ok = await t.fetch("/api/export/yaml", { method: "POST", headers: json, body: raw });
+    expect(ok.status).toBe(200);
+    expect(ok.headers.get("Content-Disposition")).toBe("attachment; filename*=UTF-8''%EF%BF%BD.yaml");
+    // 5000-character name: the download name is cut to 200 characters
+    const long = await t.fetch("/api/export/markdown", post("", { ...draft, name: "N".repeat(5000) }));
+    expect(long.headers.get("Content-Disposition")).toBe("attachment; filename*=UTF-8''" + "N".repeat(200) + ".md");
+    const big = '{"name":"' + "x".repeat(1_000_001) + '"}';
+    const tooLarge = await t.fetch("/api/resolve", { method: "POST", headers: json, body: big });
+    expect(tooLarge.status).toBe(413);
+    expect(await tooLarge.json()).toEqual({ error: "The data value transmitted exceeds the capacity limit." });
+    const deep = "[".repeat(450000);
+    for (const url of ["/api/resolve", "/api/export/yaml"]) {
+      const r = await t.fetch(url, { method: "POST", headers: json, body: deep });
+      expect(r.status).toBe(400);
+      expect((await r.json()).error).toMatch(/nested too deeply \(at most 64 levels\)/);
+    }
+    // the lang check still comes first, as on the server; a GET never reads a body; the engine is still usable
+    const badLang = await t.fetch("/api/resolve?lang=fr", { method: "POST", headers: json, body: deep });
+    expect((await badLang.json()).error).toBe("'lang' must be 'bg' or 'en'");
+    expect((await t.fetch("/api/resolve", post("", draft))).status).toBe(200);
+  }, 60_000);
+
   it("aborts: the call rejects with an AbortError and the engine stays usable", async () => {
     const c = new AbortController();
     const p = t.fetch("/api/resolve", { ...post("", draft), signal: c.signal }).catch((e) => e);

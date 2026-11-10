@@ -35,6 +35,7 @@ import logging
 import re
 import urllib.parse
 import uuid
+from itertools import accumulate
 from typing import Callable
 
 from catalog.loader import load as load_catalog
@@ -123,20 +124,92 @@ def _args(query) -> dict[str, str]:
     return out
 
 
+# VF7.6: a draft is about 8 levels deep; a body nested deeper than this is refused with a 400 (docs/API.md). The same limit and
+# text are in `frontend/src/api/engineCore.ts` for the offline worker.
+MAX_JSON_DEPTH = 64
+TOO_DEEP = f"The request body is nested too deeply (at most {MAX_JSON_DEPTH} levels)."
+# Flask enforces the 1 MB limit itself (MAX_CONTENT_LENGTH, `app.py`); the offline worker has no Flask, so the service knows the
+# limit and the text too (Werkzeug's RequestEntityTooLarge description, what the 413 always said).
+MAX_BODY_BYTES = 1_000_000
+PAYLOAD_TOO_LARGE = "The data value transmitted exceeds the capacity limit."
+
+
+class _RejectedBody(Exception):
+    """A request body `handle` answers with this response instead of running the route (the depth limit)."""
+
+    def __init__(self, response: Response):
+        super().__init__("rejected body")
+        self.response = response
+
+
+def body_problem(kind: str) -> Callable[[], bytes]:
+    """A `body` callable for a transport that already knows the body is unusable (the offline worker checks the size and the
+    nesting depth in JavaScript before copying the bytes into WebAssembly): `kind` is "too-large" (413) or "too-deep" (400).
+    Like any lazy body it is only called by the two draft routes, after their `lang` check, so the answer is the one the
+    Flask server gives; every other route never calls it."""
+    if kind not in ("too-large", "too-deep"):
+        raise ValueError(f"unknown body problem {kind!r}")
+
+    def reject() -> bytes:
+        raise _RejectedBody(_error(PAYLOAD_TOO_LARGE, 413) if kind == "too-large" else _error(TOO_DEEP, 400))
+
+    return reject
+
+
+_JSON_STRING = re.compile(rb'"(?:[^"\\]|\\.)*(?:"|$)', re.S)  # a JSON string (an unterminated one runs to the end)
+_BRACKET_STEP = bytes(1 if c in b"[{" else 2 if c in b"]}" else 0 for c in range(256))  # translate table: open, close, other
+_DELTA = (0, 1, -1)
+
+
+def _raw_depth_exceeds(body, limit: int) -> bool:
+    """The bracket nesting of the raw JSON text (strings skipped), measured BEFORE parsing: `json.loads` on a long run of `[`
+    overflows the stack (a RecursionError natively, a fatal stack overflow in WebAssembly). The same scan runs in JavaScript for
+    the offline worker (`frontend/src/api/bodyGuard.ts`), so every caller answers alike. All of it runs at C speed (regex,
+    translate, accumulate), about a millisecond for a normal draft."""
+    data = body.encode("utf-8", "replace") if isinstance(body, str) else bytes(body)
+    steps = _JSON_STRING.sub(b"", data).translate(_BRACKET_STEP)
+    return max(accumulate(map(_DELTA.__getitem__, steps)), default=0) > limit
+
+
 def _json_draft(body) -> dict | None:
     """The request's JSON body as a draft: an absent / unparseable / null body is an empty draft (as before),
-    any other non-object value (list, string, number, bool) is None, which the callers answer with a 400."""
+    any other non-object value (list, string, number, bool) is None, which the callers answer with a 400.
+    A body nested deeper than MAX_JSON_DEPTH (`json.loads` itself fails with RecursionError on a long run of `[`) is a 400."""
     if callable(body):
         body = body()
     if body is None:
         return {}
+    if len(body) > MAX_BODY_BYTES // 4 and (len(body) if isinstance(body, (bytes, bytearray)) else len(body.encode("utf-8"))) > MAX_BODY_BYTES:
+        raise _RejectedBody(_error(PAYLOAD_TOO_LARGE, 413))  # a caller other than Flask (which refuses it before the route runs)
+    if _raw_depth_exceeds(body, MAX_JSON_DEPTH):  # also for a body json.loads cannot read: the same 400 the worker gives
+        raise _RejectedBody(_error(TOO_DEEP, 400))
     try:
         parsed = json.loads(body)
     except ValueError:  # includes JSONDecodeError and UnicodeDecodeError, what get_json(silent=True) swallowed
         return {}
+    except RecursionError:  # cannot happen under the depth limit; kept as the last line of defence
+        raise _RejectedBody(_error(TOO_DEEP, 400)) from None
     if parsed is None:
         return {}
     return parsed if isinstance(parsed, dict) else None
+
+
+def _scrub_text(text: str) -> str:
+    """Lone UTF-16 surrogates (valid in JSON, not encodable as UTF-8) become U+FFFD; everything else is untouched."""
+    if text.isascii():
+        return text
+    return text.encode("utf-16", "surrogatepass").decode("utf-16", "replace")
+
+
+def _scrub(node):
+    """`node` (a parsed draft, at most MAX_JSON_DEPTH deep) with every string and key scrubbed of lone surrogates."""
+    if isinstance(node, str):
+        return _scrub_text(node)
+    if isinstance(node, list):
+        return [_scrub(v) for v in node]
+    if isinstance(node, dict):
+        return {_scrub_text(k) if isinstance(k, str) else k: _scrub(v) for k, v in node.items()}
+    return node
 
 
 def _request_lang(args: dict[str, str]):
@@ -453,6 +526,9 @@ _EXPORT_RENDERERS = {
 }
 
 
+MAX_DOWNLOAD_NAME = 200  # characters of the draft name kept in the download filename (Content-Disposition), documented in docs/API.md
+
+
 def api_export(args, body, fmt: str):
     entry = _EXPORT_RENDERERS.get(fmt)
     if entry is None:
@@ -464,6 +540,7 @@ def api_export(args, body, fmt: str):
     draft = _json_draft(body)
     if draft is None:
         return _error("draft must be a JSON object", 400)
+    draft = _scrub(draft)  # VF7.6: a lone surrogate in any text would fail the UTF-8 encoding of the download
     resolution = resolve(draft, _catalog)
     all_problems = resolution["problems"] + _pending_export_problems(resolution)
     if all_problems:
@@ -473,7 +550,7 @@ def api_export(args, body, fmt: str):
     file_lang = lang if args.get("lang") is not None else EXPORT_DEFAULT_LANG
     # a nameless draft downloads as "character" (no lang, as before XL) or as the language's word (lang given)
     fallback = export_label(lang, "filenameFallback") if args.get("lang") is not None else "character"
-    name = re.sub(r'[\\/:*?"<>|]', "_", str(draft.get("name") or fallback))
+    name = re.sub(r'[\\/:*?"<>|]', "_", str(draft.get("name") or fallback))[:MAX_DOWNLOAD_NAME]  # VF7.6: cut, the sheet keeps the whole name
     filename = urllib.parse.quote(f"{name}.{extension}", safe="")
     if fmt == "yaml":  # the YAML document is the data as it is: no localized labels, nothing to translate
         out = renderer(resolution)
@@ -532,6 +609,8 @@ def handle(method: str, path: str, query=None, body=None) -> Response:
         return _dispatch(method, path, _args(query), body)
     except BodyReadError:
         raise
+    except _RejectedBody as rejected:
+        return rejected.response
     except Exception:
         log.exception("unhandled error")
         return _error(SERVER_ERROR, 500)

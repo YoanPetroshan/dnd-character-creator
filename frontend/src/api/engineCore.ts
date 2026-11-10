@@ -2,6 +2,8 @@
 // code with different `EngineIO`. It boots Pyodide, mounts app.zip, installs the bundled wheels and answers
 // service.handle(method, path, query, body) (server/service.py, the same module the Flask server calls).
 
+import { bodyProblem } from "./bodyGuard";
+
 // Pyodide's API surface used here (the package has no bundled typings in this project).
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type PyodideApi = any;
@@ -33,8 +35,11 @@ for _p in ("/app/server", "/app"):
         sys.path.insert(0, _p)
 import service
 
-def engine_call(method, path, query, body):
-    return service.handle(method, path, query, None if body is None else body.to_bytes())
+def engine_call(method, path, query, body, problem):
+    # VF7.6: problem ("too-large" / "too-deep") is the verdict of the JavaScript body guard (bodyGuard.ts); the body itself
+    # is then not copied in. The service answers it like Flask: only the two draft routes, after their lang check.
+    data = service.body_problem(problem) if problem else (None if body is None else body.to_bytes())
+    return service.handle(method, path, query, data)
 `;
 
 const quiet = { messageCallback: () => undefined, errorCallback: () => undefined };
@@ -75,7 +80,8 @@ export function createEngine(io: EngineIO): Engine {
       return pdf;
     },
     call(method, path, query, body) {
-      const raw = call(method, path, query, body ?? undefined);
+      const problem = bodyProblem(body);
+      const raw = call(method, path, query, problem ? undefined : (body ?? undefined), problem ?? undefined);
       try {
         const [status, contentType, headers, data] = raw.toJs({ dict_converter: Object.fromEntries });
         // `data` may view the WebAssembly heap: copy it out before anything else runs.
