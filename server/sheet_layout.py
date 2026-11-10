@@ -290,7 +290,7 @@ FRAMES: tuple[Frame, ...] = (
     Frame("attuned", 2, (345.5, 24.0, 577.5, 98.3), "attuned", _ROWNAMES["attuned"]),
     Frame("equipment_left", 3, (32.5, 24.0, 303.8, 281.0), "equipment", _ROWNAMES["equipment_p3_left"]),
     Frame("equipment_right", 3, (308.5, 24.0, 579.5, 281.0), "equipment", _ROWNAMES["equipment_p3_right"]),
-    Frame("body", 4, (261.8, 699.2, 577.0, 751.6), "body", tuple(f"Body{n}" for n in ("Gender", "Age", "Size", "Height", "Weight", "Alignment", "Faith", "Skin", "Eyes", "Hair"))),
+    Frame("body", 4, (261.8, 692.0, 577.0, 751.6), "", tuple(f"Body{n}" for n in ("Gender", "Age", "Size", "Height", "Weight", "Alignment", "Faith", "Skin", "Eyes", "Hair"))),
     Frame("allies", 4, (224.2, 438.3, 393.7, 668.4), "allies", ("Allies",)),
     Frame("personality", 4, (414.6, 603.0, 575.4, 665.6), "personality", ("Personality",)),
     Frame("ideals", 4, (414.6, 547.9, 575.4, 596.5), "ideals", ("Ideals",)),

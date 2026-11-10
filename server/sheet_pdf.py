@@ -17,7 +17,7 @@ from fpdf.enums import TextMode
 
 import sheet_layout as L
 from export_labels import DEFAULT_LANG, check_lang, label, sheet_label
-from sheet_data import SheetData, build_sheet_data
+from sheet_data import FlowBlock, SheetData, build_sheet_data
 from sheet_form import CHARSET, LEADING, PAD, apply_form, charset_for, wrap_text
 
 FONT_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
@@ -121,6 +121,7 @@ class Sheet:
         self.values = self.data.as_dict()
         self.name = (resolution["sheet"].get("name") or "").strip() or label(lang, "unnamed")
         self.doc = _Doc()
+        self.doc.set_creation_date(created)  # fpdf2 would stamp the current time
         self.fields: list[L.Field] = []
         self.index: dict[str, int] = {}
         self.flow_extra: list[str] = []
@@ -335,11 +336,58 @@ class Sheet:
                         self.values[fname] = val
                         self.fields.append(L.Field(fname, "text", (L.Widget(page, rect),), al, 8.0))
 
+    # ---- page 4: appearance and story ----
+    def page4(self) -> None:
+        d, lang = self.doc, self.lang
+        page = self.new_page("story")
+        for fr in L.FRAMES:
+            if fr.page == 4:
+                draw_frame(d, fr, lang)
+        names = [f.name for f in L.FIELDS if any(w.page == 4 for w in f.widgets)]
+        draw_field_boxes(d, names, 4)
+        w = L.FIELDS_BY_NAME["CharacterName"].widgets[-1]
+        d.put(sheet_label(lang, "idName").upper(), w.rect[0], w.rect[1] - 7.5, 5, "left", w.rect[2] - w.rect[0], color=GREY)
+        for n in names:
+            if n.startswith("Body"):
+                x0, y0, x1, _y1 = L.FIELDS_BY_NAME[n].widgets[0].rect
+                d.put(sheet_label(lang, "body" + n[4:]).upper(), x0, y0 - 6.5, 4.8, "left", x1 - x0, color=GREY, minimum=3.2)
+        d.box(L.PORTRAIT_RECT, 0.9, radius=4)
+        d.put(sheet_label(lang, "portrait").upper(), L.PORTRAIT_RECT[0], L.PORTRAIT_RECT[1] + 5, 5.5, "center",
+              L.PORTRAIT_RECT[2] - L.PORTRAIT_RECT[0], bold=True, color=GREY)
+        self.add_fields(names, {4: page})
+
+    def notes_pages(self) -> None:
+        """Backstory / notes text that did not fit the page-4 boxes continues in two tall columns per page."""
+        d, lang = self.doc, self.lang
+        blocks: list = []
+        for name, key in (("Backstory", "backstory"), ("Notes1", "notes"), ("Notes2", "notes")):
+            rest = self.data.overflow.get(name)
+            if rest:
+                blocks.append(FlowBlock("heading", sheet_label(lang, "headContinued", title=sheet_label(lang, key))))
+                blocks.extend(FlowBlock("text", t) for t in rest)
+        if not blocks:
+            return
+        xs = ((36.5, 295.0), (302.0, 575.5))
+        dims = [(x1 - x0, 616.0) for x0, x1 in xs]
+        texts, _rest = self.pack(blocks, dims, 7.0, more=dims[0])
+        for k, start in enumerate(range(0, len(texts), 2), start=1):
+            page = self.new_page("notes-continued")
+            self.header_line(f"{self.name}  \u00b7  {sheet_label(lang, 'headContinued', title=sheet_label(lang, 'notes'))}")
+            for c, (x0, x1) in enumerate(xs):
+                rect = (x0, 40.0, x1, 656.0)
+                name = f"NotesC{k}_{c + 1}"
+                d.box((x0 - 2, 38.0, x1 + 2, 658.0), 0.9, radius=4)
+                d.box(rect, 0.4, fill=LIGHT, color=(150, 150, 150))
+                self.values[name] = texts[start + c] if start + c < len(texts) else ""
+                self.fields.append(L.Field(name, "multi", (L.Widget(page, rect),), "left", 7.0))
+
     def build(self) -> bytes:
         self.page1()
         self.pages23()
         self.flow_pages()
         self.equipment_pages()
+        self.page4()
+        self.notes_pages()
         self.finish_pages()
         base = bytes(self.doc.output())
         texts = [v for v in self.values.values() if isinstance(v, str)] + [self.name]
@@ -356,6 +404,7 @@ class Sheet:
                     d.cell(0, 4, charset_for([v for v in self.values.values() if isinstance(v, str)] + [self.name, self.footer(1, total)]))
             text = self.footer(i + 1, total)
             d.set_text_color(*GREY)
+            d.set_font("DejaVu", "B", 6.5)  # a change of style makes fpdf2 register the font on THIS page
             d.set_font("DejaVu", "", 6.5)
             d.set_xy(0, L.A4_H - 24)
             d.cell(L.A4_W, 8, text, align="C")

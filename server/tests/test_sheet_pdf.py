@@ -250,3 +250,58 @@ def test_pages_two_and_three_carry_the_shared_identity_and_their_fields(lang, ca
     assert (f["CoinsGp"].get("/V") or "") == expected["CoinsGp"]
     assert "Features1" in f and "Features6" in f
     assert len({n for n in f}) == len(f)
+
+
+# ---------------------------------------------------------------- S7: page 4 and the notes continuation
+@pytest.mark.parametrize("lang", ("bg", "en"))
+def test_page_four_fields_and_the_shared_character_name(lang, catalog):
+    res = __import__("copy").deepcopy(resolution("paladin6", catalog))
+    res["sheet"]["details"] = {"alignment": "Lawful Good", "age": "27", "height": "6 ft", "eyes": "grey", "faith": "Pelor",
+                               "personalityTraits": "Brave.\n\nLoud.", "ideals": "Honor", "bonds": "My order", "flaws": "Proud",
+                               "backstory": "Born in a small village.", "allies": "The Guild", "enemies": "Bandits", "notes": "Remember the key"}
+    r = reader(sheet_pdf.to_sheet(res, lang, catalog, CREATED, "2014"))
+    f = r.get_fields()
+    assert f["BodyAlignment"]["/V"] == "Lawful Good" and f["BodyAge"]["/V"] == "27" and f["BodyFaith"]["/V"] == "Pelor"
+    assert f["Personality"]["/V"] == "Brave.\n\nLoud." and f["Ideals"]["/V"] == "Honor" and f["Backstory"]["/V"] == "Born in a small village."
+    assert "The Guild" in f["Allies"]["/V"] and "Bandits" in f["Allies"]["/V"] and f["Notes1"]["/V"] == "Remember the key"
+    assert f["BodySize"]["/V"] == "Medium"
+    assert not any("ortrait" in n for n in f), "the portrait is a bare frame, not a field"
+    parents = {a.get_object()["/T"]: a.get_object() for a in r.trailer["/Root"]["/AcroForm"]["/Fields"]}
+    assert len(parents["CharacterName"]["/Kids"]) == 4
+    last = r.pages[3]
+    assert {(a.get_object().get("/T") or a.get_object()["/Parent"]["/T"]) for a in last["/Annots"]} >= {"CharacterName", "Backstory", "Notes2"}
+    _fits_everywhere(r)
+
+
+def test_long_backstory_continues_on_notes_pages_without_loss(catalog):
+    res = __import__("copy").deepcopy(resolution("paladin6", catalog))
+    paragraphs = [f"Chapter {i}. " + "the story goes on and on " * 40 for i in range(60)]
+    res["sheet"]["details"] = {"backstory": "\n\n".join(paragraphs), "notes": "\n\n".join("note " * 100 for _ in range(30))}
+    r = reader(sheet_pdf.to_sheet(res, "en", catalog, CREATED, "2014"))
+    f = r.get_fields()
+    cont = sorted((n for n in f if n.startswith("NotesC")), key=lambda n: tuple(map(int, re.findall(r"\d+", n))))
+    assert cont, "continuation pages exist"
+    words = (f["Backstory"]["/V"] + "\n\n").split()
+    for n in cont:
+        words += str(f[n].get("/V") or "").split()
+    got = " ".join(words)
+    assert got.count("Chapter ") == 60
+    assert "Chapter 0." in got and "Chapter 59." in got and got.index("Chapter 5.") < got.index("Chapter 59.")
+    assert (got + " " + f["Notes1"]["/V"] + " ").count("note ") == 3000
+    assert len(r.pages) >= 6
+    _fits_everywhere(r)
+
+
+def test_every_page_has_its_footer_with_its_number(catalog):
+    res = _fat(catalog, extra_features=0, items=150, paragraphs=40)
+    r = reader(sheet_pdf.to_sheet(res, "bg", catalog, CREATED, "2014"))
+    total = len(r.pages)
+    assert total >= 7
+    for i, page in enumerate(r.pages, start=1):
+        assert f"стр. {i}/{total}" in page.extract_text(), i
+
+
+def test_the_bytes_depend_on_created_only_not_on_the_clock(catalog):
+    first = make("paladin6", "en", catalog)
+    time.sleep(1.1)  # a different second: fpdf2 would have stamped the current time (a flaky determinism failure under load)
+    assert make("paladin6", "en", catalog) == first
