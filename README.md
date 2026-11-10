@@ -159,7 +159,9 @@ worker that precaches the whole app and the whole pack (about 18 MB, PDF stack a
 visit everything works without a network; a new version is offered with an "update" button. The app can live under a
 sub-path: `VITE_BASE=/dnd-character-creator/ npm run build:offline` (default `/`), and `VITE_SERVERLESS=1` makes an engine
 that cannot run (iOS Lockdown Mode) show a message instead of calling a server that is not there. Help and install steps
-for phones are in the app (`/help`). Placeholder icons: `.venv/bin/python scripts/make_pwa_icons.py`.
+for phones are in the app (`/help`). Publishing on GitHub Pages (owner steps, update flow, troubleshooting):
+`docs/DEPLOY-PAGES.md`; the workflow is `.github/workflows/pages.yml`; CI (`ci.yml`) also builds the pack, runs the Node
+equivalence test, builds the Pages-style site and checks that the precache manifest lists every file. Placeholder icons: `.venv/bin/python scripts/make_pwa_icons.py`.
 
 ## Test
 
