@@ -787,6 +787,7 @@ _EXPORT_FAMILY_LINES = {
     "damage": "- Rage: 3, дълга почивка (Long Rest), устойчивост (Resistance): @",
     "detailSections": "## @",
     "detailFields": "**@:**\n\nтекст, който играчът е написал",
+    "sheet": "Надпис или ред в листа за игра (PDF форма): @",
 }
 
 

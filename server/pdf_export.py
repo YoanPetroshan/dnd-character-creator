@@ -14,52 +14,15 @@ from pathlib import Path
 from fpdf import FPDF
 
 from catalog.reference_data import ABILITIES, LANGUAGE_NAMES, SKILL_NAMES, proficiency_label
-from export_fields import DETAIL_SECTIONS, SPELL_PICK_KEYS, extra_blocks, pack_contents_suffix, worn_wielded_line
+from export_fields import (DETAIL_SECTIONS, SPELL_PICK_KEYS, class_label as _class_label, extra_blocks, fmt_mod as _fmt_mod,
+                           fmt_spell_slots as _fmt_spell_slots, pack_contents_suffix, species_label as _species_label,
+                           worn_wielded_line)
 from export_labels import DEFAULT_LANG, check_lang, label, word
 
 _FONT_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
 _LANGUAGE_NAMES = LANGUAGE_NAMES
 _PROFICIENCY_SECTIONS = (("armor", "profArmor"), ("weapons", "profWeapons"), ("tools", "profTools"))
 _EQUIPMENT_SECTIONS = [("granted", "equipGranted"), ("chosen", "equipChosen"), ("added", "equipAdded")]
-
-
-def _fmt_mod(n: int) -> str:
-    return f"+{n}" if n >= 0 else str(n)
-
-
-def _species_label(species: dict | None) -> str:
-    if not species:
-        return "—"
-    label = species["name"]
-    if species.get("subspecies"):
-        label += f" ({species['subspecies']['name']})"
-    if species.get("variant"):
-        label += f" - {species['variant']['name']}"
-    return label
-
-
-def _class_label(classes: list) -> str:
-    if not classes:
-        return "—"
-    parts = []
-    for c in classes:
-        # Single-class drafts keep the plain name (the level is already
-        # shown once, in the level prefix); a multiclass draft's level
-        # line covers only the total, so each class here carries its own.
-        part = c["name"] if len(classes) == 1 else f"{c['name']} {c['level']}"
-        if c.get("subclass"):
-            part += f" ({c['subclass']['name']})"
-        parts.append(part)
-    return " / ".join(parts)
-
-
-def _fmt_spell_slots(slots: dict, lang: str) -> str:
-    """Mirrors markdown_export._fmt_spell_slots exactly (duplicated per
-    this file's established convention) — slots is
-    derived["spellSlots"]/["warlockSpellSlots"], a dict of only the
-    nonzero slot levels keyed by level as a string."""
-    ordered = sorted(slots, key=int)
-    return ", ".join(label(lang, "slotLevel", lvl=lvl, n=slots[lvl]) for lvl in ordered)
 
 
 class _SheetPDF(FPDF):

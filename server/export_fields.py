@@ -326,3 +326,40 @@ def extra_blocks(resolution: dict, lang: str = DEFAULT_LANG) -> list[tuple[str, 
                 line += " — " + "; ".join(f["notes"])
             blocks.append(("bullet", line))
     return blocks
+
+
+# ---- label helpers shared by the PDF exporters (moved from pdf_export.py in SHEET-S4, output unchanged) ----
+def fmt_mod(n: int) -> str:
+    return f"+{n}" if n >= 0 else str(n)
+
+
+def species_label(species: dict | None) -> str:
+    if not species:
+        return "—"
+    text = species["name"]
+    if species.get("subspecies"):
+        text += f" ({species['subspecies']['name']})"
+    if species.get("variant"):
+        text += f" - {species['variant']['name']}"
+    return text
+
+
+def class_label(classes: list) -> str:
+    if not classes:
+        return "—"
+    parts = []
+    for c in classes:
+        # Single-class drafts keep the plain name (the level is already shown once, in the level prefix); a
+        # multiclass draft's level line covers only the total, so each class here carries its own.
+        part = c["name"] if len(classes) == 1 else f"{c['name']} {c['level']}"
+        if c.get("subclass"):
+            part += f" ({c['subclass']['name']})"
+        parts.append(part)
+    return " / ".join(parts)
+
+
+def fmt_spell_slots(slots: dict, lang: str) -> str:
+    """`slots` is derived["spellSlots"] / ["warlockSpellSlots"], a dict of only the nonzero slot levels keyed by level
+    as a string (the same text markdown_export prints)."""
+    ordered = sorted(slots, key=int)
+    return ", ".join(label(lang, "slotLevel", lvl=lvl, n=slots[lvl]) for lvl in ordered)
