@@ -1308,6 +1308,14 @@ DATA_OVERRIDES: dict[str, dict] = {
                            "defect": "desc \"(a) five javelins or (b) any simple melee weapon\" but the nested pick is `any simple weapon` / simple-weapons"},
         "reason": "the line's own description and PHB p.82 (class file: weaponSimpleMelee) say melee; the description wins",
     },
+    "srd-levels-invocations-metamagic-known": {
+        "what": "SRD Levels counts: Warlock Eldritch Invocations known (L4 2, L6 3) and Sorcerer Metamagic known (L16 3) follow the PHB table",
+        "where": "catalog.loader:_apply_srd_levels_count_fixes",
+        "raw_record_pin": {"file": "chargen/data/srd/5e-SRD-Levels.json (not under official_dir)",
+                           "record": "warlock-4 / warlock-6 class_specific.invocations_known, sorcerer-16 class_specific.metamagic_known",
+                           "defect": "3 at L4 and 4 at L6 (PHB 2 and 3), 4 at L16 (PHB 3): one level early"},
+        "reason": "the PHB table (class-warlock.json / class-sorcerer.json optionalfeatureProgression) is the rule; the SRD Levels file has the error",
+    },
     "pact-of-the-chain-ritual": {
         "what": "Pact of the Chain (XPHB) Find Familiar is an at-will innate spell",
         "where": "engine.class_choices_2024:_INNATE_USES_2024",
@@ -5492,6 +5500,16 @@ SPECIES_OTHER_LANGUAGES: dict[str, dict] = {
     "human-phb-keldon-psd": {"names": ["Keldon"], "quote": "You can speak, read, and write Common and Keldon."},
     "merfolk-psz-ixalan;-blue-psx": {"names": ["Merfolk"], "quote": "You can speak, read, and write Common Trade Pidgin (if it exists in your campaign), Merfolk, and one additional language of your choice."},
     "merfolk-psz-ixalan;-green-psx": {"names": ["Merfolk"], "quote": "You can speak, read, and write Common Trade Pidgin (if it exists in your campaign), Merfolk, and one additional language of your choice."},
+}
+
+# VF4.4: counted features of the SRD Levels file (`class_specific`) that disagree with the PHB class table. Level 1..20.
+# Warlock "Eldritch Invocations" optionalfeatureProgression [0,2,2,2,3,3,4,4,5,5,5,6,6,6,7,7,7,8,8,8] (PHB p.107) and Sorcerer
+# "Metamagic" {"3": 2, "10": 3, "17": 4} (PHB p.101), both read from the vendored class files by a test. The SRD Levels file has
+# invocations_known 3 at L4 and 4 at L6, metamagic_known 4 at L16 (an audit of cantrips known, spells known, invocations and
+# metamagic against every PHB class table found exactly these three). Nothing else in the file disagrees.
+SRD_LEVELS_COUNT_FIXES: dict[tuple[str, str], list[int]] = {
+    ("warlock", "invocations_known"): [0, 2, 2, 2, 3, 3, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8],
+    ("sorcerer", "metamagic_known"): [0, 0, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4],
 }
 
 # VF4.2: the four GGR backgrounds whose `languageProficiencies` choose.from list holds the placeholder "other" (Boros

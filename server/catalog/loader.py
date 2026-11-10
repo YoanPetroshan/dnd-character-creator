@@ -48,6 +48,20 @@ def _follow_melee_description(classes: list[dict]) -> list[dict]:
     return classes
 
 
+def _apply_srd_levels_count_fixes(rows: list[dict]) -> list[dict]:
+    """VF4.4: the SRD Levels file counts the Warlock's invocations one level early at L4 and L6 (3 and 4; PHB 2 and 3) and the
+    Sorcerer's Metamagic at L16 (4; PHB 3). The PHB table (`reference_data.SRD_LEVELS_COUNT_FIXES`, read from the class files
+    by a test) is the rule, so the SRD-only catalog follows it too."""
+    from .reference_data import SRD_LEVELS_COUNT_FIXES
+    for row in rows:
+        if "subclass" in row:
+            continue
+        for (cls, key), table in SRD_LEVELS_COUNT_FIXES.items():
+            if row["class"]["index"] == cls and key in (row.get("class_specific") or {}):
+                row["class_specific"][key] = table[row["level"] - 1]
+    return rows
+
+
 def _index_by(items: list[dict], key: str = "index") -> dict[str, dict]:
     return {item[key]: item for item in items}
 
@@ -278,7 +292,7 @@ def load() -> Catalog:
 
     catalog = Catalog(
         classes=_index_by(_follow_melee_description(_load("5e-SRD-Classes.json"))),
-        levels=_load("5e-SRD-Levels.json"),
+        levels=_apply_srd_levels_count_fixes(_load("5e-SRD-Levels.json")),
         features=_index_by(_load("5e-SRD-Features.json")),
         subclasses=_index_by(_load("5e-SRD-Subclasses.json")),
         races=races,

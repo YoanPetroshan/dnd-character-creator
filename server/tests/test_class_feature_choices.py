@@ -210,7 +210,7 @@ INV = "class:warlock:2:invocations:eldritch-invocations"
 
 def test_invocations_count_follows_level_table(catalog):
     assert _choice(resolve(_draft([_cls("warlock", 1)]), catalog), INV) is None
-    for level, n in [(2, 2), (4, 3), (6, 4), (9, 5), (12, 6), (15, 7), (18, 8)]:
+    for level, n in [(2, 2), (4, 2), (5, 3), (6, 3), (7, 4), (9, 5), (12, 6), (15, 7), (18, 8)]:  # VF4.4: the PHB table (the SRD Levels file had 3 at L4 and 4 at L6)
         assert _choice(resolve(_draft([_cls("warlock", level)]), catalog), INV)["count"] == n, level
 
 

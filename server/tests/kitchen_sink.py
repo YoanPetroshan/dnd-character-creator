@@ -201,6 +201,8 @@ KITCHEN_SINK: dict[str, dict] = {
     # VF2.4: fixed species languages (Kenku DMG: Common and Auran) and the language pick card of the PHB Human. `once`
     "kenku-dmg-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("kenku-dmg", "acolyte")),
     "human-phb-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True, origin=("human-phb", "acolyte")),
+    # VF4.4: Warlock 6 under 2014, three invocations known (the SRD Levels file said 4). Non-2024, `once`
+    "warlock6-invocations-2014": _sub("warlock", 6, "2014", marks=("classes", "spells"), once=True),
     # VF4.2: Selesnya Initiate (GGR), the language card offers Elvish, Loxodon or Sylvan (no "other" placeholder). Non-2024, `once`
     "selesnya-initiate-wizard3-2014": _sub("wizard", 3, "2014", marks=("classes", "official"), once=True,
                                           origin=("human-phb", "selesnya-initiate-ggr")),

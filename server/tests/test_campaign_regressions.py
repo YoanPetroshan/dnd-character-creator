@@ -1201,3 +1201,85 @@ def test_vf4_3_paladin_pick_offers_only_simple_melee_weapons(catalog):
     # the Druid and Ranger lines already name the melee category
     druid = next(c for c in resolve(_draft([("druid", 1)], ruleset="2014"), catalog)["choices"] if c["id"] == "class:druid:1:equipment-choice-1")
     assert [o["id"] for o in druid["options"]] == ["scimitar", "any-simple-melee-weapons"]
+
+
+# ---------------------------------------------------------------- VF4.4 2014 Warlock invocations known (and the SRD Levels audit)
+_PHB_INVOCATIONS = [0, 2, 2, 2, 3, 3, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8]
+_PHB_METAMAGIC = [0, 0] + [2] * 7 + [3] * 7 + [4] * 4
+
+
+def _srd_level_rows():
+    rows = {}
+    for r in json.load(open(_SRD_DIR / "5e-SRD-Levels.json")):
+        if "subclass" not in r:
+            rows.setdefault(r["class"]["index"], {})[r["level"]] = r
+    return rows
+
+
+def _phb_class(name):
+    return next(c for c in json.load(open(DATA / "class" / f"class-{name.lower()}.json"))["class"]
+                if c["name"] == name and c["source"] == "PHB")
+
+
+def _progression(p):
+    if isinstance(p, list):
+        return p
+    out, cur = [], 0
+    for level in range(1, 21):
+        cur = p.get(str(level), cur)
+        out.append(cur)
+    return out
+
+
+def test_vf4_4_data_the_phb_table_and_the_srd_levels_defect():
+    warlock = _phb_class("Warlock")
+    ofp = next(o for o in warlock["optionalfeatureProgression"] if o["name"] == "Eldritch Invocations")
+    assert ofp["progression"] == _PHB_INVOCATIONS
+    srd = [_srd_level_rows()["warlock"][lv]["class_specific"]["invocations_known"] for lv in range(1, 21)]
+    assert srd == [0, 2, 2, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8]   # the SRD file: L4 and L6 one too many
+    sorc = next(o for o in _phb_class("Sorcerer")["optionalfeatureProgression"] if o["name"] == "Metamagic")
+    assert _progression(sorc["progression"]) == _PHB_METAMAGIC
+
+
+def test_vf4_4_the_srd_levels_audit_lists_exactly_three_mismatches():
+    """Every counted feature of the SRD Levels file (cantrips known, spells known, invocations known, metamagic known)
+    against the PHB class file progressions, every class and level."""
+    rows = _srd_level_rows()
+    bad = []
+    for cid, by_level in rows.items():
+        cls = _phb_class(cid.title())
+        checks = []
+        if "cantripProgression" in cls:
+            checks.append(("cantrips_known", "spellcasting", cls["cantripProgression"]))
+        if "spellsKnownProgression" in cls:
+            checks.append(("spells_known", "spellcasting", cls["spellsKnownProgression"]))
+        for o in cls.get("optionalfeatureProgression", []):
+            key = {"Eldritch Invocations": "invocations_known", "Metamagic": "metamagic_known"}.get(o["name"])
+            if key:
+                checks.append((key, "class_specific", _progression(o["progression"])))
+        for key, section, table in checks:
+            for lv in range(1, 21):
+                got = by_level[lv].get(section, {}).get(key)
+                if got != table[lv - 1]:
+                    bad.append((cid, key, lv, got, table[lv - 1]))
+    assert bad == [("sorcerer", "metamagic_known", 16, 4, 3), ("warlock", "invocations_known", 4, 3, 2),
+                   ("warlock", "invocations_known", 6, 4, 3)]
+
+
+def test_vf4_4_the_catalog_levels_follow_the_phb_table(catalog):
+    for lv in range(1, 21):
+        assert catalog.class_level_row("warlock", lv)["class_specific"]["invocations_known"] == _PHB_INVOCATIONS[lv - 1], lv
+        assert catalog.class_level_row("sorcerer", lv)["class_specific"]["metamagic_known"] == _PHB_METAMAGIC[lv - 1], lv
+
+
+@pytest.mark.parametrize("ruleset", ["2014", "mixed"])
+def test_vf4_4_the_warlock_invocation_card_counts_follow_the_phb_table(catalog, ruleset):
+    for lv in range(2, 21):
+        res = resolve(_draft([("warlock", lv)], ruleset=ruleset), catalog)
+        card = next(c for c in res["choices"] if c["id"] == "class:warlock:2:invocations:eldritch-invocations")
+        assert card["count"] == _PHB_INVOCATIONS[lv - 1], (ruleset, lv)
+
+
+def test_vf4_4_the_fix_table_equals_the_class_file_progressions():
+    from catalog import reference_data as ref
+    assert ref.SRD_LEVELS_COUNT_FIXES == {("warlock", "invocations_known"): _PHB_INVOCATIONS, ("sorcerer", "metamagic_known"): _PHB_METAMAGIC}

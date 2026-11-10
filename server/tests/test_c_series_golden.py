@@ -1182,7 +1182,7 @@ def test_y2_golden_options_carry_a_source_and_nothing_else_moved():
                     assert isinstance(o["source"], str) and o["source"], (name, card["id"], o["id"])
                     assert not o["id"].startswith("skill-") and card["source"]["kind"] != "equipment", (name, card["id"], o["id"])
         with_source += has
-    assert with_source == 254  # the VF4.2 selesnya-initiate-wizard3-2014 case; the VF4.1 silverquill-student-wizard3-2014 case; the VF2.6 mark-of-scribing-wizard5-2014 case; the two VF2.4 kenku-dmg-wizard3-2014 and human-phb-wizard3-2014 cases; the VF2.3 loxodon-ggr-wizard3-2014 case; the VF2.2 harengon-mpmm-wizard3-2014 case; the three VF2.1 species-AC sinks (lizardfolk-mpmm, tortle-ttp, warforged-erlw wizard3-2014); the VF1.8 dwarf-phb-wizard3-2014 case; the four VF1.5 / VF1.6 wizard5 innate-frequency sinks (Firbolg MPMM / VGM, Eladrin DMG, Mark of Handling); the VF1.4 dragonborn-phb-draconblood-fighter6-2014 case; the VF1.2 bard9-skill-empowerment-2014 case; the VF1.1 glory-tce-paladin7-2014 case; the four B1 PHB Dragonborn sinks (black, green, brass, white); the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
+    assert with_source == 255  # the VF4.4 warlock6-invocations-2014 case; the VF4.2 selesnya-initiate-wizard3-2014 case; the VF4.1 silverquill-student-wizard3-2014 case; the VF2.6 mark-of-scribing-wizard5-2014 case; the two VF2.4 kenku-dmg-wizard3-2014 and human-phb-wizard3-2014 cases; the VF2.3 loxodon-ggr-wizard3-2014 case; the VF2.2 harengon-mpmm-wizard3-2014 case; the three VF2.1 species-AC sinks (lizardfolk-mpmm, tortle-ttp, warforged-erlw wizard3-2014); the VF1.8 dwarf-phb-wizard3-2014 case; the four VF1.5 / VF1.6 wizard5 innate-frequency sinks (Firbolg MPMM / VGM, Eladrin DMG, Mark of Handling); the VF1.4 dragonborn-phb-draconblood-fighter6-2014 case; the VF1.2 bard9-skill-empowerment-2014 case; the VF1.1 glory-tce-paladin7-2014 case; the four B1 PHB Dragonborn sinks (black, green, brass, white); the four F1 sinks (astral elf, tiefling fierna / winged, two Magic Initiate); the G7 haunted-one-fighter3-2014 case; the G5 rune-carver-wizard9-2014 case; the G6 tiefling-phb5-2014 case; 218 + the G2 sorcerer17-metamagic-2014 case + the two G3 cleric6-paladin3-2014 cases + the four G4 sinks
 
 
 def test_b2_feat_and_species_resources_are_guarded_not_stripped():
@@ -1272,6 +1272,13 @@ def test_vf4a_primary_paladin_cases_hold_the_simple_melee_option_and_nothing_els
     for n in hit:
         card = next(c for c in _GOLDEN[n]["result"]["choices"] if c["id"] == "class:paladin:1:equipment-choice-1")
         assert [o["id"] for o in card["options"]] == ["javelin", "any-simple-melee-weapons"], n
+
+
+def test_vf4_4_warlock6_sink_holds_three_invocations():
+    """VF4.4: no stored case held a Warlock 4 or 6 (levels 1, 3, 11, 20 agree with the PHB table; no rebaseline); the sink has 3."""
+    res = next(e for n, e in _GOLDEN.items() if n.endswith("/warlock6-invocations-2014"))["result"]
+    card = next(c for c in res["choices"] if c["id"] == "class:warlock:2:invocations:eldritch-invocations")
+    assert card["count"] == 3 and len(card["selected"]) == 3
 
 
 def test_vf1_8_dwarf_phb_sink_lists_tool_proficiency_once():

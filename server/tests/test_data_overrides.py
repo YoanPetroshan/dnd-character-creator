@@ -99,6 +99,15 @@ def check_srd_paladin():
     assert nested["from"]["equipment_category"]["index"] == "simple-weapons" and nested["desc"] == "any simple weapon"
 
 
+def check_srd_levels():
+    import pathlib
+    path = pathlib.Path(__file__).resolve().parents[2] / "chargen" / "data" / "srd" / "5e-SRD-Levels.json"
+    rows = {(r["class"]["index"], r["level"]): r for r in json.loads(path.read_text(encoding="utf-8")) if "subclass" not in r}
+    assert rows[("warlock", 4)]["class_specific"]["invocations_known"] == 3
+    assert rows[("warlock", 6)]["class_specific"]["invocations_known"] == 4
+    assert rows[("sorcerer", 16)]["class_specific"]["metamagic_known"] == 4
+
+
 def check_chain():
     opt = _find(_load("optionalfeatures.json", "optionalfeature"), "Pact of the Chain", "XPHB")
     assert opt["additionalSpells"][0]["innate"]["_"] == {"ritual": ["find familiar|xphb"]}
@@ -116,6 +125,7 @@ CHECKS = {
     "genie-touched-feat": check_genie,
     "scc-student-feat-college": check_scc_students,
     "srd-paladin-simple-melee-weapon": check_srd_paladin,
+    "srd-levels-invocations-metamagic-known": check_srd_levels,
     "pact-of-the-chain-ritual": check_chain,
 }
 
