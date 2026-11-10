@@ -18,7 +18,7 @@ from fpdf.enums import TextMode
 import sheet_layout as L
 from export_labels import DEFAULT_LANG, check_lang, label, sheet_label
 from sheet_data import SheetData, build_sheet_data
-from sheet_form import CHARSET, apply_form, charset_for
+from sheet_form import CHARSET, LEADING, PAD, apply_form, charset_for, wrap_text
 
 FONT_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
 GREY = (90, 90, 90)
@@ -122,6 +122,8 @@ class Sheet:
         self.name = (resolution["sheet"].get("name") or "").strip() or label(lang, "unnamed")
         self.doc = _Doc()
         self.fields: list[L.Field] = []
+        self.index: dict[str, int] = {}
+        self.flow_extra: list[str] = []
         self.pages: list[str] = []  # kind per page, in order
 
     # ---- registering fields ----
@@ -130,8 +132,15 @@ class Sheet:
         for n in names:
             f = L.FIELDS_BY_NAME[n]
             widgets = tuple(L.Widget(page_map[w.page], w.rect) for w in f.widgets if w.page in page_map)
-            if widgets:
+            if not widgets:
+                continue
+            at = self.index.get(n)
+            if at is None:
+                self.index[n] = len(self.fields)
                 self.fields.append(L.Field(f.name, f.kind, widgets, f.align, f.size))
+            else:
+                old = self.fields[at]
+                self.fields[at] = L.Field(old.name, old.kind, old.widgets + widgets, old.align, old.size)
 
     def new_page(self, kind: str) -> int:
         self.doc.add_page()
@@ -181,8 +190,156 @@ class Sheet:
             d.put(sheet_label(lang, key).upper(), x0, top, 5, "left", x1 - x0, color=GREY)
         self.add_fields(names, {1: page})
 
+
+    # ---- packing text into columns (the features flow, notes) ----
+    def pack(self, blocks, columns, size: float, more=None):
+        """Fill columns (list of (width, height) in Letter points) with FlowBlocks. Lines are wrapped with the font's
+        metrics; a paragraph may continue in the next column; a heading or title is never the last line of a column.
+        Returns (texts per column, leftover blocks). With ``more`` (a (width, height) column) it keeps adding columns."""
+        d = self.doc
+        lines: list[tuple[int, str, str]] = []  # (paragraph id, text, kind)
+        pid = 0
+        for b in blocks:
+            if lines and b.kind in ("heading", "title"):
+                lines.append((-1, "", "blank"))
+            pid += 1
+            width = columns[0][0] if columns else more[0]
+            inner = (width - 2 * PAD / S) * 0.985
+            for ln in wrap_text(lambda t: d.width(t, size), b.text, inner):
+                lines.append((pid, ln, b.kind))
+        texts: list[str] = []
+        i, col = 0, 0
+        while i < len(lines):
+            if col < len(columns):
+                w, h = columns[col]
+            elif more:
+                w, h = more
+            else:
+                break
+            cap = max(1, int((h - 2 * PAD / S) / (size * LEADING)))
+            taken: list[tuple[int, str, str]] = []
+            while i < len(lines) and len(taken) < cap:
+                if not taken and lines[i][2] == "blank":
+                    i += 1
+                    continue
+                if lines[i][2] in ("heading", "title") and len(taken) >= cap - 1 and taken:
+                    break  # keep a heading with its text
+                taken.append(lines[i])
+                i += 1
+            while taken and taken[-1][2] == "blank":
+                taken.pop()
+            paragraphs: list[str] = []
+            last = None
+            for par, text, kind in taken:
+                if par != -1 and par == last:
+                    paragraphs[-1] += " " + text
+                else:
+                    paragraphs.append(text)
+                last = par
+            texts.append("\n".join(paragraphs))
+            col += 1
+        return texts, lines[i:]
+
+    def header_line(self, text: str) -> None:
+        self.doc.put(text, 36, 742, 11, "left", 520, bold=True)
+
+    def draw_features_frame(self, rect, title_key="features", page_title: str | None = None) -> None:
+        fr = L.Frame("x", 0, rect, title_key, ())
+        self.doc.box(rect, 0.9, radius=4)
+
+    # ---- pages 2 and 3 ----
+    def pages23(self) -> None:
+        d, lang = self.doc, self.lang
+        first = self.new_page("features")
+        second = self.new_page("features")
+        pm = {2: first, 3: second}
+        cols = [L.FIELDS_BY_NAME[f"Features{i}"] for i in range(1, 7)]
+        dims = [(f.widgets[0].rect[2] - f.widgets[0].rect[0], f.widgets[0].rect[3] - f.widgets[0].rect[1]) for f in cols]
+        flow = list(self.data.flow)
+        texts, rest = self.pack(flow, dims, 7.0, more=(dims[0][0], 616.0))
+        self.flow_columns = texts  # first six on pages 2-3, the rest on continuation pages
+        for i, f in enumerate(cols):
+            self.values[f.name] = texts[i] if i < len(texts) else ""
+        self.flow_extra = texts[6:]
+        for page, real in ((2, first), (3, second)):
+            d.page = real
+            for fr in L.FRAMES:
+                if fr.page == page:
+                    draw_frame(d, fr, lang)
+            self.draw_page23_labels(page)
+            names = [f.name for f in L.FIELDS if any(w.page == page for w in f.widgets)]
+            draw_field_boxes(d, names, page)
+            self.add_fields(names, {page: real})
+
+    def draw_page23_labels(self, page: int) -> None:
+        d, lang = self.doc, self.lang
+        for key, n in (("idName", "CharacterName"), ("idClass", "ClassLevel"), ("idPlayer", "PlayerName"), ("idSpecies", "Species"),
+                       ("idBackground", "Background"), ("idXp", "ExperiencePoints")):
+            for w in L.FIELDS_BY_NAME[n].widgets:
+                if w.page == page:
+                    d.put(sheet_label(lang, key).upper(), w.rect[0], w.rect[1] - 7.5, 5, "left", w.rect[2] - w.rect[0], color=GREY)
+        if page == 2:
+            for n, key in (("CoinsCp", "CP"), ("CoinsSp", "SP"), ("CoinsEp", "EP"), ("CoinsGp", "GP"), ("CoinsPp", "PP")):
+                x0, y0, x1, y1 = L.FIELDS_BY_NAME[n].widgets[0].rect
+                d.put(key, x1 + 2, y0 + 6, 7, "left", 10, bold=True, color=GREY)
+            for n, key in (("WeightCarried", "carryWeight"), ("WeightCapacity", "carryCapacity"), ("PushDragLift", "carryPush")):
+                x0, y0, x1, y1 = L.FIELDS_BY_NAME[n].widgets[0].rect
+                d.put(sheet_label(lang, key), x0, y1 + 2, 5.5, "left", x1 - x0 + 4, color=GREY, minimum=3.5)
+            heads = (("Eq0Name", "Eq0Qty", "Eq0Weight"), ("Eq15Name", "Eq15Qty", "Eq15Weight"), ("Attuned1Name", "Attuned1Qty", "Attuned1Weight"))
+        else:
+            heads = (("Eq26Name", "Eq26Qty", "Eq26Weight"), ("Eq41Name", "Eq41Qty", "Eq41Weight"))
+        for trio in heads:
+            for n, key in zip(trio, ("colName", "colQty", "colWeight")):
+                x0, y0, x1, y1 = L.FIELDS_BY_NAME[n].widgets[0].rect
+                d.put(sheet_label(lang, key).upper(), x0, y1 + 3, 5, "left", x1 - x0, color=GREY)
+
+    # ---- continuation pages ----
+    def flow_pages(self) -> None:
+        d, lang = self.doc, self.lang
+        cols = L.FIELDS_BY_NAME
+        xs = [(f.widgets[0].rect[0], f.widgets[0].rect[2]) for f in (cols["Features1"], cols["Features2"], cols["Features3"])]
+        extra = self.flow_extra
+        for k, start in enumerate(range(0, len(extra), 3), start=1):
+            page = self.new_page("features-continued")
+            self.header_line(f"{self.name}  \u00b7  {sheet_label(lang, 'headContinued', title=sheet_label(lang, 'features'))}")
+            names = []
+            for c, (x0, x1) in enumerate(xs):
+                rect = (x0, 40.0, x1, 656.0)
+                name = f"Flow{k}_{c + 1}"
+                self.doc.box((x0 - 2, 38.0, x1 + 2, 658.0), 0.9, radius=4)
+                self.doc.box(rect, 0.4, fill=LIGHT, color=(150, 150, 150))
+                text = extra[start + c] if start + c < len(extra) else ""
+                self.values[name] = text
+                self.fields.append(L.Field(name, "multi", (L.Widget(page, rect),), "left", 7.0))
+
+    def equipment_pages(self) -> None:
+        d, lang = self.doc, self.lang
+        rows = list(self.data.equipment_overflow)
+        per_col = 40
+        for k, start in enumerate(range(0, len(rows), 2 * per_col), start=1):
+            page = self.new_page("equipment-continued")
+            self.header_line(f"{self.name}  \u00b7  {sheet_label(lang, 'headContinued', title=sheet_label(lang, 'equipment'))}")
+            chunk = rows[start:start + 2 * per_col]
+            for c, (nx, qx, wx) in enumerate((((36.5, 231.5), (235.8, 265.9), (270.0, 299.8)), ((312.5, 507.6), (511.5, 541.2), (545.7, 575.5)))):
+                d.box((nx[0] - 3, 36.0, wx[1] + 3, 660.0), 0.9, radius=4)
+                for key, (x0, x1) in zip(("colName", "colQty", "colWeight"), (nx, qx, wx)):
+                    d.put(sheet_label(lang, key).upper(), x0, 644.0, 5, "left", x1 - x0, color=GREY)
+                for i in range(per_col):
+                    y0 = 628.0 - 14.89 * i
+                    idx = c * per_col + i
+                    name, qty, wt = chunk[idx] if idx < len(chunk) else ("", "", "")
+                    for key, (x0, x1), val, al in (("Name", nx, name, "left"), ("Qty", qx, qty, "center"), ("Weight", wx, wt, "center")):
+                        fname = f"EqX{k}_{idx:02d}{key}"
+                        rect = (x0, y0, x1, y0 + 14.1)
+                        d.box(rect, 0.4, fill=LIGHT, color=(150, 150, 150), radius=1.5)
+                        self.values[fname] = val
+                        self.fields.append(L.Field(fname, "text", (L.Widget(page, rect),), al, 8.0))
+
     def build(self) -> bytes:
         self.page1()
+        self.pages23()
+        self.flow_pages()
+        self.equipment_pages()
         self.finish_pages()
         base = bytes(self.doc.output())
         texts = [v for v in self.values.values() if isinstance(v, str)] + [self.name]

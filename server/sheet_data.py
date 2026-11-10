@@ -35,6 +35,7 @@ CHAR_WIDTH_EM = 0.58  # average character width of DejaVu Sans in em (a conserva
 LEADING = 1.2
 EQUIPMENT_FIELD_ROWS = L.EQUIPMENT_ROWS
 WEAPON_ROWS = 6
+NOTES_MIN_SIZE = 4.6  # Letter points: the smallest readable size of a one-line weapon note
 
 
 @dataclass(frozen=True)
@@ -554,13 +555,22 @@ def build_sheet_data(resolution: dict, catalog, lang: str = DEFAULT_LANG, rulese
 
     # weapons
     weapons = _weapon_rows(resolution, catalog, lang)
+    attack_lines: list[str] = []
+    notes_rect = L.FIELDS_BY_NAME["Weapon1Notes"].widgets[0].rect
+    note_chars = int((notes_rect[2] - notes_rect[0] - 4.0) / (NOTES_MIN_SIZE * CHAR_WIDTH_EM))
     for i in range(1, WEAPON_ROWS + 1):
         row = weapons[i - 1] if i <= len(weapons) else ("", "", "", "")
-        v[f"Weapon{i}Name"], v[f"Weapon{i}Attack"], v[f"Weapon{i}Damage"], v[f"Weapon{i}Notes"] = row
-    extra_weapons = weapons[WEAPON_ROWS:]
-    if extra_weapons:
-        action_blocks.append(sheet_label(lang, "headAttacks") + "\n" + "\n".join(
-            " ".join(x for x in (n, h, d, no) if x) for n, h, d, no in extra_weapons))
+        name, hit, dmg, notes = row
+        if len(notes) > note_chars:  # the single-line box keeps what is readable, the rest continues in the Actions text
+            cut = notes.rfind(", ", 0, note_chars)
+            head, tail = (notes[:cut], notes[cut + 2:]) if cut > 0 else (notes[:note_chars], notes[note_chars:])
+            notes = head
+            attack_lines.append(f"{name}: {tail}")
+        v[f"Weapon{i}Name"], v[f"Weapon{i}Attack"], v[f"Weapon{i}Damage"], v[f"Weapon{i}Notes"] = name, hit, dmg, notes
+    for n, h, d, no in weapons[WEAPON_ROWS:]:
+        attack_lines.append(" ".join(x for x in (n, h, d, no) if x))
+    if attack_lines:
+        action_blocks.append(sheet_label(lang, "headAttacks") + "\n" + "\n".join(attack_lines))
 
     # equipment, coins, carrying
     rows = _equipment_rows(resolution, catalog)

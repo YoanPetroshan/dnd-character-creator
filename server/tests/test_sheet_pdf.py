@@ -138,3 +138,115 @@ def _time(fn):
     t = time.perf_counter()
     fn()
     return time.perf_counter() - t
+
+
+# ---------------------------------------------------------------- S6: pages 2-3, flow, equipment, continuation pages
+def _flow_words(blocks):
+    return " ".join(b.text for b in blocks).split()
+
+
+def _column_words(r):
+    names = sorted(n for n in r.get_fields() if re.fullmatch(r"Features[1-6]|Flow\d+_[123]", n))
+    # page order: Features1-6 first, then Flow k columns in order
+    names = [n for n in names if n.startswith("Features")] + sorted((n for n in names if n.startswith("Flow")), key=lambda n: tuple(map(int, re.findall(r"\d+", n))))
+    words = []
+    for n in names:
+        words += str(r.get_fields()[n].get("/V") or "").split()
+    return names, words
+
+
+def _fits_everywhere(r):
+    m = metrics_of(r)
+    for page in r.pages:
+        for a in page.get("/Annots", []):
+            a = a.get_object()
+            owner = a.get("/Parent", a).get_object() if "/Parent" in a else a
+            if owner.get("/FT") != "/Tx" or not owner.get("/V"):
+                continue
+            x0, y0, x1, y1 = (float(v) for v in a["/Rect"])
+            nominal = _nominal(owner["/T"])
+            _l, _s, fits = SF.fit_text(m, str(owner["/V"]), x1 - x0, y1 - y0, nominal, bool(int(owner.get("/Ff", 0)) & 4096))
+            assert fits, (owner["/T"], str(owner["/V"])[:60])
+
+
+def _nominal(name):
+    f = L.FIELDS_BY_NAME.get(name)
+    if f:
+        return f.size * L.SCALE
+    return (7.0 if name.startswith(("Flow", "Notes")) else 8.0) * L.SCALE
+
+
+@pytest.mark.parametrize("sid,lang", (("paladin6", "bg"), ("wizard20-2014", "en"), ("barbarian20-2014", "en"), ("fighter10-2024", "bg")))
+def test_the_features_flow_is_lossless_and_fits(sid, lang, catalog):
+    res = resolution(sid, catalog)
+    data = D.build_sheet_data(res, catalog, lang, KITCHEN_SINK[sid]["ruleset"])
+    r = reader(make(sid, lang, catalog))
+    _names, words = _column_words(r)
+    expected = _flow_words(data.flow)  # the features, the feats and the leftovers of the small boxes
+    assert words == expected, "the columns hold exactly the words of the flow, in order"
+    _fits_everywhere(r)
+
+
+def _fat(catalog, extra_features=0, items=0, paragraphs=0):
+    res = __import__("copy").deepcopy(resolution("wizard20-2014", catalog))
+    sheet = res["sheet"]
+    for i in range(extra_features):
+        sheet["features"].append({"source": {"kind": "class", "id": "wizard", "label": "Wizard"}, "name": f"Invented Feature {i}", "level": 3})
+    sheet["equipment"]["added"] = [{"itemId": "dagger", "name": f"Gear {i}", "qty": 2} for i in range(items)]
+    if paragraphs:
+        sheet["details"] = {"backstory": "\n\n".join(f"Story {i}. " + "word " * 120 for i in range(paragraphs)), "notes": "n"}
+    return res
+
+
+def test_a_very_long_flow_continues_on_extra_pages_and_loses_nothing(catalog):
+    class FatCat:  # every invented feature gets a long description through a fake catalog record
+        def __init__(self, base):
+            self.__dict__.update(base.__dict__)
+            self.features = dict(base.features)
+            for i in range(160):
+                self.features[f"invented-{i}"] = {"index": f"invented-{i}", "class": {"index": "wizard"}, "name": f"Invented Feature {i}", "level": 3,
+                                                   "desc": [f"Paragraph one of {i}. " + "lorem ipsum dolor sit amet " * 30, "Second paragraph. " + "consectetur " * 40]}
+        def resolve_spell_id(self, x):
+            return x if x in self.spells else None
+    cat = FatCat(catalog)
+    res = _fat(catalog, extra_features=160)
+    data = D.build_sheet_data(res, cat, "en", "2014")
+    r = reader(sheet_pdf.to_sheet(res, "en", cat, CREATED, "2014"))
+    names, words = _column_words(r)
+    assert any(n.startswith("Flow") for n in names), "continuation pages exist"
+    flow_words = _flow_words([b for b in data.flow])
+    got = " ".join(words)
+    # all feature text survives, in order, across page 2, 3 and the continuation pages
+    assert got.startswith(" ".join(flow_words[:200])) and " ".join(flow_words) in got
+    assert len(r.pages) >= 5
+    _fits_everywhere(r)
+    assert len(set(r.get_fields())) == len(r.get_fields())
+
+
+def test_equipment_beyond_the_rows_gets_continuation_pages(catalog):
+    res = _fat(catalog, items=150)
+    data = D.build_sheet_data(res, catalog, "en", "2014")
+    r = reader(sheet_pdf.to_sheet(res, "en", catalog, CREATED, "2014"))
+    f = r.get_fields()
+    cont = sorted(n for n in f if n.startswith("EqX"))
+    assert cont and len(data.equipment_overflow) > 0
+    names = [f[n]["/V"] for n in cont if n.endswith("Name") and f[n].get("/V")]
+    assert names == [row[0] for row in data.equipment_overflow]
+    _fits_everywhere(r)
+
+
+@pytest.mark.parametrize("lang", ("bg", "en"))
+def test_pages_two_and_three_carry_the_shared_identity_and_their_fields(lang, catalog):
+    r = reader(make("paladin6", lang, catalog))
+    assert len(r.pages) >= 3
+    root = r.trailer["/Root"]["/AcroForm"]["/Fields"]
+    parents = {a.get_object()["/T"]: a.get_object() for a in root}
+    for n in ("ClassLevel", "PlayerName", "Species", "Background", "ExperiencePoints"):
+        assert len(parents[n]["/Kids"]) == 3, n
+    f = r.get_fields()
+    expected = D.build_sheet_data(resolution("paladin6", catalog), catalog, lang, "2014").as_dict()
+    for i in range(56):
+        assert (f[f"Eq{i}Name"].get("/V") or "") == expected[f"Eq{i}Name"]
+    assert (f["CoinsGp"].get("/V") or "") == expected["CoinsGp"]
+    assert "Features1" in f and "Features6" in f
+    assert len({n for n in f}) == len(f)
