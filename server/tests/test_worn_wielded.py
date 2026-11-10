@@ -85,6 +85,9 @@ def strip_g2(res: dict) -> dict:
         res["sheet"]["equipment"].pop(k, None)
     for a in res["derived"].get("attacks", []):
         a.pop("wielded", None)
+    # VF7.5: the plain Unarmed Strike row every character has now (and species natural weapon rows) are additive to the pre-G2 baseline
+    res["derived"]["attacks"] = [a for a in res["derived"].get("attacks", [])
+                                 if not (a["itemId"] == "unarmed-strike" and a["notes"] == []) and not a["itemId"].startswith("natural-")]
     res["derived"].pop("featResources", None)  # FE3 additive key (feat-less baseline drafts: always [])
     res["derived"].pop("speciesResources", None)  # W5a additive key (empty for the baseline drafts)
     for card in res["choices"]:  # SK10 (Y2) additive key: the book code of an option (the pre-G2 baseline has none)

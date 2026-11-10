@@ -69,7 +69,7 @@ def test_background_starting_gear_is_counted(catalog):
 
 def test_unequipped_added_gear_still_weighs_but_is_not_an_attack(catalog):
     r = resolve(_draft([], {"STR": 14}, [_added("longsword", 1, equipped=False)], background=None), catalog)
-    assert r["derived"]["attacks"] == []
+    assert [a["itemId"] for a in r["derived"]["attacks"]] == ["unarmed-strike"]  # VF7.5: only the plain Unarmed Strike, no longsword row
     assert r["derived"]["carryingCapacity"]["carried"] == 3
 
 

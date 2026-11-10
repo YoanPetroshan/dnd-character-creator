@@ -1566,3 +1566,131 @@ def test_vf7_4_output_is_unchanged_by_the_memo(catalog):
     bg = json.dumps(localize(res, "bg"), ensure_ascii=False)
     again = json.dumps(localize(resolve(draft, catalog), "bg"), ensure_ascii=False)
     assert bg == again
+
+
+# ---------------------------------------------------------------- VF7.5 Unarmed Strike and species natural weapons
+# Book rule (PHB p.195 "Unarmed Strike" / PHB 2024 "Unarmed Strike", NOT in the vendored data): an unarmed strike deals bludgeoning
+# damage equal to 1 + your Strength modifier and you are proficient with it. The species records pin the "normal" part: "instead of
+# the bludgeoning damage normal for an unarmed strike". Natural weapons: the table `reference_data.SPECIES_NATURAL_WEAPONS`,
+# one entry per species trait id with the sentence it was read from (the die, type and ability are re-derived from that sentence
+# by this test, so the table cannot drift from the data).
+def _trait_text(catalog, trait_id):
+    return " ".join(catalog.traits[trait_id]["desc"])
+
+
+def test_vf7_5_natural_weapon_table_matches_the_trait_sentences(catalog):
+    from catalog import reference_data as ref
+    import re
+    assert len(ref.SPECIES_NATURAL_WEAPONS) == 21
+    for tid, spec in ref.SPECIES_NATURAL_WEAPONS.items():
+        text = _trait_text(catalog, tid)
+        assert spec["quote"] in text, tid
+        quote = spec["quote"]
+        assert re.search(r"\{@damage " + re.escape(spec["die"]) + r"\}", quote), tid
+        assert spec["type"] in quote.lower() or tid == "aarakocra-dmg-trait-1" and spec["type"] == "slashing", tid
+        want = {"STR": "Strength", "CON": "Constitution"}[spec["ability"]]
+        if spec["ability"] == "CON":
+            assert "Constitution modifier" in text, tid
+        else:
+            assert "Constitution modifier, instead of your Strength" not in text, tid
+            assert want in text or tid == "aarakocra-dmg-trait-1", tid
+
+
+def test_vf7_5_every_species_trait_that_says_unarmed_strike_or_natural_weapon_is_in_the_table_or_listed(catalog):
+    """Scan of the 153 imported species: a trait whose text says "natural weapon" / "make unarmed strikes" is modelled here or
+    explicitly deferred below (with the reason in ARCHITECTURE VF7.5)."""
+    from catalog import reference_data as ref
+    import re
+    deferred = {"dhampir-rhw-trait-3": None}
+    hits = set()
+    for rid, race in catalog.races.items():
+        for ref_ in race.get("traits") or []:
+            text = _trait_text(catalog, ref_["index"])
+            if re.search(r"natural weapon|make unarmed strikes|unarmed strikes, which deal", text, re.I):
+                hits.add(ref_["index"])
+    modelled = set(ref.SPECIES_NATURAL_WEAPONS)
+    assert hits <= modelled | {"loxodon-ggr-trait-1"}, sorted(hits - modelled)
+    assert modelled - hits <= {"dhampir-rhw-trait-3"}, sorted(modelled - hits)
+
+
+def _attacks(res):
+    return res["derived"]["attacks"]
+
+
+@pytest.mark.parametrize("ruleset", ["2014", "mixed", "2024"])
+def test_vf7_5_everyone_has_an_unarmed_strike_row(catalog, ruleset):
+    res = resolve(_draft([("fighter", 5)], ruleset=ruleset, scores={"STR": 16}), catalog)
+    (row,) = [a for a in _attacks(res) if a["itemId"] == "unarmed-strike"]
+    assert row["name"] == "Unarmed Strike" and row["ability"] == "STR" and row["proficient"] is True
+    assert row["attackBonus"] == 3 + 3 and row["damage"] == "1+3" and row["damageType"] == "bludgeoning" and row["range"] == "5"
+    assert _attacks(res) == [row]  # no weapons carried
+
+
+def test_vf7_5_strength_modifier_only_and_gear_rows_come_first(catalog):
+    d = _draft([("fighter", 1)], scores={"STR": 8, "DEX": 18}, added=("longsword",))
+    rows = _attacks(resolve(d, catalog))
+    assert [r["itemId"] for r in rows] == ["longsword", "unarmed-strike"]
+    assert rows[-1]["damage"] == "1-1" and rows[-1]["attackBonus"] == -1 + 2  # DEX is never used by a plain unarmed strike
+
+
+def test_vf7_5_monk_keeps_exactly_one_unarmed_row(catalog):
+    for ruleset in ("2014", "2024"):
+        rows = [a for a in _attacks(resolve(_draft([("monk", 5)], ruleset=ruleset, scores={"DEX": 16}), catalog)) if "unarmed" in a["itemId"]]
+        assert len(rows) == 1 and rows[0]["notes"] == ["Martial Arts"] and rows[0]["ability"] == "DEX"
+
+
+_NATURAL = [  # (species, class level 5 Fighter, expected row name, die, damage type, ability)
+    ("lizardfolk-vgm", "Bite", "1d6", "piercing", "STR"), ("lizardfolk-mpmm", "Bite", "1d6", "slashing", "STR"),
+    ("tabaxi-vgm", "Cat's Claws", "1d4", "slashing", "STR"), ("tabaxi-mpmm", "Cat's Claws", "1d6", "slashing", "STR"),
+    ("minotaur-mpmm", "Horns", "1d6", "piercing", "STR"), ("minotaur-ggr", "Horns", "1d6", "piercing", "STR"),
+    ("tortle-mpmm", "Claws", "1d6", "slashing", "STR"), ("tortle-ttp", "Claws", "1d4", "slashing", "STR"),
+    ("aarakocra-eepc", "Talons", "1d4", "slashing", "STR"), ("aarakocra-mpmm", "Talons", "1d6", "slashing", "STR"),
+    ("centaur-mpmm", "Hooves", "1d6", "bludgeoning", "STR"), ("satyr-mpmm", "Ram", "1d6", "bludgeoning", "STR"),
+    ("gnoll-dmg", "Bite", "1d4", "piercing", "STR"), ("leonin-mot", "Claws", "1d4", "slashing", "STR"),
+    ("dhampir-vrgr", "Vampiric Bite", "1d4", "piercing", "CON"),
+]
+
+
+@pytest.mark.parametrize("species,name,die,dtype,ability", _NATURAL)
+def test_vf7_5_species_natural_weapon_rows(catalog, species, name, die, dtype, ability):
+    scores = {"STR": 16, "CON": 14, "DEX": 10}
+    res = resolve(_draft([("fighter", 5)], ruleset="mixed", species=species, scores=scores), catalog)
+    rows = {a["name"]: a for a in _attacks(res)}
+    assert set(rows) == {"Unarmed Strike", name}, species
+    row = rows[name]
+    mod = res["derived"]["abilityModifiers"][ability]
+    assert row["ability"] == ability and row["proficient"] is True and row["damageType"] == dtype
+    assert row["damage"] == f"{die}{mod:+d}" and row["attackBonus"] == mod + 3 and row["range"] == "5"
+    assert row["itemId"].startswith("natural-") and row["itemId"] != "unarmed-strike"
+    assert rows["Unarmed Strike"]["damageType"] == "bludgeoning" and rows["Unarmed Strike"]["damage"].startswith("1+")
+
+
+def test_vf7_5_lupin_unarmed_strikes_deal_slashing_and_shifter_longtooth_is_a_variant_row(catalog):
+    res = resolve(_draft([("fighter", 5)], ruleset="2024", species="lupin-rhw"), catalog)
+    assert [(a["name"], a["damageType"]) for a in _attacks(res)] == [("Unarmed Strike", "slashing")]
+    for sp in ("shifter-mpmm", "shifter-efa"):
+        d = _draft([("fighter", 5)], ruleset="mixed", species=sp)
+        d["species"]["choices"] = {f"species:{sp}:variant": ["longtooth"]}
+        rows = {a["name"]: a for a in _attacks(resolve(d, catalog))}
+        assert set(rows) == {"Unarmed Strike", "Longtooth"}, sp
+        assert rows["Longtooth"]["damage"] == "1d6" and rows["Longtooth"]["damageType"] == "piercing", sp
+        assert any("shifted" in n for n in rows["Longtooth"]["notes"])
+        d["species"]["choices"] = {f"species:{sp}:variant": ["beasthide"]}
+        assert {a["name"] for a in _attacks(resolve(d, catalog))} == {"Unarmed Strike"}
+
+
+def test_vf7_5_a_unarmed_feat_still_replaces_the_row_and_nothing_is_duplicated(catalog):
+    res = resolve(_draft([("fighter", 4)], ruleset="2014", species="tabaxi-vgm",
+                         class_choices={0: {"class:fighter:4:asi": ["feat:tavern-brawler-phb"]}}), catalog)
+    rows = _attacks(res)
+    assert [r["itemId"] for r in rows].count("unarmed-strike") == 1
+    assert len({r["itemId"] for r in rows}) == len(rows)
+
+
+def test_vf7_5_variant_and_lupin_quotes_are_pinned_in_the_records(catalog):
+    from catalog import reference_data as ref
+    for sid, src in (("shifter-mpmm", "MPMM"), ("shifter-efa", "EFA")):
+        text = _flat_text(next(r["entries"] for r in _species_json() if r["name"] == "Shifter" and r["source"] == src))
+        assert ref.SPECIES_VARIANT_NATURAL_WEAPONS[(sid, "longtooth")]["quote"] in text, sid
+    for tid, spec in ref.SPECIES_UNARMED_TYPE.items():
+        assert spec["quote"] in _trait_text(catalog, tid)

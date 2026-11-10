@@ -448,6 +448,17 @@ REBASELINES: dict[str, dict] = {
         ],
         "why": "2014 Ranger Favored Enemy language per gain and distinct enemy types (VF7.3)",
     },
+    # VF7.5: every character without a Monk row or an unarmed-strike feat gains the plain Unarmed Strike row (PHB: 1 + Strength modifier
+    # bludgeoning, proficient) at the END of `derived.attacks`, and a species natural weapon (Bite, Claws ...) adds one more row after it.
+    # Rule matrix: all stored cases except the 23 that already hold a Monk unarmed row (primary Monk, Barbarian 3 / Monk 2, Four Elements,
+    # the Monk 14 sink) change; the existing rows stay as they were; the two kitchen sinks with a natural-weapon species (Lizardfolk MPMM
+    # Bite, Tortle TTP Claws) also get that row. The diff tool reports a list change at the list itself, so the only allowed path is the
+    # `attacks` list; `test_vf7e_*` below proves that every change is exactly "rows appended". No other path may move.
+    "VF7e": {
+        "cases": ["*"],
+        "paths": [r"^result\.derived\.attacks$"],
+        "why": "plain Unarmed Strike row for everyone and species natural weapon rows (VF7.5)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -800,7 +811,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a", "VF2b", "VF2c", "VF2d", "VF4a", "VF7a", "VF7b", "VF7c") and STRIP == ()
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a", "VF2b", "VF2c", "VF2d", "VF4a", "VF7a", "VF7b", "VF7c", "VF7e") and STRIP == ()
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
@@ -1365,6 +1376,27 @@ def test_vf7b_the_land_druid_cases_hold_the_bonus_cantrip_and_nothing_else_moved
     for n in (n for n in _GOLDEN if n.endswith("/druid1")):
         card = next(c for c in _GOLDEN[n]["result"]["choices"] if c["id"] == "class:druid:spells-cantrips")
         assert card["count"] == 2, n
+
+
+def test_vf7e_every_non_monk_case_ends_with_the_plain_unarmed_row_and_natural_weapons_follow():
+    """VF7.5 (REBASELINES["VF7e"]): 269 of the 292 stored cases hold the plain row (notes [], damage 1 + STR) after the weapon rows;
+    the 23 Monk cases keep their Martial Arts row; Lizardfolk MPMM and Tortle TTP add Bite / Claws behind it."""
+    plain, monk = [], []
+    for name, entry in _GOLDEN.items():
+        rows = entry["result"]["derived"]["attacks"]
+        unarmed = [r for r in rows if r["itemId"] == "unarmed-strike"]
+        assert len(unarmed) == 1, name
+        (monk if unarmed[0]["notes"] else plain).append(name)
+        natural = [r["name"] for r in rows if r["itemId"].startswith("natural-")]
+        if natural:
+            assert rows[-len(natural):] == [r for r in rows if r["itemId"].startswith("natural-")], name
+            assert rows[-len(natural) - 1]["itemId"] == "unarmed-strike", name
+        else:
+            assert (rows[-1]["itemId"] == "unarmed-strike"), name
+    assert len(plain) == 269 and len(monk) == 23
+    assert all("monk" in n.lower() or "four-elements" in n for n in monk)
+    assert {n for n, e in _GOLDEN.items() if any(r["itemId"].startswith("natural-") for r in e["result"]["derived"]["attacks"])} == {
+        "ks/src-all/lizardfolk-mpmm-wizard3-2014", "ks/src-all/tortle-ttp-wizard3-2014"}
 
 
 if __name__ == "__main__":

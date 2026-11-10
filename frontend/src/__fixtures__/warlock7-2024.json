@@ -505,6 +505,21 @@
       "Pact weapon: proficient; Charisma for attack and damage; Necrotic, Psychic or Radiant damage allowed"
      ],
      "mastery": null
+    },
+    {
+     "itemId": "unarmed-strike",
+     "name": "Unarmed Strike",
+     "ability": "STR",
+     "proficient": true,
+     "attackBonus": 7,
+     "damage": "1+4",
+     "damageType": "bludgeoning",
+     "duelingDamage": null,
+     "versatileDamage": null,
+     "offhandDamage": null,
+     "range": "5",
+     "notes": [],
+     "mastery": null
     }
    ],
    "attacksPerAction": 1,

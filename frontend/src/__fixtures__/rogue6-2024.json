@@ -586,6 +586,21 @@
       "Savage Attacker: once per turn when you hit, roll the weapon's damage dice twice and use either roll."
      ],
      "mastery": null
+    },
+    {
+     "itemId": "unarmed-strike",
+     "name": "Unarmed Strike",
+     "ability": "STR",
+     "proficient": true,
+     "attackBonus": 8,
+     "damage": "1+5",
+     "damageType": "bludgeoning",
+     "duelingDamage": null,
+     "versatileDamage": null,
+     "offhandDamage": null,
+     "range": "5",
+     "notes": [],
+     "mastery": null
     }
    ],
    "attacksPerAction": 1,

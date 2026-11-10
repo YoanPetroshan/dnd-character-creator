@@ -6987,8 +6987,17 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     martial_arts = next((r for r in class_resources if r["id"] == "monk:martial-arts"), None) if is_monk else None
     martial_arts_die = martial_arts and martial_arts.get("die")
     feat_unarmed = feat_effects_mod.unarmed_spec(feat_inst, gear.hands, equipped_items, martial_arts_die, monk=is_monk)  # FE5, F-D6
+    unarmed_type = next((r["type"] for r in species_traits_mod.rows(race, subrace, reference_data.SPECIES_UNARMED_TYPE)), None)  # VF7.5 Lupin
     if is_monk or feat_unarmed:  # R2: the Monk's unarmed strike (never deduped against gear); FE5: or a feat's
-        attacks = attacks + [attacks_mod.unarmed_strike(modifiers, prof_bonus, martial_arts_die, feat_unarmed, monk=is_monk)]
+        unarmed = attacks_mod.unarmed_strike(modifiers, prof_bonus, martial_arts_die, feat_unarmed, monk=is_monk)
+    else:  # VF7.5: every other character has the plain Unarmed Strike (1 + Strength, bludgeoning)
+        unarmed = attacks_mod.basic_unarmed_strike(modifiers, prof_bonus)
+    if unarmed_type and unarmed["damageType"] == "bludgeoning":
+        unarmed = {**unarmed, "damageType": unarmed_type}
+    attacks = attacks + [unarmed]
+    natural = species_traits_mod.rows(race, subrace, reference_data.SPECIES_NATURAL_WEAPONS)  # VF7.5 Bite, Claws, Horns, Talons ...
+    variant_weapon = reference_data.SPECIES_VARIANT_NATURAL_WEAPONS.get((race_id, species_variant["id"])) if race_id and species_variant else None
+    attacks = attacks + [attacks_mod.natural_weapon_row(spec, modifiers, prof_bonus) for spec in natural + ([variant_weapon] if variant_weapon else [])]
     attacks = class_resources_mod.annotate_attacks(attacks, class_resources, equipped_items)
     if pact_weapon_id:  # C7c: Thirsting Blade, Eldritch Smite, ... notes on the pact weapon's row
         pact_notes = class_choices_2024.pact_weapon_row_notes(

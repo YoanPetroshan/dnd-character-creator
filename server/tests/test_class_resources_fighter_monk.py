@@ -285,9 +285,11 @@ def test_strength_monk_uses_strength(catalog):
     assert row["ability"] == "STR"
 
 
-def test_non_monks_have_no_unarmed_strike_row(catalog):
+def test_non_monks_have_only_the_plain_unarmed_strike_row(catalog):
+    """VF7.5: every character has the PHB Unarmed Strike (1 + Strength, no Martial Arts); only the Monk's row has the die and the note."""
     for classes in ([("fighter", 5)], [("barbarian", 3)], [("rogue", 1)]):
-        assert not any(a["itemId"] == "unarmed-strike" for a in _res(catalog, classes)["derived"]["attacks"])
+        rows = [a for a in _res(catalog, classes)["derived"]["attacks"] if a["itemId"] == "unarmed-strike"]
+        assert len(rows) == 1 and rows[0]["notes"] == [] and rows[0]["ability"] == "STR"
 
 
 def test_multiclass_monk_level_1_gets_the_row_with_its_die(catalog):

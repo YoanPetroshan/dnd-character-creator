@@ -361,8 +361,9 @@ def test_dual_wielder_phb_with_the_srd_two_weapon_fighting_style_adds_the_modifi
 
 def test_no_unarmed_row_without_such_a_feat(catalog):
     r = _res(catalog, [("fighter", 4)], ["alert-phb"], added=["longsword"])
-    assert [a["itemId"] for a in _rows(r)] == ["longsword"]
-    assert all(a["itemId"] != attacks_mod.UNARMED_STRIKE_ID for a in _rows(_res(catalog, [("fighter", 1)])))
+    assert [a["itemId"] for a in _rows(r)] == ["longsword", "unarmed-strike"]  # VF7.5: the plain row, no feat improvement
+    plain = _row(r, attacks_mod.UNARMED_STRIKE_ID)
+    assert plain["notes"] == [] and plain["damage"].startswith("1") and not plain["damage"].startswith("1d")
 
 
 def test_tavern_brawler_xphb_fighter_gets_a_proficient_d4_plus_strength_row(catalog):

@@ -184,3 +184,27 @@ def unarmed_strike(modifiers: dict, prof_bonus: int, martial_arts_die: str | Non
         "duelingDamage": None, "versatileDamage": None, "offhandDamage": None, "range": "5",
         "notes": list(feat["notes"]) if feat else ["Martial Arts"],
     }
+
+
+def basic_unarmed_strike(modifiers: dict, prof_bonus: int, damage_type: str = "bludgeoning") -> dict:
+    """VF7.5: the Unarmed Strike every character has (PHB p.195, PHB 2024: 1 + Strength modifier bludgeoning damage, proficient).
+    Not built for a Monk (Martial Arts row) or a character whose feat improves it (`unarmed_strike`)."""
+    mod = modifiers.get("STR", 0)
+    return {
+        "itemId": UNARMED_STRIKE_ID, "name": "Unarmed Strike", "ability": "STR", "proficient": True,
+        "attackBonus": mod + prof_bonus, "damage": _dice("1", mod), "damageType": damage_type,
+        "duelingDamage": None, "versatileDamage": None, "offhandDamage": None, "range": "5", "notes": [],
+    }
+
+
+def natural_weapon_row(spec: dict, modifiers: dict, prof_bonus: int) -> dict:
+    """VF7.5: a species natural weapon (`reference_data.SPECIES_NATURAL_WEAPONS`): an unarmed strike with its own die and damage
+    type, proficient, adding the ability the trait names (Strength; Dhampir: Constitution)."""
+    mod = modifiers.get(spec["ability"], 0)
+    slug = "".join(ch if ch.isalnum() else "-" for ch in spec["name"].lower().replace("'", "")).strip("-")
+    return {
+        "itemId": f"natural-{slug}", "name": spec["name"], "ability": spec["ability"], "proficient": True,
+        "attackBonus": mod + prof_bonus, "damage": _dice(spec["die"], mod), "damageType": spec["type"],
+        "duelingDamage": None, "versatileDamage": None, "offhandDamage": None, "range": "5",
+        "notes": [spec["note"]] if spec.get("note") else [],
+    }

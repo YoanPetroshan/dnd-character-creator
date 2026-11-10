@@ -222,7 +222,7 @@ def test_a_low_level_cleric_in_a_multiclass_has_no_card(catalog):
 @needs_data
 def test_weapon_rows_carry_the_divine_strike_note(catalog):
     res = _res(catalog, [_cleric(7)], added=["longsword", "longbow"])
-    rows = res["derived"]["attacks"]
+    rows = [r for r in res["derived"]["attacks"] if r["itemId"] != "unarmed-strike"]  # VF7.5: the plain Unarmed Strike has no weapon note
     assert rows
     for row in rows:
         assert "Divine Strike: +1d8 necrotic or radiant (once per turn)" in row["notes"]
