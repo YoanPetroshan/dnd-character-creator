@@ -6048,6 +6048,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         if caster:
             spell_ability, spell_dict, list_class_id = caster
             extra_cantrips = class_choices_2024.class_option_extra_cantrips(catalog, rc, ruleset)  # C6a Thaumaturge / Magician
+            extra_cantrips += class_choices_2024.subclass_extra_cantrips(catalog, rc, ruleset)  # VF7.2 2014 Circle of the Land
             if extra_cantrips and spell_dict.get("cantrips_known", 0) > 0:
                 spell_dict = {**spell_dict, "cantrips_known": spell_dict["cantrips_known"] + extra_cantrips}
             raw_feature_ids = {

@@ -414,6 +414,20 @@ REBASELINES: dict[str, dict] = {
         ],
         "why": "a 2024 background under mixed gives the 2024 origin languages (VF7.1)",
     },
+    # VF7.2: the 2014 Circle of the Land "Bonus Cantrip" (SRD / PHB, Druid 2: "one additional druid cantrip of your choice") counts on
+    # the Druid cantrip card. Rule matrix: only a stored case whose primary class is the Druid with the SRD Land circle at level >= 2
+    # moves (Druid 3 / 11 / 20, `src-srd` and `src-all`, mixed and 2014): the card's count (+1), its description (the count in the
+    # text), the filler's extra first-option pick (card `selected` and the draft's stored pick) and that cantrip in the sheet's
+    # druid cantrip list. The Cleric 1 / Druid 1 multiclass (no circle yet) and every other class must not move.
+    "VF7b": {
+        "cases": ["*/src-*/druid3", "*/src-*/druid11", "*/src-*/druid20"],
+        "paths": [
+            r"^result\.choices\[class:druid:spells-cantrips\]\.(count|description|selected)$",
+            r"^draft\.classes\[0\]\.choices\.class:druid:spells-cantrips$",
+            r"^result\.sheet\.spells\[0\]\.cantrips\[[a-z-]+\]$",
+        ],
+        "why": "the 2014 Land druid's Bonus Cantrip counts on the cantrip card (VF7.2)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -766,7 +780,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a", "VF2b", "VF2c", "VF2d", "VF4a", "VF7a") and STRIP == ()
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a", "VF2b", "VF2c", "VF2d", "VF4a", "VF7a", "VF7b") and STRIP == ()
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
@@ -1317,6 +1331,20 @@ def test_vf7a_only_the_mixed_2024_background_case_holds_the_origin_languages():
     entry = _GOLDEN[holders[0]]
     assert "common" in entry["result"]["sheet"]["proficiencies"]["languages"]
     assert len(entry["draft"]["background"]["choices"]["origin:languages"]) == 2
+
+
+def test_vf7b_the_land_druid_cases_hold_the_bonus_cantrip_and_nothing_else_moved():
+    """VF7.2 (REBASELINES["VF7b"]): the 12 primary Land Druid 3 / 11 / 20 cases hold one more cantrip than the PHB table (3 / 4 / 5);
+    Druid 1 (no circle) holds the table count."""
+    hit = sorted(n for n in _GOLDEN if any(fnmatch.fnmatchcase(n, p) for p in REBASELINES["VF7b"]["cases"]))
+    assert len(hit) == 12
+    table = {3: 2, 11: 4, 20: 4}
+    for n in hit:
+        card = next(c for c in _GOLDEN[n]["result"]["choices"] if c["id"] == "class:druid:spells-cantrips")
+        assert card["count"] == table[int(n.rsplit("druid", 1)[1])] + 1 == len(card["selected"]), n
+    for n in (n for n in _GOLDEN if n.endswith("/druid1")):
+        card = next(c for c in _GOLDEN[n]["result"]["choices"] if c["id"] == "class:druid:spells-cantrips")
+        assert card["count"] == 2, n
 
 
 if __name__ == "__main__":

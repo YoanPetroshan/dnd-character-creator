@@ -6212,3 +6212,15 @@ SIGNATURE_SPELLS_2014 = {"feature": "signature-spell", "choice": "class:wizard:2
 def wizard_spell_picks(ruleset: str) -> dict[str, dict]:
     """The Spell Mastery / Signature Spells spec for a ruleset: the XPHB table under 2024, the SRD one otherwise."""
     return WIZARD_SPELL_PICKS_2024 if ruleset == "2024" else WIZARD_SPELL_PICKS_2014
+
+
+# VF7.2: 2014 subclass features that add ONE cantrip of the class's own list on top of the class table. Keyed by subclass id:
+# {class, feature (catalog feature index, its level is the class level the grant starts at), extra}.
+# Quote-pinned in tests/test_campaign_regressions.py: SRD "Bonus Cantrip" (Circle of the Land, Druid 2): "you learn one additional
+# druid cantrip of your choice"; PHB: "This cantrip doesn't count against the number of druid cantrips you know." Modelled as a
+# count bump on the class cantrip card (the pick is a druid cantrip), like the 2024 Thaumaturge / Magician (CLASS_OPTION_CHOICES_2024).
+# Other "bonus cantrip" features were checked and are NOT in this table (fixed cantrips already reach `alwaysPrepared`: Light Domain,
+# Illusion School, Celestial; the rest are other-list or conditional picks, see ARCHITECTURE VF7.2).
+SUBCLASS_EXTRA_CANTRIPS_2014: dict[str, dict] = {
+    "land": {"class": "druid", "feature": "bonus-cantrip", "extra": 1},
+}

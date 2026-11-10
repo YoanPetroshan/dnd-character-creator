@@ -1389,3 +1389,55 @@ def test_vf7_1_mixed_with_a_2014_background_and_2014_ruleset_stay_as_they_were(c
 def test_vf7_1_2024_is_unchanged(catalog):
     res = resolve(_draft([("fighter", 1)], ruleset="2024", species="human-xphb", background="soldier-xphb"), catalog)
     assert _langs(res) == ["common"] and _origin_card(res)["count"] == 2
+
+
+# ---------------------------------------------------------------- VF7.2 2014 Circle of the Land "Bonus Cantrip"
+# SRD 5.1 (chargen/data/srd/5e-SRD-Features.json "bonus-cantrip"): "When you choose this circle at 2nd level, you learn one
+# additional druid cantrip of your choice." PHB (class-druid.json subclassFeature, Land, level 2): "You learn one additional
+# druid cantrip of your choice. This cantrip doesn't count against the number of druid cantrips you know."
+def test_vf7_2_data_quotes_land_bonus_cantrip():
+    srd = next(f for f in json.load(open(DATA.parents[2] / "chargen" / "data" / "srd" / "5e-SRD-Features.json"))
+               if f["index"] == "bonus-cantrip")
+    assert "you learn one additional druid cantrip of your choice" in " ".join(srd["desc"])
+    recs = json.load(open(DATA / "class" / "class-druid.json"))["subclassFeature"]
+    phb = next(r for r in recs if r["name"] == "Bonus Cantrip" and r["source"] == "PHB" and r["subclassShortName"] == "Land")
+    assert phb["level"] == 2
+    assert ("You learn one additional druid cantrip of your choice. This cantrip doesn't count against the number of "
+            "druid cantrips you know.") in _flat_text(phb["entries"])
+
+
+def _cantrip_card(res, cls):
+    return next(c for c in res["choices"] if c["id"] == f"class:{cls}:spells-cantrips")
+
+
+@pytest.mark.parametrize("ruleset", ["2014", "mixed"])
+@pytest.mark.parametrize("level,table", [(2, 2), (3, 2), (4, 3), (7, 3), (10, 4), (20, 4)])
+def test_vf7_2_land_druid_cantrip_card_counts_one_more(catalog, ruleset, level, table):
+    """PHB Druid table: cantrips known 2 (levels 1-3), 3 (4-9), 4 (10+); the Land druid knows one more from level 2."""
+    land = resolve(_draft([("druid", level, "land")], ruleset=ruleset), catalog)
+    moon = resolve(_draft([("druid", level, "moon-phb")], ruleset=ruleset), catalog)
+    assert _cantrip_card(moon, "druid")["count"] == table
+    assert _cantrip_card(land, "druid")["count"] == table + 1
+
+
+def test_vf7_2_druid_1_and_other_classes_are_unchanged(catalog):
+    assert _cantrip_card(resolve(_draft([("druid", 1)]), catalog), "druid")["count"] == 2
+    # a Land druid multiclassed into another caster: only the druid card moves
+    res = resolve(_draft([("druid", 2, "land"), ("wizard", 1)]), catalog)
+    assert _cantrip_card(res, "druid")["count"] == 3 and _cantrip_card(res, "wizard")["count"] == 3
+
+
+def test_vf7_2_the_extra_pick_reaches_the_sheet_and_2024_land_is_untouched(catalog):
+    d = _draft([("druid", 2, "land")], class_choices={0: {"class:druid:spells-cantrips": ["guidance", "druidcraft", "shillelagh"]}})
+    res = resolve(d, catalog)
+    assert _cantrip_card(res, "druid")["status"] == "resolved"
+    assert [c["id"] for c in res["sheet"]["spells"][0]["cantrips"]] == ["guidance", "druidcraft", "shillelagh"] or \
+        sorted(c["id"] for c in res["sheet"]["spells"][0]["cantrips"]) == ["druidcraft", "guidance", "shillelagh"]
+    res = resolve(_draft([("druid", 3, "land-xphb")], ruleset="2024"), catalog)
+    assert _cantrip_card(res, "druid")["count"] == 2  # XPHB: 2 cantrips at level 3, no Bonus Cantrip
+
+
+def test_vf7_2_a_2014_circle_under_ruleset_2024_keeps_its_old_count(catalog):
+    """Documented: the 2014 SRD circle under the 2024 chassis is outside the XPHB tables, so the bump is mixed / 2014 only."""
+    res = resolve(_draft([("druid", 3, "land")], ruleset="2024"), catalog)
+    assert _cantrip_card(res, "druid")["count"] == 2

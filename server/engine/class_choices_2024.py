@@ -13,7 +13,7 @@ from i18n.messages import msg
 from catalog.reference_data import (
     FEAT_LANGUAGE_REPLACEMENT,
     CLASS_LANGUAGES_2024, CLASS_OPTION_CHOICES_2024, EXPERTISE_2024, INVOCATION_EFFECTS, INVOCATION_EFFECTS_2024, LANGUAGES_2024_RARE, LANGUAGES_2024_STANDARD, PRIMAL_KNOWLEDGE_2024,
-    ADDITIONAL_SECRETS_2014, SKILL_NAMES, SRD_CARDS_REPLACED_2024, SUBCLASS_PICKS_2014, SUBCLASS_PICKS_2024, TOOLS,
+    ADDITIONAL_SECRETS_2014, SKILL_NAMES, SRD_CARDS_REPLACED_2024, SUBCLASS_EXTRA_CANTRIPS_2014, SUBCLASS_PICKS_2014, SUBCLASS_PICKS_2024, TOOLS,
 )
 
 
@@ -798,6 +798,17 @@ def class_option_extra_cantrips(catalog, rc: dict, ruleset: str) -> int:
     """Extra cantrips known from the stored class option picks of this class entry (Thaumaturge / Magician)."""
     return sum(class_option_effect(catalog, rc, slug, ruleset).get("extra_cantrips", 0)
                for slug, _spec in class_option_specs(rc.get("cls_id")))
+
+
+def subclass_extra_cantrips(catalog, rc: dict, ruleset: str) -> int:
+    """VF7.2: cantrips a 2014 subclass feature adds to the class cantrip card (Circle of the Land, Druid 2), once the class
+    level reaches the feature's level. `reference_data.SUBCLASS_EXTRA_CANTRIPS_2014`. Not under ruleset 2024 (the XPHB chassis
+    and its cantrip tables; a 2014 circle there keeps the output it always had)."""
+    spec = SUBCLASS_EXTRA_CANTRIPS_2014.get(rc.get("subclass_id") or "")
+    feature = catalog.features.get(spec["feature"]) if spec else None
+    if ruleset == "2024" or not spec or not feature or spec["class"] != rc.get("cls_id") or rc["level"] < (feature.get("level") or 1):
+        return 0
+    return spec["extra"]
 
 
 def selected_class_options(choices, cls_id: str | None = None) -> list[tuple[str, str, dict]]:

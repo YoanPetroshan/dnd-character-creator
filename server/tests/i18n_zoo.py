@@ -571,6 +571,15 @@ SNAPSHOT_REBASELINES: dict[str, dict] = {
         "paths": [r"^cards[.]origin:languages$", r"^exportGate(\[[0-9]+\])*$", r"^disabled[.]origin:languages [|] [a-z-]+$"],
         "why": "2024 background under mixed gives the 2024 origin languages (VF7.1)",
     },
+    # VF7.2: the 2014 Circle of the Land Bonus Cantrip counts on the Druid cantrip card: the card's text (the count) moves in every
+    # zoo draft built from a primary Land Druid 3 / 11 / 20 golden case (g / clear / half variants, mixed and 2014); the "half"
+    # drafts keep an old pick list that now has a different shortfall (`pruned`), and the 2024 variants of those drafts (they
+    # carry the rebaselined golden picks, one more than the XPHB count) report the surplus pick in `pruned`. No other path.
+    "VF7b": {
+        "cases": ["*/*/src-*/druid3", "*/*/src-*/druid11", "*/*/src-*/druid20"],
+        "paths": [r"^cards[.]class:druid:spells-cantrips(\[[0-9]+\])*$", r"^pruned(\[[0-9]+\])*$"],
+        "why": "Land druid Bonus Cantrip counts on the cantrip card (VF7.2)",
+    },
 }
 
 
