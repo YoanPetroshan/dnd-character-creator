@@ -266,6 +266,21 @@ describe("the PDF stack", () => {
     expect(t.store.get().pdf).toBe("idle");
   });
 
+  it("the fillable sheet export needs the PDF stack too (it also needs pypdf)", async () => {
+    const t = make();
+    worker.emit({ t: "ready" });
+    const p = t.fetch("/api/export/sheet?lang=en", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    await flush();
+    expect(prepares()).toEqual([{ t: "prepare", what: "pdf" }]);
+    expect(worker.requests()).toHaveLength(0);
+    worker.emit({ t: "prepared", what: "pdf" });
+    await flush();
+    const [req] = worker.requests();
+    expect(req.path).toBe("/api/export/sheet");
+    worker.emit(reply(req.id));
+    expect((await p).status).toBe(200);
+  });
+
   it("the first PDF export loads the stack first (state loading), then sends the request, and later ones do not load again", async () => {
     const t = make();
     worker.emit({ t: "ready" });

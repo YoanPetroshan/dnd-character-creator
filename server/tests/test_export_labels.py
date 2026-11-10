@@ -124,7 +124,7 @@ def test_plural_forms_of_the_short_rest_regain():
 
 def test_no_cyrillic_literal_is_left_in_the_exporters():
     """Every Bulgarian word of the exports lives in export_labels.py; comments and docstrings may mention them."""
-    for name in ("markdown_export.py", "pdf_export.py", "export_fields.py"):
+    for name in ("markdown_export.py", "pdf_export.py", "export_fields.py", "sheet_layout.py", "sheet_data.py", "sheet_form.py", "sheet_pdf.py"):
         tree = ast.parse((SERVER / name).read_text(encoding="utf-8"))
         docstrings = {id(n.body[0].value) for n in ast.walk(tree)
                       if isinstance(n, (ast.Module, ast.FunctionDef, ast.ClassDef)) and n.body

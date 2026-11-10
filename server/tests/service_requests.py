@@ -169,6 +169,27 @@ def _build() -> list[tuple]:
     add("resolve-body-nested-450k", "POST", "/api/resolve", b"[" * 450000, JSON)
     add("export-yaml-body-nested-70", "POST", "/api/export/yaml", b'{"name":' + b"[" * 70 + b"]" * 70 + b"}", JSON)
     add("resolve-body-over-1mb", "POST", "/api/resolve", b'{"name":"' + b"x" * 1_000_001 + b'"}', JSON)
+    # SHEET-S9: the fillable character sheet (appended; the entries above never move)
+    fmt = "sheet"
+    post("export-sheet", "/api/export/sheet", full)
+    post("export-sheet-lang-bg", "/api/export/sheet?lang=bg", full)
+    post("export-sheet-lang-en", "/api/export/sheet?lang=en", full)
+    post("export-sheet-bad-lang", "/api/export/sheet?lang=fr", full)
+    post("export-sheet-gate-empty", "/api/export/sheet", {})
+    post("export-sheet-gate-bg", "/api/export/sheet?lang=bg", fighter_draft())
+    post("export-sheet-gate-en", "/api/export/sheet?lang=en", fighter_draft())
+    post("export-sheet-nameless", "/api/export/sheet", exportable_draft(None))
+    post("export-sheet-nameless-bg", "/api/export/sheet?lang=bg", exportable_draft(None))
+    post("export-sheet-nameless-en", "/api/export/sheet?lang=en", exportable_draft(None))
+    post("export-sheet-name-cyrillic", "/api/export/sheet", exportable_draft("Ана/Борис"))
+    post("export-sheet-name-special", "/api/export/sheet", exportable_draft('A/B\\C:D*E?"F<G>H|I'))
+    post("export-sheet-name-lone-surrogate", "/api/export/sheet", exportable_draft("\ud800"))
+    post("export-sheet-name-5000-chars", "/api/export/sheet", exportable_draft("N" * 5000))
+    post("export-sheet-name-unicode-en", "/api/export/sheet?lang=en", exportable_draft("Жé \U0001F409"))
+    post("export-sheet-body-list", "/api/export/sheet", [1])
+    add("export-sheet-no-body", "POST", "/api/export/sheet")
+    add("export-sheet-invalid-json", "POST", "/api/export/sheet", b"{x", JSON)
+    add("api-get-export-sheet", "GET", "/api/export/sheet")
     return reqs
 
 

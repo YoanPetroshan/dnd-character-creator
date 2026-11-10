@@ -19,6 +19,7 @@ const EXPORT_FORMATS = {
   yaml: { endpoint: "/api/export/yaml", extension: "yaml", label: "YAML" },
   markdown: { endpoint: "/api/export/markdown", extension: "md", label: "Markdown" },
   pdf: { endpoint: "/api/export/pdf", extension: "pdf", label: "PDF" },
+  sheet: { endpoint: "/api/export/sheet", extension: "pdf", label: "" },
 } as const;
 
 type ExportFormat = keyof typeof EXPORT_FORMATS;
@@ -204,7 +205,13 @@ export function ExportPage() {
           data-state={exportingFormat === format ? "busy" : !canExport || exportingFormat !== null ? "disabled" : "ready"}
           onClick={() => handleExport(format)}
         >
-          {exportingFormat === format ? xp.downloading : xp.download(EXPORT_FORMATS[format].label)}
+          {exportingFormat === format
+            ? xp.downloading
+            : format === "sheet"
+              ? xp.downloadSheet
+              : format === "pdf"
+                ? xp.downloadSimplePdf
+                : xp.download(EXPORT_FORMATS[format].label)}
         </button>
       ))}
     </div>

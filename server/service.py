@@ -4,7 +4,7 @@
 plain values, so the same code answers the Flask adapter (``app.py``) and, later, a browser worker running the engine
 offline (docs/superpowers/plans/2026-11-04-offline-pyodide.md). It imports nothing from Flask / werkzeug: only the
 engine, the catalog, the exporters and the standard library (plus pyyaml for YAML). The PDF stack (fpdf2, Pillow, fonttools,
-defusedxml) is imported only when a PDF is rendered, so everything else works without it (the browser worker loads it
+defusedxml, pypdf) is imported only when a PDF is rendered, so everything else works without it (the browser worker loads it
 on the first PDF export). It
 reproduces what Flask did byte for byte (``jsonify`` defaults: ``sort_keys=True``, ``ensure_ascii=True``, compact
 separators and a trailing newline; the JSON error bodies; ``Content-Disposition`` on exports); the Flask test client
@@ -519,10 +519,20 @@ def _render_pdf(resolution: dict, lang: str) -> bytes:
     return to_pdf(resolution, lang)
 
 
+def _render_sheet(resolution: dict, lang: str, ruleset: str | None = None) -> bytes:
+    # lazy like _render_pdf; additionally needs pypdf (the form step), which the offline build loads with the PDF stack
+    from datetime import datetime, timezone
+
+    from sheet_pdf import to_sheet
+
+    return to_sheet(resolution, lang, _catalog, datetime.now(timezone.utc), ruleset)
+
+
 _EXPORT_RENDERERS = {
     "yaml": (to_yaml, "application/x-yaml", "yaml"),
     "markdown": (to_markdown, "text/markdown; charset=utf-8", "md"),
     "pdf": (_render_pdf, "application/pdf", "pdf"),
+    "sheet": (_render_sheet, "application/pdf", "pdf"),  # the fillable character sheet (A4, SHEET-S9)
 }
 
 
@@ -554,6 +564,9 @@ def api_export(args, body, fmt: str):
     filename = urllib.parse.quote(f"{name}.{extension}", safe="")
     if fmt == "yaml":  # the YAML document is the data as it is: no localized labels, nothing to translate
         out = renderer(resolution)
+    elif fmt == "sheet":  # the edition of the feature texts is the draft's, the resolution does not carry it
+        ruleset = draft.get("ruleset") if isinstance(draft.get("ruleset"), str) else None
+        out = renderer(localize(resolution, file_lang), file_lang, ruleset)
     else:
         out = renderer(localize(resolution, file_lang), file_lang)
     if isinstance(out, str):

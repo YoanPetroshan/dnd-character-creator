@@ -27,6 +27,8 @@ HEADERS = ("Content-Type", "Content-Disposition", "Allow")
 
 def normalise_pdf(data: bytes) -> bytes:
     data = re.sub(rb"/CreationDate\s*\(D:[^)]*\)", b"/CreationDate (D:X)", data)
+    # the fillable sheet (pypdf) writes its date escaped, "(D\\07220261110120000Z)", and stamps the time of the request
+    data = re.sub(rb"/(CreationDate|ModDate)\s*\(D\\072[^)]*\)", rb"/\1 (D:X)", data)
     data = re.sub(rb"/ID\s*\[\s*<[0-9a-fA-F]*>\s*<[0-9a-fA-F]*>\s*\]", b"/ID [<X> <X>]", data)
     return data
 

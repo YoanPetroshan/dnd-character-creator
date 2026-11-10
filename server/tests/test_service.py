@@ -174,7 +174,7 @@ def _imported_roots(path: pathlib.Path) -> set[str]:
 def test_service_source_imports_no_framework():
     roots = _imported_roots(SERVER / "service.py")
     assert not roots & {"flask", "flask_cors", "werkzeug", "waitress", "jinja2", "pypdf", "pytest", "app"}
-    third_party = roots - set(sys.stdlib_module_names) - {"catalog", "engine", "export", "export_labels", "i18n", "markdown_export", "pdf_export"}
+    third_party = roots - set(sys.stdlib_module_names) - {"catalog", "engine", "export", "export_labels", "i18n", "markdown_export", "pdf_export", "sheet_pdf"}
     assert third_party == set(), third_party
 
 

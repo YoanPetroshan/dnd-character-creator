@@ -63,6 +63,7 @@ def golden(path="/golden.json.gz"):
 
 def _normalise_pdf(data):
     data = re.sub(rb"/CreationDate\s*\(D:[^)]*\)", b"/CreationDate (D:X)", bytes(data))
+    data = re.sub(rb"/(CreationDate|ModDate)\s*\(D\\072[^)]*\)", rb"/\1 (D:X)", data)  # the fillable sheet (pypdf) escapes the colon
     return re.sub(rb"/ID\s*\[\s*<[0-9a-fA-F]*>\s*<[0-9a-fA-F]*>\s*\]", b"/ID [<X> <X>]", data)
 
 

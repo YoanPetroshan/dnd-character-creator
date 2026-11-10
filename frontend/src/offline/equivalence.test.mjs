@@ -126,22 +126,23 @@ json.dumps({"status": status, "loaded": loaded})`),
     expect(r.checked).toBe(92);
     expect(r.ids).toBe(true);
     expect(r.mismatches).toEqual([]);
+    // the 92 drafts rendered the simple PDF only: none of it may have imported pypdf (the sheet requests below do)
+    expect(JSON.parse(py.runPython("import json, sys\njson.dumps('pypdf' in sys.modules)"))).toBe(false);
   }, 600_000);
 
   it.skipIf(!hasPython)("answers the fixed request list through service.handle like the Flask baseline", async () => {
     await loadPdfStack();
     const r = run("harness.requests()");
     timings.requests_s = r.seconds;
-    expect(r.baselineSize).toBe(147);
-    expect(r.checked).toBe(146); // all but GET /api, which Flask answers with the SPA catch-all
+    expect(r.baselineSize).toBe(166); // 147 + the 19 fillable-sheet requests (SHEET-S9)
+    expect(r.checked).toBe(165); // all but GET /api, which Flask answers with the SPA catch-all
     expect(r.mismatches).toEqual([]);
     expect(fixtures).toBeDefined();
   }, 600_000);
 
-  it("keeps pypdf out of the old PDF route and imports it once the PDF stack is prepared", async () => {
+  it("imports pypdf once the PDF stack is prepared", async () => {
     await loadPdfStack();
-    // the 92 export hashes and the request list above rendered the simple PDF: none of it may have imported pypdf
-    expect(JSON.parse(py.runPython("import json, sys\njson.dumps('pypdf' in sys.modules)"))).toBe(false);
+    // the request list above rendered fillable sheets, so pypdf is loaded now: it imports and writes a document
     const r = JSON.parse(
       py.runPython(`
 import io, json

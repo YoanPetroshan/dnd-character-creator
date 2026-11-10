@@ -674,6 +674,8 @@ export const bg = {
     preparingPdf: "Подготвя се PDF… Първото подготвяне може да отнеме няколко секунди.",
     downloading: "Изтегляне…",
     download: (format: string) => `Изтегли ${format}`,
+    downloadSimplePdf: "Изтегли простия PDF",
+    downloadSheet: "Лист за игра (форма)",
     missing: { class: "Избери клас.", species: "Избери раса (Species).", background: "Избери произход (Background)." },
     sheetLink: "Виж листа на героя",
   },

@@ -102,8 +102,9 @@ export interface WorkerTransportOptions {
   timeoutMs?: number;
 }
 
-/** The one request that needs the PDF stack. */
-export const needsPdfStack = (method: string, path: string): boolean => method === "POST" && path === "/api/export/pdf";
+/** The requests that need the PDF stack: the simple PDF and the fillable character sheet (which also needs pypdf). */
+export const needsPdfStack = (method: string, path: string): boolean =>
+  method === "POST" && (path === "/api/export/pdf" || path === "/api/export/sheet");
 
 interface Pending {
   resolve(r: Response): void;

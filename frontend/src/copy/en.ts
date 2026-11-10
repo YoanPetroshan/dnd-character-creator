@@ -561,6 +561,8 @@ export const en: Copy = {
     preparingPdf: "Preparing the PDF… The first time can take a few seconds.",
     downloading: "Downloading…",
     download: (format: string) => `Download ${format}`,
+    downloadSimplePdf: "Download the simple PDF",
+    downloadSheet: "Character sheet (form)",
     missing: { class: "Choose a class.", species: "Choose a species.", background: "Choose a background." },
     sheetLink: "View the character sheet",
   },

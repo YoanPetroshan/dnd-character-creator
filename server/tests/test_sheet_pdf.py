@@ -402,3 +402,11 @@ def test_level_20_caster_sheet_speed(catalog):
     sheet_pdf.to_sheet(res, "bg", catalog, CREATED, "2014")
     best = min(_time(lambda: sheet_pdf.to_sheet(res, "bg", catalog, CREATED, "2014")) for _ in range(3))
     assert best < 1.5, best
+
+
+def test_characters_the_font_lacks_become_a_question_mark_not_an_error(catalog):
+    res = {**resolution("paladin6", catalog)}
+    res["sheet"] = {**res["sheet"], "name": "Жé \U0001F409 龍"}
+    r = reader(sheet_pdf.to_sheet(res, "en", catalog, CREATED, "2014"))
+    assert r.get_fields()["CharacterName"]["/V"] == "Жé ? ?"
+    assert "Жé ? ?" in r.pages[0].extract_text()

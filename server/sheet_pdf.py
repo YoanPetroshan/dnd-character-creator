@@ -37,6 +37,13 @@ class _Doc(FPDF):
         self.add_font("DejaVu", "", str(FONT_DIR / "DejaVuSans.ttf"))
         self.add_font("DejaVu", "B", str(FONT_DIR / "DejaVuSans-Bold.ttf"))
 
+    def clean(self, text: str) -> str:
+        """Characters DejaVu has no glyph for (emoji, CJK ...) become "?": visible and explicit, never a missing-glyph error."""
+        cmap = self.fonts["dejavu"].cmap
+        if all(ord(c) in cmap or c in "\n" for c in text):
+            return text
+        return "".join(c if ord(c) in cmap or c == "\n" else "?" for c in text)
+
     # ---- measuring and placing text (all coordinates are Letter points, y up, like sheet_layout) ----
     def width(self, text: str, size: float, bold: bool = False) -> float:
         self.set_font("DejaVu", "B" if bold else "", size * S)
@@ -52,6 +59,7 @@ class _Doc(FPDF):
         """Draw ``text`` with its baseline at Letter (x, y); ``align`` centre/right inside ``width`` from x; shrinks to fit width."""
         if not text:
             return
+        text = self.clean(text)
         if width:
             size = self.fit_size(text, width, size, minimum, bold)
         w = self.width(text, size, bold)
@@ -207,7 +215,7 @@ class Sheet:
             pid += 1
             width = columns[0][0] if columns else more[0]
             inner = (width - 2 * PAD / S) * 0.985
-            for ln in wrap_text(lambda t: d.width(t, size), b.text, inner):
+            for ln in wrap_text(lambda t: d.width(t, size), d.clean(b.text), inner):
                 lines.append((pid, ln, b.kind))
         texts: list[str] = []
         i, col = 0, 0
@@ -487,6 +495,8 @@ class Sheet:
 
     def finish_pages(self) -> None:
         d, total = self.doc, len(self.pages)
+        self.name = d.clean(self.name)
+        self.values = {k: (d.clean(v) if isinstance(v, str) else v) for k, v in self.values.items()}
         for i in range(total):
             d.page = i + 1
             if i == 0:
