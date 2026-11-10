@@ -163,6 +163,8 @@ for phones are in the app (`/help`). Publishing on GitHub Pages (owner steps, up
 `docs/DEPLOY-PAGES.md`; the workflow is `.github/workflows/pages.yml`; CI (`ci.yml`) also builds the pack, runs the Node
 equivalence test, builds the Pages-style site and checks that the precache manifest lists every file. Placeholder icons: `.venv/bin/python scripts/make_pwa_icons.py`.
 
+For a designer starting the visual design in a new chat: `docs/DESIGN-HANDOFF.md` (routes, design hooks, guards, how to verify).
+
 ## Test
 
 Clean-clone smoke (proves the committed tree alone runs the app: fresh `git clone` of HEAD, empty `HOME`, no `DND_*`
