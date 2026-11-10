@@ -6818,7 +6818,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         [lang["index"] for lang in (race.get("languages", []) if race else [])] + \
         [lang["index"] for lang in ((subrace or {}).get("languages") or [])] + \
         _feat_languages([f for f in resolved_feats if not _feat_build_position(f, lang_class_order)]) + \
-        class_choices_2024.fixed_origin_languages(ruleset)  # C8: Common
+        class_choices_2024.fixed_origin_languages(ruleset, bg)  # C8: Common (VF7.1: also a 2024 background under mixed)
     positioned_languages = class_choices_2024.fixed_class_language_entries(catalog, resolved_classes, ruleset) + [
         (pos, lang["index"]) for f in resolved_feats if (pos := _feat_build_position(f, lang_class_order))
         for lang in f.get("languages", [])]

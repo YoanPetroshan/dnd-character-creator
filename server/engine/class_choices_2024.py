@@ -144,9 +144,18 @@ ORIGIN_LANGUAGES_CID = "origin:languages"
 ORIGIN_LANGUAGES_PICKS = 2
 
 
-def fixed_origin_languages(ruleset: str) -> list[str]:
-    """Languages every 2024 character knows (Common). [] outside 2024."""
-    return ["common"] if ruleset == "2024" else []
+def origin_languages_apply(ruleset: str, bg: dict | None = None) -> bool:
+    """VF7.1: the 2024 "Choose Languages" rule (Common + two picks) applies under ruleset 2024, and under `mixed` when the
+    chosen background is itself a 2024 record (`bg["ruleset"] == "2024"`: XPHB, EFA, FRHoF ...; the 2024 species and
+    backgrounds carry no language data, the rule is the book's). Under 2014 an XPHB background stays unmodelled (its ASI
+    is ignored there as well), and a 2014 background under `mixed` keeps what its own record grants."""
+    return ruleset == "2024" or (ruleset == "mixed" and bool(bg) and bg.get("ruleset") == "2024")
+
+
+def fixed_origin_languages(ruleset: str, bg: dict | None = None) -> list[str]:
+    """Languages every 2024 character knows (Common); under `mixed` only with a 2024 background (see
+    `origin_languages_apply`). [] otherwise."""
+    return ["common"] if origin_languages_apply(ruleset, bg) else []
 
 
 def is_origin_language_card(c: dict) -> bool:
@@ -157,7 +166,7 @@ def origin_language_templates(bg: dict | None, bg_id: str | None, ruleset: str) 
     """The single 2-pick card of Standard languages (Common excluded: it is fixed). Source kind
     `background` so BackgroundPage renders it and the export gate counts it; the picks are stored
     under background.choices. No card without a chosen background (nowhere to store the picks)."""
-    if ruleset != "2024" or not bg or not bg_id:
+    if not origin_languages_apply(ruleset, bg) or not bg or not bg_id:
         return []
     return [{
         "id": ORIGIN_LANGUAGES_CID,

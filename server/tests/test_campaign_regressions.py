@@ -1315,3 +1315,77 @@ def test_vf6_a_stored_foreign_list_is_ignored_and_cleric_unlocks_the_spell_picks
     assert "sacred-flame" in {o["id"] for c in picks if c["count"] == 2 for o in c["options"]}
     assert "bless" in {o["id"] for c in picks if c["count"] == 1 for o in c["options"]}
     assert "magic-missile" not in {o["id"] for c in picks for o in c["options"]}
+
+
+# ---------------------------------------------------------------- VF7.1 languages of 2024 backgrounds under mixed
+# The Opus final review: mixed + human-xphb + soldier-xphb (and goliath-mpmm / astral-elf-aag + any XPHB background) had
+# NO language at all. Data check (VF7): the MPMM / AAG / FTD / ... species records carry neither `languageProficiencies`
+# nor any trait text about languages (the "Common and one other language" sentence exists only in records that also
+# carry `languageProficiencies`: Custom Lineage, Tabaxi VGM, Warforged ERLW), so the species side stays silent; the 2024
+# BACKGROUND side is a book rule (PHB 2024 "Choose Languages", C8) that follows the background's own edition.
+def _species_json():
+    return json.load(open(DATA / "races.json"))["race"]
+
+
+def test_vf7_1_data_no_silent_species_has_a_language_sentence():
+    """(a) of the review is empty: of the species without `languageProficiencies` none says 'speak, read, and write'."""
+    silent = [r for r in _species_json() if not r.get("languageProficiencies")]
+    assert len(silent) == 85  # 70 of them are imported (153 official species in the catalog)
+    with_sentence = {(r["name"], r["source"]) for r in silent if "speak, read, and write" in _flat_text(r.get("entries"))}
+    assert with_sentence == set()  # (the Plane Shift / Ravnica ones sit in records that carry languageProficiencies or in `subrace`)
+    for r in silent:
+        if r["source"] in ("MPMM", "AAG", "XPHB", "EFA", "RHW", "VRGR", "FTD", "DMG", "WBtW", "LFL", "DSotDQ", "SCC"):
+            assert "language" not in _flat_text(r.get("entries")).replace("languages you knew in life", "").replace(
+                "share a language", "").replace("non-thri-kreen languages", "").replace("one language to", "") \
+                or r["name"] in ("Skeleton", "Zombie", "Thri-kreen", "Dragonborn (Gem)"), r["name"]
+
+
+def _langs(res):
+    return res["sheet"]["proficiencies"]["languages"]
+
+
+def _origin_card(res):
+    return next((c for c in res["choices"] if c["id"] == "origin:languages"), None)
+
+
+@pytest.mark.parametrize("species", ["human-xphb", "goliath-mpmm", "astral-elf-aag", "dwarf-xphb"])
+def test_vf7_1_mixed_xphb_background_gives_common_and_the_two_picks(catalog, species):
+    res = resolve(_draft([("fighter", 1)], ruleset="mixed", species=species, background="soldier-xphb"), catalog)
+    assert _langs(res) == ["common"], species
+    card = _origin_card(res)
+    assert card and card["count"] == 2 and card["status"] == "pending"
+    assert "common" not in {o["id"] for o in card["options"]}
+
+
+def test_vf7_1_mixed_picks_land_on_the_sheet_and_a_duplicate_of_a_known_language_is_pruned(catalog):
+    d = _draft([("fighter", 1)], ruleset="mixed", species="goliath-mpmm", background="soldier-xphb")
+    d["background"]["choices"] = {"origin:languages": ["dwarvish", "elvish"]}
+    assert _langs(resolve(d, catalog)) == ["common", "dwarvish", "elvish"]
+
+
+def test_vf7_1_mixed_never_double_counts_common(catalog):
+    res = resolve(_draft([("fighter", 1)], ruleset="mixed", species="human-phb", background="soldier-xphb"), catalog)
+    assert _langs(res).count("common") == 1
+    species_card = next(c for c in res["choices"] if c["id"] == "species:human-phb:languages")
+    assert next(o for o in species_card["options"] if o["id"] == "common").get("disabled")
+    # a species pick that the origin card also picks: the species wins, the origin duplicate is pruned
+    d = _draft([("fighter", 1)], ruleset="mixed", species="human-phb", background="soldier-xphb")
+    d["species"]["choices"] = {"species:human-phb:languages": ["dwarvish"]}
+    d["background"]["choices"] = {"origin:languages": ["dwarvish", "elvish"]}
+    res = resolve(d, catalog)
+    assert _langs(res) == ["common", "dwarvish", "elvish"]
+    assert "origin:languages" in {p["choiceId"] for p in res["pruned"]}
+
+
+def test_vf7_1_mixed_with_a_2014_background_and_2014_ruleset_stay_as_they_were(catalog):
+    """Data-silent: no origin card for a 2014 background under mixed; under 2014 the XPHB background's languages stay
+    unmodelled (its ASI is ignored there too: ruleset-2014-background-asi-ignored)."""
+    res = resolve(_draft([("fighter", 1)], ruleset="mixed", species="goliath-mpmm", background="soldier-phb"), catalog)
+    assert _origin_card(res) is None and _langs(res) == []
+    res = resolve(_draft([("fighter", 1)], ruleset="2014", species="human-xphb", background="soldier-xphb"), catalog)
+    assert _origin_card(res) is None and _langs(res) == []
+
+
+def test_vf7_1_2024_is_unchanged(catalog):
+    res = resolve(_draft([("fighter", 1)], ruleset="2024", species="human-xphb", background="soldier-xphb"), catalog)
+    assert _langs(res) == ["common"] and _origin_card(res)["count"] == 2

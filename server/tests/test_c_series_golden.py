@@ -401,6 +401,19 @@ REBASELINES: dict[str, dict] = {
         "paths": [r"^result\.choices\[class:paladin:1:equipment-choice-1\]\.options\[any-simple(-melee)?-weapons\]$"],
         "why": "the SRD Paladin (b) any simple melee weapon offers only simple melee weapons (VF4.3)",
     },
+    # VF7.1: under `mixed` a 2024 background (XPHB, EFA, FRHoF ... `ruleset == "2024"`) gives the 2024 origin languages (Common + the
+    # two picks of the `origin:languages` card), like under 2024. Rule matrix: only a stored case whose ruleset is mixed AND whose
+    # background record is a 2024 one moves (the Magic Initiate / Connoisseur kitchen sink, Criminal XPHB); it gains the card at its
+    # root, the filler's picks in `draft.background.choices`, and Common / the picks in the sheet languages. No other path.
+    "VF7a": {
+        "cases": ["ks/src-all/two-magic-initiate-connoisseur-wizard8-2014"],
+        "paths": [
+            r"^result\.choices\[origin:languages\]",
+            r"^draft\.background\.choices\.origin:languages$",
+            r"^result\.sheet\.proficiencies\.languages$",
+        ],
+        "why": "a 2024 background under mixed gives the 2024 origin languages (VF7.1)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -753,7 +766,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a", "VF2b", "VF2c", "VF2d", "VF4a") and STRIP == ()
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a", "VF2b", "VF2c", "VF2d", "VF4a", "VF7a") and STRIP == ()
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
@@ -1293,6 +1306,17 @@ def test_vf1_8_dwarf_phb_sink_lists_tool_proficiency_once():
     name = next(n for n in _GOLDEN if n.endswith("/dwarf-phb-wizard3-2014"))
     tools = [f for f in _GOLDEN[name]["result"]["sheet"]["features"] if f["name"] == "Tool Proficiency"]
     assert len(tools) == 1 and tools[0].get("choice")
+
+
+def test_vf7a_only_the_mixed_2024_background_case_holds_the_origin_languages():
+    """VF7.1 (REBASELINES["VF7a"]): of the 292 stored cases exactly one is mixed with a 2024 background; it holds the
+    `origin:languages` card with the filler's two picks and Common in the sheet languages. Every other case has no such card."""
+    holders = sorted(n for n, e in _GOLDEN.items() if any(c["id"] == "origin:languages" for c in e["result"]["choices"])
+                     and e["draft"]["ruleset"] == "mixed")
+    assert holders == REBASELINES["VF7a"]["cases"]
+    entry = _GOLDEN[holders[0]]
+    assert "common" in entry["result"]["sheet"]["proficiencies"]["languages"]
+    assert len(entry["draft"]["background"]["choices"]["origin:languages"]) == 2
 
 
 if __name__ == "__main__":

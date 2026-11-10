@@ -560,6 +560,17 @@ SNAPSHOT_REBASELINES: dict[str, dict] = {
                   r"^exportGate(\[[0-9]+\])*$"],   # a stored duplicate pick (Common is fixed under 2024) leaves its card pending
         "why": "species and background language cards gated against the known languages (VF2.4b)",
     },
+    # VF7.1: under `mixed` a 2024 background gives the 2024 origin languages: the pending card `origin:languages` (2 picks) is a new key
+    # under `cards`, it moves the export gate, and it disables the languages the species / background cards already give. Rule: only
+    # a zoo draft that is mixed AND holds a 2024 background moves (the Magic Initiate / Connoisseur kitchen sink in its g / clear /
+    # half variants, the asi-double-dip, dark-gift-needs-ravenloft and source-hidden-background triggers); the 2024 variant of that
+    # kitchen sink only moves its export gate (the rebaselined golden draft now holds the card's picks). No text changes.
+    "VF7a": {
+        "cases": ["*/ks/src-all/two-magic-initiate-connoisseur-wizard8-2014", "t/asi-double-dip", "t/dark-gift-needs-ravenloft",
+                  "t/source-hidden-background"],
+        "paths": [r"^cards[.]origin:languages$", r"^exportGate(\[[0-9]+\])*$", r"^disabled[.]origin:languages [|] [a-z-]+$"],
+        "why": "2024 background under mixed gives the 2024 origin languages (VF7.1)",
+    },
 }
 
 
