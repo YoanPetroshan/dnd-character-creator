@@ -368,6 +368,11 @@ def test_thaumaturge_cantrip_goes_to_the_cleric_only(catalog):
     assert "CANTRIPS" not in _failed(_run("t2-046-cle3-dru2-2024", catalog))  # Thaumaturge Cleric 3 + plain Druid 2
 
 
+def test_cantrips_oracle_counts_the_2014_land_druid_bonus_cantrip(catalog):
+    """VF7.2: Druid 5 Land (t3-027) holds 4 cantrips (table 3 + the Bonus Cantrip); the oracle expects 4 under 2014 / mixed only."""
+    assert "CANTRIPS" not in _failed(_run("t3-027-narrow-sources-phb-2014", catalog))
+
+
 def test_mc_prof_explains_protector_and_psa_domain_heavy_armor(catalog):
     for token in ("t2-076-bar19-cle1-2024", "t2-074-cle2-pal3-2014", "t2-108-cle19-bar1-2014"):
         assert "MC-PROF" not in _failed(_run(token, catalog)), token

@@ -481,6 +481,8 @@ def c_cantrips(x: Ctx):
         act = card["count"] if card else 0
         if (x.thaumaturge_cleric and cid == "cleric") or (x.magician_druid and cid == "druid"):
             exp += 1  # 2024 Thaumaturge / Magician: one extra cantrip
+        if cid == "druid" and lvl >= 2 and x.ruleset != "2024" and x.subclass_is("druid", "land"):
+            exp += 1  # VF7.2: 2014 Circle of the Land "Bonus Cantrip" (PHB: "You learn one additional druid cantrip of your choice.")
         out.append(R("CANTRIPS", act == exp, exp, act, f"class-{cid}.json cantripProgression / 'Cantrips' column at level {lvl}"))
     return out
 
