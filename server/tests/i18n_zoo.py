@@ -580,6 +580,21 @@ SNAPSHOT_REBASELINES: dict[str, dict] = {
         "paths": [r"^cards[.]class:druid:spells-cantrips(\[[0-9]+\])*$", r"^pruned(\[[0-9]+\])*$"],
         "why": "Land druid Bonus Cantrip counts on the cantrip card (VF7.2)",
     },
+    # VF7.3: the 2014 Ranger Favored Enemy teaches one language per gain and an additional enemy must be a new one. Rule: a zoo draft
+    # with a 2014-rules Ranger (the golden Ranger 1 / 3 / 11 / 20 and Hunter 15 cases in their g / clear / half / r2024 variants, and
+    # the 2024 Ranger 9 / Fey Wanderer 3 sinks run as 2014) gains the language cards `cards.class:ranger:(1|6|14):languages:favored-
+    # enemy-*` and their `disabled` leaves (languages the character knows), the later enemy cards disable the types taken before,
+    # the export gate lists the new pending cards, and stale language picks of the 2024 variants (no such card there) are `pruned`.
+    "VF7c": {
+        "cases": ["*/*/src-*/ranger[0-9]*", "*/ks/src-*/hunter15-2014", "ks2024-as-2014/fey-wanderer3-2024", "ks2024-as-2014/ranger9-2024"],
+        "paths": [
+            r"^cards[.]class:ranger:(1|6|14):languages:favored-enemy-[a-z0-9-]+(\[[0-9]+\])*$",
+            r"^disabled[.]class:ranger:(1|6|14):languages:favored-enemy-[a-z0-9-]+ [|] [a-z-]+$",
+            r"^disabled[.]class:ranger:(6|14):enemy-type:favored-enemy-[a-z0-9-]+ [|] [a-z]+$",
+            r"^exportGate(\[[0-9]+\])*$", r"^pruned(\[[0-9]+\])*$",
+        ],
+        "why": "2014 Ranger Favored Enemy language per gain and distinct enemy types (VF7.3)",
+    },
 }
 
 

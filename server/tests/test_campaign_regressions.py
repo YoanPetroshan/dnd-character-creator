@@ -1441,3 +1441,80 @@ def test_vf7_2_a_2014_circle_under_ruleset_2024_keeps_its_old_count(catalog):
     """Documented: the 2014 SRD circle under the 2024 chassis is outside the XPHB tables, so the bump is mixed / 2014 only."""
     res = resolve(_draft([("druid", 3, "land")], ruleset="2024"), catalog)
     assert _cantrip_card(res, "druid")["count"] == 2
+
+
+# ---------------------------------------------------------------- VF7.3 2014 Ranger Favored Enemy: the language and distinct types
+# PHB (class-ranger.json classFeature, Favored Enemy, level 1): "When you gain this feature, you also learn one language of your
+# choice that is spoken by your favored enemies, if they speak one at all. You choose one additional favored enemy, as well as an
+# associated language, at 6th and 14th level." (the vendored SRD record has no language sentence; the humanoid alternative "select
+# two races of humanoid" still says "one language" per gain, so each of the three gains asks for one).
+def test_vf7_3_data_quote_phb_favored_enemy_language():
+    recs = json.load(open(DATA / "class" / "class-ranger.json"))["classFeature"]
+    phb = next(r for r in recs if r["name"] == "Favored Enemy" and r["source"] == "PHB")
+    text = _flat_text(phb["entries"])
+    assert ("When you gain this feature, you also learn one language of your choice that is spoken by your favored enemies, "
+            "if they speak one at all. You choose one additional favored enemy, as well as an associated language, at 6th "
+            "and 14th level.") in text
+    assert "you can select two races of {@filter humanoid" in text
+
+
+_FE = {1: "favored-enemy-1-type", 6: "favored-enemy-2-types", 14: "favored-enemy-3-enemies"}
+
+
+def _fe_cards(res):
+    types = {c["id"]: c for c in res["choices"] if ":enemy-type:" in c["id"]}
+    langs = {c["id"]: c for c in res["choices"] if ":languages:favored-enemy-" in c["id"]}
+    return types, langs
+
+
+@pytest.mark.parametrize("ruleset", ["2014", "mixed"])
+@pytest.mark.parametrize("level,gains", [(1, [1]), (5, [1]), (6, [1, 6]), (13, [1, 6]), (14, [1, 6, 14]), (20, [1, 6, 14])])
+def test_vf7_3_one_language_card_per_favored_enemy_gain(catalog, ruleset, level, gains):
+    res = resolve(_draft([("ranger", level, "hunter")], ruleset=ruleset), catalog)
+    _types, langs = _fe_cards(res)
+    assert sorted(langs) == sorted(f"class:ranger:{lv}:languages:{_FE[lv]}" for lv in gains)
+    for c in langs.values():
+        assert c["count"] == 1 and c["status"] == "pending"
+        assert len(c["options"]) == 16
+        assert c["source"]["kind"] == "class" and c["source"]["id"] == "ranger"
+
+
+def test_vf7_3_picked_languages_reach_the_sheet_and_gate_each_other(catalog):
+    cid = lambda lv: f"class:ranger:{lv}:languages:{_FE[lv]}"  # noqa: E731
+    d = _draft([("ranger", 14, "hunter")], class_choices={0: {cid(1): ["draconic"], cid(6): ["sylvan"], cid(14): ["abyssal"]}})
+    res = resolve(d, catalog)
+    assert {"draconic", "sylvan", "abyssal"} <= set(res["sheet"]["proficiencies"]["languages"])
+    # a duplicate (the SRD Human / Acolyte already give some): a later card cannot repeat an earlier pick
+    d = _draft([("ranger", 14, "hunter")], class_choices={0: {cid(1): ["draconic"], cid(6): ["draconic"]}})
+    res = resolve(d, catalog)
+    _types, langs = _fe_cards(res)
+    assert next(o for o in langs[cid(6)]["options"] if o["id"] == "draconic")["disabled"]
+    assert langs[cid(6)]["selected"] == [] and cid(6) in {p["choiceId"] for p in res["pruned"]}
+
+
+def test_vf7_3_no_language_card_under_2024_or_for_other_classes(catalog):
+    res = resolve(_draft([("ranger", 14, "hunter-xphb")], ruleset="2024"), catalog)
+    assert not _fe_cards(res)[1]
+    res = resolve(_draft([("fighter", 14)]), catalog)
+    assert not _fe_cards(res)[1]
+
+
+def test_vf7_3_taken_enemy_types_are_disabled_later_and_stored_duplicates_pruned(catalog):
+    cid = lambda lv: f"class:ranger:{lv}:enemy-type:{_FE[lv]}"  # noqa: E731
+    d = _draft([("ranger", 14, "hunter")], class_choices={0: {cid(1): ["undead"], cid(6): ["undead"], cid(14): ["beasts"]}})
+    res = resolve(d, catalog)
+    types, _langs = _fe_cards(res)
+    assert types[cid(1)]["selected"] == ["undead"]
+    six = {o["id"]: o for o in types[cid(6)]["options"]}
+    assert six["undead"]["disabled"] and six["undead"]["disabledReason"] == "already taken"
+    assert not six["beasts"].get("disabled")
+    assert types[cid(6)]["selected"] == [] and types[cid(6)]["status"] == "pending"
+    assert cid(6) in {p["choiceId"] for p in res["pruned"]}
+    fourteen = {o["id"]: o for o in types[cid(14)]["options"]}
+    assert fourteen["undead"]["disabled"] and not fourteen["beasts"].get("disabled")  # level 6 lost its duplicate, beasts is open
+    assert types[cid(14)]["selected"] == ["beasts"]
+    # humanoids may be taken again: the text lets you pick two races of humanoid
+    d = _draft([("ranger", 6, "hunter")], class_choices={0: {cid(1): ["humanoids"], cid(6): ["humanoids"]}})
+    types, _ = _fe_cards(resolve(d, catalog))
+    assert types[cid(6)]["selected"] == ["humanoids"]
+    assert not next(o for o in types[cid(6)]["options"] if o["id"] == "humanoids").get("disabled")

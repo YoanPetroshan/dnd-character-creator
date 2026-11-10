@@ -6224,3 +6224,8 @@ def wizard_spell_picks(ruleset: str) -> dict[str, dict]:
 SUBCLASS_EXTRA_CANTRIPS_2014: dict[str, dict] = {
     "land": {"class": "druid", "feature": "bonus-cantrip", "extra": 1},
 }
+
+
+# VF7.3: the three SRD 2014 Ranger "Favored Enemy" features (class levels 1, 6, 14); each gain also teaches one language
+# (PHB text quoted in tests/test_campaign_regressions.py).
+FAVORED_ENEMY_FEATURES_2014: tuple[str, ...] = ("favored-enemy-1-type", "favored-enemy-2-types", "favored-enemy-3-enemies")

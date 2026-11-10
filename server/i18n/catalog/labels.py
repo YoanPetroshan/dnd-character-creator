@@ -74,6 +74,11 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "You already know {language}, so you learn one language of your choice instead.",
         "bg": "Вече знаете {language}, затова научавате вместо него един език по ваш избор.",
     },
+    "label-favored-enemy-language": {"en": "Favored Enemy language", "bg": "Език за Favored Enemy"},
+    "desc-favored-enemy-language": {
+        "en": "You learn one language of your choice that is spoken by your favored enemies, if they speak one at all.",
+        "bg": "Научавате един език по ваш избор, на който говорят враговете ви от Favored Enemy, ако изобщо говорят на някакъв.",
+    },
     "desc-feat-languages": {
         "en": "Choose {n} {n|language|languages} of your choice.",
         "bg": "Изберете {n} {n|език|езика} по ваш избор.",

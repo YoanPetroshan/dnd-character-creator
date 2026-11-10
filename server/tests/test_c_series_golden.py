@@ -428,6 +428,26 @@ REBASELINES: dict[str, dict] = {
         ],
         "why": "the 2014 Land druid's Bonus Cantrip counts on the cantrip card (VF7.2)",
     },
+    # VF7.3: the 2014 Ranger "Favored Enemy" teaches one language per gain (PHB: "you also learn one language of your choice that is
+    # spoken by your favored enemies ... at 6th and 14th level") and an additional enemy must be a NEW one. Rule matrix: only a stored
+    # case with a 2014 Ranger of level >= 1 moves (Ranger 1 / 3 / 11 / 20, `src-srd` and `src-all`, mixed and 2014, and the Hunter 15
+    # sink); each gets one language card per gain at its root (`class:ranger:(1|6|14):languages:favored-enemy-*`), the filler's pick in
+    # the draft, the language in the sheet; at levels 6 and 14 the enemy card disables the types taken before (`disabled` +
+    # `disabledReason`), the filler's first option is therefore a different type (the draft pick, the card's `selected` and the
+    # enemy named on the sheet's Favored Enemy rows). No other path (the 2024 Ranger has no such card; no other class moves).
+    "VF7c": {
+        "cases": ["*/src-*/ranger[0-9]*", "ks/src-*/hunter15-2014"],
+        "paths": [
+            r"^result\.choices\[class:ranger:(1|6|14):languages:favored-enemy-[a-z0-9-]+\]$",
+            r"^draft\.classes\[0\]\.choices\.class:ranger:(1|6|14):languages:favored-enemy-[a-z0-9-]+$",
+            r"^draft\.classes\[0\]\.choices\.class:ranger:(6|14):enemy-type:favored-enemy-[a-z0-9-]+(\[[0-9]+\])?$",
+            r"^result\.choices\[class:ranger:(6|14):enemy-type:favored-enemy-[a-z0-9-]+\]\.options\[[a-z]+\]\.(disabled|disabledReason)$",
+            r"^result\.choices\[class:ranger:(6|14):enemy-type:favored-enemy-[a-z0-9-]+\]\.selected(\[[0-9]+\])?$",
+            r"^result\.sheet\.features\[[0-9]+\]\.choice(\[[0-9]+\])?$",
+            r"^result\.sheet\.proficiencies\.languages$",
+        ],
+        "why": "2014 Ranger Favored Enemy language per gain and distinct enemy types (VF7.3)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -780,7 +800,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a", "VF2b", "VF2c", "VF2d", "VF4a", "VF7a", "VF7b") and STRIP == ()
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a", "VF2b", "VF2c", "VF2d", "VF4a", "VF7a", "VF7b", "VF7c") and STRIP == ()
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 

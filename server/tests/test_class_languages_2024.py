@@ -71,7 +71,9 @@ def _opt(card, oid):
 
 
 def _lang_cards(res):
-    return [c["id"] for c in res["choices"] if c["source"]["kind"] == "class" and ":languages:" in c["id"]]
+    # the 2014 SRD Ranger's Favored Enemy language cards (VF7.3, `...:languages:favored-enemy-*`) are not 2024 class languages
+    return [c["id"] for c in res["choices"] if c["source"]["kind"] == "class" and ":languages:" in c["id"]
+            and ":languages:favored-enemy-" not in c["id"]]
 
 
 def _langs(res):

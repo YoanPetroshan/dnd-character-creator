@@ -33,6 +33,8 @@ def _class_choice_labels(choices: list[dict]) -> dict[tuple[str, str], list[str]
     out: dict[tuple[str, str], list[str]] = {}
     for c in choices:
         m = _CLASS_CHOICE_ID.match(c["id"]) if c["source"]["kind"] == "class" else None
+        if m and ":languages:favored-enemy-" in c["id"]:
+            continue  # VF7.3: the language of a Favored Enemy gain is listed under the languages, not as the enemy type
         if m and (c["selected"] or c.get("granted")):
             # Automatically granted options (Elemental Attunement) are listed first.
             out.setdefault((m.group(1), m.group(2)), []).extend([g["label"] for g in c.get("granted") or []] + _labels(c))

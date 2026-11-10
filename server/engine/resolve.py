@@ -1935,6 +1935,8 @@ def _feature_choice_templates(
         elif specific.get("enemy_type_options"):
             cid = f"class:{cls_id}:{lvl}:enemy-type:{feature['index']}"
             tpl = build_choice_template(_string_options_envelope(specific["enemy_type_options"]), cid, source, feature["name"], description=description)
+            if feature["index"] in reference_data.FAVORED_ENEMY_FEATURES_2014:  # VF7.3: the language that comes with each favored enemy
+                templates.append(class_choices_2024.favored_enemy_language_template(cls_id, lvl, feature["index"], source))
         elif specific.get("terrain_type_options"):
             cid = f"class:{cls_id}:{lvl}:terrain-type:{feature['index']}"
             tpl = build_choice_template(_string_options_envelope(specific["terrain_type_options"]), cid, source, feature["name"], description=description)
@@ -6807,6 +6809,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     poe_priors = _prof_or_expertise_priors(
         choices, resolved_feats, fixed_origin_skills, [rc["cls_id"] for rc in resolved_classes if rc["cls"]])  # FE6
     pruned += _gate_distinct_choices(choices, [rc["cls_id"] for rc in resolved_classes if rc["cls"]])  # FE7
+    pruned += class_choices_2024.gate_favored_enemies(choices)  # VF7.3
     pruned += _gate_expertise_choices(
         choices, proficient_skills | proficient_tools, _feat_expertise_skills(resolved_feats),
         [rc["cls_id"] for rc in resolved_classes if rc["cls"]], ruleset, poe_priors)

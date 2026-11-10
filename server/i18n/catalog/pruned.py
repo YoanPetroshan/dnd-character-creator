@@ -19,6 +19,10 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "'{label}': {names:, } is already known; the language selection was ignored.",
         "bg": "'{label}': вече се знае {names:, }; изборът на език беше пренебрегнат.",
     },
+    "pruned-favored-enemy-taken": {
+        "en": "'{label}': {names:, } is already a favored enemy; the selection was ignored.",
+        "bg": "'{label}': {names:, } вече е избран като Favored Enemy; изборът беше пренебрегнат.",
+    },
     # --- proficiencies and Expertise -------------------------------------------------------------------------------
     "pruned-proficient-source": {
         "en": "'{label}': {names:, } is already proficient ({source}); the selection was ignored.",

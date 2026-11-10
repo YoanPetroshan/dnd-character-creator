@@ -11,7 +11,7 @@ import re
 from engine import subclass_options_2024, subclass_spells_2024
 from i18n.messages import msg
 from catalog.reference_data import (
-    FEAT_LANGUAGE_REPLACEMENT,
+    FEAT_LANGUAGE_REPLACEMENT, LANGUAGES,
     CLASS_LANGUAGES_2024, CLASS_OPTION_CHOICES_2024, EXPERTISE_2024, INVOCATION_EFFECTS, INVOCATION_EFFECTS_2024, LANGUAGES_2024_RARE, LANGUAGES_2024_STANDARD, PRIMAL_KNOWLEDGE_2024,
     ADDITIONAL_SECRETS_2014, SKILL_NAMES, SRD_CARDS_REPLACED_2024, SUBCLASS_EXTRA_CANTRIPS_2014, SUBCLASS_PICKS_2014, SUBCLASS_PICKS_2024, TOOLS,
 )
@@ -176,6 +176,52 @@ def origin_language_templates(bg: dict | None, bg_id: str | None, ruleset: str) 
         "count": ORIGIN_LANGUAGES_PICKS,
         "options": [{"id": l["index"], "label": l["name"]} for l in LANGUAGES_2024_STANDARD if l["index"] != "common"],
     }]
+
+
+# ---- VF7.3: 2014 Ranger Favored Enemy language ---------------------------------------------------------------------
+# PHB (class-ranger.json classFeature "Favored Enemy"): "When you gain this feature, you also learn one language of your choice that
+# is spoken by your favored enemies, if they speak one at all. You choose one additional favored enemy, as well as an associated
+# language, at 6th and 14th level." One card per gain (the SRD features at class levels 1, 6 and 14); the pool is the 16 PHB
+# languages (the text names no list), "already known" is applied by `gate_languages` like every class language card.
+
+def favored_enemy_language_template(cls_id: str, level: int, feature_id: str, source: dict) -> dict:
+    return {
+        "id": f"class:{cls_id}:{level}:languages:{feature_id}",
+        "source": dict(source),
+        "label": msg("label-favored-enemy-language"),
+        "description": msg("desc-favored-enemy-language"),
+        "count": 1,
+        "options": [{"id": l["index"], "label": l["name"]} for l in LANGUAGES],
+    }
+
+
+_ENEMY_TYPE_CID = re.compile(r"^class:ranger:(\d+):enemy-type:")
+_REPEATABLE_ENEMIES = ("humanoids",)  # "you can select two races of humanoid": the option stands for a race, so it may repeat
+
+
+def gate_favored_enemies(choices: list[dict]) -> list[dict]:
+    """VF7.3: each additional Favored Enemy (levels 6 and 14) is a NEW enemy ("You choose one additional favored enemy"):
+    a type an earlier card holds is disabled "already taken" (`humanoids` excepted: it stands for a race of humanoid) and a
+    stored duplicate is dropped with a `pruned` entry (the card is pending again). Mutates `choices`; returns the pruned entries."""
+    idxs = sorted((int(m.group(1)), i) for i, c in enumerate(choices) if (m := _ENEMY_TYPE_CID.match(c["id"])))
+    if len(idxs) < 2:
+        return []
+    taken: set[str] = set()
+    pruned: list[dict] = []
+    for _lvl, i in idxs:
+        c = choices[i]
+        options = [o if o.get("disabled") or o["id"] not in taken
+                   else {**o, "disabled": True, "disabledReason": msg("disabled-already-taken")} for o in c["options"]]
+        enabled = {o["id"] for o in options if not o.get("disabled")}
+        kept = [s for s in c["selected"] if s in enabled]
+        dropped = [s for s in c["selected"] if s not in kept]
+        if dropped:
+            labels = {o["id"]: o.get("label", o["id"]) for o in c["options"]}
+            pruned.append({"choiceId": c["id"], "reason": msg(
+                "pruned-favored-enemy-taken", label=c["label"], names=[labels.get(d, d) for d in dropped])})
+        choices[i] = {**c, "options": options, "selected": kept, "status": "resolved" if len(kept) == c["count"] else "pending"}
+        taken |= {s for s in kept if s not in _REPEATABLE_ENEMIES}
+    return pruned
 
 
 # ---- RP3 (A1): replacement language of a feat whose fixed language may already be known ----------------------------
