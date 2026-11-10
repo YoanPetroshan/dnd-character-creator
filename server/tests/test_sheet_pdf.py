@@ -1,6 +1,7 @@
 """SHEET-S5..S8: the fillable sheet PDF (server/sheet_pdf.py)."""
 import io
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -111,8 +112,10 @@ def test_output_is_deterministic_and_has_no_question_mark_glyphs(catalog):
 
 
 def test_the_invisible_charset_line_covers_the_values_and_fonts_are_embedded(catalog):
-    out = subprocess.run(["pdffonts", "-"], input=make("paladin6", "bg", catalog), capture_output=True)
-    if out.returncode == 0:
+    out = None
+    if shutil.which("pdffonts"):  # poppler is optional: absent on the CI runner
+        out = subprocess.run(["pdffonts", "-"], input=make("paladin6", "bg", catalog), capture_output=True)
+    if out is not None and out.returncode == 0:
         lines = out.stdout.decode().splitlines()[2:]
         assert lines and all(" yes yes yes " in ln for ln in lines), lines
     r = reader(make("paladin6", "bg", catalog))
