@@ -24,9 +24,9 @@ export interface EngineReply {
   body: Uint8Array;
 }
 
-// The wheels of the PDF stack: pillow and fonttools come from the Pyodide distribution (pyodide-lock.json), the two
-// pure-Python ones are the pinned wheels of scripts/offline_manifest.json.
-export const PDF_WHEELS = ["pillow", "fonttools", "defusedxml-0.7.1-py2.py3-none-any.whl", "fpdf2-2.8.8-py3-none-any.whl"] as const;
+// The wheels of the PDF stack: pillow and fonttools come from the Pyodide distribution (pyodide-lock.json), the
+// pure-Python ones (fpdf2, defusedxml, pypdf) are the pinned wheels of scripts/offline_manifest.json.
+export const PDF_WHEELS = ["pillow", "fonttools", "defusedxml-0.7.1-py2.py3-none-any.whl", "fpdf2-2.8.8-py3-none-any.whl", "pypdf-6.18.1-py3-none-any.whl"] as const;
 
 const BRIDGE = `
 import sys

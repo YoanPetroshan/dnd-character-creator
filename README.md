@@ -140,7 +140,7 @@ the native engine; O2 runs it in the app, O3 loads the PDF part only on the firs
 
 Output goes to `frontend/public/pyodide/` (gitignored, about 18 MB raw, about 11 MB gzip). The only network use is the
 list of pinned downloads in `scripts/offline_manifest.json` (Pyodide 314.0.7 from `cdn.jsdelivr.net/pyodide/v314.0.7/full/`,
-fpdf2 and defusedxml wheels from `files.pythonhosted.org`); each file must match its pinned size and sha256 or the
+fpdf2, defusedxml and pypdf wheels from `files.pythonhosted.org`); each file must match its pinned size and sha256 or the
 script stops. `app.zip` is deterministic. `npm test` skips the offline test when the pack is absent. To measure the
 cold start on a phone: `cd frontend && npm run dev:lan`, open `http://<Mac LAN IP>:5173/offline-probe.html`, tap Run
 (throwaway page, not in the build).
@@ -148,8 +148,8 @@ cold start on a phone: `cd frontend && npm run dev:lan`, open `http://<Mac LAN I
 Running the app on the in-browser engine (no server at all): build the pack, then `cd frontend && npm run build:offline
 && npm run preview` (or `npm run dev:offline`). The default `npm run dev` / `npm run build` still talk to the Flask server;
 the offline build asks for the engine through `VITE_OFFLINE_ENGINE=1` (`frontend/.env.offline`) and still falls back to
-the server when the pack is not served or WebAssembly is missing. The PDF stack (`fonts.zip` plus the fpdf2, Pillow, fonttools
-and defusedxml wheels, about 2.5 MB) is loaded on the first PDF export; `VITE_OFFLINE_PDF=eager` loads it right after boot
+the server when the pack is not served or WebAssembly is missing. The PDF stack (`fonts.zip` plus the fpdf2, Pillow, fonttools,
+defusedxml and pypdf wheels, about 2.9 MB) is loaded on the first PDF export; `VITE_OFFLINE_PDF=eager` loads it right after boot
 instead (for when O4 precaches it). After any change under `server/` or `chargen/` rebuild the pack
 (`scripts/build_offline.py`): the Node equivalence test reads the built `app.zip`. Details:
 `docs/superpowers/specs/ARCHITECTURE-CURRENT-STATE.md`, sections O1-O4.

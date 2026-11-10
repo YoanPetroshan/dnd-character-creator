@@ -206,7 +206,7 @@ def test_engine_catalog_service_import_without_flask_or_pypdf():
 
 _NO_PDF_STACK_PROBE = r"""
 import json, sys
-BLOCKED = ("fpdf", "PIL", "fontTools", "defusedxml")
+BLOCKED = ("fpdf", "PIL", "fontTools", "defusedxml", "pypdf")
 class Block:
     def find_spec(self, name, path=None, target=None):
         if name.split(".")[0] in BLOCKED:
@@ -239,7 +239,8 @@ print("ok")
 
 def test_everything_but_a_pdf_works_without_the_pdf_stack():
     """O3: fpdf2, Pillow, fonttools and defusedxml are imported only when a PDF is rendered (the browser worker loads
-    them lazily). With the four blocked, every other route answers, and a PDF render fails as the JSON 500."""
+    them lazily); pypdf (the fillable sheet's form step, SHEET-S1) joins the blocked list. With the five blocked, every
+    other route answers, and a PDF render fails as the JSON 500."""
     done = subprocess.run([sys.executable, "-c", _NO_PDF_STACK_PROBE, str(SERVER)], capture_output=True, text=True, timeout=300, cwd=str(SERVER))
     assert done.returncode == 0, done.stdout[-1000:] + done.stderr[-2000:]
     assert done.stdout.strip().endswith("ok")
@@ -249,4 +250,27 @@ def test_service_does_not_import_the_pdf_stack_at_module_level():
     tree = ast.parse((SERVER / "service.py").read_text(encoding="utf-8"))
     top = {(n.module if isinstance(n, ast.ImportFrom) else a.name).split(".")[0]
            for n in tree.body if isinstance(n, (ast.Import, ast.ImportFrom)) for a in (n.names if isinstance(n, ast.Import) else [n])}
-    assert "pdf_export" not in top and not top & {"fpdf", "PIL", "fontTools", "defusedxml"}
+    assert "pdf_export" not in top and not top & {"fpdf", "PIL", "fontTools", "defusedxml", "pypdf"}
+
+
+_OLD_PDF_NEVER_LOADS_PYPDF = r"""
+import json, sys
+sys.path.insert(0, sys.argv[1])
+sys.path.insert(0, sys.argv[1] + "/tests")
+import service
+from service_requests import exportable_draft
+body = json.dumps(exportable_draft()).encode()
+status, ctype, _headers, data = service.handle("POST", "/api/export/pdf", "", body)
+assert status == 200 and ctype == "application/pdf" and data[:5] == b"%PDF-", (status, ctype)
+assert "fpdf" in sys.modules  # the PDF stack really was loaded for the render
+assert "pypdf" not in sys.modules, "the simple PDF route must not load pypdf"
+print("ok")
+"""
+
+
+def test_the_old_pdf_route_never_loads_pypdf():
+    """SHEET-S1: pypdf is the fillable sheet's form step only; the existing simple PDF (frozen baselines) renders
+    without importing it (in the browser the worker would then not need the wheel for that route)."""
+    done = subprocess.run([sys.executable, "-c", _OLD_PDF_NEVER_LOADS_PYPDF, str(SERVER)], capture_output=True, text=True, timeout=300, cwd=str(SERVER))
+    assert done.returncode == 0, done.stdout[-1000:] + done.stderr[-2000:]
+    assert done.stdout.strip().endswith("ok")

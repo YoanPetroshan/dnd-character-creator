@@ -1,6 +1,6 @@
 // The engine worker (module worker): Pyodide + the Python engine of the offline pack, answering the page's requests
 // (api/engineProtocol.ts). Everything comes from same-origin files under /pyodide/ (scripts/build_offline.py): the
-// Pyodide runtime, python_stdlib.zip, the pyyaml wheel, the pillow / fonttools / bundled fpdf2 / defusedxml wheels,
+// Pyodide runtime, python_stdlib.zip, the pyyaml wheel, the pillow / fonttools / bundled fpdf2 / defusedxml / pypdf wheels,
 // app.zip (server/*.py, engine, catalog, data); fonts.zip and the PDF wheels only when a PDF is first needed. The engine is api/engineCore.ts, the message loop
 // api/engineHost.ts; this file only connects them to the worker scope. Booting starts as soon as the worker loads.
 import { createEngine, type EngineIO } from "./api/engineCore";

@@ -13,7 +13,7 @@ Output (all under frontend/public/pyodide/, gitignored):
   + the Pyodide core files and the wheels pinned in scripts/offline_manifest.json.
 
 Network use: only the downloads listed in scripts/offline_manifest.json (jsdelivr's mirror of Pyodide 314.0.7 and
-files.pythonhosted.org for fpdf2 and defusedxml), and only for files that are missing or fail their hash. Every
+files.pythonhosted.org for fpdf2, defusedxml and pypdf), and only for files that are missing or fail their hash. Every
 download is checked against the pinned size and sha256 BEFORE it is moved into place; a mismatch stops the script
 (exit 2), nothing is skipped. app.zip is deterministic (sorted names, fixed timestamps and modes, fixed compression).
 """

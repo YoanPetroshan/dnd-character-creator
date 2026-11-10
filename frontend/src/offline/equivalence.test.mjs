@@ -43,6 +43,7 @@ async function loadPdfStack() {
         "fonttools",
         path.join(pack, "defusedxml-0.7.1-py2.py3-none-any.whl"),
         path.join(pack, "fpdf2-2.8.8-py3-none-any.whl"),
+        path.join(pack, "pypdf-6.18.1-py3-none-any.whl"),
       ],
       { messageCallback: () => {} },
     );
@@ -135,5 +136,22 @@ json.dumps({"status": status, "loaded": loaded})`),
     expect(r.checked).toBe(146); // all but GET /api, which Flask answers with the SPA catch-all
     expect(r.mismatches).toEqual([]);
     expect(fixtures).toBeDefined();
+  }, 600_000);
+
+  it("keeps pypdf out of the old PDF route and imports it once the PDF stack is prepared", async () => {
+    await loadPdfStack();
+    // the 92 export hashes and the request list above rendered the simple PDF: none of it may have imported pypdf
+    expect(JSON.parse(py.runPython("import json, sys\njson.dumps('pypdf' in sys.modules)"))).toBe(false);
+    const r = JSON.parse(
+      py.runPython(`
+import io, json
+import pypdf
+w = pypdf.PdfWriter()
+w.add_blank_page(width=595.28, height=841.89)
+buf = io.BytesIO()
+w.write(buf)
+json.dumps({"version": pypdf.__version__, "pages": len(pypdf.PdfReader(io.BytesIO(buf.getvalue())).pages)})`),
+    );
+    expect(r).toEqual({ version: "6.18.1", pages: 1 });
   }, 600_000);
 });
