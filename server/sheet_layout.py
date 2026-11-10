@@ -97,7 +97,7 @@ for _i, _s in enumerate(SKILLS):
     _y = 480.8 - 13.5 * _i
     _add(f"Skill{_s}Mark", "text", _r(99.7, _y - 0.5, 109.0, _y + 8.2), align="center")
     _add(f"Skill{_s}", "text", _r(112.0, _y, 126.4, _y + 8.6), align="center")
-    _add(f"Skill{_s}Ability", "text", _r(171.0, _y, 200.4, _y + 8.6), align="left", size=7.0)
+    _add(f"Skill{_s}Ability", "text", _r(178.0, _y, 200.4, _y + 8.6), align="left", size=7.0)
 for _i, _y in enumerate((237.2, 222.8, 209.2), start=1):
     _add(f"CustomSkill{_i}Mark", "text", _r(99.7, _y - 0.7, 109.0, _y + 7.9), align="center")
     _add(f"CustomSkill{_i}Bonus", "text", _r(111.8, _y, 126.2, _y + 8.7), align="center")
@@ -269,11 +269,11 @@ FRAMES: tuple[Frame, ...] = (
     Frame("defenses", 1, (227.6, 538.5, 385.2, 586.1), "defenses", ("Defenses",)),
     Frame("inspiration", 1, (223.7, 497.7, 347.7, 523.7), "inspiration", ("Inspiration",)),
     Frame("proficiency_bonus", 1, (221.8, 461.5, 349.1, 486.0), "proficiencyBonus", ("ProficiencyBonus",)),
-    Frame("spell_dc", 1, (221.7, 420.9, 390.2, 445.5), "spellSaveDc", ("SpellDc1", "SpellDc1Ability", "SpellDc2Ability", "SpellDc2")),
+    Frame("spell_dc", 1, (221.7, 411.5, 390.2, 445.5), "spellSaveDc", ("SpellDc1", "SpellDc1Ability", "SpellDc2Ability", "SpellDc2")),
     Frame("speed", 1, (232.2, 361.2, 381.4, 405.7), "speed", ("Speed",)),
-    Frame("hit_points", 1, (420.8, 605.2, 574.3, 656.6), "hitPoints", ("MaxHp", "CurrentHp", "TempHp")),
-    Frame("hit_dice", 1, (418.7, 542.8, 490.2, 590.3), "hitDice", ("HitDiceTotal", "HitDiceSpent")),
-    Frame("death_saves", 1, (497.4, 550.2, 576.4, 585.6), "deathSaves", tuple(f"Death{k}{i}" for k in ("Success", "Failure") for i in (1, 2, 3))),
+    Frame("hit_points", 1, (420.8, 598.0, 574.3, 656.6), "hitPoints", ("MaxHp", "CurrentHp", "TempHp")),
+    Frame("hit_dice", 1, (418.7, 526.0, 490.2, 596.0), "hitDice", ("HitDiceTotal", "HitDiceSpent")),
+    Frame("death_saves", 1, (497.4, 550.2, 576.4, 596.0), "deathSaves", tuple(f"Death{k}{i}" for k in ("Success", "Failure") for i in (1, 2, 3))),
     Frame("proficiencies", 1, (410.0, 349.9, 583.6, 516.9), "proficiencies", ("Proficiencies",)),
     Frame("actions", 1, (222.0, 188.4, 582.4, 333.4), "actions", ("Actions1", "Actions2")),
     Frame("weapons", 1, (221.0, 35.2, 582.0, 174.7), "weapons", _ROWNAMES["weapons"]),

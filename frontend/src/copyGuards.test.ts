@@ -134,6 +134,7 @@ describe("scripts", () => {
   const BRACKET_TERMS = new Set([
   "Action",
   "Actions",
+  "Character Sheet",
   "Concentration",
   "Death Saves",
   "Defenses",

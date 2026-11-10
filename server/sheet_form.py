@@ -30,7 +30,7 @@ from sheet_layout import SCALE, Field, a4_rect, a4_size
 CHARSET = (
     "".join(chr(c) for c in range(0x20, 0x7F))
     + "".join(chr(c) for c in range(0x0400, 0x0460))
-    + "\u2013\u2014\u2018\u2019\u201c\u201d\u201e\u2022\u2026\u2116\u25cf\u25cb"
+    + "\u00b7\u2013\u2014\u2018\u2019\u201c\u201d\u201e\u2022\u2026\u2116\u25cf\u25cb"
 )
 
 FONT_RESOURCE = "/DejaVu"

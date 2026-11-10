@@ -256,7 +256,7 @@ _BG: dict = {
         "noteSpellbook": "в книгата",
         "noteInnate": "вродено",
         "legend": "Подг.: P - винаги подготвено, O - подготвено по избор. Време: 1A - действие (Action), 1BA - бонус действие (Bonus Action), 1R - реакция (Reaction). Продължителност: C - концентрация (Concentration). Бележки: R - ритуал (Ritual). Умения (Skills): P - владеене (Proficiency), E - експертиза (Expertise).",
-        "footer": "Лист за герой, направен със Създаване на герои",
+        "footer": "Лист на героя (Character Sheet) \u00b7 {name} \u00b7 стр. {n}/{m}",
     },
 }
 
@@ -482,7 +482,7 @@ _EN: dict = {
         "noteSpellbook": "in the book",
         "noteInnate": "innate",
         "legend": "Prep: P = always prepared, O = prepared by choice. Time: 1A = Action, 1BA = Bonus Action, 1R = Reaction. Duration: C = Concentration. Notes: R = Ritual. Skills: P = Proficiency, E = Expertise.",
-        "footer": "Character sheet made with Character Builder",
+        "footer": "Character Sheet \u00b7 {name} \u00b7 p. {n}/{m}",
     },
 }
 
