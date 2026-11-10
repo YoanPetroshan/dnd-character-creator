@@ -17,7 +17,7 @@ Everything visual lives in `frontend/src/styles/*.css`. The markup carries class
 | `lists.css` | equipment section, item browser / inventory lists, tab bar |
 | `spells.css` | spell library |
 | `forms.css` | details section, hit-point rolls, class blocks |
-| `touch.css` | mobile/touch rules (44 px targets, 16 px inputs, safe areas, long lists). Functional: keep the minimums. |
+| `touch.css` | mobile/touch rules (44 px targets incl. the header `.help-link`, 16 px inputs, safe areas, long lists). Functional: keep the minimums. |
 | `hooks.css` | empty rules for classes that need no style yet (fill in as needed), e.g. `.name-dice` |
 | `print.css` | print: hides the app chrome (imported by `main.tsx`) |
 
@@ -29,10 +29,11 @@ Theme switch: override tokens on `:root[data-theme="..."]` (nothing sets `data-t
 - `data-state` = the UI state of an element, one value per element:
   - choice card: `expanded | collapsed`
   - option row in a picker: `available | disabled | hidden-by-filters`
-  - status banner: `error | notice | storage-failed | server-older | pruned | engine-starting`
+  - status banner: `error | notice | storage-failed | server-older | pruned | engine-starting | engine-unavailable | pwa-installing | update-available | offline-ready` (the last four: offline build only; `update-available` holds a button that starts the new version, `offline-ready` a dismiss button)
   - pruned-selection list item (Home): `pruned`
   - export button: `ready | busy | disabled`; export error line: `error`; "preparing PDF" line (offline build, first PDF only): `preparing-pdf`
   - language button: `active | inactive`
+  - Help page offline status line: `idle | unsupported | installing | offline-ready | update-available | error`; the storage line under it: `granted | denied`
 - `data-new="true"` marks a pending choice card (and the header link `.new-choices`) that appeared through a level-up and has not been resolved yet; the card also holds `<span class="choice-card__new">` (text "ново" / "new"). The attribute is absent otherwise.
 - The step-nav link keeps the `active` class (react-router); the badge `step-nav__badge` appears only when steps are unresolved. `data-active="true"` marks the active character in the Home library list.
 - Colors: `status--error` for error text. The pruned note class `choice-pruned` is defined in CSS but not rendered by any component yet.
@@ -51,6 +52,7 @@ Presentational components take props only; logic components read contexts (`useD
 | Sheet (presentational) | `components/sheet/*` (`SheetView` composes the 23 sections, each in a `SectionFrame` with `data-section`) | read-only character sheet | the resolution's `sheet` / `derived` |
 | Random name | `names/bgNames.ts`, `logic/randomName.ts`, `logic/translit.ts`; button `.name-dice` on Home (`type="button"`, `aria-label` from `t.home.randomName`, 44 px in `touch.css`, no state attribute) | name data and generation are not UI text and not in the catalog | |
 | API transport | `api/transport.ts` (`apiFetch`, selection), `api/workerTransport.ts` (Response mapping, timeout, abort), `api/engineCore.ts` / `engineHost.ts` (Pyodide + message loop), `engine.worker.ts`, `api/useEngineStatus.ts` | every `/api` call of the app goes through `apiFetch` (fetch's signature); in the offline build the in-browser engine answers | `ApiInit` = `RequestInit` + `timeoutMs` |
+| PWA / Help | `pwa/register.ts` (registration state machine, `requestPersistence`), `pwa/pwaStore.ts` (`usePwa`, `startPwa`), `pages/HelpPage.tsx` (route `/help`, link `.help-link` in the header: offline status, install steps for iPhone Safari / Android Chrome / desktop, 7-day storage warning with a link to the library export on Home, Lockdown Mode troubleshooting; plain text, `data-section` per block), banner lines in `StatusBanner` | the service worker is `frontend/pwa/sw.template.js` (rendered into `dist/sw.js` by the build); icons are placeholders (`scripts/make_pwa_icons.py`), a designer replaces the PNGs | `usePwa()` = `{phase, persisted, justReady}` |
 | Copy | `copy/bg.ts`, `copy/en.ts` | all UI text; nothing in a component is hard-coded | |
 
 ## States a designer must cover
@@ -67,4 +69,6 @@ Presentational components take props only; logic components read contexts (`useD
 | new | choice card `data-new="true"` + `.choice-card__new` text marker; header link `.new-choices` ("Нови избори: N") |
 | loading / error | headings show an ellipsis while resolving; `StatusBanner` `data-state="error"` |
 | preparing PDF | offline build only: Export page `<p role="status" data-state="preparing-pdf">` while the worker loads the PDF stack for the first PDF export (a second or two); gone when it is loaded |
+| engine unavailable | serverless build (GitHub Pages) only: `StatusBanner` `data-state="engine-unavailable"` (`role="alert"`) when WebAssembly / Workers are missing (iOS Lockdown Mode), the pack cannot be fetched or the worker failed; no server to fall back to; links to Help |
+| offline install / update | offline build only: `data-state="pwa-installing"` while the first visit downloads the cache (about 20 MB), `offline-ready` once after it, `update-available` with a "Обнови сега / Update now" button when a new version waits |
 | engine starting | offline build only: `StatusBanner` `data-state="engine-starting"` (a `<p class="status-banner" role="status">`, no design) while the in-browser engine boots; gone when it is ready |

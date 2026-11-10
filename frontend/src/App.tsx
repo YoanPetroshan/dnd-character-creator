@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, NavLink, useLocation } from "react-router-dom";
 import { CatalogProvider } from "./CatalogContext";
 import { ResolutionProvider } from "./ResolutionContext";
 import { LanguageSwitch } from "./components/LanguageSwitch";
@@ -17,9 +17,12 @@ import { AbilitiesPage } from "./pages/AbilitiesPage";
 import { EquipmentPage } from "./pages/EquipmentPage";
 import { ExportPage } from "./pages/ExportPage";
 import { SheetPage } from "./pages/SheetPage";
+import { HelpPage } from "./pages/HelpPage";
+import { useT } from "./LanguageContext";
 
 export default function App() {
   const location = useLocation();
+  const t = useT();
   return (
     <div className="app">
       <CatalogProvider>
@@ -27,6 +30,9 @@ export default function App() {
           <NewChoicesProvider>
           <RouteA11y />
           <header className="app-header">
+            <NavLink className="help-link" to="/help">
+              {t.nav.help}
+            </NavLink>
             <LanguageSwitch />
           </header>
           <StepNav />
@@ -46,6 +52,7 @@ export default function App() {
               <Route path="/equipment" element={<EquipmentPage />} />
               <Route path="/sheet" element={<SheetPage />} />
               <Route path="/export" element={<ExportPage />} />
+              <Route path="/help" element={<HelpPage />} />
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
             </ErrorBoundary>

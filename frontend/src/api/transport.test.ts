@@ -104,4 +104,58 @@ describe("createApiTransport", () => {
       vi.useRealTimers();
     }
   });
+
+  describe("serverless build (static host, no Flask to fall back to)", () => {
+    const env = { hasWebAssembly: true, hasWorker: true };
+    const noRequest = async (t: ReturnType<typeof createApiTransport>, f: ReturnType<typeof plain>) => {
+      await expect(t.apiFetch("/api/health")).rejects.toBeInstanceOf(TypeError);
+      expect(f).not.toHaveBeenCalled(); // never asks the host for /api/...
+    };
+
+    it("no WebAssembly (iOS Lockdown Mode): unavailable, and calls fail like a lost connection without a request", async () => {
+      const f = plain();
+      const t = createApiTransport({ flag: "1", serverless: true, baseUrl: "/", plainFetch: f as unknown as typeof fetch, environment: { hasWebAssembly: false, hasWorker: true }, detect: async () => true, makeWorkerTransport: fakeWorker });
+      await t.chosen;
+      expect(t.snapshot().engine).toBe("unavailable");
+      await noRequest(t, f);
+    });
+
+    it("no module Worker: unavailable", async () => {
+      const f = plain();
+      const t = createApiTransport({ flag: "1", serverless: true, baseUrl: "/", plainFetch: f as unknown as typeof fetch, environment: { hasWebAssembly: true, hasWorker: false }, detect: async () => true, makeWorkerTransport: fakeWorker });
+      await t.chosen;
+      expect(t.snapshot().engine).toBe("unavailable");
+    });
+
+    it("pack not reachable: starting -> unavailable", async () => {
+      const f = plain();
+      const t = createApiTransport({ flag: "1", serverless: true, baseUrl: "/", plainFetch: f as unknown as typeof fetch, environment: env, detect: async () => false, makeWorkerTransport: fakeWorker });
+      await t.chosen;
+      expect(t.snapshot().engine).toBe("unavailable");
+      await noRequest(t, f);
+    });
+
+    it("a worker that fails after starting shows unavailable, not fallback", async () => {
+      const w = fakeWorker();
+      const t = createApiTransport({ flag: "1", serverless: true, baseUrl: "/", plainFetch: plain() as unknown as typeof fetch, environment: env, detect: async () => true, makeWorkerTransport: () => w });
+      await t.chosen;
+      w.store.set({ engine: "ready" });
+      expect(t.snapshot().engine).toBe("ready");
+      w.store.set({ engine: "fallback" });
+      expect(t.snapshot().engine).toBe("unavailable");
+    });
+
+    it("a working engine is unaffected", async () => {
+      const w = fakeWorker();
+      const t = createApiTransport({ flag: "1", serverless: true, baseUrl: "/", plainFetch: plain() as unknown as typeof fetch, environment: env, detect: async () => true, makeWorkerTransport: () => w });
+      expect(await text(t.apiFetch("/api/health"))).toBe("engine");
+    });
+
+    it("the Flask-backed build (serverless off) still falls back to plain fetch", async () => {
+      const f = plain();
+      const t = createApiTransport({ flag: "1", baseUrl: "/", plainFetch: f as unknown as typeof fetch, environment: { hasWebAssembly: false, hasWorker: true } });
+      expect(await text(t.apiFetch("/api/health"))).toBe("server");
+      expect(t.snapshot().engine).toBe("off");
+    });
+  });
 });

@@ -3,6 +3,7 @@
 // Two implementations, chosen once at startup:
 //   - plain fetch (the default): the Flask server of `npm run dev` / the LAN server answers.
 //   - the worker transport: the engine runs in this browser (Pyodide in a Web Worker, workerTransport.ts), no server.
+// A serverless build (VITE_SERVERLESS=1, the GitHub Pages deploy) never falls back to fetch: see `serverless` below.
 // The worker transport is used only when ALL hold: the build asked for it (VITE_OFFLINE_ENGINE=1, `npm run
 // build:offline` / `dev:offline`), the browser has WebAssembly and module-capable Workers, and the offline pack is
 // really served (`/pyodide/pack.json`, written by scripts/build_offline.py). Otherwise, and whenever the worker cannot
@@ -62,6 +63,10 @@ export interface ApiTransportOptions {
   detect?: () => Promise<boolean>;
   /** Build the worker transport (default: the real worker, see spawnEngineWorker). */
   makeWorkerTransport?: () => Transport;
+  /** A build for a static host (VITE_SERVERLESS=1): there is no server to fall back to. When the engine cannot run the state
+   *  is `unavailable` and every call fails like a lost connection (a TypeError, which the pages already show), instead of
+   *  asking the host for /api/... (which would answer 404 with a page). */
+  serverless?: boolean;
 }
 
 export function createApiTransport(opts: ApiTransportOptions): ApiTransport {
@@ -71,21 +76,28 @@ export function createApiTransport(opts: ApiTransportOptions): ApiTransport {
   };
   const store = createStatusStore({ engine: "off", pdf: "idle" });
   let worker: Transport | null = null;
+  const serverless = opts.serverless === true;
+  const noServer = (): Promise<Response> => Promise.reject(new TypeError("the app engine is unavailable and there is no server"));
+  /** The state the UI sees: with no server to fall back to, a failed worker is "unavailable", not "fallback". */
+  const shown = (s: EngineSnapshot): EngineSnapshot => (serverless && s.engine === "fallback" ? { ...s, engine: "unavailable" } : s);
 
   const chosen: Promise<EngineChoice> = (async () => {
     // The cheap checks first: with the flag off (dev) or no WebAssembly nothing is fetched or started.
-    if (!flagOn(opts.flag) || !env.hasWebAssembly || !env.hasWorker) return "fetch";
+    if (!flagOn(opts.flag) || !env.hasWebAssembly || !env.hasWorker) {
+      if (serverless) store.set({ engine: "unavailable" });
+      return "fetch";
+    }
     store.set({ engine: "starting" }); // pack probe + boot: the UI shows "engine starting"
     const packPresent = await (opts.detect ?? (() => detectPack(opts.plainFetch, opts.baseUrl)))();
     const choice = chooseEngine({ flag: opts.flag, ...env, packPresent });
     if (choice === "fetch") {
-      store.set({ engine: "off" });
+      store.set({ engine: serverless ? "unavailable" : "off" });
       return "fetch";
     }
     const t = opts.makeWorkerTransport!();
     worker = t;
-    store.set(t.store.get());
-    t.store.subscribe(() => store.set(t.store.get()));
+    store.set(shown(t.store.get()));
+    t.store.subscribe(() => store.set(shown(t.store.get())));
     return "worker";
   })();
 
@@ -96,6 +108,7 @@ export function createApiTransport(opts: ApiTransportOptions): ApiTransport {
     async apiFetch(input, init) {
       const choice = await chosen;
       if (choice === "worker" && worker) return worker.fetch(input, init);
+      if (serverless) return noServer();
       return fetchWithTimeout(opts.plainFetch, input, init);
     },
   };
@@ -113,11 +126,15 @@ export function transport(): ApiTransport {
     instance = createApiTransport({
       flag: import.meta.env.VITE_OFFLINE_ENGINE as string | undefined,
       baseUrl: base,
+      serverless: flagOn(import.meta.env.VITE_SERVERLESS as string | undefined),
       plainFetch: (input, init) => fetch(input, init),
       makeWorkerTransport: () =>
         createWorkerTransport({
           spawn: () => new Worker(new URL("../engine.worker.ts", import.meta.url), { type: "module" }) as unknown as WorkerLike,
-          fallback: (input, init) => fetch(input, init),
+          // a static host has no server: a worker that cannot boot makes the call fail like a lost connection
+          fallback: flagOn(import.meta.env.VITE_SERVERLESS as string | undefined)
+            ? () => Promise.reject(new TypeError("the app engine is unavailable and there is no server"))
+            : (input, init) => fetch(input, init),
         }),
     });
   }

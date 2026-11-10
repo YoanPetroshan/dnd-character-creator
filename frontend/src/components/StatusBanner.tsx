@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useEngineStatus } from "../api/useEngineStatus";
 import { useDraft } from "../DraftContext";
@@ -7,6 +8,7 @@ import { useResolutionContext } from "../ResolutionContext";
 import { DRAFT_VERSION } from "../logic/draft";
 import { serverIsOlder } from "../logic/serverHealth";
 import { useServerHealth } from "../useServerHealth";
+import { pwa, usePwa } from "../pwa/pwaStore";
 
 /** App-wide status lines shown on every page: a failed /api/resolve (the last
  *  good resolution stays on screen), a draft that could not be stored or
@@ -17,12 +19,40 @@ export function StatusBanner() {
   const { resolution, error, retry } = useResolutionContext();
   const health = useServerHealth();
   const engine = useEngineStatus();
+  const offline = usePwa();
+  const [readyDismissed, setReadyDismissed] = useState(false);
   const prunedCount = resolution?.pruned.length ?? 0;
   return (
     <>
       {engine.engine === "starting" && (
         <p className="status-banner" role="status" data-state="engine-starting">
           {t.status.engineStarting}
+        </p>
+      )}
+      {engine.engine === "unavailable" && (
+        <p className="status-banner" role="alert" data-state="engine-unavailable">
+          {t.status.engineUnavailable} <NavLink to="/help">{t.pwa.helpLink}</NavLink>
+        </p>
+      )}
+      {offline.phase === "installing" && (
+        <p className="status-banner" role="status" data-state="pwa-installing">
+          {t.pwa.installing}
+        </p>
+      )}
+      {offline.phase === "update-available" && (
+        <p className="status-banner" role="status" data-state="update-available">
+          {t.pwa.updateAvailable}{" "}
+          <button type="button" onClick={() => pwa().applyUpdate()}>
+            {t.pwa.updateNow}
+          </button>
+        </p>
+      )}
+      {offline.phase === "offline-ready" && offline.justReady && !readyDismissed && (
+        <p className="status-banner" role="status" data-state="offline-ready">
+          {t.pwa.offlineReady}{" "}
+          <button type="button" onClick={() => setReadyDismissed(true)}>
+            {t.status.dismiss}
+          </button>
         </p>
       )}
       {error && (

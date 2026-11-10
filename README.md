@@ -152,7 +152,14 @@ the server when the pack is not served or WebAssembly is missing. The PDF stack 
 and defusedxml wheels, about 2.5 MB) is loaded on the first PDF export; `VITE_OFFLINE_PDF=eager` loads it right after boot
 instead (for when O4 precaches it). After any change under `server/` or `chargen/` rebuild the pack
 (`scripts/build_offline.py`): the Node equivalence test reads the built `app.zip`. Details:
-`docs/superpowers/specs/ARCHITECTURE-CURRENT-STATE.md`, sections O1-O3.
+`docs/superpowers/specs/ARCHITECTURE-CURRENT-STATE.md`, sections O1-O4.
+
+Installable offline app (O4): the offline build (`npm run build:offline`) is also a PWA. It writes `dist/sw.js`, a service
+worker that precaches the whole app and the whole pack (about 18 MB, PDF stack and fonts included), so after the first
+visit everything works without a network; a new version is offered with an "update" button. The app can live under a
+sub-path: `VITE_BASE=/dnd-character-creator/ npm run build:offline` (default `/`), and `VITE_SERVERLESS=1` makes an engine
+that cannot run (iOS Lockdown Mode) show a message instead of calling a server that is not there. Help and install steps
+for phones are in the app (`/help`). Placeholder icons: `.venv/bin/python scripts/make_pwa_icons.py`.
 
 ## Test
 

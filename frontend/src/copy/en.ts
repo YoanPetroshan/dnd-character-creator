@@ -28,6 +28,7 @@ export const en: Copy = {
     unresolved: (n: number) => `unresolved: ${n}`,
     newChoices: (n: number) => `New choices: ${n}`,
     nextStep: "Next unfinished step →",
+    help: "Help",
   },
 
   titles: {
@@ -41,6 +42,7 @@ export const en: Copy = {
       "/equipment": g.equipment.en,
       "/sheet": "Character Sheet",
       "/export": "Export",
+      "/help": "Help and install",
     } as Record<string, string>,
     fallback: "Page not found",
   },
@@ -332,7 +334,59 @@ export const en: Copy = {
     pruned: (n: number) => `Dropped choices: ${n}.`,
     serverOlder: "The server is an older version than the app and may not understand all of the character's data. Update the server.",
     engineStarting: "Starting the app engine… The first start can take a few seconds.",
+    engineUnavailable:
+      "The app engine cannot start: this browser has no WebAssembly (on an iPhone that is Lockdown Mode) or the app files were not downloaded. Open the app with an internet connection, or try another browser.",
     seeInHome: "See in Home",
+  },
+
+  /** Offline use (service worker): banner lines and the Help page. */
+  pwa: {
+    installing: "Downloading the app for use without a connection (about 20 MB). Do not close the page.",
+    offlineReady: "Ready: the app also works without internet.",
+    updateAvailable: "A new version of the app is available.",
+    updateNow: "Update now",
+    helpLink: "Help",
+  },
+
+  help: {
+    title: "Help and install",
+    offlineTitle: "Working without a connection",
+    status: {
+      idle: "This version of the app is not installed for offline use.",
+      unsupported: "This browser cannot work offline (no service worker, or the page is not secure). The app works only while you are online.",
+      installing: "Downloading the app for use without a connection (about 20 MB). Do not close the page.",
+      "offline-ready": "Ready: the app is saved in the browser and works without internet.",
+      "update-available": "A new version of the app is downloaded and ready to start.",
+      error: "Saving for offline use did not work. Reload the page while you are online.",
+    } as Record<string, string>,
+    storage: {
+      granted: "The browser protects the app's data from automatic clean-up.",
+      denied: "The browser does not guarantee the data: it may clear it if you do not open the app for a long time. Add the app to the home screen and keep a copy of your characters.",
+    } as Record<string, string>,
+    updateNow: "Update now",
+    installTitle: "Installing on a phone",
+    iosTitle: "iPhone and iPad (Safari)",
+    iosSteps: [
+      "Open the address of the app in Safari (not in the built-in browser of another app).",
+      "Tap the Share button (a square with an arrow pointing up).",
+      "Choose \"Add to Home Screen\", then \"Add\".",
+      "Start the app from the icon on the home screen. The first start needs internet; after that it works without.",
+    ],
+    androidTitle: "Android (Chrome)",
+    androidSteps: [
+      "Open the address of the app in Chrome.",
+      "Tap the three-dot menu and choose \"Install app\" (or \"Add to Home screen\").",
+      "Start the app from the icon. The first start needs internet; after that it works without.",
+    ],
+    desktopTitle: "Computer (Chrome, Edge)",
+    desktopText: "Click the install icon in the address bar. Installing is optional: the app also works in a normal tab.",
+    keepTitle: "Keep your characters safe",
+    keepText:
+      "Characters are stored only in this browser. An iPhone may clear the data of a website you have not opened for 7 days unless it was added to the home screen; changing phones or clearing site data also loses them. Keep a copy in a file.",
+    keepLink: "Download all characters (.json) on Home",
+    lockdownTitle: "If it does not start",
+    lockdownText:
+      "On an iPhone, Lockdown Mode turns WebAssembly off and the app cannot run in it: turn it off for Safari or use another device. If something broke, clear the site data in the browser settings (the characters are lost: download them first) and open the app again.",
   },
 
   errorBoundary: {
