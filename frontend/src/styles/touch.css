@@ -20,12 +20,20 @@ input[type="radio"] {
 }
 
 button,
+.next-button,
 .tab-bar button,
 .point-buy-stepper button,
 .name-dice,
 .choice-card__header {
   min-height: 44px;
   min-width: 44px;
+}
+
+/* The Next link is an anchor: a flex box so the 44px height applies. */
+.next-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .choice-picker li,

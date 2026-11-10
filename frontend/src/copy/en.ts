@@ -28,6 +28,7 @@ export const en: Copy = {
     unresolved: (n: number) => `unresolved: ${n}`,
     newChoices: (n: number) => `New choices: ${n}`,
     nextStep: "Next unfinished step →",
+    nextButton: "Next",
     help: "Help",
   },
 

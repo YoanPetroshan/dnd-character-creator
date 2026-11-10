@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { STEPS, nextUnfinishedStep, stepBadgeCount, stepForChoice, stepStatus } from "./steps";
+import { STEPS, nextStepAfter, nextUnfinishedStep, stepBadgeCount, stepForChoice, stepStatus } from "./steps";
 import { emptyDraft } from "./draft";
 import { choice, resolution } from "./testFixtures";
 import type { Draft } from "../types";
@@ -177,5 +177,27 @@ describe("stepForChoice", () => {
   it("equipment cards belong to /equipment, even with a class: prefix", () => {
     expect(stepForChoice("class:fighter:1:equipment-choice-0")).toBe("/equipment");
     expect(stepForChoice("background:acolyte:equipment-choice-1")).toBe("/equipment");
+  });
+});
+
+describe("nextStepAfter (the Next button's target)", () => {
+  it("follows the fixed STEPS order, one step at a time", () => {
+    const got = STEPS.slice(0, -1).map((s) => nextStepAfter(s.path)?.path);
+    expect(got).toEqual(["/class", "/background", "/species", "/abilities", "/equipment", "/sheet", "/export"]);
+    expect(nextStepAfter("/background")?.key).toBe("species");
+  });
+  it("is null on the last step and on non-step routes", () => {
+    expect(nextStepAfter("/export")).toBeNull();
+    expect(nextStepAfter("/help")).toBeNull();
+    expect(nextStepAfter("/nope")).toBeNull();
+    expect(nextStepAfter("/")).toBeNull();
+    expect(nextStepAfter("")).toBeNull();
+    expect(nextStepAfter("/classes")).toBeNull();
+  });
+  it("ignores a deep-link hash, a query and a trailing slash (the router already strips the basename)", () => {
+    expect(nextStepAfter("/class#class:warlock:1:x")?.path).toBe("/background");
+    expect(nextStepAfter("/equipment?x=1#a")?.path).toBe("/sheet");
+    expect(nextStepAfter("/species/")?.path).toBe("/abilities");
+    expect(nextStepAfter("/export#a")).toBeNull();
   });
 });

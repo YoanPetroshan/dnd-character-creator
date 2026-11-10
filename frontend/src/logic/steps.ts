@@ -116,3 +116,12 @@ export function stepForChoice(cid: string): string {
   if (isSpeciesCid(cid)) return "/species";
   return "/background";
 }
+
+/** The step AFTER the one `path` belongs to, in STEPS order (the fixed order, not the unfinished-step
+ *  logic of nextUnfinishedStep). `path` is the router's basename-stripped pathname; a "#hash", a "?query"
+ *  and a trailing slash are ignored. null on the last step (Export) and on any non-step route (Help, unknown). */
+export function nextStepAfter(path: string): Step | null {
+  const clean = path.split("#")[0].split("?")[0].replace(/(.)\/+$/, "$1");
+  const i = STEPS.findIndex((step) => step.path === clean);
+  return i >= 0 && i < STEPS.length - 1 ? STEPS[i + 1] : null;
+}

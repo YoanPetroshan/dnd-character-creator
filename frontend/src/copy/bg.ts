@@ -29,6 +29,7 @@ export const bg = {
     unresolved: (n: number) => `неизбрани: ${n}`,
     newChoices: (n: number) => `Нови избори: ${n}`,
     nextStep: "Следваща незавършена стъпка →",
+    nextButton: "Напред",
     help: "Помощ",
   },
 

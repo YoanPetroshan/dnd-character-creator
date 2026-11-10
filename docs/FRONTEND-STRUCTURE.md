@@ -35,6 +35,7 @@ Theme switch: override tokens on `:root[data-theme="..."]` (nothing sets `data-t
   - language button: `active | inactive`
   - Help page offline status line: `idle | unsupported | installing | offline-ready | update-available | error`; the storage line under it: `granted | denied`
 - `data-new="true"` marks a pending choice card (and the header link `.new-choices`) that appeared through a level-up and has not been resolved yet; the card also holds `<span class="choice-card__new">` (text "ново" / "new"). The attribute is absent otherwise.
+- `a.next-button` (`NextStepButton`, rendered once in `App.tsx` right after the routed page, inside `<main>`, so it is the last thing on every step page) goes to the step AFTER the current one in the fixed `STEPS` order (`nextStepAfter(pathname)`; the header-top `NextStepLink` is the different "first unfinished step" link). `data-next="<target step key>"` (`class`, `background`, ...), `aria-label` "Напред: <step name>" / "Next: <step name>" from `t.nav.nextButton` + `t.nav.steps`; no state attribute; absent on Export (last step) and on Help / unknown routes; 44 px in `touch.css`, empty rule in `hooks.css`, hidden in print. Clicking scrolls to the top (`RouteA11y` moves focus without scrolling).
 - The step-nav link keeps the `active` class (react-router); the badge `step-nav__badge` appears only when steps are unresolved. `data-active="true"` marks the active character in the Home library list.
 - Colors: `status--error` for error text. The pruned note class `choice-pruned` is defined in CSS but not rendered by any component yet.
 
@@ -44,7 +45,7 @@ Presentational components take props only; logic components read contexts (`useD
 
 | Area | Files | Role | Data received |
 | --- | --- | --- | --- |
-| Shell | `App.tsx`, `components/StepNav`, `NextStepLink`, `StatusBanner`, `LanguageSwitch`, `ErrorBoundary`, `RouteA11y` | chrome around every page | contexts only |
+| Shell | `App.tsx`, `components/StepNav`, `NextStepLink`, `NextStepButton`, `StatusBanner`, `LanguageSwitch`, `ErrorBoundary`, `RouteA11y` | chrome around every page | contexts only |
 | Pages (logic) | `pages/HomePage, ClassPage, BackgroundPage, SpeciesPage, AbilitiesPage, EquipmentPage, SheetPage, ExportPage` | one per route, read the draft and the resolution, dispatch draft actions | draft, resolution, catalog |
 | Choices | `ChoiceCard` (logic: expanded state) -> `ChoicePicker` (short and long layouts) | one server choice, selectable options | a `Choice` (id, label, status, options with `disabled`, `disabledReason`, `hiddenByFilters`, `group`, `selected`, `count`) and `onToggle` |
 | Small summaries (presentational) | `ClassResourcesList`, `SheetTraitsSummary`, `SpellSlotsSummary`, `StepProblems`, `CommitNumberInput` | | resolution parts |

@@ -4,6 +4,7 @@ import { ResolutionProvider } from "./ResolutionContext";
 import { LanguageSwitch } from "./components/LanguageSwitch";
 import { StepNav } from "./components/StepNav";
 import { NextStepLink } from "./components/NextStepLink";
+import { NextStepButton } from "./components/NextStepButton";
 import { NewChoicesLink } from "./components/NewChoicesLink";
 import { NewChoicesProvider } from "./NewChoicesContext";
 import { StatusBanner } from "./components/StatusBanner";
@@ -56,6 +57,7 @@ export default function App() {
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
             </ErrorBoundary>
+            <NextStepButton />
           </main>
           </NewChoicesProvider>
         </ResolutionProvider>
