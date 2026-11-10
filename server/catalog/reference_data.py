@@ -1223,6 +1223,11 @@ BACKGROUND_FEAT_VARIANT_FROM_TEXT: dict[str, dict] = {
     }
     for college in ("Lorehold", "Prismari", "Quandrix", "Silverquill", "Witherbloom")
 }
+# VF6: Astral Drifter (AAG) fixes the Magic Initiate (PHB) list to Cleric the same way (owner-approved).
+BACKGROUND_FEAT_VARIANT_FROM_TEXT["astral drifter|aag"] = {
+    "hints": {"magic-initiate-phb": "Cleric Spells"},
+    "quote": "You gain the {@feat Magic Initiate||Magic Initiate feat} from the {@book Player's Handbook|PHB} and must choose cleric for the feat.",
+}
 
 # FE6 (B4): 5etools says `languageProficiencies: [{"thieves' cant": true}]` for Harper Agent (FRHoF) and the
 # converter used to drop the unknown key. index -> language ids ("You know Thieves' Cant."). Display names come
@@ -1299,6 +1304,13 @@ DATA_OVERRIDES: dict[str, dict] = {
         "raw_record_pin": {"file": "backgrounds.json", "record": "background Lorehold Student|SCC (and the four other colleges) feats",
                            "defect": "[{\"strixhaven initiate|scc\": true}] carries no variant while the entry says \"must choose Lorehold within it\""},
         "reason": "the record's own sentence names the college; the table restores the variant hint the Magic Initiate backgrounds carry",
+    },
+    "astral-drifter-feat-list": {
+        "what": "Astral Drifter (AAG) fixes the Magic Initiate (PHB) spell list to Cleric",
+        "where": "catalog.reference_data:BACKGROUND_FEAT_VARIANT_FROM_TEXT",
+        "raw_record_pin": {"file": "backgrounds.json", "record": "background Astral Drifter|AAG feats",
+                           "defect": "[{\"magic initiate|phb\": true}] carries no variant while the entry says \"must choose cleric for the feat\""},
+        "reason": "the record's own sentence names the list; the table restores the variant hint the Magic Initiate backgrounds carry",
     },
     "srd-paladin-simple-melee-weapon": {
         "what": "SRD Paladin starting equipment (b) \"any simple melee weapon\" offers the simple MELEE weapons only",

@@ -85,7 +85,7 @@ def check_scc_students():
     for key, row in table.items():
         name, _, source = key.partition("|")
         bg = _bg(name.title(), source.upper())
-        assert bg["feats"] == [{"strixhaven initiate|scc": True}]
+        assert bg["feats"] == [{"strixhaven initiate|scc": True} if source == "scc" else {"magic initiate|phb": True}]
         assert row["quote"] in json.dumps(bg["entries"])
 
 
@@ -124,6 +124,7 @@ CHECKS = {
     "harper-agent-thieves-cant": check_harper,
     "genie-touched-feat": check_genie,
     "scc-student-feat-college": check_scc_students,
+    "astral-drifter-feat-list": check_scc_students,
     "srd-paladin-simple-melee-weapon": check_srd_paladin,
     "srd-levels-invocations-metamagic-known": check_srd_levels,
     "pact-of-the-chain-ritual": check_chain,

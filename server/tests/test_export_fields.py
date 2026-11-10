@@ -241,6 +241,8 @@ _EXPECT = {
     "selesnya-initiate-wizard3-2014": {"languages": ["common"]},
     # VF4.1: Silverquill Student, Strixhaven Initiate with the college fixed
     "silverquill-student-wizard3-2014": {"innate": True},
+    # VF6: Astral Drifter, Magic Initiate with the Cleric list fixed
+    "astral-drifter-wizard3-2014": {"innate": True},
     # VF2.6: Mark of Scribing innate frequencies
     "mark-of-scribing-wizard5-2014": {"innate": True},
     # VF1.8: PHB Dwarf, one Tool Proficiency line

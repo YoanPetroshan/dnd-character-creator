@@ -1048,7 +1048,7 @@ def test_vf4_1_data_the_student_backgrounds_name_their_college_in_the_feat_sente
 
 def test_vf4_1_the_fixed_variant_sentences_are_exactly_the_pinned_set():
     """Every background whose text fixes a feat variant ('must choose X within it' / 'must choose X for the feat'):
-    the five SCC students and Astral Drifter (AAG). Nothing else in the data says it."""
+    the five SCC students and Astral Drifter (AAG; fixed to Cleric in VF6). Nothing else in the data says it."""
     import re
     found = sorted(r["name"] for r in _backgrounds_json()
                    if re.search(r"must choose \w+ (within it|for the feat)", _flat_text(r.get("entries"))))
@@ -1283,3 +1283,35 @@ def test_vf4_4_the_warlock_invocation_card_counts_follow_the_phb_table(catalog, 
 def test_vf4_4_the_fix_table_equals_the_class_file_progressions():
     from catalog import reference_data as ref
     assert ref.SRD_LEVELS_COUNT_FIXES == {("warlock", "invocations_known"): _PHB_INVOCATIONS, ("sorcerer", "metamagic_known"): _PHB_METAMAGIC}
+
+
+# ---------------------------------------------------------------- VF6 Astral Drifter Magic Initiate is the Cleric list
+def test_vf6_data_astral_drifter_text_fixes_cleric():
+    rec = next(r for r in _backgrounds_json() if r["name"] == "Astral Drifter")
+    assert rec["feats"] == [{"magic initiate|phb": True}]  # the data carries no variant, only the text does
+    assert ("You gain the {@feat Magic Initiate||Magic Initiate feat} from the {@book Player's Handbook|PHB} "
+            "and must choose cleric for the feat.") in _flat_text(rec["entries"])
+
+
+def test_vf6_astral_drifter_card_is_the_cleric_list(catalog):
+    assert catalog.backgrounds["astral-drifter-aag"]["feat_variant_hints"] == {"magic-initiate-phb": "Cleric Spells"}
+    res = resolve(_draft([("fighter", 1)], ruleset="mixed", background="astral-drifter-aag"), catalog)
+    card = next(c for c in res["choices"] if c["id"] == "feat:magic-initiate-phb:spell-variant")
+    assert [o["id"] for o in card["options"]] == ["cleric-spells"]
+
+
+def test_vf6_a_stored_foreign_list_is_ignored_and_cleric_unlocks_the_spell_picks(catalog):
+    d = _draft([("fighter", 1)], ruleset="mixed", background="astral-drifter-aag")
+    vid = "feat:magic-initiate-phb:spell-variant"
+    d["background"]["choices"] = {vid: ["wizard-spells"]}
+    res = resolve(d, catalog)
+    card = next(c for c in res["choices"] if c["id"] == vid)
+    assert card["status"] == "pending"
+    assert not [c for c in res["choices"] if ":magic-initiate-phb:spell-choice-" in c["id"]]
+    d["background"]["choices"] = {vid: ["cleric-spells"]}
+    res = resolve(d, catalog)
+    picks = [c for c in res["choices"] if ":magic-initiate-phb:spell-choice-" in c["id"]]
+    assert sorted(c["count"] for c in picks) == [1, 2]
+    assert "sacred-flame" in {o["id"] for c in picks if c["count"] == 2 for o in c["options"]}
+    assert "bless" in {o["id"] for c in picks if c["count"] == 1 for o in c["options"]}
+    assert "magic-missile" not in {o["id"] for c in picks for o in c["options"]}

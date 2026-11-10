@@ -2096,7 +2096,7 @@ def test_background_feat_variant_hint_for_restricted_magic_initiate():
     from catalog.official_source import load_official_backgrounds
     bgs = {b["index"]: b for b in load_official_backgrounds(official_dir())}
     assert bgs["acolyte-xphb"]["feat_variant_hints"] == {"magic-initiate-xphb": "Cleric Spells"}
-    assert bgs["astral-drifter-aag"]["feat_variant_hints"] == {}
+    assert bgs["astral-drifter-aag"]["feat_variant_hints"] == {"magic-initiate-phb": "Cleric Spells"}  # VF6: the text fixes it
 
 
 def test_ritual_caster_xphb_folds_level_scaled_counts_into_one_choice():

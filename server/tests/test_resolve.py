@@ -4687,35 +4687,40 @@ def test_aberrant_dragonmark_cantrip_and_level_one_choices(catalog):
 
 # --- feats' additionalSpells: variant selection (slice 4) ---
 
-_MI_VARIANT = "feat:magic-initiate-phb:spell-variant"
+_MI_VARIANT = "class:fighter:4:asi:feat:magic-initiate-phb:spell-variant"  # VF6: the free list is the ASI-picked PHB feat
 
 
-def _astral_draft(choices):
-    return _fighter_acolyte_human_draft(sources=["srd", "phb", "aag"], background={"id": "astral-drifter-aag", "choices": choices})
+def _mi_free_draft(choices):
+    """Magic Initiate (PHB) taken as the fighter-4 ASI feat: the only route with a free list now that Astral Drifter
+    (the former vehicle) is locked to Cleric."""
+    return _fighter_acolyte_human_draft(
+        sources=["srd", "phb", "aag"], preferences=_feat_prereqs_on(),
+        background={"id": "soldier-phb", "choices": {}},
+        classes=[{"classId": "fighter", "level": 4, "choices": {"class:fighter:4:asi": ["feat:magic-initiate-phb"], **choices}}])
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 def test_magic_initiate_variant_choice_pending_without_dependent_choices(catalog):
-    r = resolve(_astral_draft({}), catalog)
-    feat_choices = [c for c in r["choices"] if c["source"]["kind"] == "feat"]
+    r = resolve(_mi_free_draft({}), catalog)
+    feat_choices = [c for c in r["choices"] if c["source"]["kind"] == "feat" and ":magic-initiate-phb:" in c["id"]]
     assert [c["id"] for c in feat_choices] == [_MI_VARIANT]
     assert len(feat_choices[0]["options"]) == 6 and feat_choices[0]["status"] == "pending"
 
 
 @pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 def test_magic_initiate_variant_selection_reveals_spell_choices(catalog):
-    r = resolve(_astral_draft({_MI_VARIANT: ["wizard-spells"]}), catalog)
-    spell_choices = [c for c in r["choices"] if ":spell-choice-" in c["id"]]
+    r = resolve(_mi_free_draft({_MI_VARIANT: ["wizard-spells"]}), catalog)
+    spell_choices = [c for c in r["choices"] if ":magic-initiate-phb:spell-choice-" in c["id"]]
     by_count = sorted((c["count"], len(c["options"])) for c in spell_choices)
     assert by_count == ([(1, 30), (2, 16)] if has_official_spells() else [(1, 27), (2, 14)])  # Slice 11a; script-verified
     cid = next(c["id"] for c in spell_choices if c["count"] == 2)
     lvl1 = next(c["id"] for c in spell_choices if c["count"] == 1)
-    r2 = resolve(_astral_draft({_MI_VARIANT: ["wizard-spells"], cid: ["fire-bolt", "light"], lvl1: ["magic-missile"]}), catalog)
+    r2 = resolve(_mi_free_draft({_MI_VARIANT: ["wizard-spells"], cid: ["fire-bolt", "light"], lvl1: ["magic-missile"]}), catalog)
     mine = [e for e in r2["sheet"]["innateSpells"] if e.get("featId") == "magic-initiate-phb"]
     assert {e["name"] for e in mine} == {"Fire Bolt", "Light", "Magic Missile"}
     assert all(e["ability"] == "INT" for e in mine)
     # switching variant leaves the stale picks reported as pruned
-    r3 = resolve(_astral_draft({_MI_VARIANT: ["cleric-spells"], cid: ["fire-bolt"]}), catalog)
+    r3 = resolve(_mi_free_draft({_MI_VARIANT: ["cleric-spells"], cid: ["fire-bolt"]}), catalog)
     assert cid in [p["choiceId"] for p in r3["pruned"]]
 
 
