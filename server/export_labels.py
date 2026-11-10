@@ -18,6 +18,8 @@ Nothing here knows about rules; the exporters (markdown_export, pdf_export, expo
 """
 from __future__ import annotations
 
+from decimal import ROUND_HALF_UP, Decimal
+
 from i18n.messages import format_template
 
 LANGS = ("bg", "en")
@@ -104,7 +106,7 @@ _BG: dict = {
     "secSpeciesResources": "Ресурси от расата (Species)",
     "secCarrying": "Носимост (Carrying Capacity)",
     "overCapacity": " (претоварен)",
-    "pushDragLift": ", тласкане/влачене/вдигане {n} lb",
+    "pushDragLift": ", тласкане/влачене/вдигане {n}",
     "secArmor": "Броня",
     "stealthDisadvantage": "Недостатък (Disadvantage) при Скритост (носена броня).",
     "secStartingGold": "Начално злато и други предмети",
@@ -229,7 +231,7 @@ _EN: dict = {
     "secSpeciesResources": "Species Resources",
     "secCarrying": "Carrying Capacity",
     "overCapacity": " (over capacity)",
-    "pushDragLift": ", push/drag/lift {n} lb",
+    "pushDragLift": ", push/drag/lift {n}",
     "secArmor": "Armor",
     "stealthDisadvantage": "Disadvantage on Stealth (worn armor).",
     "secStartingGold": "Starting Gold and Other Items",
@@ -303,6 +305,43 @@ def check_lang(lang: str) -> str:
 def label(lang: str, key: str, **params) -> str:
     """The template `key` of `lang` filled in with `params`."""
     return format_template(LABELS[check_lang(lang)][key], params)
+
+
+# --- weights (owner decision 2026-11-10): the Bulgarian text adds the kilograms after a weight in pounds
+KG_PER_LB = Decimal("0.45359237")  # the international avoirdupois pound, exact by definition
+
+
+def _num(value) -> str:
+    """A number exactly as the exports always printed it (plain `str`; English stays byte-identical)."""
+    return str(value)
+
+
+def kilograms(lb) -> str:
+    """`lb` pounds in kilograms: ONE decimal, half up, Bulgarian decimal comma, a trailing ",0" dropped ("0 kg", "10 kg",
+    "43,5 kg"; 100 lb -> "45,4 kg"). Exact decimal arithmetic, so the same number gives the same text everywhere (the
+    frontend ``formatWeight`` is pinned to it by a cross-check over 0..4000 lb in steps of 0.25)."""
+    tenths = (Decimal(str(lb)) * KG_PER_LB * 10).quantize(Decimal(1), rounding=ROUND_HALF_UP)
+    whole, frac = divmod(abs(int(tenths)), 10)
+    sign = "-" if tenths < 0 else ""
+    return f"{sign}{whole}" + (f",{frac}" if frac else "") + " kg"
+
+
+def weight(lb, lang: str) -> str:
+    """A weight for display: English "96 lb"; Bulgarian "96 lb (43,5 kg)". The ONLY place the exports print a weight.
+    Display only: the sheet fields stay numeric pounds in the API."""
+    text = f"{_num(lb)} lb"
+    if check_lang(lang) == "bg" and isinstance(lb, (int, float)) and not isinstance(lb, bool):
+        return f"{text} ({kilograms(lb)})"
+    return text
+
+
+def weight_pair(first, second, lang: str) -> str:
+    """Two weights that share the unit, "96/225 lb"; Bulgarian "96/225 lb (43,5/102,1 kg)"."""
+    text = f"{_num(first)}/{_num(second)} lb"
+    if check_lang(lang) == "bg":
+        a, b = kilograms(first)[:-3], kilograms(second)[:-3]
+        return f"{text} ({a}/{b} kg)"
+    return text
 
 
 def word(lang: str, group: str, key: str, default: str | None = None) -> str:

@@ -4,6 +4,8 @@
 // T1 (owner decision 2026-11-05): a Bulgarian rules term is followed by its English term in brackets, "Талант (Feat)"
 // (docs/TERMS-PROPOSAL.md; the allowed terms are the BRACKET_TERMS list of copyGuards.test.ts).
 
+import { formatWeight, formatWeightPair } from "../logic/units";
+
 type Msgs = Record<string, string>;
 
 export const bg = {
@@ -63,7 +65,8 @@ export const bg = {
     dateLocale: "bg-BG",
     none: "—",
     feet: (n: number) => (n === 1 ? "1 фут" : `${n} фута`),
-    pounds: (n: number) => `${n} lb`,
+    /** A weight in pounds; the kilograms follow in brackets (logic/units.ts, owner decision 2026-11-10). */
+    pounds: (n: number) => formatWeight(n, "bg"),
     level: (n: number) => `ниво ${n}`,
     levelOf: (n: number) => `от ниво ${n}`,
     gold: (n: number) => `${n} зл.`,
@@ -663,7 +666,7 @@ export const bg = {
     attackRange: (range: string) => `range ${range}`,
     attackMastery: (mastery: string) => `mastery ${mastery}`,
     carrying: (carried: number, capacity: number, pushDragLift: number) =>
-      `Carrying: ${carried}/${capacity} lb (push/drag/lift ${pushDragLift} lb)`,
+      `Carrying: ${formatWeightPair(carried, capacity, "bg")} (push/drag/lift ${formatWeight(pushDragLift, "bg")})`,
     overCapacity: "over capacity",
     stealthDisadvantage: "броня: недостатък (Disadvantage) при Скритост",
     pendingEquipment: (n: number) => `Не всички избори за екипировка са направени (${n}) — това не блокира експорта.`,

@@ -61,7 +61,7 @@ _PLACEHOLDER = re.compile(r"\{[^{}]*\}")
 _BRACKET = re.compile(r"\([^()]*\)")
 _LATIN_WORD = re.compile(r"[A-Za-z][A-Za-z'’]+")
 # Latin tokens that are abbreviations / units / codes, not English words that were left untranslated.
-_ABBREVIATIONS = {"AC", "DC", "HP", "CR", "SP", "GP", "lb", "ft", "STR", "DEX", "CON", "INT", "WIS", "CHA", "JSON", "PDF", "MB",
+_ABBREVIATIONS = {"AC", "DC", "HP", "CR", "SP", "GP", "lb", "kg", "ft", "STR", "DEX", "CON", "INT", "WIS", "CHA", "JSON", "PDF", "MB",
                   "SRD", "BG", "EN", "YAML", "HTTP", "API", "ID", "bg", "en", "GB", "NPC"}
 
 
@@ -321,11 +321,19 @@ _NODE_RENDER = r"""
 const input = JSON.parse(require('fs').readFileSync(0, 'utf8'));
 const g = input.g;
 const out = input.items.map((it) => {
-  try { const f = new Function('g', 'return (' + it.src + ')')(g); return String(f(...it.args)); }
+  try { const f = new Function('g', input.prelude + '\nreturn (' + it.src + ')')(g); return String(f(...it.args)); }
   catch (e) { return 'ERROR ' + e.message; }
 });
 process.stdout.write(JSON.stringify(out));
 """
+
+
+def _units_prelude() -> str:
+    """The weight helpers (`frontend/src/logic/units.ts`) as plain JavaScript, for the templates that call them."""
+    src = (pathlib.Path(__file__).resolve().parents[2] / "frontend" / "src" / "logic" / "units.ts").read_text(encoding="utf-8")
+    src = re.sub(r"^import .*$", "", src, flags=re.M)
+    src = re.sub(r"^export ", "", src, flags=re.M)
+    return re.sub(r":\s*(number|string|Lang)\b", "", src)
 
 
 def _strip_ts_params(src: str) -> str:
@@ -384,7 +392,7 @@ def render_templates(items: list[dict], gloss: dict) -> list[str]:
     node = shutil.which("node")
     if node is None:
         raise RuntimeError("node is needed to fill in the UI templates of the review sheet (the templates are TypeScript functions)")
-    payload = {"g": _g_object(gloss), "items": [{"src": _strip_ts_params(i["src"]), "args": i["args"]} for i in items]}
+    payload = {"g": _g_object(gloss), "prelude": _units_prelude(), "items": [{"src": _strip_ts_params(i["src"]), "args": i["args"]} for i in items]}
     done = subprocess.run([node, "-e", _NODE_RENDER], input=json.dumps(payload), capture_output=True, text=True, check=True)
     result = json.loads(done.stdout)
     bad = [(i["path"], r) for i, r in zip(items, result) if r.startswith("ERROR")]
@@ -749,7 +757,7 @@ EXPORT_LINES: dict[str, tuple[dict, str]] = {
     "attackMastery": ({"mastery": "Sap"}, "- Longsword: +6, 1d8 slashing, @"),
     "secMasteries": ({}, "## @"), "secClassResources": ({}, "## @"), "secFeatResources": ({}, "## @"),
     "secSpeciesResources": ({}, "## @"), "secCarrying": ({}, "## @"),
-    "overCapacity": ({}, "- Носено: 260 / 225 lb@"), "pushDragLift": ({"n": 450}, "- Носено: 96 / 225 lb@"),
+    "overCapacity": ({}, "- Носено: 260/225 lb (117,9/102,1 kg)@"), "pushDragLift": ({"n": "450 lb (204,1 kg)"}, "- Носено: 96/225 lb (43,5/102,1 kg)@"),
     "secArmor": ({}, "## @"), "stealthDisadvantage": ({}, "- Chain Mail: @"),
     "secStartingGold": ({}, "## @"), "startingGold": ({"n": 150}, "- @"),
     "secFeatures": ({}, "## @"), "featureLevel": ({"level": 3}, "- Improved Critical (@)"), "secFeats": ({}, "## @"),
@@ -982,7 +990,7 @@ UNTRANSLATED: list[tuple[str, str, str, str, str, str]] = [
     ("abbr:SP", "SP", "SP",
      "Опция на талант в карта за избор: „Quickened Spell (2 SP)“ (точки за чародейство)", "изключение", "SP (sorcery points) е в етикети от данните и не се превежда."),
     ("abbr:lb", "lb", "lb",
-     "Лист, „Носимост (Carrying Capacity)“: 96 / 225 lb; експорт: „, тласкане/влачене/вдигане 450 lb“", "изключение", "Мерната единица lb (паунд) остава, както е в книгите; футовете са преведени („фута“)."),
+     "Лист, „Носимост (Carrying Capacity)“: 96 lb (43,5 kg); експорт: „96/225 lb (43,5/102,1 kg), тласкане/влачене/вдигане 450 lb (204,1 kg)“", "изключение", "Мерните единици lb (паунд) и kg (килограм) остават латински, както са в книгите; в българския текст след паундите са добавени килограмите в скоби; футовете са преведени („фута“)."),
     ("abbr:dice", "d4, d6, d8, d10, d12, d20", "d4, d6, d8, d10, d12, d20",
      "Страница „Клас“: „Fighter (d10)“; лист: Точки живот (Hit Points): 44 (5d10)", "изключение", "Означенията на зарове са международни и не се превеждат."),
     ("ui:marks", "Latin tags: Ritual, Concentration", "Ритуал, Концентрация",

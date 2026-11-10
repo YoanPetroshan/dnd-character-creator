@@ -16,7 +16,7 @@ neither list below).
 from __future__ import annotations
 
 from catalog.reference_data import SKILL_NAMES, proficiency_label
-from export_labels import DEFAULT_LANG, LABELS, label, word
+from export_labels import DEFAULT_LANG, LABELS, label, weight, weight_pair, word
 
 SHEET_FIELDS: list[tuple[str, object]] = [
     ("name", ""), ("level", 0), ("classes", []), ("background", None), ("species", None),
@@ -272,8 +272,8 @@ def extra_blocks(resolution: dict, lang: str = DEFAULT_LANG) -> list[tuple[str, 
     if carrying:
         blocks.append(("h2", label(lang, "secCarrying")))
         over = label(lang, "overCapacity") if carrying.get("overCapacity") else ""
-        lift = label(lang, "pushDragLift", n=carrying["pushDragLift"]) if carrying.get("pushDragLift") else ""
-        blocks.append(("body", f"{carrying['carried']}/{carrying['capacity']} lb{over}{lift}"))
+        lift = label(lang, "pushDragLift", n=weight(carrying["pushDragLift"], lang)) if carrying.get("pushDragLift") else ""
+        blocks.append(("body", f"{weight_pair(carrying['carried'], carrying['capacity'], lang)}{over}{lift}"))
     if derived.get("stealthDisadvantage"):
         blocks.append(("h2", label(lang, "secArmor")))
         blocks.append(("body", label(lang, "stealthDisadvantage")))

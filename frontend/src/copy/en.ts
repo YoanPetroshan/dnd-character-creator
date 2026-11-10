@@ -4,6 +4,7 @@
 // feature names and rule texts) comes from the data as delivered and is not in here.
 import type { Copy } from "./index";
 import { glossary as g } from "./glossary.gen";
+import { formatWeight, formatWeightPair } from "../logic/units";
 
 type Msgs = Record<string, string>;
 
@@ -60,7 +61,7 @@ export const en: Copy = {
     dateLocale: "en-GB",
     none: "—",
     feet: (n: number) => (n === 1 ? `1 foot` : `${n} ${g.feet.en}`),
-    pounds: (n: number) => `${n} lb`,
+    pounds: (n: number) => formatWeight(n, "en"),
     level: (n: number) => `level ${n}`,
     levelOf: (n: number) => `from level ${n}`,
     gold: (n: number) => `${n} ${g.gold.en}`,
@@ -552,7 +553,7 @@ export const en: Copy = {
     attackRange: (range: string) => `range ${range}`,
     attackMastery: (mastery: string) => `mastery ${mastery}`,
     carrying: (carried: number, capacity: number, pushDragLift: number) =>
-      `Carrying: ${carried}/${capacity} lb (push/drag/lift ${pushDragLift} lb)`,
+      `Carrying: ${formatWeightPair(carried, capacity, "en")} (push/drag/lift ${formatWeight(pushDragLift, "en")})`,
     overCapacity: "over capacity",
     stealthDisadvantage: "armor: disadvantage on Stealth",
     pendingEquipment: (n: number) => `Not all equipment choices have been made (${n}) — this does not block the export.`,

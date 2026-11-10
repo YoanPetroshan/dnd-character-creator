@@ -313,3 +313,46 @@ def test_frontend_filename_fallbacks_equal_the_servers():
     for lang in LANGS:
         src = (root / f"{lang}.ts").read_text(encoding="utf-8")
         assert re.search(r'fileFallback: "([^"]+)"', src).group(1) == LABELS[lang]["filenameFallback"], lang
+
+
+# --- weights: pounds, and in Bulgarian the kilograms in brackets (owner decision 2026-11-10)
+
+@pytest.mark.parametrize("lb, kg", [
+    (0, "0 kg"), (0.5, "0,2 kg"), (1, "0,5 kg"), (2.5, "1,1 kg"), (5, "2,3 kg"), (10, "4,5 kg"), (22, "10 kg"),
+    (50, "22,7 kg"), (58.5, "26,5 kg"), (96, "43,5 kg"), (100, "45,4 kg"), (130, "59 kg"), (225, "102,1 kg"),
+    (1000, "453,6 kg"), (12345, "5599,6 kg"), (-5, "-2,3 kg"),
+])
+def test_kilograms_rounding_comma_and_dropped_zero(lb, kg):
+    assert export_labels.kilograms(lb) == kg
+
+
+def test_weight_is_pounds_in_english_and_adds_kilograms_in_bulgarian():
+    assert export_labels.weight(96, "en") == "96 lb"
+    assert export_labels.weight(96, "bg") == "96 lb (43,5 kg)"
+    assert export_labels.weight(0, "bg") == "0 lb (0 kg)"
+    assert export_labels.weight(2.5, "bg") == "2.5 lb (1,1 kg)" and export_labels.weight(2.5, "en") == "2.5 lb"
+    assert export_labels.weight_pair(96, 225, "bg") == "96/225 lb (43,5/102,1 kg)"
+    assert export_labels.weight_pair(96, 225, "en") == "96/225 lb"
+    with pytest.raises(ValueError):
+        export_labels.weight(1, "de")
+
+
+def test_bulgarian_weight_fragment_strips_back_to_the_english_text():
+    frag = re.compile(r" \(-?\d+(?:,\d)?(?:/-?\d+(?:,\d)?)? kg\)")
+    for lb in (0, 0.5, 2.5, 10, 96, 225.5, 4000):
+        assert frag.sub("", export_labels.weight(lb, "bg")) == export_labels.weight(lb, "en")
+
+
+def test_frontend_kilograms_agree_with_the_server_for_every_quarter_pound_up_to_4000():
+    """logic/units.ts (the web UI) and export_labels.kilograms (the exports) must print the same text."""
+    import json
+    import shutil
+    import subprocess
+    from i18n.review_sheet import _units_prelude
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not installed")
+    code = _units_prelude() + "\nconst o = []; for (let i = 0; i <= 16000; i++) o.push(kilograms(i / 4) + ' kg'); process.stdout.write(JSON.stringify(o));"
+    out = json.loads(subprocess.run([node, "-e", code], capture_output=True, text=True, check=True).stdout)
+    want = [export_labels.kilograms(i / 4) for i in range(16001)]
+    assert [(i / 4, a, b) for i, (a, b) in enumerate(zip(out, want)) if a != b] == []

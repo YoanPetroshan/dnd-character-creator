@@ -6,7 +6,7 @@ import pytest
 from pypdf import PdfReader
 
 import export_fields
-from export_labels import LABELS
+from export_labels import LABELS, weight_pair
 from catalog.loader import load
 from catalog.reference_data import LANGUAGE_NAMES, SKILL_NAMES
 from engine.resolve import resolve
@@ -138,10 +138,15 @@ def test_markdown_and_pdf_list_attacks_and_capacity(catalog):
     assert "- Dagger: +5, 1d4+3 piercing" in md
     # STR 11 (+0), rogue is proficient with longswords: +2, bare dice
     assert "- Longsword: +2, 1d8 slashing (versatile 1d10)" in md
-    assert "## Носимост (Carrying Capacity)" in md and f"{carried}/{capacity} lb" in md
+    assert "## Носимост (Carrying Capacity)" in md and f"{carried}/{capacity} lb (" in md
+    assert weight_pair(carried, capacity, "bg") in md  # 2026-11-10: the Bulgarian text adds the kilograms
+    assert "/74,8 kg)" in md  # 165 lb = 74,8 kg
     assert "## Броня" not in md  # leather armor: no stealth disadvantage
     text = "".join(p.extract_text() for p in PdfReader(io.BytesIO(to_pdf(res))).pages)
     assert "Атаки" in text and "Dagger: +5, 1d4+3 piercing" in text and f"{carried}/{capacity} lb" in text
+    assert "kg)" in text
+    en = to_markdown(res, "en")
+    assert f"{carried}/{capacity} lb" in en and " kg" not in en  # English stays pounds only
 
 
 def test_over_capacity_and_stealth_armor_are_flagged(catalog):
@@ -149,7 +154,9 @@ def test_over_capacity_and_stealth_armor_are_flagged(catalog):
     res["derived"]["carryingCapacity"] = {"capacity": 100, "pushDragLift": 200, "carried": 130, "overCapacity": True}
     res["derived"]["stealthDisadvantage"] = True
     md = to_markdown(res)
-    assert "130/100 lb (претоварен)" in md
+    assert "130/100 lb (59/45,4 kg) (претоварен), тласкане/влачене/вдигане 200 lb (90,7 kg)" in md
+    en = to_markdown(res, "en")
+    assert "130/100 lb (over capacity), push/drag/lift 200 lb" in en and " kg" not in en
     assert "## Броня" in md and "Недостатък (Disadvantage) при Скритост" in md
 
 
