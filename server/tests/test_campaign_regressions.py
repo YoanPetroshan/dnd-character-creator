@@ -1518,3 +1518,51 @@ def test_vf7_3_taken_enemy_types_are_disabled_later_and_stored_duplicates_pruned
     types, _ = _fe_cards(resolve(d, catalog))
     assert types[cid(6)]["selected"] == ["humanoids"]
     assert not next(o for o in types[cid(6)]["options"] if o["id"] == "humanoids").get("disabled")
+
+
+# ---------------------------------------------------------------- VF7.4 prerequisites on: the ASI templates stay cheap
+# Spec t2-126-fig19-sor1-mixed (Fighter 19 Rune Knight / Sorcerer 1, seven ASI feats, usePrerequisites.feats on) cost 58-93 ms
+# in the review (22 ms with prerequisites off): 8,875 `_feat_prerequisite_unmet_reason` calls and 7,945 message formats per resolve.
+# Now the structured prerequisite is parsed once per walk and the reason messages are formatted once per distinct (key, params).
+# Measured here (best of 25, warm): 11.9 ms -> 9.6 ms with prerequisites on (6.7 ms off), message formats 1630 -> 265.
+def _perf_spec_draft(catalog):
+    from tools.chartest.runner import find_spec
+    from tools.chartest.spec import resolve_spec
+    spec = find_spec("t2-126-fig19-sor1-mixed", catalog)[0]
+    draft, _res = resolve_spec(spec, catalog, resolve)
+    assert draft["preferences"]["usePrerequisites"]["feats"] is True
+    return draft
+
+
+def test_vf7_4_prerequisites_on_resolve_stays_fast(catalog):
+    from perf_helpers import assert_fast, measure
+    draft = _perf_spec_draft(catalog)
+    resolve(draft, catalog)
+    assert_fast(measure(lambda: resolve(draft, catalog), runs=15), "t2-126-fig19-sor1-mixed with prerequisites", limit_ms=40.0)
+
+
+def test_vf7_4_prerequisite_reasons_are_formatted_once_not_per_option(catalog, monkeypatch):
+    """Deterministic guard (no clock): a warm resolve of the spec formats few messages (1630 before the fix, 265 after)."""
+    import i18n.messages as messages
+    draft = _perf_spec_draft(catalog)
+    resolve(draft, catalog)
+    calls = []
+    real = messages.format_template
+    monkeypatch.setattr(messages, "format_template", lambda t, p: calls.append(t) or real(t, p))
+    resolve(draft, catalog)
+    assert len(calls) < 600, len(calls)
+
+
+def test_vf7_4_output_is_unchanged_by_the_memo(catalog):
+    """Same reasons with the memo cold and warm, and the shared Msg objects still localise per call."""
+    from engine import resolve as resolve_mod
+    from i18n.messages import localize
+    draft = _perf_spec_draft(catalog)
+    resolve_mod._PREREQ_MSG_MEMO.clear()
+    cold = json.dumps(resolve(draft, catalog), sort_keys=True, default=str)
+    warm = json.dumps(resolve(draft, catalog), sort_keys=True, default=str)
+    assert cold == warm
+    res = resolve(draft, catalog)
+    bg = json.dumps(localize(res, "bg"), ensure_ascii=False)
+    again = json.dumps(localize(resolve(draft, catalog), "bg"), ensure_ascii=False)
+    assert bg == again

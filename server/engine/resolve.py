@@ -58,7 +58,8 @@ from dataclasses import dataclass, field
 from catalog import feat_effects_data, reference_data
 from catalog.choices import build_choice_template, build_equipment_choice, pack_quantities, pack_units
 from catalog.loader import Catalog
-from i18n.messages import msg
+from i18n.messages import Msg, msg
+from i18n.messages import msg as _format_msg
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
 from catalog.reference_data import (
     ABILITIES, HEAVY_ARMOR_SPEED_EXEMPT_RACES, HEAVY_ARMOR_SPEED_EXEMPT_TRAITS, SPECIFIC_WEAPON_PROFICIENCY_IDS, SRD_TRAIT_EFFECTS, SUBCLASS_PROFICIENCIES, SUBCLASS_EXTRA_FEATURES,
@@ -3838,9 +3839,33 @@ def _stored_asi_feat_pick(class_choices: dict | None, cid: str) -> str | None:
     return None
 
 
+_PREREQ_MSG_MEMO: dict = {}
+
+
+def _freeze_msg_param(value):
+    if isinstance(value, Msg):
+        return ("msg", value.key, str(value))
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze_msg_param(v) for v in value)
+    return value
+
+
+def _prereq_msg(key: str, /, **params) -> Msg:
+    """VF7.4: `msg()` for the feat-prerequisite reasons, formatted once per distinct (key, params) and shared (a `Msg` is
+    immutable text plus its key / params, the same instance is safe to hand to several options). The same reason repeats for
+    every unmet feat at every ASI level, so formatting dominated the ASI templates (7,945 formats for one Fighter 19)."""
+    key_ = (key, tuple((k, _freeze_msg_param(v)) for k, v in params.items()))
+    hit = _PREREQ_MSG_MEMO.get(key_)
+    if hit is None:
+        if len(_PREREQ_MSG_MEMO) > 20000:
+            _PREREQ_MSG_MEMO.clear()
+        hit = _PREREQ_MSG_MEMO[key_] = _format_msg(key, **params)
+    return hit
+
+
 def _feat_prerequisite_unmet_reason(
     feat: dict, total_level: int, scores: dict[str, int], use_prerequisites: bool,
-    held: "_HeldFeatState | None" = None, catalog: Catalog | None = None,
+    held: "_HeldFeatState | None" = None, catalog: Catalog | None = None, prereq_memo: dict | None = None,
 ) -> str | None:
     """None when the ASI-level gate lets the feat through (prerequisites
     off, no structured prerequisite verifiable under
@@ -3850,7 +3875,14 @@ def _feat_prerequisite_unmet_reason(
     templates so the two always agree."""
     if not use_prerequisites:
         return None
-    prereq = _feat_structured_prerequisite(feat, _ASI_GATE_PREREQUISITE_KEYS)
+    msg = _prereq_msg  # VF7.4: shared, formatted once per distinct (key, params); the call sites stay literal for the catalog scans
+    if prereq_memo is None:
+        prereq = _feat_structured_prerequisite(feat, _ASI_GATE_PREREQUISITE_KEYS)
+    else:  # VF7.4: the structured prerequisite is a pure function of the feat, parsed once per walk instead of once per level
+        index = feat["index"]
+        if index not in prereq_memo:
+            prereq_memo[index] = _feat_structured_prerequisite(feat, _ASI_GATE_PREREQUISITE_KEYS)
+        prereq = prereq_memo[index]
     if prereq is None:
         return None
     if any(_feat_prerequisite_alt_met(alt, total_level, scores, held) for alt in prereq):
@@ -3874,6 +3906,7 @@ def _armor_category_msg(value):
 def _feat_prerequisite_failing_parts(
     alt: dict, total_level: int, scores: dict[str, int], held: "_HeldFeatState | None", catalog: Catalog | None,
 ) -> list[str]:
+    msg = _prereq_msg  # VF7.4 (see _feat_prerequisite_unmet_reason)
     parts: list = []
     level_req = alt.get("level")
     if isinstance(level_req, int) and total_level < level_req:
@@ -3943,6 +3976,7 @@ def _asi_choice_templates(
     # race/background record (see _feat_source_allowed). SRD-only drafts
     # therefore get zero feat options — the 2014 SRD has no feats.
     pools: dict[tuple[bool, bool], list[dict]] = {}
+    prereq_memo: dict = {}  # VF7.4
     templates = []
     for lvl in asi_levels:
         cid = f"class:{cls_id}:{lvl}:asi"
@@ -3963,19 +3997,20 @@ def _asi_choice_templates(
                 option["disabled"] = True
                 option["disabledReason"] = msg("disabled-ability-cap-20")
             options.append(option)
+        held_here = (held_by_level or {}).get(lvl) or _HeldFeatState()  # VF7.4: once per level, not once per feat
+        taken_here = (taken_by_level or {}).get(lvl)
         for feat, option in _feat_options(general_feats, ruleset):
             if feat.get("_hidden_by_filters"):
                 option["hiddenByFilters"] = True
             reason = _feat_prerequisite_unmet_reason(
-                feat, total_level, current_scores, use_prerequisites,
-                (held_by_level or {}).get(lvl) or _HeldFeatState(), catalog,
+                feat, total_level, current_scores, use_prerequisites, held_here, catalog, prereq_memo,
             )
             if reason:
                 option["disabled"] = True
                 option["disabledReason"] = reason
-            elif _taken_reason(feat, (taken_by_level or {}).get(lvl)):
+            elif taken := _taken_reason(feat, taken_here):
                 option["disabled"] = True
-                option["disabledReason"] = _taken_reason(feat, (taken_by_level or {}).get(lvl))
+                option["disabledReason"] = taken
             options.append(option)
         source = {"kind": "class", "id": cls_id, "label": cls_name, "level": lvl}
         templates.append({
