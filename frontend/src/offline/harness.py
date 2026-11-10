@@ -91,6 +91,31 @@ def exports(fixture="/fixtures.json", baseline="/export_baseline.json"):
     return _out(len(cases), bad, t0, ids=sorted(cases) == sorted(expected))
 
 
+def sheets(fixture="/fixtures.json", baseline="/sheet_baseline.json"):
+    """The fillable sheet's raw bytes (fixed created) against sheet_baseline.json, per draft and language."""
+    import datetime
+    from catalog.loader import load
+    from engine.resolve import resolve
+    from sheet_pdf import to_sheet
+    t0 = time.perf_counter()
+    cases = json.load(open(fixture, encoding="utf-8"))["exports"]
+    expected = json.load(open(baseline, encoding="utf-8"))
+    catalog = load()
+    created = datetime.datetime(2026, 11, 10, 12, 0, 0, tzinfo=datetime.timezone.utc)
+    bad, timings = [], {}
+    for key, want in sorted(expected.items()):
+        sid, lang = key.rsplit(":", 1)
+        case = cases[sid]
+        res = resolve(case["draft"], catalog) if "draft" in case else case["resolution"]
+        ruleset = case["draft"].get("ruleset") if "draft" in case else None
+        t = time.perf_counter()
+        got = _sha(to_sheet(res, lang, catalog, created, ruleset))
+        timings[key] = round(time.perf_counter() - t, 3)
+        if got != want:
+            bad.append(key)
+    return _out(len(expected), bad, t0, timings=timings)
+
+
 def requests(fixture="/fixtures.json", baseline="/service_baseline.json"):
     import service
     import base64

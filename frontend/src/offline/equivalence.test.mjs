@@ -72,6 +72,7 @@ describe.skipIf(!packPresent)("offline engine equals the native engine", () => {
     py.FS.writeFile("/golden.json.gz", bytes(path.join(testData, "golden/c_series_mixed_2014_baseline.json.gz")));
     py.FS.writeFile("/export_baseline.json", bytes(path.join(testData, "export_baseline.json")));
     py.FS.writeFile("/service_baseline.json", bytes(path.join(testData, "service_baseline.json")));
+    py.FS.writeFile("/sheet_baseline.json", bytes(path.join(testData, "sheet_baseline.json")));
     if (hasPython) {
       const out = path.join(mkdtempSync(path.join(tmpdir(), "offline-fx-")), "fixtures.json");
       const env = { ...process.env };
@@ -129,6 +130,17 @@ json.dumps({"status": status, "loaded": loaded})`),
     // the 92 drafts rendered the simple PDF only: none of it may have imported pypdf (the sheet requests below do)
     expect(JSON.parse(py.runPython("import json, sys\njson.dumps('pypdf' in sys.modules)"))).toBe(false);
   }, 600_000);
+
+  it.skipIf(!hasPython)("renders the fillable sheets byte-identically to the native baseline (13 drafts, bg and en)", async () => {
+    await loadPdfStack();
+    const r = run("harness.sheets()");
+    timings.sheets_s = r.seconds;
+    timings.sheet_ms = Object.fromEntries(Object.entries(r.timings).map(([k, v]) => [k, Math.round(v * 1000)]));
+    expect(r.checked).toBe(26);
+    expect(r.mismatches).toEqual([]);
+    // the level-20 caster in Pyodide (SHEET-S10 target: under 1.5 s warm)
+    expect(r.timings["wizard20-2014:en"]).toBeLessThan(1.5);
+  }, 900_000);
 
   it.skipIf(!hasPython)("answers the fixed request list through service.handle like the Flask baseline", async () => {
     await loadPdfStack();
