@@ -12,6 +12,15 @@ from __future__ import annotations
 import yaml
 
 from export_fields import yaml_document
+from i18n.messages import Msg
+
+
+def _represent_msg(dumper, data):
+    """VF7.7a: a tagged engine message (`Msg`, a str subclass; the attack-row notes now are) is written as its English text."""
+    return dumper.represent_str(str(data))
+
+
+yaml.SafeDumper.add_representer(Msg, _represent_msg)
 
 
 def to_yaml(resolution: dict) -> str:

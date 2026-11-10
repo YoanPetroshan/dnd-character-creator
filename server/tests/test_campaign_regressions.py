@@ -1694,3 +1694,153 @@ def test_vf7_5_variant_and_lupin_quotes_are_pinned_in_the_records(catalog):
         assert ref.SPECIES_VARIANT_NATURAL_WEAPONS[(sid, "longtooth")]["quote"] in text, sid
     for tid, spec in ref.SPECIES_UNARMED_TYPE.items():
         assert spec["quote"] in _trait_text(catalog, tid)
+
+
+# ---------------------------------------------------------------- VF7.7a attack-row notes are tagged messages (Bulgarian)
+# `derived.attacks[].notes` were plain English strings printed raw by AttacksSection.tsx in lang=bg. The closed vocabulary the engine
+# writes itself is now tagged: the six weapon property words, Great Weapon Fighting (both editions), Thrown Weapon Fighting, Dueling
+# (both notes), the pact weapon note, "Rage: +N damage" and the natural-weapon notes. EN text is byte-identical (a Msg is the English
+# text). Feature names with dice (Sneak Attack, Divine / Primal Strike, Martial Arts, Colossus Slayer) and the long feat-rule rider
+# sentences stay English by decision (docs/API.md).
+def _bg_notes(res_bg):
+    return {a["itemId"]: a["notes"] for a in res_bg["derived"]["attacks"]}
+
+
+def test_vf7_7a_property_words_and_rage_are_bulgarian_and_english_is_unchanged(catalog):
+    from i18n.messages import Msg, localize
+    d = _draft([("barbarian", 5)], ruleset="2014", scores={"STR": 16}, added=("greataxe", "handaxe", "crossbow-light"))
+    res = resolve(d, catalog)
+    en = {a["itemId"]: a["notes"] for a in res["derived"]["attacks"]}
+    assert en["greataxe"] == ["two-handed", "heavy", "Rage: +2 damage"]
+    assert en["handaxe"] == ["thrown", "Rage: +2 damage"]
+    assert en["crossbow-light"] == ["two-handed", "ammunition", "loading"]
+    assert all(isinstance(n, Msg) for notes in en.values() for n in notes)
+    bg = _bg_notes(localize(res, "bg"))
+    assert bg["greataxe"] == ["двуръчно (Two-Handed)", "тежко (Heavy)", "Rage: +2 щета"]
+    assert bg["handaxe"] == ["хвърляемо (Thrown)", "Rage: +2 щета"]
+    assert bg["crossbow-light"] == ["двуръчно (Two-Handed)", "боеприпаси (Ammunition)", "зареждане (Loading)"]
+
+
+def test_vf7_7a_fighting_style_and_pact_notes_are_tagged(catalog):
+    from i18n.messages import Msg, localize
+    d = _draft([("fighter", 1)], ruleset="2014", added=("longsword", "spear"),
+               class_choices={0: {"class:fighter:1:feature:fighter-fighting-style": ["fighter-fighting-style-dueling"]}})
+    res = resolve(d, catalog)
+    row = next(a for a in res["derived"]["attacks"] if a["itemId"] == "longsword")
+    assert "Dueling: only with no other weapon" in row["notes"] or "Dueling: +2 damage" in row["notes"]
+    assert all(isinstance(n, Msg) for n in row["notes"])
+    bg = _bg_notes(localize(res, "bg"))
+    assert not [n for notes in bg.values() for n in notes if n.startswith("Dueling: only") or n.startswith("Dueling: +2 damage")]
+    assert any(n.startswith("Dueling: ") and "щета" in n or "само когато" in n for notes in bg.values() for n in notes)
+
+
+def test_vf7_7a_natural_weapon_notes_and_every_note_key_has_both_languages(catalog):
+    from i18n.messages import MESSAGES, Msg, localize
+    res = resolve(_draft([("fighter", 5)], ruleset="mixed", species="dhampir-vrgr"), catalog)
+    row = next(a for a in res["derived"]["attacks"] if a["itemId"] == "natural-vampiric-bite")
+    assert row["notes"] == ["Advantage while you are missing half or more of your hit points"] and isinstance(row["notes"][0], Msg)
+    bg = _bg_notes(localize(res, "bg"))["natural-vampiric-bite"]
+    assert bg[0] != row["notes"][0] and "Hit Points" in bg[0]
+    keys = [k for k in MESSAGES if k.startswith("label-attack-note-")]
+    assert len(keys) >= 14
+    for k in keys:
+        assert MESSAGES[k]["en"] and MESSAGES[k]["bg"] and MESSAGES[k]["en"] != MESSAGES[k]["bg"], k
+
+
+# ---------------------------------------------------------------- VF7.7c Bulgarian `pruned` reasons: a label, not a raw option id
+# The English text is pinned by the frozen snapshot and keeps the id (they were "wizard-spells", "any-simple-weapons" ...); the tagged
+# message `label-stale-pick` carries the id AND a label, EN prints the id, BG prints the label (a feature / language name, "N gp",
+# or the id spelled as words).
+def test_vf7_7c_stale_picks_print_a_label_in_bulgarian_and_the_id_in_english(catalog):
+    from i18n.messages import localize
+    d = _draft([("fighter", 1)], ruleset="mixed", background="astral-drifter-aag")
+    d["background"]["choices"] = {"feat:magic-initiate-phb:spell-variant": ["wizard-spells"]}
+    res = resolve(d, catalog)
+    (p,) = [p for p in res["pruned"] if p["choiceId"] == "feat:magic-initiate-phb:spell-variant"]
+    assert str(p["reason"]) == "'Magic Initiate: Spell List': wizard-spells is no longer offered and was ignored."
+    bg = next(x for x in localize(res, "bg")["pruned"] if x["choiceId"] == p["choiceId"])["reason"]
+    assert "wizard-spells" not in bg and "Wizard spells" in bg
+
+    d = _draft([("fighter", 1)], ruleset="2014")
+    d["classes"][0]["choices"] = {"class:fighter:1:equipment-choice-0": ["any-simple-weapons"]}
+    res = resolve(d, catalog)
+    (p,) = [p for p in res["pruned"] if p["choiceId"] == "class:fighter:1:equipment-choice-0"]
+    assert "any-simple-weapons is no longer offered" in p["reason"]
+    bg = next(x for x in localize(res, "bg")["pruned"] if x["choiceId"] == p["choiceId"])["reason"]
+    assert "any-simple-weapons" not in bg and "Any simple weapons" in bg
+
+
+def test_vf7_7c_joined_picks_gold_and_feature_names(catalog):
+    from i18n.messages import localize
+    d = _draft([("fighter", 1)], ruleset="2014")
+    d["classes"][0]["choices"] = {"class:fighter:1:equipment-choice-1": ["any-martial-weapons+gp-14", "scale-mail+shield"]}
+    res = resolve(d, catalog)
+    en = {p["choiceId"]: p["reason"] for p in res["pruned"]}["class:fighter:1:equipment-choice-1"]
+    assert "any-martial-weapons + gp-14, Scale Mail + Shield" in en
+    bg = next(x for x in localize(res, "bg")["pruned"] if x["choiceId"] == "class:fighter:1:equipment-choice-1")["reason"]
+    assert "any-martial-weapons" not in bg and "gp-14" not in bg and "Any martial weapons + 14 gp, Scale Mail + Shield" in bg
+
+
+def test_vf7_7c_no_raw_id_is_left_in_a_bulgarian_pruned_reason_of_the_zoo_stale_cases(catalog):
+    """The stale cases of the zoo (2024 variants of the golden drafts keep 2014 equipment picks) in Bulgarian: no `word-word-word` id."""
+    import re
+    from i18n.messages import localize
+    import i18n_zoo as zoo
+    cases = zoo.zoo(catalog)
+    ident = re.compile(r"\b(?:any|category|gp|opt|xphb|eldritch)-[a-z0-9()-]+")
+    seen = 0
+    for name in sorted(cases)[:1200:7]:
+        res = localize(resolve(cases[name], zoo.catalog_for(name, catalog)), "bg")
+        for p in res["pruned"]:
+            if "вече не се предлага" in p["reason"]:
+                seen += 1
+                assert not ident.search(p["reason"]), (name, p["reason"])
+    assert seen >= 5
+
+
+# ---------------------------------------------------------------- VF7.7b class chassis "Choose ..." texts (2024 skills / tools)
+# `catalog/official/class_chassis.py` built "Choose {count} skills from ..." as plain English: untranslated in lang=bg and "one skills" for a
+# count of 1 (the Rogue / Ranger-style single pick). Now tagged messages with plural handling; the English text of every count > 1 is the
+# same, count 1 reads "Choose one skill from ..." (SNAPSHOT_REBASELINES["VF7g"]).
+def _chassis_desc(res, cid):
+    return next(c for c in res["choices"] if c["id"] == cid)["description"]
+
+
+def test_vf7_7b_skill_and_tool_descriptions_are_tagged_with_plural_handling(catalog):
+    from i18n.messages import Msg, localize
+    res = resolve(_draft([("fighter", 1)], ruleset="2024"), catalog)
+    en = _chassis_desc(res, "class:fighter:1:prof-choice-0")
+    assert isinstance(en, Msg) and en.startswith("Choose two skills from Acrobatics, Animal Handling, Athletics")
+    bg = _chassis_desc(localize(res, "bg"), "class:fighter:1:prof-choice-0")
+    assert bg.startswith("Изберете 2 умения (Skills) от Acrobatics, Animal Handling, Athletics")
+    res = resolve(_draft([("bard", 1)], ruleset="2024"), catalog)
+    assert _chassis_desc(res, "class:bard:1:prof-choice-0") == "Choose any three skills."
+    assert _chassis_desc(res, "class:bard:1:prof-choice-1") == "Choose three musical instruments."  # was "instrument"
+    loc = localize(res, "bg")
+    assert _chassis_desc(loc, "class:bard:1:prof-choice-0") == "Изберете 3 умения (Skills) по ваш избор."
+    assert _chassis_desc(loc, "class:bard:1:prof-choice-1") == "Изберете 3 музикални инструмента."
+
+
+def test_vf7_7b_a_single_pick_reads_one_skill_not_one_skills(catalog):
+    from catalog.official.class_chassis import _skill_envelopes
+    from i18n.messages import localize
+    one = _skill_envelopes([{"choose": {"from": ["athletics", "acrobatics"], "count": 1}}])[0]["desc"]
+    assert one == "Choose one skill from Athletics, Acrobatics."
+    assert localize({"d": one}, "bg")["d"] == "Изберете 1 умение (Skill) от Athletics, Acrobatics."
+    anyone = _skill_envelopes([{"any": 1}])[0]["desc"]
+    assert anyone == "Choose any one skill." and localize({"d": anyone}, "bg")["d"] == "Изберете 1 умение (Skill) по ваш избор."
+    six = _skill_envelopes([{"any": 6}])[0]["desc"]
+    assert six == "Choose any 6 skills."
+
+
+def test_vf7_7b_every_2024_class_card_description_is_tagged(catalog):
+    """No plain-English `Choose ... skills / tools` left in the 2024 chassis envelopes (they are Msg objects)."""
+    from i18n.messages import Msg
+    plain = []
+    for cid, cls in catalog.classes.items():
+        for env in cls.get("proficiency_choices") or []:
+            desc = env.get("desc")
+            if isinstance(desc, str) and desc.startswith("Choose") and ("skills" in desc or "tool" in desc or "instrument" in desc) \
+                    and not isinstance(desc, Msg) and cls.get("ruleset") == "2024":
+                plain.append((cid, desc))
+    assert plain == []

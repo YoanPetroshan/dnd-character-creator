@@ -1097,7 +1097,7 @@ def annotate_attacks(attacks: list[dict], resources: list[dict], items: list[dic
             ranged = item.get("weapon_range") == "Ranged"
             finesse = any(p["index"] == "finesse" for p in item.get("properties", []))
             if rage and a["ability"] == "STR" and not ranged:
-                notes.append(f"Rage: +{rage} damage")
+                notes.append(msg("label-attack-note-rage", n=rage))
             if sneak and (finesse or ranged):
                 notes.append(f"Sneak Attack {sneak}")
             for name, dice, types in strikes:

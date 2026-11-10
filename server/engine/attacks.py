@@ -34,12 +34,24 @@ Out of scope: magic items, Monk martial arts for non-Monks, other unarmed strike
 from __future__ import annotations
 
 from catalog import reference_data
+from i18n.messages import msg
 
 _NOTE_ORDER = ("two-handed", "heavy", "ammunition", "loading", "reach", "thrown")
-GWF_NOTE = "Great Weapon Fighting: reroll 1s and 2s"
-GWF_2024_NOTE = "Great Weapon Fighting: treat 1s and 2s as 3"
-DUELING_NOTE = "Dueling: only with no other weapon"
-PACT_WEAPON_NOTE = "Pact weapon: proficient; Charisma for attack and damage; Necrotic, Psychic or Radiant damage allowed"  # C7c (2024)
+
+
+def _property_note(prop: str):
+    """VF7.7a: the weapon property word as a tagged message (EN: the word itself)."""
+    if prop == "two-handed":
+        return msg("label-attack-note-two-handed")
+    if prop == "heavy":
+        return msg("label-attack-note-heavy")
+    if prop == "ammunition":
+        return msg("label-attack-note-ammunition")
+    if prop == "loading":
+        return msg("label-attack-note-loading")
+    if prop == "reach":
+        return msg("label-attack-note-reach")
+    return msg("label-attack-note-thrown")
 
 
 def _dice(dice: str, mod: int) -> str:
@@ -103,9 +115,9 @@ def weapon_attack(item: dict, modifiers: dict, prof_bonus: int, proficiency_ids,
     proficient = True if pact else weapon_is_proficient(item, proficiency_ids)
     attack_bonus = mod + (prof_bonus if proficient else 0) + (styles.get("ranged_attack", 0) if ranged else 0)
 
-    notes = [n for n in _NOTE_ORDER if n in props]
+    notes = [_property_note(n) for n in _NOTE_ORDER if n in props]
     if pact:
-        notes.append(PACT_WEAPON_NOTE)
+        notes.append(msg("label-attack-note-pact-weapon"))  # C7c (2024)
     dmg = item.get("damage")
     two_handed = "two-handed" in props
     dueling = 0 if ranged or two_handed else styles.get("one_handed_melee_damage", 0)
@@ -127,18 +139,18 @@ def weapon_attack(item: dict, modifiers: dict, prof_bonus: int, proficiency_ids,
             offhand = _dice(dmg["damage_dice"], mod)  # FE12 Crossbow Expert (PHB): the bonus action attack adds the modifier
         if not ranged and (two_handed or "versatile" in props):
             if styles.get("great_weapon_fighting"):
-                notes.append(GWF_NOTE)
+                notes.append(msg("label-attack-note-gwf"))
             if styles.get("great_weapon_fighting_2024"):
-                notes.append(GWF_2024_NOTE)
+                notes.append(msg("label-attack-note-gwf-2024"))
         if styles.get("thrown_damage") and "thrown" in props:
-            notes.append(f"Thrown Weapon Fighting: +{styles['thrown_damage']} damage when thrown")
+            notes.append(msg("label-attack-note-twf", n=styles["thrown_damage"]))
         if dueling and hands is None:
             dueling_damage = _dice(dmg["damage_dice"], mod + dueling)
-            notes.append(DUELING_NOTE)
+            notes.append(msg("label-attack-note-dueling-only"))
         elif dueling and item["index"] == hands.get("main") and hands.get("dueling_ok"):
             # G2: the hands are known, so the +2 goes straight into `damage` (one-handed grip)
             damage = _dice(dmg["damage_dice"], mod + dueling)
-            notes.append("Dueling: +2 damage")
+            notes.append(msg("label-attack-note-dueling"))
 
     row = {
         "itemId": item["index"], "name": item["name"], "ability": ability, "proficient": proficient,
@@ -206,5 +218,16 @@ def natural_weapon_row(spec: dict, modifiers: dict, prof_bonus: int) -> dict:
         "itemId": f"natural-{slug}", "name": spec["name"], "ability": spec["ability"], "proficient": True,
         "attackBonus": mod + prof_bonus, "damage": _dice(spec["die"], mod), "damageType": spec["type"],
         "duelingDamage": None, "versatileDamage": None, "offhandDamage": None, "range": "5",
-        "notes": [spec["note"]] if spec.get("note") else [],
+        "notes": [natural_note(spec["note"])] if spec.get("note") else [],
     }
+
+
+def natural_note(note_id: str):
+    """VF7.7a: a natural-weapon row note (`reference_data.SPECIES_NATURAL_WEAPONS[...]["note"]` is the note id)."""
+    if note_id == "bite-replaces":
+        return msg("label-attack-note-bite-replaces")
+    if note_id == "half-hp-advantage":
+        return msg("label-attack-note-half-hp-advantage")
+    if note_id == "naga-bite":
+        return msg("label-attack-note-naga-bite")
+    return msg("label-attack-note-shifted-bonus-action")

@@ -13,6 +13,7 @@ from __future__ import annotations
 import re
 
 BRACKET_TERMS = frozenset({
+    "Advantage", "Ammunition", "Heavy", "Loading", "Reach", "Thrown", "Two-Handed",  # VF7.7a: attack-row notes (new for owner review)
     "Ability", "Ability Checks", "Ability Score", "Ability Score Improvement", "Ability Score Increase", "Ability Scores",
     "Armor Class", "Background", "Blindsight", "Bonus Action", "Breath Weapon", "Cantrip", "Cantrips", "Cantrips Known",
     "Carrying Capacity", "Class Features", "Darkvision", "Devil's Sight", "Disadvantage", "Draconic Ancestry", "Expertise", "Feat",

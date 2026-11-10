@@ -459,6 +459,8 @@ def without_localized(resolution: dict) -> dict:
     out["choices"] = [{**{k: v for k, v in c.items() if k not in LOCALIZED_CARD_KEYS},
                        "options": [{k: v for k, v in o.items() if k != "disabledReason"} for o in c.get("options") or []]}
                       for c in resolution.get("choices") or []]
+    if isinstance(out.get("derived"), dict) and "attacks" in out["derived"]:  # VF7.7a: the attack-row notes are localized messages
+        out["derived"] = {**out["derived"], "attacks": [{k: v for k, v in a.items() if k != "notes"} for a in out["derived"]["attacks"]]}
     return out
 
 
@@ -594,6 +596,16 @@ SNAPSHOT_REBASELINES: dict[str, dict] = {
             r"^exportGate(\[[0-9]+\])*$", r"^pruned(\[[0-9]+\])*$",
         ],
         "why": "2014 Ranger Favored Enemy language per gain and distinct enemy types (VF7.3)",
+    },
+    # VF7.7b: the 2024 chassis "Choose ..." texts are tagged messages with plural handling. The English text is the same except where the
+    # old f-string was ungrammatical: "Choose three musical instrument." is now "... musical instruments." (the Bard's tool pick) and
+    # "Choose one skills from ..." is "Choose one skill from ..." (a single-skill multiclass pick). Rule: only a case that holds a 2024
+    # Bard (level 1 card or the multiclass card of a Rogue / Bard) or the Rogue multiclass trigger moves, and only the description leaf
+    # of the 2024 chassis proficiency cards (`cards.class:<cls>:1:prof-choice-N[1]`, `cards.class:<cls>:multiclass-prof-choice-N[1]`).
+    "VF7g": {
+        "cases": ["r2024/*bard*", "t/bard-2024-magical-secrets", "t/class-2024-tables-missing"],
+        "paths": [r"^cards[.]class:[a-z]+:(1:prof|multiclass-prof)-choice-[0-9]+\[[0-9]+\]$"],
+        "why": "2024 chassis skill / tool descriptions: plural handling, one skill (VF7.7b)",
     },
 }
 
@@ -750,7 +762,8 @@ SERVER_FILES = sorted(glob.glob(str(SERVER / "engine" / "*.py"))) + [str(SERVER 
     "service.py", "export.py", "export_fields.py", "markdown_export.py", "pdf_export.py")]
 # I5: the catalog modules that write card texts (a label of a data table, the equipment card builder); the earlier guards
 # scan SERVER_FILES only (data tables carry plain "reason" keys of their own)
-CATALOG_FILES = [str(SERVER / n) for n in ("catalog/choices.py", "catalog/reference_data.py", "catalog/feat_effects_data.py")]
+CATALOG_FILES = [str(SERVER / n) for n in ("catalog/choices.py", "catalog/reference_data.py", "catalog/feat_effects_data.py",
+                                                    "catalog/official/class_chassis.py")]  # VF7.7b: the 2024 chassis "Choose ..." texts
 
 
 def server_trees(*, with_catalog: bool = False):

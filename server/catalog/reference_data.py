@@ -6249,10 +6249,10 @@ SPECIES_NATURAL_WEAPONS: dict[str, dict] = {
         "quote": 'the strike deals {@damage 1d6} + your Strength modifier bludgeoning damage'},
     "dhampir-rhw-trait-3": {"name": "Vampiric Bite", "die": "1d4", "type": "piercing", "ability": "CON",
         "quote": 'You deal Piercing damage equal to {@damage 1d4} plus your Constitution modifier',
-        "note": 'Replaces the damage of an Unarmed Strike when you bite'},
+        "note": 'bite-replaces'},
     "dhampir-vrgr-trait-5": {"name": "Vampiric Bite", "die": "1d4", "type": "piercing", "ability": "CON",
         "quote": 'You add your Constitution modifier, instead of your Strength modifier, to the attack and damage rolls when you attack with this bite. It deals {@damage 1d4} piercing damage on a hit.',
-        "note": 'Advantage while you are missing half or more of your hit points'},
+        "note": 'half-hp-advantage'},
     "gnoll-dmg-trait-0": {"name": "Bite", "die": "1d4", "type": "piercing", "ability": "STR",
         "quote": 'you deal piercing damage equal to {@damage 1d4} + your Strength modifier'},
     "leonin-mot-trait-4": {"name": "Claws", "die": "1d4", "type": "slashing", "ability": "STR",
@@ -6269,7 +6269,7 @@ SPECIES_NATURAL_WEAPONS: dict[str, dict] = {
         "quote": 'you deal bludgeoning damage equal to {@damage 1d6} + your Strength modifier'},
     "naga-psa-trait-4": {"name": "Bite", "die": "1d4", "type": "piercing", "ability": "STR",
         "quote": 'you deal piercing damage equal to {@damage 1d4} + your Strength modifier',
-        "note": 'On a hit the target makes a Constitution save or takes poison damage (see the trait)'},
+        "note": 'naga-bite'},
     "satyr-mot-trait-4": {"name": "Ram", "die": "1d4", "type": "bludgeoning", "ability": "STR",
         "quote": 'you deal bludgeoning damage equal to {@damage 1d4} + your Strength modifier'},
     "satyr-mpmm-trait-1": {"name": "Ram", "die": "1d6", "type": "bludgeoning", "ability": "STR",
@@ -6289,10 +6289,10 @@ SPECIES_NATURAL_WEAPONS: dict[str, dict] = {
 SPECIES_VARIANT_NATURAL_WEAPONS: dict[tuple[str, str], dict] = {
     ("shifter-mpmm", "longtooth"): {
         "name": "Longtooth", "die": "1d6", "type": "piercing", "ability": "STR",
-        "quote": "you can deal piercing damage equal to {@damage 1d6} + your Strength modifier", "note": "While shifted: bonus action"},
+        "quote": "you can deal piercing damage equal to {@damage 1d6} + your Strength modifier", "note": "shifted-bonus-action"},
     ("shifter-efa", "longtooth"): {
         "name": "Longtooth", "die": "1d6", "type": "piercing", "ability": "STR",
-        "quote": "you can deal Piercing damage equal to {@dice 1d6} plus your Strength modifier", "note": "While shifted: bonus action"},
+        "quote": "you can deal Piercing damage equal to {@dice 1d6} plus your Strength modifier", "note": "shifted-bonus-action"},
 }
 
 # VF7.5: a species trait that changes the damage type of every Unarmed Strike (Lupin, RHW: "Your Unarmed Strikes deal Slashing

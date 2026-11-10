@@ -28,6 +28,8 @@ from catalog.reference_data import (
     proficiency_label,
 )
 
+from i18n.messages import msg
+
 from .common import slug
 from .equipment import _equipment_bundle_member_from_5etools
 from .proficiencies import _skill_choice_envelope_from_5etools, _tool_choice_envelope_from_5etools
@@ -40,7 +42,21 @@ _FILTER_PROPERTY_IDS = {
     frozenset({"light"}): MARTIAL_LIGHT_PROFICIENCY_ID,
 }
 _TOOL_WILDCARD_CATEGORY = {"anyArtisansTool": "Artisan's Tools", "anyMusicalInstrument": "Musical Instrument"}
-_NUMBER_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five"}
+
+
+def _count_word(count: int):
+    """The count as a tagged word ("one" ... "five"; Bulgarian shows a digit), else the plain number (VF7.7b)."""
+    if count == 1:
+        return msg("label-number-1")
+    if count == 2:
+        return msg("label-number-2")
+    if count == 3:
+        return msg("label-number-3")
+    if count == 4:
+        return msg("label-number-4")
+    if count == 5:
+        return msg("label-number-5")
+    return count
 
 
 def _entry(index: str) -> dict:
@@ -98,12 +114,13 @@ def _tools(entries) -> tuple[list[str], list[dict]]:
         categories = {_TOOL_WILDCARD_CATEGORY[k] for k, _ in wild}
         options = [{"option_type": "reference", "item": {"index": t["index"], "name": t["name"], "url": ""}}
                    for t in TOOLS if t["category"] in categories]
-        return fixed, [{"desc": "Choose one tool: an Artisan's Tool or a Musical Instrument.", "choose": wild[0][1],
+        return fixed, [{"desc": msg("desc-class-tool-either"), "choose": wild[0][1],
                         "type": "proficiencies", "from": {"option_set_type": "options_array", "options": options}}]
     envelopes = []
     for key, count in wild:
         envelope = _tool_choice_envelope_from_5etools({key: count})
-        envelope["desc"] = f"Choose {_NUMBER_WORDS.get(count, count)} {_TOOL_WILDCARD_CATEGORY[key].lower()}."
+        envelope["desc"] = (msg("desc-class-tools-artisan", word=_count_word(count), n=count) if key == "anyArtisansTool"
+                            else msg("desc-class-tools-musical", word=_count_word(count), n=count))  # VF7.7b
         envelopes.append(envelope)
     return fixed, envelopes
 
@@ -114,12 +131,12 @@ def _skill_envelopes(entries) -> list[dict]:
         envelope = _skill_choice_envelope_from_5etools(entry) if isinstance(entry, dict) else None
         if envelope is None:
             raise ValueError(f"unmapped XPHB skill proficiency {entry!r}")
-        count = _NUMBER_WORDS.get(envelope["choose"], envelope["choose"])
+        count = envelope["choose"]
         if envelope["from"]["option_set_type"] == "any_skill":
-            envelope["desc"] = f"Choose any {count} skills."
+            envelope["desc"] = msg("desc-class-skills-any", word=_count_word(count), n=count)  # VF7.7b
         else:
             names = [SKILL_NAMES.get(o["item"]["index"], o["item"]["name"]) for o in envelope["from"]["options"]]
-            envelope["desc"] = f"Choose {count} skills from {', '.join(names)}."
+            envelope["desc"] = msg("desc-class-skills-from", word=_count_word(count), n=count, names=names)
         out.append(envelope)
     return out
 

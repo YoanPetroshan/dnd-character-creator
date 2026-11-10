@@ -60,6 +60,69 @@ MESSAGES: dict[str, dict[str, str]] = {
     "label-artisans-tools": {"en": "Artisan's Tools", "bg": "Инструменти на занаятчия"},
     "label-pact-weapon": {"en": "Pact Weapon", "bg": "Оръжие на пакта"},
     "label-circle-spells-land": {"en": "Circle Spells (land type)", "bg": "Circle Spells (вид терен)"},
+    # --- attack-row notes (VF7.7a): the closed vocabulary the engine writes on `derived.attacks[].notes` ---------------------------
+    "label-attack-note-two-handed": {"en": "two-handed", "bg": "двуръчно (Two-Handed)"},
+    "label-attack-note-heavy": {"en": "heavy", "bg": "тежко (Heavy)"},
+    "label-attack-note-ammunition": {"en": "ammunition", "bg": "боеприпаси (Ammunition)"},
+    "label-attack-note-loading": {"en": "loading", "bg": "зареждане (Loading)"},
+    "label-attack-note-reach": {"en": "reach", "bg": "обсег (Reach)"},
+    "label-attack-note-thrown": {"en": "thrown", "bg": "хвърляемо (Thrown)"},
+    "label-attack-note-gwf": {"en": "Great Weapon Fighting: reroll 1s and 2s",
+                              "bg": "Great Weapon Fighting: хвърлете наново 1 и 2"},
+    "label-attack-note-gwf-2024": {"en": "Great Weapon Fighting: treat 1s and 2s as 3",
+                                   "bg": "Great Weapon Fighting: третирайте 1 и 2 като 3"},
+    "label-attack-note-twf": {"en": "Thrown Weapon Fighting: +{n} damage when thrown",
+                              "bg": "Thrown Weapon Fighting: +{n} щета при хвърляне"},
+    "label-attack-note-dueling-only": {"en": "Dueling: only with no other weapon",
+                                       "bg": "Dueling: само когато не държите друго оръжие"},
+    "label-attack-note-dueling": {"en": "Dueling: +2 damage", "bg": "Dueling: +2 щета"},
+    "label-attack-note-pact-weapon": {
+        "en": "Pact weapon: proficient; Charisma for attack and damage; Necrotic, Psychic or Radiant damage allowed",
+        "bg": "Pact weapon: владеете с него; Харизма за атака и щета; позволена е некротична, психична или лъчиста щета",
+    },
+    "label-attack-note-rage": {"en": "Rage: +{n} damage", "bg": "Rage: +{n} щета"},
+    "label-attack-note-bite-replaces": {"en": "Replaces the damage of an Unarmed Strike when you bite",
+                                        "bg": "Заменя щетата на Unarmed Strike, когато ухапете"},
+    "label-attack-note-half-hp-advantage": {
+        "en": "Advantage while you are missing half or more of your hit points",
+        "bg": "предимство (Advantage), докато ви липсва половината или повече от точките живот (Hit Points)",
+    },
+    "label-attack-note-naga-bite": {
+        "en": "On a hit the target makes a Constitution save or takes poison damage (see the trait)",
+        "bg": "При попадение целта прави спасително хвърляне (Saving Throw) на Constitution или търпи отровна щета (виж чертата)",
+    },
+    "label-attack-note-shifted-bonus-action": {"en": "While shifted: bonus action",
+                                               "bg": "Докато сте в Shifting: бонус действие (Bonus Action)"},
+    # --- a stale stored pick named in a `pruned` reason (VF7.7c): EN prints the id (the frozen text), BG the label. The `!s:.0` precision
+    # cuts a string to nothing, so each template names both parameters (the catalog needs equal placeholders) and prints one. --------
+    "label-stale-pick": {"en": "{id!s}{label!s:.0}", "bg": "{label!s}{id!s:.0}"},
+    "label-pick-join": {"en": "{parts: + }", "bg": "{parts: + }"},
+    # --- class chassis descriptions (VF7.7b): the count word is a nested message (EN a word, BG a digit), the noun follows the count ---
+    "label-number-1": {"en": "one", "bg": "1"},
+    "label-number-2": {"en": "two", "bg": "2"},
+    "label-number-3": {"en": "three", "bg": "3"},
+    "label-number-4": {"en": "four", "bg": "4"},
+    "label-number-5": {"en": "five", "bg": "5"},
+    "desc-class-skills-from": {
+        "en": "Choose {word} {n|skill|skills} from {names:, }.",
+        "bg": "Изберете {word} {n|умение (Skill)|умения (Skills)} от {names:, }.",
+    },
+    "desc-class-skills-any": {
+        "en": "Choose any {word} {n|skill|skills}.",
+        "bg": "Изберете {word} {n|умение (Skill)|умения (Skills)} по ваш избор.",
+    },
+    "desc-class-tools-musical": {
+        "en": "Choose {word} {n|musical instrument|musical instruments}.",
+        "bg": "Изберете {word} {n|музикален инструмент|музикални инструмента}.",
+    },
+    "desc-class-tools-artisan": {
+        "en": "Choose {word} {n|artisan's tool|artisan's tools}.",
+        "bg": "Изберете {word} {n|инструмент на занаятчия|инструмента на занаятчия}.",
+    },
+    "desc-class-tool-either": {
+        "en": "Choose one tool: an Artisan's Tool or a Musical Instrument.",
+        "bg": "Изберете един инструмент: инструмент на занаятчия или музикален инструмент.",
+    },
     # --- composed labels: a feature or feat name stays a parameter ----------------------------------------------------
     "label-prefixed": {"en": "{head}: {tail}", "bg": "{head}: {tail}"},
     "label-feature-level": {"en": "{name} (level {level})", "bg": "{name} (ниво {level})"},

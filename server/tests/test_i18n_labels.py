@@ -62,8 +62,12 @@ def test_label_templates_have_bulgarian_with_the_same_placeholders():
     assert m.validate_catalog({k: m.MESSAGES[k] for k in LABEL_KEYS}, require_bg=True) == []
 
 
+# Keys whose Bulgarian is language-neutral by design: pure placeholders, the count digit (VF7.7b) and the stale-pick label (VF7.7c).
+NEUTRAL_BG = {"label-prefixed", "label-pick-join", "label-stale-pick"} | {f"label-number-{i}" for i in range(1, 6)}
+
+
 def test_bulgarian_label_templates_are_bulgarian_and_english_ones_are_not():
-    assert not [k for k in LABEL_KEYS if not re.search("[А-Яа-я]", m.MESSAGES[k]["bg"]) and k != "label-prefixed"]
+    assert not [k for k in LABEL_KEYS if not re.search("[А-Яа-я]", m.MESSAGES[k]["bg"]) and k not in NEUTRAL_BG]
     assert not [k for k in LABEL_KEYS if re.search("[А-Яа-я]", m.MESSAGES[k]["en"])]
 
 
@@ -87,7 +91,7 @@ def test_every_label_template_renders_in_both_languages(key):
         assert isinstance(made, Msg) and made.key == key
         bg = render(made, "bg")
         assert isinstance(bg, str) and bg and "{" not in bg and "}" not in bg
-        if key != "label-prefixed":
+        if key not in NEUTRAL_BG:
             assert re.search("[А-Яа-я]", bg)
 
 

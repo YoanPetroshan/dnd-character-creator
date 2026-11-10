@@ -5272,6 +5272,31 @@ def _class_feature_list(
 MAX_PRUNED_REPORTED = 200
 
 
+def _stale_pick_label(catalog: Catalog, pick: str) -> str:
+    """VF7.7c: the label a stale stored pick (one the card no longer offers) is shown with in Bulgarian: the name of the feature,
+    language, ... the id stands for, "<N> gp" for a gold pick, else the id spelled as words ("any-martial-weapons" ->
+    "Any martial weapons"). English keeps printing the id (frozen text); see the `label-stale-pick` message."""
+    feature = catalog.features.get(pick)
+    if feature and feature.get("name"):
+        return str(feature["name"])
+    for lang in reference_data.LANGUAGES:
+        if lang["index"] == pick:
+            return lang["name"]
+    gold = re.fullmatch(r"gp-(\d+)", pick)
+    if gold:
+        return f"{gold.group(1)} gp"
+    words = re.sub(r"[-_]+", " ", pick).strip()
+    return words[:1].upper() + words[1:]
+
+
+def _stale_pick_name(catalog: Catalog, pick: str, feats: bool = True):
+    """The name of a dropped pick: the catalog record's name (items, spells, feats), else a `label-stale-pick` message."""
+    record = catalog.items.get(pick) or catalog.spells.get(pick) or (catalog.feats.get(pick) if feats else None)
+    if record and record.get("name"):
+        return record["name"]
+    return msg("label-stale-pick", id=pick, label=_stale_pick_label(catalog, pick))
+
+
 def resolve(draft: dict, catalog: Catalog) -> dict:
     draft, problems = normalize_draft(draft)
     warnings: list[dict] = []
@@ -6349,7 +6374,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                 selected = selected[: tpl["count"]]
             dropped = [s for s in raw_selected if s not in selected]
             if dropped:
-                names = [(catalog.spells.get(d) or catalog.items.get(d) or {}).get("name", d) for d in dropped]
+                names = [_stale_pick_name(catalog, d, feats=False) for d in dropped]  # VF7.7c
                 if _is_mastery_choice(tpl):  # F1: here only options the class filter / catalog no longer offers
                     if tpl["source"]["kind"] == "class":
                         reason = msg("pruned-mastery-unavailable-class", label=tpl["label"], names=names)
@@ -6385,10 +6410,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
                     and not (s.startswith("feat:") and _ASI_CID_RE.match(tpl["id"]))]
             if gone:
                 def _pick_name(pick):
-                    def _one(part):
-                        rec = catalog.items.get(part) or catalog.spells.get(part) or catalog.feats.get(part) or {}
-                        return rec.get("name", part)
-                    return " + ".join(_one(p) for p in pick.split("+")) if "+" in pick else _one(pick)
+                    if "+" in pick:  # VF7.7c: a bundle; the parts stay tagged so Bulgarian shows their labels
+                        return msg("label-pick-join", parts=[_stale_pick_name(catalog, p) for p in pick.split("+")])
+                    return _stale_pick_name(catalog, pick)
                 pruned.append({
                     "choiceId": tpl["id"],
                     "reason": msg("pruned-no-longer-offered", label=tpl["label"], names=[_pick_name(g) for g in gone]),

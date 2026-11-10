@@ -74,8 +74,9 @@ def test_catalog_keys_are_unique_across_modules_and_counted():
 
 def test_a_bulgarian_template_without_cyrillic_is_only_a_pure_placeholder_or_quoted_data():
     plain = {k: e["bg"] for k, e in MESSAGES.items() if not CYRILLIC.search(e["bg"])}
-    # a Bulgarian template with no Cyrillic would print English: only templates that are just a parameter qualify
-    assert all(re.fullmatch(r"(\{[^{}]*\}|[\s,.:;'()\[\]|-])*", t) for t in plain.values()), plain
+    # a Bulgarian template with no Cyrillic would print English: only templates that are just a parameter (or a digit: the count
+    # word of VF7.7b) qualify
+    assert all(re.fullmatch(r"(\{[^{}]*\}|[\s,.:;'()\[\]|0-9+-])*", t) for t in plain.values()), plain
 
 
 # ---- 2. export labels ------------------------------------------------------------------------------------------------

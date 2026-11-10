@@ -544,6 +544,12 @@ def _message_params(key: str) -> dict:
 
 
 MESSAGE_SAMPLES: dict[str, dict] = {
+    "label-stale-pick": {"id": "any-martial-weapons", "label": "Any martial weapons"},  # VF7.7c
+    "desc-class-skills-from": {"word": msg("label-number-2"), "n": 2, "names": ["Athletics", "Stealth"]},  # VF7.7b
+    "desc-class-skills-any": {"word": msg("label-number-3"), "n": 3},
+    "desc-class-tools-musical": {"word": msg("label-number-3"), "n": 3},
+    "desc-class-tools-artisan": {"word": msg("label-number-1"), "n": 1},
+    "label-attack-note-twf": {"n": 2}, "label-attack-note-rage": {"n": 2},
     "malformed-object": {"label": "equipment"}, "malformed-text": {"label": "name"},
     "malformed-selection-not-list": {"key": "class:fighter:1:skills"},
     "malformed-selection-entries": {"key": "class:fighter:1:skills"},
