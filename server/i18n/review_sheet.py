@@ -267,7 +267,7 @@ UI_VALUES: dict[str, str] = {
     "sheet.passives.perception": "13", "sheet.passives.insight": "11", "sheet.passives.investigation": "9",
     "sheet.attacks.perAction": "2", "sheet.carryingCapacity.carried": "96", "sheet.carryingCapacity.capacity": "225",
     "sheet.spells.ability": "Intelligence", "sheet.spells.saveDC": "14", "sheet.spells.attackBonus": "+6",
-    "sheet.details.fields.alignment": "Законен добър", "sheet.details.fields.age": "42", "sheet.details.fields.height": "1,32 м",
+    "sheet.details.fields.alignment": "Законно добър", "sheet.details.fields.age": "42", "sheet.details.fields.height": "1,32 м",
     "sheet.details.fields.weight": "75 кг", "sheet.details.fields.eyes": "кафяви", "sheet.details.fields.hair": "черна",
     "sheet.details.fields.skin": "мургава", "sheet.details.fields.faith": "Мoradin", "sheet.details.fields.lifestyle": "Skilled",
     "home.nameLabel": "Тордек", "classPage.level": "5", "classPage.subclass": "Champion", "classPage.hitPoints": "d10",

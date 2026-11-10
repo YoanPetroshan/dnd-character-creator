@@ -1,7 +1,7 @@
 {
-  "name": "Конструктор на герои",
+  "name": "Създаване на герои",
   "short_name": "Герои",
-  "description": "Конструктор на герои за D&D 5e, който работи и без връзка. Character builder for D&D 5e that also works offline.",
+  "description": "Създаване на герои за D&D 5e, което работи и без връзка. Character builder for D&D 5e that also works offline.",
   "lang": "bg",
   "dir": "ltr",
   "id": "./",

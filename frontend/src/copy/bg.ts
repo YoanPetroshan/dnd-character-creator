@@ -9,7 +9,7 @@ import { formatWeight, formatWeightPair } from "../logic/units";
 type Msgs = Record<string, string>;
 
 export const bg = {
-  appName: "Конструктор на герои",
+  appName: "Създаване на герои",
 
   /** The language control in the header: its group label and the two button labels. */
   lang: { label: "Език", bg: "БГ", en: "EN" },
@@ -494,15 +494,15 @@ export const bg = {
     choose: "— избери произход (Background) —",
     noChoices: "Няма избори за този произход (Background).",
     alignments: {
-      "Lawful Good": "Законен добър",
-      "Neutral Good": "Неутрален добър",
-      "Chaotic Good": "Хаотичен добър",
-      "Lawful Neutral": "Законен неутрален",
-      "True Neutral": "Истински неутрален",
-      "Chaotic Neutral": "Хаотичен неутрален",
-      "Lawful Evil": "Законен зъл",
-      "Neutral Evil": "Неутрален зъл",
-      "Chaotic Evil": "Хаотичен зъл",
+      "Lawful Good": "Законно добър",
+      "Neutral Good": "Неутрално добър",
+      "Chaotic Good": "Хаотично добър",
+      "Lawful Neutral": "Законно неутрален",
+      "True Neutral": "Напълно неутрален",
+      "Chaotic Neutral": "Хаотично неутрален",
+      "Lawful Evil": "Законно зъл",
+      "Neutral Evil": "Неутрално зъл",
+      "Chaotic Evil": "Хаотично зъл",
     } as Record<string, string>,
   },
 

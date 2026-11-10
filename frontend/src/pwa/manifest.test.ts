@@ -19,7 +19,7 @@ function pngSize(p: string): [number, number] {
 
 describe("web app manifest", () => {
   it("names the app in Bulgarian, is standalone and starts at the app's own folder (relative, any sub-path)", () => {
-    expect(manifest.name).toBe("Конструктор на герои");
+    expect(manifest.name).toBe("Създаване на герои");
     expect(manifest.short_name).toBeTruthy();
     expect(manifest.short_name.length).toBeLessThanOrEqual(12);
     expect(manifest.lang).toBe("bg");
