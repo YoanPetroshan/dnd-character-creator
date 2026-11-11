@@ -13,7 +13,7 @@ from __future__ import annotations
 import re
 
 BRACKET_TERMS = frozenset({
-    "Ability Save DC", "Action", "Spell Attack Bonus", "Actions", "Character Sheet", "Encumbered", "Hit Dice", "Concentration", "Death Saves", "Defenses", "Heroic Inspiration", "Reaction", "Ritual",  # SHEET-S4: the fillable sheet (new for owner review)
+    "Ability Save DC", "Action", "Features & Traits", "Inventory", "Notes", "Spells", "Spell Attack Bonus", "Actions", "Character Sheet", "Encumbered", "Hit Dice", "Concentration", "Death Saves", "Defenses", "Heroic Inspiration", "Reaction", "Ritual",  # SHEET-S4: the fillable sheet (new for owner review)
     "Weapon Attacks",
     "Advantage", "Ammunition", "Heavy", "Loading", "Reach", "Thrown", "Two-Handed",  # VF7.7a: attack-row notes (new for owner review)
     "Ability", "Ability Checks", "Ability Score", "Ability Score Improvement", "Ability Score Increase", "Ability Scores",

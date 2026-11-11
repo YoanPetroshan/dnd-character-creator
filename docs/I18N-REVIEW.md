@@ -41,7 +41,7 @@ How to read it: **Key** says where the text lives (kind and name), **EN** and **
 | 19 | `copy:nav.steps.home` | Home | Home | Page names that the Bulgarian UI has always shown in English (the LEGACY list): translating them is a deliberate later change. (SK6-BI) | |
 | 20 | `copy:nav.steps.abilities` | Abilities | Abilities | English in the Bulgarian UI on purpose (LEGACY); glossary 'Характеристики'. (SK6-BI) | |
 | 21 | `copy:nav.steps.equipment` | Equipment | Equipment | English in the Bulgarian UI on purpose (LEGACY); glossary 'Екипировка'. (SK6-BI) | |
-| 22 | `copy:nav.steps.export` | Export | Export | English in the Bulgarian UI on purpose (LEGACY). (SK6-BI) | |
+| 22 | `copy:sheet.tabs.background` | Background | Предистория (Background) | Tab named 'Предистория (Background)' by the owner's brief; the glossary term for the rule is 'Произход'. (SK6-BI) | |
 
 ## Random names (the dice button)
 

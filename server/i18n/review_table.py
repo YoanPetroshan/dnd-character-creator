@@ -59,7 +59,7 @@ FLAGS: list[tuple[str, str, str, str]] = [
     ("copy", "nav.steps.home", "SK6-BI", "Page names that the Bulgarian UI has always shown in English (the LEGACY list): translating them is a deliberate later change."),
     ("copy", "nav.steps.abilities", "SK6-BI", "English in the Bulgarian UI on purpose (LEGACY); glossary 'Характеристики'."),
     ("copy", "nav.steps.equipment", "SK6-BI", "English in the Bulgarian UI on purpose (LEGACY); glossary 'Екипировка'."),
-    ("copy", "nav.steps.export", "SK6-BI", "English in the Bulgarian UI on purpose (LEGACY)."),
+    ("copy", "sheet.tabs.background", "SK6-BI", "Tab named 'Предистория (Background)' by the owner's brief; the glossary term for the rule is 'Произход'."),
     # ---- random names (N1) --------------------------------------------------------------------------------------------
     ("name", "Пресиан", "N1", "Planner marked it '?'."),
     ("name", "Ивайло", "N1", "Planner marked it '?'."),

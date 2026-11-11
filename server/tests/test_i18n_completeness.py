@@ -183,6 +183,8 @@ _LEGACY = ("Bulgarian UI page / label that has always shown the English word (th
 KNOWN_INCONSISTENCIES: dict[str, str] = {
     "front:originFeat:choice.groups.origin": "false positive: the group heading is the plural 'Таланти от произхода (Origin "
                                              "Feats)' of the singular glossary term 'Талант от произхода'; wording is consistent",
+    "front:background:sheet.tabs.background": "the owner's brief fixes the tab name 'Предистория (Background)' (a backstory tab); "
+                                              "the glossary term for the rule 'Background' stays 'Произход'",
     **{f"front:{term}:{path}": _LEGACY for term, path in [
         ("equipment", "nav.steps.equipment"), ("equipment", "equipmentPage.title"),
     ]},
