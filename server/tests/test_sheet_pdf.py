@@ -440,11 +440,12 @@ def test_the_sheet_uses_white_fields_on_grey_panels():
 
 
 def test_every_page_registers_its_fonts(catalog):
-    """poppler reports "No font in show" when a page draws text with a font its resources lack (fpdf2 registers a font on a page only
-    when the style changes there)."""
-    out = subprocess.run(["pdftotext", "-", "-"], input=make("wizard20-2014", "bg", catalog), capture_output=True)
-    if out.returncode == 0 or out.stderr:
-        assert b"No font" not in out.stderr and b"Syntax Error" not in out.stderr, out.stderr[:300]
+    """A page that draws text with a font its /Resources lack shows nothing in poppler ("No font in show"); fpdf2 registers a
+    font on a page only when the style changes there. Checked with pypdf: every `/Fn size Tf` of a page content stream names a
+    font of that page's resources."""
     r = reader(make("wizard20-2014", "bg", catalog))
-    for page in r.pages:
-        assert len(page["/Resources"]["/Font"]) == 2
+    for number, page in enumerate(r.pages, start=1):
+        fonts = set(page["/Resources"]["/Font"])
+        used = set(re.findall(rb"(/F\d+) [\d.]+ Tf", page.get_contents().get_data()))
+        assert used and {u.decode() for u in used} <= fonts, (number, used, fonts)
+        assert len(fonts) == 2
