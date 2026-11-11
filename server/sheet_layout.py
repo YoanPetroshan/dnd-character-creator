@@ -289,8 +289,8 @@ FRAMES: tuple[Frame, ...] = (
     Frame("equipment_left", 2, (108.2, 24.0, 339.8, 281.0), "equipment", _ROWNAMES["equipment_p2_left"]),
     Frame("equipment_right", 2, (345.5, 102.0, 577.5, 281.0), "equipment", _ROWNAMES["equipment_p2_right"]),
     Frame("attuned", 2, (345.5, 24.0, 577.5, 98.3), "attuned", _ROWNAMES["attuned"]),
-    Frame("equipment_left", 3, (32.5, 24.0, 303.8, 281.0), "equipment", _ROWNAMES["equipment_p3_left"]),
-    Frame("equipment_right", 3, (308.5, 24.0, 579.5, 281.0), "equipment", _ROWNAMES["equipment_p3_right"]),
+    Frame("equipment_left", 3, (32.5, 24.0, 303.8, 281.0), "equipmentMore", _ROWNAMES["equipment_p3_left"]),
+    Frame("equipment_right", 3, (308.5, 24.0, 579.5, 281.0), "equipmentMore", _ROWNAMES["equipment_p3_right"]),
     Frame("body", 4, (261.8, 692.0, PAGE_RIGHT + 4, 751.6), "", tuple(f"Body{n}" for n in ("Gender", "Age", "Size", "Height", "Weight", "Alignment", "Faith", "Skin", "Eyes", "Hair"))),
     Frame("allies", 4, (223.5, 438.3, 393.0, 668.4), "allies", ("Allies",)),
     Frame("personality", 4, (414.5, 603.0, PAGE_RIGHT + 4, 665.6), "personality", ("Personality",)),
@@ -301,5 +301,5 @@ FRAMES: tuple[Frame, ...] = (
     Frame("backstory", 4, (32.5, 32.5, 202.0, 410.5), "backstory", ("Backstory",)),
     Frame("notes", 4, (223.5, 32.0, PAGE_RIGHT + 4, 410.0), "notes", ("Notes1", "Notes2")),  # ONE block: two text columns, one caption
     Frame("spell_header", 5, (43.0, 689.5, 560.0, 742.0), "", ()),
-    Frame("spell_grid", 5, (25.0, 49.0, 582.0, 652.0), "", ()),
+    Frame("spell_grid", 5, (25.0, 49.0, 582.0, 657.0), "", ()),
 )

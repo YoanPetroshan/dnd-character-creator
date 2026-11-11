@@ -340,7 +340,7 @@ class Sheet:
         for n, key in (("PassivePerception", "passivePerception"), ("PassiveInsight", "passiveInsight"),
                        ("PassiveInvestigation", "passiveInvestigation")):
             x0, y0, x1, y1 = L.FIELDS_BY_NAME[n].widgets[0].rect
-            d.put(label(lang, key), x1 + 5, y0 + 5.5, 6, "left", 200 - x1 - 8, minimum=4.5)
+            d.put(label(lang, key).upper(), x1 + 5, y0 + 5.5, 5.6, "left", 200 - x1 - 8, minimum=5.0, color=LABEL)
         # hit points / dice / death saves labels
         for n, key in (("MaxHp", "hpMax"), ("CurrentHp", "hpCurrent"), ("TempHp", "hpTemp")):
             x0, y0, x1, _ = L.FIELDS_BY_NAME[n].widgets[0].rect
@@ -350,7 +350,7 @@ class Sheet:
             d.put(sheet_label(lang, key), x0 - 2, (y1 if dy > 0 else y0) + dy, 5.6, "center", x1 - x0 + 4, color=LABEL)
         for n, key in (("DeathSuccess1", "dsSuccess"), ("DeathFailure1", "dsFailure")):
             x0, y0, _x1, _ = L.FIELDS_BY_NAME[n].widgets[0].rect
-            d.put(sheet_label(lang, key), 500, y0 + 3, 5.6, "left", x0 - 503, color=LABEL)
+            d.put(sheet_label(lang, key).upper(), 500, y0 + 3, 5.6, "left", x0 - 503, color=LABEL)
         # weapon column heads
         top = L.FIELDS_BY_NAME["Weapon1Name"].widgets[0].rect[3] + 3
         for n, key in (("Weapon1Name", "colName"), ("Weapon1Attack", "colAttack"), ("Weapon1Damage", "colDamage"), ("Weapon1Notes", "colNotes")):
@@ -436,7 +436,7 @@ class Sheet:
                 if fr.page == page:
                     draw_frame(d, fr, lang, misses=self.title_misses)
             self.draw_page23_labels(page)
-            d.put(sheet_label(lang, "features").upper(), 36.0, 303.0, TITLE_SIZE, "center", 538.0, bold=True, color=TITLE, minimum=TITLE_MIN)
+            d.put(sheet_label(lang, "features" if page == 2 else "featuresMore").upper(), 36.0, 303.0, TITLE_SIZE, "center", 538.0, bold=True, color=TITLE, minimum=TITLE_MIN)
             names = [f.name for f in L.FIELDS if any(w.page == page for w in f.widgets)]
             draw_field_boxes(d, names, page)
             self.add_fields(names, {page: real})
@@ -454,7 +454,8 @@ class Sheet:
                 d.put(key, x1 + 3.5, (y0 + y1) / 2 - 2.0, 5.8, "left", 9.5, bold=True, color=TITLE)
             for n, key in (("WeightCarried", "carryWeight"), ("WeightCapacity", "carryCapacity"), ("PushDragLift", "carryPush")):
                 x0, y0, x1, y1 = L.FIELDS_BY_NAME[n].widgets[0].rect
-                caption = wrap_words(lambda t: d.width(t, 5.6), sheet_label(lang, key), x1 - x0 + 2)
+                text_up = sheet_label(lang, key).upper()
+                caption = [text_up] if d.width(text_up, 5.6) <= x1 - x0 + 2 else wrap_words(lambda t: d.width(t, 5.6), text_up.replace("/", "/ "), x1 - x0 + 2)
                 for i, ln in enumerate(reversed(caption[:2])):
                     d.put(ln, x0, y1 + 2.2 + 6.4 * i, 5.6, "left", x1 - x0 + 2, color=LABEL, minimum=5.0)
             heads = (("Eq0Name", "Eq0Qty", "Eq0Weight"), ("Eq15Name", "Eq15Qty", "Eq15Weight"), ("Attuned1Name", "Attuned1Qty", "Attuned1Weight"))
@@ -473,8 +474,8 @@ class Sheet:
         extra = self.flow_extra
         for k, start in enumerate(range(0, len(extra), 3), start=1):
             page = self.new_page("features-continued")
-            self.header_line(f"{self.name}  \u00b7  {sheet_label(lang, 'headContinued', title=sheet_label(lang, 'features'))}")
-            self.text_block_frame(xs[0][0], xs[-1][1], "features")
+            self.header_line(f"{self.name}  \u00b7  {sheet_label(lang, 'headContinued', title=sheet_label(lang, 'featuresMore'))}")
+            self.text_block_frame(xs[0][0], xs[-1][1], "featuresMore")
             for c, (x0, x1) in enumerate(xs):
                 rect = (x0, 40.0, x1, 656.0)
                 name = f"Flow{k}_{c + 1}"
@@ -496,7 +497,7 @@ class Sheet:
         per_col = 40
         for k, start in enumerate(range(0, len(rows), 2 * per_col), start=1):
             page = self.new_page("equipment-continued")
-            self.header_line(f"{self.name}  \u00b7  {sheet_label(lang, 'headContinued', title=sheet_label(lang, 'equipment'))}")
+            self.header_line(f"{self.name}  \u00b7  {sheet_label(lang, 'headContinued', title=sheet_label(lang, 'equipmentMore'))}")
             chunk = rows[start:start + 2 * per_col]
             for c, (nx, qx, wx) in enumerate((((36.5, 231.5), (235.8, 265.9), (270.0, 299.8)), ((312.5, 507.6), (511.5, 541.2), (545.7, 575.5)))):
                 d.box((nx[0] - 5, 34.0, wx[1] + 5, 662.0), 1.0, fill=FRAME_FILL, radius=6, color=INK)
@@ -612,7 +613,7 @@ class Sheet:
             for key, text in cells.items():
                 values[f"Spell{n}_{slot:02d}_{key}"] = text
         d.box((43.0, 689.5, 560.0, 742.0), 1.0, fill=FRAME_FILL, radius=6, color=INK)
-        d.box((25.0, 49.0, 582.0, 652.0), 1.0, fill=PANEL, radius=7, color=INK)
+        d.box((25.0, 49.0, 582.0, 657.0), 1.0, fill=PANEL, radius=7, color=INK)
         for slot, row in enumerate(rows):  # a darker band behind each level header
             if row.kind == "header":
                 y0, y1 = L.spell_slot_y(slot)
@@ -635,7 +636,12 @@ class Sheet:
                 d.put(ln, x, rect[1] - 6.6 - LINE_H * i, size, "left" if key == "Class" else "center", room, bold=True, color=TITLE, minimum=size)
         top = L.SPELL_SLOT_TOP + 3
         for key, x0, x1, _al in L.SPELL_COLUMNS:
-            d.put(sheet_label(lang, "sp" + key).upper() if key != "Prep" else sheet_label(lang, "spPrep").upper(), x0, top, 5.6, "left", x1 - x0, bold=True, color=LABEL, minimum=5.0)
+            caption = sheet_label(lang, "sp" + key)
+            lines, size = title_lines(d, caption, x1 - x0 + 1.0, max_lines=2)
+            if any(d.width(ln, size, True) > x1 - x0 + 1.5 for ln in lines) and " " not in caption:  # no space to wrap at: break after the slash
+                lines, size = title_lines(d, caption.replace("/", "/ "), x1 - x0 + 1.0, max_lines=2)
+            for i, ln in enumerate(lines):  # a narrow column's head wraps over two lines (Save/ Atk), words are never broken
+                d.put(ln, x0, top + LINE_H * (len(lines) - 1 - i), size, "left", x1 - x0 + 1.0, bold=True, color=LABEL, minimum=size)
         if slot_parts:
             d.put("   ".join(slot_parts), 47.5, 677.0, 7, "left", 510, color=(0, 0, 0))
         if continued:

@@ -132,13 +132,17 @@ describe("scripts", () => {
   // hold a Bulgarian head or an abbreviation next to the term: "(експертиза, Expertise)", "(Armor Class, AC)".
   // BRACKET_TERMS_START
   const BRACKET_TERMS = new Set([
+  "Ability Save DC",
+  "Spell Attack Bonus",
   "Action",
   "Actions",
   "Character Sheet",
   "Concentration",
+  "Encumbered",
   "Death Saves",
   "Defenses",
   "Heroic Inspiration",
+  "Hit Dice",
   "Reaction",
   "Ritual",
   "Weapon Attacks",
