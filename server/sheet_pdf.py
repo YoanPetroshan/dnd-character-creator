@@ -146,7 +146,7 @@ PANEL_GROUPS = {
         ["hit_points", "hit_dice", "death_saves"], ["proficiencies"], ["actions"], ["senses"], ["weapons"]],
     2: [["features_1", "features_2", "features_3"], ["coins", "carrying"], ["equipment_left", "equipment_right", "attuned"]],
     3: [["features_4", "features_5", "features_6"], ["equipment_left", "equipment_right"]],
-    4: [["body"], ["allies"], ["personality", "ideals", "bonds", "flaws"], ["appearance"], ["backstory"], ["notes1", "notes2"]],
+    4: [["body"], ["allies"], ["personality", "ideals", "bonds", "flaws"], ["appearance"], ["backstory"], ["notes"]],
 }
 CIRCLES = ("Save", "Skill", "CustomSkill", "Inspiration", "DeathSuccess", "DeathFailure")
 
@@ -474,15 +474,21 @@ class Sheet:
         for k, start in enumerate(range(0, len(extra), 3), start=1):
             page = self.new_page("features-continued")
             self.header_line(f"{self.name}  \u00b7  {sheet_label(lang, 'headContinued', title=sheet_label(lang, 'features'))}")
-            names = []
+            self.text_block_frame(xs[0][0], xs[-1][1], "features")
             for c, (x0, x1) in enumerate(xs):
                 rect = (x0, 40.0, x1, 656.0)
                 name = f"Flow{k}_{c + 1}"
-                self.doc.box((x0 - 3, 36.0, x1 + 3, 660.0), 1.0, fill=FRAME_FILL, radius=6, color=INK)
                 self.doc.box(rect, 0.4, fill=FIELD, color=FIELD_LINE)
                 text = extra[start + c] if start + c < len(extra) else ""
                 self.values[name] = text
                 self.fields.append(L.Field(name, "multi", (L.Widget(page, rect),), "left", 7.0))
+
+    def text_block_frame(self, x0: float, x1: float, title_key: str) -> None:
+        """ONE panel and ONE frame around the text columns of a continuation page, with one centred caption below."""
+        d = self.doc
+        d.box((x0 - 8, 22.0, x1 + 8, 668.0), 0.0, fill=PANEL, radius=7, color=PANEL)
+        d.box((x0 - 4, 26.0, x1 + 4, 664.0), 1.0, fill=FRAME_FILL, radius=6, color=INK)
+        d.put(sheet_label(self.lang, title_key).upper(), x0, 31.5, TITLE_SIZE, "center", x1 - x0, bold=True, color=TITLE, minimum=TITLE_MIN)
 
     def equipment_pages(self) -> None:
         d, lang = self.doc, self.lang
@@ -539,16 +545,17 @@ class Sheet:
                 blocks.extend(FlowBlock("text", t) for t in rest)
         if not blocks:
             return
-        xs = ((36.5, 295.0), (302.0, 575.5))
+        half = (L.PAGE_RIGHT - L.PAGE_LEFT - L.GUTTER) / 2  # two equal columns, the same gutter as the features columns
+        xs = ((L.PAGE_LEFT, L.PAGE_LEFT + half), (L.PAGE_RIGHT - half, L.PAGE_RIGHT))
         dims = [(x1 - x0, 616.0) for x0, x1 in xs]
         texts, _rest = self.pack(blocks, dims, 7.0, more=dims[0])
         for k, start in enumerate(range(0, len(texts), 2), start=1):
             page = self.new_page("notes-continued")
             self.header_line(f"{self.name}  \u00b7  {sheet_label(lang, 'headContinued', title=sheet_label(lang, 'notes'))}")
+            self.text_block_frame(xs[0][0], xs[1][1], "notes")
             for c, (x0, x1) in enumerate(xs):
                 rect = (x0, 40.0, x1, 656.0)
                 name = f"NotesC{k}_{c + 1}"
-                d.box((x0 - 3, 36.0, x1 + 3, 660.0), 1.0, fill=FRAME_FILL, radius=6, color=INK)
                 d.box(rect, 0.4, fill=FIELD, color=FIELD_LINE)
                 self.values[name] = texts[start + c] if start + c < len(texts) else ""
                 self.fields.append(L.Field(name, "multi", (L.Widget(page, rect),), "left", 7.0))
@@ -620,7 +627,7 @@ class Sheet:
                 d.box((41.9, y0, 148.1, y1), 0.3, fill=(205, 205, 205), color=(205, 205, 205))
         for key, text in (("Ability", "spAbility"), ("SaveDc", "spDc"), ("Attack", "spAttack"), ("Class", "spClass")):
             rect = next(f for f in fields if f.name == f"Spell{n}_{key}").widgets[0].rect
-            room = {"Ability": 96.0, "SaveDc": 70.0, "Attack": 112.0, "Class": rect[2] - rect[0]}[key]
+            room = {"Ability": 92.0, "SaveDc": 92.0, "Attack": 92.0, "Class": rect[2] - rect[0]}[key]
             lines, size = title_lines(d, sheet_label(lang, text), room)
             cx = (rect[0] + rect[2]) / 2
             for i, ln in enumerate(lines):

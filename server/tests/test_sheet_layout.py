@@ -155,3 +155,56 @@ def test_the_module_imports_only_the_standard_library():
     mods = {(n.module if isinstance(n, ast.ImportFrom) else a.name).split(".")[0]
             for n in ast.walk(tree) if isinstance(n, (ast.Import, ast.ImportFrom)) for a in (n.names if isinstance(n, ast.Import) else [n])}
     assert mods <= {"__future__", "dataclasses"}
+
+
+# ---- symmetry: equal widths, one gutter, equal outer margins ----
+def _rects(*names, page):
+    return [next(w.rect for w in L.FIELDS_BY_NAME[n].widgets if w.page == page) for n in names]
+
+
+def test_the_features_columns_have_equal_widths_one_gutter_and_equal_margins():
+    for page, names in ((2, ("Features1", "Features2", "Features3")), (3, ("Features4", "Features5", "Features6"))):
+        cols = _rects(*names, page=page)
+        widths = [c[2] - c[0] for c in cols]
+        gutters = [b[0] - a[2] for a, b in zip(cols, cols[1:])]
+        assert max(widths) - min(widths) < 0.05 and max(gutters) - min(gutters) < 0.05 and abs(gutters[0] - L.GUTTER) < 0.05
+        assert abs(cols[0][0] - L.PAGE_LEFT) < 0.05 and abs(cols[-1][2] - L.PAGE_RIGHT) < 0.05
+        assert all(c[1] == cols[0][1] and c[3] == cols[0][3] for c in cols), "tops and bottoms line up"
+
+
+def test_the_notes_block_of_page_4_is_one_frame_with_two_equal_columns_and_the_same_gutter():
+    n1, n2 = _rects("Notes1", "Notes2", page=4)
+    assert abs((n1[2] - n1[0]) - (n2[2] - n2[0])) < 0.05 and abs((n2[0] - n1[2]) - L.GUTTER) < 0.05
+    assert n1[1] == n2[1] and n1[3] == n2[3] and abs(n2[2] - L.PAGE_RIGHT) < 0.05
+    frames = [fr for fr in L.FRAMES if fr.page == 4 and "Notes1" in fr.members]
+    assert len(frames) == 1 and frames[0].members == ("Notes1", "Notes2") and frames[0].title == "notes"
+    assert not [fr for fr in L.FRAMES if fr.name in ("notes1", "notes2")]
+
+
+def test_page_four_columns_share_their_edges_and_the_right_margin():
+    left = _rects("Appearance", "Backstory", page=4)
+    assert left[0][0] == left[1][0] and left[0][2] == left[1][2] == L.PORTRAIT_RECT[2] and L.PORTRAIT_RECT[0] == left[0][0]
+    right = _rects("Personality", "Ideals", "Bonds", "Flaws", page=4)
+    assert len({r[0] for r in right}) == 1 and len({r[2] for r in right}) == 1 and abs(right[0][2] - L.PAGE_RIGHT) < 0.05
+    body = [w.rect for n in ("Gender", "Age", "Size", "Height", "Weight") for w in L.FIELDS_BY_NAME["Body" + n].widgets]
+    assert max(b[2] - b[0] for b in body) - min(b[2] - b[0] for b in body) < 0.05
+    assert abs(body[-1][2] - L.PAGE_RIGHT) < 0.05
+    first, second = [L.FIELDS_BY_NAME[n].widgets[0].rect for n in ("BodyGender", "BodyAlignment")], [L.FIELDS_BY_NAME[n].widgets[0].rect for n in ("BodyAge", "BodyFaith")]
+    assert abs(first[0][0] - first[1][0]) < 0.05 and abs(second[0][0] - second[1][0]) < 0.05, "the two body rows share their columns"
+    margins = (min(fr.rect[0] for fr in L.FRAMES if fr.page == 4 and fr.name in ("backstory", "appearance")), L.LETTER_W - max(fr.rect[2] for fr in L.FRAMES if fr.page == 4 and fr.name in ("notes", "flaws")))
+    assert abs(margins[0] - margins[1]) < 1.0, margins
+
+
+def test_the_spell_header_boxes_are_equal_and_evenly_spaced():
+    boxes = [(k, x0, x1) for k, x0, _y0, x1, _y1 in L.SPELL_HEADER_FIELDS if k != "Class"]
+    widths = [x1 - x0 for _k, x0, x1 in boxes]
+    gutters = [b[1] - a[2] for a, b in zip(boxes, boxes[1:])]
+    assert max(widths) - min(widths) < 0.05 and max(gutters) - min(gutters) < 0.05
+
+
+def test_the_equipment_halves_of_page_3_are_equal_and_symmetric():
+    left, right = _rects("Eq26Name", "Eq41Name", page=3)
+    lw = _rects("Eq26Weight", page=3)[0]
+    rw = _rects("Eq41Weight", page=3)[0]
+    assert abs((lw[2] - left[0]) - (rw[2] - right[0])) < 1.0
+    assert abs(left[0] - (L.LETTER_W - rw[2])) < 1.5  # equal outer margins

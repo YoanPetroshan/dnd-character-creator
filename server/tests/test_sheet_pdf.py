@@ -623,3 +623,18 @@ def test_saves_are_dot_checkboxes_and_skill_marks_are_letters_that_fit_their_cir
         for ch in ("P", "E"):
             _l, size, fits = SF.fit_text(m, ch, x1 - x0, y1 - y0, L.FIELDS_BY_NAME[name].size * L.SCALE, False)
             assert fits and size >= L.FIELDS_BY_NAME[name].size * L.SCALE - 0.01, (name, ch)  # not even shrunk
+
+
+def test_the_notes_continuation_has_two_equal_columns_with_the_features_gutter(catalog):
+    res = __import__("copy").deepcopy(resolution("paladin6", catalog))
+    res["sheet"]["details"] = {"backstory": "\n\n".join(f"Chapter {i}. " + "the story goes on " * 40 for i in range(60))}
+    r = reader(sheet_pdf.to_sheet(res, "en", catalog, CREATED, "2014"))
+    rects = {}
+    for page in r.pages:
+        for a in page.get("/Annots", []):
+            a = a.get_object()
+            if str(a.get("/T", "")).startswith("NotesC1_"):
+                rects[a["/T"]] = [float(x) for x in a["/Rect"]]
+    left, right = rects["NotesC1_1"], rects["NotesC1_2"]
+    assert abs((left[2] - left[0]) - (right[2] - right[0])) < 0.05
+    assert abs((right[0] - left[2]) - L.GUTTER * L.SCALE) < 0.05 and left[1] == right[1] and left[3] == right[3]

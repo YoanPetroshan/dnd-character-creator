@@ -139,7 +139,9 @@ for _i in range(1, 7):
     _add(f"Weapon{_i}Notes", "text", _r(443.8, _y, 578.0, _y + 14.0), size=6.0)
 
 # ---- pages 2 and 3: features flow, coins, carrying, equipment ----
-_FEATURE_COLS = ((36.1, 210.6), (218.6, 393.1), (400.0, 574.5))
+PAGE_LEFT, PAGE_RIGHT, GUTTER = 36.5, 575.5, 8.0  # the text area of pages 2-4 and the gutter between text columns
+_COL_W = (PAGE_RIGHT - PAGE_LEFT - 2 * GUTTER) / 3
+_FEATURE_COLS = tuple((round(PAGE_LEFT + i * (_COL_W + GUTTER), 2), round(PAGE_LEFT + i * (_COL_W + GUTTER) + _COL_W, 2)) for i in range(3))
 for _i, (_x0, _x1) in enumerate(_FEATURE_COLS, start=1):
     _add(f"Features{_i}", "multi", _r(_x0, 315.5, _x1, 656.0), page=2, size=7.0)
     _add(f"Features{_i + 3}", "multi", _r(_x0, 315.5, _x1, 656.0), page=3, size=7.0)
@@ -172,21 +174,23 @@ for _i in range(1, 4):  # attuned items: blank, filled by hand
     _add(f"Attuned{_i}Weight", "text", _r(543.7, _y, 573.5, _y + 14.1), page=2, align="center", size=8.0)
 
 # ---- page 4: appearance and story ----
+_BODY_W = (PAGE_RIGHT - 265.8 - 4 * 2.7) / 5  # five equal boxes, 2.7 pt apart
+_BODY_X = tuple((round(265.8 + i * (_BODY_W + 2.7), 2), round(265.8 + i * (_BODY_W + 2.7) + _BODY_W, 2)) for i in range(5))
 for _i, _n in enumerate(("Gender", "Age", "Size", "Height", "Weight")):
-    _x0 = (265.8, 338.5, 398.6, 458.4, 520.3)[_i]
-    _x1 = (335.8, 395.9, 455.6, 517.6, 573.0)[_i]
+    _x0, _x1 = _BODY_X[_i]
     _add(f"Body{_n}", "text", _r(_x0, 729.4, _x1, 747.6), page=4, size=8.0)
 for _i, _n in enumerate(("Alignment", "Faith", "Skin", "Eyes", "Hair")):
-    _x0 = (265.8, 337.1, 398.6, 458.4, 520.3)[_i]
-    _x1 = (334.3, 395.9, 455.6, 517.6, 573.0)[_i]
+    _x0, _x1 = _BODY_X[_i]
     _add(f"Body{_n}", "text", _r(_x0, 703.2, _x1, 721.4), page=4, size=8.0)
-for _n, _rect in (("Allies", _r(228.2, 448.3, 389.7, 664.4)), ("Personality", _r(418.6, 613.0, 571.4, 661.6)),
-                  ("Ideals", _r(418.6, 557.9, 571.4, 592.5)), ("Bonds", _r(418.6, 502.5, 571.4, 537.1)),
-                  ("Appearance", _r(36.5, 448.3, 197.9, 517.1)), ("Flaws", _r(418.6, 447.8, 571.4, 482.3)),
-                  ("Backstory", _r(37.1, 42.5, 198.5, 406.5)), ("Notes1", _r(228.0, 42.3, 396.6, 406.3)),
-                  ("Notes2", _r(404.6, 41.9, 573.3, 405.8))):
+# three columns on page 4: left 36.5-198.0, middle from 227.5, right 418.5-575.5; the notes block spans middle + right
+_NOTES_W = (PAGE_RIGHT - 227.5 - GUTTER) / 2
+for _n, _rect in (("Allies", _r(227.5, 448.3, 389.0, 664.4)), ("Personality", _r(418.5, 613.0, PAGE_RIGHT, 661.6)),
+                  ("Ideals", _r(418.5, 557.9, PAGE_RIGHT, 592.5)), ("Bonds", _r(418.5, 502.5, PAGE_RIGHT, 537.1)),
+                  ("Appearance", _r(36.5, 448.3, 198.0, 517.1)), ("Flaws", _r(418.5, 447.8, PAGE_RIGHT, 482.3)),
+                  ("Backstory", _r(36.5, 42.5, 198.0, 406.5)), ("Notes1", _r(227.5, 42.0, 227.5 + _NOTES_W, 406.0)),
+                  ("Notes2", _r(PAGE_RIGHT - _NOTES_W, 42.0, PAGE_RIGHT, 406.0))):
     _add(_n, "multi", _rect, page=4, size=7.0)
-PORTRAIT_RECT: Rect = _r(38.6, 521.7, 196.4, 663.7)  # a drawn frame only (no field: the player pastes a picture)
+PORTRAIT_RECT: Rect = _r(36.5, 521.7, 198.0, 663.7)  # a drawn frame only (no field: the player pastes a picture)
 
 # ---- page 5: spell page template ----
 SPELL_PAGE = 5
@@ -200,8 +204,8 @@ SPELL_COLUMNS = (  # (key, x0, x1, align): Prep, Name, Source, Save/Atk, Time, R
     ("Comp", 320.1, 341.8, "center"), ("Duration", 342.7, 387.9, "left"), ("Ref", 388.8, 422.1, "left"),
     ("Notes", 422.6, 578.8, "left"),
 )
-SPELL_HEADER_FIELDS = (("Ability", 283.8, 711.4, 348.6, 735.8), ("SaveDc", 384.5, 711.4, 449.3, 735.8),
-                       ("Attack", 468.0, 711.4, 532.8, 735.8), ("Class", 47.5, 705.9, 256.0, 726.8))
+SPELL_HEADER_FIELDS = (("Ability", 286.0, 711.4, 346.0, 735.8), ("SaveDc", 382.0, 711.4, 442.0, 735.8),  # three equal boxes, 36 pt apart
+                       ("Attack", 478.0, 711.4, 538.0, 735.8), ("Class", 47.5, 705.9, 256.0, 726.8))
 
 
 def spell_slot_y(slot: int) -> tuple[float, float]:
@@ -278,12 +282,8 @@ FRAMES: tuple[Frame, ...] = (
     Frame("proficiencies", 1, (410.0, 349.9, 583.6, 516.9), "proficiencies", ("Proficiencies",)),
     Frame("actions", 1, (222.0, 188.4, 582.4, 333.4), "actions", ("Actions1", "Actions2")),
     Frame("weapons", 1, (221.0, 35.2, 582.0, 174.7), "weapons", _ROWNAMES["weapons"]),
-    Frame("features_1", 2, (34.1, 313.5, 212.6, 658.0), "", ("Features1",)),
-    Frame("features_4", 3, (34.1, 313.5, 212.6, 658.0), "", ("Features4",)),
-    Frame("features_2", 2, (216.6, 313.5, 395.1, 658.0), "", ("Features2",)),
-    Frame("features_5", 3, (216.6, 313.5, 395.1, 658.0), "", ("Features5",)),
-    Frame("features_3", 2, (398.0, 313.5, 576.5, 658.0), "", ("Features3",)),
-    Frame("features_6", 3, (398.0, 313.5, 576.5, 658.0), "", ("Features6",)),
+    *(Frame(f"features_{i + 1 + 3 * k}", 2 + k, (x0 - 2, 313.5, x1 + 2, 658.0), "", (f"Features{i + 1 + 3 * k}",))
+      for k in (0, 1) for i, (x0, x1) in enumerate(_FEATURE_COLS)),
     Frame("coins", 2, (34.0, 132.0, 106.5, 286.0), "coins", tuple(f"Coins{n}" for n in ("Cp", "Sp", "Ep", "Gp", "Pp"))),
     Frame("carrying", 2, (33.3, 17.0, 106.5, 130.0), "carrying", ("WeightCarried", "WeightCapacity", "PushDragLift")),
     Frame("equipment_left", 2, (108.2, 24.0, 339.8, 281.0), "equipment", _ROWNAMES["equipment_p2_left"]),
@@ -291,16 +291,15 @@ FRAMES: tuple[Frame, ...] = (
     Frame("attuned", 2, (345.5, 24.0, 577.5, 98.3), "attuned", _ROWNAMES["attuned"]),
     Frame("equipment_left", 3, (32.5, 24.0, 303.8, 281.0), "equipment", _ROWNAMES["equipment_p3_left"]),
     Frame("equipment_right", 3, (308.5, 24.0, 579.5, 281.0), "equipment", _ROWNAMES["equipment_p3_right"]),
-    Frame("body", 4, (261.8, 692.0, 577.0, 751.6), "", tuple(f"Body{n}" for n in ("Gender", "Age", "Size", "Height", "Weight", "Alignment", "Faith", "Skin", "Eyes", "Hair"))),
-    Frame("allies", 4, (224.2, 438.3, 393.7, 668.4), "allies", ("Allies",)),
-    Frame("personality", 4, (414.6, 603.0, 575.4, 665.6), "personality", ("Personality",)),
-    Frame("ideals", 4, (414.6, 547.9, 575.4, 596.5), "ideals", ("Ideals",)),
-    Frame("bonds", 4, (414.6, 492.5, 575.4, 541.1), "bonds", ("Bonds",)),
-    Frame("appearance", 4, (32.5, 438.3, 201.9, 521.1), "appearance", ("Appearance",)),
-    Frame("flaws", 4, (414.6, 437.8, 575.4, 486.3), "flaws", ("Flaws",)),
-    Frame("backstory", 4, (33.1, 32.5, 202.5, 410.5), "backstory", ("Backstory",)),
-    Frame("notes1", 4, (224.0, 32.3, 398.6, 410.3), "notes", ("Notes1",)),
-    Frame("notes2", 4, (402.6, 31.9, 577.3, 409.8), "notes", ("Notes2",)),
+    Frame("body", 4, (261.8, 692.0, PAGE_RIGHT + 4, 751.6), "", tuple(f"Body{n}" for n in ("Gender", "Age", "Size", "Height", "Weight", "Alignment", "Faith", "Skin", "Eyes", "Hair"))),
+    Frame("allies", 4, (223.5, 438.3, 393.0, 668.4), "allies", ("Allies",)),
+    Frame("personality", 4, (414.5, 603.0, PAGE_RIGHT + 4, 665.6), "personality", ("Personality",)),
+    Frame("ideals", 4, (414.5, 547.9, PAGE_RIGHT + 4, 596.5), "ideals", ("Ideals",)),
+    Frame("bonds", 4, (414.5, 492.5, PAGE_RIGHT + 4, 541.1), "bonds", ("Bonds",)),
+    Frame("appearance", 4, (32.5, 438.3, 202.0, 521.1), "appearance", ("Appearance",)),
+    Frame("flaws", 4, (414.5, 437.8, PAGE_RIGHT + 4, 486.3), "flaws", ("Flaws",)),
+    Frame("backstory", 4, (32.5, 32.5, 202.0, 410.5), "backstory", ("Backstory",)),
+    Frame("notes", 4, (223.5, 32.0, PAGE_RIGHT + 4, 410.0), "notes", ("Notes1", "Notes2")),  # ONE block: two text columns, one caption
     Frame("spell_header", 5, (43.0, 689.5, 560.0, 742.0), "", ()),
     Frame("spell_grid", 5, (25.0, 49.0, 582.0, 652.0), "", ()),
 )
