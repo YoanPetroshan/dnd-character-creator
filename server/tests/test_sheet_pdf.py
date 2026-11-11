@@ -413,3 +413,38 @@ def test_characters_the_font_lacks_become_a_question_mark_not_an_error(catalog):
     r = reader(sheet_pdf.to_sheet(res, "en", catalog, CREATED, "2014"))
     assert r.get_fields()["CharacterName"]["/V"] == "Жé ? ?"
     assert "Жé ? ?" in r.pages[0].extract_text()
+
+
+# ---------------------------------------------------------------- S11: the look
+@pytest.mark.parametrize("lang", ("bg", "en"))
+def test_every_frame_title_finds_room_and_stays_readable(lang, catalog):
+    res = resolution("wizard20-2014", catalog)
+    sheet = sheet_pdf.Sheet(res, lang, catalog, CREATED, "2014")
+    sheet.build()
+    assert sheet.title_misses == []
+    assert sheet_pdf.TITLE_MIN >= 5.0 and sheet_pdf.TITLE_SIZE >= 5.5
+
+
+def test_the_sheet_uses_white_fields_on_grey_panels():
+    assert sheet_pdf.FIELD == (255, 255, 255)
+    assert sheet_pdf.PANEL[0] < sheet_pdf.FRAME_FILL[0] < sheet_pdf.FIELD[0]
+    # text and captions are dark enough for greyscale printing (contrast against the frame fill >= 4.5:1)
+    def lum(c):
+        v = [x / 255 for x in c]
+        v = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in v]
+        return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+    ratio = lambda a, b: (max(lum(a), lum(b)) + 0.05) / (min(lum(a), lum(b)) + 0.05)  # noqa: E731
+    for ink in (sheet_pdf.INK, sheet_pdf.TITLE, sheet_pdf.LABEL):
+        assert ratio(ink, sheet_pdf.FRAME_FILL) >= 4.5 and ratio(ink, sheet_pdf.FIELD) >= 4.5
+    assert ratio(sheet_pdf.INK, sheet_pdf.PANEL) >= 4.5
+
+
+def test_every_page_registers_its_fonts(catalog):
+    """poppler reports "No font in show" when a page draws text with a font its resources lack (fpdf2 registers a font on a page only
+    when the style changes there)."""
+    out = subprocess.run(["pdftotext", "-", "-"], input=make("wizard20-2014", "bg", catalog), capture_output=True)
+    if out.returncode == 0 or out.stderr:
+        assert b"No font" not in out.stderr and b"Syntax Error" not in out.stderr, out.stderr[:300]
+    r = reader(make("wizard20-2014", "bg", catalog))
+    for page in r.pages:
+        assert len(page["/Resources"]["/Font"]) == 2

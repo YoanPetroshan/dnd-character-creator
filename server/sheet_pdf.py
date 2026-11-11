@@ -24,6 +24,8 @@ from sheet_form import CHARSET, LEADING, PAD, apply_form, charset_for, wrap_text
 FONT_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
 GREY = (90, 90, 90)
 LIGHT = (235, 235, 235)
+INK_ = (0, 0, 0)
+FIELD_ = (255, 255, 255)
 S = L.SCALE
 SKILL_LABELS = ("Acrobatics", "Animal Handling", "Arcana", "Athletics", "Deception", "History", "Insight", "Intimidation",
                 "Investigation", "Medicine", "Nature", "Perception", "Performance", "Persuasion", "Religion", "Sleight of Hand",
@@ -71,6 +73,41 @@ class _Doc(FPDF):
         ax, ay = L.a4_point(x, y)
         self.text(ax, L.A4_H - ay, text)
 
+    def poly(self, points, fill=None, width: float = 0.8, color=INK_) -> None:
+        """A closed polygon of Letter points."""
+        self.set_draw_color(*color)
+        self.set_line_width(width * S)
+        if fill:
+            self.set_fill_color(*fill)
+        self.polygon([(L.a4_point(x, y)[0], L.A4_H - L.a4_point(x, y)[1]) for x, y in points], style="DF" if fill else "D")
+
+    def oval(self, rect, fill=None, width: float = 0.7) -> None:
+        x0, y0, x1, y1 = L.a4_rect(rect)
+        self.set_draw_color(*INK_)
+        self.set_line_width(width * S)
+        if fill:
+            self.set_fill_color(*fill)
+        self.ellipse(x0, L.A4_H - y1, x1 - x0, y1 - y0, style="DF" if fill else "D")
+
+    def hexagon(self, rect) -> None:
+        x0, y0, x1, y1 = rect
+        m, k = (y0 + y1) / 2, min(9.0, (x1 - x0) / 4)
+        self.poly([(x0, m), (x0 + k, y1), (x1 - k, y1), (x1, m), (x1 - k, y0), (x0 + k, y0)], fill=FIELD_, width=0.9)
+
+    def shield(self, rect) -> None:
+        """A heater shield behind the armor class value."""
+        x0, y0, x1, y1 = rect
+        cx, left, right, top = (x0 + x1) / 2, x0 - 6, x1 + 6, y1 + 6
+        side, tip = y0 + 8, y0 - 4
+        pts = [(left, top), (cx, top - 2), (right, top), (right, side)]
+        for i in range(1, 9):  # right curve down to the tip
+            t = i / 8
+            pts.append(((1 - t) ** 2 * right + 2 * t * (1 - t) * (right - 4) + t * t * cx, (1 - t) ** 2 * side + 2 * t * (1 - t) * (tip + 7) + t * t * tip))
+        for i in range(1, 8):
+            t = i / 8
+            pts.append(((1 - t) ** 2 * cx + 2 * t * (1 - t) * (left + 4) + t * t * left, (1 - t) ** 2 * tip + 2 * t * (1 - t) * (tip + 7) + t * t * side))
+        self.poly(pts, fill=FIELD_, width=1.2)
+
     def box(self, rect, width: float = 0.5, fill=None, radius: float = 0, color=GREY) -> None:
         x0, y0, x1, y1 = L.a4_rect(rect)
         self.set_draw_color(*color)
@@ -84,6 +121,28 @@ class _Doc(FPDF):
             self.rect(x0, L.A4_H - y1, x1 - x0, y1 - y0, style=style)
 
 
+PANEL = (208, 208, 208)  # the large grey regions behind groups of frames
+FRAME_FILL = (234, 234, 234)
+FIELD = (255, 255, 255)
+INK = (0, 0, 0)
+TITLE = (25, 25, 25)
+LABEL = (55, 55, 55)  # small captions: dark enough to stay readable in greyscale
+FIELD_LINE = (70, 70, 70)
+TITLE_SIZE = 5.6
+TITLE_MIN = 5.0
+LINE_H = 6.6
+# which frames sit on one grey panel, per layout page (the panel is their union plus a margin)
+PANEL_GROUPS = {
+    1: [["ability_str", "ability_dex", "ability_con", "ability_int", "ability_wis", "ability_cha"], ["saves", "skills"],
+        ["initiative", "armor_class", "defenses", "inspiration", "proficiency_bonus", "spell_dc", "speed"],
+        ["hit_points", "hit_dice", "death_saves"], ["proficiencies"], ["actions"], ["senses"], ["weapons"]],
+    2: [["features_1", "features_2", "features_3"], ["coins", "carrying"], ["equipment_left", "equipment_right", "attuned"]],
+    3: [["features_4", "features_5", "features_6"], ["equipment_left", "equipment_right"]],
+    4: [["body"], ["allies"], ["personality", "ideals", "bonds", "flaws"], ["appearance"], ["backstory"], ["notes1", "notes2"]],
+}
+CIRCLES = ("Save", "Skill", "CustomSkill", "Inspiration", "DeathSuccess", "DeathFailure")
+
+
 def _members_bbox(fr: L.Frame):
     rects = [w.rect for n in fr.members for w in L.FIELDS_BY_NAME[n].widgets if w.page == fr.page]
     if not rects:
@@ -91,35 +150,101 @@ def _members_bbox(fr: L.Frame):
     return (min(r[0] for r in rects), min(r[1] for r in rects), max(r[2] for r in rects), max(r[3] for r in rects))
 
 
-def draw_frame(doc: _Doc, fr: L.Frame, lang: str, title: str | None = None) -> None:
-    """A rounded frame with its title in the biggest free band (below, above, right or left of the fields)."""
-    doc.box(fr.rect, 0.9, radius=4)
+def title_lines(doc: _Doc, text: str, width: float) -> tuple[list[str], float]:
+    """The title in capitals as one line, or two (the bracket term on its own line), at TITLE_SIZE; down to TITLE_MIN only if a
+    single word is too wide."""
+    text = text.upper()
+    for size in (TITLE_SIZE, TITLE_MIN):
+        if doc.width(text, size, True) <= width:
+            return [text], size
+        if " (" in text:
+            head, tail = text.split(" (", 1)
+            lines = [head, "(" + tail]
+        else:
+            lines = wrap_text(lambda t: doc.width(t, size, True), text, width)
+            if len(lines) > 2:
+                lines = [lines[0], " ".join(lines[1:])]
+        if all(doc.width(x, size, True) <= width for x in lines):
+            return lines, size
+    return lines, TITLE_MIN
+
+
+def pill_radius(rect) -> float:
+    return min(rect[3] - rect[1], rect[2] - rect[0]) / 2.0
+
+
+def draw_frame(doc: _Doc, fr: L.Frame, lang: str, title: str | None = None, misses: list | None = None) -> None:
+    """A black-outlined rounded frame (light grey) with its bold capital title in the biggest free band."""
+    if fr.name == "identity":
+        draw_header(doc, fr)
+        return
+    pill = fr.name in ("inspiration", "proficiency_bonus", "spell_dc")
+    doc.box(fr.rect, 1.0, fill=FRAME_FILL, radius=pill_radius(fr.rect) if pill else 5, color=INK)
     text = sheet_label(lang, fr.title) if title is None and fr.title else (title or "")
     bbox = _members_bbox(fr)
     if not text or not bbox:
         return
-    text = text.upper()
     x0, y0, x1, y1 = fr.rect
     below, above = bbox[1] - y0, y1 - bbox[3]
     right, left = x1 - bbox[2], bbox[0] - x0
-    size = 5.5
     if fr.name == "weapons":  # the column heads use the top band
         above = 0
-    if below >= 8 or above >= 8:
-        y = y0 + (below - 5.5) / 2 + 1.2 if below >= above else y1 - above + (above - 5.5) / 2 + 1.2
-        doc.put(text, x0 + 3, y, size, "center", x1 - x0 - 6, bold=True, color=GREY)
-    elif right >= 36:
-        doc.put(text, bbox[2] + 4, (bbox[1] + bbox[3]) / 2 - 2, size, "left", right - 8, bold=True, color=GREY)
-    elif left >= 30:
-        doc.put(text, x0 + 3, (bbox[1] + bbox[3]) / 2 - 2, size, "left", left - 6, bold=True, color=GREY)
+    inner = x1 - x0 - 8
+    lines, size = title_lines(doc, text, inner)
+    need = LINE_H * len(lines)
+    if below >= need + 1 or above >= need + 1:
+        at_bottom = below >= need + 1 and (below >= above or above < need + 1)
+        top = (y0 + (below + need) / 2 - 1.2) if at_bottom else (y1 - above + (above + need) / 2 - 1.2)
+        for i, ln in enumerate(lines):
+            doc.put(ln, x0 + 4, top - LINE_H * (i + 1) + 1.6, size, "center", inner, bold=True, color=TITLE, minimum=size)
+        return
+    for room, x_start in ((right, bbox[2] + 4), (left, x0 + 4)):
+        if room >= 34:
+            lines, size = title_lines(doc, text, room - 8)
+            mid = (bbox[1] + bbox[3]) / 2 + LINE_H * len(lines) / 2
+            for i, ln in enumerate(lines):
+                doc.put(ln, x_start, mid - LINE_H * (i + 1) + 1.6, size, "left", room - 8, bold=True, color=TITLE, minimum=size)
+            return
+    if misses is not None:
+        misses.append(fr.name)
+
+
+def draw_header(doc: _Doc, fr: L.Frame) -> None:
+    """The name ribbon (swallow-tailed banner behind the character name) and, on pages 1-3, the grey block of the other identity boxes."""
+    name = L.FIELDS_BY_NAME["CharacterName"].widgets[0] if fr.page == 1 else next(w for w in L.FIELDS_BY_NAME["CharacterName"].widgets if w.page == fr.page)
+    x0, y0, x1, y1 = name.rect
+    ribbon = [(x0 - 20, y1 + 8), (x1 + 14, y1 + 8), (x1 + 5, (y0 + y1) / 2), (x1 + 14, y0 - 8), (x0 - 20, y0 - 8), (x0 - 11, (y0 + y1) / 2)]
+    doc.poly(ribbon, fill=(190, 190, 190), width=1.0)
+    if fr.page != 4:
+        doc.box((x1 + 24, fr.rect[1], fr.rect[2], fr.rect[3]), 1.0, fill=FRAME_FILL, radius=6, color=INK)
+
+
+def draw_panels(doc: _Doc, page: int) -> None:
+    for group in PANEL_GROUPS.get(page, []):
+        rects = [fr.rect for fr in L.FRAMES if fr.page == page and fr.name in group]
+        if rects:
+            doc.box((min(r[0] for r in rects) - 4, min(r[1] for r in rects) - 4, max(r[2] for r in rects) + 4, max(r[3] for r in rects) + 4),
+                    0.0, fill=PANEL, radius=7, color=PANEL)
 
 
 def draw_field_boxes(doc: _Doc, names, page: int) -> None:
+    """White boxes with dark text on the grey frames; round marks, an oval modifier, a shield behind the AC, hexagonal coins."""
     for n in names:
         f = L.FIELDS_BY_NAME[n]
         for w in f.widgets:
-            if w.page == page:
-                doc.box(w.rect, 0.4, fill=LIGHT if f.kind != "check" else None, color=(150, 150, 150), radius=0 if f.kind == "multi" else 1.5)
+            if w.page != page:
+                continue
+            x0, y0, x1, y1 = w.rect
+            if n == "ArmorClass":
+                doc.shield(w.rect)
+            elif n.endswith("Mod") and n.startswith("Ability"):
+                doc.oval((x0 - 3, y0 - 1.5, x1 + 3, y1 + 1.5), FIELD)
+            elif n.startswith("Coins"):
+                doc.hexagon((x0 - 2, y0 - 2, x1 + 2, y1 + 2))
+            elif (n.startswith(CIRCLES) and (n.endswith("Mark") or n.startswith(("Inspiration", "Death")))):
+                doc.oval(w.rect, FIELD)
+            else:
+                doc.box(w.rect, 0.6, fill=FIELD, color=FIELD_LINE, radius=0 if f.kind == "multi" else 2)
 
 
 class Sheet:
@@ -135,6 +260,7 @@ class Sheet:
         self.index: dict[str, int] = {}
         self.flow_extra: list[str] = []
         self.pages: list[str] = []  # kind per page, in order
+        self.title_misses: list[str] = []  # frames whose title found no room (a test keeps this empty)
 
     # ---- registering fields ----
     def add_fields(self, names, page_map: dict[int, int]) -> None:
@@ -152,9 +278,16 @@ class Sheet:
                 old = self.fields[at]
                 self.fields[at] = L.Field(old.name, old.kind, old.widgets + widgets, old.align, old.size)
 
+    def use_page(self, number: int) -> None:
+        """Make ``number`` the drawing page and register both fonts on it (fpdf2 only does that when the style CHANGES)."""
+        self.doc.page = number
+        self.doc.set_font("DejaVu", "B", 6)
+        self.doc.set_font("DejaVu", "", 6)
+
     def new_page(self, kind: str) -> int:
         self.doc.add_page()
         self.pages.append(kind)
+        self.use_page(len(self.pages))
         return len(self.pages)
 
     # ---- page 1 ----
@@ -162,15 +295,16 @@ class Sheet:
         d, lang = self.doc, self.lang
         page = self.new_page("combat")
         names = [f.name for f in L.FIELDS if any(w.page == 1 for w in f.widgets)]
+        draw_panels(d, 1)
         for fr in L.FRAMES:
             if fr.page == 1:
-                draw_frame(d, fr, lang)
+                draw_frame(d, fr, lang, misses=self.title_misses)
         draw_field_boxes(d, names, 1)
         # identity labels under the boxes
         for key, n in (("idName", "CharacterName"), ("idClass", "ClassLevel"), ("idPlayer", "PlayerName"), ("idSpecies", "Species"),
                        ("idBackground", "Background"), ("idXp", "ExperiencePoints")):
             x0, y0, x1, _ = L.FIELDS_BY_NAME[n].widgets[0].rect
-            d.put(sheet_label(lang, key).upper(), x0, y0 - 7.5, 5, "left", x1 - x0, color=GREY)
+            d.put(sheet_label(lang, key).upper(), x0, y0 - (17.0 if n == "CharacterName" else 7.5), 5.6, "left", x1 - x0, color=LABEL)
         # saves: short names; skills: names and ability tags are fields, the names are drawn
         for i, a in enumerate(L.ABILITIES):
             y = L.FIELDS_BY_NAME[f"Save{a}"].widgets[0].rect[1]
@@ -186,18 +320,18 @@ class Sheet:
         # hit points / dice / death saves labels
         for n, key in (("MaxHp", "hpMax"), ("CurrentHp", "hpCurrent"), ("TempHp", "hpTemp")):
             x0, y0, x1, _ = L.FIELDS_BY_NAME[n].widgets[0].rect
-            d.put(sheet_label(lang, key), x0 - 2, y0 - 8, 5.5, "center", x1 - x0 + 4, color=GREY)
+            d.put(sheet_label(lang, key), x0 - 2, y0 - 8, 5.6, "center", x1 - x0 + 4, color=LABEL)
         for n, key, dy in (("HitDiceTotal", "hdTotal", 3), ("HitDiceSpent", "hdSpent", -7)):
             x0, y0, x1, y1 = L.FIELDS_BY_NAME[n].widgets[0].rect
-            d.put(sheet_label(lang, key), x0 - 2, (y1 if dy > 0 else y0) + dy, 5.5, "center", x1 - x0 + 4, color=GREY)
+            d.put(sheet_label(lang, key), x0 - 2, (y1 if dy > 0 else y0) + dy, 5.6, "center", x1 - x0 + 4, color=LABEL)
         for n, key in (("DeathSuccess1", "dsSuccess"), ("DeathFailure1", "dsFailure")):
             x0, y0, _x1, _ = L.FIELDS_BY_NAME[n].widgets[0].rect
-            d.put(sheet_label(lang, key), 500, y0 + 3, 5.5, "left", x0 - 503, color=GREY)
+            d.put(sheet_label(lang, key), 500, y0 + 3, 5.6, "left", x0 - 503, color=LABEL)
         # weapon column heads
         top = L.FIELDS_BY_NAME["Weapon1Name"].widgets[0].rect[3] + 3
         for n, key in (("Weapon1Name", "colName"), ("Weapon1Attack", "colAttack"), ("Weapon1Damage", "colDamage"), ("Weapon1Notes", "colNotes")):
             x0, _y0, x1, _ = L.FIELDS_BY_NAME[n].widgets[0].rect
-            d.put(sheet_label(lang, key).upper(), x0, top, 5, "left", x1 - x0, color=GREY)
+            d.put(sheet_label(lang, key).upper(), x0, top, 5.6, "left", x1 - x0, color=LABEL)
         self.add_fields(names, {1: page})
 
 
@@ -272,11 +406,13 @@ class Sheet:
             self.values[f.name] = texts[i] if i < len(texts) else ""
         self.flow_extra = texts[6:]
         for page, real in ((2, first), (3, second)):
-            d.page = real
+            self.use_page(real)
+            draw_panels(d, page)
             for fr in L.FRAMES:
                 if fr.page == page:
-                    draw_frame(d, fr, lang)
+                    draw_frame(d, fr, lang, misses=self.title_misses)
             self.draw_page23_labels(page)
+            d.put(sheet_label(lang, "features").upper(), 36.0, 303.0, TITLE_SIZE, "center", 538.0, bold=True, color=TITLE, minimum=TITLE_MIN)
             names = [f.name for f in L.FIELDS if any(w.page == page for w in f.widgets)]
             draw_field_boxes(d, names, page)
             self.add_fields(names, {page: real})
@@ -287,21 +423,21 @@ class Sheet:
                        ("idBackground", "Background"), ("idXp", "ExperiencePoints")):
             for w in L.FIELDS_BY_NAME[n].widgets:
                 if w.page == page:
-                    d.put(sheet_label(lang, key).upper(), w.rect[0], w.rect[1] - 7.5, 5, "left", w.rect[2] - w.rect[0], color=GREY)
+                    d.put(sheet_label(lang, key).upper(), w.rect[0], w.rect[1] - (17.0 if n == "CharacterName" else 7.5), 5.6, "left", w.rect[2] - w.rect[0], color=LABEL)
         if page == 2:
             for n, key in (("CoinsCp", "CP"), ("CoinsSp", "SP"), ("CoinsEp", "EP"), ("CoinsGp", "GP"), ("CoinsPp", "PP")):
                 x0, y0, x1, y1 = L.FIELDS_BY_NAME[n].widgets[0].rect
-                d.put(key, x1 + 2, y0 + 6, 7, "left", 10, bold=True, color=GREY)
+                d.put(key, x1 + 5, y0 + 6, 7, "left", 10, bold=True, color=LABEL)
             for n, key in (("WeightCarried", "carryWeight"), ("WeightCapacity", "carryCapacity"), ("PushDragLift", "carryPush")):
                 x0, y0, x1, y1 = L.FIELDS_BY_NAME[n].widgets[0].rect
-                d.put(sheet_label(lang, key), x0, y1 + 2, 5.5, "left", x1 - x0 + 4, color=GREY, minimum=3.5)
+                d.put(sheet_label(lang, key), x0, y1 + 2, 5.6, "left", x1 - x0 + 4, color=LABEL, minimum=5.0)
             heads = (("Eq0Name", "Eq0Qty", "Eq0Weight"), ("Eq15Name", "Eq15Qty", "Eq15Weight"), ("Attuned1Name", "Attuned1Qty", "Attuned1Weight"))
         else:
             heads = (("Eq26Name", "Eq26Qty", "Eq26Weight"), ("Eq41Name", "Eq41Qty", "Eq41Weight"))
         for trio in heads:
             for n, key in zip(trio, ("colName", "colQty", "colWeight")):
                 x0, y0, x1, y1 = L.FIELDS_BY_NAME[n].widgets[0].rect
-                d.put(sheet_label(lang, key).upper(), x0, y1 + 3, 5, "left", x1 - x0, color=GREY)
+                d.put(sheet_label(lang, key).upper(), x0, y1 + 3, 5.6, "left", x1 - x0, color=LABEL)
 
     # ---- continuation pages ----
     def flow_pages(self) -> None:
@@ -316,8 +452,8 @@ class Sheet:
             for c, (x0, x1) in enumerate(xs):
                 rect = (x0, 40.0, x1, 656.0)
                 name = f"Flow{k}_{c + 1}"
-                self.doc.box((x0 - 2, 38.0, x1 + 2, 658.0), 0.9, radius=4)
-                self.doc.box(rect, 0.4, fill=LIGHT, color=(150, 150, 150))
+                self.doc.box((x0 - 3, 36.0, x1 + 3, 660.0), 1.0, fill=FRAME_FILL, radius=6, color=INK)
+                self.doc.box(rect, 0.4, fill=FIELD, color=FIELD_LINE)
                 text = extra[start + c] if start + c < len(extra) else ""
                 self.values[name] = text
                 self.fields.append(L.Field(name, "multi", (L.Widget(page, rect),), "left", 7.0))
@@ -331,9 +467,9 @@ class Sheet:
             self.header_line(f"{self.name}  \u00b7  {sheet_label(lang, 'headContinued', title=sheet_label(lang, 'equipment'))}")
             chunk = rows[start:start + 2 * per_col]
             for c, (nx, qx, wx) in enumerate((((36.5, 231.5), (235.8, 265.9), (270.0, 299.8)), ((312.5, 507.6), (511.5, 541.2), (545.7, 575.5)))):
-                d.box((nx[0] - 3, 36.0, wx[1] + 3, 660.0), 0.9, radius=4)
+                d.box((nx[0] - 5, 34.0, wx[1] + 5, 662.0), 1.0, fill=FRAME_FILL, radius=6, color=INK)
                 for key, (x0, x1) in zip(("colName", "colQty", "colWeight"), (nx, qx, wx)):
-                    d.put(sheet_label(lang, key).upper(), x0, 644.0, 5, "left", x1 - x0, color=GREY)
+                    d.put(sheet_label(lang, key).upper(), x0, 644.0, 5.6, "left", x1 - x0, color=LABEL)
                 for i in range(per_col):
                     y0 = 628.0 - 14.89 * i
                     idx = c * per_col + i
@@ -341,7 +477,7 @@ class Sheet:
                     for key, (x0, x1), val, al in (("Name", nx, name, "left"), ("Qty", qx, qty, "center"), ("Weight", wx, wt, "center")):
                         fname = f"EqX{k}_{idx:02d}{key}"
                         rect = (x0, y0, x1, y0 + 14.1)
-                        d.box(rect, 0.4, fill=LIGHT, color=(150, 150, 150), radius=1.5)
+                        d.box(rect, 0.4, fill=FIELD, color=FIELD_LINE, radius=2)
                         self.values[fname] = val
                         self.fields.append(L.Field(fname, "text", (L.Widget(page, rect),), al, 8.0))
 
@@ -349,19 +485,20 @@ class Sheet:
     def page4(self) -> None:
         d, lang = self.doc, self.lang
         page = self.new_page("story")
+        draw_panels(d, 4)
         for fr in L.FRAMES:
             if fr.page == 4:
-                draw_frame(d, fr, lang)
+                draw_frame(d, fr, lang, misses=self.title_misses)
         names = [f.name for f in L.FIELDS if any(w.page == 4 for w in f.widgets)]
         draw_field_boxes(d, names, 4)
         w = L.FIELDS_BY_NAME["CharacterName"].widgets[-1]
-        d.put(sheet_label(lang, "idName").upper(), w.rect[0], w.rect[1] - 7.5, 5, "left", w.rect[2] - w.rect[0], color=GREY)
+        d.put(sheet_label(lang, "idName").upper(), w.rect[0], w.rect[1] - 17.0, 5.6, "left", w.rect[2] - w.rect[0], color=LABEL)
         for n in names:
             if n.startswith("Body"):
                 x0, y0, x1, _y1 = L.FIELDS_BY_NAME[n].widgets[0].rect
-                d.put(sheet_label(lang, "body" + n[4:]).upper(), x0, y0 - 6.5, 4.8, "left", x1 - x0, color=GREY, minimum=3.2)
-        d.box(L.PORTRAIT_RECT, 0.9, radius=4)
-        d.put(sheet_label(lang, "portrait").upper(), L.PORTRAIT_RECT[0], L.PORTRAIT_RECT[1] + 5, 5.5, "center",
+                d.put(sheet_label(lang, "body" + n[4:]).upper(), x0, y0 - 6.5, 5.6, "left", x1 - x0, color=LABEL, minimum=5.0)
+        d.box(L.PORTRAIT_RECT, 1.0, fill=FIELD, radius=5, color=INK)
+        d.put(sheet_label(lang, "portrait").upper(), L.PORTRAIT_RECT[0], L.PORTRAIT_RECT[1] + 5, 5.6, "center",
               L.PORTRAIT_RECT[2] - L.PORTRAIT_RECT[0], bold=True, color=GREY)
         self.add_fields(names, {4: page})
 
@@ -385,8 +522,8 @@ class Sheet:
             for c, (x0, x1) in enumerate(xs):
                 rect = (x0, 40.0, x1, 656.0)
                 name = f"NotesC{k}_{c + 1}"
-                d.box((x0 - 2, 38.0, x1 + 2, 658.0), 0.9, radius=4)
-                d.box(rect, 0.4, fill=LIGHT, color=(150, 150, 150))
+                d.box((x0 - 3, 36.0, x1 + 3, 660.0), 1.0, fill=FRAME_FILL, radius=6, color=INK)
+                d.box(rect, 0.4, fill=FIELD, color=FIELD_LINE)
                 self.values[name] = texts[start + c] if start + c < len(texts) else ""
                 self.fields.append(L.Field(name, "multi", (L.Widget(page, rect),), "left", 7.0))
 
@@ -441,8 +578,8 @@ class Sheet:
             cells["Notes"] = self.shorten(cells["Notes"], 578.8 - 422.6)
             for key, text in cells.items():
                 values[f"Spell{n}_{slot:02d}_{key}"] = text
-        d.box((43.0, 694.0, 560.0, 742.0), 0.9, radius=4)
-        d.box((25.0, 49.0, 582.0, 652.0), 0.9, radius=4)
+        d.box((43.0, 694.0, 560.0, 742.0), 1.0, fill=FRAME_FILL, radius=6, color=INK)
+        d.box((25.0, 49.0, 582.0, 652.0), 1.0, fill=PANEL, radius=7, color=INK)
         for slot, row in enumerate(rows):  # a darker band behind each level header
             if row.kind == "header":
                 y0, y1 = L.spell_slot_y(slot)
@@ -450,23 +587,26 @@ class Sheet:
         d.set_fill_color(*LIGHT)
         for f in fields:
             for w in f.widgets:
-                d.box(w.rect, 0.3, fill=LIGHT, color=(160, 160, 160))
+                d.box(w.rect, 0.3, fill=FIELD, color=(125, 125, 125))
         for slot, row in enumerate(rows):
             if row.kind == "header":
                 y0, y1 = L.spell_slot_y(slot)
                 d.box((41.9, y0, 148.1, y1), 0.3, fill=(205, 205, 205), color=(205, 205, 205))
         for key, text in (("Ability", "spAbility"), ("SaveDc", "spDc"), ("Attack", "spAttack"), ("Class", "spClass")):
             rect = next(f for f in fields if f.name == f"Spell{n}_{key}").widgets[0].rect
-            d.put(sheet_label(lang, text).upper(), rect[0], rect[1] - 6.5, 4.8, "center" if key != "Class" else "left", rect[2] - rect[0], bold=True, color=GREY, minimum=3.2)
+            lines, size = title_lines(d, sheet_label(lang, text), rect[2] - rect[0] + 8 if key != "Class" else rect[2] - rect[0])
+            for i, ln in enumerate(lines):
+                d.put(ln, rect[0] - (4 if key != "Class" else 0), rect[1] - 6.6 - LINE_H * i, size, "center" if key != "Class" else "left",
+                      rect[2] - rect[0] + (8 if key != "Class" else 0), bold=True, color=LABEL, minimum=size)
         top = L.SPELL_SLOT_TOP + 3
         for key, x0, x1, _al in L.SPELL_COLUMNS:
-            d.put(sheet_label(lang, "sp" + key).upper() if key != "Prep" else sheet_label(lang, "spPrep").upper(), x0, top, 4.8, "left", x1 - x0, bold=True, color=GREY, minimum=3.0)
+            d.put(sheet_label(lang, "sp" + key).upper() if key != "Prep" else sheet_label(lang, "spPrep").upper(), x0, top, 5.6, "left", x1 - x0, bold=True, color=LABEL, minimum=5.0)
         if slot_parts:
             d.put("   ".join(slot_parts), 47.5, 684.0, 7, "left", 510, color=(0, 0, 0))
         if continued:
-            d.put(sheet_label(lang, "headContinued", title=group.title), 47.5, 668.0, 7, "left", 510, bold=True, color=GREY)
+            d.put(sheet_label(lang, "headContinued", title=group.title), 47.5, 668.0, 7, "left", 510, bold=True, color=LABEL)
         for i, line in enumerate(wrap_text(lambda t: d.width(t, 5.0), sheet_label(lang, "legend"), 552.0)[:3]):
-            d.put(line, 28.0, 41.5 - 6.0 * i, 5.0, "left", 552.0, color=GREY, minimum=3.2)
+            d.put(line, 28.0, 41.5 - 6.0 * i, 5.0, "left", 552.0, color=LABEL, minimum=5.0)
         self.fields.extend(fields)
         self.values.update(values)
 
