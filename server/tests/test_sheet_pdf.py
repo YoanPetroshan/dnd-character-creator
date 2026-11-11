@@ -549,3 +549,52 @@ def test_the_audit_helpers_see_an_overlap():
     assert _boxes_hit(doc.texts[0][2], doc.texts[1][2])
     doc.box((90, 90, 130, 130), 1.0, color=(0, 0, 0))
     assert doc.frames and not _inside(doc.texts[0][2], doc.frames[0][1])
+
+
+# ---------------------------------------------------------------- S12: long identity values stay readable and inside their boxes
+LONG = {
+    "species": [{"id": "x", "name": "Half-Elf", "subspecies": {"name": "Variant; Moon Elf or Sun Elf Descent"}, "variant": None, "size": "Medium"},
+                {"id": "x", "name": "Half-Orc", "subspecies": {"name": "Variant; Mark of Finding"}, "variant": None, "size": "Medium"},
+                {"id": "x", "name": "Elf (Kaladesh)", "subspecies": {"name": "Bishatar and Tirahar"}, "variant": None, "size": "Medium"},
+                {"id": "x", "name": "Dragonborn (Chromatic)", "subspecies": None, "variant": None, "size": "Medium"}],
+    "background": ["Variant City Watch (Investigator)", "Celebrity Adventurer's Scion", "Emerald Enclave Caretaker", "Mulhorandi Tomb Raider"],
+    "classes": [[{"id": "barbarian", "name": "Barbarian", "level": 7, "subclass": {"name": "Path of the Ancestral Guardian"}},
+                 {"id": "fighter", "name": "Fighter", "level": 5, "subclass": {"name": "Purple Dragon Knight (Banneret)"}},
+                 {"id": "sorcerer", "name": "Sorcerer", "level": 3, "subclass": {"name": "Way of the Ascendant Dragon"}}],
+                [{"id": "wizard", "name": "Wizard", "level": 12, "subclass": {"name": "School of Evocation"}},
+                 {"id": "cleric", "name": "Cleric", "level": 8, "subclass": {"name": "Twilight Domain"}}]],
+}
+
+
+@pytest.mark.parametrize("lang", ("bg", "en"))
+def test_the_longest_identity_values_fit_their_boxes_at_a_readable_size(lang, catalog):
+    base = resolution("paladin6", catalog)
+    cases = [("Species", lambda sh, x: sh.update(species=x), LONG["species"]),
+             ("Background", lambda sh, x: sh.update(background={"id": "b", "name": x}), LONG["background"]),
+             ("ClassLevel", lambda sh, x: sh.update(classes=x), LONG["classes"])]
+    for field, setter, values in cases:
+        for value in values:
+            res = {**base, "sheet": {**base["sheet"]}}
+            setter(res["sheet"], value)
+            r = reader(sheet_pdf.to_sheet(res, lang, catalog, CREATED, "2014"))
+            m = metrics_of(r)
+            f = L.FIELDS_BY_NAME[field]
+            for w in f.widgets:
+                x0, y0, x1, y1 = L.a4_rect(w.rect)
+                text = r.get_fields()[field]["/V"]
+                _lines, size, fits = SF.fit_text(m, text, x1 - x0, y1 - y0, f.size * L.SCALE, False)
+                assert fits and size >= 5.4 * L.SCALE, (field, text, round(size / L.SCALE, 2))
+
+
+def test_a_long_value_does_not_change_the_width_pdfkit_needs(catalog):
+    """Preview (PDFKit) lays a form field's text out in the box minus about 3 pt and wraps / hides the rest: the fit pad is that."""
+    assert SF.PAD >= 3.0
+    r = reader(make("paladin6", "en", catalog))
+    f = r.get_fields()
+    m = metrics_of(r)
+    for name in ("Species", "ClassLevel", "SkillAcrobatics", "WeightCarried", "Initiative"):
+        w = L.FIELDS_BY_NAME[name].widgets[0]
+        x0, y0, x1, y1 = L.a4_rect(w.rect)
+        text = str(f[name].get("/V") or "")
+        _l, size, fits = SF.fit_text(m, text, x1 - x0, y1 - y0, L.FIELDS_BY_NAME[name].size * L.SCALE, False)
+        assert fits and m.width(text, size) <= x1 - x0 - 2 * 3.0 + 0.01, name

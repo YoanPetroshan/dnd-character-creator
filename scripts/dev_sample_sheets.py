@@ -43,7 +43,28 @@ def main(argv: list[str]) -> int:
         target = out / f"sheet-{sid}-{lang}.pdf"
         target.write_bytes(data)
         print(f"wrote {target} ({len(data) // 1024} KB)")
+    spec = KITCHEN_SINK_HALF_ORC = _half_orc_spec()
+    reason = skip_reason(spec)
+    if reason:
+        print(f"skip half-orc: {reason}")
+        return 0
+    from kitchen_sink import base_draft, fill
+
+    draft = fill(base_draft(spec), catalog, spec["overrides"], resolve)
+    draft["name"] = "Корвин Тъмнокосия"
+    resolution = resolve(draft, catalog)
+    for lang in ("bg", "en"):  # a long species label: "Half-Orc (Variant; Mark of Finding)"
+        target = out / f"sheet-halforc-mark-of-finding-{lang}.pdf"
+        target.write_bytes(sheet_pdf.to_sheet(resolution, lang, catalog, created, "2014"))
+        print(f"wrote {target}")
     return 0
+
+
+def _half_orc_spec() -> dict:
+    from kitchen_sink import _sub
+
+    return _sub("rogue", 5, "2014", marks=("classes", "official"),
+                origin=("half-orc-phb", "criminal", "half-orc-phb-variant;-mark-of-finding-erlw"))
 
 
 if __name__ == "__main__":

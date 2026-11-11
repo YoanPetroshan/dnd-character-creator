@@ -35,6 +35,7 @@ CHAR_WIDTH_EM = 0.58  # average character width of DejaVu Sans in em (a conserva
 LEADING = 1.2
 EQUIPMENT_FIELD_ROWS = L.EQUIPMENT_ROWS
 WEAPON_ROWS = 6
+IDENTITY_EM = 0.57  # average character width in em of the identity values (DejaVu Sans)
 NOTES_MIN_SIZE = 4.6  # Letter points: the smallest readable size of a one-line weapon note
 
 
@@ -480,6 +481,16 @@ def _defenses(sheet: dict, lang: str) -> list[str]:
     return blocks
 
 
+def _shortest_that_fits(options: list[str], field: str) -> str:
+    """The first of ``options`` (longest first) that fits the identity box at 6 pt, else the shortest one (the font shrinks)."""
+    rect = L.FIELDS_BY_NAME[field].widgets[0].rect
+    room = rect[2] - rect[0] - 7.0
+    for text in options:
+        if len(text) * IDENTITY_EM * 6.0 <= room:
+            return text
+    return min(options, key=len)
+
+
 def _paragraphs(text: str | None) -> list[str]:
     return [p for p in re.split(r"\n\s*\n", (text or "").strip()) if p.strip()]
 
@@ -494,13 +505,16 @@ def build_sheet_data(resolution: dict, catalog, lang: str = DEFAULT_LANG, rulese
     v: dict[str, str | bool] = {}
     blocks: dict[str, list[str]] = {}  # multi field -> blocks (paragraph groups)
 
-    # identity
+    # identity: a long value gets shorter alternatives (subclass names, "Variant; ", a bracket) before the font has to shrink
     v["CharacterName"] = sheet.get("name") or ""
     classes = sheet.get("classes") or []
-    v["ClassLevel"] = " / ".join(
-        f"{c['name']} {c['level']}" + (f" ({c['subclass']['name']})" if c.get("subclass") else "") for c in classes)
-    v["Species"] = species_label(sheet.get("species")) if sheet.get("species") else ""
-    v["Background"] = (sheet.get("background") or {}).get("name", "")
+    v["ClassLevel"] = _shortest_that_fits(
+        [" / ".join(f"{c['name']} {c['level']}" + (f" ({c['subclass']['name']})" if c.get("subclass") else "") for c in classes),
+         " / ".join(f"{c['name']} {c['level']}" for c in classes)], "ClassLevel")
+    species_full = species_label(sheet.get("species")) if sheet.get("species") else ""
+    v["Species"] = _shortest_that_fits([species_full, species_full.replace("(Variant; ", "(")], "Species")
+    background = (sheet.get("background") or {}).get("name", "")
+    v["Background"] = _shortest_that_fits([background, re.sub(r"\s*\([^)]*\)", "", background)], "Background")
 
     # abilities, saves, skills
     mods, saves = derived.get("abilityModifiers") or {}, derived.get("savingThrows") or {}

@@ -332,10 +332,10 @@ class Sheet:
         # saves: short names; skills: names and ability tags are fields, the names are drawn
         for i, a in enumerate(L.ABILITIES):
             y = L.FIELDS_BY_NAME[f"Save{a}"].widgets[0].rect[1]
-            d.put(a.upper(), 131, y + 2, 7, "left", 22, color=(0, 0, 0))
+            d.put(a.upper(), 132, y + 2, 7, "left", 22, color=(0, 0, 0))
         for i, s in enumerate(L.SKILLS):
             y = L.FIELDS_BY_NAME[f"Skill{s}"].widgets[0].rect[1]
-            d.put(SKILL_LABELS[i], 128, y + 2, 7, "left", 48)
+            d.put(SKILL_LABELS[i], 130, y + 2, 7, "left", 46)
         # passives
         for n, key in (("PassivePerception", "passivePerception"), ("PassiveInsight", "passiveInsight"),
                        ("PassiveInvestigation", "passiveInvestigation")):

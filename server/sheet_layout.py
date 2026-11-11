@@ -75,8 +75,8 @@ def _add(name: str, kind: str, rects: dict[int, Rect] | Rect, page: int = 1, ali
 # ---- identity header: one field with a widget per page (page 4 only has the character name) ----
 _add("CharacterName", "text", {1: _r(47.5, 710.3, 220.6, 731.2), 2: _r(47.3, 711.3, 220.5, 732.2),
                                 3: _r(47.3, 711.3, 220.5, 732.2), 4: _r(49.3, 710.8, 222.5, 731.7)}, size=12.0)
-for _name, _x0, _x1, _y in (("ClassLevel", 270.7, 467.4, 728.3), ("PlayerName", 470.3, 568.2, 728.3), ("Species", 270.7, 380.6, 702.2),
-                            ("Background", 383.5, 477.4, 702.2), ("ExperiencePoints", 480.2, 568.2, 702.2)):
+for _name, _x0, _x1, _y in (("ClassLevel", 270.7, 492.0, 728.3), ("PlayerName", 495.0, 568.2, 728.3), ("Species", 270.7, 400.7, 702.2),
+                            ("Background", 403.7, 513.7, 702.2), ("ExperiencePoints", 516.7, 568.2, 702.2)):
     _add(_name, "text", {1: _r(_x0, _y, _x1, _y + 14.1), 2: _r(_x0, _y + 1.0, _x1, _y + 15.1), 3: _r(_x0, _y + 1.0, _x1, _y + 15.1)}, size=8.0)
 
 # ---- page 1: abilities, saves, skills ----
@@ -88,7 +88,7 @@ for _i, _a in enumerate(ABILITIES):
     _add(f"Ability{_a}Mod", "text", _r(46.4, _MOD_Y[_i], 67.7, _MOD_Y[_i] + 12.8), align="center", size=10.0)
     _y = 650.4 - 13.5 * _i
     _add(f"Save{_a}Mark", "text", _r(99.6, _y, 109.0, _y + 8.7), align="center", size=8.0)
-    _add(f"Save{_a}", "text", _r(113.0, _y, 127.4, _y + 8.6), align="center", size=8.0)
+    _add(f"Save{_a}", "text", _r(111.0, _y, 128.5, _y + 8.6), align="center", size=8.0)
 
 SKILLS = ("Acrobatics", "AnimalHandling", "Arcana", "Athletics", "Deception", "History", "Insight", "Intimidation",
           "Investigation", "Medicine", "Nature", "Perception", "Performance", "Persuasion", "Religion", "SleightOfHand",
@@ -96,11 +96,11 @@ SKILLS = ("Acrobatics", "AnimalHandling", "Arcana", "Athletics", "Deception", "H
 for _i, _s in enumerate(SKILLS):
     _y = 480.8 - 13.5 * _i
     _add(f"Skill{_s}Mark", "text", _r(99.7, _y - 0.5, 109.0, _y + 8.2), align="center")
-    _add(f"Skill{_s}", "text", _r(112.0, _y, 126.4, _y + 8.6), align="center")
+    _add(f"Skill{_s}", "text", _r(110.5, _y, 128.0, _y + 8.6), align="center")
     _add(f"Skill{_s}Ability", "text", _r(178.0, _y, 200.4, _y + 8.6), align="left", size=7.0)
 for _i, _y in enumerate((237.2, 222.8, 209.2), start=1):
     _add(f"CustomSkill{_i}Mark", "text", _r(99.7, _y - 0.7, 109.0, _y + 7.9), align="center")
-    _add(f"CustomSkill{_i}Bonus", "text", _r(111.8, _y, 126.2, _y + 8.7), align="center")
+    _add(f"CustomSkill{_i}Bonus", "text", _r(110.5, _y, 128.0, _y + 8.7), align="center")
     _add(f"CustomSkill{_i}Name", "text", _r(132.0, _y - 0.5, 200.4, _y + 8.7), size=7.0)
 
 _add("SaveNotes", "multi", _r(98.9, 520.8, 200.6, 562.2), size=7.0)

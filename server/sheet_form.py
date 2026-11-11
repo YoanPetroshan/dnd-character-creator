@@ -35,9 +35,14 @@ CHARSET = (
 
 FONT_RESOURCE = "/DejaVu"
 LEADING = 1.2
-PAD = 1.5  # A4 points, inside a field box
+PAD = 3.2  # A4 points, inside a field box on each side: Preview (PDFKit) lays the text out in the box minus about 3 pt and wraps / hides what does not fit (S12)
 MIN_SIZE_SINGLE = 0.6  # a single-line value may shrink to this fraction of the field's size
 MIN_SIZE_MULTI = 6.0 * SCALE  # a multiline value shrinks down to 6 pt (Letter) before it is cut off
+
+
+def pad_for(width: float) -> float:
+    """The inner margin of a box ``width`` A4 points wide: PAD, less in a tiny box (a round mark or a one-character tag)."""
+    return PAD if width >= 12.0 else 0.16 * width
 
 
 class MissingGlyph(ValueError):
@@ -120,7 +125,8 @@ def fit_text(metrics: FontMetrics, text: str, width: float, height: float, size:
     """(lines, font size, fits) for ``text`` in a box of ``width`` x ``height`` A4 points. Single line: the size shrinks to
     ``MIN_SIZE_SINGLE`` of ``size``; multiline: it shrinks (0.25 pt steps) to ``MIN_SIZE_MULTI``. ``fits`` is False when
     the text still does not fit at the smallest size (the appearance is then clipped; /V keeps all of it)."""
-    inner_w = width - 2 * PAD
+    pad = pad_for(width)
+    inner_w = width - 2 * pad
     if not multiline:
         line = text.replace("\r", " ").replace("\n", " ")
         s = size
@@ -131,7 +137,7 @@ def fit_text(metrics: FontMetrics, text: str, width: float, height: float, size:
     s = size
     while True:
         lines = wrap_text(lambda t: metrics.width(t, s), text, inner_w)
-        fits = len(lines) * s * LEADING + 2 * PAD <= height
+        fits = len(lines) * s * LEADING + 2 * min(pad, PAD) <= height
         if fits or s <= MIN_SIZE_MULTI:
             return lines, s, fits
         s = max(MIN_SIZE_MULTI, s - 0.25)
@@ -174,6 +180,7 @@ def apply_form(base: bytes, fields: Sequence[Field], values: Mapping[str, str | 
     n = NameObject
     resources = writer._add_object(DictionaryObject({n("/Font"): DictionaryObject({n(FONT_RESOURCE): font_ref})}))
     default_da = f"{FONT_RESOURCE} 8 Tf 0 g"
+    parent_size: dict[int, float] = {}
     acro = DictionaryObject({
         n("/Fields"): ArrayObject(),
         n("/DR"): DictionaryObject({n("/Font"): DictionaryObject({n(FONT_RESOURCE): font_ref})}),
@@ -216,12 +223,13 @@ def apply_form(base: bytes, fields: Sequence[Field], values: Mapping[str, str | 
                 field_entries[n("/Q")] = NumberObject(1)
         parent = None
         if len(field.widgets) > 1:
-            parent = DictionaryObject({**field_entries, n("/Kids"): ArrayObject()})
+            parent = DictionaryObject({**field_entries, n("/Kids"): ArrayObject(), n("/DA"): TextStringObject(default_da)})
             parent_ref = writer._add_object(parent)
             acro["/Fields"].append(parent_ref)
         for widget in field.widgets:
             x0, y0, x1, y1 = a4_rect(widget.rect)
             w, h = x1 - x0, y1 - y0
+            pad = pad_for(w)
             annot = DictionaryObject({
                 n("/Type"): n("/Annot"), n("/Subtype"): n("/Widget"),
                 n("/Rect"): ArrayObject([FloatObject(round(v, 3)) for v in (x0, y0, x1, y1)]),
@@ -229,8 +237,8 @@ def apply_form(base: bytes, fields: Sequence[Field], values: Mapping[str, str | 
                 n("/MK"): DictionaryObject(),
             })
             if field.kind == "check":
-                on = form_xobject(f"q 0 g {a4_size(1.0):.2f} w {PAD:.2f} {PAD:.2f} m {w - PAD:.2f} {h - PAD:.2f} l S "
-                                  f"{PAD:.2f} {h - PAD:.2f} m {w - PAD:.2f} {PAD:.2f} l S Q", w, h, False)
+                on = form_xobject(f"q 0 g {a4_size(1.0):.2f} w {pad:.2f} {pad:.2f} m {w - pad:.2f} {h - pad:.2f} l S "
+                                  f"{pad:.2f} {h - pad:.2f} m {w - pad:.2f} {pad:.2f} l S Q", w, h, False)
                 off = form_xobject("", w, h, False)
                 state = n("/Yes" if value else "/Off")
                 annot.update({n("/AP"): DictionaryObject({n("/N"): DictionaryObject({n("/Yes"): on, n("/Off"): off})}),
@@ -243,12 +251,15 @@ def apply_form(base: bytes, fields: Sequence[Field], values: Mapping[str, str | 
             else:
                 lines, size, _fits = fit_text(metrics, text, w, h, a4_size(field.size), multi)
                 da = f"{FONT_RESOURCE} {size:.2f} Tf 0 g"
-                ops = ["/Tx BMC", "q", f"{PAD / 2:.2f} {PAD / 2:.2f} {w - PAD:.2f} {h - PAD:.2f} re W n", "BT", da]
+                if parent is not None and size < parent_size.get(id(parent), 1e9):  # a shared field: the smallest size of its widgets
+                    parent[n("/DA")] = TextStringObject(da)
+                    parent_size[id(parent)] = size
+                ops = ["/Tx BMC", "q", f"{pad / 2:.2f} {pad / 2:.2f} {w - pad:.2f} {h - pad:.2f} re W n", "BT", da]
                 if lines != [""]:
-                    base_y = h - PAD - size * 0.93 if multi else (h - size * 0.73) / 2.0
+                    base_y = h - pad - size * 0.93 if multi else (h - size * 0.73) / 2.0
                     for line in lines:
                         tw = metrics.width(line, size)
-                        x = (w - tw) / 2.0 if field.align == "center" and not multi else PAD + 0.5
+                        x = (w - tw) / 2.0 if field.align == "center" and not multi else pad + 0.5
                         ops.append(f"1 0 0 1 {x:.2f} {base_y:.2f} Tm <{metrics.encode(line)}> Tj")
                         base_y -= size * LEADING
                 ops += ["ET", "Q", "EMC"]
