@@ -76,7 +76,7 @@ Equipment → Sheet (преглед) → Export. Лентата със стъп�
 | `/abilities` | `.../AbilitiesPage.tsx` | Abilities / Abilities |
 | `/equipment` | `.../EquipmentPage.tsx` | Equipment / Equipment |
 | `/sheet` | `.../SheetPage.tsx` | Лист / Sheet |
-| `/export` | `.../ExportPage.tsx` | Export / Export |
+| `/export` | (пренасочване, `ExportRedirect` в `App.tsx`) | към `/sheet`, `replace`, с запазен query string |
 | `/help` | `.../HelpPage.tsx` | Помощ / Help (линк в хедъра, не е стъпка) |
 
 (Етикетите идват от `frontend/src/copy/bg.ts` и `en.ts`, ключ `nav.steps`; редът на стъпките е в
@@ -125,12 +125,20 @@ drop lowest) / Manual. Таблица `.ability-table` (шест характе�
 браузър на предмети (`.item-browser-list`, скролируем списък с чекбоксове и филтър), инвентар (`.inventory-list`),
 носено/държано, злато.
 
-**Sheet** (`/sheet`). Само за четене лист на героя, `SheetView` от 23 секции (виж 3.4). Горе има бутон "Печат" (`window.print()`), линк към Export и ред за
-неприключени неща; те са с `.no-print`. Страницата е `div.page[data-page="sheet"]`.
-
-**Export** (`/export`). Проверка за готовност (какво още липсва, с линкове към картите), обобщения (`ClassResourcesList`,
-`SpellSlotsSummary`, `SheetTraitsSummary`), бутони за YAML / Markdown / PDF (`data-state="ready|busy|disabled"`), ред с
-грешка (`.status--error`, `data-state="error"`), ред "подготвям PDF" (`p[data-state="preparing-pdf"]`, `role=status`).
+**Sheet** (`/sheet`, `div.page[data-page="sheet"]`; Лист + Export са обединени, `/export` пренасочва тук). Структура, без окончателен дизайн.
+Отгоре `section[data-section="export"]` (`ExportBar`): точно два бутона, в ред: `button[data-export="sheet"]` (основният, попълваем PDF
+"Лист за игра (форма)" / "Character sheet (form)") и `button[data-export="markdown"]`. Няма YAML и просто-PDF бутони в интерфейса (сървърните
+маршрути са непроменени). `data-state="ready|busy|disabled"`, при `disabled` бутоните са с `aria-describedby="export-reasons"` и блок
+`#export-reasons[data-state="not-ready"]` с причините (липсващи части, проблеми, чакащи избори с линкове към картите). Ред "подготвям PDF"
+`p[data-state="preparing-pdf"][role=status]`, грешка `.status--error[data-state="error"]`; стойност `data-state="incomplete"` за реда с неприключените неща.
+Под него `section[data-section="summary"]` (`SummaryStrip`): `[data-summary="name|class|species|hitPoints|armorClass|initiative|speed|proficiencyBonus|passivePerception|hitDice"]`
+и `[data-summary-ability="STR|DEX|CON|INT|WIS|CHA"]`. После WAI-ARIA табове (`Tabs`): `[role=tablist]` > `button[role=tab][data-tab=<id>][aria-selected][aria-controls]`
+(roving tabindex, стрелки/Home/End, автоматична активация, `.tabs__list` се скролира хоризонтално), `div[role=tabpanel][data-panel=<id>]` (само избраният е
+показан). Ключове (`?tab=`): `actions` (по подразбиране), `spells`, `inventory`, `features`, `background`, `notes`. Съдържание: Actions = атаки, стандартни
+действия (`data-section="standardActions"`), ресурси, характеристики, спасителни хвърляния, умения, сетива, защити, владеене, езици (избор: те живеят тук,
+за да не се губят данни); Spells = по клас-източник способност/DC/атака/слотове и `table` със `tr[data-spell][data-spell-level]`; Inventory = екипировка и
+товароносимост; Features = филтри `button[data-filter=all|class|species|feats][aria-pressed]`; Background и Notes = секциите на `DetailsSection` (`only`).
+Премахнати/преместени куки: страницата `ExportPage` и бутоните `data-export=yaml|pdf`; куките `data-state` на бутоните и `preparing-pdf` са запазени.
 
 **Help** (`/help`, `div.page.help-page`). Блокове с `data-section`: `offline` (състояние на офлайн, редът има
 `data-state="idle|unsupported|installing|offline-ready|update-available|error"`, редът за паметта

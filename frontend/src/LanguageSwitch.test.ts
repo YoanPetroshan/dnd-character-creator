@@ -34,11 +34,11 @@ describe("withLang", () => {
 });
 
 describe("requests carry the language", () => {
-  it("useResolution and ExportPage build their URLs with withLang(…, lang) and re-resolve on lang", () => {
+  it("useResolution and the export bar build their URLs with withLang(…, lang) and re-resolve on lang", () => {
     const res = readFileSync(new URL("./useResolution.ts", import.meta.url)).toString("utf8");
     expect(res).toContain('withLang("/api/resolve", lang)');
     expect(res).toContain("[draft, retryNonce, lang]");
-    const exp = readFileSync(new URL("./pages/ExportPage.tsx", import.meta.url)).toString("utf8");
+    const exp = readFileSync(new URL("./components/sheetpage/ExportBar.tsx", import.meta.url)).toString("utf8");
     expect(exp).toContain("withLang(config.endpoint, lang)");
   });
 });

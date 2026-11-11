@@ -36,7 +36,5 @@ describe("formatWeight", () => {
   it("the copy catalogs use the helper (EN pounds only, BG with kilograms)", () => {
     expect(en.common.pounds(96)).toBe("96 lb");
     expect(bg.common.pounds(96)).toBe("96 lb (43,5 kg)");
-    expect(en.exportPage.carrying(96, 225, 450)).toBe("Carrying: 96/225 lb (push/drag/lift 450 lb)");
-    expect(bg.exportPage.carrying(96, 225, 450)).toBe("Carrying: 96/225 lb (43,5/102,1 kg) (push/drag/lift 450 lb (204,1 kg))");
   });
 });

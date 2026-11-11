@@ -50,7 +50,8 @@ vi.mock("./useSpells", async (orig) => ({
   useSpells: () => ({ spells: [], loading: false, error: null, retry: () => undefined }),
 }));
 
-const ROUTES = ["/home", "/class", "/background", "/species", "/abilities", "/equipment", "/sheet", "/export"];
+// /export redirects to /sheet; the sheet page has six tabs (?tab=), each rendered on its own
+const ROUTES = ["/home", "/class", "/background", "/species", "/abilities", "/equipment", "/sheet", "/sheet?tab=spells", "/sheet?tab=inventory", "/sheet?tab=features", "/sheet?tab=background", "/sheet?tab=notes"];
 
 interface Fixture {
   id: string;

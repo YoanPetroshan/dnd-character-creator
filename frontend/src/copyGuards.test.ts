@@ -115,12 +115,12 @@ describe("scripts", () => {
   // Legacy: English words the Bulgarian UI already showed before the copy catalog existed (page titles, labels,
   // sentences). They stay so that the BG rendering is byte-identical; translating them is a deliberate later change.
   const LEGACY = new Set([
-    "Abilities", "Add", "Array", "Attacks", "Buy", "Carrying", "Character", "Dueling", "Equipment", "Export", "Home",
-    "Manual", "Name", "Point", "Points", "Preferences", "Problems", "Re", "Remaining", "Resolution", "Roll", "Saved",
-    "Sources", "Standard", "Subspecies", "Unresolved", "action", "all", "and", "api", "as", "be", "capacity",
-    "choice", "choices", "current", "drag", "drop", "from", "hand", "here", "level", "lift", "lowest", "mastery",
-    "name", "none", "off", "over", "page", "pending", "per", "push", "range", "reload", "replaces", "resolve",
-    "rolling", "ruleset", "scores", "should", "six", "still", "the", "this", "type", "versatile", "with", "you",
+    "Abilities", "Add", "Array", "Buy", "Character", "Equipment", "Home",
+    "Manual", "Name", "Point", "Points", "Preferences", "Re", "Remaining", "Resolution", "Roll", "Saved",
+    "Sources", "Standard", "Subspecies", "all", "and", "api", "as", "be",
+    "choice", "current", "drop", "from", "here", "level", "lowest",
+    "name", "none", "page", "pending", "reload", "replaces", "resolve",
+    "rolling", "ruleset", "scores", "should", "six", "still", "the", "this", "type", "you",
   ]);
 
   // Game terms kept in English on purpose (owner decision 2026-11-05): "Spell Slots" (glossary spellSlots, as in the BG export).
@@ -133,6 +133,10 @@ describe("scripts", () => {
   // BRACKET_TERMS_START
   const BRACKET_TERMS = new Set([
   "Ability Save DC",
+  "Features & Traits",
+  "Inventory",
+  "Notes",
+  "Spells",
   "Spell Attack Bonus",
   "Action",
   "Actions",

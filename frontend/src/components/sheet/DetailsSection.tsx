@@ -1,13 +1,14 @@
 import { useT } from "../../LanguageContext";
-import type { SheetSectionData } from "../../logic/sheetSections";
+import type { DetailSectionKey, SheetSectionData } from "../../logic/sheetSections";
 import { SectionFrame } from "./SectionFrame";
 
-export function DetailsSection({ data }: { data: SheetSectionData["details"] }) {
+/** `only` narrows the blocks shown (the sheet page splits the details between its Background and Notes tabs). */
+export function DetailsSection({ data, only }: { data: SheetSectionData["details"]; only?: DetailSectionKey[] }) {
   const t = useT();
   const c = t.sheet.details;
   return (
     <SectionFrame sectionKey="details" title={c.title}>
-      {data.map((s) => (
+      {data.filter((s) => !only || only.includes(s.section)).map((s) => (
         <div key={s.section}>
           <h3>{c.sections[s.section]}</h3>
           <dl>

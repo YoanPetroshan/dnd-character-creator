@@ -5,8 +5,8 @@ import { choice, resolution } from "./testFixtures";
 import type { Draft } from "../types";
 
 describe("STEPS", () => {
-  it("keeps the eight routes in order (the sheet sits between Equipment and Export)", () => {
-    expect(STEPS.map((s) => s.path)).toEqual(["/home", "/class", "/background", "/species", "/abilities", "/equipment", "/sheet", "/export"]);
+  it("keeps the seven routes in order (the sheet, which also holds the downloads, is the last step)", () => {
+    expect(STEPS.map((s) => s.path)).toEqual(["/home", "/class", "/background", "/species", "/abilities", "/equipment", "/sheet"]);
   });
 });
 
@@ -25,7 +25,7 @@ describe("stepStatus (current behaviour)", () => {
   it("without a draft, an empty step is read from the resolution's sheet (SK3)", () => {
     const s = stepStatus(resolution({ classes: 0, species: false, background: false }));
     expect(["/class", "/species", "/background"].map((p) => s[p].missing)).toEqual([1, 1, 1]);
-    for (const p of ["/home", "/abilities", "/equipment", "/export"]) expect(stepBadgeCount(s[p])).toBe(0);
+    for (const p of ["/home", "/abilities", "/equipment", "/sheet"]) expect(stepBadgeCount(s[p])).toBe(0);
   });
 
   it("counts pending cards on their own step and skips optional / non-pending ones", () => {
@@ -50,7 +50,7 @@ describe("stepStatus (current behaviour)", () => {
     expect(s["/equipment"].pending).toBe(2);
     expect(s["/abilities"].pending).toBe(0);
     expect(s["/home"].pending).toBe(0);
-    expect(s["/export"].pending).toBe(0);
+    expect(s["/sheet"].pending).toBe(0);
     expect(s["/class"].done).toBe(false);
   });
 
@@ -81,7 +81,7 @@ describe("stepStatus (current behaviour)", () => {
     expect(s["/abilities"].problems).toBe(1);
     expect(s["/equipment"].problems).toBe(1);
     expect(s["/species"].problems).toBe(0);
-    expect(s["/export"].problems).toBe(0); // unmapped problems stay Export-only and are not badged
+    expect(s["/sheet"].problems).toBe(0); // unmapped problems stay Sheet-only and are not badged
   });
 });
 
@@ -99,7 +99,7 @@ describe("missing parts (SK3)", () => {
       expect(s[p]).toMatchObject({ missing: 1, pending: 0, problems: 0, done: false });
       expect(stepBadgeCount(s[p])).toBe(1);
     }
-    for (const p of ["/home", "/abilities", "/equipment", "/export"]) expect(stepBadgeCount(s[p])).toBe(0);
+    for (const p of ["/home", "/abilities", "/equipment", "/sheet"]) expect(stepBadgeCount(s[p])).toBe(0);
   });
 
   it("picking a part clears only its own missing count", () => {
@@ -151,8 +151,8 @@ describe("nextUnfinishedStep", () => {
     expect(nextUnfinishedStep(resolution({ choices: [eq] }), pickedDraft)).toBe("/equipment");
   });
 
-  it("everything done -> Export", () => {
-    expect(nextUnfinishedStep(resolution(), pickedDraft)).toBe("/export");
+  it("everything done -> Sheet", () => {
+    expect(nextUnfinishedStep(resolution(), pickedDraft)).toBe("/sheet");
   });
 
   it("no resolution yet -> null (no link while loading)", () => {
@@ -183,11 +183,12 @@ describe("stepForChoice", () => {
 describe("nextStepAfter (the Next button's target)", () => {
   it("follows the fixed STEPS order, one step at a time", () => {
     const got = STEPS.slice(0, -1).map((s) => nextStepAfter(s.path)?.path);
-    expect(got).toEqual(["/class", "/background", "/species", "/abilities", "/equipment", "/sheet", "/export"]);
+    expect(got).toEqual(["/class", "/background", "/species", "/abilities", "/equipment", "/sheet"]);
     expect(nextStepAfter("/background")?.key).toBe("species");
   });
   it("is null on the last step and on non-step routes", () => {
-    expect(nextStepAfter("/export")).toBeNull();
+    expect(nextStepAfter("/sheet")).toBeNull();
+    expect(nextStepAfter("/export")).toBeNull(); // redirected to /sheet by the router; not a step any more
     expect(nextStepAfter("/help")).toBeNull();
     expect(nextStepAfter("/nope")).toBeNull();
     expect(nextStepAfter("/")).toBeNull();
@@ -198,6 +199,6 @@ describe("nextStepAfter (the Next button's target)", () => {
     expect(nextStepAfter("/class#class:warlock:1:x")?.path).toBe("/background");
     expect(nextStepAfter("/equipment?x=1#a")?.path).toBe("/sheet");
     expect(nextStepAfter("/species/")?.path).toBe("/abilities");
-    expect(nextStepAfter("/export#a")).toBeNull();
+    expect(nextStepAfter("/sheet#a")).toBeNull();
   });
 });

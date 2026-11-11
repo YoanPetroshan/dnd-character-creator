@@ -46,7 +46,7 @@ Presentational components take props only; logic components read contexts (`useD
 | Area | Files | Role | Data received |
 | --- | --- | --- | --- |
 | Shell | `App.tsx`, `components/StepNav`, `NextStepLink`, `NextStepButton`, `StatusBanner`, `LanguageSwitch`, `ErrorBoundary`, `RouteA11y` | chrome around every page | contexts only |
-| Pages (logic) | `pages/HomePage, ClassPage, BackgroundPage, SpeciesPage, AbilitiesPage, EquipmentPage, SheetPage, ExportPage` | one per route, read the draft and the resolution, dispatch draft actions | draft, resolution, catalog |
+| Pages (logic) | `pages/HomePage, ClassPage, BackgroundPage, SpeciesPage, AbilitiesPage, EquipmentPage, SheetPage` (+ `components/sheetpage/`: `ExportBar`, `SummaryStrip`, `Tabs`, `panels`; logic `logic/sheetTabs.ts`, `logic/exportRedirect.ts`; `/export` redirects to `/sheet`) | one per route, read the draft and the resolution, dispatch draft actions | draft, resolution, catalog |
 | Choices | `ChoiceCard` (logic: expanded state) -> `ChoicePicker` (short and long layouts) | one server choice, selectable options | a `Choice` (id, label, status, options with `disabled`, `disabledReason`, `hiddenByFilters`, `group`, `selected`, `count`) and `onToggle` |
 | Small summaries (presentational) | `ClassResourcesList`, `SheetTraitsSummary`, `SpellSlotsSummary`, `StepProblems`, `CommitNumberInput` | | resolution parts |
 | Spells | `SpellLibrary` | cantrip / known / detail browser | spell lists from `useSpells` |
@@ -69,7 +69,7 @@ Presentational components take props only; logic components read contexts (`useD
 | pruned | Home list of dropped selections `data-state="pruned"`; the status banner `data-state="pruned"` |
 | new | choice card `data-new="true"` + `.choice-card__new` text marker; header link `.new-choices` ("Нови избори: N") |
 | loading / error | headings show an ellipsis while resolving; `StatusBanner` `data-state="error"` |
-| preparing PDF | offline build only: Export page `<p role="status" data-state="preparing-pdf">` while the worker loads the PDF stack for the first PDF export (a second or two); gone when it is loaded |
+| preparing PDF | offline build only: Sheet page (export bar) `<p role="status" data-state="preparing-pdf">` while the worker loads the PDF stack for the first PDF export (a second or two); gone when it is loaded |
 | engine unavailable | serverless build (GitHub Pages) only: `StatusBanner` `data-state="engine-unavailable"` (`role="alert"`) when WebAssembly / Workers are missing (iOS Lockdown Mode), the pack cannot be fetched or the worker failed; no server to fall back to; links to Help |
 | offline install / update | offline build only: `data-state="pwa-installing"` while the first visit downloads the cache (about 20 MB), `offline-ready` once after it, `update-available` with a "Обнови сега / Update now" button when a new version waits |
 | engine starting | offline build only: `StatusBanner` `data-state="engine-starting"` (a `<p class="status-banner" role="status">`, no design) while the in-browser engine boots; gone when it is ready |

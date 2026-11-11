@@ -37,7 +37,6 @@ export const STEPS: Step[] = [
   { path: "/abilities", problemStep: "abilities", key: "abilities", kind: null },
   { path: "/equipment", problemStep: "equipment", key: "equipment", kind: ["equipment"] },
   { path: "/sheet", key: "sheet", kind: null },
-  { path: "/export", key: "export", kind: null },
 ];
 
 export interface StepStatus {
@@ -98,13 +97,13 @@ export function stepBadgeCount(status: StepStatus): number {
 }
 
 /** The first step, in STEPS order, that still has something outstanding
- *  (a missing part, a pending card or a blocking problem); Export when
+ *  (a missing part, a pending card or a blocking problem); the Sheet when
  *  nothing is. null while there is no resolution yet. */
 export function nextUnfinishedStep(resolution: Resolution | null, draft?: Draft): string | null {
   if (!resolution) return null;
   const status = stepStatus(resolution, draft);
   const next = STEPS.find((step) => stepBadgeCount(status[step.path]) > 0);
-  return next ? next.path : "/export";
+  return next ? next.path : "/sheet";
 }
 
 /** The step page that owns a choice card, from its cid. Equipment cards
@@ -119,7 +118,7 @@ export function stepForChoice(cid: string): string {
 
 /** The step AFTER the one `path` belongs to, in STEPS order (the fixed order, not the unfinished-step
  *  logic of nextUnfinishedStep). `path` is the router's basename-stripped pathname; a "#hash", a "?query"
- *  and a trailing slash are ignored. null on the last step (Export) and on any non-step route (Help, unknown). */
+ *  and a trailing slash are ignored. null on the last step (Sheet) and on any non-step route (Help, unknown). */
 export function nextStepAfter(path: string): Step | null {
   const clean = path.split("#")[0].split("?")[0].replace(/(.)\/+$/, "$1");
   const i = STEPS.findIndex((step) => step.path === clean);

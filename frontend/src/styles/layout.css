@@ -59,3 +59,112 @@ main {
 .page {
   max-width: 800px;
 }
+
+/* The sheet page: export actions, summary strip and tabs (structure only; the look comes from the design chat). */
+.export-bar__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.export-bar__button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.export-bar__button--primary {
+  font-weight: bold;
+}
+
+.export-bar__reasons {
+}
+
+.summary-strip {
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.summary-strip__who {
+  margin: 0 0 var(--space-2);
+}
+
+.summary-strip__abilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  list-style: none;
+  margin: 0 0 var(--space-2);
+  padding: 0;
+}
+
+.summary-strip__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+}
+
+.summary-strip__stats div {
+  min-width: 0;
+}
+
+.summary-strip__stats dt,
+.summary-strip__stats dd {
+  margin: 0;
+}
+
+.tabs__list {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--space-1);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tabs__tab {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.tabs__tab[aria-selected="true"] {
+  font-weight: bold;
+}
+
+.tabs__panel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.tabs__panel table {
+  width: 100%;
+  table-layout: auto;
+}
+
+.tabs__panel td,
+.tabs__panel th {
+  overflow-wrap: anywhere;
+}
+
+.feature-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.feature-filters button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.standard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  list-style: none;
+  padding: 0;
+}

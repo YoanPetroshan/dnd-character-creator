@@ -4,7 +4,7 @@
 // feature names and rule texts) comes from the data as delivered and is not in here.
 import type { Copy } from "./index";
 import { glossary as g } from "./glossary.gen";
-import { formatWeight, formatWeightPair } from "../logic/units";
+import { formatWeight } from "../logic/units";
 
 type Msgs = Record<string, string>;
 
@@ -23,7 +23,6 @@ export const en: Copy = {
       abilities: "Abilities",
       equipment: "Equipment",
       sheet: "Sheet",
-      export: "Export",
     },
     sheet: "Sheet",
     unresolved: (n: number) => `unresolved: ${n}`,
@@ -43,7 +42,6 @@ export const en: Copy = {
       "/abilities": g.abilityScores.en,
       "/equipment": g.equipment.en,
       "/sheet": "Character Sheet",
-      "/export": "Export",
       "/help": "Help and install",
     } as Record<string, string>,
     fallback: "Page not found",
@@ -82,7 +80,52 @@ export const en: Copy = {
   sheet: {
     title: "Character Sheet",
     print: "Print",
-    exportLink: "Go to export",
+    tabs: {
+      label: "Sheet sections",
+      actions: "Actions",
+      spells: "Spells",
+      inventory: "Inventory",
+      features: "Features & Traits",
+      background: "Background",
+      notes: "Notes",
+    },
+    summary: {
+      label: "Summary",
+      ability: (ability: string, score: number, modifier: string) => `${ability} ${score} (${modifier})`,
+      hitPoints: "Hit Points",
+      armorClass: "Armor Class",
+      initiative: "Initiative",
+      speed: "Speed",
+      proficiencyBonus: "Proficiency Bonus",
+      passivePerception: "Passive Perception",
+      hitDice: "Hit Dice",
+    },
+    actionsTab: {
+      standardActions: "Standard Actions",
+    },
+    spellsTab: {
+      empty: "This character has no spells.",
+      level: (n: number) => (n === 0 ? "Cantrips" : `Level ${n}`),
+      columns: { spell: "Spell", time: "Time", range: "Range", components: "Components", duration: "Duration", notes: "Notes" },
+      concentration: "concentration",
+      ritual: "ritual",
+      marks: {
+        known: "prepared",
+        spellbook: "in spellbook",
+        alwaysPrepared: "always prepared",
+        mysticArcanum: "mystic arcanum",
+        spellMastery: "mastery",
+        signatureSpells: "signature",
+        pactOfTheTome: "book of shadows",
+      },
+    },
+    featuresTab: {
+      filtersLabel: "Filter",
+      filters: { all: "All", class: "Class", species: "Species", feats: "Feats" },
+      source: { class: "Class", species: "Species", background: "Background" },
+      empty: "No features in this filter.",
+    },
+    notesTab: { empty: "No notes." },
     loading: "Loading…",
     unnamed: "Unnamed character",
     incomplete: (count: number) =>
@@ -539,32 +582,19 @@ export const en: Copy = {
   },
 
   exportPage: {
-    title: "Export",
     /** File name of an unnamed hero (the server's export uses the same word per language). */
     fileFallback: "character",
-    problems: "Problems",
+    heading: "Download",
+    problems: "Problems in the draft",
     unresolved: "Unresolved choices",
-    attacks: "Attacks",
-    attacksPerAction: (n: number) => `Attacks per action: ${n}`,
-    attackDamage: (dice: string, type: string | null) => `${dice} ${type}`,
-    attackVersatile: (dice: string) => `versatile ${dice}`,
-    attackDueling: (dice: string) => `with Dueling ${dice}`,
-    attackOffhand: (dice: string) => `off hand ${dice}`,
-    attackRange: (range: string) => `range ${range}`,
-    attackMastery: (mastery: string) => `mastery ${mastery}`,
-    carrying: (carried: number, capacity: number, pushDragLift: number) =>
-      `Carrying: ${formatWeightPair(carried, capacity, "en")} (push/drag/lift ${formatWeight(pushDragLift, "en")})`,
-    overCapacity: "over capacity",
-    stealthDisadvantage: "armor: disadvantage on Stealth",
-    pendingEquipment: (n: number) => `Not all equipment choices have been made (${n}) — this does not block the export.`,
-    ready: "Everything is ready for export.",
+    pendingEquipment: (n: number) => `Not all equipment choices have been made (${n}) — this does not block the download.`,
+    ready: "Everything is ready to download.",
+    notReady: "Downloading is unavailable until the items above are fixed.",
     preparingPdf: "Preparing the PDF… The first time can take a few seconds.",
     downloading: "Downloading…",
-    download: (format: string) => `Download ${format}`,
-    downloadSimplePdf: "Download the simple PDF",
     downloadSheet: "Character sheet (form)",
+    downloadMarkdown: "Markdown",
     missing: { class: "Choose a class.", species: "Choose a species.", background: "Choose a background." },
-    sheetLink: "View the character sheet",
   },
 
   choice: {

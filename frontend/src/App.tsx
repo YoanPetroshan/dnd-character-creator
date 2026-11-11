@@ -10,16 +10,22 @@ import { NewChoicesProvider } from "./NewChoicesContext";
 import { StatusBanner } from "./components/StatusBanner";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { RouteA11y } from "./components/RouteA11y";
+import { exportRedirectTarget } from "./logic/exportRedirect";
 import { HomePage } from "./pages/HomePage";
 import { ClassPage } from "./pages/ClassPage";
 import { BackgroundPage } from "./pages/BackgroundPage";
 import { SpeciesPage } from "./pages/SpeciesPage";
 import { AbilitiesPage } from "./pages/AbilitiesPage";
 import { EquipmentPage } from "./pages/EquipmentPage";
-import { ExportPage } from "./pages/ExportPage";
 import { SheetPage } from "./pages/SheetPage";
 import { HelpPage } from "./pages/HelpPage";
 import { useT } from "./LanguageContext";
+
+/** The old Export page is the Sheet page now; the query string (e.g. ?tab) is kept. */
+function ExportRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={exportRedirectTarget(search)} replace />;
+}
 
 export default function App() {
   const location = useLocation();
@@ -52,7 +58,7 @@ export default function App() {
               <Route path="/abilities" element={<AbilitiesPage />} />
               <Route path="/equipment" element={<EquipmentPage />} />
               <Route path="/sheet" element={<SheetPage />} />
-              <Route path="/export" element={<ExportPage />} />
+              <Route path="/export" element={<ExportRedirect />} />
               <Route path="/help" element={<HelpPage />} />
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>

@@ -4,7 +4,7 @@
 // T1 (owner decision 2026-11-05): a Bulgarian rules term is followed by its English term in brackets, "Талант (Feat)"
 // (docs/TERMS-PROPOSAL.md; the allowed terms are the BRACKET_TERMS list of copyGuards.test.ts).
 
-import { formatWeight, formatWeightPair } from "../logic/units";
+import { formatWeight } from "../logic/units";
 
 type Msgs = Record<string, string>;
 
@@ -25,7 +25,6 @@ export const bg = {
       abilities: "Abilities",
       equipment: "Equipment",
       sheet: "Лист",
-      export: "Export",
     },
     sheet: "Лист",
     unresolved: (n: number) => `неизбрани: ${n}`,
@@ -46,7 +45,6 @@ export const bg = {
       "/abilities": "Характеристики (Ability Scores)",
       "/equipment": "Екипировка",
       "/sheet": "Лист на героя",
-      "/export": "Експорт",
       "/help": "Помощ и инсталиране",
     } as Record<string, string>,
     fallback: "Страницата не е намерена",
@@ -88,7 +86,52 @@ export const bg = {
   sheet: {
     title: "Лист на героя",
     print: "Печат",
-    exportLink: "Към експорта",
+    tabs: {
+      label: "Раздели на листа",
+      actions: "Действия (Actions)",
+      spells: "Заклинания (Spells)",
+      inventory: "Екипировка (Inventory)",
+      features: "Черти и особености (Features & Traits)",
+      background: "Предистория (Background)",
+      notes: "Бележки (Notes)",
+    },
+    summary: {
+      label: "Кратка справка",
+      ability: (ability: string, score: number, modifier: string) => `${ability} ${score} (${modifier})`,
+      hitPoints: "Точки живот (Hit Points)",
+      armorClass: "Клас броня (Armor Class, AC)",
+      initiative: "Инициатива",
+      speed: "Скорост",
+      proficiencyBonus: "Бонус за владеене (Proficiency Bonus)",
+      passivePerception: "Пасивно възприятие",
+      hitDice: "Зарове за точки живот (Hit Point Dice)",
+    },
+    actionsTab: {
+      standardActions: "Стандартни действия",
+    },
+    spellsTab: {
+      empty: "Този герой няма заклинания.",
+      level: (n: number) => (n === 0 ? "Трикове (Cantrips)" : `Ниво ${n}`),
+      columns: { spell: "Заклинание", time: "Време", range: "Обхват", components: "Компоненти", duration: "Продължителност", notes: "Бележки" },
+      concentration: "концентрация",
+      ritual: "ритуал",
+      marks: {
+        known: "подготвено",
+        spellbook: "Книга със заклинания",
+        alwaysPrepared: "винаги подготвено",
+        mysticArcanum: "мистичен арканум",
+        spellMastery: "майсторство",
+        signatureSpells: "запазено",
+        pactOfTheTome: "книга на сенките",
+      },
+    },
+    featuresTab: {
+      filtersLabel: "Филтър",
+      filters: { all: "Всички", class: "Клас", species: "Раса (Species)", feats: "Таланти (Feats)" },
+      source: { class: "Клас", species: "Раса (Species)", background: "Произход (Background)" },
+      empty: "Няма черти в този филтър.",
+    },
+    notesTab: { empty: "Няма бележки." },
     loading: "Зареждане…",
     unnamed: "Безименен герой",
     incomplete: (count: number) =>
@@ -652,31 +695,18 @@ export const bg = {
   },
 
   exportPage: {
-    title: "Export",
     /** File name of an unnamed hero (the server's export uses the same word per language). */
     fileFallback: "герой",
-    problems: "Problems",
-    unresolved: "Unresolved choices",
-    attacks: "Attacks",
-    attacksPerAction: (n: number) => `Attacks per action: ${n}`,
-    attackDamage: (dice: string, type: string | null) => `${dice} ${type}`,
-    attackVersatile: (dice: string) => `versatile ${dice}`,
-    attackDueling: (dice: string) => `with Dueling ${dice}`,
-    attackOffhand: (dice: string) => `off hand ${dice}`,
-    attackRange: (range: string) => `range ${range}`,
-    attackMastery: (mastery: string) => `mastery ${mastery}`,
-    carrying: (carried: number, capacity: number, pushDragLift: number) =>
-      `Carrying: ${formatWeightPair(carried, capacity, "bg")} (push/drag/lift ${formatWeight(pushDragLift, "bg")})`,
-    overCapacity: "over capacity",
-    stealthDisadvantage: "броня: недостатък (Disadvantage) при Скритост",
-    pendingEquipment: (n: number) => `Не всички избори за екипировка са направени (${n}) — това не блокира експорта.`,
-    ready: "Всичко е готово за експорт.",
+    heading: "Изтегляне",
+    problems: "Проблеми в черновата",
+    unresolved: "Неизбрани избори",
+    pendingEquipment: (n: number) => `Не всички избори за екипировка са направени (${n}) — това не блокира изтеглянето.`,
+    ready: "Всичко е готово за изтегляне.",
+    notReady: "Изтеглянето е недостъпно, докато не бъдат оправени горните неща.",
     preparingPdf: "Подготвя се PDF… Първото подготвяне може да отнеме няколко секунди.",
     downloading: "Изтегляне…",
-    download: (format: string) => `Изтегли ${format}`,
-    downloadSimplePdf: "Изтегли простия PDF",
     downloadSheet: "Лист за игра (форма)",
+    downloadMarkdown: "Markdown",
     missing: { class: "Избери клас.", species: "Избери раса (Species).", background: "Избери произход (Background)." },
-    sheetLink: "Виж листа на героя",
   },
 };

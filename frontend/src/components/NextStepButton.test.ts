@@ -32,7 +32,7 @@ describe("NextStepButton", () => {
   it("under a base path the router strips it: the target is found and the href carries it", () => {
     const at = (path: string) => renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [path], basename: "/dnd-character-creator" }, createElement(NextStepButton)));
     expect(at("/dnd-character-creator/species")).toContain('data-next="abilities" aria-label="Напред: Abilities" href="/dnd-character-creator/abilities"');
-    expect(at("/dnd-character-creator/export")).toBe("");
+    expect(at("/dnd-character-creator/sheet")).toBe("");
   });
   it("every step but the last has exactly one button, pointing at the next step", () => {
     STEPS.slice(0, -1).forEach((s, i) => {
@@ -41,8 +41,8 @@ describe("NextStepButton", () => {
       expect(html).toContain(`href="${STEPS[i + 1].path}"`);
     });
   });
-  it("renders nothing on the last step (Export), on Help and on an unknown route", () => {
-    expect(render("/export", "bg")).toBe("");
+  it("renders nothing on the last step (Sheet), on Help and on an unknown route", () => {
+    expect(render("/sheet", "bg")).toBe("");
     expect(render("/help", "en")).toBe("");
     expect(render("/nope", "en")).toBe("");
   });
