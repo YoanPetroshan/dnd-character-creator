@@ -35,7 +35,7 @@ CHARSET = (
 
 FONT_RESOURCE = "/DejaVu"
 LEADING = 1.2
-PAD = 3.2  # A4 points, inside a field box on each side: Preview (PDFKit) lays the text out in the box minus about 3 pt and wraps / hides what does not fit (S12)
+PAD = 3.7  # A4 points, inside a field box on each side: Preview (PDFKit) lays the text out in the box minus about 3 pt and wraps / hides what does not fit (S12)
 MIN_SIZE_SINGLE = 0.6  # a single-line value may shrink to this fraction of the field's size
 MIN_SIZE_MULTI = 6.0 * SCALE  # a multiline value shrinks down to 6 pt (Letter) before it is cut off
 

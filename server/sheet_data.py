@@ -29,6 +29,7 @@ from export_labels import DEFAULT_LANG, check_lang, label, sheet_label, weight, 
 
 STANDARD_ACTIONS = ("Attack", "Dash", "Disengage", "Dodge", "Help", "Hide", "Influence", "Magic", "Ready", "Search",
                     "Study", "Utilize")
+MARK_PROFICIENT, MARK_EXPERT = "P", "E"  # language-neutral letters in the skill circles (saving throws use a dot checkbox)
 SMALL_FONT = 6.0  # Letter points: the smallest size a text box shrinks to before text continues elsewhere
 CHAR_WIDTH_EM = 0.58  # average character width of DejaVu Sans in em (a conservative estimate for the overflow split)
 LEADING = 1.2
@@ -456,17 +457,16 @@ def _weapon_rows(resolution: dict, catalog, lang: str) -> list[tuple[str, str, s
     return rows
 
 
-def _skill_rows(resolution: dict) -> dict[str, tuple[bool, bool, str, str]]:
+def _skill_rows(resolution: dict) -> dict[str, tuple[str, str, str]]:
     sheet, derived = resolution["sheet"], resolution["derived"]
     prof = set(sheet["proficiencies"].get("skills") or [])
     expert = set(sheet.get("expertiseSkills") or [])
     out = {}
     for skill in L.SKILLS:
         sid = "skill-" + re.sub(r"(?<!^)([A-Z])", r"-\1", skill).lower()
-        expertise = sid in expert
-        proficient = expertise or sid in prof  # expertise implies proficiency
+        mark = MARK_EXPERT if sid in expert else MARK_PROFICIENT if sid in prof else ""  # one character in the skill circle
         value = derived["skills"].get(sid)
-        out[skill] = (proficient, expertise, fmt_mod(value) if value is not None else "", SKILL_ABILITY.get(sid, ""))
+        out[skill] = (mark, fmt_mod(value) if value is not None else "", SKILL_ABILITY.get(sid, ""))
     return out
 
 
@@ -525,9 +525,8 @@ def build_sheet_data(resolution: dict, catalog, lang: str = DEFAULT_LANG, rulese
         v[f"Ability{a}Mod"] = fmt_mod(mods[ab]) if ab in mods else ""
         v[f"Save{a}Mark"] = ab in save_prof  # a checked box: a filled dot in the ring
         v[f"Save{a}"] = fmt_mod(saves[ab]) if ab in saves else ""
-    for skill, (proficient, expertise, value, ability) in _skill_rows(resolution).items():
-        v[f"Skill{skill}Mark"], v[f"Skill{skill}Expert"] = proficient, expertise
-        v[f"Skill{skill}"], v[f"Skill{skill}Ability"] = value, ability
+    for skill, (mark, value, ability) in _skill_rows(resolution).items():
+        v[f"Skill{skill}Mark"], v[f"Skill{skill}"], v[f"Skill{skill}Ability"] = mark, value, ability
     v["PassivePerception"] = str(derived.get("passivePerception", ""))
     v["PassiveInsight"] = str(derived.get("passiveInsight", ""))
     v["PassiveInvestigation"] = str(derived.get("passiveInvestigation", ""))

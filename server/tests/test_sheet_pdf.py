@@ -588,7 +588,7 @@ def test_the_longest_identity_values_fit_their_boxes_at_a_readable_size(lang, ca
 
 def test_a_long_value_does_not_change_the_width_pdfkit_needs(catalog):
     """Preview (PDFKit) lays a form field's text out in the box minus about 3 pt and wraps / hides the rest: the fit pad is that."""
-    assert SF.PAD >= 3.0
+    assert SF.PAD >= 3.5  # a 3-character value like +11 in an 18.5 pt box lost its last digit at 3.2
     r = reader(make("paladin6", "en", catalog))
     f = r.get_fields()
     m = metrics_of(r)
@@ -597,23 +597,29 @@ def test_a_long_value_does_not_change_the_width_pdfkit_needs(catalog):
         x0, y0, x1, y1 = L.a4_rect(w.rect)
         text = str(f[name].get("/V") or "")
         _l, size, fits = SF.fit_text(m, text, x1 - x0, y1 - y0, L.FIELDS_BY_NAME[name].size * L.SCALE, False)
-        assert fits and m.width(text, size) <= x1 - x0 - 2 * 3.0 + 0.01, name
+        assert fits and m.width(text, size) <= x1 - x0 - 2 * 3.5 + 0.01, name
 
 
-def test_the_marks_are_clickable_checkboxes_with_a_dot_and_expertise_is_a_second_box(catalog):
+def test_saves_are_dot_checkboxes_and_skill_marks_are_letters_that_fit_their_circle(catalog):
     r = reader(make("wizard5-2024", "en", catalog))
     f = r.get_fields()
     sheet = resolution("wizard5-2024", catalog)["sheet"]
-    assert any(sid for sid in sheet["expertiseSkills"]), "the draft has expertise"
+    assert sheet["expertiseSkills"], "the draft has expertise"
     for page in r.pages:
         for a in page.get("/Annots", []):
             a = a.get_object()
             name = a.get("/T") or ""
-            if name.endswith(("Mark", "Expert")) and a.get("/FT") == "/Btn":
-                assert set(a["/AP"]["/N"]) == {"/Yes", "/Off"}, name
+            if name.startswith("Save") and name.endswith("Mark"):
+                assert set(a["/AP"]["/N"]) == {"/Yes", "/Off"}
                 on = a["/AP"]["/N"]["/Yes"].get_object().get_data()
                 assert b" c f" in on and b" l S" not in on, name  # a filled dot, not the cross
     for skill in sheet["expertiseSkills"]:
         field = "Skill" + "".join(w.capitalize() for w in skill.replace("skill-", "").split("-"))
-        assert f[field + "Expert"]["/V"] == "/Yes" and f[field + "Mark"]["/V"] == "/Yes", field
-    assert f["SkillAcrobatics"]["/FT"] == "/Tx"  # the value stays a text field
+        assert f[field + "Mark"]["/V"] == "E" and f[field + "Mark"]["/FT"] == "/Tx", field
+    assert not [n for n in f if n.endswith("Expert")]
+    m = metrics_of(r)
+    for name in [f"Skill{s}Mark" for s in L.SKILLS]:
+        x0, y0, x1, y1 = L.a4_rect(L.FIELDS_BY_NAME[name].widgets[0].rect)
+        for ch in ("P", "E"):
+            _l, size, fits = SF.fit_text(m, ch, x1 - x0, y1 - y0, L.FIELDS_BY_NAME[name].size * L.SCALE, False)
+            assert fits and size >= L.FIELDS_BY_NAME[name].size * L.SCALE - 0.01, (name, ch)  # not even shrunk

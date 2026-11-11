@@ -63,9 +63,8 @@ def test_the_numbers_come_from_the_resolution(sid, lang, catalog):
     for skill in L.SKILLS:
         sid_ = "skill-" + re.sub(r"(?<!^)([A-Z])", r"-\1", skill).lower()
         assert got[f"Skill{skill}"] == sign(derived["skills"][sid_])
-        expert = sid_ in sheet["expertiseSkills"]
-        assert got[f"Skill{skill}Expert"] is expert  # a second checkbox: a dot in a double ring
-        assert got[f"Skill{skill}Mark"] is (expert or sid_ in sheet["proficiencies"]["skills"])  # expertise implies proficiency
+        mark = "E" if sid_ in sheet["expertiseSkills"] else "P" if sid_ in sheet["proficiencies"]["skills"] else ""
+        assert got[f"Skill{skill}Mark"] == mark  # one character in the circle
     assert got["ArmorClass"] == str(derived["armorClass"]) and got["MaxHp"] == str(derived["hitPointMax"])
     assert got["Initiative"] == sign(derived["initiative"]) and got["ProficiencyBonus"] == sign(derived["proficiencyBonus"])
     assert got["PassivePerception"] == str(derived["passivePerception"])
@@ -314,12 +313,14 @@ def test_the_module_is_pure_data_code():
     assert not mods & {"fpdf", "pypdf", "PIL", "fontTools", "defusedxml", "flask", "yaml", "os", "pathlib", "io"}, mods
 
 
-def test_the_skill_marks_are_checkboxes_without_letters_and_the_legend_says_so():
-    for name in [f"Skill{s}{k}" for s in L.SKILLS for k in ("Mark", "Expert")] + [f"Save{a}Mark" for a in L.ABILITIES] \
-            + [f"CustomSkill{i}{k}" for i in (1, 2, 3) for k in ("Mark", "Expert")]:
+def test_skill_marks_are_one_character_fields_and_saves_are_dot_checkboxes():
+    for name in [f"Skill{s}Mark" for s in L.SKILLS] + [f"CustomSkill{i}Mark" for i in (1, 2, 3)]:
         f = L.FIELDS_BY_NAME[name]
-        assert f.kind == "check" and f.style == "dot", name
+        assert f.kind == "text" and f.align == "center", name
+    assert not [n for n in L.FIELDS_BY_NAME if n.endswith("Expert")], "no second expertise box"
+    for a in L.ABILITIES:
+        f = L.FIELDS_BY_NAME[f"Save{a}Mark"]
+        assert f.kind == "check" and f.style == "dot", a
     for lang in LANGS:
         legend = LABELS[lang]["sheet"]["legend"]
-        assert "E =" not in legend and "E -" not in legend and "P = Proficiency" not in legend and "P - владеене" not in legend
-    assert "double ring" in LABELS["en"]["sheet"]["legend"] and "двоен пръстен" in LABELS["bg"]["sheet"]["legend"]
+        assert ("P - владеене" in legend and "E - експертиза" in legend) if lang == "bg" else ("P = Proficiency" in legend and "E = Expertise" in legend)

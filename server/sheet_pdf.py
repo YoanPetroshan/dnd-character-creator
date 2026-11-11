@@ -265,9 +265,6 @@ def draw_field_boxes(doc: _Doc, names, page: int) -> None:
                 doc.oval((x0 - 3, y0 - 1.5, x1 + 3, y1 + 1.5), FIELD)
             elif n.startswith("Coins"):
                 doc.hexagon((x0 - 2, y0 - 2, x1 + 2, y1 + 2))
-            elif f.kind == "check" and n.endswith("Expert"):  # expertise: a double ring (the dot appears inside when checked)
-                doc.oval(w.rect, FIELD)
-                doc.oval((x0 + 1.3, y0 + 1.3, x1 - 1.3, y1 - 1.3), None, width=0.6)
             elif (n.startswith(CIRCLES) and (n.endswith("Mark") or n.startswith(("Inspiration", "Death")))):
                 doc.oval(w.rect, FIELD)
             else:
@@ -335,10 +332,10 @@ class Sheet:
         # saves: short names; skills: names and ability tags are fields, the names are drawn
         for i, a in enumerate(L.ABILITIES):
             y = L.FIELDS_BY_NAME[f"Save{a}"].widgets[0].rect[1]
-            d.put(a.upper(), 132, y + 2, 7, "left", 22, color=(0, 0, 0))
+            d.put(a.upper(), 133, y + 2, 7, "left", 22, color=(0, 0, 0))
         for i, s in enumerate(L.SKILLS):
             y = L.FIELDS_BY_NAME[f"Skill{s}"].widgets[0].rect[1]
-            d.put(SKILL_LABELS[i], 132.5, y + 2, 7, "left", 44)
+            d.put(SKILL_LABELS[i], 131.5, y + 2, 7, "left", 44.5)
         # passives
         for n, key in (("PassivePerception", "passivePerception"), ("PassiveInsight", "passiveInsight"),
                        ("PassiveInvestigation", "passiveInvestigation")):
