@@ -59,12 +59,13 @@ def test_the_numbers_come_from_the_resolution(sid, lang, catalog):
         assert got[f"Ability{a}"] == str(sheet["abilities"][ab])
         assert got[f"Ability{a}Mod"] == sign(derived["abilityModifiers"][ab])
         assert got[f"Save{a}"] == sign(derived["savingThrows"][ab])
-        assert got[f"Save{a}Mark"] == ("●" if ab in sheet["proficiencies"]["savingThrows"] else "")
+        assert got[f"Save{a}Mark"] is (ab in sheet["proficiencies"]["savingThrows"])  # a checkbox: a filled dot when proficient
     for skill in L.SKILLS:
         sid_ = "skill-" + re.sub(r"(?<!^)([A-Z])", r"-\1", skill).lower()
         assert got[f"Skill{skill}"] == sign(derived["skills"][sid_])
-        mark = "E" if sid_ in sheet["expertiseSkills"] else "P" if sid_ in sheet["proficiencies"]["skills"] else ""
-        assert got[f"Skill{skill}Mark"] == mark
+        expert = sid_ in sheet["expertiseSkills"]
+        assert got[f"Skill{skill}Expert"] is expert  # a second checkbox: a dot in a double ring
+        assert got[f"Skill{skill}Mark"] is (expert or sid_ in sheet["proficiencies"]["skills"])  # expertise implies proficiency
     assert got["ArmorClass"] == str(derived["armorClass"]) and got["MaxHp"] == str(derived["hitPointMax"])
     assert got["Initiative"] == sign(derived["initiative"]) and got["ProficiencyBonus"] == sign(derived["proficiencyBonus"])
     assert got["PassivePerception"] == str(derived["passivePerception"])
@@ -311,3 +312,14 @@ def test_the_module_is_pure_data_code():
     mods = {(n.module if isinstance(n, ast.ImportFrom) else a.name).split(".")[0]
             for n in ast.walk(tree) if isinstance(n, (ast.Import, ast.ImportFrom)) for a in (n.names if isinstance(n, ast.Import) else [n])}
     assert not mods & {"fpdf", "pypdf", "PIL", "fontTools", "defusedxml", "flask", "yaml", "os", "pathlib", "io"}, mods
+
+
+def test_the_skill_marks_are_checkboxes_without_letters_and_the_legend_says_so():
+    for name in [f"Skill{s}{k}" for s in L.SKILLS for k in ("Mark", "Expert")] + [f"Save{a}Mark" for a in L.ABILITIES] \
+            + [f"CustomSkill{i}{k}" for i in (1, 2, 3) for k in ("Mark", "Expert")]:
+        f = L.FIELDS_BY_NAME[name]
+        assert f.kind == "check" and f.style == "dot", name
+    for lang in LANGS:
+        legend = LABELS[lang]["sheet"]["legend"]
+        assert "E =" not in legend and "E -" not in legend and "P = Proficiency" not in legend and "P - владеене" not in legend
+    assert "double ring" in LABELS["en"]["sheet"]["legend"] and "двоен пръстен" in LABELS["bg"]["sheet"]["legend"]

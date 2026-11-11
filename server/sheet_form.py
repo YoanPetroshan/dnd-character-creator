@@ -237,7 +237,18 @@ def apply_form(base: bytes, fields: Sequence[Field], values: Mapping[str, str | 
                 n("/MK"): DictionaryObject(),
             })
             if field.kind == "check":
-                on = form_xobject(f"q 0 g {a4_size(1.0):.2f} w {pad:.2f} {pad:.2f} m {w - pad:.2f} {h - pad:.2f} l S "
+                if field.style == "dot":  # a filled dot (the ring is page artwork); the same dot for proficiency and expertise
+                    r_dot = min(w, h) * 0.30
+                    k = 0.5523 * r_dot
+                    cx, cy = w / 2.0, h / 2.0
+                    on = form_xobject(
+                        f"q 0 g {cx + r_dot:.2f} {cy:.2f} m "
+                        f"{cx + r_dot:.2f} {cy + k:.2f} {cx + k:.2f} {cy + r_dot:.2f} {cx:.2f} {cy + r_dot:.2f} c "
+                        f"{cx - k:.2f} {cy + r_dot:.2f} {cx - r_dot:.2f} {cy + k:.2f} {cx - r_dot:.2f} {cy:.2f} c "
+                        f"{cx - r_dot:.2f} {cy - k:.2f} {cx - k:.2f} {cy - r_dot:.2f} {cx:.2f} {cy - r_dot:.2f} c "
+                        f"{cx + k:.2f} {cy - r_dot:.2f} {cx + r_dot:.2f} {cy - k:.2f} {cx + r_dot:.2f} {cy:.2f} c f Q", w, h, False)
+                else:
+                    on = form_xobject(f"q 0 g {a4_size(1.0):.2f} w {pad:.2f} {pad:.2f} m {w - pad:.2f} {h - pad:.2f} l S "
                                   f"{pad:.2f} {h - pad:.2f} m {w - pad:.2f} {pad:.2f} l S Q", w, h, False)
                 off = form_xobject("", w, h, False)
                 state = n("/Yes" if value else "/Off")

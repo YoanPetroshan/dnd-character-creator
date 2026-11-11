@@ -48,6 +48,7 @@ class Field:
     widgets: tuple[Widget, ...]  # more than one: the same field shown on several pages (one shared value)
     align: str = "left"  # "left" | "center"
     size: float = 8.0  # default font size in Letter points (the renderer may shrink long text)
+    style: str = ""  # a checkbox: "" = a cross when checked, "dot" = a filled dot (proficiency / expertise marks)
 
 
 @dataclass(frozen=True)
@@ -66,10 +67,10 @@ def _r(x0: float, y0: float, x1: float, y1: float) -> Rect:
 _FIELDS: list[Field] = []
 
 
-def _add(name: str, kind: str, rects: dict[int, Rect] | Rect, page: int = 1, align: str = "left", size: float = 8.0) -> None:
+def _add(name: str, kind: str, rects: dict[int, Rect] | Rect, page: int = 1, align: str = "left", size: float = 8.0, style: str = "") -> None:
     if isinstance(rects, tuple):
         rects = {page: rects}
-    _FIELDS.append(Field(name, kind, tuple(Widget(p, r) for p, r in sorted(rects.items())), align, size))
+    _FIELDS.append(Field(name, kind, tuple(Widget(p, r) for p, r in sorted(rects.items())), align, size, style))
 
 
 # ---- identity header: one field with a widget per page (page 4 only has the character name) ----
@@ -87,7 +88,7 @@ for _i, _a in enumerate(ABILITIES):
     _add(f"Ability{_a}", "text", _r(36.8, _SCORE_Y[_i], 77.8, _SCORE_Y[_i] + 25.5), align="center", size=18.0)
     _add(f"Ability{_a}Mod", "text", _r(46.4, _MOD_Y[_i], 67.7, _MOD_Y[_i] + 12.8), align="center", size=10.0)
     _y = 650.4 - 13.5 * _i
-    _add(f"Save{_a}Mark", "text", _r(99.6, _y, 109.0, _y + 8.7), align="center", size=8.0)
+    _add(f"Save{_a}Mark", "check", _r(99.7, _y + 0.6, 107.1, _y + 8.0), style="dot")  # proficient: a filled dot in the ring
     _add(f"Save{_a}", "text", _r(111.0, _y, 128.5, _y + 8.6), align="center", size=8.0)
 
 SKILLS = ("Acrobatics", "AnimalHandling", "Arcana", "Athletics", "Deception", "History", "Insight", "Intimidation",
@@ -95,13 +96,15 @@ SKILLS = ("Acrobatics", "AnimalHandling", "Arcana", "Athletics", "Deception", "H
           "Stealth", "Survival")
 for _i, _s in enumerate(SKILLS):
     _y = 480.8 - 13.5 * _i
-    _add(f"Skill{_s}Mark", "text", _r(99.7, _y - 0.5, 109.0, _y + 8.2), align="center")
-    _add(f"Skill{_s}", "text", _r(110.5, _y, 128.0, _y + 8.6), align="center")
+    _add(f"Skill{_s}Mark", "check", _r(97.0, _y + 0.6, 104.4, _y + 8.0), style="dot")  # proficient
+    _add(f"Skill{_s}Expert", "check", _r(105.4, _y + 0.6, 112.8, _y + 8.0), style="dot")  # expertise: a dot in a double ring
+    _add(f"Skill{_s}", "text", _r(113.6, _y, 131.0, _y + 8.6), align="center")
     _add(f"Skill{_s}Ability", "text", _r(178.0, _y, 200.4, _y + 8.6), align="left", size=7.0)
 for _i, _y in enumerate((237.2, 222.8, 209.2), start=1):
-    _add(f"CustomSkill{_i}Mark", "text", _r(99.7, _y - 0.7, 109.0, _y + 7.9), align="center")
-    _add(f"CustomSkill{_i}Bonus", "text", _r(110.5, _y, 128.0, _y + 8.7), align="center")
-    _add(f"CustomSkill{_i}Name", "text", _r(132.0, _y - 0.5, 200.4, _y + 8.7), size=7.0)
+    _add(f"CustomSkill{_i}Mark", "check", _r(97.0, _y + 0.6, 104.4, _y + 8.0), style="dot")
+    _add(f"CustomSkill{_i}Expert", "check", _r(105.4, _y + 0.6, 112.8, _y + 8.0), style="dot")
+    _add(f"CustomSkill{_i}Bonus", "text", _r(113.6, _y, 131.0, _y + 8.7), align="center")
+    _add(f"CustomSkill{_i}Name", "text", _r(133.0, _y - 0.5, 200.4, _y + 8.7), size=7.0)
 
 _add("SaveNotes", "multi", _r(98.9, 520.8, 200.6, 562.2), size=7.0)
 for _name, _y in (("PassivePerception", 149.0), ("PassiveInsight", 119.0), ("PassiveInvestigation", 88.2)):
@@ -233,8 +236,8 @@ def fixed_page_fields(page: int) -> tuple[Field, ...]:
 def _rows() -> dict[str, tuple[tuple[str, ...], ...]]:
     rows: dict[str, tuple[tuple[str, ...], ...]] = {
         "saves": tuple((f"Save{a}Mark", f"Save{a}") for a in ABILITIES),
-        "skills": tuple((f"Skill{s}Mark", f"Skill{s}", f"Skill{s}Ability") for s in SKILLS),
-        "custom_skills": tuple((f"CustomSkill{i}Mark", f"CustomSkill{i}Bonus", f"CustomSkill{i}Name") for i in (1, 2, 3)),
+        "skills": tuple((f"Skill{s}Mark", f"Skill{s}Expert", f"Skill{s}", f"Skill{s}Ability") for s in SKILLS),
+        "custom_skills": tuple((f"CustomSkill{i}Mark", f"CustomSkill{i}Expert", f"CustomSkill{i}Bonus", f"CustomSkill{i}Name") for i in (1, 2, 3)),
         "weapons": tuple((f"Weapon{i}Name", f"Weapon{i}Attack", f"Weapon{i}Damage", f"Weapon{i}Notes") for i in range(1, 7)),
         "attuned": tuple((f"Attuned{i}Name", f"Attuned{i}Qty", f"Attuned{i}Weight") for i in (1, 2, 3)),
     }
@@ -261,8 +264,8 @@ FRAMES: tuple[Frame, ...] = (
     Frame("ability_int", 1, (26.0, 355.2, 89.0, 422.5), "abilityInt", ("AbilityInt", "AbilityIntMod")),
     Frame("ability_wis", 1, (26.0, 278.9, 89.0, 346.2), "abilityWis", ("AbilityWis", "AbilityWisMod")),
     Frame("ability_cha", 1, (26.0, 202.7, 89.0, 269.9), "abilityCha", ("AbilityCha", "AbilityChaMod")),
-    Frame("saves", 1, (94.9, 514.8, 204.6, 678.1), "saves", _ROWNAMES["saves"] + ("SaveNotes",)),
-    Frame("skills", 1, (95.7, 198.5, 204.4, 501.4), "skills", _ROWNAMES["skills"] + _ROWNAMES["custom_skills"]),
+    Frame("saves", 1, (93.0, 514.8, 204.6, 678.1), "saves", _ROWNAMES["saves"] + ("SaveNotes",)),
+    Frame("skills", 1, (93.0, 198.5, 204.4, 501.4), "skills", _ROWNAMES["skills"] + _ROWNAMES["custom_skills"]),
     Frame("senses", 1, (33.8, 28.0, 201.6, 171.6), "senses", ("PassivePerception", "PassiveInsight", "PassiveInvestigation", "Senses")),
     Frame("initiative", 1, (228.0, 604.3, 282.5, 649.8), "initiative", ("Initiative",)),
     Frame("armor_class", 1, (324.0, 588.0, 386.0, 653.0), "armorClass", ("ArmorClass",)),
