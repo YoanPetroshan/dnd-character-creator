@@ -449,3 +449,42 @@ def test_every_page_registers_its_fonts(catalog):
         used = set(re.findall(rb"(/F\d+) [\d.]+ Tf", page.get_contents().get_data()))
         assert used and {u.decode() for u in used} <= fonts, (number, used, fonts)
         assert len(fonts) == 2
+
+
+@pytest.mark.parametrize("lang", ("bg", "en"))
+@pytest.mark.parametrize("sid", ("paladin6", "wizard20-2014", "cleric6-paladin3-2014", "warlock7-2024"))
+def test_no_drawn_text_is_wider_than_the_room_it_was_given(sid, lang, catalog):
+    """Every caption, title and heading is measured with the real font against the width its box / frame allows (at the smallest
+    readable size); one that still overflows is recorded by `_Doc.put` and is a defect (a title crossing its frame border)."""
+    sheet = sheet_pdf.Sheet(resolution(sid, catalog), lang, catalog, CREATED, KITCHEN_SINK[sid]["ruleset"])
+    sheet.build()
+    assert sheet.doc.overflows == [], sheet.doc.overflows
+    assert sheet.title_misses == []
+
+
+def test_the_longest_carrying_values_fit_at_six_points_or_more(catalog):
+    """`NNNN lb (NNNN,N kg)` in a carrying box (a Strength 30 character: 1800 lb push / drag / lift) at 6 pt (Letter) or more."""
+    r = reader(make("paladin6", "bg", catalog))
+    m = metrics_of(r)
+    for name in ("WeightCarried", "WeightCapacity", "PushDragLift"):
+        x0, y0, x1, y1 = L.a4_rect(L.FIELDS_BY_NAME[name].widgets[0].rect)
+        for text in ("1234 lb (559,9 kg)", "1800 lb (816,5 kg)", "99 lb (44,9 kg)"):
+            _lines, size, fits = SF.fit_text(m, text, x1 - x0, y1 - y0, L.FIELDS_BY_NAME[name].size * L.SCALE, False)
+            assert fits and size >= 6.0 * L.SCALE, (name, text, size)
+
+
+def test_the_spell_save_dc_boxes_hold_three_letter_abilities(catalog):
+    m = metrics_of(reader(make("paladin6", "en", catalog)))
+    for name in ("SpellDc1Ability", "SpellDc2Ability"):
+        x0, y0, x1, y1 = L.a4_rect(L.FIELDS_BY_NAME[name].widgets[0].rect)
+        for text in ("CHA", "WIS", "INT", "CON", "STR", "DEX"):
+            _l, size, fits = SF.fit_text(m, text, x1 - x0, y1 - y0, L.FIELDS_BY_NAME[name].size * L.SCALE, False)
+            assert fits and size >= L.FIELDS_BY_NAME[name].size * L.SCALE - 0.01, (name, text, size)  # not even shrunk
+
+
+def test_form_fields_have_no_fill_so_a_blue_tint_is_the_viewers_highlight(catalog):
+    r = reader(make("paladin6", "bg", catalog))
+    for page in r.pages:
+        for a in page.get("/Annots", []):
+            a = a.get_object()
+            assert "/BG" not in a.get("/MK", {}) and "/IC" not in a.get("/MK", {}), a.get("/T")

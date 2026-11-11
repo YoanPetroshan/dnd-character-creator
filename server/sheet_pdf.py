@@ -38,6 +38,7 @@ class _Doc(FPDF):
         self.set_auto_page_break(False)
         self.add_font("DejaVu", "", str(FONT_DIR / "DejaVuSans.ttf"))
         self.add_font("DejaVu", "B", str(FONT_DIR / "DejaVuSans-Bold.ttf"))
+        self.overflows: list[tuple[str, float, float]] = []  # (text, width needed at the smallest size, width allowed): a defect
 
     def clean(self, text: str) -> str:
         """Characters DejaVu has no glyph for (emoji, CJK ...) become "?": visible and explicit, never a missing-glyph error."""
@@ -64,6 +65,8 @@ class _Doc(FPDF):
         text = self.clean(text)
         if width:
             size = self.fit_size(text, width, size, minimum, bold)
+            if self.width(text, size, bold) > width + 0.5:
+                self.overflows.append((text, round(self.width(text, size, bold), 1), width))
         w = self.width(text, size, bold)
         if align == "center" and width:
             x += (width - w) / 2
@@ -150,21 +153,21 @@ def _members_bbox(fr: L.Frame):
     return (min(r[0] for r in rects), min(r[1] for r in rects), max(r[2] for r in rects), max(r[3] for r in rects))
 
 
-def title_lines(doc: _Doc, text: str, width: float) -> tuple[list[str], float]:
-    """The title in capitals as one line, or two (the bracket term on its own line), at TITLE_SIZE; down to TITLE_MIN only if a
-    single word is too wide."""
+def title_lines(doc: _Doc, text: str, width: float, max_lines: int = 3) -> tuple[list[str], float]:
+    """The title in capitals as one line, or wrapped (the bracket term starts its own line), at TITLE_SIZE, else at TITLE_MIN.
+    Words are never cut; a line that is still too wide is recorded by ``put`` as an overflow."""
     text = text.upper()
+    lines: list[str] = [text]
     for size in (TITLE_SIZE, TITLE_MIN):
-        if doc.width(text, size, True) <= width:
+        measure = lambda t, size=size: doc.width(t, size, True)  # noqa: E731
+        if measure(text) <= width:
             return [text], size
         if " (" in text:
             head, tail = text.split(" (", 1)
-            lines = [head, "(" + tail]
+            lines = wrap_text(measure, head, width) + wrap_text(measure, "(" + tail, width)
         else:
-            lines = wrap_text(lambda t: doc.width(t, size, True), text, width)
-            if len(lines) > 2:
-                lines = [lines[0], " ".join(lines[1:])]
-        if all(doc.width(x, size, True) <= width for x in lines):
+            lines = wrap_text(measure, text, width)
+        if len(lines) <= max_lines and all(measure(x) <= width + 0.01 for x in lines):
             return lines, size
     return lines, TITLE_MIN
 
@@ -321,7 +324,7 @@ class Sheet:
         for n, key in (("MaxHp", "hpMax"), ("CurrentHp", "hpCurrent"), ("TempHp", "hpTemp")):
             x0, y0, x1, _ = L.FIELDS_BY_NAME[n].widgets[0].rect
             d.put(sheet_label(lang, key), x0 - 2, y0 - 8, 5.6, "center", x1 - x0 + 4, color=LABEL)
-        for n, key, dy in (("HitDiceTotal", "hdTotal", 3), ("HitDiceSpent", "hdSpent", -7)):
+        for n, key, dy in (("HitDiceTotal", "hdTotal", 3), ("HitDiceSpent", "hdSpent", -5.5)):
             x0, y0, x1, y1 = L.FIELDS_BY_NAME[n].widgets[0].rect
             d.put(sheet_label(lang, key), x0 - 2, (y1 if dy > 0 else y0) + dy, 5.6, "center", x1 - x0 + 4, color=LABEL)
         for n, key in (("DeathSuccess1", "dsSuccess"), ("DeathFailure1", "dsFailure")):
@@ -427,10 +430,12 @@ class Sheet:
         if page == 2:
             for n, key in (("CoinsCp", "CP"), ("CoinsSp", "SP"), ("CoinsEp", "EP"), ("CoinsGp", "GP"), ("CoinsPp", "PP")):
                 x0, y0, x1, y1 = L.FIELDS_BY_NAME[n].widgets[0].rect
-                d.put(key, x1 + 5, y0 + 6, 7, "left", 10, bold=True, color=LABEL)
+                d.put(key, x1 + 4.5, (y0 + y1) / 2 - 2.0, 6.0, "left", 10, bold=True, color=TITLE)
             for n, key in (("WeightCarried", "carryWeight"), ("WeightCapacity", "carryCapacity"), ("PushDragLift", "carryPush")):
                 x0, y0, x1, y1 = L.FIELDS_BY_NAME[n].widgets[0].rect
-                d.put(sheet_label(lang, key), x0, y1 + 2, 5.6, "left", x1 - x0 + 4, color=LABEL, minimum=5.0)
+                caption = wrap_text(lambda t: d.width(t, 5.6), sheet_label(lang, key), x1 - x0 + 2)
+                for i, ln in enumerate(reversed(caption[:2])):
+                    d.put(ln, x0, y1 + 2.2 + 6.0 * i, 5.6, "left", x1 - x0 + 2, color=LABEL, minimum=5.0)
             heads = (("Eq0Name", "Eq0Qty", "Eq0Weight"), ("Eq15Name", "Eq15Qty", "Eq15Weight"), ("Attuned1Name", "Attuned1Qty", "Attuned1Weight"))
         else:
             heads = (("Eq26Name", "Eq26Qty", "Eq26Weight"), ("Eq41Name", "Eq41Qty", "Eq41Weight"))
@@ -578,7 +583,7 @@ class Sheet:
             cells["Notes"] = self.shorten(cells["Notes"], 578.8 - 422.6)
             for key, text in cells.items():
                 values[f"Spell{n}_{slot:02d}_{key}"] = text
-        d.box((43.0, 694.0, 560.0, 742.0), 1.0, fill=FRAME_FILL, radius=6, color=INK)
+        d.box((43.0, 689.5, 560.0, 742.0), 1.0, fill=FRAME_FILL, radius=6, color=INK)
         d.box((25.0, 49.0, 582.0, 652.0), 1.0, fill=PANEL, radius=7, color=INK)
         for slot, row in enumerate(rows):  # a darker band behind each level header
             if row.kind == "header":
@@ -594,17 +599,19 @@ class Sheet:
                 d.box((41.9, y0, 148.1, y1), 0.3, fill=(205, 205, 205), color=(205, 205, 205))
         for key, text in (("Ability", "spAbility"), ("SaveDc", "spDc"), ("Attack", "spAttack"), ("Class", "spClass")):
             rect = next(f for f in fields if f.name == f"Spell{n}_{key}").widgets[0].rect
-            lines, size = title_lines(d, sheet_label(lang, text), rect[2] - rect[0] + 8 if key != "Class" else rect[2] - rect[0])
+            room = {"Ability": 96.0, "SaveDc": 70.0, "Attack": 112.0, "Class": rect[2] - rect[0]}[key]
+            lines, size = title_lines(d, sheet_label(lang, text), room)
+            cx = (rect[0] + rect[2]) / 2
             for i, ln in enumerate(lines):
-                d.put(ln, rect[0] - (4 if key != "Class" else 0), rect[1] - 6.6 - LINE_H * i, size, "center" if key != "Class" else "left",
-                      rect[2] - rect[0] + (8 if key != "Class" else 0), bold=True, color=LABEL, minimum=size)
+                x = rect[0] if key == "Class" else cx - room / 2
+                d.put(ln, x, rect[1] - 6.6 - LINE_H * i, size, "left" if key == "Class" else "center", room, bold=True, color=TITLE, minimum=size)
         top = L.SPELL_SLOT_TOP + 3
         for key, x0, x1, _al in L.SPELL_COLUMNS:
             d.put(sheet_label(lang, "sp" + key).upper() if key != "Prep" else sheet_label(lang, "spPrep").upper(), x0, top, 5.6, "left", x1 - x0, bold=True, color=LABEL, minimum=5.0)
         if slot_parts:
-            d.put("   ".join(slot_parts), 47.5, 684.0, 7, "left", 510, color=(0, 0, 0))
+            d.put("   ".join(slot_parts), 47.5, 677.0, 7, "left", 510, color=(0, 0, 0))
         if continued:
-            d.put(sheet_label(lang, "headContinued", title=group.title), 47.5, 668.0, 7, "left", 510, bold=True, color=LABEL)
+            d.put(sheet_label(lang, "headContinued", title=group.title), 47.5, 664.0, 7, "left", 510, bold=True, color=LABEL)
         for i, line in enumerate(wrap_text(lambda t: d.width(t, 5.0), sheet_label(lang, "legend"), 552.0)[:3]):
             d.put(line, 28.0, 41.5 - 6.0 * i, 5.0, "left", 552.0, color=LABEL, minimum=5.0)
         self.fields.extend(fields)

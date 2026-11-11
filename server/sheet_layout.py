@@ -115,8 +115,8 @@ _add("Defenses", "multi", _r(231.6, 548.5, 381.2, 582.1), size=7.0)
 _add("Inspiration", "check", _r(229.7, 501.7, 247.7, 519.7))
 _add("ProficiencyBonus", "text", _r(227.8, 465.5, 249.1, 482.0), align="center", size=11.0)
 _add("SpellDc1", "text", _r(227.7, 424.9, 249.0, 441.5), align="center", size=11.0)
-_add("SpellDc1Ability", "text", _r(257.1, 429.2, 275.0, 437.8), align="center", size=7.0)
-_add("SpellDc2Ability", "text", _r(336.1, 429.2, 354.0, 437.8), align="center", size=7.0)
+_add("SpellDc1Ability", "text", _r(253.0, 428.4, 281.0, 438.6), align="center", size=7.0)
+_add("SpellDc2Ability", "text", _r(331.0, 428.4, 359.0, 438.6), align="center", size=7.0)
 _add("SpellDc2", "text", _r(363.0, 424.9, 384.2, 441.5), align="center", size=11.0)
 _add("Speed", "multi", _r(236.2, 371.2, 377.4, 401.7), size=8.0)
 _add("MaxHp", "text", _r(426.8, 612.5, 463.2, 640.8), align="center", size=16.0)
@@ -145,7 +145,7 @@ for _i, (_x0, _x1) in enumerate(_FEATURE_COLS, start=1):
 for _i, (_n, _y) in enumerate((("Cp", 250.1), ("Sp", 221.2), ("Ep", 192.4), ("Gp", 163.8), ("Pp", 135.0))):
     _add(f"Coins{_n}", "text", _r(38.0, _y, 91.4, _y + 17.6), page=2, align="center", size=10.0)
 for _n, _y in (("WeightCarried", 101.3), ("WeightCapacity", 73.1), ("PushDragLift", 43.9)):
-    _add(_n, "text", _r(37.3, _y, 94.0, _y + 14.0), page=2, align="center", size=8.0)
+    _add(_n, "text", _r(37.3, _y, 103.0, _y + 14.0), page=2, align="center", size=8.0)
 
 _EQ_PITCH = 14.89
 _EQ_COLUMNS = (  # (name x0, x1), (qty x0, x1), (weight x0, x1) per equipment column
@@ -200,7 +200,7 @@ SPELL_COLUMNS = (  # (key, x0, x1, align): Prep, Name, Source, Save/Atk, Time, R
     ("Notes", 422.6, 578.8, "left"),
 )
 SPELL_HEADER_FIELDS = (("Ability", 283.8, 711.4, 348.6, 735.8), ("SaveDc", 384.5, 711.4, 449.3, 735.8),
-                       ("Attack", 488.3, 711.4, 553.1, 735.8), ("Class", 47.5, 705.9, 256.0, 726.8))
+                       ("Attack", 468.0, 711.4, 532.8, 735.8), ("Class", 47.5, 705.9, 256.0, 726.8))
 
 
 def spell_slot_y(slot: int) -> tuple[float, float]:
@@ -255,12 +255,12 @@ FRAMES: tuple[Frame, ...] = (
     Frame("identity", 2, (43.3, 693.2, 572.2, 747.4), "", _IDENT),
     Frame("identity", 3, (43.3, 693.2, 572.2, 747.4), "", _IDENT),
     Frame("identity", 4, (45.3, 700.8, 226.5, 735.7), "", ("CharacterName",)),
-    Frame("ability_str", 1, (28.5, 585.5, 86.5, 652.8), "abilityStr", ("AbilityStr", "AbilityStrMod")),
-    Frame("ability_dex", 1, (28.5, 508.5, 86.5, 575.8), "abilityDex", ("AbilityDex", "AbilityDexMod")),
-    Frame("ability_con", 1, (28.5, 432.2, 86.5, 499.5), "abilityCon", ("AbilityCon", "AbilityConMod")),
-    Frame("ability_int", 1, (28.5, 355.2, 86.5, 422.5), "abilityInt", ("AbilityInt", "AbilityIntMod")),
-    Frame("ability_wis", 1, (28.5, 278.9, 86.5, 346.2), "abilityWis", ("AbilityWis", "AbilityWisMod")),
-    Frame("ability_cha", 1, (28.5, 202.7, 86.5, 269.9), "abilityCha", ("AbilityCha", "AbilityChaMod")),
+    Frame("ability_str", 1, (26.0, 585.5, 89.0, 652.8), "abilityStr", ("AbilityStr", "AbilityStrMod")),
+    Frame("ability_dex", 1, (26.0, 508.5, 89.0, 575.8), "abilityDex", ("AbilityDex", "AbilityDexMod")),
+    Frame("ability_con", 1, (26.0, 432.2, 89.0, 499.5), "abilityCon", ("AbilityCon", "AbilityConMod")),
+    Frame("ability_int", 1, (26.0, 355.2, 89.0, 422.5), "abilityInt", ("AbilityInt", "AbilityIntMod")),
+    Frame("ability_wis", 1, (26.0, 278.9, 89.0, 346.2), "abilityWis", ("AbilityWis", "AbilityWisMod")),
+    Frame("ability_cha", 1, (26.0, 202.7, 89.0, 269.9), "abilityCha", ("AbilityCha", "AbilityChaMod")),
     Frame("saves", 1, (94.9, 514.8, 204.6, 678.1), "saves", _ROWNAMES["saves"] + ("SaveNotes",)),
     Frame("skills", 1, (95.7, 198.5, 204.4, 501.4), "skills", _ROWNAMES["skills"] + _ROWNAMES["custom_skills"]),
     Frame("senses", 1, (33.8, 28.0, 201.6, 171.6), "senses", ("PassivePerception", "PassiveInsight", "PassiveInvestigation", "Senses")),
@@ -272,8 +272,8 @@ FRAMES: tuple[Frame, ...] = (
     Frame("spell_dc", 1, (221.7, 408.0, 390.2, 445.5), "spellSaveDc", ("SpellDc1", "SpellDc1Ability", "SpellDc2Ability", "SpellDc2")),
     Frame("speed", 1, (232.2, 361.2, 381.4, 405.7), "speed", ("Speed",)),
     Frame("hit_points", 1, (420.8, 598.0, 574.3, 656.6), "hitPoints", ("MaxHp", "CurrentHp", "TempHp")),
-    Frame("hit_dice", 1, (418.7, 518.0, 490.2, 596.0), "hitDice", ("HitDiceTotal", "HitDiceSpent")),
-    Frame("death_saves", 1, (497.4, 550.2, 576.4, 596.0), "deathSaves", tuple(f"Death{k}{i}" for k in ("Success", "Failure") for i in (1, 2, 3))),
+    Frame("hit_dice", 1, (413.0, 518.0, 494.5, 596.0), "hitDice", ("HitDiceTotal", "HitDiceSpent")),
+    Frame("death_saves", 1, (497.4, 533.5, 576.4, 596.0), "deathSaves", tuple(f"Death{k}{i}" for k in ("Success", "Failure") for i in (1, 2, 3))),
     Frame("proficiencies", 1, (410.0, 349.9, 583.6, 516.9), "proficiencies", ("Proficiencies",)),
     Frame("actions", 1, (222.0, 188.4, 582.4, 333.4), "actions", ("Actions1", "Actions2")),
     Frame("weapons", 1, (221.0, 35.2, 582.0, 174.7), "weapons", _ROWNAMES["weapons"]),
@@ -283,8 +283,8 @@ FRAMES: tuple[Frame, ...] = (
     Frame("features_5", 3, (216.6, 313.5, 395.1, 658.0), "", ("Features5",)),
     Frame("features_3", 2, (398.0, 313.5, 576.5, 658.0), "", ("Features3",)),
     Frame("features_6", 3, (398.0, 313.5, 576.5, 658.0), "", ("Features6",)),
-    Frame("coins", 2, (34.0, 131.0, 105.0, 279.7), "coins", tuple(f"Coins{n}" for n in ("Cp", "Sp", "Ep", "Gp", "Pp"))),
-    Frame("carrying", 2, (33.3, 24.0, 98.0, 127.3), "carrying", ("WeightCarried", "WeightCapacity", "PushDragLift")),
+    Frame("coins", 2, (34.0, 132.0, 106.5, 286.0), "coins", tuple(f"Coins{n}" for n in ("Cp", "Sp", "Ep", "Gp", "Pp"))),
+    Frame("carrying", 2, (33.3, 17.0, 106.5, 130.0), "carrying", ("WeightCarried", "WeightCapacity", "PushDragLift")),
     Frame("equipment_left", 2, (108.2, 24.0, 339.8, 281.0), "equipment", _ROWNAMES["equipment_p2_left"]),
     Frame("equipment_right", 2, (345.5, 102.0, 577.5, 281.0), "equipment", _ROWNAMES["equipment_p2_right"]),
     Frame("attuned", 2, (345.5, 24.0, 577.5, 98.3), "attuned", _ROWNAMES["attuned"]),
@@ -300,6 +300,6 @@ FRAMES: tuple[Frame, ...] = (
     Frame("backstory", 4, (33.1, 32.5, 202.5, 410.5), "backstory", ("Backstory",)),
     Frame("notes1", 4, (224.0, 32.3, 398.6, 410.3), "notes", ("Notes1",)),
     Frame("notes2", 4, (402.6, 31.9, 577.3, 409.8), "notes", ("Notes2",)),
-    Frame("spell_header", 5, (43.0, 694.0, 560.0, 742.0), "", ()),
+    Frame("spell_header", 5, (43.0, 689.5, 560.0, 742.0), "", ()),
     Frame("spell_grid", 5, (25.0, 49.0, 582.0, 652.0), "", ()),
 )

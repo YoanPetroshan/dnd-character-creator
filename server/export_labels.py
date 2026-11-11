@@ -232,7 +232,7 @@ _BG: dict = {
         "spDuration": "Прод.",
         "spRef": "Книга",
         "spNotes": "Бележки",
-        "spAbility": "Основа на заклинанията (Spellcasting Ability)",
+        "spAbility": "Магическа основа (Spellcasting Ability)",
         "spDc": "ТС",
         "spAttack": "Бонус за атака със заклинание (Spell Attack Modifier)",
         "spClass": "Клас",

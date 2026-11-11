@@ -1140,7 +1140,7 @@ Fire Bolt, Light се получават автоматично.",преведе
 985,Експорт,export:sheet.spDuration,Dur.,Прод.,Ред в Markdown / PDF файла: Надпис или ред в листа за игра (PDF форма): Прод.,преведено,,,
 986,Експорт,export:sheet.spRef,Ref,Книга,Ред в Markdown / PDF файла: Надпис или ред в листа за игра (PDF форма): Книга,преведено,,,
 987,Експорт,export:sheet.spNotes,Notes,Бележки,Ред в Markdown / PDF файла: Надпис или ред в листа за игра (PDF форма): Бележки,преведено,,,
-988,Експорт,export:sheet.spAbility,Spellcasting Ability,Основа на заклинанията (Spellcasting Ability),Ред в Markdown / PDF файла: Надпис или ред в листа за игра (PDF форма): Основа на заклинанията (Spellcasting Ability),преведено + английско в скоби,,,
+988,Експорт,export:sheet.spAbility,Spellcasting Ability,Магическа основа (Spellcasting Ability),Ред в Markdown / PDF файла: Надпис или ред в листа за игра (PDF форма): Магическа основа (Spellcasting Ability),преведено + английско в скоби,,,
 989,Експорт,export:sheet.spDc,Save DC,ТС,Ред в Markdown / PDF файла: Надпис или ред в листа за игра (PDF форма): ТС,преведено,,,
 990,Експорт,export:sheet.spAttack,Spell Attack Modifier,Бонус за атака със заклинание (Spell Attack Modifier),Ред в Markdown / PDF файла: Надпис или ред в листа за игра (PDF форма): Бонус за атака със заклинание (Spell Attack Modifier),преведено + английско в скоби,,,Дълго заради скобите (T1): 53 знака. На телефон и в тясна колона на таблица може да е неудобно; реши дали да остане с термина в скоби или да има по-кратка форма.
 991,Експорт,export:sheet.spClass,Class,Клас,Ред в Markdown / PDF файла: Надпис или ред в листа за игра (PDF форма): Клас,преведено,,,
