@@ -38,6 +38,8 @@ class _Doc(FPDF):
         self.set_auto_page_break(False)
         self.add_font("DejaVu", "", str(FONT_DIR / "DejaVuSans.ttf"))
         self.add_font("DejaVu", "B", str(FONT_DIR / "DejaVuSans-Bold.ttf"))
+        self.texts: list[tuple[int, str, tuple[float, float, float, float]]] = []  # (page, text, Letter box) of every drawn text
+        self.frames: list[tuple[int, tuple[float, float, float, float]]] = []  # (page, rect) of every outlined frame
         self.overflows: list[tuple[str, float, float]] = []  # (text, width needed at the smallest size, width allowed): a defect
 
     def clean(self, text: str) -> str:
@@ -73,6 +75,7 @@ class _Doc(FPDF):
         elif align == "right" and width:
             x += width - w
         self.set_text_color(*color)
+        self.texts.append((self.page, text, (x, y - 0.22 * size, x + w, y + 0.78 * size)))
         ax, ay = L.a4_point(x, y)
         self.text(ax, L.A4_H - ay, text)
 
@@ -112,6 +115,8 @@ class _Doc(FPDF):
         self.poly(pts, fill=FIELD_, width=1.2)
 
     def box(self, rect, width: float = 0.5, fill=None, radius: float = 0, color=GREY) -> None:
+        if color == INK_ and width >= 1.0:  # an outlined frame: remembered for the "no text crosses a border" test
+            self.frames.append((self.page, tuple(rect)))
         x0, y0, x1, y1 = L.a4_rect(rect)
         self.set_draw_color(*color)
         self.set_line_width(width * S)
@@ -153,6 +158,20 @@ def _members_bbox(fr: L.Frame):
     return (min(r[0] for r in rects), min(r[1] for r in rects), max(r[2] for r in rects), max(r[3] for r in rects))
 
 
+def wrap_words(measure, text: str, width: float) -> list[str]:
+    """Greedy wrap at spaces only: a word is never broken (one that is too wide stays on its own line and is reported by ``put``)."""
+    lines: list[str] = []
+    cur = ""
+    for word in text.split(" "):
+        trial = word if not cur else cur + " " + word
+        if cur and measure(trial) > width:
+            lines.append(cur)
+            cur = word
+        else:
+            cur = trial
+    return lines + [cur]
+
+
 def title_lines(doc: _Doc, text: str, width: float, max_lines: int = 3) -> tuple[list[str], float]:
     """The title in capitals as one line, or wrapped (the bracket term starts its own line), at TITLE_SIZE, else at TITLE_MIN.
     Words are never cut; a line that is still too wide is recorded by ``put`` as an overflow."""
@@ -164,9 +183,9 @@ def title_lines(doc: _Doc, text: str, width: float, max_lines: int = 3) -> tuple
             return [text], size
         if " (" in text:
             head, tail = text.split(" (", 1)
-            lines = wrap_text(measure, head, width) + wrap_text(measure, "(" + tail, width)
+            lines = wrap_words(measure, head, width) + wrap_words(measure, "(" + tail, width)
         else:
-            lines = wrap_text(measure, text, width)
+            lines = wrap_words(measure, text, width)
         if len(lines) <= max_lines and all(measure(x) <= width + 0.01 for x in lines):
             return lines, size
     return lines, TITLE_MIN
@@ -204,6 +223,8 @@ def draw_frame(doc: _Doc, fr: L.Frame, lang: str, title: str | None = None, miss
     for room, x_start in ((right, bbox[2] + 4), (left, x0 + 4)):
         if room >= 34:
             lines, size = title_lines(doc, text, room - 8)
+            if any(doc.width(x, size, True) > room - 8 for x in lines):
+                continue  # a word that does not fit: never broken, so this side is no place for the title
             mid = (bbox[1] + bbox[3]) / 2 + LINE_H * len(lines) / 2
             for i, ln in enumerate(lines):
                 doc.put(ln, x_start, mid - LINE_H * (i + 1) + 1.6, size, "left", room - 8, bold=True, color=TITLE, minimum=size)
@@ -430,12 +451,12 @@ class Sheet:
         if page == 2:
             for n, key in (("CoinsCp", "CP"), ("CoinsSp", "SP"), ("CoinsEp", "EP"), ("CoinsGp", "GP"), ("CoinsPp", "PP")):
                 x0, y0, x1, y1 = L.FIELDS_BY_NAME[n].widgets[0].rect
-                d.put(key, x1 + 4.5, (y0 + y1) / 2 - 2.0, 6.0, "left", 10, bold=True, color=TITLE)
+                d.put(key, x1 + 3.5, (y0 + y1) / 2 - 2.0, 5.8, "left", 9.5, bold=True, color=TITLE)
             for n, key in (("WeightCarried", "carryWeight"), ("WeightCapacity", "carryCapacity"), ("PushDragLift", "carryPush")):
                 x0, y0, x1, y1 = L.FIELDS_BY_NAME[n].widgets[0].rect
-                caption = wrap_text(lambda t: d.width(t, 5.6), sheet_label(lang, key), x1 - x0 + 2)
+                caption = wrap_words(lambda t: d.width(t, 5.6), sheet_label(lang, key), x1 - x0 + 2)
                 for i, ln in enumerate(reversed(caption[:2])):
-                    d.put(ln, x0, y1 + 2.2 + 6.0 * i, 5.6, "left", x1 - x0 + 2, color=LABEL, minimum=5.0)
+                    d.put(ln, x0, y1 + 2.2 + 6.4 * i, 5.6, "left", x1 - x0 + 2, color=LABEL, minimum=5.0)
             heads = (("Eq0Name", "Eq0Qty", "Eq0Weight"), ("Eq15Name", "Eq15Qty", "Eq15Weight"), ("Attuned1Name", "Attuned1Qty", "Attuned1Weight"))
         else:
             heads = (("Eq26Name", "Eq26Qty", "Eq26Weight"), ("Eq41Name", "Eq41Qty", "Eq41Weight"))
@@ -612,7 +633,7 @@ class Sheet:
             d.put("   ".join(slot_parts), 47.5, 677.0, 7, "left", 510, color=(0, 0, 0))
         if continued:
             d.put(sheet_label(lang, "headContinued", title=group.title), 47.5, 664.0, 7, "left", 510, bold=True, color=LABEL)
-        for i, line in enumerate(wrap_text(lambda t: d.width(t, 5.0), sheet_label(lang, "legend"), 552.0)[:3]):
+        for i, line in enumerate(wrap_words(lambda t: d.width(t, 5.0), sheet_label(lang, "legend"), 552.0)[:3]):
             d.put(line, 28.0, 41.5 - 6.0 * i, 5.0, "left", 552.0, color=LABEL, minimum=5.0)
         self.fields.extend(fields)
         self.values.update(values)

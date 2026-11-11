@@ -488,3 +488,64 @@ def test_form_fields_have_no_fill_so_a_blue_tint_is_the_viewers_highlight(catalo
         for a in page.get("/Annots", []):
             a = a.get_object()
             assert "/BG" not in a.get("/MK", {}) and "/IC" not in a.get("/MK", {}), a.get("/T")
+
+
+# ---------------------------------------------------------------- generic geometry audit of everything drawn
+def _boxes_hit(a, b, eps=0.25):
+    return a[0] < b[2] - eps and b[0] < a[2] - eps and a[1] < b[3] - eps and b[1] < a[3] - eps
+
+
+def _inside(a, b, eps=0.4):
+    return a[0] >= b[0] - eps and a[1] >= b[1] - eps and a[2] <= b[2] + eps and a[3] <= b[3] + eps
+
+
+AUDIT = (("paladin6", "bg"), ("paladin6", "en"), ("wizard20-2014", "bg"), ("wizard20-2014", "en"),
+         ("cleric6-paladin3-2014", "bg"), ("cleric6-paladin3-2014", "en"), ("warlock7-2024", "bg"), ("warlock7-2024", "en"),
+         ("barbarian20-2014", "bg"), ("barbarian20-2014", "en"))
+
+
+@pytest.mark.parametrize("sid,lang", AUDIT)
+def test_drawn_texts_never_overlap_each_other_a_frame_border_or_a_field(sid, lang, catalog):
+    sheet = sheet_pdf.Sheet(resolution(sid, catalog), lang, catalog, CREATED, KITCHEN_SINK[sid]["ruleset"])
+    sheet.build()
+    doc = sheet.doc
+    assert not doc.overflows and not sheet.title_misses
+    texts = doc.texts
+    assert len(texts) > 40
+    problems = []
+    for i, (page, text, box) in enumerate(texts):
+        for page2, text2, box2 in texts[i + 1:]:
+            if page2 == page and _boxes_hit(box, box2, eps=-0.5):  # clear space between two texts (line pitch of a wrapped caption is the minimum)
+                problems.append(f"p{page}: text '{text}' touches or overlaps text '{text2}'")
+        for fpage, frect in doc.frames:
+            if fpage == page and _boxes_hit(box, frect) and not _inside(box, frect):
+                problems.append(f"p{page}: text '{text}' crosses the border of the frame {frect}")
+        for f in sheet.fields:
+            for w in f.widgets:
+                if w.page == page and _boxes_hit(box, w.rect):
+                    problems.append(f"p{page}: text '{text}' is drawn over the field {f.name}")
+    assert not problems, "\n".join(problems[:25])
+
+
+@pytest.mark.parametrize("sid,lang", (("paladin6", "bg"), ("wizard20-2014", "en"), ("barbarian20-2014", "bg")))
+def test_field_widgets_never_overlap_each_other_on_any_page(sid, lang, catalog):
+    sheet = sheet_pdf.Sheet(resolution(sid, catalog), lang, catalog, CREATED, KITCHEN_SINK[sid]["ruleset"])
+    sheet.build()
+    by_page: dict[int, list] = {}
+    for f in sheet.fields:
+        for w in f.widgets:
+            by_page.setdefault(w.page, []).append((f.name, w.rect))
+    for page, items in by_page.items():
+        for i, (na, a) in enumerate(items):
+            for nb, b in items[i + 1:]:
+                assert not _boxes_hit(a, b), (page, na, nb)
+
+
+def test_the_audit_helpers_see_an_overlap():
+    doc = sheet_pdf._Doc()
+    doc.add_page()
+    doc.put("ABCDEFGH", 100, 100, 6, "left", 60, bold=True)
+    doc.put("Успехи", 102, 100, 6, "left", 40)
+    assert _boxes_hit(doc.texts[0][2], doc.texts[1][2])
+    doc.box((90, 90, 130, 130), 1.0, color=(0, 0, 0))
+    assert doc.frames and not _inside(doc.texts[0][2], doc.frames[0][1])

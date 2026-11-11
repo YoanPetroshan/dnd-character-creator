@@ -273,7 +273,7 @@ FRAMES: tuple[Frame, ...] = (
     Frame("speed", 1, (232.2, 361.2, 381.4, 405.7), "speed", ("Speed",)),
     Frame("hit_points", 1, (420.8, 598.0, 574.3, 656.6), "hitPoints", ("MaxHp", "CurrentHp", "TempHp")),
     Frame("hit_dice", 1, (413.0, 518.0, 494.5, 596.0), "hitDice", ("HitDiceTotal", "HitDiceSpent")),
-    Frame("death_saves", 1, (497.4, 533.5, 576.4, 596.0), "deathSaves", tuple(f"Death{k}{i}" for k in ("Success", "Failure") for i in (1, 2, 3))),
+    Frame("death_saves", 1, (497.4, 531.0, 576.4, 596.0), "deathSaves", tuple(f"Death{k}{i}" for k in ("Success", "Failure") for i in (1, 2, 3))),
     Frame("proficiencies", 1, (410.0, 349.9, 583.6, 516.9), "proficiencies", ("Proficiencies",)),
     Frame("actions", 1, (222.0, 188.4, 582.4, 333.4), "actions", ("Actions1", "Actions2")),
     Frame("weapons", 1, (221.0, 35.2, 582.0, 174.7), "weapons", _ROWNAMES["weapons"]),
