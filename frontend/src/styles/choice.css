@@ -1,8 +1,9 @@
+/* Choice card: a row with a 1px line below. Left to right: state mark, "new" pill, title, level, counter.
+   Mark: red solid "!" circle = needs a choice; green outline check = resolved. */
 .choice-card {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  margin-bottom: var(--space-2);
-  background: var(--color-surface);
+  margin: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: none;
 }
 
 .choice-card__header {
@@ -10,63 +11,218 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 10px var(--space-3);
+  min-height: 62px;
+  padding: var(--space-2) 0;
   background: none;
   border: none;
+  border-radius: 0;
   text-align: left;
+  font-size: 16px;
   cursor: pointer;
-  font-size: 14px;
 }
 
-.choice-card[data-status="pending"] .choice-card__header {
-  border-left: 3px solid var(--color-accent);
-}
-
-.choice-card__pending-dot {
+.choice-card__pending-dot,
+.choice-card[data-status="resolved"] .choice-card__header::before {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  flex: none;
+  width: 26px;
+  height: 26px;
   border-radius: var(--radius-round);
-  background: var(--color-accent);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.choice-card__pending-dot {
+  background: var(--color-danger);
   color: var(--color-on-dark);
-  font-size: 12px;
-  font-weight: bold;
+}
+
+.choice-card[data-status="resolved"] .choice-card__header::before {
+  content: "\2713";
+  border: 1.5px solid var(--color-ok);
+  color: var(--color-ok);
+}
+
+.choice-card__new {
+  order: 1;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--color-highlight);
+  color: var(--color-on-highlight);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .choice-card__label {
-  font-weight: 600;
+  order: 2;
   flex: 1;
+  font-weight: 600;
+  line-height: 1.25;
 }
 
 .choice-card__level,
 .choice-card__count {
-  font-size: 12px;
+  order: 3;
+  font-size: 13px;
   color: var(--color-text-secondary);
 }
 
-.choice-card__body {
-  padding: 0 var(--space-3) var(--space-3);
+.choice-card__count {
+  order: 4;
+  font-weight: 600;
 }
 
+.choice-card__body {
+  padding: 0 0 var(--space-4);
+  animation: choice-open 150ms ease-out;
+}
+
+@keyframes choice-open {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .choice-card__body {
+    animation: none;
+  }
+}
+
+/* Short picker: option pills, two columns on a phone. A checked pill is solid ink, an unavailable one is
+   dashed with its reason inside. The checkbox stays in the DOM (visually hidden) for keyboard and screen readers. */
 .choice-picker {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.choice-picker li {
-  padding: 2px 0;
+.choice-picker-wrap:not(.choice-picker-wrap--long) > ul.choice-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
 }
 
-.choice-picker__option--disabled {
-  color: var(--color-disabled);
+ul.choice-picker > li {
+  display: block;
+  min-height: 0;
+  padding: 0;
+}
+
+.choice-picker-wrap:not(.choice-picker-wrap--long) > ul.choice-picker > li.choice-picker__item--group-start {
+  display: contents;
+}
+
+.choice-picker-wrap:not(.choice-picker-wrap--long) .choice-picker__group {
+  grid-column: 1 / -1;
+  padding-top: var(--space-3);
+}
+
+.choice-picker-wrap:not(.choice-picker-wrap--long) .choice-picker label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
+  height: 100%;
+  padding: var(--space-1) 14px;
+  border: 1.5px solid var(--color-text);
+  border-radius: var(--radius-pill);
+  font-size: 14.5px;
+  font-weight: 500;
+  line-height: 1.25;
+  cursor: pointer;
+}
+
+.choice-picker-wrap:not(.choice-picker-wrap--long) .choice-picker input[type="checkbox"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+
+.choice-picker-wrap:not(.choice-picker-wrap--long) .choice-picker label:has(input:checked) {
+  background: var(--color-accent);
+  color: var(--color-on-dark);
+  font-weight: 600;
+}
+
+.choice-picker-wrap:not(.choice-picker-wrap--long) .choice-picker label:has(input:focus-visible) {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+
+.choice-picker__option--disabled,
+.choice-picker-wrap:not(.choice-picker-wrap--long) .choice-picker label.choice-picker__option--disabled {
+  border-style: dashed;
+  color: var(--color-text-secondary);
 }
 
 .choice-picker__reason {
-  font-style: italic;
-  font-size: 12px;
+  display: block;
+  width: 100%;
+  font-size: 11.5px;
+  font-style: normal;
+}
+
+/* Long picker: rows with 1px lines; "Selected" is the block on top with a 2px rule; the search is a field with a bottom line. */
+.choice-picker-wrap--long .choice-picker li {
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.choice-picker__selected {
+  margin-bottom: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 2px solid var(--color-text);
+}
+
+.choice-picker__selected-title {
+  margin: 0 0 var(--space-1);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.choice-picker__group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  font-size: 16px;
+}
+
+.choice-picker__group-toggle::after {
+  content: "+";
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.choice-picker__group-toggle[aria-expanded="true"]::after {
+  content: "\2212";
+}
+
+.picker-filter {
+  border: 0;
+  border-bottom: 1.5px solid var(--color-text);
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.choice-picker__result-count {
+  font-size: 13px;
+  color: var(--color-text-secondary);
 }
 
 .picker-list {
