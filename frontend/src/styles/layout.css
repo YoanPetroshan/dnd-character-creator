@@ -160,6 +160,65 @@ main {
   max-width: 800px;
 }
 
+/* Primary action: solid ink pill with an arrow. `main` raises the specificity over the structural rules in touch.css. */
+main .next-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 58px;
+  margin-top: 20px;
+  padding: 0 22px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-on-dark);
+  font-size: 17px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+main .next-button::after {
+  content: "\2192";
+  font-size: 22px;
+  line-height: 1;
+}
+
+/* Secondary pill: the same shape, outline only (the "next unfinished step" link). */
+.next-step {
+  margin: var(--space-2) var(--space-4) 0;
+}
+
+.next-step a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1.5px solid var(--color-text);
+  border-radius: var(--radius-pill);
+  font-size: 14.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* "New choices: N": a small highlight pill after a level-up. */
+.new-choices {
+  margin: var(--space-2) var(--space-4) 0;
+}
+
+.new-choices a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  background: var(--color-highlight);
+  color: var(--color-on-highlight);
+  font-size: 14.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
 /* The sheet page: export actions, summary strip and tabs (structure only; the look comes from the design chat). */
 .export-bar__buttons {
   display: flex;
