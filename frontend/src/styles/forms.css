@@ -45,16 +45,107 @@
   margin-bottom: var(--space-3);
 }
 
+/* Class block: no box. Glyph circle + 44px name, then level (field + 2x10 pips), then the subclass row. */
 .class-block {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: var(--space-3) var(--space-4);
   margin-bottom: var(--space-4);
-  background: var(--color-surface);
+}
+
+.class-block__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-3) 0;
 }
 
 .class-block h2 {
-  margin-top: 0;
+  margin: 0;
+  padding: 0;
+  border-top: 0;
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+}
+
+.class-block h2 button {
+  vertical-align: middle;
+  font-size: 13px;
+}
+
+.class-glyph {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1.5px solid var(--color-text);
+  border-radius: var(--radius-round);
+  color: var(--color-text);
+}
+
+.class-glyph[data-solid="true"] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-dark);
+}
+
+.class-glyph svg {
+  width: 62%;
+  height: 62%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.class-block__head .class-glyph {
+  width: 72px;
+  height: 72px;
+}
+
+.class-level {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-weight: 600;
+}
+
+.class-level input {
+  width: 72px;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Decorative level meter: 20 diamonds on 2 rows of 10, filled up to the current level. */
+.level-pips {
+  display: grid;
+  grid-template-columns: repeat(10, 9px);
+  gap: 9px 8px;
+  margin: var(--space-2) 0 var(--space-4);
+  padding-left: 3px;
+}
+
+.level-pips__pip {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--color-text);
+  transform: rotate(45deg);
+}
+
+.level-pips__pip[data-on="true"] {
+  background: var(--color-text);
+}
+
+.class-subclass {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  font-weight: 600;
 }
 
 .add-class {

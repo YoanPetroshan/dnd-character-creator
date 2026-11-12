@@ -8,6 +8,7 @@ import { renderMsg } from "../logic/messages";
 import { useResolutionContext } from "../ResolutionContext";
 import { useCatalogContext } from "../CatalogContext";
 import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
+import { ClassGlyph } from "../components/ClassGlyph";
 import { CommitNumberInput } from "../components/CommitNumberInput";
 import { SpellLibrary } from "../components/SpellLibrary";
 import { ClassResourcesList } from "../components/ClassResourcesList";
@@ -91,16 +92,19 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
 
   return (
     <div className="class-block">
-      <h2>
-        {sheetClass?.name ?? catalog.classes.find((c) => c.id === classId)?.name ?? classId}{" "}
-        {!isPrimary && (
-          <button type="button" onClick={() => dispatch({ type: "REMOVE_CLASS", classId })}>
-            {cp.remove}
-          </button>
-        )}
-      </h2>
+      <div className="class-block__head">
+        <ClassGlyph classId={classId} solid />
+        <h2>
+          {sheetClass?.name ?? catalog.classes.find((c) => c.id === classId)?.name ?? classId}{" "}
+          {!isPrimary && (
+            <button type="button" onClick={() => dispatch({ type: "REMOVE_CLASS", classId })}>
+              {cp.remove}
+            </button>
+          )}
+        </h2>
+      </div>
 
-      <label>
+      <label className="class-level">
         {cp.level}
         <CommitNumberInput
           min={1}
@@ -109,9 +113,15 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
           onCommit={(level) => dispatch({ type: "SET_CLASS_LEVEL", classId, level })}
         />
       </label>
+      {/* decorative: the number field above stays the control and the source of truth */}
+      <span className="level-pips" aria-hidden="true">
+        {Array.from({ length: 20 }, (_, i) => (
+          <span key={i} className="level-pips__pip" data-on={i < classLevel ? "true" : undefined} />
+        ))}
+      </span>
 
       {classDetail && classDetail.subclassUnlockLevel !== null && classLevel >= classDetail.subclassUnlockLevel && (
-        <label>
+        <label className="class-subclass">
           {cp.subclass}
           <select
             value={classEntry?.subclassId ?? ""}

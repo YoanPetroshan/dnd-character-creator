@@ -12,6 +12,7 @@ import { safeFilename, shareOrDownload } from "../logic/files";
 import { sourceOn, toggleSource } from "../logic/sources";
 import type { Ruleset } from "../types";
 import { formatDateTime } from "../logic/formatDate";
+import { ClassGlyph } from "../components/ClassGlyph";
 import { stepBadgeCount, stepStatus } from "../logic/steps";
 
 export function HomePage() {
@@ -142,6 +143,7 @@ export function HomePage() {
           const name = active ? draft.name : item.name;
           return (
             <li key={item.id} className="hero" data-active={active ? "true" : undefined}>
+              <ClassGlyph classId={item.status === "ok" ? item.classes[0]?.classId : undefined} solid={active} />
               <div className="hero__text">
                 <strong className="hero__name">{name || t.home.unnamed}</strong>
                 {active && <span className="hero__tag">{t.home.active}</span>}
