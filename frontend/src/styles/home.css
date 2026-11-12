@@ -1,0 +1,135 @@
+/* Home page (data-page="home"): name field, library list, library actions, preferences. */
+[data-page="home"] .name-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.name-row__field {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.name-row__label {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.name-row__field input {
+  min-height: 56px;
+  padding: 0;
+  border: 0;
+  border-bottom: 2px solid var(--color-text);
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: 29px;
+  font-weight: 700;
+}
+
+.name-dice {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border-color: var(--color-accent);
+  border-radius: var(--radius-round);
+  background: var(--color-accent);
+  color: var(--color-on-dark);
+  font-size: 26px;
+  line-height: 1;
+}
+
+.name-hint {
+  margin: var(--space-2) 0 var(--space-4);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.hero-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  min-height: 66px;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.hero__text {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  column-gap: var(--space-2);
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.hero__name {
+  font-size: 17px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.hero__tag {
+  justify-self: start;
+  padding: 1px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-on-dark);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.hero__meta {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.library-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.library-actions > p,
+.library-actions > div {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+[data-page="home"] fieldset {
+  margin: var(--space-3) 0;
+  padding: var(--space-2) 0 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+[data-page="home"] legend {
+  padding: 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}

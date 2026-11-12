@@ -67,71 +67,78 @@ export function HomePage() {
     dispatch({ type: "SET_SOURCES", sources: toggleSource(draft.sources, allSourceIds, id, on) });
   }
   return (
-    <div className="page">
+    <div className="page" data-page="home">
       <h1>{t.home.title}</h1>
-      <label>
-        {t.home.nameLabel}
-        <input
-          type="text"
-          value={draft.name}
-          onChange={(e) => dispatch({ type: "SET_NAME", name: e.target.value })}
-        />
-      </label>
-      <button
-        type="button"
-        className="name-dice"
-        aria-label={t.home.randomName}
-        onClick={() => dispatch({ type: "SET_NAME", name: randomName(lang, Math.random) })}
-      >
-        {t.home.randomNameIcon}
-      </button>
-      <p>{t.home.nameHint}</p>
+      <div className="name-row">
+        <label className="name-row__field">
+          <span className="name-row__label">{t.home.nameLabel}</span>
+          <input
+            type="text"
+            value={draft.name}
+            onChange={(e) => dispatch({ type: "SET_NAME", name: e.target.value })}
+          />
+        </label>
+        <button
+          type="button"
+          className="name-dice"
+          aria-label={t.home.randomName}
+          onClick={() => dispatch({ type: "SET_NAME", name: randomName(lang, Math.random) })}
+        >
+          {t.home.randomNameIcon}
+        </button>
+      </div>
+      <p className="name-hint">{t.home.nameHint}</p>
 
       <h2>{t.home.charactersTitle}</h2>
-      <ul>
+      <ul className="hero-list">
         {library.items.map((item) => {
           const active = item.id === library.activeId;
           const name = active ? draft.name : item.name;
           return (
-            <li key={item.id} data-active={active ? "true" : undefined}>
-              <strong>{name || t.home.unnamed}</strong>
-              {active && ` ${t.home.active}`}
-              {item.status === "corrupt" && ` — ${t.home.corrupt}`}
-              {item.status === "empty" && ` — ${t.home.noStoredDraft}`}
-              {item.status === "ok" &&
-                ` — ${t.home.itemSummary(item.classes.length ? item.classes.map((c) => `${className(c.classId)} ${c.level}`).join(", ") : t.home.noClass, item.totalLevel)}`}
-              {" — "}
-              <time dateTime={new Date(item.updatedAt).toISOString()}>
-                {t.home.updated(formatDateTime(item.updatedAt, t.common.dateLocale))}
-              </time>{" "}
-              {!active && (
-                <button type="button" onClick={() => library.openCharacter(item.id)}>
-                  {t.home.open}
+            <li key={item.id} className="hero" data-active={active ? "true" : undefined}>
+              <div className="hero__text">
+                <strong className="hero__name">{name || t.home.unnamed}</strong>
+                {active && <span className="hero__tag">{t.home.active}</span>}
+                <span className="hero__meta">
+                  {item.status === "corrupt" && t.home.corrupt}
+                  {item.status === "empty" && t.home.noStoredDraft}
+                  {item.status === "ok" &&
+                    t.home.itemSummary(item.classes.length ? item.classes.map((c) => `${className(c.classId)} ${c.level}`).join(", ") : t.home.noClass, item.totalLevel)}
+                </span>
+                <time className="hero__meta" dateTime={new Date(item.updatedAt).toISOString()}>
+                  {t.home.updated(formatDateTime(item.updatedAt, t.common.dateLocale))}
+                </time>
+              </div>
+              <div className="hero__actions">
+                {!active && (
+                  <button type="button" onClick={() => library.openCharacter(item.id)}>
+                    {t.home.open}
+                  </button>
+                )}
+                <button type="button" onClick={() => renameItem(item.id, name)}>
+                  {t.home.rename}
                 </button>
-              )}{" "}
-              <button type="button" onClick={() => renameItem(item.id, name)}>
-                {t.home.rename}
-              </button>{" "}
-              <button type="button" onClick={() => library.duplicateCharacter(item.id)}>
-                {t.home.duplicate}
-              </button>{" "}
-              <button type="button" onClick={() => deleteItem(item.id, name)}>
-                {t.home.delete}
-              </button>
+                <button type="button" onClick={() => library.duplicateCharacter(item.id)}>
+                  {t.home.duplicate}
+                </button>
+                <button type="button" onClick={() => deleteItem(item.id, name)}>
+                  {t.home.delete}
+                </button>
+              </div>
             </li>
           );
         })}
       </ul>
-      <div>
+      <div className="library-actions">
         <button type="button" onClick={() => library.newCharacter()}>
           {t.home.newHero}
-        </button>{" "}
+        </button>
         <button type="button" onClick={exportAll}>
           {t.home.downloadAll}
-        </button>{" "}
+        </button>
         <button type="button" onClick={() => fileInput.current?.click()}>
           {t.home.upload}
-        </button>{" "}
+        </button>
         <button type="button" onClick={downloadDraft}>
           {t.home.downloadOne}
         </button>

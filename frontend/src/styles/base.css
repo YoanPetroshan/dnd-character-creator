@@ -188,7 +188,7 @@ button[aria-disabled="true"] {
 }
 
 /* Fields: white, thin line, 16px (iOS does not zoom at 16px or more). */
-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"])),
 select,
 textarea {
   font-family: inherit;
