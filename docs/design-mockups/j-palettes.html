@@ -1,0 +1,350 @@
+<title>Палитри за J</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Piazzolla:opsz,wght@8..30,500;8..30,700;8..30,800&family=Golos+Text:wght@400;500;600;700&family=Oranienbaum&family=Onest:wght@400;500;600;700&family=Vollkorn:wght@500;700;800&family=Sofia+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a plain review page; each direction is a block with notes, two phone frames and one desktop frame. */
+:root{--pg:#eceae6;--pg2:#ffffff;--ptx:#1c1d20;--pmu:#5d5f66;--pline:#cfccc5;--frame:#101113}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--pg:#17181b;--pg2:#222327;--ptx:#ecebe8;--pmu:#a5a6ad;--pline:#3a3b41;--frame:#000;color-scheme:dark}}
+:root[data-theme="dark"]{--pg:#17181b;--pg2:#222327;--ptx:#ecebe8;--pmu:#a5a6ad;--pline:#3a3b41;--frame:#000;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--pg);color:var(--ptx);font:16px/1.5 "Golos Text",system-ui,sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1.top{font:700 28px/1.2 "Golos Text",system-ui,sans-serif;margin:0 0 8px;text-wrap:balance}
+.lead{color:var(--pmu);margin:0 0 12px;max-width:66ch}
+.fixed{margin:0 0 36px;padding:14px 16px;background:var(--pg2);border:1px solid var(--pline);border-radius:10px;max-width:760px;font-size:15px}
+.fixed b{display:block;margin-bottom:4px}
+.fixed ul{margin:0;padding-left:18px}
+section.dir{margin:0 0 64px}
+section.dir>h2{font:700 23px/1.25 "Golos Text",system-ui,sans-serif;margin:0 0 4px}
+.tag{color:var(--pmu);margin:0 0 10px;font-size:15px;max-width:66ch}
+.why{margin:0 0 14px;padding-left:18px;max-width:68ch;font-size:15px}
+.why li{margin:3px 0}
+.sw{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.sw i{display:block;width:84px;height:46px;border-radius:6px;font:600 10.5px/1.25 system-ui,sans-serif;font-style:normal;padding:5px 6px;border:1px solid rgba(0,0,0,.2)}
+.fonts{font-size:13.5px;color:var(--pmu);margin:0 0 18px}
+.cap{font:600 12.5px system-ui,sans-serif;color:var(--pmu);margin:0 0 8px;letter-spacing:.06em;text-transform:uppercase}
+.phones{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start;margin-bottom:28px}
+.phone{width:395px;max-width:100%;padding:10px;background:var(--frame);border-radius:40px}
+.screen{width:100%;height:740px;overflow:auto;border-radius:30px;scrollbar-width:none}
+.screen::-webkit-scrollbar{display:none}
+.deskwrap{width:100%;overflow:hidden}
+.desk{width:1040px;border:8px solid var(--frame);border-radius:14px;overflow:hidden;zoom:var(--z,1)}
+.glyphs{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:10px;max-width:760px;margin:0 0 40px;padding:16px;background:var(--pg2);border:1px solid var(--pline);border-radius:10px}
+.glyphs div{text-align:center;font-size:12.5px;color:var(--pmu)}
+.glyphs svg{width:52px;height:52px;margin:0 auto 4px;color:var(--ptx)}
+
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--pg);padding:10px 0 12px;margin:0 0 20px;border-bottom:1px solid var(--pline)}
+.bar .lbl{font:600 12px system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--pmu);margin:0 0 6px}
+.grp{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.grp button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px 0 8px;border:1.5px solid var(--pline);border-radius:22px;font:600 14px "Golos Text",system-ui,sans-serif;color:var(--ptx);background:var(--pg2)}
+.grp button:focus-visible{outline:2px solid var(--ptx);outline-offset:2px}
+.grp button[aria-pressed=true]{border-color:var(--ptx);box-shadow:inset 0 0 0 1.5px var(--ptx)}
+.grp .dots{display:flex}
+.grp .dots i{width:16px;height:26px;border:1px solid rgba(0,0,0,.25);margin-left:-1px}
+.grp .dots i:first-child{border-radius:13px 0 0 13px;margin-left:0}
+.grp .dots i:last-child{border-radius:0 13px 13px 0}
+#fonts button{padding:0 14px}
+.info{margin:0;font-size:14px;color:var(--pmu);max-width:70ch}
+svg.ic{display:block;width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round}
+
+/* ===== shared mock structure ===== */
+.m{background:var(--bg);color:var(--tx);font:400 16px/1.45 var(--fb)}
+.m button{font:inherit;color:inherit}
+.hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 6px}
+.brand{display:flex;align-items:center;gap:9px;font:700 16px var(--fd)}
+.brand svg{width:26px;height:26px}
+.lang{display:flex;gap:4px}
+.lang button{all:unset;box-sizing:border-box;min-width:44px;height:36px;text-align:center;line-height:34px;font:600 13px var(--fb);cursor:pointer;color:var(--mu);border-radius:18px}
+.lang button[aria-pressed=true]{background:var(--ink);color:var(--on-ink)}
+.nav{overflow-x:auto;scrollbar-width:none;padding:10px 10px 12px}
+.nav::-webkit-scrollbar{display:none}
+.nav ol{list-style:none;margin:0;padding:0;display:flex;width:max-content;gap:2px}
+.nav li{position:relative}
+.nav a{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:68px;min-height:44px;cursor:pointer;color:var(--mu);font:500 11.5px var(--fb)}
+.nav .n{width:34px;height:34px;display:grid;place-items:center;border:1.5px solid var(--mu);border-radius:50%;font:600 13.5px var(--fb);font-variant-numeric:tabular-nums}
+.nav .done .n{background:var(--ink);border-color:var(--ink);color:var(--on-ink)}
+.nav .cur .n{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);box-shadow:0 0 0 3px var(--navbg,var(--bg)),0 0 0 4.5px var(--acc)}
+.nav .cur a{color:var(--tx);font-weight:700}
+.nav .bd{position:absolute;top:-5px;left:50%;margin-left:8px;min-width:18px;height:18px;border-radius:9px;background:var(--bad);color:#fff;font:700 11px/18px var(--fb);text-align:center;padding:0 4px;z-index:2}
+.m main{padding:8px 16px 28px}
+.eyebrow{font:600 11.5px var(--fb);letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin:0}
+.m h1{font:700 34px/1.08 var(--fd);margin:6px 0 16px;text-wrap:balance}
+.name{display:flex;gap:10px;align-items:center}
+.name .in{flex:1;min-width:0;min-height:56px;display:flex;align-items:center;font:700 25px var(--fd)}
+.die{all:unset;box-sizing:border-box;flex:none;width:56px;height:56px;display:grid;place-items:center;border-radius:50%;background:var(--ink);color:var(--on-ink);cursor:pointer}
+.die svg{width:30px;height:30px}
+.hint{font-size:13.5px;color:var(--mu);margin:6px 0 20px}
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 14px}
+.slot{all:unset;box-sizing:border-box;display:block;min-height:104px;padding:12px 10px;cursor:pointer}
+.slot .k{display:flex;justify-content:space-between;align-items:center;font:600 10.5px var(--fb);letter-spacing:.12em;text-transform:uppercase;color:var(--mu)}
+.slot .v{display:block;margin:10px 0 3px;font:700 20px/1.1 var(--fd)}
+.slot .s{display:block;font-size:12.5px;line-height:1.25;color:var(--mu)}
+.slot.bad .s{color:var(--bad);font-weight:600}
+.mk{flex:none;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;font:700 12px var(--fb);letter-spacing:0}
+.mk.p{background:var(--bad);color:#fff}
+.mk.r{color:var(--ok);border:1.5px solid var(--ok)}
+.go{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;width:100%;min-height:58px;padding:0 22px;cursor:pointer;background:var(--ink);color:var(--on-ink);border-radius:var(--rb);font:700 17px var(--fb)}
+.go small{display:block;font:600 11px var(--fb);letter-spacing:.12em;text-transform:uppercase;opacity:.75}
+.go svg{width:22px;height:22px}
+.go.ghost{background:transparent;color:var(--tx);border:1.5px solid var(--tx);min-height:52px;font-size:16px}
+.sh{display:flex;justify-content:space-between;align-items:baseline;margin:30px 0 8px}
+.sh h3{margin:0;font:700 23px var(--fd)}
+.sh span{font:500 13px var(--fb);color:var(--mu)}
+.lib{list-style:none;padding:0;margin:0 0 12px}
+.lib li{display:flex;align-items:center;gap:12px;min-height:66px}
+.sg{flex:none;width:42px;height:42px;display:grid;place-items:center;border-radius:50%;color:var(--tx)}
+.sg svg{width:34px;height:34px;stroke-width:1.5}
+.lib .t{flex:1;min-width:0}
+.lib .t b{display:block;font:600 16.5px/1.2 var(--fb);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lib .t span{font-size:13px;color:var(--mu)}
+.lib .act .sg{background:var(--ink);color:var(--on-ink)}
+.more{all:unset;width:44px;height:44px;display:grid;place-items:center;color:var(--mu);font-size:22px;letter-spacing:1px;cursor:pointer}
+.row2{display:flex;gap:18px;margin:4px 0 22px;flex-wrap:wrap}
+.row2 a{min-height:44px;display:flex;align-items:center;font:600 14px var(--fb);text-decoration:underline;text-underline-offset:4px;cursor:pointer}
+.rules{margin:0 0 20px}
+.rules .eyebrow{margin-bottom:10px}
+.sg3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:0 0 12px}
+.sg3 button{all:unset;box-sizing:border-box;text-align:center;min-height:44px;line-height:42px;border:1.5px solid var(--line);border-radius:22px;font:600 15px var(--fb);cursor:pointer;color:var(--mu)}
+.sg3 button[aria-pressed=true]{background:var(--ink);color:var(--on-ink);border-color:var(--ink)}
+.tg{display:flex;flex-wrap:wrap;gap:6px}
+.tg span{min-height:34px;padding:0 12px;border-radius:17px;border:1.5px solid var(--tx);display:flex;align-items:center;font:600 13px var(--fb)}
+.tg span.off{color:var(--mu);border:1.5px dashed var(--mu)}
+/* class */
+.hero{margin:0 0 18px}
+.hero .top{display:flex;gap:14px;align-items:center;margin-bottom:14px}
+.crest{flex:none;width:72px;height:72px;display:grid;place-items:center;border-radius:50%;background:var(--ink);color:var(--on-ink)}
+.crest svg{width:54px;height:54px;stroke-width:1.3}
+.hero .k{font:600 10.5px var(--fb);letter-spacing:.14em;text-transform:uppercase;color:var(--mu)}
+.cl{all:unset;display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;font:700 34px/1 var(--fd)}
+.cl svg{width:20px;height:20px;color:var(--mu)}
+.sb{font-size:13.5px;color:var(--mu)}
+.lv{display:flex;align-items:center;gap:12px;margin:0 0 8px}
+.lv>button{all:unset;box-sizing:border-box;flex:none;width:48px;height:48px;border:1.5px solid var(--tx);border-radius:50%;display:grid;place-items:center;font:600 24px var(--fb);cursor:pointer}
+.lv .mid{flex:1;min-width:0;text-align:center}
+.lv .num{font:700 24px/1.1 var(--fd);font-variant-numeric:tabular-nums}
+.lv .num small{font:500 13px var(--fb);color:var(--mu)}
+.lvp{display:grid;grid-template-columns:repeat(10,9px);justify-content:center;gap:8px 9px;margin-top:12px}
+.lvp i,.pips i{width:9px;height:9px;transform:rotate(45deg);border:1.5px solid var(--mu);flex:none}
+.lvp i.f,.pips i.f{background:var(--pip);border-color:var(--pip)}
+.pips{display:flex;gap:5px}
+.pips i{width:9px;height:9px}
+.line{display:flex;align-items:center;justify-content:space-between;min-height:48px;border-top:1px solid var(--line);font-size:14.5px;color:var(--mu)}
+.line b{font:700 16px var(--fb);color:var(--tx)}
+.line b i{font-style:normal;color:var(--ok);margin-left:6px}
+.addc{all:unset;display:flex;align-items:center;min-height:44px;font:600 14px var(--fb);cursor:pointer;text-decoration:underline;text-underline-offset:4px}
+.tabs{display:flex;gap:6px;margin:0 0 12px}
+.tabs button{all:unset;box-sizing:border-box;flex:1;text-align:center;min-height:46px;line-height:46px;font:700 17px var(--fd);cursor:pointer;color:var(--mu)}
+.cc>button{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;min-height:62px;cursor:pointer}
+.cc .mk{width:24px;height:24px;font-size:13px}
+.cc .lab{flex:1;min-width:0;font:600 16px/1.2 var(--fb)}
+.cc .lab small{display:block;font:400 12.5px var(--fb);color:var(--mu);margin-top:2px}
+.new{font:700 10px var(--fb);letter-spacing:.1em;text-transform:uppercase;background:var(--acc);color:var(--acc-ink);padding:2px 7px;border-radius:9px;margin-right:6px;vertical-align:1px}
+.cc .body{padding:0 0 16px}
+.cc .body p{margin:0 0 10px;font-size:14px;color:var(--mu)}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile{min-height:48px;padding:6px 14px;border:1.5px solid var(--line);border-radius:var(--rt);display:flex;flex-direction:column;justify-content:center;font:600 15.5px/1.2 var(--fb)}
+.tile.sel{background:var(--ink);color:var(--on-ink);border-color:var(--ink)}
+.tile.dis{border-style:dashed;color:var(--mu)}
+.tile small{font:400 11.5px var(--fb);color:var(--mu)}
+.nextb{margin-top:20px}
+/* desktop variant */
+.desk .hd{padding:16px 32px 6px}
+.desk .nav{padding:12px 32px 16px}
+.desk .nav ol{width:100%;justify-content:center;gap:14px}
+.desk .nav a{min-width:84px;font-size:13px}
+.desk .nav .n{width:40px;height:40px;font-size:15px}
+.desk main{display:grid;grid-template-columns:340px 1fr;gap:40px;align-items:start;padding:20px 32px 36px}
+.desk .tiles{grid-template-columns:repeat(3,1fr)}
+.desk .nextb{width:auto;margin-left:auto;gap:28px}
+
+/* ===== J · «Мастило» — type and hairlines carry the structure ===== */
+.J{--bg:#edf0f3;--surf:#fff;--line:#c3c9d2;--tx:#16213a;--mu:#55607a;--ink:#16213a;--on-ink:#f3f5f8;--acc:#f2c230;--acc-ink:#16213a;--pip:#16213a;--ok:#1d6b52;--bad:#c93a22;--rb:29px;--rt:24px;--fd:Piazzolla,Georgia,serif;--fb:"Golos Text",system-ui,sans-serif}
+.J .cl,.J h1,.J .name .in,.J .sh h3,.J .slot .v,.J .lv .num,.J .tabs button,.J .brand{font-weight:var(--fw,700)}
+.J h1{font-weight:var(--fwh,800);font-size:38px;letter-spacing:-.01em}
+.J .hd{border-bottom:1px solid var(--line)}
+.J .name{border-bottom:2px solid var(--tx);padding-bottom:6px}
+.J .name .in{font-size:29px}
+.J .slots{gap:0;border-top:2px solid var(--tx);border-bottom:1px solid var(--line)}
+.J .slot+.slot{border-left:1px solid var(--line)}
+.J .slot .v{font-size:22px}
+.J .sh{border-bottom:2px solid var(--tx);padding-bottom:6px}
+.J .lib li{border-bottom:1px solid var(--line)}
+.J .rules{border-top:2px solid var(--tx);padding-top:14px}
+.J .cl{font-size:44px;font-weight:var(--fwh,800);letter-spacing:-.015em}
+.J .tabs{border-bottom:1px solid var(--line)}
+.J .tabs button[aria-selected=true]{color:var(--tx);box-shadow:inset 0 -3px 0 var(--tx)}
+.J .cc{border-bottom:1px solid var(--line)}
+
+/* ===== K · «Мъх» — soft filled surfaces, one dark block per page ===== */
+.K{--bg:#f1f3ea;--surf:#e2e8d6;--line:#bcc6ab;--tx:#1c2a1d;--mu:#55634f;--ink:#1c2a1d;--on-ink:#f1f3ea;--acc:#2a7048;--acc-ink:#fff;--pip:#2a7048;--ok:#2a7048;--bad:#b9471a;--rb:29px;--rt:14px;--fd:Oranienbaum,Georgia,serif;--fb:Onest,system-ui,sans-serif}
+.K h1,.K .cl,.K .slot .v,.K .sh h3,.K .name .in,.K .lv .num,.K .tabs button,.K .brand{font-weight:400}
+.K h1{font-size:40px}
+.K .brand{font-size:19px}
+.K .name .in{background:var(--surf);border-radius:28px;padding:0 20px;font-size:27px}
+.K .die{background:var(--acc);color:var(--acc-ink)}
+.K .slot{background:var(--surf);border-radius:18px}
+.K .slot .v{font-size:23px}
+.K .go:not(.ghost){background:var(--acc);color:var(--acc-ink)}
+.K .lib{display:grid;gap:8px}
+.K .lib li{background:var(--surf);border-radius:33px;padding:0 6px 0 12px}
+.K .sg{background:var(--bg)}
+.K .rules{background:var(--surf);border-radius:18px;padding:16px}
+.K .sg3 button{border-color:var(--mu)}
+.K .hero{background:var(--ink);color:var(--on-ink);border-radius:22px;padding:18px 16px 8px;--tx:#f1f3ea;--mu:#b4c0a8;--line:#3f5140;--pip:#8fd3a8;--ok:#8fd3a8}
+.K .crest{background:var(--on-ink);color:var(--ink)}
+.K .cl{font-size:40px}
+.K .tabs{background:var(--surf);border-radius:25px;padding:4px}
+.K .tabs button{min-height:42px;line-height:42px;border-radius:21px;font-size:19px}
+.K .tabs button[aria-selected=true]{background:var(--bg);color:var(--tx)}
+.K .cc{background:var(--surf);border-radius:18px;margin-bottom:8px;padding:0 14px}
+.K .tile{background:var(--bg);border-color:transparent}
+.K .tile.sel{background:var(--acc);color:var(--acc-ink)}
+.K .tile.dis{background:transparent;border:1.5px dashed var(--line)}
+.K .nav .cur .n{color:#fff}
+
+/* ===== L · «Вино» — dark band on top, light working area below ===== */
+.L{--bg:#f6f2f1;--surf:#fff;--line:#dccfd0;--tx:#2a1620;--mu:#6c5560;--ink:#5a1a2b;--on-ink:#fbeee6;--acc:#f3a65a;--acc-ink:#2a1620;--pip:#5a1a2b;--ok:#2b6e55;--bad:#b3261e;--rb:14px;--rt:12px;--fd:Vollkorn,Georgia,serif;--fb:"Sofia Sans",system-ui,sans-serif}
+.L .band{background:var(--ink);color:var(--on-ink);border-radius:0 0 24px 24px;--tx:#fbeee6;--mu:#d9b9bd;--navbg:#5a1a2b}
+.L .band .lang button[aria-pressed=true]{background:var(--on-ink);color:var(--ink)}
+.L .band .nav .done .n{background:var(--on-ink);border-color:var(--on-ink);color:var(--ink)}
+.L .band .nav .bd{background:var(--on-ink);color:var(--ink)}
+.L main{padding-top:20px}
+.L h1{font-weight:800;font-size:35px}
+.L .name .in{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:0 16px}
+.L .die{background:var(--acc);color:var(--acc-ink)}
+.L .slot{background:var(--surf);border:1px solid var(--line);border-radius:14px}
+.L .slot.bad{border-color:var(--bad)}
+.L .lib{display:grid;gap:8px}
+.L .lib li{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:0 4px 0 10px}
+.L .lib .act{border-color:var(--ink)}
+.L .rules{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:16px}
+.L .hero{background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:16px 16px 6px}
+.L .crest{background:var(--acc);color:var(--acc-ink)}
+.L .cl{font-weight:800;font-size:38px}
+.L .tabs button{border-radius:12px;border:1px solid var(--line)}
+.L .tabs button[aria-selected=true]{background:var(--ink);color:var(--on-ink);border-color:var(--ink)}
+.L .cc{background:var(--surf);border:1px solid var(--line);border-radius:14px;margin-bottom:8px;padding:0 14px}
+.L .cc.bad{border-color:var(--bad)}
+.L .tile{font-size:16px}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+ <symbol id="d20" viewBox="0 0 32 32"><polygon points="16,2.5 28.5,9.5 28.5,22.5 16,29.5 3.5,22.5 3.5,9.5"/><polygon points="16,9.5 22.5,20.5 9.5,20.5"/><path d="M16 2.5V9.5M28.5 9.5L22.5 20.5M3.5 9.5L9.5 20.5M3.5 22.5L9.5 20.5M28.5 22.5L22.5 20.5M16 29.5L9.5 20.5M16 29.5L22.5 20.5"/></symbol>
+ <symbol id="chev" viewBox="0 0 20 20"><path d="M4 7l6 6 6-6"/></symbol>
+ <symbol id="arr" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol>
+ <symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+ <symbol id="g-barbarian" viewBox="0 0 60 60"><path d="M30 3l24 27-24 27L6 30z"/><path d="M30 17v26M30 20c8 0 11 5 11 9-4-3-8-3-11-2z"/></symbol>
+ <symbol id="g-bard" viewBox="0 0 60 60"><path d="M30 3l24 27-24 27L6 30z"/><path d="M22 21v9a8 8 0 0 0 16 0v-9M27 21v13M30 21v14M33 21v13"/></symbol>
+ <symbol id="g-cleric" viewBox="0 0 60 60"><path d="M30 3l24 27-24 27L6 30z"/><circle cx="30" cy="30" r="5.5"/><path d="M30 15v6M30 39v6M17 30h5M38 30h5"/></symbol>
+ <symbol id="g-druid" viewBox="0 0 60 60"><path d="M30 3l24 27-24 27L6 30z"/><path d="M30 16c9 6 9 22 0 28c-9-6-9-22 0-28zM30 23v21"/></symbol>
+ <symbol id="g-fighter" viewBox="0 0 60 60"><path d="M30 3l24 27-24 27L6 30z"/><path d="M30 14l3 5v15h-6V19zM23 34h14M30 34v10"/></symbol>
+ <symbol id="g-monk" viewBox="0 0 60 60"><path d="M30 3l24 27-24 27L6 30z"/><circle cx="30" cy="30" r="10"/><circle cx="30" cy="30" r="3"/></symbol>
+ <symbol id="g-paladin" viewBox="0 0 60 60"><path d="M30 3l24 27-24 27L6 30z"/><path d="M21 19h18v10c0 8-9 14-9 14s-9-6-9-14zM30 19v24"/></symbol>
+ <symbol id="g-ranger" viewBox="0 0 60 60"><path d="M30 3l24 27-24 27L6 30z"/><path d="M30 45V16M23 23l7-7 7 7M25 41l5-4 5 4"/></symbol>
+ <symbol id="g-rogue" viewBox="0 0 60 60"><path d="M30 3l24 27-24 27L6 30z"/><path d="M22 19l16 22M38 19L22 41M24 34l5 4M36 34l-5 4"/></symbol>
+ <symbol id="g-sorcerer" viewBox="0 0 60 60"><path d="M30 3l24 27-24 27L6 30z"/><path d="M30 15l3 12 9 3-9 3-3 12-3-12-9-3 9-3z"/></symbol>
+ <symbol id="g-warlock" viewBox="0 0 60 60"><path d="M30 3l24 27-24 27L6 30z"/><path d="M17 30q13-12 26 0q-13 12-26 0z"/><circle cx="30" cy="30" r="3.5"/></symbol>
+ <symbol id="g-wizard" viewBox="0 0 60 60"><path d="M30 3l24 27-24 27L6 30z"/><path d="M30 14l13 16-13 16-13-16z"/><circle cx="30" cy="30" r="3.5"/></symbol>
+</svg>
+
+<div class="wrap">
+ <h1 class="top">Палитри за J</h1>
+ <p class="lead">Същата структура J, с осем палитри и два шрифта за заглавията. Натисни палитра и трите екрана се преоцветяват. Нивото вече е на два реда по десет ромбчета.</p>
+ <div class="bar">
+  <p class="lbl">Палитра</p><div class="grp" id="pals" role="group" aria-label="Палитра"></div>
+  <p class="lbl">Шрифт на заглавията</p><div class="grp" id="fonts" role="group" aria-label="Шрифт"></div>
+  <p class="info" id="info"></p>
+ </div>
+ <div id="out"></div>
+</div>
+
+<script>
+var T=[
+ {c:'J',h:'J. „Мастило“',tag:'Студена светла хартия и тъмносиньо мастило. Структурата идва от буквите и от тънки линии, почти без кутии.',
+  why:['<b>Най-близо до семплостта на G.</b> Големи заглавия, дебела линия над всяка секция, тънки линии между редовете.','<b>Един жълт акцент</b> само за текущото: текущата стъпка и етикета „ново“. Червеното е запазено за „чака избор“.','Контрастът идва от плътни тъмносини кръгове и бутони с форма на хапче. Правоъгълници почти няма.'],
+  sw:[['#edf0f3','хартия','#16213a'],['#16213a','мастило','#f3f5f8'],['#f2c230','текущо','#16213a'],['#1d6b52','готово','#fff'],['#c93a22','чака','#fff']],
+  f:'Шрифтове: Piazzolla (заглавия) и Golos Text (текст). И двата са свободни и с кирилица.'},
+ {c:'K',h:'K. „Мъх“',tag:'Светлозеленикава основа, меки запълнени повърхности без рамки и един тъмен блок на страница.',
+  why:['<b>Най-мека и най-„приложение“.</b> Всичко е заоблено; групите се отделят с тон, не с линии.','<b>Тъмният блок е героят на страницата:</b> на Class това е картата на класа със светъл знак в нея.','Зеленото е и акцент, и „готово“; оранжево-ръждивото е „чака избор“. Заглавията са с тънък елегантен сериф.'],
+  sw:[['#f1f3ea','основа','#1c2a1d'],['#e2e8d6','повърхност','#1c2a1d'],['#1c2a1d','тъмен блок','#f1f3ea'],['#2a7048','акцент и готово','#fff'],['#b9471a','чака','#fff']],
+  f:'Шрифтове: Oranienbaum (заглавия) и Onest (текст). И двата са свободни и с кирилица.'},
+ {c:'L',h:'L. „Вино“',tag:'Тъмна виненочервена лента горе с марката и стъпките, под нея светла работна зона с бели карти.',
+  why:['<b>Най-силен контраст, най-близо до B.</b> Навигацията винаги е върху тъмното, съдържанието винаги е на светло.','<b>Кайсиев акцент</b> за текущата стъпка, зарчето и знака на класа. Картите са бели с тънка рамка и заоблени ъгли.','Най-ясно разделя „къде съм“ от „какво правя“. Рискът е, че картите са най-обикновеният елемент от трите посоки.'],
+  sw:[['#f6f2f1','основа','#2a1620'],['#5a1a2b','вино','#fbeee6'],['#f3a65a','кайсия','#2a1620'],['#2b6e55','готово','#fff'],['#b3261e','чака','#fff']],
+  f:'Шрифтове: Vollkorn (заглавия) и Sofia Sans (текст, с български форми на буквите). И двата са свободни.'}
+];
+var STEPS=['Home','Клас','Произход','Раса','Abilities','Equipment','Лист'];
+function ic(n){return '<svg class="ic" aria-hidden="true"><use href="#'+n+'"/></svg>';}
+function nav(cur,done){var pend={1:2,4:1},h='<nav class="nav" aria-label="Стъпки"><ol>';
+ STEPS.forEach(function(l,i){var c=i===cur?'cur':(done.indexOf(i)>-1?'done':'');
+  var n=c==='done'?'✓':(i===0?'◆':i);
+  h+='<li class="'+c+'">'+(pend[i]?'<b class="bd">'+pend[i]+'</b>':'')+'<a><span class="n">'+n+'</span><span>'+l+'</span></a></li>';});
+ return h+'</ol></nav>';}
+function topBar(cur,done){return '<div class="band"><header class="hd"><div class="brand">'+ic('d20')+'<span>Създаване на герои</span></div><div class="lang" role="group" aria-label="Език"><button aria-pressed="true">BG</button><button aria-pressed="false">EN</button></div></header>'+nav(cur,done)+'</div>';}
+function home(){return topBar(0,[2,3])+'<main>'+
+ '<p class="eyebrow">Твоят герой</p><h1>Кой ще е героят?</h1>'+
+ '<div class="name"><div class="in">Мирела Драгиева</div><button class="die" aria-label="Случайно име">'+ic('d20')+'</button></div><p class="hint">Зарчето хвърля българско име.</p>'+
+ '<div class="slots"><button class="slot bad"><span class="k">Клас<span class="mk p">!</span></span><span class="v">Wizard 3</span><span class="s">още 2 избора</span></button>'+
+ '<button class="slot"><span class="k">Произход<span class="mk r">✓</span></span><span class="v">Sage</span><span class="s">Background</span></button>'+
+ '<button class="slot"><span class="k">Раса<span class="mk r">✓</span></span><span class="v">Human</span><span class="s">Species</span></button></div>'+
+ '<button class="go"><span><small>Следващо неприключено</small>Клас</span>'+ic('arr')+'</button>'+
+ '<div class="sh"><h3>Библиотека</h3><span>3 героя</span></div><ul class="lib">'+
+ '<li class="act"><span class="sg">'+ic('g-wizard')+'</span><span class="t"><b>Мирела Драгиева</b><span>Wizard 3 · Human · сега отворен</span></span><button class="more" aria-label="Действия">···</button></li>'+
+ '<li><span class="sg">'+ic('g-fighter')+'</span><span class="t"><b>Борислав Кънев</b><span>Fighter 4 · Dwarf · вчера</span></span><button class="more" aria-label="Действия">···</button></li>'+
+ '<li><span class="sg">'+ic('g-cleric')+'</span><span class="t"><b>Радка Стоянова</b><span>Cleric 1 · Elf · преди 6 дни</span></span><button class="more" aria-label="Действия">···</button></li></ul>'+
+ '<button class="go ghost"><span>Нов герой</span>'+ic('plus')+'</button><div class="row2"><a>Изтегли всички (.json)</a><a>Качи .json</a></div>'+
+ '<div class="rules"><p class="eyebrow">Правила и източници</p><div class="sg3"><button aria-pressed="false">Mixed</button><button aria-pressed="false">2014</button><button aria-pressed="true">2024</button></div><div class="tg"><span>PHB 2024</span><span>SRD 5.2</span><span class="off">Xanathar\'s</span><span class="off">Tasha\'s</span></div></div>'+
+ '<button class="go ghost"><span>Напред: Клас</span>'+ic('arr')+'</button></main>';}
+function pips(f,n){var h='';for(var i=0;i<n;i++)h+='<i'+(i<f?' class="f"':'')+'></i>';return h;}
+function cls(){return topBar(1,[0,2,3])+'<main><div class="colA">'+
+ '<div class="hero"><div class="top"><span class="crest">'+ic('g-wizard')+'</span><div><div class="k">Клас · Мирела Драгиева</div><button class="cl">Wizard'+ic('chev')+'</button><div class="sb">d6 за живот · основна характеристика INT</div></div></div>'+
+ '<div class="lv"><button aria-label="Намали нивото">−</button><div class="mid"><div class="num">Ниво 3 <small>от 20</small></div><div class="lvp">'+pips(3,20)+'</div></div><button aria-label="Увеличи нивото">+</button></div>'+
+ '<div class="line"><span>Подклас (Subclass)</span><b>Evoker<i>✓</i></b></div><button class="addc">+ Добави клас (Multiclass)</button></div></div><div class="colB">'+
+ '<div class="tabs" role="tablist"><button role="tab" aria-selected="true">Features</button><button role="tab" aria-selected="false">Spells</button></div>'+
+ '<div class="cc bad"><button><span class="mk p">!</span><span class="lab">Умения (Skills)<small>избери 2</small></span><span class="pips">'+pips(1,2)+'</span></button><div class="body"><p>Дава: владеене в две умения от списъка.</p><div class="tiles"><div class="tile dis">Arcana<small>вече от Sage</small></div><div class="tile dis">History<small>вече от Sage</small></div><div class="tile">Insight</div><div class="tile sel">Investigation</div><div class="tile">Medicine</div><div class="tile">Religion</div></div></div></div>'+
+ '<div class="cc bad"><button><span class="mk p">!</span><span class="lab"><span class="new">ново</span>Книга със заклинания<small>Spellbook · 8 от 10</small></span><span class="pips">'+pips(4,5)+'</span></button></div>'+
+ '<div class="cc"><button><span class="mk r">✓</span><span class="lab">Трикове (Cantrips)<small>3 от 3</small></span><span class="pips">'+pips(3,3)+'</span></button></div>'+
+ '<div class="cc"><button><span class="mk r">✓</span><span class="lab">Подклас: School of Evoker<small>ниво 3</small></span><span class="pips">'+pips(1,1)+'</span></button></div>'+
+ '<button class="go nextb"><span><small>Напред</small>Произход (Background)</span>'+ic('arr')+'</button></div></main>';}
+
+var G0=['Barbarian','Bard','Cleric','Druid','Fighter','Monk','Paladin','Ranger','Rogue','Sorcerer','Warlock','Wizard'];
+var out='';
+T.slice(0,1).forEach(function(t){
+ out+='<section class="dir"><div class="phones">'+
+ '<div><p class="cap">'+t.c+' · Home · телефон</p><div class="phone"><div class="screen m '+t.c+'">'+home()+'</div></div></div>'+
+ '<div><p class="cap">'+t.c+' · Class · телефон</p><div class="phone"><div class="screen m '+t.c+'">'+cls()+'</div></div></div></div>'+
+ '<p class="cap">'+t.c+' · Class · десктоп</p><div class="deskwrap"><div class="desk m '+t.c+'">'+cls()+'</div></div></section>';});
+document.getElementById('out').innerHTML=out;
+
+var P=[
+ {n:'Мастило',d:'Тъмносиньо мастило, жълто за текущото. Това е палитрата от първия макет.',bg:'#edf0f3',line:'#c3c9d2',tx:'#16213a',mu:'#55607a',ink:'#16213a',on:'#f3f5f8',acc:'#f2c230',ai:'#16213a',ok:'#1d6b52',bad:'#c93a22'},
+ {n:'Кобалт',d:'По-наситено и по-смело синьо, същото жълто. Най-цветната от осемте.',bg:'#eef1f6',line:'#c2c9da',tx:'#141a33',mu:'#525a78',ink:'#1f3fa8',on:'#f4f6fc',acc:'#ffd24a',ai:'#141a33',ok:'#1d6b52',bad:'#c5341f'},
+ {n:'Графит',d:'Неутрално почти черно със светлосин акцент. Най-спокойната и най-„вестникарска“.',bg:'#f1f1ef',line:'#cdccc7',tx:'#202124',mu:'#5c5d62',ink:'#202124',on:'#f5f5f3',acc:'#8ccbf5',ai:'#14202b',ok:'#23694d',bad:'#c2261c'},
+ {n:'Бор',d:'Тъмно борово зелено с кехлибар. Природна, но по-строга от „Мъх“.',bg:'#eef1ea',line:'#c4ccbc',tx:'#15291f',mu:'#52614f',ink:'#173528',on:'#f1f4ec',acc:'#f0b541',ai:'#15291f',ok:'#2c7a50',bad:'#c0431f'},
+ {n:'Петрол',d:'Синьо-зелено мастило с коралов акцент. Необичайна, свежа.',bg:'#edf2f2',line:'#bfcdcd',tx:'#0d2a31',mu:'#4d6468',ink:'#0f3a44',on:'#eef5f5',acc:'#ff9a78',ai:'#0d2a31',ok:'#1d7357',bad:'#bd2f1c'},
+ {n:'Вино',d:'Виненочервено мастило с кайсия, от посока L.',bg:'#f6f2f1',line:'#dccfd0',tx:'#2a1620',mu:'#6c5560',ink:'#5a1a2b',on:'#fbeee6',acc:'#f3a65a',ai:'#2a1620',ok:'#2b6e55',bad:'#b3261e'},
+ {n:'Еспресо',d:'Тъмнокафяво с градински чай. Топла, без да е пергамент.',bg:'#f3efe9',line:'#d6ccc0',tx:'#2b1f19',mu:'#6a5a50',ink:'#3a2a22',on:'#f6f1ea',acc:'#9ed0c0',ai:'#1f2b27',ok:'#2f6f57',bad:'#b8371f'},
+ {n:'Хартия',d:'Топла хартия и мастило с охра. Най-близо до чара на H, но с гладък фон.',bg:'#f4efe4',line:'#d5cab2',tx:'#1e1a2b',mu:'#5f586a',ink:'#1e1a2b',on:'#f4efe4',acc:'#e9b949',ai:'#1e1a2b',ok:'#2c6a5b',bad:'#a5301e'}
+];
+var F=[
+ {n:'Piazzolla (от J)',fd:'Piazzolla,Georgia,serif',fb:'"Golos Text",system-ui,sans-serif'},
+ {n:'Vollkorn (от L)',fd:'Vollkorn,Georgia,serif',fb:'"Sofia Sans",system-ui,sans-serif'}
+];
+var MAP={bg:'--bg',line:'--line',tx:'--tx',mu:'--mu',ink:'--ink',on:'--on-ink',acc:'--acc',ai:'--acc-ink',ok:'--ok',bad:'--bad'};
+var mocks=document.querySelectorAll('.m.J');
+function store(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+function load(k){try{return +localStorage.getItem(k)||0}catch(e){return 0}}
+function setPal(i){var p=P[i]||P[0];mocks.forEach(function(m){for(var k in MAP)m.style.setProperty(MAP[k],p[k]);m.style.setProperty('--pip',p.ink);});
+ document.querySelectorAll('#pals button').forEach(function(b,j){b.setAttribute('aria-pressed',j===i)});
+ document.getElementById('info').textContent=p.n+': '+p.d;store('jpal',i);}
+function setFont(i){var f=F[i]||F[0];mocks.forEach(function(m){m.style.setProperty('--fd',f.fd);m.style.setProperty('--fb',f.fb);});
+ document.querySelectorAll('#fonts button').forEach(function(b,j){b.setAttribute('aria-pressed',j===i)});store('jfont',i);}
+document.getElementById('pals').innerHTML=P.map(function(p,i){return '<button type="button" id="pal'+i+'" data-p="'+i+'"><span class="dots">'+[p.bg,p.ink,p.acc,p.ok,p.bad].map(function(c){return '<i style="background:'+c+'"></i>'}).join('')+'</span>'+p.n+'</button>'}).join('');
+document.getElementById('fonts').innerHTML=F.map(function(f,i){return '<button type="button" id="font'+i+'" data-f="'+i+'">'+f.n+'</button>'}).join('');
+document.querySelector('.bar').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;if(b.dataset.p)setPal(+b.dataset.p);if(b.dataset.f)setFont(+b.dataset.f);});
+setPal(load('jpal'));setFont(load('jfont'));
+function fit(){document.querySelectorAll('.deskwrap').forEach(function(w){var d=w.firstElementChild;d.style.setProperty('--z',Math.min(1,w.clientWidth/1040).toFixed(4));});}
+fit();window.addEventListener('resize',fit);
+document.querySelectorAll('.screen .nav').forEach(function(r){var c=r.querySelector('.cur');if(c)r.scrollLeft=Math.max(0,c.offsetLeft-90)});
+document.addEventListener('click',function(e){var b=e.target.closest('.m button[aria-pressed]');if(b){b.parentElement.querySelectorAll('button[aria-pressed]').forEach(function(x){x.setAttribute('aria-pressed',x===b)})}var t=e.target.closest('.tabs button');if(t){t.parentElement.querySelectorAll('button').forEach(function(x){x.setAttribute('aria-selected',x===t)})}});
+</script>
