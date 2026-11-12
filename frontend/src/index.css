@@ -8,5 +8,6 @@
 @import "./styles/spells.css";
 @import "./styles/forms.css";
 @import "./styles/home.css";
+@import "./styles/desktop.css";
 @import "./styles/touch.css";
 @import "./styles/hooks.css";

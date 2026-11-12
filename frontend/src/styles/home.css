@@ -208,3 +208,9 @@
   font-size: 13px;
   color: var(--color-text-secondary);
 }
+
+/* The two shells of the Home page: stacked on a phone, side by side from 900px (see desktop.css). */
+.home-side,
+.home-main {
+  min-width: 0;
+}

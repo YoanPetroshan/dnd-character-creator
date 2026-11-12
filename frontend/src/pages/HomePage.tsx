@@ -100,6 +100,7 @@ export function HomePage() {
   return (
     <div className="page" data-page="home">
       <h1>{t.home.title}</h1>
+      <div className="home-side">
       <div className="name-row">
         <label className="name-row__field">
           <span className="name-row__label">{t.home.nameLabel}</span>
@@ -136,6 +137,8 @@ export function HomePage() {
         ))}
       </ul>
 
+      </div>
+      <div className="home-main">
       <h2>{t.home.charactersTitle}</h2>
       <ul className="hero-list">
         {library.items.map((item) => {
@@ -333,6 +336,7 @@ export function HomePage() {
           </button>
         </>
       )}
+      </div>
     </div>
   );
 }

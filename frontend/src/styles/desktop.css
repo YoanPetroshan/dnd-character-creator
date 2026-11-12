@@ -1,0 +1,104 @@
+/* Desktop (>= 900px): content is at most 1040px wide, centered, with 32px side margins. Home and the Sheet page
+   are two columns (340px + the rest); the other pages keep one column of at most 720px, because they have no
+   second shell to put in a column. The "next" button sits bottom right. */
+@media (min-width: 900px) {
+  .app-header,
+  .next-step,
+  .new-choices,
+  .status-banner {
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: max(32px, calc((100% - 1040px) / 2));
+    padding-right: max(32px, calc((100% - 1040px) / 2));
+  }
+
+  .status-banner {
+    border-left: 0;
+    box-shadow: inset 3px 0 0 var(--color-text);
+  }
+
+  .status-banner[data-state="error"],
+  .status-banner[data-state="engine-unavailable"] {
+    box-shadow: inset 3px 0 0 var(--color-danger);
+  }
+
+  .status-banner[data-state="offline-ready"] {
+    box-shadow: inset 3px 0 0 var(--color-ok);
+  }
+
+  .status-banner[data-state="storage-failed"],
+  .status-banner[data-state="server-older"],
+  .status-banner[data-state="pruned"] {
+    box-shadow: inset 3px 0 0 var(--color-warning-border);
+  }
+
+  .step-nav {
+    justify-content: center;
+    gap: 14px;
+  }
+
+  .step-nav a {
+    min-width: 88px;
+    font-size: 13px;
+  }
+
+  .step-nav a::before {
+    width: 40px;
+    height: 40px;
+    font-size: 15px;
+  }
+
+  main {
+    width: 100%;
+    max-width: 1104px;
+    margin: 0 auto;
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  .page {
+    max-width: 720px;
+  }
+
+  [data-page="home"],
+  [data-page="sheet"] {
+    max-width: none;
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    column-gap: 32px;
+    align-items: start;
+  }
+
+  [data-page="home"] > h1,
+  [data-page="sheet"] > h1 {
+    grid-column: 1 / -1;
+  }
+
+  [data-page="sheet"] > :not(h1):not(.tabs) {
+    grid-column: 1;
+  }
+
+  [data-page="sheet"] > .tabs {
+    grid-column: 2;
+    grid-row: 2 / span 6;
+  }
+
+  /* the sheet's left column is only 340px wide: the ability cells stay 3 x 2 */
+  .summary-strip__abilities {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .summary-strip__abilities li:not(:first-child) {
+    border-left: 0;
+  }
+
+  .summary-strip__abilities li:not(:nth-child(3n + 1)) {
+    border-left: 1px solid var(--color-border);
+  }
+
+  main .next-button {
+    width: auto;
+    margin-left: auto;
+    gap: 28px;
+  }
+}
