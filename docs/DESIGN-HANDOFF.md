@@ -264,53 +264,53 @@ drop lowest) / Manual. Таблица `.ability-table` (шест характе�
 
 | # | Файл | Съдържание |
 | --- | --- | --- |
-| 1 | `frontend/src/styles/tokens.css` | `:root` променливи (4.2) |
-| 2 | `frontend/src/styles/base.css` | `box-sizing`, `body`, `.app` |
-| 3 | `frontend/src/styles/layout.css` | `.app-header`, `.lang-switch`, `.step-nav`, `main`, `.page` |
-| 4 | `frontend/src/styles/status.css` | `.status--error` |
-| 5 | `frontend/src/styles/choice.css` | карти с избори, избирачи |
-| 6 | `frontend/src/styles/abilities.css` | метод на характеристиките, таблица, стъпало |
+| 1 | `frontend/src/styles/tokens.css` | `:root` променливи (4.2), тъмна тема (`@media (prefers-color-scheme: dark)` и `:root[data-theme="dark"]`), печатен набор (`@media print`) |
+| 2 | `frontend/src/styles/base.css` | `@font-face` (Piazzolla, Golos Text), `h1`/`h2`, връзки, фокус, бутони, полета, `summary` |
+| 3 | `frontend/src/styles/layout.css` | хедър и марка, езиков превключвател, стъпки (номерирани кръгове), `main`, `.page`, „Напред“, банер за нови избори, страницата на листа (лента за изнасяне, обобщение, табове, таблици) |
+| 4 | `frontend/src/styles/status.css` | `.status--error`, статус банери |
+| 5 | `frontend/src/styles/choice.css` | карти с избори, хапчета-опции, дълъг избирач |
+| 6 | `frontend/src/styles/abilities.css` | метод на характеристиките (хапчета), таблица, стъпало |
 | 7 | `frontend/src/styles/lists.css` | екипировка, браузър на предмети, инвентар, табове |
 | 8 | `frontend/src/styles/spells.css` | библиотека със заклинания |
-| 9 | `frontend/src/styles/forms.css` | `.details-section`, зарове за HP, `.class-block`, `.choice-pruned` |
-| 10 | `frontend/src/styles/touch.css` | мобилни/докосване правила (функционални, вж. 4.4) |
-| 11 | `frontend/src/styles/hooks.css` | празни правила за класове без стил още |
+| 9 | `frontend/src/styles/forms.css` | `.details-section`, зарове за HP, блок на класа, знак на клас, ромбчета за ниво |
+| 10 | `frontend/src/styles/home.css` | Home: име, зарче, слотове, списък с герои, действия |
+| 11 | `frontend/src/styles/desktop.css` | `@media (min-width: 900px)`: ширина 1040 px, две колони за Home и листа |
+| 12 | `frontend/src/styles/touch.css` | мобилни/докосване правила (функционални, вж. 4.4) |
+| 13 | `frontend/src/styles/hooks.css` | празни правила за класове без стил още |
 | - | `frontend/src/print.css` | печат (внася се от `main.tsx`) |
 
-Все още няма стил за `.status-banner` (банерите са голи `<p>`), за секциите на листа (`[data-section]` има само
-структурни правила), за `.help-page`, `.next-button` (само размер) и за заглавията `h1`/`h2`. Това е най-голямата
-"бяла" територия.
+Шрифтовете са в `frontend/src/assets/fonts/` (с `LICENSE-*.txt`). Компонентът `ClassGlyph` (`components/ClassGlyph.tsx`)
+рисува знаците на класовете; чернови на 12-те знака са в таблицата `MOTIFS`.
+
+Все още няма отделен стил за `.help-page` (страницата Help е само текст с общите правила) и за секциите на листа
+извън табовете (`[data-section]` има общите правила за `h2` и таблици).
 
 ### 4.2 Токени (`frontend/src/styles/tokens.css`, сегашни стойности)
 
-| Токен | Стойност | Забележка |
+| Токен | Светла стойност | Забележка |
 | --- | --- | --- |
-| `--font-sans` | `system-ui, sans-serif` | единственият шрифтов токен |
-| `--space-1` | `4px` | |
-| `--space-2` | `8px` | |
-| `--space-3` | `12px` | |
-| `--space-4` | `16px` | |
-| `--space-5` | `20px` | |
-| `--radius-sm` | `4px` | |
-| `--radius-pill` | `10px` | значки |
-| `--radius-round` | `50%` | точки |
-| `--color-text` | `#222` | |
-| `--color-text-strong` | `#333` | активна стъпка (фон) |
-| `--color-text-muted` | `#555` | |
-| `--color-text-secondary` | `#666` | |
-| `--color-disabled` | `#999` | |
-| `--color-page` | `#fafafa` | **трябва да е hex** (виж 5.6) |
-| `--color-surface` | `#fff` | |
-| `--color-surface-muted` | `#f5f5f5` | |
-| `--color-on-dark` | `#fff` | |
-| `--color-border` | `#ccc` | |
-| `--color-border-subtle` | `#eee` | |
-| `--color-accent` | `#2980b9` | **трябва да е hex** (виж 5.6) |
-| `--color-danger` | `#c0392b` | значка на стъпка |
-| `--color-error` | `red` | текст на грешка |
-| `--color-warning-text` | `#8a5a00` | |
-| `--color-warning-bg` | `#fff7e0` | |
-| `--color-warning-border` | `#e0a800` | |
+| `--font-display` | `"Piazzolla", Georgia, serif` | заглавия (700, 800) |
+| `--font-sans` | `"Golos Text", system-ui, sans-serif` | текст (400-700) |
+| `--space-1` … `--space-5` | `4 / 8 / 12 / 16 / 20px` | |
+| `--radius-sm` | `4px` | само дребни неща |
+| `--radius-pill` | `29px` | бутони, значки |
+| `--radius-round` | `50%` | кръгове |
+| `--color-page` | `#edf0f3` | **трябва да е hex** (виж 5.6) |
+| `--color-surface` | `#ffffff` | полета, падащи списъци |
+| `--color-surface-muted` | `#e2e6eb` | |
+| `--color-text`, `--color-text-strong` | `#16213a` | |
+| `--color-text-muted`, `--color-text-secondary` | `#55607a` | |
+| `--color-disabled` | `#7c869b` | винаги с пунктир |
+| `--color-on-dark` | `#f3f5f8` | текст върху `--color-accent` |
+| `--color-border`, `--color-border-subtle` | `#c3c9d2`, `#d9dde3` | |
+| `--color-accent` | `#16213a` | „мастило“; **трябва да е hex** (виж 5.6); първото срещане в `tokens.css` е светлото |
+| `--color-highlight`, `--color-on-highlight` | `#f2c230`, `#16213a` | текуща стъпка, „ново“ |
+| `--color-ok` | `#1d6b52` | готово |
+| `--color-danger`, `--color-error` | `#c4371f` | чака избор, грешка (AA върху страницата) |
+| `--color-warning-text` / `-bg` / `-border` | `#6b4e00` / `#fbf1cf` / `#d9a400` | |
+
+Тъмните стойности са в същия файл (`@media (prefers-color-scheme: dark)` върху `:root:not([data-theme="light"])` и
+`:root[data-theme="dark"]`); при печат токените се връщат към светъл, черно-бял набор. Нищо още не поставя `data-theme`.
 
 Токените се четат с `var(--…)` във всички останали файлове. Нови токени (напр. `--font-display`, `--shadow-1`,
 `--color-surface-raised`) се добавят САМО в `tokens.css` (тест: само `tokens.css` дефинира `--*`, и всяко `var(--x)`
@@ -321,9 +321,9 @@ drop lowest) / Manual. Таблица `.ability-table` (шест характе�
 
 ### 4.3 Тема и тъмен режим
 
-`tokens.css` е подготвен за темиране: коментарът препоръчва да се презапишат токените на `:root[data-theme="..."]`.
-**Нищо още не поставя `data-theme`** (grep в `frontend/src`: няма) и няма `prefers-color-scheme` правила. Ако дизайнът
-иска тъмна/светла/друга тема: (а) блоковете `:root[data-theme="dark"] { --color-...: ... }` (и/или
+Тъмната тема вече е в `tokens.css` (`@media (prefers-color-scheme: dark)` и `:root[data-theme="dark"]`), следва системата;
+стойностите чакат преглед от собственика на екран. **Нищо още не поставя `data-theme`** (grep в `frontend/src`: няма).
+Ако е нужен ръчен превключвател или друга тема: (а) блоковете `:root[data-theme="dark"] { --color-...: ... }` (и/или
 `@media (prefers-color-scheme: dark)`) отиват в `tokens.css` (тестът не позволява `--*` дефиниции в други файлове);
 (б) за ръчен превключвател трябва малък код, който записва `data-theme` на `document.documentElement` и пази избора в
 `localStorage` (нов компонент в `components/`, текстове в `copy/bg.ts` и `en.ts`, и повторно заснемане на snapshot,
