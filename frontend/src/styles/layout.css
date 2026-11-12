@@ -219,7 +219,7 @@ main .next-button::after {
   text-decoration: none;
 }
 
-/* The sheet page: export actions, summary strip and tabs (structure only; the look comes from the design chat). */
+/* The sheet page: export bar, summary strip, tabs (text only, scroll sideways on a phone) and panels. CSS only. */
 .export-bar__buttons {
   display: flex;
   flex-wrap: wrap;
@@ -231,41 +231,95 @@ main .next-button::after {
   min-width: 44px;
 }
 
+/* The fillable PDF is the main action: a solid ink pill. */
 .export-bar__button--primary {
-  font-weight: bold;
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-dark);
+}
+
+.export-bar__button--primary:disabled {
+  background: transparent;
+  color: var(--color-disabled);
+  border-color: var(--color-border);
 }
 
 .export-bar__reasons {
+  margin-top: var(--space-3);
+  padding-left: var(--space-3);
+  border-left: 3px solid var(--color-danger);
+  font-size: 14.5px;
 }
 
 .summary-strip {
   padding: var(--space-2) 0;
-  border-top: 1px solid var(--color-border-subtle);
-  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .summary-strip__who {
-  margin: 0 0 var(--space-2);
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-secondary);
 }
 
+.summary-strip__who strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--color-text-strong);
+}
+
+/* Abilities: 3x2 cells on a phone, 6x1 from 600px; a 2px rule above the row, 1px lines between cells. */
 .summary-strip__abilities {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-3);
-  list-style: none;
-  margin: 0 0 var(--space-2);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0 0 var(--space-3);
   padding: 0;
+  list-style: none;
+  border-top: 2px solid var(--color-text);
+  font-variant-numeric: tabular-nums;
 }
 
+.summary-strip__abilities li {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 600;
+}
+
+.summary-strip__abilities li:not(:nth-child(3n + 1)) {
+  border-left: 1px solid var(--color-border);
+}
+
+@media (min-width: 600px) {
+  .summary-strip__abilities {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .summary-strip__abilities li:not(:nth-child(3n + 1)) {
+    border-left: 0;
+  }
+
+  .summary-strip__abilities li:not(:first-child) {
+    border-left: 1px solid var(--color-border);
+  }
+}
+
+/* Stats: AC and HP are solid ink circles with the number inside; the others are a number over a label. */
 .summary-strip__stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  align-items: start;
+  gap: var(--space-4) var(--space-2);
   margin: 0;
 }
 
 .summary-strip__stats div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   min-width: 0;
+  text-align: center;
 }
 
 .summary-strip__stats dt,
@@ -273,13 +327,42 @@ main .next-button::after {
   margin: 0;
 }
 
+.summary-strip__stats dd {
+  order: -1;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-strip__stats dt {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.summary-strip__stats [data-summary="hitPoints"] dd,
+.summary-strip__stats [data-summary="armorClass"] dd {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--space-1);
+  border-radius: var(--radius-round);
+  background: var(--color-accent);
+  color: var(--color-on-dark);
+  font-size: 24px;
+}
+
 .tabs__list {
   display: flex;
   flex-wrap: nowrap;
-  gap: var(--space-1);
+  gap: var(--space-4);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
+  scrollbar-width: none;
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -288,10 +371,19 @@ main .next-button::after {
   white-space: nowrap;
   min-height: 44px;
   min-width: 44px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--color-text-secondary);
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
 }
 
 .tabs__tab[aria-selected="true"] {
-  font-weight: bold;
+  color: var(--color-text);
+  box-shadow: inset 0 -3px 0 var(--color-text);
 }
 
 .tabs__panel {
@@ -299,14 +391,29 @@ main .next-button::after {
   overflow-wrap: anywhere;
 }
 
+/* Tables: no vertical lines, an eyebrow header row, tabular figures. */
 .tabs__panel table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   table-layout: auto;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
 }
 
 .tabs__panel td,
 .tabs__panel th {
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  padding: var(--space-1) var(--space-2) var(--space-1) 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  text-align: left;
+}
+
+.tabs__panel th {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
 }
 
 .feature-filters {
@@ -318,6 +425,12 @@ main .next-button::after {
 .feature-filters button {
   min-height: 44px;
   min-width: 44px;
+}
+
+.feature-filters button[aria-pressed="true"] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-dark);
 }
 
 .standard-actions {
