@@ -164,12 +164,14 @@
 
 .slot__label {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-1);
-  font-size: 11.5px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-text-secondary);
 }

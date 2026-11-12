@@ -1,11 +1,31 @@
-/* Print hook (structure only, no visual choices): the sheet prints without the app chrome. */
+/* Print: the sheet prints without the app chrome, black on white (the tokens switch to a light set in tokens.css).
+   Only the selected sheet tab is rendered, so only that tab prints. */
 @media print {
+  .app-header,
   .step-nav,
   .next-step,
+  .new-choices,
   .next-button,
   .status-banner,
+  .export-bar,
+  .tabs__list,
+  .feature-filters,
   .no-print,
   button {
     display: none !important;
+  }
+
+  [data-page="sheet"] {
+    display: block !important;
+  }
+
+  .tabs__panel[hidden] {
+    display: none;
+  }
+
+  h2,
+  .summary-strip__abilities,
+  .summary-strip__abilities li {
+    break-after: avoid;
   }
 }
