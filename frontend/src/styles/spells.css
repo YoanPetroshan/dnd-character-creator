@@ -4,11 +4,12 @@
   padding: 0;
   max-height: 400px;
   overflow-y: auto;
-  border: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .spell-library-card {
-  padding: var(--space-2);
+  padding: var(--space-2) 0;
   border-bottom: 1px solid var(--color-border-subtle);
 }
 
@@ -20,15 +21,16 @@
   display: flex;
   justify-content: space-between;
   gap: var(--space-3);
-  font-weight: bold;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .spell-library-card__meta {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  font-size: 0.85em;
-  color: var(--color-text-muted);
+  font-size: 13px;
+  color: var(--color-text-secondary);
   margin: var(--space-1) 0;
 }
 

@@ -1,18 +1,68 @@
+/* Method selector: option pills (the radio stays in the DOM, visually hidden). */
 .ability-method-selector {
   display: flex;
-  gap: var(--space-4);
+  flex-wrap: wrap;
+  gap: var(--space-2);
   margin-bottom: var(--space-3);
 }
 
+.ability-method-selector label,
+.picker-list label {
+  position: relative;
+  padding: 0 16px;
+  border: 1.5px solid var(--color-text);
+  border-radius: var(--radius-pill);
+  font-size: 14.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.ability-method-selector input[type="radio"],
+.picker-list input[type="radio"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+
+.ability-method-selector label:has(input:checked),
+.picker-list label:has(input:checked) {
+  background: var(--color-accent);
+  color: var(--color-on-dark);
+  font-weight: 600;
+}
+
+.ability-method-selector label:has(input:focus-visible),
+.picker-list label:has(input:focus-visible) {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+
+/* Table: no vertical lines, a plain eyebrow header row, tabular figures. */
 .ability-table {
   border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
 }
 
 .ability-table th,
 .ability-table td {
-  border: 1px solid var(--color-border);
   padding: 6px var(--space-3);
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
   text-align: left;
+}
+
+.ability-table th {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.ability-table thead th {
+  border-bottom: 2px solid var(--color-text);
 }
 
 .point-buy-stepper {
@@ -21,8 +71,18 @@
   gap: var(--space-2);
 }
 
+.point-buy-stepper button {
+  padding: 0;
+  border-radius: var(--radius-round);
+  font-size: 20px;
+}
+
 .point-buy-stepper__value {
   min-width: 1.5em;
   text-align: center;
   display: inline-block;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }

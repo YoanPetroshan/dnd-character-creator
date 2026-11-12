@@ -7,6 +7,7 @@
   padding-left: var(--space-5);
 }
 
+/* Lists: rows with 1px lines, no outer box. */
 .item-browser-list,
 .inventory-list {
   list-style: none;
@@ -14,7 +15,8 @@
   padding: 0;
   max-height: 300px;
   overflow-y: auto;
-  border: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .item-browser-list li,
@@ -22,7 +24,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-1) 0;
   border-bottom: 1px solid var(--color-border-subtle);
 }
 
