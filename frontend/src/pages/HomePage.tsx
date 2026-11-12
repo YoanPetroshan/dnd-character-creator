@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useDraft } from "../DraftContext";
 import { useLibrary } from "../LibraryContext";
 import type { ImportEntry } from "../library";
@@ -11,6 +12,7 @@ import { safeFilename, shareOrDownload } from "../logic/files";
 import { sourceOn, toggleSource } from "../logic/sources";
 import type { Ruleset } from "../types";
 import { formatDateTime } from "../logic/formatDate";
+import { stepBadgeCount, stepStatus } from "../logic/steps";
 
 export function HomePage() {
   const t = useT();
@@ -61,6 +63,34 @@ export function HomePage() {
 
   const className = (classId: string) => catalog.classes.find((c) => c.id === classId)?.name ?? classId;
 
+  // The three slots: what is chosen for the class, background and species steps, and what is still open.
+  const status = stepStatus(resolution, draft);
+  const open = (path: string) => (resolution ? stepBadgeCount(status[path]) : 0);
+  const totalLevel = draft.classes.reduce((sum, c) => sum + c.level, 0);
+  const slots = [
+    {
+      key: "class",
+      path: "/class",
+      label: t.nav.steps.class,
+      value: draft.classes.length ? draft.classes.map((c) => className(c.classId)).join(" / ") : null,
+      hint: draft.classes.length ? t.common.level(totalLevel) : null,
+    },
+    {
+      key: "background",
+      path: "/background",
+      label: t.nav.steps.background,
+      value: draft.background.id ? (catalog.allBackgrounds.find((b) => b.id === draft.background.id)?.name ?? draft.background.id) : null,
+      hint: null,
+    },
+    {
+      key: "species",
+      path: "/species",
+      label: t.nav.steps.species,
+      value: draft.species.id ? (catalog.allSpecies.find((sp) => sp.id === draft.species.id)?.name ?? draft.species.id) : null,
+      hint: null,
+    },
+  ];
+
   const allSourceIds = catalog.sources.map((src) => src.id);
   const sourceOnFor = (id: string) => sourceOn(draft.sources, id);
   function toggle(id: string, on: boolean) {
@@ -88,6 +118,22 @@ export function HomePage() {
         </button>
       </div>
       <p className="name-hint">{t.home.nameHint}</p>
+
+      <ul className="slots">
+        {slots.map((slot) => (
+          <li key={slot.key} className="slot" data-state={slot.value ? "filled" : "empty"}>
+            <Link className="slot__link" to={slot.path}>
+              <span className="slot__label">{slot.label}</span>
+              <span className="slot__value">{slot.value ?? t.home.slotNone}</span>
+              {open(slot.path) > 0 ? (
+                <span className="slot__hint">{t.nav.unresolved(open(slot.path))}</span>
+              ) : (
+                slot.hint && <span className="slot__hint">{slot.hint}</span>
+              )}
+            </Link>
+          </li>
+        ))}
+      </ul>
 
       <h2>{t.home.charactersTitle}</h2>
       <ul className="hero-list">

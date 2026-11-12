@@ -462,6 +462,7 @@ export const bg = {
     corrupt: "повредена чернова",
     noStoredDraft: "няма запазена чернова",
     noClass: "без клас",
+    slotNone: "не е избрано",
     itemSummary: (classes: string, total: number) => `${classes}, общо ниво ${total}`,
     updated: (when: string) => `променен ${when}`,
     open: "Отвори",

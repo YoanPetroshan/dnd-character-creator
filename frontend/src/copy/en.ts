@@ -454,6 +454,7 @@ export const en: Copy = {
     corrupt: "damaged draft",
     noStoredDraft: "no stored draft",
     noClass: "no class",
+    slotNone: "not chosen",
     itemSummary: (classes: string, total: number) => `${classes}, total level ${total}`,
     updated: (when: string) => `updated ${when}`,
     open: "Open",
