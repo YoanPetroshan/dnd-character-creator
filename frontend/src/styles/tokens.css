@@ -1,7 +1,8 @@
 :root {
   /* Neutral placeholder tokens: every value equals what the stylesheets used before SK7.
      A designer changes the look here (or overrides these on :root / [data-theme]). */
-  --font-sans: system-ui, sans-serif;
+  --font-display: "Piazzolla", Georgia, serif;
+  --font-sans: "Golos Text", system-ui, sans-serif;
 
   --space-1: 4px;
   --space-2: 8px;
