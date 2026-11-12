@@ -3,52 +3,152 @@
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-2);
-  padding: var(--space-1) var(--space-2);
+  padding: 14px var(--space-3) 6px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-right: auto;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text-strong);
+}
+
+.app-brand__mark {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+.app-brand__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.help-link {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.lang-switch {
+  display: flex;
+  gap: var(--space-1);
 }
 
 .lang-switch button {
   min-width: 44px;
   min-height: 44px;
+  padding: 0 var(--space-2);
+  border-color: transparent;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  color: var(--color-text-secondary);
 }
 
+.lang-switch button[data-state="active"] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-dark);
+}
+
+/* Steps: a numbered circle over the step name. Outline = not done, solid ink with a check = done,
+   solid highlight with a ring = current. The number is a CSS counter (the label stays the link text). */
 .step-nav {
   display: flex;
-  gap: var(--space-1);
-  padding: var(--space-2);
-  background: var(--color-border-subtle);
-  border-bottom: 1px solid var(--color-border);
+  gap: 2px;
+  padding: 10px 10px 12px;
+  counter-reset: step;
   flex-wrap: nowrap;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+}
+
+.step-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .step-nav a {
-  flex: 0 0 auto;
-  white-space: nowrap;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  padding: var(--space-2) var(--space-3);
-  text-decoration: none;
-  color: var(--color-text-strong);
-  border-radius: var(--radius-sm);
+  counter-increment: step;
   position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 68px;
+  min-height: 44px;
+  padding: 0;
+  white-space: nowrap;
+  text-decoration: none;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.step-nav a::before {
+  content: counter(step);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid var(--color-text-muted);
+  border-radius: var(--radius-round);
+  font-size: 13.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.step-nav a[href$="/home"]::before {
+  content: "\25C6";
+}
+
+.step-nav a[data-state="done"]::before {
+  content: "\2713";
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-dark);
 }
 
 .step-nav a.active {
-  background: var(--color-text-strong);
-  color: var(--color-on-dark);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.step-nav a.active::before {
+  background: var(--color-highlight);
+  border-color: var(--color-highlight);
+  color: var(--color-on-highlight);
+  box-shadow: 0 0 0 3px var(--color-page), 0 0 0 4.5px var(--color-highlight);
 }
 
 .step-nav__badge {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 1px 6px;
-  border-radius: var(--radius-pill);
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  z-index: 2;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 8px;
+  padding: 0 4px;
+  border-radius: 9px;
   background: var(--color-danger);
   color: var(--color-on-dark);
   font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
 }
 
 main {

@@ -37,6 +37,14 @@ export default function App() {
           <NewChoicesProvider>
           <RouteA11y />
           <header className="app-header">
+            <span className="app-brand">
+              <svg className="app-brand__mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+                <polygon points="16,2.5 28.5,9.5 28.5,22.5 16,29.5 3.5,22.5 3.5,9.5" />
+                <polygon points="16,9.5 22.5,20.5 9.5,20.5" />
+                <path d="M16 2.5V9.5M28.5 9.5L22.5 20.5M3.5 9.5L9.5 20.5M3.5 22.5L9.5 20.5M28.5 22.5L22.5 20.5M16 29.5L9.5 20.5M16 29.5L22.5 20.5" />
+              </svg>
+              <span className="app-brand__name">{t.appName}</span>
+            </span>
             <NavLink className="help-link" to="/help">
               {t.nav.help}
             </NavLink>
