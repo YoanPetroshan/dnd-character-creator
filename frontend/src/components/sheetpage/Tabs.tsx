@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { tabAfterKey } from "../../logic/sheetTabs";
 
 export interface TabDef<Id extends string> {
@@ -26,6 +26,10 @@ export function Tabs<Id extends string>({
 }) {
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
   const current = Math.max(0, tabs.findIndex((t) => t.id === selected));
+
+  useEffect(() => {
+    refs.current[selected]?.scrollIntoView?.({ inline: "nearest", block: "nearest" });
+  }, [selected]);
 
   function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
     const next = tabAfterKey(current, tabs.length, e.key);
