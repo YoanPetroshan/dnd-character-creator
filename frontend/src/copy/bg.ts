@@ -102,7 +102,7 @@ export const bg = {
       armorClass: "AC",
       initiative: "Инициатива",
       speed: "Скорост",
-      proficiencyBonus: "Владеене",
+      proficiencyBonus: "Бонус",
       passivePerception: "Възприятие",
       hitDice: "Зарове HP",
     },

@@ -288,7 +288,7 @@ copy:sheet.initiative.title",Initiative,Инициатива,"Страница �
 206,Интерфейс,"copy:sheet.summary.speed
 copy:sheet.speeds.title",Speed,Скорост,"Страница „Лист на героя“ · текст: „Скорост“
 Лист, секция „Скорост“ · заглавие на секция: „Скорост“ → напр. „Скорост: 30 фута“",преведено,,,
-207,Интерфейс,copy:sheet.summary.proficiencyBonus,Proficiency,Владеене,Страница „Лист на героя“ · текст: „Владеене“,преведено,,,
+207,Интерфейс,copy:sheet.summary.proficiencyBonus,Proficiency,Бонус,Страница „Лист на героя“ · текст: „Бонус“,преведено,,,
 208,Интерфейс,copy:sheet.summary.passivePerception,Perception,Възприятие,Страница „Лист на героя“ · текст: „Възприятие“,преведено,,,
 209,Интерфейс,copy:sheet.summary.hitDice,Hit Dice,Зарове HP,Страница „Лист на героя“ · текст: „Зарове HP“,преведено,,,
 210,Интерфейс,copy:sheet.actionsTab.standardActions,Standard Actions,Стандартни действия,Страница „Лист на героя“ · текст: „Стандартни действия“,преведено,,,
