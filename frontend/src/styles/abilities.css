@@ -139,6 +139,57 @@
   outline-offset: -2px;
 }
 
+/* Class tiles: a grid of two columns (three from 600px), each tile a pill with the class mark on its left. */
+.picker-list--classes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+@media (min-width: 600px) {
+  .picker-list--classes {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.picker-list--classes li {
+  min-height: 0;
+  display: block;
+}
+
+.picker-list--classes label,
+.picker-list--classes button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  padding: 6px 14px 6px 7px;
+  font-size: 14.5px;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.picker-list--classes .class-glyph {
+  width: 40px;
+  height: 40px;
+}
+
+.picker-list--classes label:has(input:checked) .class-glyph {
+  background: var(--color-on-dark);
+  border-color: var(--color-on-dark);
+  color: var(--color-accent);
+}
+
+.picker-list--classes button:disabled {
+  border-style: dashed;
+  color: var(--color-text-secondary);
+}
+
+.picker-list--classes button:disabled .class-glyph {
+  opacity: 0.6;
+}
+
 .picker-list__source {
   margin-left: auto;
   padding-left: 12px;

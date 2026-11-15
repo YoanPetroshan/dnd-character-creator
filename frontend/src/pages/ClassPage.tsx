@@ -271,7 +271,7 @@ export function ClassPage() {
       )}
 
       {draft.classes.length <= 1 && (
-        <ul className="picker-list">
+        <ul className="picker-list picker-list--classes">
           {catalog.classes.map((c) => (
             <li key={c.id}>
               <label>
@@ -281,6 +281,7 @@ export function ClassPage() {
                   checked={c.id === primaryClassId}
                   onChange={() => dispatch({ type: "SET_CLASS", classId: c.id })}
                 />
+                <ClassGlyph classId={c.id} />
                 {cp.hitDieLabel(c.name, c.hitDie)}
               </label>
             </li>
@@ -304,7 +305,7 @@ export function ClassPage() {
           {totalLevel(draft) >= MAX_TOTAL_LEVEL && (
             <p role="note">{cp.levelCap(MAX_TOTAL_LEVEL)}</p>
           )}
-          <ul className="picker-list">
+          <ul className="picker-list picker-list--classes">
             {catalog.classes
               .filter((c) => !takenClassIds.has(c.id))
               .map((c) => (
@@ -314,6 +315,7 @@ export function ClassPage() {
                     disabled={totalLevel(draft) >= MAX_TOTAL_LEVEL}
                     onClick={() => dispatch({ type: "ADD_CLASS", classId: c.id })}
                   >
+                    <ClassGlyph classId={c.id} />
                     {cp.hitDieLabel(c.name, c.hitDie)}
                   </button>
                 </li>
