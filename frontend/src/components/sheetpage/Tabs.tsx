@@ -9,6 +9,12 @@ export interface TabDef<Id extends string> {
 /** WAI-ARIA tabs (automatic activation): role tablist / tab / tabpanel, aria-selected / aria-controls, a roving tabindex,
  *  Left / Right (wrapping), Home and End. Only the selected panel has content; the others stay as empty hidden elements so that
  *  every aria-controls points at something. The tab list scrolls sideways on a narrow screen (CSS). */
+/** The text shown on a tab: the English term in brackets when the label has one ("Действия (Actions)" -> "Actions"),
+ *  so six tabs stay short on a phone. The full label remains the button's accessible name. */
+function shortLabel(label: string): string {
+  return /\(([^()]+)\)\s*$/.exec(label)?.[1] ?? label;
+}
+
 export function Tabs<Id extends string>({
   idPrefix,
   label,
@@ -51,6 +57,7 @@ export function Tabs<Id extends string>({
             id={`${idPrefix}-tab-${tab.id}`}
             className="tabs__tab"
             data-tab={tab.id}
+            aria-label={shortLabel(tab.label) === tab.label ? undefined : tab.label}
             aria-selected={tab.id === selected}
             aria-controls={`${idPrefix}-panel-${tab.id}`}
             tabIndex={tab.id === selected ? 0 : -1}
@@ -59,7 +66,7 @@ export function Tabs<Id extends string>({
             }}
             onClick={() => onSelect(tab.id)}
           >
-            {tab.label}
+            {shortLabel(tab.label)}
           </button>
         ))}
       </div>
