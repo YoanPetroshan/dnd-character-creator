@@ -86,3 +86,71 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+
+/* Species list: one row per option with the source on the right; the radio stays hidden but focusable. */
+.picker-list.picker-list--rows {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0 var(--space-5);
+}
+
+.picker-list.picker-list--rows li {
+  padding: 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.picker-list.picker-list--rows label {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 4px;
+  gap: 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.picker-list.picker-list--rows label::before {
+  content: "";
+  flex: none;
+  box-sizing: border-box;
+  width: 9px;
+  height: 9px;
+  margin: 0 3px;
+  border: 1.5px solid var(--color-text);
+  transform: rotate(45deg);
+}
+
+.picker-list.picker-list--rows label:has(input:checked) {
+  background: transparent;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.picker-list.picker-list--rows label:has(input:checked)::before {
+  background: var(--color-text);
+}
+
+.picker-list.picker-list--rows label:has(input:focus-visible) {
+  outline: 2px solid var(--color-text);
+  outline-offset: -2px;
+}
+
+.picker-list__source {
+  margin-left: auto;
+  padding-left: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (min-width: 600px) {
+  .picker-list.picker-list--rows {
+    grid-template-columns: 1fr 1fr;
+  }
+}

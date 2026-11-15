@@ -80,7 +80,7 @@ export function SpeciesPage() {
         onChange={(e) => setSpeciesFilter(e.target.value)}
       />
       {needle && shownSpecies.length === 0 && <p>{t.common.noMatches}</p>}
-      <ul className="picker-list">
+      <ul className="picker-list picker-list--rows">
         {shownSpecies.map((s) => (
           <li key={s.id}>
             <label>
@@ -92,6 +92,7 @@ export function SpeciesPage() {
               />
               {s.name}
               {speciesHidden && s.id === selectedSpeciesId ? ` (${t.common.hiddenByFilters})` : ""}
+              {s.source && !s.name.endsWith(`(${s.source})`) && <span className="picker-list__source">{s.source}</span>}
             </label>
           </li>
         ))}
