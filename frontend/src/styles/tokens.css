@@ -14,23 +14,23 @@
   --radius-pill: 29px;
   --radius-round: 50%;
 
-  --color-text: #16213a;
-  --color-text-strong: #16213a;
-  --color-text-muted: #55607a;
-  --color-text-secondary: #55607a;
-  --color-disabled: #7c869b;
-  --color-page: #edf0f3;
+  --color-text: #1c2a1d;
+  --color-text-strong: #1c2a1d;
+  --color-text-muted: #55634f;
+  --color-text-secondary: #55634f;
+  --color-disabled: #7f8b79;
+  --color-page: #f1f3ea;
   --color-surface: #ffffff;
-  --color-surface-muted: #e2e6eb;
-  --color-on-dark: #f3f5f8;
-  --color-border: #c3c9d2;
-  --color-border-subtle: #d9dde3;
-  --color-accent: #16213a;
-  --color-danger: #c4371f;
-  --color-error: #c4371f;
-  --color-highlight: #f2c230;
-  --color-on-highlight: #16213a;
-  --color-ok: #1d6b52;
+  --color-surface-muted: #e2e8d6;
+  --color-on-dark: #f1f3ea;
+  --color-border: #bcc6ab;
+  --color-border-subtle: #d3dbc6;
+  --color-accent: #1c2a1d;
+  --color-danger: #b9471a;
+  --color-error: #b9471a;
+  --color-highlight: #2a7048;
+  --color-on-highlight: #ffffff;
+  --color-ok: #2a7048;
   --color-warning-text: #6b4e00;
   --color-warning-bg: #fbf1cf;
   --color-warning-border: #d9a400;
@@ -40,23 +40,23 @@
    proposal, not yet reviewed on a screen. The manifest test reads only the first (light) --color-accent. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-page: #121826;
-    --color-surface: #1a2233;
-    --color-surface-muted: #222c40;
-    --color-text: #e8ecf4;
-    --color-text-strong: #e8ecf4;
-    --color-text-muted: #9aa5bd;
-    --color-text-secondary: #9aa5bd;
-    --color-disabled: #6f7a92;
-    --color-border: #2f3a52;
-    --color-border-subtle: #232d42;
-    --color-accent: #e8ecf4;
-    --color-on-dark: #121826;
-    --color-highlight: #f2c230;
-    --color-on-highlight: #16213a;
-    --color-ok: #5fc2a0;
-    --color-danger: #ff7a63;
-    --color-error: #ff7a63;
+    --color-page: #121a14;
+    --color-surface: #1a251c;
+    --color-surface-muted: #232f25;
+    --color-text: #e6ede3;
+    --color-text-strong: #e6ede3;
+    --color-text-muted: #9fae9a;
+    --color-text-secondary: #9fae9a;
+    --color-disabled: #6f7d6b;
+    --color-border: #2f3f32;
+    --color-border-subtle: #243026;
+    --color-accent: #e6ede3;
+    --color-on-dark: #121a14;
+    --color-highlight: #5fc28a;
+    --color-on-highlight: #0f1a12;
+    --color-ok: #6fcf97;
+    --color-danger: #ff8a65;
+    --color-error: #ff8a65;
     --color-warning-text: #f2d27a;
     --color-warning-bg: #2a2412;
     --color-warning-border: #d9a400;
@@ -65,23 +65,23 @@
 }
 
 :root[data-theme="dark"] {
-  --color-page: #121826;
-  --color-surface: #1a2233;
-  --color-surface-muted: #222c40;
-  --color-text: #e8ecf4;
-  --color-text-strong: #e8ecf4;
-  --color-text-muted: #9aa5bd;
-  --color-text-secondary: #9aa5bd;
-  --color-disabled: #6f7a92;
-  --color-border: #2f3a52;
-  --color-border-subtle: #232d42;
-  --color-accent: #e8ecf4;
-  --color-on-dark: #121826;
-  --color-highlight: #f2c230;
-  --color-on-highlight: #16213a;
-  --color-ok: #5fc2a0;
-  --color-danger: #ff7a63;
-  --color-error: #ff7a63;
+  --color-page: #121a14;
+  --color-surface: #1a251c;
+  --color-surface-muted: #232f25;
+  --color-text: #e6ede3;
+  --color-text-strong: #e6ede3;
+  --color-text-muted: #9fae9a;
+  --color-text-secondary: #9fae9a;
+  --color-disabled: #6f7d6b;
+  --color-border: #2f3f32;
+  --color-border-subtle: #243026;
+  --color-accent: #e6ede3;
+  --color-on-dark: #121a14;
+  --color-highlight: #5fc28a;
+  --color-on-highlight: #0f1a12;
+  --color-ok: #6fcf97;
+  --color-danger: #ff8a65;
+  --color-error: #ff8a65;
   --color-warning-text: #f2d27a;
   --color-warning-bg: #2a2412;
   --color-warning-border: #d9a400;
@@ -92,19 +92,19 @@
 @media print {
   :root,
   :root[data-theme="dark"] {
-    --color-page: #ffffff;
-    --color-surface: #ffffff;
-    --color-surface-muted: #ffffff;
-    --color-text: #000000;
-    --color-text-strong: #000000;
-    --color-text-muted: #333333;
-    --color-text-secondary: #333333;
-    --color-border: #999999;
-    --color-border-subtle: #cccccc;
-    --color-accent: #000000;
-    --color-on-dark: #ffffff;
-    --color-danger: #a02a16;
-    --color-error: #a02a16;
-    --color-ok: #1d6b52;
+    --color-page: #121a14;
+    --color-surface: #1a251c;
+    --color-surface-muted: #232f25;
+    --color-text: #e6ede3;
+    --color-text-strong: #e6ede3;
+    --color-text-muted: #9fae9a;
+    --color-text-secondary: #9fae9a;
+    --color-border: #2f3f32;
+    --color-border-subtle: #243026;
+    --color-accent: #e6ede3;
+    --color-on-dark: #121a14;
+    --color-danger: #ff8a65;
+    --color-error: #ff8a65;
+    --color-ok: #6fcf97;
   }
 }
