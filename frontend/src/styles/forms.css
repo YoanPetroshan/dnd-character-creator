@@ -92,9 +92,10 @@
   color: var(--color-on-dark);
 }
 
+/* 84%: the diamond's corners stay inside the circle and the motif is as large as it can be */
 .class-glyph svg {
-  width: 62%;
-  height: 62%;
+  width: 84%;
+  height: 84%;
   fill: none;
   stroke: currentColor;
   stroke-width: 2.4;

@@ -1,5 +1,5 @@
 /** A geometric class mark: a diamond with a motif inside, drawn as inline SVG (decorative, aria-hidden).
- *  The twelve marks are DRAFTS from docs/design-mockups/j-palettes.html; edit only the MOTIFS table to change them.
+ *  The twelve marks follow the owner's notes of 2026-11-12; edit only the MOTIFS table to change them.
  *  Any other class id gets the generic mark (an empty diamond with a dot). */
 const DIAMOND = "M30 3l24 27-24 27L6 30z";
 
@@ -15,8 +15,8 @@ const MOTIFS: Record<string, string> = {
   druid: "M30 16c9 6 9 22 0 28c-9-6-9-22 0-28zM30 20V44M30 37L24 31M30 37L36 31M30 30L25 25M30 30L35 25",
   // two crossed swords
   fighter: "M23 17L35 35M31.3 37.5l7.4-5M35 35l3 4.5M37 17L25 35M28.7 37.5l-7.4-5M25 35l-3 4.5",
-  // (draft, owner wants other ideas)
-  monk: "M40 30a10 10 0 1 1-20 0a10 10 0 1 1 20 0zM33 30a3 3 0 1 1-6 0a3 3 0 1 1 6 0z",
+  // lotus: three petals over a ground line (alternatives shown to the owner 2026-11-15: fist, balance swirl)
+  monk: "M30 17c5 6 5 15 0 21c-5-6-5-15 0-21zM30 38C24 37 19 33 18 26C24 27 28 31 30 38zM30 38C36 37 41 33 42 26C36 27 32 31 30 38zM22 43h16",
   // shield with a sun
   paladin:
     "M21 19h18v10c0 8-9 14-9 14s-9-6-9-14zM32.5 28a2.5 2.5 0 1 1-5 0a2.5 2.5 0 1 1 5 0zM30 23.5V21M30 32.5V35M34.5 28H37M25.5 28H23M33.2 24.8L35 23M26.8 24.8L25 23M33.2 31.2L35 33M26.8 31.2L25 33",
