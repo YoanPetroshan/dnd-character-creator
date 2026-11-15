@@ -171,6 +171,7 @@
 .ability-table input[type="number"] {
   width: 56px;
   min-width: 0;
+  text-align: center;
 }
 
 /* On a phone the first column header is hidden visually (the rows say STR, DEX...; screen readers still get it),
