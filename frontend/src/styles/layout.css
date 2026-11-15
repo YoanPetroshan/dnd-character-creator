@@ -435,6 +435,12 @@ main .next-button::after {
   overflow-wrap: anywhere;
 }
 
+@media (min-width: 600px) and (max-width: 899px) {
+  .summary-strip__stats {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+}
+
 /* Tables: no vertical lines, an eyebrow header row, tabular figures. */
 .tabs__panel table {
   width: max-content;

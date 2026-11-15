@@ -308,3 +308,11 @@
     display: none;
   }
 }
+
+/* A label with its field on one row (the ruleset select): a clear gap between the words and the field. */
+.home-main > label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+}
