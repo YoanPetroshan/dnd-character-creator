@@ -187,21 +187,25 @@ main .next-button::after {
   line-height: 1;
 }
 
-/* Secondary pill: the same shape, outline only (the "next unfinished step" link). */
+/* The "next unfinished step" link: quiet underlined text, right-aligned, so it does not compete with the page title. */
 .next-step {
-  margin: var(--space-2) var(--space-4) 0;
+  margin: var(--space-1) var(--space-4) 0;
+  text-align: right;
 }
 
 .next-step a {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  padding: 0 18px;
-  border: 1.5px solid var(--color-text);
-  border-radius: var(--radius-pill);
-  font-size: 14.5px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  font-size: 13px;
   font-weight: 600;
-  text-decoration: none;
+  color: var(--color-text-secondary);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
 }
 
 /* "New choices: N": a small highlight pill after a level-up. */
