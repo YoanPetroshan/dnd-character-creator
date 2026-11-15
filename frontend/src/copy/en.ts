@@ -92,12 +92,12 @@ export const en: Copy = {
     summary: {
       label: "Summary",
       ability: (ability: string, score: number, modifier: string) => `${ability} ${score} (${modifier})`,
-      hitPoints: "Hit Points",
-      armorClass: "Armor Class",
+      hitPoints: "HP",
+      armorClass: "AC",
       initiative: "Initiative",
       speed: "Speed",
-      proficiencyBonus: "Proficiency Bonus",
-      passivePerception: "Passive Perception",
+      proficiencyBonus: "Proficiency",
+      passivePerception: "Perception",
       hitDice: "Hit Dice",
     },
     actionsTab: {

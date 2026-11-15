@@ -98,13 +98,13 @@ export const bg = {
     summary: {
       label: "Кратка справка",
       ability: (ability: string, score: number, modifier: string) => `${ability} ${score} (${modifier})`,
-      hitPoints: "Точки живот (Hit Points)",
-      armorClass: "Клас броня (Armor Class, AC)",
+      hitPoints: "HP",
+      armorClass: "AC",
       initiative: "Инициатива",
       speed: "Скорост",
-      proficiencyBonus: "Бонус за владеене (Proficiency Bonus)",
-      passivePerception: "Пасивно възприятие",
-      hitDice: "Зарове за точки живот (Hit Point Dice)",
+      proficiencyBonus: "Владеене",
+      passivePerception: "Възприятие",
+      hitDice: "Зарове HP",
     },
     actionsTab: {
       standardActions: "Стандартни действия",

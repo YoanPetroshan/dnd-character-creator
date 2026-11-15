@@ -359,6 +359,40 @@ main .next-button::after {
   font-size: 24px;
 }
 
+/* Phones: a compact 12-column grid; HP, AC and initiative take 4 columns each, the other four 3 each. */
+@media (max-width: 599px) {
+  .summary-strip__stats {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--space-3) var(--space-1);
+  }
+
+  .summary-strip__stats [data-summary] {
+    grid-column: span 3;
+  }
+
+  .summary-strip__stats [data-summary="hitPoints"],
+  .summary-strip__stats [data-summary="armorClass"],
+  .summary-strip__stats [data-summary="initiative"] {
+    grid-column: span 4;
+  }
+
+  .summary-strip__stats dd {
+    font-size: 20px;
+  }
+
+  .summary-strip__stats dt {
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+  }
+
+  .summary-strip__stats [data-summary="hitPoints"] dd,
+  .summary-strip__stats [data-summary="armorClass"] dd {
+    width: 56px;
+    height: 56px;
+    font-size: 22px;
+  }
+}
+
 .tabs__list {
   display: flex;
   flex-wrap: nowrap;
