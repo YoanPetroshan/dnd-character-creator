@@ -76,6 +76,37 @@
   font-weight: 600;
 }
 
+@media (max-width: 599px) {
+  .choice-card__header {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+
+  .choice-card__label {
+    flex: 1 1 60%;
+  }
+
+  .choice-card__level {
+    margin-left: 34px;
+  }
+
+  .choice-card__level,
+  .choice-card__count {
+    flex: 0 0 auto;
+  }
+
+  .choice-card__count {
+    margin-left: auto;
+  }
+
+  .choice-card__header::after {
+    content: "";
+    order: 2;
+    flex-basis: 100%;
+    height: 0;
+  }
+}
+
 .choice-card__body {
   padding: 0 0 var(--space-4);
   animation: choice-open 150ms ease-out;
