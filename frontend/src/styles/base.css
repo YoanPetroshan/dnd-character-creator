@@ -93,6 +93,16 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-tap-highlight-color: transparent;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+::selection {
+  background: var(--color-highlight);
+  color: var(--color-on-highlight);
+}
+
 body {
   margin: 0;
   font-family: var(--font-sans);
@@ -335,5 +345,40 @@ main .next-button:active,
   .export-bar__button--primary,
   .name-dice {
     transition: background-color 120ms, opacity 120ms;
+  }
+}
+
+/* Pointer hover (mouse and trackpad only; nothing here is the only way to do something). */
+@media (hover: hover) and (pointer: fine) {
+  button:hover:not(:disabled):not([aria-disabled="true"]):not(.name-dice):not(.hero__open):not(.next-button):not(.export-bar__button--primary):not(.tabs__tab):not(.tab-bar button) {
+    background: var(--color-surface-muted);
+  }
+
+  main .next-button:hover:not(:disabled),
+  .export-bar__button--primary:hover:not(:disabled),
+  .name-dice:hover:not(:disabled),
+  .hero__open:hover:not(:disabled) {
+    opacity: 0.88;
+  }
+
+  .choice-picker label:not(:has(input:checked)):not(.choice-picker__option--disabled):hover,
+  .picker-list label:not(:has(input:checked)):hover,
+  .ability-method-selector label:not(:has(input:checked)):hover,
+  .picker-list.picker-list--rows label:hover,
+  .choice-card__header:hover {
+    background: var(--color-surface-muted);
+  }
+
+  .step-nav a:hover::before {
+    border-color: var(--color-text);
+  }
+
+  .tab-bar button:hover,
+  .tabs__tab:hover {
+    color: var(--color-text);
+  }
+
+  a:hover {
+    text-decoration-thickness: 2px;
   }
 }
