@@ -154,3 +154,37 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* 375px: the table fits without scrolling inside itself (headers wrap, tighter cells, a 56px number field). */
+.ability-table th,
+.ability-table td {
+  padding: 6px 8px;
+}
+
+.ability-table th {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  white-space: normal;
+  vertical-align: bottom;
+}
+
+.ability-table input[type="number"] {
+  width: 56px;
+  min-width: 0;
+}
+
+/* The two long header words (first and last column) may break so the table never needs to scroll at 375px. */
+.ability-table th:first-child,
+.ability-table th:last-child {
+  overflow-wrap: anywhere;
+}
+
+/* Point buy: the two 44px steppers need the room, so their column is tight. */
+.ability-table .point-buy-stepper {
+  gap: 4px;
+}
+
+.ability-table td:nth-child(2) {
+  padding-left: 0;
+  padding-right: 0;
+}

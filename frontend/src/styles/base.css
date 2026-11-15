@@ -252,3 +252,24 @@ summary {
   cursor: pointer;
   font-weight: 600;
 }
+
+/* Press feedback: a muted fill on outline buttons, a slight fade on solid pills. */
+/* :where keeps this at element specificity, so solid pills (class backgrounds) are not turned muted */
+button:where(:active:not(:disabled)) {
+  background: var(--color-surface-muted);
+}
+
+main .next-button:active,
+.export-bar__button--primary:active:not(:disabled),
+.name-dice:active {
+  opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  button,
+  main .next-button,
+  .export-bar__button--primary,
+  .name-dice {
+    transition: background-color 120ms, opacity 120ms;
+  }
+}
