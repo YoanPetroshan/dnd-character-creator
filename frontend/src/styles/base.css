@@ -140,8 +140,13 @@ h2 {
 }
 
 h3 {
-  font-size: 16px;
-  font-weight: 600;
+  margin: 20px 0 6px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
 }
 
 h1:focus-visible {

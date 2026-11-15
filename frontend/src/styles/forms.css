@@ -5,11 +5,52 @@
   padding: var(--space-2) 0;
 }
 
-.details-section summary {
+.details-section > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  list-style: none;
+}
+
+/* The spell summary holds two blocks, so its sign is placed at the right edge instead of in a flex row. */
+.spell-library-card summary {
+  position: relative;
+  padding-right: 28px;
+  list-style: none;
+}
+
+.spell-library-card summary::after {
+  position: absolute;
+  top: 0;
+  right: 4px;
+}
+
+.details-section > summary::-webkit-details-marker,
+.spell-library-card summary::-webkit-details-marker {
+  display: none;
+}
+
+.details-section > summary {
+  min-height: 48px;
   cursor: pointer;
   font-family: var(--font-display);
   font-size: 17px;
   font-weight: 700;
+}
+
+/* The sign: "+" when closed, a minus (U+2212) when open. */
+.details-section > summary::after,
+.spell-library-card summary::after {
+  content: "+";
+  font-family: var(--font-sans);
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.details-section[open] > summary::after,
+.spell-library-card details[open] > summary::after {
+  content: "\2212";
 }
 
 .details-section label {
