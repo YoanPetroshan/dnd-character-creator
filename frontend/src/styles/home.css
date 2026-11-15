@@ -280,3 +280,10 @@
 .home-main {
   min-width: 0;
 }
+
+/* On a phone the visible "Open" pill would squeeze the name: it is hidden there (Open is also the first item in the menu). */
+@media (max-width: 599px) {
+  .hero__open {
+    display: none;
+  }
+}

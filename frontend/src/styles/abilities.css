@@ -173,10 +173,12 @@
   min-width: 0;
 }
 
-/* The two long header words (first and last column) may break so the table never needs to scroll at 375px. */
-.ability-table th:first-child,
-.ability-table th:last-child {
-  overflow-wrap: anywhere;
+/* On a phone the first column header is hidden visually (the rows say STR, DEX...; screen readers still get it),
+   which leaves room for the other headers to stay whole words. */
+@media (max-width: 599px) {
+  .ability-table thead th:first-child {
+    font-size: 0;
+  }
 }
 
 /* Point buy: the two 44px steppers need the room, so their column is tight. */
@@ -187,4 +189,21 @@
 .ability-table td:nth-child(2) {
   padding-left: 0;
   padding-right: 0;
+}
+
+/* Column headers: sentence case and no forced breaks, so a long word is never cut in the middle. */
+.ability-table thead th {
+  padding-left: 4px;
+  padding-right: 4px;
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.ability-table tbody th,
+.ability-table td {
+  padding-left: 4px;
+  padding-right: 4px;
 }
