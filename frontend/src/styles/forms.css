@@ -177,8 +177,7 @@
   line-height: 1.55;
 }
 
-.help-page ol,
-.help-page ul {
+.help-page ol {
   margin: var(--space-2) 0;
   padding-left: 20px;
 }

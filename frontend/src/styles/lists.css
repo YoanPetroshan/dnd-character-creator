@@ -2,11 +2,6 @@
   margin-bottom: var(--space-4);
 }
 
-.equipment-section ul {
-  margin: var(--space-1) 0;
-  padding-left: var(--space-5);
-}
-
 /* Lists: rows with 1px lines, no outer box. */
 .item-browser-list,
 .inventory-list {

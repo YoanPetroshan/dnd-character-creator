@@ -265,6 +265,48 @@ dd ul {
   list-style: none;
 }
 
+/* Lists in page content: a small diamond instead of a bullet. Lists with a class (or inside a dd or the hero menu) have their own look. */
+main ul:not([class]),
+.equipment-section ul {
+  list-style: none;
+  margin: var(--space-2) 0;
+  padding: 0;
+}
+
+main ul:not([class]) > li,
+.equipment-section ul > li {
+  position: relative;
+  padding: 5px 0 5px 18px;
+}
+
+main ul:not([class]) > li::before,
+.equipment-section ul > li::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 13px;
+  width: 5px;
+  height: 5px;
+  background: var(--color-text-secondary);
+  transform: rotate(45deg);
+}
+
+main dd ul:not([class]),
+main .hero__menu-list ul:not([class]) {
+  margin: 0;
+  padding: 0;
+}
+
+main dd ul:not([class]) > li,
+main .hero__menu-list ul:not([class]) > li {
+  padding: 0;
+}
+
+main dd ul:not([class]) > li::before,
+main .hero__menu-list ul:not([class]) > li::before {
+  content: none;
+}
+
 summary {
   cursor: pointer;
   font-weight: 600;
