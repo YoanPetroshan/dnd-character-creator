@@ -32,7 +32,10 @@
   font-weight: 700;
 }
 
+/* The dice button: the glyph from the copy catalog is hidden (font-size 0) and a die is drawn with a mask in the text colour. */
 .name-dice {
+  display: inline-grid;
+  place-items: center;
   flex: none;
   width: 56px;
   height: 56px;
@@ -41,8 +44,17 @@
   border-radius: var(--radius-round);
   background: var(--color-accent);
   color: var(--color-on-dark);
-  font-size: 26px;
+  font-size: 0;
   line-height: 1;
+}
+
+.name-dice::before {
+  content: "";
+  width: 28px;
+  height: 28px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7zm1.5 2.9a1.6 1.6 0 1 1 0 3.2a1.6 1.6 0 0 1 0-3.2zm3.5 3.5a1.6 1.6 0 1 1 0 3.2a1.6 1.6 0 0 1 0-3.2zm3.5 3.5a1.6 1.6 0 1 1 0 3.2a1.6 1.6 0 0 1 0-3.2z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7zm1.5 2.9a1.6 1.6 0 1 1 0 3.2a1.6 1.6 0 0 1 0-3.2zm3.5 3.5a1.6 1.6 0 1 1 0 3.2a1.6 1.6 0 0 1 0-3.2zm3.5 3.5a1.6 1.6 0 1 1 0 3.2a1.6 1.6 0 0 1 0-3.2z'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 .name-hint {
