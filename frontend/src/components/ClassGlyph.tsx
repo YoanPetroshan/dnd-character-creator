@@ -13,13 +13,13 @@ const MOTIFS: Record<string, string> = {
     "M35 24a5 5 0 1 1-10 0a5 5 0 1 1 10 0zM30 29V46M30 19V14M33.5 20.5L37 17M35 24H40M33.5 27.5L37 31M26.5 27.5L23 31M25 24H20M26.5 20.5L23 17",
   // leaf: outline, midrib and diagonal veins up from the midrib
   druid: "M30 16c9 6 9 22 0 28c-9-6-9-22 0-28zM30 20V44M30 37L24 31M30 37L36 31M30 30L25 25M30 30L35 25",
-  // two crossed swords
-  fighter: "M23 17L35 35M31.3 37.5l7.4-5M35 35l3 4.5M37 17L25 35M28.7 37.5l-7.4-5M25 35l-3 4.5",
+  // two crossed swords with blade outlines, guards and grips
+  fighter: "M37.4 34.9L20 16L34.6 37.1M31.7 39.4L40.3 32.6M36 36L39.4 40.3M22.6 34.9L40 16L25.4 37.1M28.3 39.4L19.7 32.6M24 36L20.6 40.3",
   // lotus: three petals over a ground line (alternatives shown to the owner 2026-11-15: fist, balance swirl)
   monk: "M30 17c5 6 5 15 0 21c-5-6-5-15 0-21zM30 38C24 37 19 33 18 26C24 27 28 31 30 38zM30 38C36 37 41 33 42 26C36 27 32 31 30 38zM22 43h16",
-  // shield with a sun
+  // larger shield with a sun: 4 long rays and 4 short rays between them
   paladin:
-    "M21 19h18v10c0 8-9 14-9 14s-9-6-9-14zM32.5 28a2.5 2.5 0 1 1-5 0a2.5 2.5 0 1 1 5 0zM30 23.5V21M30 32.5V35M34.5 28H37M25.5 28H23M33.2 24.8L35 23M26.8 24.8L25 23M33.2 31.2L35 33M26.8 31.2L25 33",
+    "M19 17h22v11c0 10-11 17-11 17s-11-7-11-17zM33 28a3 3 0 1 1-6 0a3 3 0 1 1 6 0zM30 22.8V18.5M30 33.2V37.5M35.2 28H39.5M24.8 28H20.5M33.7 24.3L35 23M26.3 24.3L25 23M33.7 31.7L35 33M26.3 31.7L25 33",
   // arrow: head, shaft, fletching
   ranger: "M30 12l-4.5 7h9zM30 19V46M30 38l-4 5M30 42l-4 5M30 38l4 5M30 42l4 5",
   // serrated dagger
