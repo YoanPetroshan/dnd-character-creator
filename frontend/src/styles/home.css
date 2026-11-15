@@ -58,10 +58,9 @@
 }
 
 .hero {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-2) var(--space-3);
   min-height: 66px;
   padding: var(--space-2) 0;
@@ -73,7 +72,7 @@
   grid-template-columns: auto 1fr;
   align-items: baseline;
   column-gap: var(--space-2);
-  flex: 1 1 220px;
+  flex: 1 1 0;
   min-width: 0;
 }
 
@@ -101,8 +100,76 @@
 
 .hero__actions {
   display: flex;
-  flex-wrap: wrap;
+  flex: none;
+  align-items: center;
   gap: var(--space-2);
+}
+
+/* The visible primary action of a row that is not open: a solid pill. */
+.hero__open {
+  min-height: 44px;
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-dark);
+}
+
+/* More actions: a native disclosure with a round "..." toggle (three dots drawn with CSS). */
+.hero__menu {
+  position: relative;
+}
+
+.hero__menu-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  border: 1.5px solid var(--color-text);
+  border-radius: var(--radius-round);
+  list-style: none;
+  cursor: pointer;
+}
+
+.hero__menu-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.hero__menu-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: var(--radius-round);
+  background: var(--color-text);
+}
+
+.hero__menu-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+}
+
+.hero__menu-list button {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  text-align: left;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.hero__menu-list .hero__menu-danger {
+  color: var(--color-danger);
 }
 
 .library-actions {

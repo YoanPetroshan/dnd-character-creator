@@ -466,6 +466,7 @@ export const bg = {
     itemSummary: (classes: string, total: number) => `${classes}, общо ниво ${total}`,
     updated: (when: string) => `променен ${when}`,
     open: "Отвори",
+    moreActions: "Още действия",
     rename: "Преименувай",
     duplicate: "Копирай",
     delete: "Изтрий",

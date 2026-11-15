@@ -458,6 +458,7 @@ export const en: Copy = {
     itemSummary: (classes: string, total: number) => `${classes}, total level ${total}`,
     updated: (when: string) => `updated ${when}`,
     open: "Open",
+    moreActions: "More actions",
     rename: "Rename",
     duplicate: "Duplicate",
     delete: "Delete",

@@ -15,6 +15,10 @@ import { formatDateTime } from "../logic/formatDate";
 import { ClassGlyph } from "../components/ClassGlyph";
 import { stepBadgeCount, stepStatus } from "../logic/steps";
 
+function closeMenu(e: { currentTarget: HTMLElement }) {
+  (e.currentTarget.closest("details") as HTMLDetailsElement | null)?.removeAttribute("open");
+}
+
 export function HomePage() {
   const t = useT();
   const { lang } = useLang();
@@ -162,19 +166,58 @@ export function HomePage() {
               </div>
               <div className="hero__actions">
                 {!active && (
-                  <button type="button" onClick={() => library.openCharacter(item.id)}>
+                  <button type="button" className="hero__open" onClick={() => library.openCharacter(item.id)}>
                     {t.home.open}
                   </button>
                 )}
-                <button type="button" onClick={() => renameItem(item.id, name)}>
-                  {t.home.rename}
-                </button>
-                <button type="button" onClick={() => library.duplicateCharacter(item.id)}>
-                  {t.home.duplicate}
-                </button>
-                <button type="button" onClick={() => deleteItem(item.id, name)}>
-                  {t.home.delete}
-                </button>
+                <details className="hero__menu">
+                  <summary className="hero__menu-toggle" aria-label={t.home.moreActions}>
+                    <span className="hero__menu-dot" aria-hidden="true" />
+                    <span className="hero__menu-dot" aria-hidden="true" />
+                    <span className="hero__menu-dot" aria-hidden="true" />
+                  </summary>
+                  <div className="hero__menu-list">
+                    {!active && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          closeMenu(e);
+                          library.openCharacter(item.id);
+                        }}
+                      >
+                        {t.home.open}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        closeMenu(e);
+                        renameItem(item.id, name);
+                      }}
+                    >
+                      {t.home.rename}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        closeMenu(e);
+                        library.duplicateCharacter(item.id);
+                      }}
+                    >
+                      {t.home.duplicate}
+                    </button>
+                    <button
+                      type="button"
+                      className="hero__menu-danger"
+                      onClick={(e) => {
+                        closeMenu(e);
+                        deleteItem(item.id, name);
+                      }}
+                    >
+                      {t.home.delete}
+                    </button>
+                  </div>
+                </details>
               </div>
             </li>
           );
