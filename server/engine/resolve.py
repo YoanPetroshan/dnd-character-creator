@@ -1469,6 +1469,15 @@ class ResolveState:
     spells_summary: Any = field(init=False)
     starting_gold: Any = field(init=False)
     warlock_slots: Any = field(init=False)
+    fixed_languages: Any = field(init=False)
+    invocation_effects: Any = field(init=False)
+    poe_priors: Any = field(init=False)
+    positioned_languages: Any = field(init=False)
+    proficient_armor: Any = field(init=False)
+    proficient_save_abilities: Any = field(init=False)
+    proficient_skills: Any = field(init=False)
+    proficient_tools: Any = field(init=False)
+    proficient_weapons: Any = field(init=False)
 
 
 def _pass_classes(rs: ResolveState) -> None:
@@ -3100,55 +3109,20 @@ def _pass_equipment_and_spells(rs: ResolveState) -> None:
     rs.warnings = warnings
 
 
-def _pass_rest(rs: ResolveState) -> dict:
-    """The remaining sections of the old single function."""
-    added_resolved = rs.added_resolved
-    asi_selected_feats = rs.asi_selected_feats
+def _pass_proficiencies(rs: ResolveState) -> None:
+    """Skills, armor, weapons, tools, languages and the gates over them."""
     bg = rs.bg
-    bg_id = rs.bg_id
     catalog = rs.catalog
     choices = rs.choices
-    chosen_equipment = rs.chosen_equipment
-    classes = rs.classes
     cls = rs.cls
-    details = rs.details
-    draft = rs.draft
-    equipped_items = rs.equipped_items
-    feat_options = rs.feat_options
-    final_scores = rs.final_scores
-    fs_feats = rs.fs_feats
     fs_slots_by_class = rs.fs_slots_by_class
-    gear = rs.gear
-    granted_equipment = rs.granted_equipment
-    granted_feats = rs.granted_feats
-    lessons_feats = rs.lessons_feats
-    modifiers = rs.modifiers
-    narrative_items = rs.narrative_items
-    pact_weapon_id = rs.pact_weapon_id
-    problems = rs.problems
-    prof_bonus = rs.prof_bonus
     pruned = rs.pruned
     race = rs.race
-    race_id = rs.race_id
     resolved_classes = rs.resolved_classes
     resolved_feats = rs.resolved_feats
     ruleset = rs.ruleset
-    slot_granting_class_ids = rs.slot_granting_class_ids
-    species_alt = rs.species_alt
-    species_feats = rs.species_feats
-    species_size = rs.species_size
-    species_spell_ability = rs.species_spell_ability
-    species_variant = rs.species_variant
-    spell_slots = rs.spell_slots
-    spells_summary = rs.spells_summary
     srd_fs_slots_by_class = rs.srd_fs_slots_by_class
-    starting_gold = rs.starting_gold
     subrace = rs.subrace
-    subrace_id = rs.subrace_id
-    total_level = rs.total_level
-    variant_follow = rs.variant_follow
-    warlock_slots = rs.warlock_slots
-    warnings = rs.warnings
     xphb_effects = rs.xphb_effects
     pruned += class_choices_2024.gate_additional_secrets(choices, catalog)  # RPX1: SRD Lore Bard 6, apart from the other spell cards
     # Derived stats.
@@ -3420,7 +3394,75 @@ def _pass_rest(rs: ResolveState) -> dict:
     ]:
         if ab not in proficient_save_abilities:
             proficient_save_abilities.append(ab)
+    rs.fixed_languages = fixed_languages
+    rs.invocation_effects = invocation_effects
+    rs.poe_priors = poe_priors
+    rs.positioned_languages = positioned_languages
+    rs.proficient_armor = proficient_armor
+    rs.proficient_save_abilities = proficient_save_abilities
+    rs.proficient_skills = proficient_skills
+    rs.proficient_tools = proficient_tools
+    rs.proficient_weapons = proficient_weapons
+    rs.pruned = pruned
 
+
+def _pass_rest(rs: ResolveState) -> dict:
+    """The remaining sections of the old single function."""
+    added_resolved = rs.added_resolved
+    asi_selected_feats = rs.asi_selected_feats
+    bg = rs.bg
+    bg_id = rs.bg_id
+    catalog = rs.catalog
+    choices = rs.choices
+    chosen_equipment = rs.chosen_equipment
+    classes = rs.classes
+    cls = rs.cls
+    details = rs.details
+    draft = rs.draft
+    equipped_items = rs.equipped_items
+    feat_options = rs.feat_options
+    final_scores = rs.final_scores
+    fixed_languages = rs.fixed_languages
+    fs_feats = rs.fs_feats
+    gear = rs.gear
+    granted_equipment = rs.granted_equipment
+    granted_feats = rs.granted_feats
+    invocation_effects = rs.invocation_effects
+    lessons_feats = rs.lessons_feats
+    modifiers = rs.modifiers
+    narrative_items = rs.narrative_items
+    pact_weapon_id = rs.pact_weapon_id
+    poe_priors = rs.poe_priors
+    positioned_languages = rs.positioned_languages
+    problems = rs.problems
+    prof_bonus = rs.prof_bonus
+    proficient_armor = rs.proficient_armor
+    proficient_save_abilities = rs.proficient_save_abilities
+    proficient_skills = rs.proficient_skills
+    proficient_tools = rs.proficient_tools
+    proficient_weapons = rs.proficient_weapons
+    pruned = rs.pruned
+    race = rs.race
+    race_id = rs.race_id
+    resolved_classes = rs.resolved_classes
+    resolved_feats = rs.resolved_feats
+    ruleset = rs.ruleset
+    slot_granting_class_ids = rs.slot_granting_class_ids
+    species_alt = rs.species_alt
+    species_feats = rs.species_feats
+    species_size = rs.species_size
+    species_spell_ability = rs.species_spell_ability
+    species_variant = rs.species_variant
+    spell_slots = rs.spell_slots
+    spells_summary = rs.spells_summary
+    starting_gold = rs.starting_gold
+    subrace = rs.subrace
+    subrace_id = rs.subrace_id
+    total_level = rs.total_level
+    variant_follow = rs.variant_follow
+    warlock_slots = rs.warlock_slots
+    warnings = rs.warnings
+    xphb_effects = rs.xphb_effects
     hp_type = (draft.get("preferences") or {}).get("hitPointType")
     if hp_type not in ("fixed", "manual"):
         hp_type = "fixed"
@@ -3758,4 +3800,5 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     _pass_spell_and_choice_templates(rs)
     _pass_collect_choices(rs)
     _pass_equipment_and_spells(rs)
+    _pass_proficiencies(rs)
     return _pass_rest(rs)
