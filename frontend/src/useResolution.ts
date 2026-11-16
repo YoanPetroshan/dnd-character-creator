@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { apiFetch, isTimeoutError } from "./api/transport";
 import { useLang } from "./LanguageContext";
 import { withLang } from "./logic/langQuery";
@@ -24,6 +24,8 @@ export function useResolution(draft: Draft): ResolutionState & { retry: () => vo
   const [retryNonce, setRetryNonce] = useState(0);
   const { lang } = useLang();
   const requestId = useRef(0);
+  // FE-07: the request depends on the draft's text, not its identity: a new object with the same content asks nothing
+  const body = useMemo(() => JSON.stringify(draft), [draft]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -33,7 +35,7 @@ export function useResolution(draft: Draft): ResolutionState & { retry: () => vo
       apiFetch(withLang("/api/resolve", lang), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(draft),
+        body,
         signal: controller.signal,
         // counted from the moment the request is sent (with the in-browser engine: after it has booted)
         timeoutMs: REQUEST_TIMEOUT_MS,
@@ -73,7 +75,7 @@ export function useResolution(draft: Draft): ResolutionState & { retry: () => vo
       // an aborted in-flight request must not leave a stuck "loading"
       requestId.current++;
     };
-  }, [draft, retryNonce, lang]);
+  }, [body, retryNonce, lang]);
 
   const retry = useCallback(() => setRetryNonce((n) => n + 1), []);
 

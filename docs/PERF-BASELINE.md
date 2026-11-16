@@ -45,3 +45,14 @@ case is bounded by the 50 ms guards in `server/tests` (`perf_helpers.py`).
 - Start of the engine on a phone (instructions: `docs/DEPLOY-PAGES.md`).
 - React renders per keystroke when typing in "Name" (needs the React Profiler in a browser). Slice S11 needs this number
   for its "before / after"; until it is taken, S11 proves the change with the unit tests of the debouncing helper.
+
+## After S11 (debounced saving, memoised draft context, no request for an unchanged draft)
+
+What changed, measured by the unit tests rather than a profiler (see "Not measured" above):
+- `localStorage` is written once per typing pause (400 ms) instead of once per key: `logic/debouncedSave.test.ts` (a run of
+  keystrokes is one save; `pagehide` / `visibilitychange` flush the last text).
+- The draft context value is memoised (`DraftContext.tsx`), so consumers of it no longer re-render when only the library
+  context re-renders.
+- `useResolution` depends on the draft's JSON text: a new draft object with the same content sends no request.
+- The index write on each save stays (it also carries `updatedAt`), but it now happens once per pause, not per key.
+React renders per key: still to be taken with the React Profiler (before: this branch at `exec/S10`).

@@ -44,6 +44,9 @@ export interface LibraryContextValue {
   setSeen: (seenChoiceIds: string[], baselined: boolean) => void;
   /** Called by DraftProvider after each edit of the active character; returns whether the write succeeded. */
   persistActive: (id: string, draft: Draft) => boolean;
+  /** FE-07: tell the library the live draft of the active character without saving it (exports and copies use it while
+   *  the debounced save has not run yet). */
+  noteLive: (id: string, draft: Draft) => void;
   newCharacter: () => void;
   openCharacter: (id: string) => void;
   /** Rename a character that is NOT the active one (the active one is renamed with SET_NAME). */
@@ -129,6 +132,10 @@ export function LibraryProvider({ children, env }: { children: ReactNode; env?: 
     return () => window.removeEventListener("storage", onStorage);
   }, [commit]);
 
+  const noteLive = useCallback((id: string, draft: Draft) => {
+    liveRef.current = { id, draft };
+  }, []);
+
   const addNotices = (more: Msg[], raw: string | null) => {
     if (more.length) setNotices((n) => [...n, ...more]);
     if (raw) setUnsavedRaw(raw);
@@ -147,6 +154,7 @@ export function LibraryProvider({ children, env }: { children: ReactNode; env?: 
       unsavedRaw,
       storageFailed,
       persistActive,
+      noteLive,
       seenChoiceIds: lib.items[lib.activeId]?.seenChoiceIds ?? [],
       seenBaselined: lib.items[lib.activeId]?.seenBaselined === true,
       setSeen: (seen, baselined) => {
@@ -199,7 +207,7 @@ export function LibraryProvider({ children, env }: { children: ReactNode; env?: 
       },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [summaries, lib, activeDraft, notices, unsavedRaw, storageFailed, persistActive, commit],
+    [summaries, lib, activeDraft, notices, unsavedRaw, storageFailed, persistActive, noteLive, commit],
   );
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;
