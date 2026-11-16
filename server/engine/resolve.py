@@ -3672,8 +3672,8 @@ def _pass_speed_attacks_derived(rs: ResolveState) -> None:
     rs.weapon_masteries = weapon_masteries
 
 
-def _pass_rest(rs: ResolveState) -> dict:
-    """The remaining sections of the old single function."""
+def _pass_defenses_and_sheet(rs: ResolveState) -> dict:
+    """Languages, resistances, senses, innate spells, the sheet and the returned envelope."""
     added_resolved = rs.added_resolved
     asi_selected_feats = rs.asi_selected_feats
     bg = rs.bg
@@ -3886,4 +3886,4 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     _pass_proficiencies(rs)
     _pass_hp_saves_skills(rs)
     _pass_speed_attacks_derived(rs)
-    return _pass_rest(rs)
+    return _pass_defenses_and_sheet(rs)
