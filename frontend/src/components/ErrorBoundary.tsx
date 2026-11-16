@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 
 import { useT } from "../LanguageContext";
 import { activeDraftRaw, browserStorage, resetActiveDraft } from "../library";
+import { resetTarget } from "../logic/resetTarget";
 
 interface State {
   error: Error | null;
@@ -45,7 +46,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
     } catch {
       // ignore
     }
-    window.location.assign("/home");
+    window.location.assign(resetTarget(import.meta.env.BASE_URL));
   };
 
   render() {
