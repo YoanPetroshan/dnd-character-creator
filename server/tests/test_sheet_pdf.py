@@ -166,6 +166,8 @@ def _fits_everywhere(r):
             owner = a.get("/Parent", a).get_object() if "/Parent" in a else a
             if owner.get("/FT") != "/Tx" or not owner.get("/V"):
                 continue
+            if re.fullmatch(r"Spell\d+_\d+_(?!Name)\w+", str(owner["/T"])):
+                continue  # S05: a spell cell keeps its full text in /V; a long one is shown clipped (the owner's choice)
             x0, y0, x1, y1 = (float(v) for v in a["/Rect"])
             nominal = _nominal(owner["/T"])
             _l, _s, fits = SF.fit_text(m, str(owner["/V"]), x1 - x0, y1 - y0, nominal, bool(int(owner.get("/Ff", 0)) & 4096))

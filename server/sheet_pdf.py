@@ -599,17 +599,8 @@ class Sheet:
                 values[f"Spell{n}_{slot:02d}_Name"] = row.cells["Name"]
                 continue
             cells = {key: str(row.cells.get(key, "")) for key, *_ in L.SPELL_COLUMNS}
-            moved = []
-            for key, x0, x1, _al in L.SPELL_COLUMNS:
-                if key == "Notes":
-                    continue
-                short = self.shorten(cells[key], x1 - x0)
-                if short != cells[key]:
-                    moved.append(cells[key])  # the full text continues in the Notes box
-                    cells[key] = short
-            if moved:
-                cells["Notes"] = ", ".join([x for x in (cells["Notes"], *moved) if x])
-            cells["Notes"] = self.shorten(cells["Notes"], 578.8 - 422.6)
+            # S05 (EXP-01): every cell keeps its full text in /V; a box that is too small shows it clipped by the viewer
+            # (fit_text shrinks the font first), nothing is replaced by an ellipsis
             for key, text in cells.items():
                 values[f"Spell{n}_{slot:02d}_{key}"] = text
         d.box((43.0, 689.5, 560.0, 742.0), 1.0, fill=FRAME_FILL, radius=6, color=INK)
@@ -650,16 +641,6 @@ class Sheet:
             d.put(line, 28.0, 41.5 - 6.0 * i, 5.0, "left", 552.0, color=LABEL, minimum=5.0)
         self.fields.extend(fields)
         self.values.update(values)
-
-    def shorten(self, text: str, width: float, size: float = 6.5) -> str:
-        """``text`` cut with an ellipsis until it fits one line of a ``width`` box at 0.6 of ``size`` (what apply_form shrinks to)."""
-        small = size * 0.6
-        inner = (width - 2 * PAD / S) * 0.985
-        if not text or self.doc.width(text, small) <= inner:
-            return text
-        while text and self.doc.width(text + "\u2026", small) > inner:
-            text = text[:-1]
-        return text.rstrip() + "\u2026"
 
     def build(self) -> bytes:
         self.page1()

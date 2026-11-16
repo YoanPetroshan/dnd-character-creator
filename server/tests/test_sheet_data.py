@@ -105,7 +105,8 @@ def test_equipment_rows_list_every_item_and_expand_packs(sid, catalog):
 def test_both_languages_share_every_number_and_name(catalog):
     en, bg = _data("paladin6", "en", catalog).as_dict(), _data("paladin6", "bg", catalog).as_dict()
     labelled = {"Proficiencies", "Actions1", "Actions2", "Speed", "Defenses", "Senses", "WeightCarried", "WeightCapacity",
-                "PushDragLift"} | {f"Weapon{i}Notes" for i in range(1, 7)} | {f"Weapon{i}Damage" for i in range(1, 7)}
+                "PushDragLift"} | {f"Weapon{i}Notes" for i in range(1, 7)} | {f"Weapon{i}Damage" for i in range(1, 7)} \
+        | {f"Eq{i}Weight" for i in range(L.EQUIPMENT_ROWS)}  # S05: the Bulgarian weights carry kilograms
     assert {k for k in en if en[k] != bg[k]} <= labelled
     assert en["WeightCarried"].endswith("lb") and "kg" in bg["WeightCarried"]
 

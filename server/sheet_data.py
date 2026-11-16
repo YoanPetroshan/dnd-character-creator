@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 import sheet_layout as L
 from catalog.reference_data import LANGUAGE_NAMES, SKILL_ABILITY, SKILL_NAMES, proficiency_label
 from export_fields import defense_lines, fmt_mod, fmt_spell_slots, resource_line, species_label
-from export_labels import DEFAULT_LANG, check_lang, label, sheet_label, weight, word
+from export_labels import DEFAULT_LANG, check_lang, kilograms, label, sheet_label, weight, word
 
 STANDARD_ACTIONS = ("Attack", "Dash", "Disengage", "Dodge", "Help", "Hide", "Influence", "Magic", "Ready", "Search",
                     "Study", "Utilize")
@@ -397,7 +397,16 @@ def _casting_ability(catalog, class_id: str) -> str:
 # ---------------------------------------------------------------------------------------------------------------
 # the field map
 # ---------------------------------------------------------------------------------------------------------------
-def _equipment_rows(resolution: dict, catalog) -> list[tuple[str, str, str]]:
+def _weight_cell(total, lang: str) -> str:
+    """The weight of one equipment row. English "3 lb"; Bulgarian "3 lb (1,4 kg)" (S05, EXP-02), or, when the narrow cell cannot
+    hold that even at the smallest size, "3 lb/1,4 kg", or the kilograms alone."""
+    if lang != "bg":
+        return f"{total} lb"
+    kg = kilograms(total)
+    return _shortest_that_fits([weight(total, lang), f"{total} lb/{kg}", kg], "Eq0Weight")
+
+
+def _equipment_rows(resolution: dict, catalog, lang: str = DEFAULT_LANG) -> list[tuple[str, str, str]]:
     eq = resolution["sheet"].get("equipment") or {}
     rows: list[tuple[str, str, str]] = []
 
@@ -406,7 +415,7 @@ def _equipment_rows(resolution: dict, catalog) -> list[tuple[str, str, str]]:
         if not isinstance(w, (int, float)) or isinstance(w, bool) or w == 0:
             return "--"
         total = w * qty
-        return f"{int(total) if float(total).is_integer() else total} lb"
+        return _weight_cell(int(total) if float(total).is_integer() else total, lang)
 
     for key in ("granted", "chosen", "added"):
         for e in eq.get(key) or []:
@@ -592,7 +601,7 @@ def build_sheet_data(resolution: dict, catalog, lang: str = DEFAULT_LANG, rulese
         action_blocks.append(sheet_label(lang, "headAttacks") + "\n" + "\n".join(attack_lines))
 
     # equipment, coins, carrying
-    rows = _equipment_rows(resolution, catalog)
+    rows = _equipment_rows(resolution, catalog, lang)
     for i in range(EQUIPMENT_FIELD_ROWS):
         name, qty, wt = rows[i] if i < len(rows) else ("", "", "")
         v[f"Eq{i}Name"], v[f"Eq{i}Qty"], v[f"Eq{i}Weight"] = name, qty, wt
