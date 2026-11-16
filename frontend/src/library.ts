@@ -7,6 +7,8 @@
 //   dnd-builder-draft-v2:<id>         one Draft per character (shape and DRAFT_VERSION unchanged)
 //   dnd-builder-draft-v2              LEGACY single draft: migrated at boot into the first item and
 //                                     then only READ; removed once a second character exists
+//   dnd-builder-portrait-v1:<id>      optional hero picture (a JPEG data URL), kept OUTSIDE the draft so the
+//                                     engine (/api/resolve) never receives it
 //   <key>.unreadable-backup           copies of texts that could not be loaded (never overwritten silently)
 //
 // Write rules: every write is try/catch. The draft is written BEFORE the index, so a failed
@@ -24,7 +26,9 @@ export const DRAFT_KEY_PREFIX = "dnd-builder-draft-v2:";
 const BACKUP_SUFFIX = ".unreadable-backup";
 export const MAX_IMPORT = 200;
 
+export const PORTRAIT_KEY_PREFIX = "dnd-builder-portrait-v1:";
 export const draftKey = (id: string) => `${DRAFT_KEY_PREFIX}${id}`;
+export const portraitKey = (id: string) => `${PORTRAIT_KEY_PREFIX}${id}`;
 export const backupKey = (id: string) => `${DRAFT_KEY_PREFIX}${id}${BACKUP_SUFFIX}`;
 
 export interface StorageLike {
@@ -440,6 +444,8 @@ export function duplicateCharacter(
   const next: Library = { ...lib, items: { ...lib.items, [newId]: newItem(env, newId, copy.name, item.seenChoiceIds, item.seenBaselined === true) } };
   const indexOk = writeIndex(env, next);
   dropLegacy(env, next);
+  const picture = readPortrait(env, id);
+  if (picture) writePortrait(env, newId, picture); // best effort: the copy is usable without it
   return { library: next, id: newId, ok: draftOk && indexOk };
 }
 
@@ -472,7 +478,33 @@ export function deleteCharacter(env: LibraryEnv, lib: Library, id: string): { li
   }
   del(env, draftKey(id));
   del(env, backupKey(id));
+  del(env, portraitKey(id));
   return { library: next, draft, notices, unsavedRaw, ok };
+}
+
+/** The stored picture of a character (a data URL), or null. */
+export function readPortrait(env: LibraryEnv, id: string): string | null {
+  const v = get(env, portraitKey(id));
+  return typeof v === "string" && v.startsWith("data:image/") ? v : null;
+}
+
+/** Store (or with null remove) a character's picture. False when the write failed (quota, private mode). */
+export function writePortrait(env: LibraryEnv, id: string, dataUrl: string | null): boolean {
+  if (dataUrl === null) {
+    del(env, portraitKey(id));
+    return true;
+  }
+  return put(env, portraitKey(id), dataUrl);
+}
+
+/** Pictures of all characters that have one, by id. */
+export function readPortraits(env: LibraryEnv, lib: Library): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const id of Object.keys(lib.items)) {
+    const p = readPortrait(env, id);
+    if (p) out[id] = p;
+  }
+  return out;
 }
 
 /** Drafts to put in the bundle (plain drafts, oldest character first). `live` overrides the stored
@@ -481,21 +513,27 @@ export function exportLibrary(
   env: LibraryEnv,
   lib: Library,
   live?: LiveDraft,
-): { bundle: { kind: "dnd-builder-library"; version: 1; drafts: Draft[] }; skipped: string[] } {
+): { bundle: { kind: "dnd-builder-library"; version: 1; drafts: Draft[]; portraits?: (string | null)[] }; skipped: string[] } {
   const drafts: Draft[] = [];
+  const portraits: (string | null)[] = [];
   const skipped: string[] = [];
   const items = Object.values(lib.items).sort((a, b) => a.createdAt - b.createdAt);
   for (const item of items) {
-    if (live && live.id === item.id) {
-      drafts.push(clone(live.draft));
-      continue;
+    const before = drafts.length;
+    if (live && live.id === item.id) drafts.push(clone(live.draft));
+    else {
+      const r = readDraft(env, item.id);
+      if (r.kind === "ok") drafts.push(r.draft);
+      else if (r.kind === "missing") drafts.push({ ...clone(emptyDraft), name: item.name });
+      else skipped.push(item.name);
     }
-    const r = readDraft(env, item.id);
-    if (r.kind === "ok") drafts.push(r.draft);
-    else if (r.kind === "missing") drafts.push({ ...clone(emptyDraft), name: item.name });
-    else skipped.push(item.name);
+    if (drafts.length > before) portraits.push(readPortrait(env, item.id));
   }
-  return { bundle: { kind: "dnd-builder-library", version: 1, drafts }, skipped };
+  // `portraits` runs parallel to `drafts` (null = no picture); it is left out when no character has one
+  const bundle = portraits.some((p) => p !== null)
+    ? { kind: "dnd-builder-library" as const, version: 1 as const, drafts, portraits }
+    : { kind: "dnd-builder-library" as const, version: 1 as const, drafts };
+  return { bundle, skipped };
 }
 
 /** Import one draft or a library bundle. Every draft goes through mergeDraft; accepted ones become
@@ -504,7 +542,9 @@ export function exportLibrary(
 export function importDrafts(env: LibraryEnv, lib: Library, parsed: unknown): { library: Library; report: ImportEntry[]; ok: boolean } {
   const report: ImportEntry[] = [];
   let candidates: unknown[];
+  let pictures: unknown[] = [];
   if (isObj(parsed) && parsed.kind === "dnd-builder-library") {
+    if (Array.isArray(parsed.portraits)) pictures = parsed.portraits;
     if (typeof parsed.version === "number" && parsed.version > 1) {
       return rejectAll(lib, msg("lib.bundleNewer"));
     }
@@ -537,6 +577,9 @@ export function importDrafts(env: LibraryEnv, lib: Library, parsed: unknown): { 
       return;
     }
     next = { ...next, items: { ...next.items, [id]: newItem(env, id, draft.name) } };
+    const picture = pictures[index];
+    // a picture that is not an image data URL, or that does not fit in storage, is skipped: the character still imports
+    if (typeof picture === "string" && picture.startsWith("data:image/")) writePortrait(env, id, picture);
     accepted++;
     report.push({ index, name: draft.name, status: "accepted", id, message: msg("lib.added") });
   });
