@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 import pathlib
 import re
+import os
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -36,7 +37,10 @@ GLOSSARY_MD = REPO / "docs" / "GLOSSARY.md"
 GLOSSARY_TS = REPO / "frontend" / "src" / "copy" / "glossary.gen.ts"
 SRD_DIR = REPO / "chargen" / "data" / "srd"
 OFFICIAL_DIR = REPO / "server" / "data" / "official"
-PHB_PATH = pathlib.Path("/Users/yoanpetrov/Downloads/Player's Handbook (2024).md")
+# The 2024 PHB text is outside the repo (a book): set DND_PHB_2024_MD to its markdown file to check the PHB quotes; without it
+# the default below does not exist and those checks are skipped.
+_phb_env = os.environ.get("DND_PHB_2024_MD", "").strip()
+PHB_PATH = pathlib.Path(_phb_env).expanduser() if _phb_env else REPO / "docs" / "PHB-2024.md"
 
 SOURCES = ("phb2024", "srd", "5etools")
 SOURCE_LABELS = {"phb2024": "2024 PHB", "srd": "SRD", "5etools": "5etools data"}

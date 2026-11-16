@@ -137,7 +137,7 @@ def test_custom_lineage_amount_shape_is_plus_two_to_one_ability():
 # --- Task 3: fixed skill/tool/weapon/armor proficiency grants -------------
 #
 # Real-data shapes confirmed empirically (2026-09-23) against
-# /Users/yoanpetrov/.claude/dnd/.data/official/races.json:
+# ~/.claude/dnd/.data/official/races.json:
 #   skillProficiencies -> Aetherborn (PSK) -> [{"intimidation": True}]
 #   toolProficiencies  -> Naga (PSA)       -> [{"poisoner's kit": True}]
 #   weaponProficiencies-> Dwarf (PHB)      -> [{"battleaxe|phb": True, ...}]
@@ -265,7 +265,7 @@ def test_subrace_fixed_weapon_proficiency_lands_on_a_racial_trait():
 # --- Task 4: skill/tool proficiency CHOICES, including the "any N" wildcard
 #
 # Real-data shapes confirmed empirically (2026-09-24) against
-# /Users/yoanpetrov/.claude/dnd/.data/official/races.json:
+# ~/.claude/dnd/.data/official/races.json:
 #   enumerated list -> Centaur (GGR)     -> skillProficiencies [{"choose": {"from": [...]}}] (no "count" -> choose 1)
 #   enumerated list -> Dwarf (PHB)       -> toolProficiencies  [{"choose": {"from": ["smith's tools", ...]}}]
 #   any N wildcard  -> Hexblood (VRGR)   -> skillProficiencies [{"any": 2}]
