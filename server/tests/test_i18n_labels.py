@@ -13,6 +13,7 @@ Maneuvers, Metamagic, Eldritch Invocation, class and spell-school names).
 from __future__ import annotations
 
 import ast
+import glob
 import pathlib
 import re
 
@@ -185,7 +186,7 @@ def plain_card_text_sites(tree, *, cards: bool = True) -> list[int]:
 
 
 def test_no_plain_text_card_label_description_or_unavailable_reason_in_the_engine():
-    data_tables = {"reference_data.py", "feat_effects_data.py"}
+    data_tables = {"reference_data.py", "feat_effects_data.py"} | {pathlib.Path(p).name for p in glob.glob(str(zoo.SERVER / "catalog" / "reference" / "*.py"))}  # S17: reference_data.py's tables
     found = {pathlib.Path(p).name: plain_card_text_sites(t, cards=pathlib.Path(p).name not in data_tables)
              for p, t in zoo.server_trees(with_catalog=True)}
     found = {k: v for k, v in found.items() if v}
