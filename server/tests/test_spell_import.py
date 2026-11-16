@@ -1,7 +1,7 @@
 """Slice 11a: sourcebook spells (5etools spells/*.json -> SRD spell shape).
 
 Every number asserted against real data was computed by script from
-/Users/yoanpetrov/Documents/5etools-src/data/spells (2026-10-09); tests that
+~/Documents/5etools-src/data/spells (2026-10-09); tests that
 need the files skip when they are absent (no `DND_5ETOOLS_DATA`, nothing
 synced into official_dir()/spells)."""
 import json
@@ -36,6 +36,7 @@ def _write_spell_dir(root, files=None):
 
 def test_spells_dir_honours_the_env_override(tmp_path, monkeypatch):
     d = _write_spell_dir(tmp_path / "data")
+    monkeypatch.delenv("DND_OFFICIAL_DATA", raising=False)  # S12: SRD-only (`none`) ignores the override, this test is about the override
     monkeypatch.setenv("DND_5ETOOLS_DATA", str(tmp_path / "data"))
     assert paths.spells_dir() == d
     assert paths.has_official_spells()

@@ -2,7 +2,7 @@
 
 Every number asserted against real data was computed by script (with the
 project's own `catalog.official.common.slug`) over
-/Users/yoanpetrov/Documents/5etools-src/data/class on 2026-10-09; tests that
+~/Documents/5etools-src/data/class on 2026-10-09; tests that
 need the files skip when they are absent (no `DND_5ETOOLS_DATA`, nothing
 synced into official_dir()/class)."""
 import json
@@ -38,6 +38,7 @@ def _write_class_dir(root, files=None):
 
 def test_class_dir_honours_the_env_override(tmp_path, monkeypatch):
     d = _write_class_dir(tmp_path / "data")
+    monkeypatch.delenv("DND_OFFICIAL_DATA", raising=False)  # S12: SRD-only (`none`) ignores the override, this test is about the override
     monkeypatch.setenv("DND_5ETOOLS_DATA", str(tmp_path / "data"))
     assert paths.class_dir() == d
     assert paths.has_official_classes()
@@ -53,6 +54,7 @@ def test_class_dir_falls_back_to_the_official_dir_then_none(tmp_path, monkeypatc
 
 
 def test_optionalfeatures_file_override_first_then_official_dir_then_none(tmp_path, monkeypatch):
+    monkeypatch.delenv("DND_OFFICIAL_DATA", raising=False)  # S12: SRD-only (`none`) ignores the override
     monkeypatch.delenv("DND_5ETOOLS_DATA", raising=False)
     monkeypatch.setattr(paths, "official_dir", lambda: tmp_path / "official")
     assert paths.optionalfeatures_file() is None
