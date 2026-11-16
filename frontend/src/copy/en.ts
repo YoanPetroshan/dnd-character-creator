@@ -621,6 +621,7 @@ export const en: Copy = {
     searchLabel: (label: string) => `Search: ${label}`,
     hideUnavailable: "Hide the unavailable",
     showUnavailable: (n: number) => `Show the unavailable (${n})`,
+    showSpell: "Show spell description",
     selectedTitle: "Selected",
     selectedCount: (selected: number, count: number) => `Selected (${selected}/${count})`,
     removeLabel: (label: string) => `Remove: ${label}`,

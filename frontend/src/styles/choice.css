@@ -269,3 +269,86 @@ ul.choice-picker > li {
 .picker-list li {
   padding: 2px 0;
 }
+
+/* Spell preview: a round eye button at the right end of a spell row (44px tap target, 32px circle) opens the
+   spell text under the row, set off by a 2px rule on the left. */
+ul.choice-picker > li.choice-picker__item--spell {
+  position: relative;
+}
+
+li.choice-picker__item--spell label {
+  padding-right: 48px;
+}
+
+.choice-picker-wrap:not(.choice-picker-wrap--long) > ul.choice-picker > li.choice-picker__item--spell-open {
+  grid-column: 1 / -1;
+}
+
+.choice-picker-wrap:not(.choice-picker-wrap--long) .choice-picker li.choice-picker__item--spell-open label {
+  height: auto;
+}
+
+.spell-eye {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-round);
+  background: transparent;
+  color: var(--color-text);
+}
+
+.spell-eye::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 32px;
+  height: 32px;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-round);
+  background: var(--color-surface);
+}
+
+.spell-eye::after {
+  content: "";
+  position: absolute;
+  top: 13px;
+  left: 13px;
+  width: 18px;
+  height: 18px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 5c4.6 0 8.6 3 10.5 7-1.9 4-5.9 7-10.5 7S3.4 16 1.5 12C3.4 8 7.4 5 12 5zm0 2C8.8 7 5.9 9 4.2 12c1.7 3 4.6 5 7.8 5s6.100-2 7.800-5C18.100 9 15.200 7 12 7zm0 1.800a3.200 3.200 0 1 1 0 6.400a3.200 3.200 0 0 1 0-6.400z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 5c4.6 0 8.6 3 10.5 7-1.9 4-5.9 7-10.5 7S3.4 16 1.5 12C3.4 8 7.4 5 12 5zm0 2C8.8 7 5.9 9 4.2 12c1.7 3 4.6 5 7.8 5s6.100-2 7.800-5C18.100 9 15.200 7 12 7zm0 1.800a3.200 3.200 0 1 1 0 6.400a3.200 3.200 0 0 1 0-6.400z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.spell-eye[aria-expanded="true"]::before {
+  background: var(--color-surface-muted);
+  border-color: var(--color-text);
+}
+
+.spell-eye:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: -2px;
+}
+
+.spell-eye__panel {
+  margin: var(--space-2) 0 var(--space-3) var(--space-2);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--color-border);
+  font-size: 15px;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+}
+
+.spell-eye__panel .spell-library-card__material {
+  font-size: 13px;
+  line-height: 18px;
+  font-style: normal;
+  color: var(--color-text-secondary);
+}

@@ -3,6 +3,7 @@ import { useT } from "../LanguageContext";
 import type { Copy } from "../copy";
 import { optionSource } from "../logic/sources";
 import type { Choice, ChoiceOption } from "../types";
+import { SpellDetailBody, useSpellDetails } from "./SpellDetailBody";
 
 interface ChoicePickerProps {
   choice: Choice;
@@ -34,10 +35,51 @@ export function groupLabel(t: Copy, group: string): string {
   return t.choice.groups[group] ?? group;
 }
 
+const isSpellOption = (o: ChoiceOption): boolean => /^spell-level-\d+$/.test(o.group ?? "");
+
+/** The eye button of a spell row (a sibling of the label, so it never toggles the checkbox) and the panel under it. */
+function useSpellPreview() {
+  const t = useT();
+  const { details, loadDetail } = useSpellDetails();
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const isOpen = (o: ChoiceOption) => open.has(o.id);
+  function toggle(id: string) {
+    const next = new Set(open);
+    if (next.has(id)) next.delete(id);
+    else {
+      next.add(id);
+      loadDetail(id);
+    }
+    setOpen(next);
+  }
+  const button = (o: ChoiceOption) =>
+    isSpellOption(o) && (
+      <button
+        type="button"
+        className="spell-eye"
+        aria-label={t.choice.showSpell}
+        aria-expanded={isOpen(o)}
+        onClick={() => toggle(o.id)}
+      />
+    );
+  const panel = (o: ChoiceOption) =>
+    isSpellOption(o) && isOpen(o) && (
+      <div className="spell-eye__panel">
+        <SpellDetailBody state={details[o.id]} />
+      </div>
+    );
+  const itemClass = (o: ChoiceOption, extra?: string) =>
+    [extra, isSpellOption(o) ? "choice-picker__item--spell" : null, isSpellOption(o) && isOpen(o) ? "choice-picker__item--spell-open" : null]
+      .filter(Boolean)
+      .join(" ") || undefined;
+  return { button, panel, itemClass };
+}
+
 function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
   const t = useT();
   const [filter, setFilter] = useState("");
   const [showUnavailable, setShowUnavailable] = useState(false);
+  const preview = useSpellPreview();
 
   const selected = new Set(choice.selected);
   const needle = filter.trim().toLowerCase();
@@ -55,7 +97,7 @@ function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
   function renderOption(option: ChoiceOption, prev: ChoiceOption | undefined) {
     const heading = option.group && option.group !== prev?.group ? option.group : null;
     return (
-      <li key={option.id} className={heading ? "choice-picker__item--group-start" : undefined} data-state={optionState(option)}>
+      <li key={option.id} className={preview.itemClass(option, heading ? "choice-picker__item--group-start" : undefined)} data-state={optionState(option)}>
         {heading && (
           <span className="choice-picker__group" role="presentation">
             {groupLabel(t, heading)}
@@ -78,6 +120,8 @@ function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
             <span className="choice-picker__reason" id={`${choice.id}::${option.id}::why`}> — {option.disabledReason}</span>
           )}
         </label>
+        {preview.button(option)}
+        {preview.panel(option)}
       </li>
     );
   }
@@ -121,6 +165,7 @@ function LongPicker({ choice, onToggle }: ChoicePickerProps) {
   const [showUnavailable, setShowUnavailable] = useState(false);
   /** User choices only; a group with no entry follows its default. */
   const [openState, setOpenState] = useState<Record<string, boolean>>({});
+  const preview = useSpellPreview();
 
   const selected = new Set(choice.selected);
   const needle = filter.trim().toLowerCase();
@@ -189,7 +234,7 @@ function LongPicker({ choice, onToggle }: ChoicePickerProps) {
 
   function renderRow(option: ChoiceOption) {
     return (
-      <li key={option.id} data-state={optionState(option)}>
+      <li key={option.id} className={preview.itemClass(option)} data-state={optionState(option)}>
         <label className={option.disabled ? "choice-picker__option--disabled" : ""}>
           <input
             type="checkbox"
@@ -207,6 +252,8 @@ function LongPicker({ choice, onToggle }: ChoicePickerProps) {
             <span className="choice-picker__reason" id={`${choice.id}::${option.id}::why`}> — {option.disabledReason}</span>
           )}
         </label>
+        {preview.button(option)}
+        {preview.panel(option)}
       </li>
     );
   }
