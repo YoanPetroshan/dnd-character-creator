@@ -70,6 +70,10 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
   const prunedReasons = new Map((resolution?.pruned ?? []).map((p) => [p.choiceId, p.reason]));
   const hasSpells = spellChoices.length > 0;
   const effectiveTab: ClassTab = hasSpells ? tab : "features";
+  // a tab that is not open shows the red mark when one of its required choices is still open
+  const hasPending = (list: typeof featureChoices) => list.some((c) => c.status === "pending" && !c.optional);
+  const featuresPending = effectiveTab !== "features" && hasPending(featureChoices);
+  const spellsPending = effectiveTab !== "spells" && hasPending(spellChoices);
 
   // A "#<cid>" hash may point into the tab that is not showing: switch to it
   // (the card itself expands and scrolls, see ChoiceCard).
@@ -194,6 +198,11 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
           onClick={() => setTab("features")}
         >
           {cp.tabFeatures}
+          {featuresPending && (
+            <span className="tab-bar__pending" aria-label={t.choice.pendingDot}>
+              !
+            </span>
+          )}
         </button>
         {hasSpells && (
           <button
@@ -205,6 +214,11 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
             onClick={() => setTab("spells")}
           >
             {cp.tabSpells}
+            {spellsPending && (
+              <span className="tab-bar__pending" aria-label={t.choice.pendingDot}>
+                !
+              </span>
+            )}
           </button>
         )}
       </div>
