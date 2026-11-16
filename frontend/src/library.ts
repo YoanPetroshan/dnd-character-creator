@@ -60,6 +60,9 @@ export interface Library {
   items: Record<string, LibraryItem>;
   /** id of the item the legacy single key was migrated into (decides when the legacy key may go) */
   legacyId?: string;
+  /** FE-01: id -> when the character was deleted. Another tab's stale copy of an item with an older `updatedAt` is dropped
+   *  instead of coming back, and a draft key of such an id is not adopted as an orphan. */
+  tombstones?: Record<string, number>;
 }
 
 export interface BootResult {
@@ -140,8 +143,12 @@ const whyOf = (e: unknown): Msg =>
         ? msg("raw", { text: e.message })
         : msg("lib.cannotRead");
 
+/** Write the index. FE-01: read-merge-write, so a character another tab added (or deleted) since this tab last looked
+ *  is neither dropped nor brought back by this tab's write. */
 function writeIndex(env: LibraryEnv, lib: Library): boolean {
-  return put(env, LIBRARY_KEY, JSON.stringify(lib));
+  const stored = readIndex(env);
+  const merged = stored ? mergeLibraries(lib, stored) : lib;
+  return put(env, LIBRARY_KEY, JSON.stringify(Object.keys(merged.items).length ? merged : lib));
 }
 
 function freshId(env: LibraryEnv, lib: Library): string {
@@ -221,7 +228,77 @@ function normalizeLibrary(parsed: unknown, env: LibraryEnv): Library | null {
   const activeId = typeof parsed.activeId === "string" && items[parsed.activeId] ? parsed.activeId : mostRecent(items);
   const lib: Library = { version: 1, activeId, items };
   if (typeof parsed.legacyId === "string") lib.legacyId = parsed.legacyId;
+  if (isObj(parsed.tombstones)) {
+    const tombs = Object.fromEntries(Object.entries(parsed.tombstones).filter(([, t]) => typeof t === "number" && Number.isFinite(t)));
+    if (Object.keys(tombs).length) lib.tombstones = tombs as Record<string, number>;
+  }
   return lib;
+}
+
+const MAX_TOMBSTONES = 100;
+
+/** The index as stored right now (null when absent, unreadable, newer or empty). */
+function readIndex(env: LibraryEnv): Library | null {
+  const raw = get(env, LIBRARY_KEY);
+  if (raw === null) return null;
+  try {
+    return normalizeLibrary(JSON.parse(raw), env);
+  } catch {
+    return null;
+  }
+}
+
+/** FE-01: the union of two copies of the index (this tab's and the stored one). An item in both takes the newer
+ *  `updatedAt` (ties: ours); a tombstone removes an item that was not changed after the deletion; the active
+ *  character stays this tab's choice. */
+function mergeLibraries(ours: Library, theirs: Library): Library {
+  const tombs: Record<string, number> = { ...(theirs.tombstones ?? {}) };
+  for (const [id, t] of Object.entries(ours.tombstones ?? {})) tombs[id] = Math.max(t, tombs[id] ?? 0);
+  const items: Record<string, LibraryItem> = {};
+  for (const id of new Set([...Object.keys(theirs.items), ...Object.keys(ours.items)])) {
+    const a = ours.items[id];
+    const b = theirs.items[id];
+    const pick = a && b ? (b.updatedAt > a.updatedAt ? b : a) : (a ?? b);
+    if (tombs[id] !== undefined && pick.updatedAt <= tombs[id]) continue;
+    items[id] = pick;
+  }
+  const kept = Object.entries(tombs).sort((x, y) => y[1] - x[1]).slice(0, MAX_TOMBSTONES);
+  const activeId = items[ours.activeId] ? ours.activeId : items[theirs.activeId] ? theirs.activeId : mostRecent(items);
+  const merged: Library = { version: 1, activeId, items };
+  const legacyId = ours.legacyId ?? theirs.legacyId;
+  if (legacyId) merged.legacyId = legacyId;
+  if (kept.length) merged.tombstones = Object.fromEntries(kept);
+  return merged;
+}
+
+/** Another tab changed the stored library: this tab's copy merged with it. `changed` is false when nothing differs;
+ *  `activeGone` when this tab's active character was deleted elsewhere (the caller then opens `library.activeId`). */
+export function refreshFromStorage(env: LibraryEnv, lib: Library): { library: Library; changed: boolean; activeGone: boolean } {
+  const stored = readIndex(env);
+  if (!stored) return { library: lib, changed: false, activeGone: false };
+  const merged = mergeLibraries(lib, stored);
+  if (Object.keys(merged.items).length === 0) return { library: lib, changed: false, activeGone: false };
+  const shape = (l: Library) => JSON.stringify(Object.values(l.items).map((i) => [i.id, i.name, i.updatedAt]).sort());
+  return { library: merged, changed: shape(merged) !== shape(lib), activeGone: !!lib.items[lib.activeId] && !merged.items[lib.activeId] };
+}
+
+/** Draft keys that have no index entry and were not deleted: characters another tab created before its index write
+ *  reached us, or whose index text was lost. They are adopted (an unreadable one is isolated by the per-item check). */
+function orphanItems(env: LibraryEnv, known: Record<string, LibraryItem>, tombstones: Record<string, number> = {}): Record<string, LibraryItem> {
+  const found: Record<string, LibraryItem> = {};
+  for (const k of keysOf(env)) {
+    if (!k.startsWith(DRAFT_KEY_PREFIX) || k.endsWith(BACKUP_SUFFIX)) continue;
+    const id = k.slice(DRAFT_KEY_PREFIX.length);
+    if (!id || known[id] || tombstones[id] !== undefined) continue;
+    let name = "";
+    try {
+      name = mergeDraft(JSON.parse(get(env, k) as string)).name;
+    } catch {
+      // unreadable: adopted anyway, isolated by the per-item check
+    }
+    found[id] = newItem(env, id, name);
+  }
+  return found;
 }
 
 function mostRecent(items: Record<string, LibraryItem>, except?: string): string {
@@ -318,7 +395,9 @@ export function bootLibrary(env: LibraryEnv): BootResult {
     return { library: lib, draft: firstItemDraft, notices, unsavedRaw, storageFailed };
   }
 
-  // existing library: check every item, isolate the corrupt ones, load the active draft
+  // existing library: adopt orphan draft keys, check every item, isolate the corrupt ones, load the active draft
+  const orphans = orphanItems(env, lib.items, lib.tombstones);
+  if (Object.keys(orphans).length) lib = { ...lib, items: { ...lib.items, ...orphans } };
   let active: Draft | null = null;
   for (const item of Object.values(lib.items)) {
     const r = readDraft(env, item.id);
@@ -455,7 +534,7 @@ export function deleteCharacter(env: LibraryEnv, lib: Library, id: string): { li
   if (!lib.items[id]) return { library: lib, draft: null, notices: [], unsavedRaw: null, ok: true };
   const items = { ...lib.items };
   delete items[id];
-  let next: Library = { ...lib, items };
+  let next: Library = { ...lib, items, tombstones: { ...(lib.tombstones ?? {}), [id]: env.now() } };
   let draft: Draft | null = null;
   let ok = true;
   let notices: Msg[] = [];

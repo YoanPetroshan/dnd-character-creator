@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Draft } from "./types";
 import {
   bootLibrary,
@@ -9,6 +9,7 @@ import {
   exportLibrary,
   importDrafts,
   openCharacter,
+  refreshFromStorage,
   renameCharacter,
   saveDraft,
   setSeenChoices,
@@ -18,9 +19,10 @@ import {
   type Library,
   type LibraryNames,
   type LibraryEnv,
+  LIBRARY_KEY,
 } from "./library";
 import { totalLevel } from "./logic/draft";
-import type { Msg } from "./logic/messages";
+import { msg, type Msg } from "./logic/messages";
 import { useT } from "./LanguageContext";
 
 export interface LibraryContextValue {
@@ -105,6 +107,27 @@ export function LibraryProvider({ children, env }: { children: ReactNode; env?: 
     setStorageFailed(!r.ok);
     return r.ok;
   }, []);
+
+  // FE-01: another tab changed the library (a character added, deleted or renamed): merge it in and say so
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== null && e.key !== LIBRARY_KEY) return;
+      const r = refreshFromStorage(envRef.current, libRef.current);
+      if (!r.changed) return;
+      if (r.activeGone) {
+        const opened = openCharacter(envRef.current, r.library, r.library.activeId);
+        if (opened.draft) {
+          commit(opened.library, opened.draft);
+          setStorageFailed(!opened.ok);
+        } else commit(r.library);
+      } else {
+        commit(r.library);
+      }
+      setNotices((n) => [...n, msg("lib.changedElsewhere")]);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [commit]);
 
   const addNotices = (more: Msg[], raw: string | null) => {
     if (more.length) setNotices((n) => [...n, ...more]);
