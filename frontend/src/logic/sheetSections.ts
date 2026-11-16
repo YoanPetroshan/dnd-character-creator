@@ -64,10 +64,34 @@ export interface AbilityRow {
 export interface SkillRow {
   id: string;
   name: string;
+  /** The ability the skill uses (standard 5e mapping); null for an id outside the 18 skills. */
+  ability: Ability | null;
   bonus: number;
   proficient: boolean;
   expertise: boolean;
 }
+
+/** The standard 5e skill -> ability mapping (the same in 2014 and 2024; the resolution gives only the bonus). */
+export const SKILL_ABILITY: Record<string, Ability> = {
+  acrobatics: "DEX",
+  "animal-handling": "WIS",
+  arcana: "INT",
+  athletics: "STR",
+  deception: "CHA",
+  history: "INT",
+  insight: "WIS",
+  intimidation: "CHA",
+  investigation: "INT",
+  medicine: "WIS",
+  nature: "INT",
+  perception: "WIS",
+  performance: "CHA",
+  persuasion: "CHA",
+  religion: "INT",
+  "sleight-of-hand": "DEX",
+  stealth: "DEX",
+  survival: "WIS",
+};
 
 export interface SpellcasterData {
   classId: string;
@@ -218,7 +242,7 @@ export function sheetSections(resolution: Resolution, base?: Record<Ability, num
   const skillProf = new Set(sheet.proficiencies.skills);
   const expertise = new Set(sheet.expertiseSkills ?? []);
   const rows = Object.entries(derived.skills)
-    .map(([id, bonus]) => ({ id, name: skillName(id), bonus, proficient: skillProf.has(id), expertise: expertise.has(id) }))
+    .map(([id, bonus]) => ({ id, name: skillName(id), ability: SKILL_ABILITY[id.replace(/^skill-/, "")] ?? null, bonus, proficient: skillProf.has(id), expertise: expertise.has(id) }))
     .sort((a, b) => a.name.localeCompare(b.name, "en"));
   const otherExpertise = [...expertise].filter((id) => !(id in derived.skills)).map(expertiseLabel);
   push("skills", { rows, otherExpertise });

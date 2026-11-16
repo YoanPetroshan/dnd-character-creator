@@ -190,6 +190,7 @@ export const en: Copy = {
     skills: {
       title: g.skills.en,
       columns: { skill: "Skill", bonus: "Bonus", mark: "Proficiency" },
+      head: { prof: "Prof", mod: "Mod", skill: "Skill", bonus: "Bonus" },
       otherExpertise: "Other Expertise",
     },
 
@@ -711,6 +712,13 @@ export const en: Copy = {
     "lib.added": () => "Added as a new character.",
   },
 
+  portrait: {
+    upload: "Upload picture",
+    change: "Change picture",
+    remove: "Remove picture",
+    storageFull: "The picture was not saved: the browser storage is full. Delete old heroes or pick a smaller picture.",
+    unreadable: "The file cannot be read as an image.",
+  },
   library: {
     unnamed: "Unnamed",
     copyName: (name: string) => `${name} (copy)`,

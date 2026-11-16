@@ -9,10 +9,12 @@ import {
   exportLibrary,
   importDrafts,
   openCharacter,
+  readPortraits,
   renameCharacter,
   saveDraft,
   setSeenChoices,
   summarize,
+  writePortrait,
   type ImportEntry,
   type ItemSummary,
   type Library,
@@ -51,6 +53,10 @@ export interface LibraryContextValue {
   /** Bundle of all characters (plus names of unreadable ones that were left out). */
   exportAll: () => { json: string; skipped: string[] };
   importParsed: (parsed: unknown) => ImportEntry[];
+  /** Hero pictures by character id (data URLs), stored outside the drafts. */
+  portraits: Record<string, string>;
+  /** Store (or with null remove) a character's picture; false when storage is full. */
+  setPortrait: (id: string, dataUrl: string | null) => boolean;
 }
 
 const LibraryContext = createContext<LibraryContextValue | null>(null);
@@ -71,6 +77,7 @@ export function LibraryProvider({ children, env }: { children: ReactNode; env?: 
   namesRef.current = { unnamed: t.library.unnamed, copyName: t.library.copyName };
   const [unsavedRaw, setUnsavedRaw] = useState<string | null>(boot.unsavedRaw);
   const [storageFailed, setStorageFailed] = useState(boot.storageFailed);
+  const [portraits, setPortraits] = useState<Record<string, string>>(() => readPortraits(envRef.current, boot.library));
 
   const commit = useCallback((next: Library, activeDraftNext?: Draft | null) => {
     libRef.current = next;
@@ -78,6 +85,7 @@ export function LibraryProvider({ children, env }: { children: ReactNode; env?: 
     setLib(next);
     if (activeDraftNext) setActiveDraft(activeDraftNext);
     setSummaries(summarize(envRef.current, next, liveRef.current));
+    setPortraits(readPortraits(envRef.current, next));
   }, []);
 
   const persistActive = useCallback((id: string, draft: Draft) => {
@@ -171,9 +179,15 @@ export function LibraryProvider({ children, env }: { children: ReactNode; env?: 
         setStorageFailed(!r.ok);
         return r.report;
       },
+      portraits,
+      setPortrait: (id, dataUrl) => {
+        const ok = writePortrait(envRef.current, id, dataUrl);
+        if (ok) setPortraits(readPortraits(envRef.current, libRef.current));
+        return ok;
+      },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [summaries, lib, activeDraft, notices, unsavedRaw, storageFailed, persistActive, commit],
+    [summaries, lib, activeDraft, notices, unsavedRaw, storageFailed, persistActive, commit, portraits],
   );
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;

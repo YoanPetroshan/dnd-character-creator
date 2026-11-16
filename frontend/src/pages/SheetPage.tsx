@@ -1,6 +1,6 @@
 import { useSearchParams } from "react-router-dom";
 import { ExportBar } from "../components/sheetpage/ExportBar";
-import { SummaryStrip } from "../components/sheetpage/SummaryStrip";
+import { CombatRow, SheetHero, SummaryStrip } from "../components/sheetpage/SummaryStrip";
 import { Tabs, type TabDef } from "../components/sheetpage/Tabs";
 import { ActionsPanel, BackgroundPanel, FeaturesPanel, InventoryPanel, NotesPanel, ReferenceBlock, SpellsPanel } from "../components/sheetpage/panels";
 import { useDraft } from "../DraftContext";
@@ -11,7 +11,9 @@ import { TAB_IDS, parseTab, type TabId } from "../logic/sheetTabs";
 import { useResolutionContext } from "../ResolutionContext";
 
 /** The character sheet page (/sheet, also the old /export): the download buttons at the top, a summary strip, then tabs
- *  (`?tab=actions|spells|inventory|features|background|notes`, default actions). Works on an unfinished draft too: the
+ *  (`?tab=actions|spells|inventory|features|background|notes`, default actions). The layout follows the familiar online
+ *  sheet: header with the picture, a row of number boxes, then saves / senses / proficiencies, skills and the tab panel in
+ *  three columns on a wide screen. Works on an unfinished draft too: the
  *  downloads are then disabled and the page says why. */
 export function SheetPage() {
   const t = useT();
@@ -45,13 +47,17 @@ export function SheetPage() {
       <h1>
         {t.sheet.title} {loading && "…"}
       </h1>
-      <SummaryStrip sections={sections} />
+      <SheetHero sections={sections} />
       <ExportBar resolution={resolution} error={error} />
       {outstanding > 0 && (
         <p role="status" data-state="incomplete">
           {t.sheet.incomplete(outstanding)}
         </p>
       )}
+      <SummaryStrip sections={sections} />
+      <div className="sheet-body">
+      <div className="sheet-main">
+      <CombatRow sections={sections} />
       <Tabs
         idPrefix="sheet"
         label={t.sheet.tabs.label}
@@ -75,7 +81,9 @@ export function SheetPage() {
           }
         }}
       />
+      </div>
       <ReferenceBlock sections={sections} />
+      </div>
     </div>
   );
 }

@@ -14,6 +14,9 @@ import {
   exportLibrary,
   importDrafts,
   openCharacter,
+  portraitKey,
+  readPortrait,
+  readPortraits,
   renameCharacter,
   resetActiveDraft,
   saveDraft,
@@ -21,6 +24,7 @@ import {
   summarize,
   type LibraryEnv,
   type StorageLike,
+  writePortrait,
 } from "./library";
 import { bg } from "./copy";
 import { DRAFT_VERSION, emptyDraft } from "./logic/draft";
@@ -588,5 +592,53 @@ describe("seen choice ids (SK8)", () => {
     const id = b.library.activeId;
     expect(bootLibrary(env).library.items[id].seenBaselined).toBeUndefined();
     expect(idx(storage).items[id].seenBaselined).toBeUndefined();
+  });
+});
+
+describe("portraits (stored outside the draft)", () => {
+  const PIC = "data:image/jpeg;base64,AAAA";
+  it("are written, read, removed, copied on duplicate and dropped on delete; the draft never holds them", () => {
+    const h = makeEnv();
+    const b = bootLibrary(h.env);
+    const id = b.library.activeId;
+    expect(readPortrait(h.env, id)).toBeNull();
+    expect(writePortrait(h.env, id, PIC)).toBe(true);
+    expect(h.storage.getItem(portraitKey(id))).toBe(PIC);
+    expect(h.storage.getItem(draftKey(id))).not.toContain("data:image");
+    expect(readPortraits(h.env, b.library)).toEqual({ [id]: PIC });
+    const dup = duplicateCharacter(h.env, b.library, id, undefined, NAMES);
+    expect(readPortrait(h.env, dup.id as string)).toBe(PIC);
+    deleteCharacter(h.env, dup.library, dup.id as string);
+    expect(h.storage.getItem(portraitKey(dup.id as string))).toBeNull();
+    expect(writePortrait(h.env, id, null)).toBe(true);
+    expect(readPortrait(h.env, id)).toBeNull();
+  });
+
+  it("a full storage makes the write report false", () => {
+    const h = makeEnv();
+    const b = bootLibrary(h.env);
+    h.storage.failKeys.add(portraitKey(b.library.activeId));
+    expect(writePortrait(h.env, b.library.activeId, PIC)).toBe(false);
+  });
+
+  it("go into the bundle in parallel to the drafts and come back on import; a bundle without them still imports", () => {
+    const a = makeEnv();
+    const boot = bootLibrary(a.env);
+    expect("portraits" in exportLibrary(a.env, boot.library).bundle).toBe(false);
+    const second = createCharacter(a.env, boot.library);
+    writePortrait(a.env, second.id, PIC);
+    const out = exportLibrary(a.env, second.library);
+    expect(out.bundle.portraits).toEqual([null, PIC]);
+    const b = makeEnv();
+    const fresh = bootLibrary(b.env);
+    const r = importDrafts(b.env, fresh.library, JSON.parse(JSON.stringify(out.bundle)));
+    const ids = r.report.filter((e) => e.status === "accepted").map((e) => e.id as string);
+    expect(ids.map((i) => readPortrait(b.env, i))).toEqual([null, PIC]);
+    const c = makeEnv();
+    const plain = { ...out.bundle, portraits: undefined };
+    const r2 = importDrafts(c.env, bootLibrary(c.env).library, JSON.parse(JSON.stringify(plain)));
+    expect(r2.report.filter((e) => e.status === "accepted")).toHaveLength(2);
+    const bad = importDrafts(c.env, r2.library, { ...out.bundle, portraits: ["javascript:alert(1)", 5] });
+    expect(bad.report.filter((e) => e.status === "accepted").map((e) => readPortrait(c.env, e.id as string))).toEqual([null, null]);
   });
 });

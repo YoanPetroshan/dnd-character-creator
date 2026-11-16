@@ -352,7 +352,7 @@ main .next-button:active,
 
 /* Pointer hover (mouse and trackpad only; nothing here is the only way to do something). */
 @media (hover: hover) and (pointer: fine) {
-  button:hover:not(:disabled):not([aria-disabled="true"]):not(.name-dice):not(.hero__open):not(.next-button):not(.export-bar__button--primary):not(.tabs__tab):not(.tab-bar button) {
+  button:hover:not(:disabled):not([aria-disabled="true"]):not(.name-dice):not(.hero__open):not(.next-button):not(.export-bar__button--primary):not(.tabs__tab):not(.tab-bar button):not(.sheet-pills > button):not(.portrait__frame):not(.portrait__action) {
     background: var(--color-surface-muted);
   }
 
@@ -383,4 +383,14 @@ main .next-button:active,
   a:hover {
     text-decoration-thickness: 2px;
   }
+}
+
+/* Text for screen readers only (kept in the accessibility tree, not drawn). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

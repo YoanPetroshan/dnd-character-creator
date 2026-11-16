@@ -196,6 +196,7 @@ export const bg = {
     skills: {
       title: "Умения (Skills)",
       columns: { skill: "Умение (Skill)", bonus: "Бонус", mark: "Владеене (Proficiency)" },
+      head: { prof: "Влад.", mod: "Хар.", skill: "Умение (Skill)", bonus: "Бонус" },
       otherExpertise: "Друга експертиза (Other Expertise)",
     },
 
@@ -706,6 +707,13 @@ export const bg = {
   },
 
   /** Words the character library stores into character names (a copy of a hero). */
+  portrait: {
+    upload: "Качи снимка",
+    change: "Смени снимката",
+    remove: "Премахни снимката",
+    storageFull: "Снимката не се запази: паметта на браузъра е пълна. Изтрий стари герои или избери по-малка снимка.",
+    unreadable: "Файлът не може да се прочете като изображение.",
+  },
   library: {
     unnamed: "Без име",
     copyName: (name: string) => `${name} (копие)`,

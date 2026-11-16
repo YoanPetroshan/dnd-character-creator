@@ -20,20 +20,18 @@ export function AttacksSection({ data }: { data: SheetSectionData["attacks"] }) 
   const c = t.sheet.attacks;
   return (
     <SectionFrame sectionKey="attacks" title={c.title}>
-      <dl>
+      <dl className="attacks__per-action">
         <dt>{c.perAction}</dt>
         <dd>{data.perAction}</dd>
       </dl>
       {data.attacks.length > 0 && (
-        <table>
+        <table className="attacks">
           <thead>
             <tr>
               <th scope="col">{c.columns.weapon}</th>
-              <th scope="col">{c.columns.ability}</th>
+              <th scope="col">{c.columns.range}</th>
               <th scope="col">{c.columns.bonus}</th>
               <th scope="col">{c.columns.damage}</th>
-              <th scope="col">{c.columns.range}</th>
-              <th scope="col">{c.columns.mastery}</th>
               <th scope="col">{c.columns.notes}</th>
             </tr>
           </thead>
@@ -41,15 +39,19 @@ export function AttacksSection({ data }: { data: SheetSectionData["attacks"] }) 
             {data.attacks.map((a) => (
               <tr key={a.itemId} data-proficient={a.proficient} data-wielded={a.wielded ?? undefined}>
                 <th scope="row">
-                  {a.name}
-                  {a.wielded ? ` (${c.wielded})` : ""}
+                  <span className="attack__name">{a.name}</span>
+                  <span className="attack__sub">
+                    {[a.ability, ...(a.wielded ? [c.wielded] : []), ...(a.mastery ? [`${c.columns.mastery}: ${a.mastery}`] : [])].join(" · ")}
+                  </span>
                 </th>
-                <td>{a.ability}</td>
-                <td>{formatModifier(a.attackBonus)}</td>
-                <td>{damageText(t, a)}</td>
-                <td>{a.range ?? t.common.none}</td>
-                <td>{a.mastery ?? t.common.none}</td>
-                <td>{a.notes.length > 0 ? a.notes.join("; ") : t.common.none}</td>
+                <td className="attack__range">{a.range ?? t.common.none}</td>
+                <td>
+                  <span className="sheet-chip">{formatModifier(a.attackBonus)}</span>
+                </td>
+                <td>
+                  <span className="sheet-chip sheet-chip--wide">{damageText(t, a)}</span>
+                </td>
+                <td className="attack__notes">{a.notes.length > 0 ? a.notes.join("; ") : t.common.none}</td>
               </tr>
             ))}
           </tbody>

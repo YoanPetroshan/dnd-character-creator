@@ -104,6 +104,18 @@ describe("sheetSections", () => {
     expect(skills.rows.map((r) => r.name)).toEqual([...skills.rows.map((r) => r.name)].sort((a, b) => a.localeCompare(b, "en")));
   });
 
+  it("every skill row carries its ability (standard 5e mapping)", () => {
+    const skills = section(byId("fighter4-2024"), "skills")!;
+    expect(skills.rows).toHaveLength(18);
+    const by = Object.fromEntries(skills.rows.map((r) => [r.id, r.ability]));
+    expect(by["skill-athletics"]).toBe("STR");
+    expect(by["skill-acrobatics"]).toBe("DEX");
+    expect(by["skill-arcana"]).toBe("INT");
+    expect(by["skill-perception"]).toBe("WIS");
+    expect(by["skill-persuasion"]).toBe("CHA");
+    expect(skills.rows.every((r) => r.ability !== null)).toBe(true);
+  });
+
   it("saving throws mark exactly the proficient abilities", () => {
     for (const f of FIXTURES) {
       const saves = section(f, "savingThrows")!;

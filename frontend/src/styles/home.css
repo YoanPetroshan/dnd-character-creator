@@ -320,3 +320,25 @@
   align-items: center;
   gap: var(--space-1) var(--space-3);
 }
+
+/* The hero's picture above the name: the 72px frame with its actions beside it. */
+.home-portrait {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.home-portrait .portrait__actions {
+  flex: 1 1 auto;
+}
+
+/* A hero row shows the picture instead of the class mark when there is one. */
+.hero__portrait {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border: 1.5px solid var(--color-frame);
+  border-radius: var(--radius-round);
+  object-fit: cover;
+}

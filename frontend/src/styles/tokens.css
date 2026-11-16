@@ -13,6 +13,8 @@
   --radius-sm: 4px;
   --radius-pill: 29px;
   --radius-round: 50%;
+  /* the boxes of the sheet page (rounded rectangles with a frame-coloured border) */
+  --radius-box: 10px;
 
   --color-text: #1c2a1d;
   --color-text-strong: #1c2a1d;
@@ -31,6 +33,8 @@
   --color-highlight: #2a7048;
   --color-on-highlight: #ffffff;
   --color-label: #2a7048;
+  /* border of the sheet boxes and the sheet's one brand colour (selected tab, section titles, the pressed filter) */
+  --color-frame: #2a7048;
   --color-ok: #2a7048;
   --color-warning-text: #6b4e00;
   --color-warning-bg: #fbf1cf;
@@ -59,6 +63,8 @@
     --color-highlight: #2f7d52;
     --color-on-highlight: #ffffff;
     --color-label: #8fc7a0;
+    --color-frame: #4d8f66;
+    --radius-box: 10px;
     --color-ok: #8fc7a0;
     --color-danger: #ff8a65;
     --color-error: #ff8a65;
@@ -86,6 +92,8 @@
   --color-highlight: #2f7d52;
   --color-on-highlight: #ffffff;
   --color-label: #8fc7a0;
+  --color-frame: #4d8f66;
+  --radius-box: 10px;
   --color-ok: #8fc7a0;
   --color-danger: #ff8a65;
   --color-error: #ff8a65;
@@ -114,6 +122,8 @@
     --color-highlight: #000000;
     --color-on-highlight: #ffffff;
     --color-label: #000000;
+    --color-frame: #555555;
+    --radius-box: 6px;
     --color-danger: #a02a16;
     --color-error: #a02a16;
     --color-ok: #1d6b52;
