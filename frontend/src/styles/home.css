@@ -33,9 +33,11 @@
 }
 
 /* The dice button: the glyph from the copy catalog is hidden (font-size 0) and a die is drawn with a mask in the text colour. */
+/* flex, not grid: the emoji text node (font-size 0) would take a second grid row and push the drawn die up */
 .name-dice {
-  display: inline-grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: none;
   width: 56px;
   height: 56px;

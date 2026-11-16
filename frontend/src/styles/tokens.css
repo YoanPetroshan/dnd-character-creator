@@ -34,6 +34,9 @@
   --color-warning-text: #6b4e00;
   --color-warning-bg: #fbf1cf;
   --color-warning-border: #d9a400;
+
+  /* paper grain over the page colour: fine specks plus a faint large-scale mottle (tiles seamlessly) */
+  --texture-page: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280'%3E%3Cfilter id='g' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.11 0 0 0 0 0.16 0 0 0 0 0.11 0.34 0 0 0 -0.143'/%3E%3C/filter%3E%3Cfilter id='m' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.011' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.11 0 0 0 0 0.16 0 0 0 0 0.11 0.1 0 0 0 -0.045'/%3E%3C/filter%3E%3Crect width='280' height='280' filter='url(%23m)'/%3E%3Crect width='280' height='280' filter='url(%23g)'/%3E%3C/svg%3E");
 }
 
 /* Dark theme: the system setting decides unless the page sets data-theme (light or dark). The values are a
@@ -60,6 +63,7 @@
     --color-warning-text: #f2d27a;
     --color-warning-bg: #2a2412;
     --color-warning-border: #d9a400;
+    --texture-page: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280'%3E%3Cfilter id='g' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.9 0 0 0 0 0.93 0 0 0 0 0.89 0.16 0 0 0 -0.067'/%3E%3C/filter%3E%3Cfilter id='m' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.011' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.9 0 0 0 0 0.93 0 0 0 0 0.89 0.06 0 0 0 -0.027'/%3E%3C/filter%3E%3Crect width='280' height='280' filter='url(%23m)'/%3E%3Crect width='280' height='280' filter='url(%23g)'/%3E%3C/svg%3E");
     color-scheme: dark;
   }
 }
@@ -85,6 +89,7 @@
   --color-warning-text: #f2d27a;
   --color-warning-bg: #2a2412;
   --color-warning-border: #d9a400;
+  --texture-page: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280'%3E%3Cfilter id='g' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.9 0 0 0 0 0.93 0 0 0 0 0.89 0.16 0 0 0 -0.067'/%3E%3C/filter%3E%3Cfilter id='m' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.011' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.9 0 0 0 0 0.93 0 0 0 0 0.89 0.06 0 0 0 -0.027'/%3E%3C/filter%3E%3Crect width='280' height='280' filter='url(%23m)'/%3E%3Crect width='280' height='280' filter='url(%23g)'/%3E%3C/svg%3E");
   color-scheme: dark;
 }
 
@@ -108,5 +113,6 @@
     --color-danger: #a02a16;
     --color-error: #a02a16;
     --color-ok: #1d6b52;
+    --texture-page: none;
   }
 }

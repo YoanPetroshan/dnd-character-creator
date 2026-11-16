@@ -168,10 +168,10 @@ main .next-button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
-  width: 100%;
-  min-height: 58px;
-  margin-top: 20px;
+  gap: 28px;
+  width: fit-content;
+  min-height: 56px;
+  margin: 28px 0 0 auto;
   padding: 0 22px;
   border-radius: var(--radius-pill);
   background: var(--color-accent);

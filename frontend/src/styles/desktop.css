@@ -99,12 +99,6 @@
     border-left: 1px solid var(--color-border);
   }
 
-  main .next-button {
-    width: auto;
-    margin-left: auto;
-    gap: 28px;
-  }
-
   /* the sheet's left column stays in view while the panels scroll */
   .summary-strip {
     position: sticky;
