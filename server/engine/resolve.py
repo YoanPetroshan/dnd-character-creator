@@ -1453,6 +1453,10 @@ class ResolveState:
     xphb_effects: Any = field(init=False)
     equipment_dependents: Any = field(init=False)
     warlock_spell_ctx: Any = field(init=False)
+    choices: Any = field(init=False)
+    details: Any = field(init=False)
+    equipment_dict: Any = field(init=False)
+    pruned: Any = field(init=False)
 
 
 def _pass_classes(rs: ResolveState) -> None:
@@ -2650,51 +2654,24 @@ def _pass_spell_and_choice_templates(rs: ResolveState) -> None:
     rs.warlock_spell_ctx = warlock_spell_ctx
 
 
-def _pass_rest(rs: ResolveState) -> dict:
-    """The remaining sections of the old single function."""
-    asi_selected_feats = rs.asi_selected_feats
+def _pass_collect_choices(rs: ResolveState) -> None:
+    """Selections, dependents, stale picks and the resolved choices."""
     background_clamped_notes = rs.background_clamped_notes
     background_dict = rs.background_dict
-    bg = rs.bg
-    bg_id = rs.bg_id
     catalog = rs.catalog
     choice_templates = rs.choice_templates
-    classes = rs.classes
-    cls = rs.cls
     draft = rs.draft
     either_or_defaults = rs.either_or_defaults
     equipment_dependents = rs.equipment_dependents
-    feat_options = rs.feat_options
-    final_scores = rs.final_scores
     fixed_clamped_notes = rs.fixed_clamped_notes
-    fs_feats = rs.fs_feats
-    fs_slots_by_class = rs.fs_slots_by_class
-    granted_feats = rs.granted_feats
-    lessons_feats = rs.lessons_feats
-    modifiers = rs.modifiers
     problems = rs.problems
-    prof_bonus = rs.prof_bonus
     pruned_ability_notes = rs.pruned_ability_notes
-    race = rs.race
-    race_id = rs.race_id
     resolved_classes = rs.resolved_classes
     resolved_feats = rs.resolved_feats
     ruleset = rs.ruleset
     species = rs.species
-    species_alt = rs.species_alt
-    species_feats = rs.species_feats
-    species_size = rs.species_size
-    species_spell_ability = rs.species_spell_ability
-    species_variant = rs.species_variant
-    srd_fs_slots_by_class = rs.srd_fs_slots_by_class
     subclass_pruned = rs.subclass_pruned
-    subrace = rs.subrace
-    subrace_id = rs.subrace_id
-    total_level = rs.total_level
-    variant_follow = rs.variant_follow
     warlock_spell_ctx = rs.warlock_spell_ctx
-    warnings = rs.warnings
-    xphb_effects = rs.xphb_effects
     # Apply the draft's own selections onto each template to get a real Choice.
     equipment_raw = draft.get("equipment")
     equipment_dict = equipment_raw if isinstance(equipment_raw, dict) else {}
@@ -2882,7 +2859,51 @@ def _pass_rest(rs: ResolveState) -> dict:
                 selected = selected[: tpl["count"]]
         status = "resolved" if len(selected) == tpl["count"] else "pending"
         choices.append({**tpl, "selected": selected, "status": status})
+    rs.choices = choices
+    rs.details = details
+    rs.equipment_dict = equipment_dict
+    rs.pruned = pruned
 
+
+def _pass_rest(rs: ResolveState) -> dict:
+    """The remaining sections of the old single function."""
+    asi_selected_feats = rs.asi_selected_feats
+    bg = rs.bg
+    bg_id = rs.bg_id
+    catalog = rs.catalog
+    choices = rs.choices
+    classes = rs.classes
+    cls = rs.cls
+    details = rs.details
+    draft = rs.draft
+    equipment_dict = rs.equipment_dict
+    feat_options = rs.feat_options
+    final_scores = rs.final_scores
+    fs_feats = rs.fs_feats
+    fs_slots_by_class = rs.fs_slots_by_class
+    granted_feats = rs.granted_feats
+    lessons_feats = rs.lessons_feats
+    modifiers = rs.modifiers
+    problems = rs.problems
+    prof_bonus = rs.prof_bonus
+    pruned = rs.pruned
+    race = rs.race
+    race_id = rs.race_id
+    resolved_classes = rs.resolved_classes
+    resolved_feats = rs.resolved_feats
+    ruleset = rs.ruleset
+    species_alt = rs.species_alt
+    species_feats = rs.species_feats
+    species_size = rs.species_size
+    species_spell_ability = rs.species_spell_ability
+    species_variant = rs.species_variant
+    srd_fs_slots_by_class = rs.srd_fs_slots_by_class
+    subrace = rs.subrace
+    subrace_id = rs.subrace_id
+    total_level = rs.total_level
+    variant_follow = rs.variant_follow
+    warnings = rs.warnings
+    xphb_effects = rs.xphb_effects
     added_raw = equipment_dict.get("added")
     if added_raw is None:
         added_raw = []
@@ -3675,4 +3696,5 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     _pass_origin_ability_deltas(rs)
     _pass_class_asi_loop(rs)
     _pass_spell_and_choice_templates(rs)
+    _pass_collect_choices(rs)
     return _pass_rest(rs)
