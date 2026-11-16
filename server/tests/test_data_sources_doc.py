@@ -68,11 +68,11 @@ def test_every_manifest_file_is_covered():
 
 def test_documented_counts_match_manifest():
     files = json.loads((BUNDLE / "MANIFEST.json").read_text())["files"]
-    assert len(files) == 40
+    assert len(files) == 41
     assert sum(1 for m in files.values() if m["url"] is not None) == 4
-    assert sum(1 for m in files.values() if m["url"] is None) == 36
-    assert sum(m["bytes"] for m in files.values()) == 5868057
-    assert "5,868,057" in _doc()
+    assert sum(1 for m in files.values() if m["url"] is None) == 37
+    assert sum(m["bytes"] for m in files.values()) == 6344031
+    assert "6,344,031" in _doc()
 
 
 def test_provenance_commit_and_source_codes():

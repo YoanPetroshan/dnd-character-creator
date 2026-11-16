@@ -17,7 +17,7 @@ That is the wording of the code; this file does not verify it.
 
 ## Official 5etools data (`server/data/official/`)
 
-40 raw JSON files (5,868,057 bytes) plus `server/data/official/MANIFEST.json`, which records for every file its size,
+41 raw JSON files (6,344,031 bytes) plus `server/data/official/MANIFEST.json`, which records for every file its size,
 sha256, record counts, and (where known) url and pull date, and a `bundle_sha256` over all files. The files were
 copied byte for byte from the local sync folder (`~/.claude/dnd/.data/official`, filled by `chargen.sync --official`);
 the bundle builder is `server/catalog/official/bundle.py`. The upstream repository is 5etools-mirror-3/5etools-src.
@@ -35,7 +35,7 @@ Pulled from `https://raw.githubusercontent.com/5etools-mirror-3/5etools-src/main
 
 These four were fetched from the main branch on the dates shown; the upstream commit was not recorded.
 
-### Files with no per-file url or pull date (36)
+### Files with no per-file url or pull date (37)
 
 The manifest has `url: null` and `pulled_at: null` for these, because the sync folder's metadata does not list them.
 Groups:
@@ -43,11 +43,12 @@ Groups:
 - `server/data/official/spells/` (19 files: index.json, sources.json and 17 spell books, one per source code in the index)
 - `server/data/official/class/` (16 files: index.json and 15 class files)
 - `server/data/official/optionalfeatures.json`
+- `server/data/official/fluff-races.json` (the descriptive text of the species; 218 `raceFluff` records, 475,974 bytes, sha256 `5b3cb5b91224c3816e5aa58d8ce70832fc2b2ba30b4c2980127ae8f5f7c703ee`)
 
-Provenance statement, verified on 2026-11-03 by comparing sha256 of these 36 files with the same relative paths under
+Provenance statement, verified on 2026-11-03 by comparing sha256 of 36 of these files with the same relative paths under
 `~/Documents/5etools-src/data` (a local checkout whose package.json version is 2.25.4 and whose HEAD is the commit below;
 all 36 matched; they also match the blobs at that checkout's HEAD commit, git show HEAD:data/<file>): the spells, class and optionalfeatures files are byte-identical to 5etools-src v2.25.4, commit
-d2a2616867c2e435b37e465d64cc01e2fc075ace (2026-03-25). The same comparison for the four files with recorded
+d2a2616867c2e435b37e465d64cc01e2fc075ace (2026-03-25). `server/data/official/fluff-races.json` was added on 2026-11-16, copied byte for byte from `~/Documents/5etools-src/data/fluff-races.json` (the same v2.25.4 checkout, commit d2a2616867c2e435b37e465d64cc01e2fc075ace; its sha256 equals the blob at that commit's data/fluff-races.json). It is matched to the species by (name, source). The same comparison for the four files with recorded
 provenance showed that races.json, backgrounds.json and feats.json differ from that checkout (they come from a
 later main), and items-base.json does not exist there.
 

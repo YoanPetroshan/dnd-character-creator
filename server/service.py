@@ -41,6 +41,7 @@ from typing import Callable
 from catalog.loader import load as load_catalog
 from catalog.reference_data import SOURCE_NAMES, ruleset_allows, subclass_unlock_level
 from engine.resolve import _source_allowed, _spell_visible, _subclass_visible, resolve
+from catalog.official.race_fluff import species_fluff, trait_details
 from export import to_yaml
 from export_labels import DEFAULT_LANG as EXPORT_DEFAULT_LANG, label as export_label
 from i18n.messages import localize, msg, parse_lang
@@ -376,7 +377,10 @@ def api_catalog_species(args, body, species_id: str):
     race = _catalog.races.get(species_id)
     if not race:
         return _error("not found", 404)
-    return _json({**race, "subspecies": _catalog.subraces_of(species_id)})
+    subspecies = _catalog.subraces_of(species_id)
+    return _json({**race, "subspecies": subspecies,
+                  "fluff": species_fluff(race.get("name", ""), race.get("source", ""), [s.get("name", "") for s in subspecies]),
+                  "traitDetails": trait_details(race, _catalog.traits)})
 
 
 def api_items(args, body, **_):

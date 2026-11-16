@@ -959,7 +959,7 @@
  },
  "health": {
   "bodyLength": 149,
-  "bodySha256": "d5e152665856ce2bf8cc9e96c3e2c320d9c7df2cb2856c728288cbafd41fc1c2",
+  "bodySha256": "2793992538f4dfe54c68d52b42acaef44fb6474bd4b98d74b35e1d2050334ed5",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -967,7 +967,7 @@
  },
  "health-query-ignored": {
   "bodyLength": 149,
-  "bodySha256": "d5e152665856ce2bf8cc9e96c3e2c320d9c7df2cb2856c728288cbafd41fc1c2",
+  "bodySha256": "2793992538f4dfe54c68d52b42acaef44fb6474bd4b98d74b35e1d2050334ed5",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -1238,16 +1238,16 @@
   "status": 200
  },
  "species-elf": {
-  "bodyLength": 2674,
-  "bodySha256": "dd784dce42e6f8298bd169fe11db89431b66f5c6753065b81a9fad6c3c44c9f7",
+  "bodyLength": 5184,
+  "bodySha256": "80e230c2cfd46a200d5f33e861e81d6745a2540f41f21aa2310990a2cbd5222c",
   "headers": {
    "Content-Type": "application/json"
   },
   "status": 200
  },
  "species-human": {
-  "bodyLength": 3273,
-  "bodySha256": "2269596622abd60e2c97056c9e7ac75244d464bc682dfe76c76c757a1ff82e10",
+  "bodyLength": 4923,
+  "bodySha256": "79fe7e3d0d39e8f9a81378358e916e8cef04fbe97c9112219c9ca003765c2f07",
   "headers": {
    "Content-Type": "application/json"
   },

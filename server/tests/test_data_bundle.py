@@ -29,6 +29,7 @@ def make_src(root: pathlib.Path, *, hostile: bool = False) -> pathlib.Path:
     _w(src / "feats.json", {"feat": []})
     _w(src / "items-base.json", {"baseitem": [{"name": "D"}]})
     _w(src / "optionalfeatures.json", {"optionalfeature": [{"name": "E"}]})
+    _w(src / "fluff-races.json", {"raceFluff": [{"name": "A", "source": "PHB", "entries": ["x"]}]})
     idx = {"PHB": "spells-phb.json", "XGE": "spells-xge.json"}
     if hostile:
         idx.update({"bad1": "../evil.json", "bad2": "sub/x.json", "bad3": ".hidden.json",
@@ -49,6 +50,7 @@ def make_src(root: pathlib.Path, *, hostile: bool = False) -> pathlib.Path:
 
 EXPECTED = {
     "races.json", "backgrounds.json", "feats.json", "items-base.json", "optionalfeatures.json",
+    "fluff-races.json",
     "spells/index.json", "spells/sources.json", "spells/spells-phb.json", "spells/spells-xge.json",
     "class/index.json", "class/class-wizard.json",
 }
@@ -173,7 +175,7 @@ def test_real_bundle_integrity():
     lines = "".join(f"{r} {m['files'][r]['sha256']}\n" for r in sorted(m["files"]))
     assert m["bundle_sha256"] == hashlib.sha256(lines.encode()).hexdigest()
     assert set(bundle.required_files(BUNDLE)) == set(m["files"])
-    assert len(m["files"]) == 40
+    assert len(m["files"]) == 41
 
 
 def test_real_bundle_completeness():
@@ -184,6 +186,7 @@ def test_real_bundle_completeness():
     assert m["feats.json"]["records"]["feat"] == 305
     assert m["optionalfeatures.json"]["records"]["optionalfeature"] == 213
     assert m["items-base.json"]["records"]["baseitem"] == 230
+    assert m["fluff-races.json"]["records"]["raceFluff"] == 218
     books = [r for r in m if r.startswith("spells/spells-")]
     assert len(books) == 17
     assert sum(m[r]["records"]["spell"] for r in books) == 936

@@ -35,6 +35,7 @@ TOP_LEVEL_FILES = (
     "feats.json",
     "items-base.json",
     "optionalfeatures.json",
+    "fluff-races.json",
 )
 # subdir -> files always present besides what its index.json lists
 SUBDIRS = {

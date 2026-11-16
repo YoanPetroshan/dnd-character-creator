@@ -1,5 +1,5 @@
 {
-  "bundle_sha256": "88aab57fab15e41e83929e86da1e825c59d8ff2312b4901f8908c04e03c369b2",
+  "bundle_sha256": "c0ed61420c364301e5b4cde2e6725335671d4f1cff2c972bc9413b504517be94",
   "files": {
     "backgrounds.json": {
       "bytes": 703412,
@@ -203,6 +203,15 @@
       },
       "sha256": "a7b55565927f767a16e515a18f432349fe93cb0b98dc616dfd4bc61819d078b1",
       "url": "https://raw.githubusercontent.com/5etools-mirror-3/5etools-src/main/data/feats.json"
+    },
+    "fluff-races.json": {
+      "bytes": 475974,
+      "pulled_at": null,
+      "records": {
+        "raceFluff": 218
+      },
+      "sha256": "5b3cb5b91224c3816e5aa58d8ce70832fc2b2ba30b4c2980127ae8f5f7c703ee",
+      "url": null
     },
     "items-base.json": {
       "bytes": 185338,
