@@ -1478,6 +1478,15 @@ class ResolveState:
     proficient_skills: Any = field(init=False)
     proficient_tools: Any = field(init=False)
     proficient_weapons: Any = field(init=False)
+    class_levels: Any = field(init=False)
+    effects: Any = field(init=False)
+    expertise_all: Any = field(init=False)
+    hp_class_entries: Any = field(init=False)
+    hp_type: Any = field(init=False)
+    initiative_jack: Any = field(init=False)
+    initiative_remarkable: Any = field(init=False)
+    saves: Any = field(init=False)
+    skills: Any = field(init=False)
 
 
 def _pass_classes(rs: ResolveState) -> None:
@@ -3406,61 +3415,23 @@ def _pass_proficiencies(rs: ResolveState) -> None:
     rs.pruned = pruned
 
 
-def _pass_rest(rs: ResolveState) -> dict:
-    """The remaining sections of the old single function."""
-    added_resolved = rs.added_resolved
-    asi_selected_feats = rs.asi_selected_feats
-    bg = rs.bg
-    bg_id = rs.bg_id
+def _pass_hp_saves_skills(rs: ResolveState) -> None:
+    """Hit points, saving throws and skill scores."""
     catalog = rs.catalog
     choices = rs.choices
-    chosen_equipment = rs.chosen_equipment
     classes = rs.classes
     cls = rs.cls
-    details = rs.details
     draft = rs.draft
-    equipped_items = rs.equipped_items
-    feat_options = rs.feat_options
-    final_scores = rs.final_scores
-    fixed_languages = rs.fixed_languages
-    fs_feats = rs.fs_feats
-    gear = rs.gear
-    granted_equipment = rs.granted_equipment
-    granted_feats = rs.granted_feats
     invocation_effects = rs.invocation_effects
-    lessons_feats = rs.lessons_feats
     modifiers = rs.modifiers
-    narrative_items = rs.narrative_items
-    pact_weapon_id = rs.pact_weapon_id
     poe_priors = rs.poe_priors
-    positioned_languages = rs.positioned_languages
-    problems = rs.problems
     prof_bonus = rs.prof_bonus
-    proficient_armor = rs.proficient_armor
     proficient_save_abilities = rs.proficient_save_abilities
     proficient_skills = rs.proficient_skills
-    proficient_tools = rs.proficient_tools
-    proficient_weapons = rs.proficient_weapons
     pruned = rs.pruned
-    race = rs.race
-    race_id = rs.race_id
     resolved_classes = rs.resolved_classes
     resolved_feats = rs.resolved_feats
     ruleset = rs.ruleset
-    slot_granting_class_ids = rs.slot_granting_class_ids
-    species_alt = rs.species_alt
-    species_feats = rs.species_feats
-    species_size = rs.species_size
-    species_spell_ability = rs.species_spell_ability
-    species_variant = rs.species_variant
-    spell_slots = rs.spell_slots
-    spells_summary = rs.spells_summary
-    starting_gold = rs.starting_gold
-    subrace = rs.subrace
-    subrace_id = rs.subrace_id
-    total_level = rs.total_level
-    variant_follow = rs.variant_follow
-    warlock_slots = rs.warlock_slots
     warnings = rs.warnings
     xphb_effects = rs.xphb_effects
     hp_type = (draft.get("preferences") or {}).get("hitPointType")
@@ -3526,6 +3497,80 @@ def _pass_rest(rs: ResolveState) -> dict:
             amount = max(bonus["minimum"], modifiers[bonus["ability"]])
             for skill_id in bonus["skills"]:
                 skills[skill_id] += amount
+    rs.class_levels = class_levels
+    rs.effects = effects
+    rs.expertise_all = expertise_all
+    rs.hp_class_entries = hp_class_entries
+    rs.hp_type = hp_type
+    rs.initiative_jack = initiative_jack
+    rs.initiative_remarkable = initiative_remarkable
+    rs.pruned = pruned
+    rs.saves = saves
+    rs.skills = skills
+
+
+def _pass_rest(rs: ResolveState) -> dict:
+    """The remaining sections of the old single function."""
+    added_resolved = rs.added_resolved
+    asi_selected_feats = rs.asi_selected_feats
+    bg = rs.bg
+    bg_id = rs.bg_id
+    catalog = rs.catalog
+    choices = rs.choices
+    chosen_equipment = rs.chosen_equipment
+    class_levels = rs.class_levels
+    details = rs.details
+    draft = rs.draft
+    effects = rs.effects
+    equipped_items = rs.equipped_items
+    expertise_all = rs.expertise_all
+    feat_options = rs.feat_options
+    final_scores = rs.final_scores
+    fixed_languages = rs.fixed_languages
+    fs_feats = rs.fs_feats
+    gear = rs.gear
+    granted_equipment = rs.granted_equipment
+    granted_feats = rs.granted_feats
+    hp_class_entries = rs.hp_class_entries
+    hp_type = rs.hp_type
+    initiative_jack = rs.initiative_jack
+    initiative_remarkable = rs.initiative_remarkable
+    invocation_effects = rs.invocation_effects
+    lessons_feats = rs.lessons_feats
+    modifiers = rs.modifiers
+    narrative_items = rs.narrative_items
+    pact_weapon_id = rs.pact_weapon_id
+    positioned_languages = rs.positioned_languages
+    problems = rs.problems
+    prof_bonus = rs.prof_bonus
+    proficient_armor = rs.proficient_armor
+    proficient_save_abilities = rs.proficient_save_abilities
+    proficient_skills = rs.proficient_skills
+    proficient_tools = rs.proficient_tools
+    proficient_weapons = rs.proficient_weapons
+    pruned = rs.pruned
+    race = rs.race
+    race_id = rs.race_id
+    resolved_classes = rs.resolved_classes
+    resolved_feats = rs.resolved_feats
+    ruleset = rs.ruleset
+    saves = rs.saves
+    skills = rs.skills
+    slot_granting_class_ids = rs.slot_granting_class_ids
+    species_alt = rs.species_alt
+    species_feats = rs.species_feats
+    species_size = rs.species_size
+    species_spell_ability = rs.species_spell_ability
+    species_variant = rs.species_variant
+    spell_slots = rs.spell_slots
+    spells_summary = rs.spells_summary
+    starting_gold = rs.starting_gold
+    subrace = rs.subrace
+    subrace_id = rs.subrace_id
+    total_level = rs.total_level
+    variant_follow = rs.variant_follow
+    warlock_slots = rs.warlock_slots
+    warnings = rs.warnings
     speeds = _species_speeds(race, subrace, species_variant)
     worn_armor = any(i.get("equipment_category", {}).get("index") == "armor" for i in equipped_items)  # body armor or shield
     if speeds and not worn_armor:
@@ -3801,4 +3846,5 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     _pass_collect_choices(rs)
     _pass_equipment_and_spells(rs)
     _pass_proficiencies(rs)
+    _pass_hp_saves_skills(rs)
     return _pass_rest(rs)
