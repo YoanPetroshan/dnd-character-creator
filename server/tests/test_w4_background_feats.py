@@ -194,7 +194,7 @@ def test_dark_gifts_are_outside_every_other_feat_pool(catalog):
 def test_background_pick_is_in_the_taken_map_of_later_cards(catalog, monkeypatch):
     """The background card runs before the species card and joins `taken`: make the Human card's pool contain the
     picked Dark Gift (a patched pool) and it must read "already taken"."""
-    import engine.resolve as r
+    import engine.resolve_species as r  # S17: the pool is used where it now lives
     real = r._species_feat_pool
 
     def widened(cat, category, sources, ruleset="mixed", keep=(), include=()):
