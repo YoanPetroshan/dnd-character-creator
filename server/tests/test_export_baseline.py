@@ -18,6 +18,8 @@ import re
 
 import pytest
 
+import baseline_guard
+
 from catalog.loader import load
 from engine.resolve import resolve
 from export import to_yaml
@@ -82,8 +84,8 @@ def test_default_export_is_byte_identical_to_the_baseline(catalog, sid):
     got = outputs(_resolution(sid, catalog))
     stored = json.loads(BASELINE.read_text(encoding="utf-8")) if BASELINE.exists() else {}
     if os.environ.get("WRITE_EXPORT_BASELINE"):
-        stored[sid] = got
-        BASELINE.write_text(json.dumps(stored, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+        new = {**stored, sid: got}
+        baseline_guard.write_baseline(BASELINE, new, stored, f"export baseline {sid}")  # merge-only: other entries stay
         return
     assert sid in stored, f"no baseline for {sid}"
     assert got == stored[sid], f"{sid}: export bytes changed for {[k for k in got if got[k] != stored[sid][k]]}"
