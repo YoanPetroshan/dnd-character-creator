@@ -23,6 +23,8 @@ export const LEGACY_BACKUP_KEY = "dnd-builder-draft-v2.unreadable-backup";
 export const DRAFT_KEY_PREFIX = "dnd-builder-draft-v2:";
 const BACKUP_SUFFIX = ".unreadable-backup";
 export const MAX_IMPORT = 200;
+/** FE-06: the largest stored form of one imported draft (characters are a few KB; this is room for a long backstory). */
+export const MAX_IMPORT_DRAFT_CHARS = 2_000_000;
 
 export const draftKey = (id: string) => `${DRAFT_KEY_PREFIX}${id}`;
 export const backupKey = (id: string) => `${DRAFT_KEY_PREFIX}${id}${BACKUP_SUFFIX}`;
@@ -530,8 +532,13 @@ export function importDrafts(env: LibraryEnv, lib: Library, parsed: unknown): { 
       report.push({ index, name: nameOf, status: "rejected", message: toMsg(e) });
       return;
     }
+    const stored = JSON.stringify(draft);
+    if (stored.length > MAX_IMPORT_DRAFT_CHARS) {
+      report.push({ index, name: draft.name, status: "rejected", message: msg("lib.draftTooBig", { max: 2 }) });
+      return;
+    }
     const id = freshId(env, next);
-    if (!put(env, draftKey(id), JSON.stringify(draft))) {
+    if (!put(env, draftKey(id), stored)) {
       ok = false;
       report.push({ index, name: draft.name, status: "rejected", message: msg("lib.cannotStore") });
       return;

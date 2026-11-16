@@ -490,6 +490,15 @@ describe("export and import", () => {
     expect(stored(h.storage, "fresh").name).toBe("Вносен");
   });
 
+  it("a draft whose stored form is over about 2 MB is rejected with a message, the others are added (FE-06)", () => {
+    const { env } = makeEnv();
+    const boot = bootLibrary(env);
+    const huge = { ...draftOf("Огромен", [["rogue", 1]]), details: { backstory: "x".repeat(2_100_000) } };
+    const r = importDrafts(env, boot.library, { kind: "dnd-builder-library", version: 1, drafts: [huge, draftOf("Малък", [["cleric", 1]])] });
+    expect(r.report.map((e) => e.status)).toEqual(["rejected", "accepted"]);
+    expect(bgText(r.report[0].message)).toContain("2 MB");
+  });
+
   it("a single draft (not a bundle) is imported as a new character", () => {
     const { env } = makeEnv();
     const boot = bootLibrary(env);

@@ -139,3 +139,42 @@ describe("reducer", () => {
   });
   it("RESET returns the empty draft", () => expect(reducer(two, { type: "RESET" })).toBe(emptyDraft));
 });
+
+describe("mergeDraft keeps only well-typed values (FE-06)", () => {
+  const merge = (extra: Record<string, unknown>) => mergeDraft({ draftVersion: DRAFT_VERSION, ...extra }) as unknown as Record<string, any>;
+
+  it("sources: only strings survive", () => {
+    expect(merge({ sources: [1, "PHB", null, { a: 1 }, "xge"] }).sources).toEqual(["PHB", "xge"]);
+    expect(merge({ sources: "PHB" }).sources).toEqual([]);
+  });
+  it("name and the detail values are strings; other detail values are dropped", () => {
+    const d = merge({ name: 5, details: { backstory: "x", age: 30, faith: { a: 1 }, notes: null, alignment: true } });
+    expect(d.name).toBe("");
+    expect(d.details).toEqual({ backstory: "x", age: "30" });
+  });
+  it("ids are strings or absent", () => {
+    const d = merge({ species: { id: 7, subspeciesId: ["x"], choices: {} }, background: { id: {}, choices: {} } });
+    expect(d.species.id).toBeUndefined();
+    expect(d.species.subspeciesId).toBeUndefined();
+    expect(d.background.id).toBeUndefined();
+    expect(merge({ species: { id: "elf", choices: {} } }).species.id).toBe("elf");
+  });
+  it("choices are lists of strings", () => {
+    const d = merge({ background: { id: "acolyte", choices: { a: ["x", 1, null], b: "no", c: 4 } } });
+    expect(d.background.choices).toEqual({ a: ["x"] });
+  });
+  it("hpRolls values are finite numbers", () => {
+    const d = merge({ classes: [{ classId: "fighter", level: 3, choices: {}, hpRolls: { "2": 7, "3": "x", "4": true, "5": null, "6": 1e999 } }], });
+    expect(d.classes[0].hpRolls).toEqual({ "2": 7 });
+  });
+  it("unknown top-level keys are dropped", () => {
+    const d = merge({ classes: [], __proto_pollution: 1, extra: { a: 1 } });
+    expect("extra" in d).toBe(false);
+    expect("__proto_pollution" in d).toBe(false);
+  });
+  it("the example from the audit: sources [1] and a numeric name", () => {
+    const d = mergeDraft({ draftVersion: 2, sources: [1], details: { name: 5 } });
+    expect(d.sources).toEqual([]);
+    expect(typeof d.name).toBe("string");
+  });
+});
