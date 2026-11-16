@@ -45,7 +45,7 @@ function browser() {
     log.push({ url, cache: init?.cache });
     return network.has(url) ? new Response(network.get(url)) : new Response("nope", { status: 404 });
   };
-  function load(man) {
+  function load(man, schema = null) {
     const handlers = {};
     const state = { skipped: false, claimed: false };
     const sandbox = {
@@ -60,7 +60,7 @@ function browser() {
         clients: { claim: async () => (state.claimed = true) },
       },
     };
-    vm.runInNewContext(renderServiceWorker(TEMPLATE, man), sandbox);
+    vm.runInNewContext(renderServiceWorker(TEMPLATE, man, schema), sandbox);
     const wait = async (type, ev = {}) => {
       let p;
       handlers[type]({ ...ev, waitUntil: (x) => (p = x) });
@@ -191,13 +191,21 @@ describe("service worker", () => {
     expect(sw.state.skipped).toBe(true);
   });
 
-  it("GET_VERSION answers the sender with the cache version", async () => {
+  it("GET_VERSION answers the sender with the cache version and the storage schema", async () => {
     const b = browser();
     const m = manifest("v9");
-    const sw = b.load(m);
+    const sw = b.load(m, 7);
     const sent = [];
     sw.message({ type: "GET_VERSION" }, { postMessage: (x) => sent.push(x) });
-    expect(sent).toEqual([{ type: "VERSION", version: "v9", files: 3 }]);
+    expect(sent).toEqual([{ type: "VERSION", version: "v9", files: 3, schema: 7 }]);
+  });
+
+  it("a worker built without a schema reports null (the page treats that as incompatible)", async () => {
+    const b = browser();
+    const sw = b.load(manifest("v9"));
+    const sent = [];
+    sw.message({ type: "GET_VERSION" }, { postMessage: (x) => sent.push(x) });
+    expect(sent[0].schema).toBeNull();
   });
 
   it("works under a different sub-path (the scope decides every URL)", async () => {

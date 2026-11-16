@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createPwa, requestPersistence, type ContainerLike, type RegistrationLike, type StorageManagerLike, type WorkerLike } from "./register";
+import { createPwa, requestPersistence, type ContainerLike, type PwaDeps, type RegistrationLike, type StorageManagerLike, type WorkerLike } from "./register";
 
 /** A fake worker whose state the test moves by hand. */
 function fakeWorker(state = "installing") {
@@ -34,19 +34,22 @@ function fakeRegistration(init: Partial<Record<"installing" | "waiting" | "activ
 
 function fakeContainer(reg: RegistrationLike | Error, controller: unknown = null) {
   const changes: (() => void)[] = [];
+  const messages: ((e: { data?: unknown; source?: unknown }) => void)[] = [];
   const c = {
     controller,
     register: vi.fn(async () => {
       if (reg instanceof Error) throw reg;
       return reg;
     }),
-    addEventListener: (_t: "controllerchange", l: () => void) => void changes.push(l),
+    addEventListener: (t: string, l: (e: never) => void) => void (t === "message" ? messages : changes).push(l as never),
     claim: () => changes.forEach((l) => l()),
+    say: (data: unknown, source?: unknown) => messages.forEach((l) => l({ data, source })),
   };
-  return c as ContainerLike & { register: ReturnType<typeof vi.fn>; claim(): void };
+  return c as unknown as ContainerLike & { register: ReturnType<typeof vi.fn>; claim(): void; say(data: unknown, source?: unknown): void };
 }
 
-const deps = (container: ContainerLike | undefined, extra: { storage?: StorageManagerLike; reload?: () => void } = {}) => ({
+const deps = (container: ContainerLike | undefined, extra: { storage?: StorageManagerLike; reload?: () => void } & Partial<PwaDeps> = {}): PwaDeps => ({
+  ...extra,
   container,
   swUrl: "/dnd-character-creator/sw.js",
   scope: "/dnd-character-creator/",
@@ -159,6 +162,99 @@ describe("createPwa", () => {
     reg.active = installing;
     installing.move("activated");
     expect(seen).toEqual(["installing"]);
+  });
+});
+
+describe("automatic update", () => {
+  const SAME = { type: "VERSION", schema: 3 };
+  function setup(opts: { atRisk?: boolean; allowed?: boolean; clock?: { t: number } } = {}) {
+    const waiting = fakeWorker("installed");
+    const reg = fakeRegistration({ active: fakeWorker("activated"), waiting });
+    const container = fakeContainer(reg, {});
+    const reload = vi.fn();
+    const clock = opts.clock ?? { t: 0 };
+    const mark = vi.fn();
+    const pwa = createPwa(
+      deps(container, {
+        reload,
+        schema: 3,
+        dataAtRisk: () => !!opts.atRisk,
+        autoApply: { windowMs: 1000, now: () => clock.t, allowed: () => opts.allowed ?? true, mark },
+      }),
+    );
+    return { waiting, reg, container, reload, clock, mark, pwa };
+  }
+
+  it("asks the waiting worker for its schema; the same schema is applied by itself right after the app opened", async () => {
+    const { waiting, container, pwa, mark, reload } = setup();
+    await pwa.start();
+    expect(waiting.posted).toEqual([{ type: "GET_VERSION" }]);
+    expect(pwa.get().phase).toBe("update-available");
+    container.say(SAME, waiting);
+    expect(mark).toHaveBeenCalledTimes(1);
+    expect(waiting.posted).toEqual([{ type: "GET_VERSION" }, { type: "SKIP_WAITING" }]);
+    container.claim();
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("a different schema, or one that is not stated, asks for a backup and never applies by itself", async () => {
+    for (const data of [{ type: "VERSION", schema: 4 }, { type: "VERSION" }]) {
+      const { waiting, container, pwa, reload } = setup();
+      await pwa.start();
+      container.say(data, waiting);
+      expect(pwa.get().phase).toBe("update-needs-backup");
+      expect(waiting.posted).toEqual([{ type: "GET_VERSION" }]);
+      pwa.applyUpdate(); // the person pressed the button after the download
+      container.claim();
+      expect(reload).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it("a draft that failed to save blocks the silent update even with the same schema", async () => {
+    const { waiting, container, pwa } = setup({ atRisk: true });
+    await pwa.start();
+    container.say(SAME, waiting);
+    expect(pwa.get().phase).toBe("update-needs-backup");
+    expect(waiting.posted).not.toContainEqual({ type: "SKIP_WAITING" });
+  });
+
+  it("outside the window after opening the update waits (manual button) and is applied when the app is shown again", async () => {
+    const clock = { t: 0 };
+    const { waiting, container, pwa, reg } = setup({ clock });
+    await pwa.start();
+    clock.t = 5000; // the person has been using the app for a while
+    container.say(SAME, waiting);
+    expect(pwa.get().phase).toBe("update-available");
+    expect(waiting.posted).not.toContainEqual({ type: "SKIP_WAITING" });
+    await pwa.checkForUpdate(); // shown again: armed again
+    expect(reg.update).toHaveBeenCalledTimes(1);
+    expect(waiting.posted).toContainEqual({ type: "SKIP_WAITING" });
+  });
+
+  it("the reload guard (allowed() false) stops a second automatic update", async () => {
+    const { waiting, container, pwa } = setup({ allowed: false });
+    await pwa.start();
+    container.say(SAME, waiting);
+    expect(waiting.posted).not.toContainEqual({ type: "SKIP_WAITING" });
+    expect(pwa.get().phase).toBe("update-available");
+  });
+
+  it("ignores answers from another worker and messages of other kinds", async () => {
+    const { waiting, container, pwa } = setup();
+    await pwa.start();
+    container.say(SAME, fakeWorker("activated"));
+    container.say({ type: "SOMETHING", schema: 3 }, waiting);
+    container.say(null, waiting);
+    expect(waiting.posted).toEqual([{ type: "GET_VERSION" }]);
+  });
+
+  it("without a schema or autoApply nothing is asked and nothing is applied by itself", async () => {
+    const waiting = fakeWorker("installed");
+    const container = fakeContainer(fakeRegistration({ active: fakeWorker("activated"), waiting }), {});
+    const pwa = createPwa(deps(container));
+    await pwa.start();
+    expect(waiting.posted).toEqual([]);
+    expect(pwa.get().phase).toBe("update-available");
   });
 });
 

@@ -19,6 +19,11 @@ describe.skipIf(!have && !required)("dist precache manifest", () => {
   const files = collectFiles(dist);
   const manifest = readManifestFromServiceWorker(readFileSync(dist + "sw.js", "utf8"));
 
+  it("carries the storage schema of src/storageSchema.json (the page compares it before updating by itself)", () => {
+    const { schema } = JSON.parse(readFileSync(new URL("../storageSchema.json", import.meta.url), "utf8"));
+    expect(manifest.schema).toBe(schema);
+  });
+
   it("lists every file of dist (nothing missing, nothing stale)", () => {
     expect(manifestProblems(manifest, files)).toEqual({ missing: [], stale: [] });
   });

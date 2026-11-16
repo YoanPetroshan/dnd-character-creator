@@ -43,10 +43,39 @@ while the app is already usable online.
 
 ## What happens on an update
 
-The installed copy keeps working. In the background the new version downloads only the files that changed (the big
-runtime file does not change between normal updates). When it is ready the app shows "Има нова версия на приложението" with
-**Обнови сега / Update now**; the new version starts when you press it (the page reloads). The old files are then deleted.
-Nothing changes under a person who is in the middle of editing a character.
+The installed copy keeps working while the new version downloads in the background (only the changed files; the big runtime
+file does not change between normal updates). The new version is applied **by itself** when the app is opened, or shown
+again after being in the background (a 60-second window after that; it checks `sw.js`, which the browser never takes from
+its HTTP cache), and the page reloads once. The characters are not touched: they live in the browser's `localStorage`,
+which a service worker or cache update never clears, and every change is written to it at once.
+
+It is **not** applied silently when data could be at risk. Then the banner "update-needs-backup" asks the person to press
+"Изтегли всички герои (.json)" first, and only then enables "Обнови сега". That happens when:
+
+1. **The storage schema differs.** `frontend/src/storageSchema.json` holds a number that goes into `dist/sw.js`. Raise it by
+   one in any release whose code cannot read what an older release stored (a new `DRAFT_VERSION` or library `version`
+   without a lossless migration), or whose data an older release cannot read. The page asks the waiting worker for its
+   number (`GET_VERSION`); a worker that does not state one counts as different.
+2. **The last save failed** (full or blocked storage): that draft exists only in memory and a reload would lose it.
+
+Other rules: the first update after this feature is installed still needs the button (the old page has no such code); an
+update found while the person is already working waits (button) and is applied at the next open; a reload guard
+(`sessionStorage`, 30 s) prevents loops. Logic: `frontend/src/pwa/register.ts`; tests: `register.test.ts`, `sw.test.mjs`,
+`precache.test.mjs`, `offline/precache.dist.test.mjs`.
+
+### Manual check after a deploy (two versions needed)
+
+1. On a phone/browser open the live address once (version A), wait for "Готово", create a character with a name.
+2. Push a visible change (e.g. a text) so Pages deploys version B. Wait for the `pages` workflow to finish.
+3. Close the app fully (or switch away for a minute), open it again with internet. Expected: for a few seconds A, then one
+   reload to B, without a button; the character is still there. DevTools > Application > Cache Storage shows only the new
+   `dnd-builder-precache-<version>` cache.
+4. Backup path: deploy a version C with `storageSchema.json` raised by one. Open the app on B: the banner asks for the
+   download, "Обнови сега" is disabled until the file is made; after the download press it, the app reloads to C. Check the
+   characters exist (if not: Home > upload the file).
+5. Airplane mode after step 3: the app still opens (offline). In DevTools, with "Offline" on, reopen: no error.
+6. Full-storage case (optional): fill `localStorage` (DevTools console) until a save fails, then deploy a new version: the
+   banner must ask for the backup even with the same schema.
 
 ## Troubleshooting
 
@@ -55,8 +84,8 @@ Nothing changes under a person who is in the middle of editing a character.
   use another device. Otherwise the files did not download: open the app once with a working connection.
 - **Data disappeared on iPhone.** Safari clears a website's storage after 7 days without use unless the app is added to the
   home screen. Add it to the home screen and keep a `.json` backup (Home > Изтегли всички).
-- **The app does not update.** Close it fully and reopen it with internet; the update prompt appears after the new version
-  has downloaded. A stuck copy can be reset: remove the home-screen icon and clear the site's data (Safari: Settings >
+- **The app does not update.** Close it fully and reopen it with internet; the update is applied by itself after it has
+  downloaded (or the banner asks for a backup first). A stuck copy can be reset: remove the home-screen icon and clear the site's data (Safari: Settings >
   Safari > Advanced > Website Data > search "github.io" > delete; Chrome: site settings > Clear data) then open the
   address again. This also deletes the characters stored in the browser: download them first.
 - **Deep links (a page address typed directly) show a blank flash.** GitHub Pages answers unknown paths with `404.html`,

@@ -1,9 +1,17 @@
 // The app's PWA instance and its React hook (see register.ts). `startPwa()` is called from main.tsx once the in-browser
 // engine is in use; the dev server and the Flask build never register a service worker.
 import { useSyncExternalStore } from "react";
+import storageSchema from "../storageSchema.json";
 import { createPwa, type Pwa, type PwaSnapshot } from "./register";
 
 let instance: Pwa | null = null;
+let storageFailed = false;
+const GUARD_KEY = "dnd-builder-autoupdate-at";
+const GUARD_MS = 30_000;
+/** The draft context tells whether the last save failed (such a draft lives only in memory: no silent update). */
+export function reportStorageFailed(failed: boolean): void {
+  storageFailed = failed;
+}
 
 export function pwa(): Pwa {
   if (!instance) {
@@ -15,6 +23,28 @@ export function pwa(): Pwa {
       scope: base,
       storage: nav?.storage,
       reload: () => window.location.reload(),
+      schema: storageSchema.schema,
+      dataAtRisk: () => storageFailed,
+      autoApply: {
+        windowMs: 60_000,
+        now: () => Date.now(),
+        // never twice within 30 s: a reload loop cannot form even if the new worker does not take over cleanly
+        allowed: () => {
+          try {
+            const at = Number(window.sessionStorage.getItem(GUARD_KEY));
+            return !at || Date.now() - at > GUARD_MS;
+          } catch {
+            return true;
+          }
+        },
+        mark: () => {
+          try {
+            window.sessionStorage.setItem(GUARD_KEY, String(Date.now()));
+          } catch {
+            // no sessionStorage: the 60 s window alone limits it
+          }
+        },
+      },
     });
   }
   return instance;

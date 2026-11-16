@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useEngineStatus } from "../api/useEngineStatus";
 import { useDraft } from "../DraftContext";
@@ -8,7 +8,9 @@ import { useResolutionContext } from "../ResolutionContext";
 import { DRAFT_VERSION } from "../logic/draft";
 import { serverIsOlder } from "../logic/serverHealth";
 import { useServerHealth } from "../useServerHealth";
-import { pwa, usePwa } from "../pwa/pwaStore";
+import { pwa, reportStorageFailed, usePwa } from "../pwa/pwaStore";
+import { useLibrary } from "../LibraryContext";
+import { safeFilename, shareOrDownload } from "../logic/files";
 
 /** App-wide status lines shown on every page: a failed /api/resolve (the last
  *  good resolution stays on screen), a draft that could not be stored or
@@ -21,6 +23,15 @@ export function StatusBanner() {
   const engine = useEngineStatus();
   const offline = usePwa();
   const [readyDismissed, setReadyDismissed] = useState(false);
+  const library = useLibrary();
+  const [backup, setBackup] = useState<{ skipped: string[] } | null>(null);
+  // an update must not take over a draft that exists only in memory (see pwa/register.ts, dataAtRisk)
+  useEffect(() => reportStorageFailed(storageFailed), [storageFailed]);
+  async function downloadBackup() {
+    const { json, skipped } = library.exportAll();
+    await shareOrDownload(new Blob([json], { type: "application/json" }), safeFilename("dnd-heroes", "json"), "application/json");
+    setBackup({ skipped });
+  }
   const prunedCount = resolution?.pruned.length ?? 0;
   return (
     <>
@@ -46,6 +57,26 @@ export function StatusBanner() {
             {t.pwa.updateNow}
           </button>
         </p>
+      )}
+      {/* КОНФЛИКТ С ДИЗАЙН: new banner state, same markup as the neighbours; restyle freely. */}
+      {offline.phase === "update-needs-backup" && (
+        <div className="status-banner" role="alert" data-state="update-needs-backup">
+          <p>{t.pwa.needsBackup}</p>
+          <p>
+            <button type="button" onClick={() => void downloadBackup()}>
+              {t.pwa.downloadAll}
+            </button>{" "}
+            <button type="button" onClick={() => pwa().applyUpdate()} disabled={!backup}>
+              {t.pwa.updateNow}
+            </button>
+          </p>
+          {backup && (
+            <p>
+              {t.pwa.backupDone}
+              {backup.skipped.length > 0 && ` ${t.pwa.backupSkipped}${backup.skipped.join(", ")}`}
+            </p>
+          )}
+        </div>
       )}
       {offline.phase === "offline-ready" && offline.justReady && !readyDismissed && (
         <p className="status-banner" role="status" data-state="offline-ready">

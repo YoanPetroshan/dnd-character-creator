@@ -392,6 +392,10 @@ export const en: Copy = {
     offlineReady: "Ready: the app also works without internet.",
     updateAvailable: "A new version of the app is available.",
     updateNow: "Update now",
+    needsBackup: "The new version changes how characters are stored, so it is not applied by itself. Steps: 1) press “Download all characters (.json)” and save the file; 2) press “Update now”; 3) if the characters are missing afterwards, use “Upload a character or bundle (.json)” on Home and pick the file. A copy is also needed when the last save failed.",
+    downloadAll: "Download all characters (.json)",
+    backupDone: "The file is downloaded. You can update now.",
+    backupSkipped: "Left out: ",
     helpLink: "Help",
   },
 
@@ -404,6 +408,7 @@ export const en: Copy = {
       installing: "Downloading the app for use without a connection (about 20 MB). Do not close the page.",
       "offline-ready": "Ready: the app is saved in the browser and works without internet.",
       "update-available": "A new version of the app is downloaded and ready to start.",
+      "update-needs-backup": "A new version is downloaded and ready. Download a copy of the characters before you apply it (see the bar at the top).",
       error: "Saving for offline use did not work. Reload the page while you are online.",
     } as Record<string, string>,
     storage: {

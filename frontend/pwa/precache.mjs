@@ -49,13 +49,21 @@ export function manifestProblems(manifest, files, exclude = DEFAULT_EXCLUDE) {
   return { missing, stale };
 }
 
+/** The number in the storage-schema JSON file ({"schema": N}); null when no file is given. */
+export function readStorageSchema(path) {
+  if (!path) return null;
+  const n = JSON.parse(readFileSync(path, "utf8")).schema;
+  if (!Number.isInteger(n) || n < 1) throw new Error(`${path}: "schema" must be a positive integer`);
+  return n;
+}
+
 const TOKEN = "__PRECACHE_MANIFEST__";
 
 /** sw.template.js with the manifest filled in (the token appears exactly once). */
-export function renderServiceWorker(template, manifest) {
+export function renderServiceWorker(template, manifest, schema = null) {
   if (template.split(TOKEN).length !== 2) throw new Error(`sw.template.js must contain ${TOKEN} exactly once`);
   const { version, entries } = manifest;
-  return template.replace(TOKEN, () => JSON.stringify({ version, entries: entries.map(({ url, revision }) => ({ url, revision })) }));
+  return template.replace(TOKEN, () => JSON.stringify({ version, schema, entries: entries.map(({ url, revision }) => ({ url, revision })) }));
 }
 
 /** Parse the manifest back out of a rendered service worker (used by the dist check). */
@@ -70,7 +78,7 @@ export function readManifestFromServiceWorker(source) {
  * copy of index.html: GitHub Pages answers an unknown path with it, so a deep link still loads the single-page app).
  * Active only for builds that use the in-browser engine (`enabled()`), and only when the offline pack was built.
  */
-export function pwaPlugin({ enabled, templatePath, log = console.log }) {
+export function pwaPlugin({ enabled, templatePath, schemaPath = null, log = console.log }) {
   let outDir = "dist";
   let root = process.cwd();
   return {
@@ -91,8 +99,8 @@ export function pwaPlugin({ enabled, templatePath, log = console.log }) {
         }
         copyFileSync(join(dist, "index.html"), join(dist, "404.html"));
         const manifest = buildPrecacheManifest(collectFiles(dist));
-        writeFileSync(join(dist, "sw.js"), renderServiceWorker(readFileSync(templatePath, "utf8"), manifest));
-        log(`[pwa] sw.js: ${manifest.entries.length} files, ${(manifest.totalBytes / (1 << 20)).toFixed(2)} MB precached, version ${manifest.version}`);
+        writeFileSync(join(dist, "sw.js"), renderServiceWorker(readFileSync(templatePath, "utf8"), manifest, readStorageSchema(schemaPath)));
+        log(`[pwa] sw.js: schema ${readStorageSchema(schemaPath)}, ${manifest.entries.length} files, ${(manifest.totalBytes / (1 << 20)).toFixed(2)} MB precached, version ${manifest.version}`);
       },
     },
   };
