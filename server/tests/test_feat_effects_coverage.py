@@ -215,6 +215,7 @@ def test_mixed_and_2014_golden_holds_no_feat():
     golden = json.load(gzip.open(GOLDEN, "rt"))
     holding = sorted(
         name for name, case in golden.items()
-        if case["result"]["sheet"].get("feats") or case["result"]["sheet"].get("grantedFeats")
-        or '"feat:' in json.dumps(case["draft"]))
+        if not name.startswith("y2024/")  # S14: the 2024 slice has Origin feats (Human, Soldier); this guard is for mixed / 2014
+        and (case["result"]["sheet"].get("feats") or case["result"]["sheet"].get("grantedFeats")
+        or '"feat:' in json.dumps(case["draft"])))
     assert len(holding) == GOLDEN_FEAT_CASES, holding[:5]
