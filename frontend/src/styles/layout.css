@@ -572,8 +572,27 @@ main .next-button::after {
 }
 
 .tabs__panel [data-section="attacks"] td:nth-child(4) {
-  min-width: 14ch;
+  min-width: 12ch;
   white-space: normal;
+}
+
+/* attack notes are long reminders: smaller grey text in a wider column, rows read from the top */
+.tabs__panel [data-section="attacks"] td:last-child {
+  min-width: 24ch;
+  padding-right: 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--color-text-secondary);
+}
+
+.tabs__panel [data-section="attacks"] tbody :is(th, td) {
+  padding-right: 12px;
+  vertical-align: top;
+}
+
+.tabs__panel [data-section="attacks"] thead th {
+  padding-right: 12px;
+  letter-spacing: 0.04em;
 }
 
 .tabs__panel thead th {
