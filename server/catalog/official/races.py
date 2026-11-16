@@ -5,7 +5,7 @@ from pathlib import Path
 import json
 import re
 from catalog.reference_data import SPECIES_DIALECT_LANGUAGES, SPECIES_OTHER_LANGUAGES, ruleset_for_edition
-from .common import _ability_bonus_options_from_5etools, _ability_bonuses_from_5etools, _condition_immunities_from_5etools, _damage_modifiers_from_5etools, _darkvision_from_5etools, _speed_from_5etools, slug
+from .common import _ability_bonus_options_from_5etools, _ability_bonuses_from_5etools, _condition_immunities_from_5etools, _damage_modifiers_from_5etools, _darkvision_from_5etools, _speed_from_5etools, resolve_copies, slug
 from .innate_spells import _innate_spells_from_5etools
 from .languages import _language_grants_from_5etools
 from .proficiencies import _attach_choice_proficiencies, _attach_fixed_proficiencies, _proficiencies_from_5etools
@@ -310,6 +310,8 @@ def load_official_races(official_dir: Path) -> tuple[list[dict], list[dict], dic
         return [], [], {}
     with open(races_path, encoding="utf-8") as f:
         data = json.load(f)
+    # S13: `_copy` reprints become full records first (a record that cannot be resolved stays a `_copy` and is skipped below)
+    data = {**data, "race": resolve_copies(data.get("race", [])), "subrace": resolve_copies(data.get("subrace", []), match_race=True)}
 
     traits_by_index: dict[str, dict] = {}
     races = []

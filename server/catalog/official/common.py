@@ -8,6 +8,118 @@ def _sentence_case(text: str) -> str:
     return text[:1].upper() + text[1:] if text else text
 
 
+# ---- `_copy` / `_mod` records (S13, audit DATA-01) ------------------------------------------------------------------------
+
+# Keys that describe the PARENT record as a book entry and are not inherited by a copy unless `_preserve` names them.
+_COPY_PARENT_ONLY = frozenset({
+    "srd", "srd52", "basicRules", "basicRules2024", "freeRules2024", "page", "otherSources", "additionalSources",
+    "reprintedAs", "hasFluff", "hasFluffImages", "soundClip", "alias", "_versions",
+})
+
+
+class _CannotResolve(Exception):
+    """A `_copy` this module cannot turn into a full record (missing parent, unknown `_mod` operation, cycle)."""
+
+
+def _copy_key(record: dict, match_race: bool) -> tuple:
+    key = (record.get("name"), record.get("source"))
+    return key + (record.get("raceName"), record.get("raceSource")) if match_race else key
+
+
+def _walk_strings(node, fn):
+    if isinstance(node, str):
+        return fn(node)
+    if isinstance(node, list):
+        return [_walk_strings(x, fn) for x in node]
+    if isinstance(node, dict):
+        return {k: _walk_strings(v, fn) for k, v in node.items()}
+    return node
+
+
+def _as_list(value) -> list:
+    return list(value) if isinstance(value, list) else [value]
+
+
+def _apply_mod(array, op: dict):
+    import copy as _copy_mod
+    import re
+
+    mode = op.get("mode")
+    if not isinstance(array, list):
+        raise _CannotResolve("_mod on a field that is not a list")
+    if mode == "appendArr":
+        return array + _copy_mod.deepcopy(_as_list(op["items"]))
+    if mode == "insertArr":
+        index = op.get("index", 0)
+        return array[:index] + _copy_mod.deepcopy(_as_list(op["items"])) + array[index:]
+    if mode == "replaceArr":
+        target = op["replace"]
+        if isinstance(target, dict) and "index" in target:
+            at = target["index"]
+        else:
+            at = next((i for i, item in enumerate(array)
+                       if (isinstance(item, dict) and item.get("name") == target) or item == target), None)
+        if at is None or not (0 <= at < len(array)):
+            raise _CannotResolve(f"replaceArr target {target!r} not found")
+        return array[:at] + _copy_mod.deepcopy(_as_list(op["items"])) + array[at + 1:]
+    if mode == "replaceTxt":
+        flags = re.IGNORECASE if "i" in (op.get("flags") or "") else 0
+        pattern = re.compile(op["replace"], flags)
+        return _walk_strings(array, lambda text: pattern.sub(op["with"], text))
+    raise _CannotResolve(f"unknown _mod mode {mode!r}")
+
+
+def resolve_copies(records: list[dict], match_race: bool = False) -> list[dict]:
+    """The records with every resolvable `_copy` turned into a full record, in the same order.
+
+    5etools writes some reprints as {"name", "source", "_copy": {"name", "source", "_mod": {...}, "_preserve": {...}}, ...own keys}.
+    The result is a deep copy of the parent (itself resolved first) without its book metadata (`_COPY_PARENT_ONLY`, unless
+    `_preserve` keeps it), the child's own keys over it, then the `_mod` operations replaceArr / appendArr / insertArr /
+    replaceTxt on the named fields. `match_race` also matches the parent by raceName / raceSource (subraces). A record that
+    cannot be resolved (parent not in `records`, an unknown operation, a cycle) is returned untouched, still with `_copy`,
+    so the converters skip it as they always did. The input is never modified."""
+    import copy as _copy_mod
+
+    by_key = {_copy_key(r, match_race): r for r in records}
+    done: dict[int, dict] = {}
+
+    def full(record: dict, trail: tuple = ()) -> dict:
+        if "_copy" not in record:
+            return record
+        if id(record) in done:
+            return done[id(record)]
+        if id(record) in trail:
+            raise _CannotResolve("cycle")
+        meta = record["_copy"]
+        parent_key = (meta.get("name"), meta.get("source")) + ((meta.get("raceName"), meta.get("raceSource")) if match_race else ())
+        parent = by_key.get(parent_key)
+        if parent is None:
+            raise _CannotResolve("parent not found")
+        out = _copy_mod.deepcopy(full(parent, trail + (id(record),)))
+        preserve = meta.get("_preserve") or {}
+        for key in _COPY_PARENT_ONLY:
+            if not (preserve.get(key) or preserve.get("*")):
+                out.pop(key, None)
+        for key, value in record.items():
+            if key not in ("_copy", "_preserve"):
+                out[key] = _copy_mod.deepcopy(value)
+        for field, ops in (meta.get("_mod") or {}).items():
+            if field == "*":
+                raise _CannotResolve("_mod on '*'")
+            for op in _as_list(ops):
+                out[field] = _apply_mod(out.get(field, []), op)
+        done[id(record)] = out
+        return out
+
+    result = []
+    for record in records:
+        try:
+            result.append(full(record))
+        except (_CannotResolve, KeyError, TypeError, IndexError, ValueError):
+            result.append(record)  # unresolvable: stays a `_copy` and is skipped by the converters
+    return result
+
+
 def slug(name: str) -> str:
     # "/" added (Task 6): spell names like "Enlarge/Reduce" need it to match
     # the bundled SRD spell catalog's own id ("enlarge-reduce") — no

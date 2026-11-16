@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 import json
 from catalog.reference_data import BACKGROUND_FEATS_FROM_TEXT, BACKGROUND_FEAT_VARIANT_FROM_TEXT, BACKGROUND_OTHER_LANGUAGES, ruleset_for_edition
-from .common import _ability_bonus_options_from_5etools_weighted_pair, slug
+from .common import _ability_bonus_options_from_5etools_weighted_pair, resolve_copies, slug
 from .background_equipment import starting_equipment_options_2024_from_5etools
 from .equipment import _fixed_starting_equipment_from_5etools, _starting_equipment_options_from_5etools
 from .feats import _feat_variant_hints_from_5etools
@@ -299,7 +299,7 @@ def load_official_backgrounds(official_dir: Path) -> list[dict]:
     with open(bg_path, encoding="utf-8") as f:
         data = json.load(f)
     backgrounds = []
-    for raw in data.get("background", []):
+    for raw in resolve_copies(data.get("background", [])):  # S13: `_copy` reprints are full records now
         converted = _background_from_5etools(raw)
         if converted is not None:
             backgrounds.append(converted)
