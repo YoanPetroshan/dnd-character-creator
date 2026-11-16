@@ -15,7 +15,8 @@ CLUSTERS = ("resolve_feats", "resolve_species", "resolve_spells", "resolve_gates
 
 
 def test_resolve_py_is_smaller_and_the_clusters_are_not_monoliths():
-    assert len((ENGINE / "resolve.py").read_text(encoding="utf-8").splitlines()) < 3600
+    # step 3 adds the ResolveState and a header / footer per pass (about 580 lines) while resolve() itself shrinks to a short list of calls
+    assert len((ENGINE / "resolve.py").read_text(encoding="utf-8").splitlines()) < 4000
     for name in CLUSTERS:
         assert len((ENGINE / f"{name}.py").read_text(encoding="utf-8").splitlines()) < 2000, name
 
@@ -34,3 +35,12 @@ def test_the_clusters_do_not_import_engine_resolve():
     for name in CLUSTERS:
         text = (ENGINE / f"{name}.py").read_text(encoding="utf-8")
         assert "from .resolve import" not in text and "import resolve" not in text.replace("resolve_", ""), name
+
+
+def test_resolve_is_a_short_orchestrator_over_named_passes():
+    """S17 step 3: resolve() only builds the ResolveState and calls the passes in order (the last one returns the envelope)."""
+    import ast
+
+    tree = ast.parse((ENGINE / "resolve.py").read_text(encoding="utf-8"))
+    fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "resolve")
+    assert fn.end_lineno - fn.lineno < 30
