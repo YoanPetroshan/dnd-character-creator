@@ -1398,6 +1398,19 @@ class ResolveState:
     bg_id: Any = field(init=False)
     feat_options: Any = field(init=False)
     granted_feats: Any = field(init=False)
+    held: Any = field(init=False)
+    race: Any = field(init=False)
+    race_id: Any = field(init=False)
+    species: Any = field(init=False)
+    species_alt: Any = field(init=False)
+    species_choices_raw: Any = field(init=False)
+    species_size: Any = field(init=False)
+    species_spell_ability: Any = field(init=False)
+    species_variant: Any = field(init=False)
+    subrace: Any = field(init=False)
+    subrace_id: Any = field(init=False)
+    use_feat_prereqs: Any = field(init=False)
+    use_prerequisites_prefs: Any = field(init=False)
 
 
 def _pass_classes(rs: ResolveState) -> None:
@@ -1582,24 +1595,14 @@ def _pass_background(rs: ResolveState) -> None:
     rs.granted_feats = granted_feats
 
 
-def _pass_rest(rs: ResolveState) -> dict:
-    """The remaining sections of the old single function."""
-    background_dict = rs.background_dict
+def _pass_species(rs: ResolveState) -> None:
+    """Species, subspecies, variant, the held-feat state and the pre-walk proficiency grants."""
     background_feats = rs.background_feats
     bg = rs.bg
-    bg_id = rs.bg_id
     catalog = rs.catalog
-    classes = rs.classes
-    cls = rs.cls
-    cls_id = rs.cls_id
     draft = rs.draft
-    feat_options = rs.feat_options
-    granted_feats = rs.granted_feats
-    primary = rs.primary
     problems = rs.problems
     resolved_classes = rs.resolved_classes
-    subclass_pruned = rs.subclass_pruned
-    total_level = rs.total_level
     warnings = rs.warnings
     # ASI-or-feat Task 3: a feat a class took INSTEAD of an ASI joins the
     # SAME `resolved_feats` list (assembled right after the per-class ASI
@@ -1693,7 +1696,53 @@ def _pass_rest(rs: ResolveState) -> dict:
                 held.proficiency_ids.update(p["index"] for p in trait.get("proficiencies", []))
     if bg:
         held.proficiency_ids.update(p["index"] for p in bg.get("starting_proficiencies", []))
+    rs.held = held
+    rs.race = race
+    rs.race_id = race_id
+    rs.species = species
+    rs.species_alt = species_alt
+    rs.species_choices_raw = species_choices_raw
+    rs.species_size = species_size
+    rs.species_spell_ability = species_spell_ability
+    rs.species_variant = species_variant
+    rs.subrace = subrace
+    rs.subrace_id = subrace_id
+    rs.use_feat_prereqs = use_feat_prereqs
+    rs.use_prerequisites_prefs = use_prerequisites_prefs
 
+
+def _pass_rest(rs: ResolveState) -> dict:
+    """The remaining sections of the old single function."""
+    background_dict = rs.background_dict
+    background_feats = rs.background_feats
+    bg = rs.bg
+    bg_id = rs.bg_id
+    catalog = rs.catalog
+    classes = rs.classes
+    cls = rs.cls
+    cls_id = rs.cls_id
+    draft = rs.draft
+    feat_options = rs.feat_options
+    granted_feats = rs.granted_feats
+    held = rs.held
+    primary = rs.primary
+    problems = rs.problems
+    race = rs.race
+    race_id = rs.race_id
+    resolved_classes = rs.resolved_classes
+    species = rs.species
+    species_alt = rs.species_alt
+    species_choices_raw = rs.species_choices_raw
+    species_size = rs.species_size
+    species_spell_ability = rs.species_spell_ability
+    species_variant = rs.species_variant
+    subclass_pruned = rs.subclass_pruned
+    subrace = rs.subrace
+    subrace_id = rs.subrace_id
+    total_level = rs.total_level
+    use_feat_prereqs = rs.use_feat_prereqs
+    use_prerequisites_prefs = rs.use_prerequisites_prefs
+    warnings = rs.warnings
     # Final ability scores: base + species bonuses + background bonuses +
     # feat bonuses. Backgrounds DO grant ability bonuses as of Phase 4b
     # Task 4 — the 2024-style ability-score-improvement choice (see
@@ -3385,4 +3434,5 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     rs = ResolveState(draft, catalog)
     _pass_classes(rs)
     _pass_background(rs)
+    _pass_species(rs)
     return _pass_rest(rs)
