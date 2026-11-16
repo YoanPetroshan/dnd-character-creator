@@ -9,7 +9,7 @@ import type { Resolution } from "../../types";
 import { SpellSlotsSummary } from "../SpellSlotsSummary";
 import { AttacksSection } from "../sheet/AttacksSection";
 import { DetailsSection } from "../sheet/DetailsSection";
-import { CarryingCapacitySection, DefensesSection, EquipmentSection } from "../sheet/EquipmentSection";
+import { CarryingCapacitySection, EquipmentSection } from "../sheet/EquipmentSection";
 import { LanguagesSection, ProficienciesSection, SavingThrowsSection, SkillsSection } from "../sheet/ProficiencySections";
 import { ResourcesSection } from "../sheet/ResourcesSection";
 import { SectionFrame } from "../sheet/SectionFrame";
@@ -41,13 +41,13 @@ export function ActionsPanel({ sections }: { sections: SheetSection[] }) {
   );
 }
 
-/** The reference numbers needed with every tab: saving throws, skills, then passives, senses, defenses, proficiencies, languages. */
+/** The reference boxes shown with every tab: saving throws, passive senses and senses, proficiencies & training (with the
+ *  languages) on the left; skills in their own column. Defenses sit with Initiative / AC over the tabs (CombatRow). */
 export function ReferenceBlock({ sections }: { sections: SheetSection[] }) {
   const passives = find(sections, "passives");
   const saves = find(sections, "savingThrows");
   const skills = find(sections, "skills");
   const senses = find(sections, "senses");
-  const defenses = find(sections, "defenses");
   const proficiencies = find(sections, "proficiencies");
   const languages = find(sections, "languages");
   return (
@@ -57,9 +57,11 @@ export function ReferenceBlock({ sections }: { sections: SheetSection[] }) {
       <div className="sheet-reference__rest">
         {passives && <PassivesSection data={passives} />}
         {senses && <SensesSection data={senses} />}
-        {defenses && <DefensesSection data={defenses} />}
-        {proficiencies && <ProficienciesSection data={proficiencies} />}
-        {languages && <LanguagesSection data={languages} />}
+        {proficiencies ? (
+          <ProficienciesSection data={proficiencies} languages={languages} />
+        ) : (
+          languages && <LanguagesSection data={languages} />
+        )}
       </div>
     </div>
   );
@@ -189,7 +191,7 @@ export function FeaturesPanel({ resolution }: { resolution: Resolution }) {
   const featBlock = groups.find((g) => g.kind === "feat");
   return (
     <>
-      <div className="feature-filters" role="group" aria-label={c.filtersLabel}>
+      <div className="feature-filters sheet-pills" role="group" aria-label={c.filtersLabel}>
         {FEATURE_FILTERS.map((f) => (
           <button key={f} type="button" data-filter={f} aria-pressed={filter === f} onClick={() => setFilter(f)}>
             {c.filters[f]}
@@ -202,14 +204,14 @@ export function FeaturesPanel({ resolution }: { resolution: Resolution }) {
           {featureBlocks.map((g) => (
             <div key={g.key} data-source={g.kind}>
               <h3>
-                {g.label} ({c.source[g.kind as "class" | "species" | "background"]})
+                {g.label} <span className="feature__source">{c.source[g.kind as "class" | "species" | "background"]}</span>
               </h3>
-              <ul>
+              <ul className="feature-list">
                 {g.features.map((f, i) => (
-                  <li key={`${f.name}:${i}`}>
-                    {f.name}
-                    {f.level ? ` (${t.sheet.features.level(f.level)})` : ""}
-                    {f.choice && f.choice.length > 0 ? `: ${f.choice.join(", ")}` : ""}
+                  <li key={`${f.name}:${i}`} className="feature">
+                    <strong className="feature__name">{f.name}</strong>
+                    {f.level ? <span className="feature__meta">{t.sheet.features.level(f.level)}</span> : null}
+                    {f.choice && f.choice.length > 0 && <span className="feature__nested">{f.choice.join(", ")}</span>}
                   </li>
                 ))}
               </ul>
@@ -219,14 +221,17 @@ export function FeaturesPanel({ resolution }: { resolution: Resolution }) {
       )}
       {featBlock && (
         <SectionFrame sectionKey="feats" title={t.sheet.feats.title}>
-          <ul>
+          <ul className="feature-list">
             {featBlock.feats.map((f, i) => (
               // a repeatable feat appears once per pick with the same id
-              <li key={`${f.id}:${f.origin}:${f.level ?? ""}:${i}`}>
-                {f.name}
-                {f.level ? ` (${t.sheet.feats.level(f.level)})` : ""}
-                {f.choice && f.choice.length > 0 ? `: ${f.choice.join(", ")}` : ""}
-                {f.notes && f.notes.length > 0 ? ` — ${f.notes.join("; ")}` : ""}
+              <li key={`${f.id}:${f.origin}:${f.level ?? ""}:${i}`} className="feature">
+                <strong className="feature__name">{f.name}</strong>
+                {f.level ? <span className="feature__meta">{t.sheet.feats.level(f.level)}</span> : null}
+                {((f.choice && f.choice.length > 0) || (f.notes && f.notes.length > 0)) && (
+                  <span className="feature__nested">
+                    {[...(f.choice && f.choice.length > 0 ? [f.choice.join(", ")] : []), ...(f.notes ?? [])].join("; ")}
+                  </span>
+                )}
               </li>
             ))}
           </ul>

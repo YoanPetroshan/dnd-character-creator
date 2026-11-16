@@ -83,13 +83,19 @@ export function PassivesSection({ data }: { data: SheetSectionData["passives"] }
   const c = t.sheet.passives;
   return (
     <SectionFrame sectionKey="passives" title={c.title}>
-      <dl>
-        <dt>{c.perception}</dt>
-        <dd>{data.perception}</dd>
-        <dt>{c.insight}</dt>
-        <dd>{data.insight}</dd>
-        <dt>{c.investigation}</dt>
-        <dd>{data.investigation}</dd>
+      <dl className="passives">
+        {(
+          [
+            ["perception", c.perception, data.perception],
+            ["investigation", c.investigation, data.investigation],
+            ["insight", c.insight, data.insight],
+          ] as const
+        ).map(([key, label, value]) => (
+          <div key={key} className="passives__row">
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
       </dl>
     </SectionFrame>
   );

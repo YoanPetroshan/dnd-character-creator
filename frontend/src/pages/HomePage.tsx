@@ -13,6 +13,7 @@ import { sourceOn, toggleSource } from "../logic/sources";
 import type { Ruleset } from "../types";
 import { formatDateTime } from "../logic/formatDate";
 import { ClassGlyph } from "../components/ClassGlyph";
+import { HeroPortrait } from "../components/HeroPortrait";
 import { stepBadgeCount, stepStatus } from "../logic/steps";
 
 function closeMenu(e: { currentTarget: HTMLElement }) {
@@ -105,6 +106,9 @@ export function HomePage() {
     <div className="page" data-page="home">
       <h1>{t.home.title}</h1>
       <div className="home-side">
+      <div className="home-portrait">
+        <HeroPortrait id={library.activeId} classId={draft.classes[0]?.classId} />
+      </div>
       <div className="name-row">
         <label className="name-row__field">
           <span className="name-row__label">{t.home.nameLabel}</span>
@@ -150,7 +154,11 @@ export function HomePage() {
           const name = active ? draft.name : item.name;
           return (
             <li key={item.id} className="hero" data-active={active ? "true" : undefined}>
-              <ClassGlyph classId={item.status === "ok" ? item.classes[0]?.classId : undefined} solid={active} />
+              {library.portraits[item.id] ? (
+                <img className="hero__portrait" src={library.portraits[item.id]} alt="" />
+              ) : (
+                <ClassGlyph classId={item.status === "ok" ? item.classes[0]?.classId : undefined} solid={active} />
+              )}
               <div className="hero__text">
                 <strong className="hero__name">{name || t.home.unnamed}</strong>
                 {active && <span className="hero__tag">{t.home.active}</span>}

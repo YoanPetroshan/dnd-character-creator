@@ -286,12 +286,91 @@ main .next-button::after {
   color: var(--color-text-secondary);
 }
 
-.summary-strip {
+/* Header: the picture (72px square), the name, species and class, the level. The picture's actions sit under the name. */
+.sheet-hero {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  grid-template-areas:
+    "frame who"
+    "frame actions";
+  column-gap: 14px;
+  align-items: start;
+  margin: 0 0 var(--space-4);
+}
+
+.sheet-hero .portrait__frame {
+  grid-area: frame;
+}
+
+.sheet-hero .summary-strip__who {
+  grid-area: who;
+}
+
+.sheet-hero .portrait__actions {
+  grid-area: actions;
+}
+
+.portrait__frame {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  min-width: 72px;
   padding: 0;
+  overflow: hidden;
+  border: 2px solid var(--color-frame);
+  border-radius: var(--radius-box);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.portrait__frame[data-state="empty"] {
+  border-style: dashed;
+}
+
+.portrait__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.portrait__frame .class-glyph {
+  width: 46px;
+  height: 46px;
+}
+
+.portrait__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-4);
+}
+
+.portrait__action {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.portrait__error {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--color-danger);
 }
 
 .summary-strip__who {
-  margin: 0 0 var(--space-4);
+  margin: 0;
   font-size: 14px;
   line-height: 20px;
   color: var(--color-text-secondary);
@@ -300,168 +379,222 @@ main .next-button::after {
 .summary-strip__who strong {
   display: block;
   font-family: var(--font-display);
-  font-size: 34px;
+  font-size: 30px;
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: -0.01em;
   color: var(--color-text-strong);
 }
 
-.summary-strip__who span + span::before {
+.summary-strip__line {
+  display: block;
+  margin-top: 2px;
+}
+
+.summary-strip__line span + span::before {
   content: "\00B7";
-  margin: 0 8px;
+  margin: 0 6px;
   color: var(--color-border);
 }
 
-/* Abilities: 3 x 2 cells on a phone, 6 x 1 from 600px. A 2px rule above the row, 1px lines between the cells. */
+.summary-strip__level {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* The boxes: plain rounded rectangles with a 2px frame-coloured border on the surface colour. */
+.sheet-box,
+.sheet-reference__saves > [data-section],
+.sheet-reference__skills > [data-section],
+.sheet-reference__rest > [data-section],
+.sheet-combat > [data-section="defenses"],
+.sheet-main > .tabs {
+  min-width: 0;
+  background: var(--color-surface);
+  border: 2px solid var(--color-frame);
+  border-radius: var(--radius-box);
+}
+
+/* Top row: six ability boxes (label, modifier, score in a bubble over the bottom edge), then proficiency, speed, HP. */
+.summary-strip {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding: 0;
+}
+
 .summary-strip__abilities {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
-  border-top: 2px solid var(--color-text);
   font-variant-numeric: tabular-nums;
 }
 
-.summary-strip__abilities li {
+.ability-box {
+  position: relative;
   display: grid;
   justify-items: center;
-  row-gap: 3px;
-  padding: 10px 4px 9px;
-  border-bottom: 1px solid var(--color-border);
-  font-weight: 400;
+  align-content: start;
+  row-gap: 2px;
+  min-height: 92px;
+  margin-bottom: 12px;
+  padding: 8px 4px 20px;
   text-align: center;
 }
 
-.summary-strip__abilities li:not(:nth-child(3n + 1)) {
-  border-left: 1px solid var(--color-border);
-}
-
 .ability__label {
-  font-size: 11px;
-  line-height: 14px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-text-secondary);
 }
 
 .ability__mod {
   font-family: var(--font-display);
-  font-size: 28px;
-  line-height: 30px;
+  font-size: 30px;
+  line-height: 34px;
   font-weight: 700;
   color: var(--color-text-strong);
 }
 
 .ability__score {
-  font-size: 13px;
-  line-height: 14px;
-  color: var(--color-text-secondary);
+  position: absolute;
+  left: 50%;
+  bottom: -14px;
+  min-width: 42px;
+  height: 28px;
+  padding: 0 8px;
+  transform: translateX(-50%);
+  border: 2px solid var(--color-frame);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  font-size: 15px;
+  line-height: 24px;
+  font-weight: 600;
+  color: var(--color-text);
 }
 
-@media (min-width: 600px) {
-  .summary-strip__abilities {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-
-  .summary-strip__abilities li:not(:nth-child(3n + 1)) {
-    border-left: 0;
-  }
-
-  .summary-strip__abilities li:not(:first-child) {
-    border-left: 1px solid var(--color-border);
-  }
-
-  .ability__mod {
-    font-size: 30px;
-    line-height: 32px;
-  }
-}
-
-/* Vitals: the same cell pattern as the abilities (label over number), 3 x 2 under 720px and 6 x 1 from there. */
-.summary-strip__stats {
+.summary-strip__stats,
+.sheet-combat__stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0;
+  gap: var(--space-3);
   margin: 0;
 }
 
-.summary-strip__stats > div {
+.stat-box {
   display: grid;
   justify-items: center;
   align-content: start;
-  row-gap: 3px;
-  min-width: 0;
-  padding: 10px 4px 9px;
-  border-bottom: 1px solid var(--color-border);
+  row-gap: 2px;
+  min-height: 92px;
+  padding: 8px 6px 10px;
   text-align: center;
 }
 
-.summary-strip__stats > div:not(:nth-child(3n + 1)) {
-  border-left: 1px solid var(--color-border);
-}
-
-.summary-strip__stats dt {
-  order: 0;
+.stat-box dt {
   padding: 0;
   border: 0;
-  overflow-wrap: normal;
-  font-size: 11px;
-  line-height: 14px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-text-secondary);
 }
 
-.summary-strip__stats dd {
-  order: 1;
+.stat-box dd {
   margin: 0;
   padding: 0;
   border: 0;
-  text-align: center;
   font-family: var(--font-display);
-  font-size: 26px;
-  line-height: 28px;
+  font-size: 30px;
+  line-height: 34px;
   font-weight: 700;
   color: var(--color-text-strong);
 }
 
-.summary-strip__stats [data-summary="speed"] dd,
-.summary-strip__stats [data-summary="hitDice"] dd {
+.stat-box dd {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.stat-box[data-summary="speed"] dd {
   font-size: 20px;
 }
 
+@media (min-width: 600px) {
+  .stat-box[data-summary="speed"] dd {
+    font-size: 24px;
+  }
+}
+
 .summary-strip__sub {
-  order: 2;
-  font-family: var(--font-sans);
-  font-size: 13px;
-  line-height: 18px;
-  font-weight: 400;
+  font-size: 12px;
+  line-height: 16px;
   color: var(--color-text-secondary);
+}
+
+/* Armor Class: a shield outline made of radii (a generic shape, no artwork). */
+.stat-box--ac {
+  border-radius: var(--radius-box) var(--radius-box) 50% 50% / var(--radius-box) var(--radius-box) 36% 36%;
+  padding-bottom: 16px;
 }
 
 .summary-strip__note {
-  margin: var(--space-2) 0 0;
+  flex-basis: 100%;
+  margin: 0;
   font-size: 13px;
   line-height: 18px;
   color: var(--color-text-secondary);
 }
 
-@media (min-width: 720px) {
-  .summary-strip__stats {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
+/* Initiative, Armor Class and the defenses box, over the tab panel. */
+.sheet-combat {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
 
-  .summary-strip__stats > div:not(:nth-child(3n + 1)) {
-    border-left: 0;
-  }
+.sheet-combat__stats {
+  flex: 1 1 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 
-  .summary-strip__stats > div:not(:first-child) {
-    border-left: 1px solid var(--color-border);
-  }
+.sheet-combat > [data-section="defenses"] {
+  flex: 1 1 100%;
+  padding: 10px 14px;
+}
+
+.sheet-combat > [data-section="defenses"] > h2 {
+  margin: 0 0 4px;
+  padding: 0;
+  border: 0;
+  color: var(--color-text-strong);
+}
+
+/* Body: the tab panel (with the combat row) first on a phone, then the reference boxes. */
+.sheet-body {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.sheet-main {
+  min-width: 0;
+}
+
+/* The tab panel box: tabs on top, the selected one underlined in the frame colour. */
+.sheet-main > .tabs {
+  padding: 0 var(--space-4) var(--space-4);
 }
 
 .tabs__list {
@@ -474,15 +607,14 @@ main .next-button::after {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  background: var(--color-page) var(--texture-page);
-  border-top: 2px solid var(--color-text);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .tabs__tab {
   flex: 0 0 auto;
   white-space: nowrap;
-  min-height: 44px;
+  min-height: 48px;
   min-width: 44px;
   padding: 0 2px;
   border: 0;
@@ -490,63 +622,145 @@ main .next-button::after {
   background: none;
   color: var(--color-text-secondary);
   font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .tabs__tab[aria-selected="true"] {
-  color: var(--color-text);
-  box-shadow: inset 0 -2px 0 var(--color-text);
+  color: var(--color-text-strong);
+  box-shadow: inset 0 -3px 0 var(--color-frame);
 }
 
 .tabs__panel {
   min-width: 0;
-  padding-top: var(--space-4);
+  padding-top: var(--space-3);
   overflow-wrap: anywhere;
 }
 
 .tabs__panel :is(p, ul, ol) {
-  max-width: 68ch;
+  max-width: 72ch;
 }
 
-/* Section label: a small green uppercase line over every block of the sheet. */
-[data-page="sheet"] [data-section] > h2 {
-  margin: 24px 0 var(--space-2);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--color-border);
-  font-family: var(--font-sans);
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+/* Filter pills (ALL + categories): a 30px pill drawn inside a 44px tap target; the pressed one is filled. */
+.sheet-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.sheet-pills > button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 10px;
+  border: 0 solid transparent;
+  border-width: 7px 0;
+  border-radius: 4px / 11px;
+  background: var(--color-surface-muted);
+  background-clip: padding-box;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 30px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--color-label);
 }
 
-.sheet-reference__saves > [data-section]:first-child > h2,
-.sheet-reference__skills > [data-section]:first-child > h2,
-.tabs__panel > [data-section]:first-child > h2 {
-  margin-top: 0;
+.sheet-pills > button[aria-pressed="true"] {
+  background-color: var(--color-frame);
+  color: var(--color-on-highlight);
 }
 
-.tabs__panel > [data-section]:first-child > h2 {
-  padding-top: 0;
+/* Section titles in the panel: small uppercase in the frame colour over a thin rule. */
+[data-page="sheet"] .tabs__panel [data-section] > h2 {
+  margin: 24px 0 var(--space-2);
+  padding: 0 0 6px;
   border-top: 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-frame);
 }
 
-.sheet-reference__saves > [data-section]:first-child > h2,
-.sheet-reference__skills > [data-section]:first-child > h2 {
-  border-top: 2px solid var(--color-text);
+.tabs__panel > [data-section]:first-child > h2,
+.tabs__panel > .sheet-pills + [data-section] > h2 {
+  margin-top: var(--space-2);
 }
 
-.tabs__panel h3,
+.tabs__panel h3 {
+  margin: 18px 0 6px;
+  letter-spacing: 0;
+  text-transform: none;
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 700;
+  color: var(--color-frame);
+}
+
 .tabs__panel h4 {
-  margin: 20px 0 6px;
+  margin: 18px 0 6px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-text-strong);
+  font-size: 15px;
+  font-weight: 700;
 }
 
-/* Tables in the panels: no vertical lines, an eyebrow header row, tabular figures. */
+/* Features and feats: the name bold, the level small italic grey on the same line, a picked option as a block with a grey rule. */
+.feature-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feature {
+  padding: 6px 0;
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.feature__name {
+  font-weight: 700;
+  color: var(--color-text-strong);
+}
+
+.feature__meta {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--color-text-secondary);
+}
+
+.feature__meta::before {
+  content: "\2022";
+  margin: 0 6px;
+  font-style: normal;
+  color: var(--color-border);
+}
+
+.feature__nested {
+  display: block;
+  margin: 6px 0 2px;
+  padding: 2px 0 2px 12px;
+  border-left: 3px solid var(--color-border-subtle);
+  color: var(--color-text);
+}
+
+.feature__source {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--color-text-secondary);
+}
+
+/* Tables in the panels: no vertical lines, an uppercase header row, tabular figures. */
 .tabs__panel table {
   width: max-content;
   min-width: 100%;
@@ -558,7 +772,7 @@ main .next-button::after {
 .tabs__panel td,
 .tabs__panel th {
   overflow-wrap: normal;
-  padding: 8px 16px 8px 0;
+  padding: 8px 14px 8px 0;
   border-bottom: 1px solid var(--color-border-subtle);
   font-size: 15px;
   line-height: 20px;
@@ -571,13 +785,96 @@ main .next-button::after {
   white-space: normal;
 }
 
-.tabs__panel [data-section="attacks"] td:nth-child(4) {
+.tabs__panel thead th {
+  padding: 0 14px 6px 0;
+  white-space: normal;
+  vertical-align: bottom;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-strong);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.tabs__panel tbody th {
+  font-weight: 600;
+}
+
+/* Attacks: name with a grey sub-line, range, hit and damage in small outlined boxes, notes small and grey. */
+.attacks__per-action {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 var(--space-2);
+  font-size: 14px;
+}
+
+.attacks__per-action :is(dt, dd) {
+  padding: 0;
+  border: 0;
+}
+
+.attacks__per-action dt {
+  color: var(--color-text-secondary);
+}
+
+.attacks__per-action dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.attacks__per-action dt::after {
+  content: ":";
+}
+
+.tabs__panel .attacks tbody :is(th, td) {
+  padding: 10px 12px 10px 0;
+  vertical-align: middle;
+}
+
+.attack__name {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.attack__sub {
+  display: block;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+
+.sheet-chip {
+  display: inline-block;
+  min-width: 44px;
+  padding: 4px 8px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 17px;
+  line-height: 24px;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.sheet-chip--wide {
+  display: block;
+  min-width: 11ch;
+  font-size: 14px;
+  line-height: 20px;
+  text-align: left;
+  white-space: normal;
+}
+
+.tabs__panel .attacks td:nth-child(4) {
   min-width: 12ch;
   white-space: normal;
 }
 
-/* attack notes are long reminders: smaller grey text in a wider column, rows read from the top */
-.tabs__panel [data-section="attacks"] td:last-child {
+.tabs__panel .attacks .attack__notes {
   min-width: 24ch;
   padding-right: 0;
   font-size: 13px;
@@ -585,56 +882,33 @@ main .next-button::after {
   color: var(--color-text-secondary);
 }
 
-.tabs__panel [data-section="attacks"] tbody :is(th, td) {
-  padding-right: 12px;
-  vertical-align: top;
-}
-
-.tabs__panel [data-section="attacks"] thead th {
-  padding-right: 12px;
-  letter-spacing: 0.04em;
-}
-
-.tabs__panel thead th {
-  padding: 0 16px 6px 0;
-  white-space: normal;
-  vertical-align: bottom;
-  font-size: 11px;
-  line-height: 14px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-text-secondary);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.tabs__panel tbody th {
-  font-weight: 500;
-}
-
 /* Label-over-text lists: proficiencies, defenses and the character details wrap each pair in a div. */
-:is(.tabs__panel, .sheet-reference) dl:has(> div) {
+:is(.tabs__panel, .sheet-reference, .sheet-combat > [data-section]) dl:has(> div) {
   display: block;
   margin: 0;
 }
 
-:is(.tabs__panel, .sheet-reference) dl > div {
+:is(.tabs__panel, .sheet-reference, .sheet-combat > [data-section]) dl > div {
   padding: var(--space-2) 0;
   border-bottom: 1px solid var(--color-border-subtle);
 }
 
-:is(.tabs__panel, .sheet-reference) dl > div > dt {
-  padding: 0;
-  border: 0;
-  font-size: 11px;
-  line-height: 14px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-text-secondary);
+:is(.tabs__panel, .sheet-reference, .sheet-combat > [data-section]) dl > div:last-child {
+  border-bottom: 0;
 }
 
-:is(.tabs__panel, .sheet-reference) dl > div > dd {
+:is(.tabs__panel, .sheet-reference, .sheet-combat > [data-section]) dl > div > dt {
+  padding: 0;
+  border: 0;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-frame);
+}
+
+:is(.tabs__panel, .sheet-reference, .sheet-combat > [data-section]) dl > div > dd {
   padding: 2px 0 0;
   border: 0;
   text-align: left;
@@ -643,9 +917,58 @@ main .next-button::after {
   font-weight: 400;
 }
 
-.sheet-reference dl:not(:has(> div)) {
+.tabs__panel dl:not(:has(> div)) {
   font-size: 15px;
-  line-height: 20px;
+  line-height: 22px;
+}
+
+.standard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+  list-style: none;
+  padding: 0 0 0 12px;
+  border-left: 3px solid var(--color-border-subtle);
+  font-size: 15px;
+  line-height: 22px;
+}
+
+/* Reference boxes: the title sits at the bottom, centred, in small capitals (it stays first in the markup). */
+.sheet-reference {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.sheet-reference__saves,
+.sheet-reference__skills,
+.sheet-reference__rest {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.sheet-reference__saves > [data-section],
+.sheet-reference__skills > [data-section],
+.sheet-reference__rest > [data-section] {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px 10px;
+}
+
+[data-page="sheet"] .sheet-reference [data-section] > h2 {
+  order: 99;
+  margin: 10px 0 0;
+  padding: 0;
+  border: 0;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--color-text-strong);
 }
 
 .sheet-reference p,
@@ -654,66 +977,54 @@ main .next-button::after {
   line-height: 22px;
 }
 
-.feature-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
-
-.feature-filters button {
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0 14px;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.feature-filters button[aria-pressed="true"] {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: var(--color-on-dark);
-}
-
-.standard-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px 16px;
-  list-style: none;
-  padding: 0;
-  font-size: 15px;
-  line-height: 22px;
-  color: var(--color-text-secondary);
-}
-
-/* Reference block: saving throws, skills and the rest; shown with every tab, after the panels. */
-.sheet-reference {
-  margin-top: var(--space-4);
-}
-
-.sheet-reference__saves {
-  grid-area: saves;
-}
-
-.sheet-reference__skills {
-  grid-area: skills;
-}
-
-.sheet-reference__rest {
-  grid-area: rest;
-}
-
-.sheet-reference [data-section="savingThrows"] table,
-.sheet-reference [data-section="skills"] table {
-  display: table;
+/* Saving throws: a 2 x 3 grid of pills (STR DEX CON left, INT WIS CHA right); a filled dot marks proficiency. */
+.sheet-reference [data-section="savingThrows"] table {
+  display: block;
   width: 100%;
-  overflow: visible;
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
 }
 
-.sheet-reference :is([data-section="savingThrows"], [data-section="skills"]) thead,
-.sheet-reference :is([data-section="savingThrows"], [data-section="skills"]) td:last-child {
+.sheet-reference [data-section="savingThrows"] tbody {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(3, auto);
+  grid-auto-flow: column;
+  gap: 10px 12px;
+}
+
+.sheet-reference [data-section="savingThrows"] tr {
+  display: flex;
+  align-items: stretch;
+  min-height: 36px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.sheet-reference [data-section="savingThrows"] tbody th {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  padding: 0 4px 0 22px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: left;
+}
+
+.sheet-reference [data-section="savingThrows"] td:nth-child(2) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  border-left: 1.5px solid var(--color-border);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+:is(.sheet-reference [data-section="savingThrows"] thead, .sheet-reference [data-section="savingThrows"] td:last-child) {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -722,72 +1033,219 @@ main .next-button::after {
   white-space: nowrap;
 }
 
-.sheet-reference :is([data-section="savingThrows"], [data-section="skills"]) :is(tbody th, td) {
-  padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--color-border-subtle);
-  font-size: 15px;
-  line-height: 20px;
-}
-
-.sheet-reference :is([data-section="savingThrows"], [data-section="skills"]) tbody th {
-  position: relative;
-  padding-left: 20px;
-  text-align: left;
-  font-weight: 400;
-}
-
-.sheet-reference :is([data-section="savingThrows"], [data-section="skills"]) td:nth-child(2) {
-  width: 3.5em;
-  text-align: right;
-  font-weight: 500;
-}
-
-/* Marker: an outline diamond is not proficient, a filled one is proficient, a filled one with an outer outline is expertise. */
-.sheet-reference :is([data-section="savingThrows"], [data-section="skills"]) tbody th::before {
+/* The proficiency dot: empty ring, filled (proficient), filled with an outer ring (expertise). */
+.sheet-reference [data-section="savingThrows"] tbody th::before,
+.skill__mark::before {
   content: "";
-  position: absolute;
-  left: 3px;
-  top: 15px;
-  width: 7px;
-  height: 7px;
+  display: block;
+  width: 9px;
+  height: 9px;
   box-sizing: border-box;
   border: 1.5px solid var(--color-text-secondary);
-  transform: rotate(45deg);
+  border-radius: var(--radius-round);
 }
 
-.sheet-reference tr[data-proficient="true"] th::before {
+.sheet-reference [data-section="savingThrows"] tbody th::before {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  margin-top: -4.5px;
+}
+
+.sheet-reference tr[data-proficient="true"] th::before,
+.sheet-reference tr[data-proficient="true"] .skill__mark::before {
   background: var(--color-text);
   border-color: var(--color-text);
 }
 
-.sheet-reference tr[data-expertise="true"] th::before {
+.sheet-reference tr[data-expertise="true"] .skill__mark::before {
   outline: 1.5px solid var(--color-text);
   outline-offset: 2px;
 }
 
-.sheet-reference tr[data-proficient="true"] th {
-  font-weight: 500;
+/* Skills: PROF / MOD / SKILL / BONUS, the bonus in a small outlined box on the right. */
+.sheet-reference [data-section="skills"] table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.sheet-reference [data-section="skills"] thead th {
+  padding: 0 0 6px;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--color-text-secondary);
+}
+
+.sheet-reference [data-section="skills"] thead th:last-child {
+  text-align: right;
+}
+
+.sheet-reference [data-section="skills"] tbody :is(th, td) {
+  height: 38px;
+  padding: 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-size: 15px;
+  line-height: 20px;
+  vertical-align: middle;
+}
+
+.sheet-reference [data-section="skills"] tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+
+.skill__mark {
+  width: 44px;
+}
+
+.skill__ability {
+  width: 44px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+}
+
+.sheet-reference [data-section="skills"] tbody th {
+  font-weight: 400;
+  text-align: left;
+}
+
+.sheet-reference [data-section="skills"] tr[data-proficient="true"] th {
+  font-weight: 600;
+}
+
+.skill__bonus {
+  width: 44px;
+  text-align: right;
+}
+
+.sheet-reference .skill__bonus .sheet-chip {
+  min-width: 40px;
+  padding: 1px 6px;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+/* Passive senses: the number in a small rounded box, the label in a long pill beside it. */
+.passives {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.sheet-reference .passives > .passives__row {
+  display: flex;
+  align-items: stretch;
+  padding: 0;
+  border: 0;
+}
+
+.sheet-reference .passives > .passives__row > dd {
+  order: -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 34px;
+  padding: 0 6px;
+  border: 2px solid var(--color-frame);
+  border-radius: 8px;
+  background: var(--color-surface);
+  font-size: 17px;
+  font-weight: 700;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.sheet-reference .passives > .passives__row > dt {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  margin-left: -8px;
+  padding: 0 10px 0 18px;
+  border: 1.5px solid var(--color-border);
+  border-left: 0;
+  border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
+  color: var(--color-text-strong);
+}
+
+.sheet-reference [data-section="senses"] ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: center;
+}
+
+/* Languages: the last block inside the proficiencies box, titled like its other labels. */
+.sheet-reference [data-section="languages"] h3 {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-frame);
+}
+
+.sheet-reference [data-section="proficiencies"] [data-section="languages"] {
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.sheet-reference [data-section="languages"] p {
+  margin: 2px 0 0;
 }
 
 @media (min-width: 600px) {
-  .sheet-reference :is([data-section="savingThrows"], [data-section="skills"]) :is(tbody th, td) {
-    padding-top: 6px;
-    padding-bottom: 6px;
+  .summary-strip__abilities {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
-  .sheet-reference :is([data-section="savingThrows"], [data-section="skills"]) tbody th::before {
-    top: 12px;
+  .sheet-combat__stats {
+    flex: 0 0 auto;
+    grid-template-columns: repeat(2, 128px);
+  }
+
+  .sheet-combat > [data-section="defenses"] {
+    flex: 1 1 240px;
   }
 }
 
 @media (min-width: 600px) and (max-width: 899px) {
   .sheet-reference {
-    display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    column-gap: 40px;
     grid-template-rows: auto 1fr;
     grid-template-areas:
       "saves skills"
       "rest skills";
+    align-items: start;
   }
+
+  .sheet-reference__saves {
+    grid-area: saves;
+  }
+
+  .sheet-reference__skills {
+    grid-area: skills;
+  }
+
+  .sheet-reference__rest {
+    grid-area: rest;
+  }
+}
+
+.attack__range {
+  font-weight: 600;
+}
+
+.stat-box--hp dd {
+  font-size: 32px;
 }
