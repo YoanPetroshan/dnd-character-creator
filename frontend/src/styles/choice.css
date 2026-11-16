@@ -60,7 +60,8 @@
 .choice-card__label {
   order: 2;
   flex: 1;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 500;
   line-height: 1.25;
 }
 
@@ -68,12 +69,12 @@
 .choice-card__count {
   order: 3;
   font-size: 13px;
+  font-weight: 400;
   color: var(--color-text-secondary);
 }
 
 .choice-card__count {
   order: 4;
-  font-weight: 600;
 }
 
 @media (max-width: 599px) {

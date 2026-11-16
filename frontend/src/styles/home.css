@@ -62,6 +62,7 @@
 .name-hint {
   margin: var(--space-2) 0 var(--space-4);
   font-size: 13px;
+  line-height: 18px;
   color: var(--color-text-secondary);
 }
 
@@ -92,7 +93,7 @@
 
 .hero__name {
   font-size: 17px;
-  font-weight: 600;
+  font-weight: 500;
   overflow-wrap: anywhere;
 }
 
@@ -109,6 +110,7 @@
 .hero__meta {
   grid-column: 1 / -1;
   font-size: 13px;
+  line-height: 18px;
   color: var(--color-text-secondary);
 }
 

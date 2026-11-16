@@ -12,7 +12,7 @@
   padding: 0 16px;
   border: 1.5px solid var(--color-text);
   border-radius: var(--radius-pill);
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 500;
   cursor: pointer;
 }
@@ -127,7 +127,7 @@
 .picker-list.picker-list--rows label:has(input:checked) {
   background: transparent;
   color: var(--color-text);
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .picker-list.picker-list--rows label:has(input:checked)::before {
@@ -149,6 +149,7 @@
 @media (min-width: 600px) {
   .picker-list--classes {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px 16px;
   }
 }
 
@@ -165,7 +166,8 @@
   width: 100%;
   min-height: 56px;
   padding: 6px 14px 6px 7px;
-  font-size: 14.5px;
+  font-size: 15px;
+  font-weight: 500;
   line-height: 1.2;
   text-align: left;
 }
@@ -194,7 +196,7 @@
   margin-left: auto;
   padding-left: 12px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 400;
   color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -203,6 +205,7 @@
 @media (min-width: 600px) {
   .picker-list.picker-list--rows {
     grid-template-columns: 1fr 1fr;
+    gap: 0 48px;
   }
 }
 
@@ -258,4 +261,28 @@
 .ability-table td {
   padding-left: 4px;
   padding-right: 4px;
+}
+
+/* Ability table, tablet and up: roomier cells, 16px body, a quiet sentence-case header, a lighter row label. */
+.ability-table tbody th {
+  font-weight: 500;
+}
+
+@media (min-width: 600px) {
+  .ability-table tbody th,
+  .ability-table td {
+    padding: 8px 12px;
+    font-size: 16px;
+  }
+
+  .ability-table tbody th {
+    letter-spacing: 0.04em;
+  }
+
+  .ability-table thead th {
+    padding: 8px 12px;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+  }
 }

@@ -293,7 +293,7 @@ main ul:not([class]),
 main ul:not([class]) > li,
 .equipment-section ul > li {
   position: relative;
-  padding: 5px 0 5px 18px;
+  padding: 4px 0 4px 18px;
 }
 
 main ul:not([class]) > li::before,
