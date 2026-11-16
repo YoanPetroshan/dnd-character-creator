@@ -353,7 +353,7 @@ describe("BG render is identical to the snapshot captured before the copy conver
     expect(bad).toEqual([]);
     expect(en["busy-pointbuy /home"]).toContain("Characters");
     expect(en["busy-pointbuy /class"]).toContain("Class Resources");
-    expect(en["wizard20-2024 /sheet"]).toContain("Armor Class");
+    expect(en["wizard20-2024 /sheet"]).toContain("Saving Throws");
   });
 
   it("the two languages render different pages from the same data", () => {

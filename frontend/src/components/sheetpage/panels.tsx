@@ -2,53 +2,30 @@ import { useState } from "react";
 import { useDraft } from "../../DraftContext";
 import { useT } from "../../LanguageContext";
 import { formatModifier } from "../../logic/abilities";
-import type { SheetSection, SheetSectionData } from "../../logic/sheetSections";
+import type { DetailSectionKey, SheetSection, SheetSectionData } from "../../logic/sheetSections";
 import { FEATURE_FILTERS, STANDARD_ACTIONS, featureGroups, mergeSpellRows, type FeatureFilter, type SpellMark } from "../../logic/sheetTabs";
 import { useSpells, type CatalogSpell } from "../../useSpells";
 import type { Resolution } from "../../types";
 import { SpellSlotsSummary } from "../SpellSlotsSummary";
-import { AbilitiesSection } from "../sheet/AbilitiesSection";
 import { AttacksSection } from "../sheet/AttacksSection";
 import { DetailsSection } from "../sheet/DetailsSection";
 import { CarryingCapacitySection, DefensesSection, EquipmentSection } from "../sheet/EquipmentSection";
-import { IdentitySection } from "../sheet/IdentitySection";
 import { LanguagesSection, ProficienciesSection, SavingThrowsSection, SkillsSection } from "../sheet/ProficiencySections";
 import { ResourcesSection } from "../sheet/ResourcesSection";
 import { SectionFrame } from "../sheet/SectionFrame";
 import { InnateSpellsSection } from "../sheet/SpellsSection";
-import {
-  ArmorClassSection,
-  HitPointsSection,
-  InitiativeSection,
-  PassivesSection,
-  ProficiencyBonusSection,
-  SensesSection,
-  SpeedsSection,
-} from "../sheet/StatSections";
+import { PassivesSection, SensesSection } from "../sheet/StatSections";
 
 function find<K extends SheetSection["key"]>(sections: SheetSection[], key: K): SheetSectionData[K] | undefined {
   return sections.find((s) => s.key === key)?.data as SheetSectionData[K] | undefined;
 }
 
-/** Actions: attacks, the standard actions, resources; then the numbers, skills, saves, senses and proficiencies the page keeps here
- *  (nothing the old sheet page showed is dropped). Every block grows with its content: no inner scroll windows. */
+/** Actions: attacks, the standard actions, resources. The numbers, saves, skills and proficiencies are in the summary strip and the
+ *  reference block (shown with every tab). Every block grows with its content: no inner scroll windows. */
 export function ActionsPanel({ sections }: { sections: SheetSection[] }) {
   const t = useT();
   const attacks = find(sections, "attacks");
   const resources = find(sections, "resources");
-  const abilities = find(sections, "abilities");
-  const hp = find(sections, "hitPoints");
-  const ac = find(sections, "armorClass");
-  const initiative = find(sections, "initiative");
-  const speeds = find(sections, "speeds");
-  const prof = find(sections, "proficiencyBonus");
-  const passives = find(sections, "passives");
-  const saves = find(sections, "savingThrows");
-  const skills = find(sections, "skills");
-  const senses = find(sections, "senses");
-  const defenses = find(sections, "defenses");
-  const proficiencies = find(sections, "proficiencies");
-  const languages = find(sections, "languages");
   return (
     <>
       {attacks && <AttacksSection data={attacks} />}
@@ -60,20 +37,31 @@ export function ActionsPanel({ sections }: { sections: SheetSection[] }) {
         </ul>
       </SectionFrame>
       {resources && <ResourcesSection data={resources} />}
-      {abilities && <AbilitiesSection data={abilities} />}
-      {prof !== undefined && <ProficiencyBonusSection data={prof} />}
-      {ac && <ArmorClassSection data={ac} />}
-      {hp && <HitPointsSection data={hp} />}
-      {initiative !== undefined && <InitiativeSection data={initiative} />}
-      {speeds && <SpeedsSection data={speeds} />}
-      {passives && <PassivesSection data={passives} />}
-      {saves && <SavingThrowsSection data={saves} />}
-      {skills && <SkillsSection data={skills} />}
-      {senses && <SensesSection data={senses} />}
-      {defenses && <DefensesSection data={defenses} />}
-      {proficiencies && <ProficienciesSection data={proficiencies} />}
-      {languages && <LanguagesSection data={languages} />}
     </>
+  );
+}
+
+/** The reference numbers needed with every tab: saving throws, skills, then passives, senses, defenses, proficiencies, languages. */
+export function ReferenceBlock({ sections }: { sections: SheetSection[] }) {
+  const passives = find(sections, "passives");
+  const saves = find(sections, "savingThrows");
+  const skills = find(sections, "skills");
+  const senses = find(sections, "senses");
+  const defenses = find(sections, "defenses");
+  const proficiencies = find(sections, "proficiencies");
+  const languages = find(sections, "languages");
+  return (
+    <div className="sheet-reference">
+      <div className="sheet-reference__saves">{saves && <SavingThrowsSection data={saves} />}</div>
+      <div className="sheet-reference__skills">{skills && <SkillsSection data={skills} />}</div>
+      <div className="sheet-reference__rest">
+        {passives && <PassivesSection data={passives} />}
+        {senses && <SensesSection data={senses} />}
+        {defenses && <DefensesSection data={defenses} />}
+        {proficiencies && <ProficienciesSection data={proficiencies} />}
+        {languages && <LanguagesSection data={languages} />}
+      </div>
+    </div>
   );
 }
 
@@ -248,16 +236,13 @@ export function FeaturesPanel({ resolution }: { resolution: Resolution }) {
   );
 }
 
-/** Background: who the character is (name, classes, species, size, background) and the characteristics / personality blocks. */
+/** Background: the characteristics / personality blocks (name, classes, species, size and background are in the summary strip). */
 export function BackgroundPanel({ sections }: { sections: SheetSection[] }) {
-  const identity = find(sections, "identity");
+  const t = useT();
   const details = find(sections, "details");
-  return (
-    <>
-      {identity && <IdentitySection data={identity} />}
-      {details && <DetailsSection data={details} only={["character", "physical", "personality"]} />}
-    </>
-  );
+  const only: DetailSectionKey[] = ["character", "physical", "personality"];
+  const hasData = details?.some((d) => only.includes(d.section)) ?? false;
+  return <>{details && hasData ? <DetailsSection data={details} only={only} /> : <p>{t.sheet.backgroundTab.empty}</p>}</>;
 }
 
 /** Notes: organizations, allies, enemies, backstory and the other notes. */

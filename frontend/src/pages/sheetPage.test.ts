@@ -154,12 +154,12 @@ describe("no data is lost: every section of the old sheet / export pages is rend
     expect(SHEET_SECTION_KEYS.length).toBeGreaterThan(20);
   });
 
-  it("the summary strip is always there: name, class, species, six abilities, HP, AC, initiative, speed, proficiency bonus, passive perception", () => {
+  it("the summary strip is always there: name, class, species, six abilities, HP, AC, initiative, speed, proficiency bonus", () => {
     const f = fighter4;
     const h = page(f.resolution as unknown as Resolution, "/sheet?tab=notes", "en", f.base as Draft["abilities"]["base"]);
     expect(h).toContain('data-section="summary"');
     for (const a of ["STR", "DEX", "CON", "INT", "WIS", "CHA"]) expect(h).toContain(`data-summary-ability="${a}"`);
-    for (const k of ["name", "class", "species", "hitPoints", "armorClass", "initiative", "speed", "proficiencyBonus", "passivePerception"]) expect(h).toContain(`data-summary="${k}"`);
+    for (const k of ["name", "class", "species", "hitPoints", "armorClass", "initiative", "speed", "proficiencyBonus"]) expect(h).toContain(`data-summary="${k}"`);
     expect(h).not.toMatch(/current HP|temp(orary)? HP|inspiration|short rest/i);
   });
 

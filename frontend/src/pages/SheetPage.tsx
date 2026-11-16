@@ -2,7 +2,7 @@ import { useSearchParams } from "react-router-dom";
 import { ExportBar } from "../components/sheetpage/ExportBar";
 import { SummaryStrip } from "../components/sheetpage/SummaryStrip";
 import { Tabs, type TabDef } from "../components/sheetpage/Tabs";
-import { ActionsPanel, BackgroundPanel, FeaturesPanel, InventoryPanel, NotesPanel, SpellsPanel } from "../components/sheetpage/panels";
+import { ActionsPanel, BackgroundPanel, FeaturesPanel, InventoryPanel, NotesPanel, ReferenceBlock, SpellsPanel } from "../components/sheetpage/panels";
 import { useDraft } from "../DraftContext";
 import { useT } from "../LanguageContext";
 import { exportReadiness } from "../logic/exportReadiness";
@@ -22,7 +22,7 @@ export function SheetPage() {
 
   if (!resolution) {
     return (
-      <div className="page">
+      <div className="page" data-page="sheet">
         <h1>{t.sheet.title}</h1>
         {!error && <p>{t.sheet.loading}</p>}
       </div>
@@ -45,13 +45,13 @@ export function SheetPage() {
       <h1>
         {t.sheet.title} {loading && "…"}
       </h1>
+      <SummaryStrip sections={sections} />
       <ExportBar resolution={resolution} error={error} />
       {outstanding > 0 && (
         <p role="status" data-state="incomplete">
           {t.sheet.incomplete(outstanding)}
         </p>
       )}
-      <SummaryStrip sections={sections} />
       <Tabs
         idPrefix="sheet"
         label={t.sheet.tabs.label}
@@ -75,6 +75,7 @@ export function SheetPage() {
           }
         }}
       />
+      <ReferenceBlock sections={sections} />
     </div>
   );
 }

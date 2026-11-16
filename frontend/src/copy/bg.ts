@@ -132,6 +132,7 @@ export const bg = {
       empty: "Няма черти в този филтър.",
     },
     notesTab: { empty: "Няма бележки." },
+    backgroundTab: { empty: "Няма попълнени данни за героя." },
     loading: "Зареждане…",
     unnamed: "Безименен герой",
     incomplete: (count: number) =>

@@ -126,6 +126,7 @@ export const en: Copy = {
       empty: "No features in this filter.",
     },
     notesTab: { empty: "No notes." },
+    backgroundTab: { empty: "No character details yet." },
     loading: "Loading…",
     unnamed: "Unnamed character",
     incomplete: (count: number) =>
