@@ -33,12 +33,21 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 
-# The catalog sizes of the vendored bundle (see server/tests/test_data_bundle.py and DATA-SOURCES.md).
-PINNED_COUNTS = {
-    "classes": 12, "levels": 961, "features": 1783, "subclasses": 176, "races": 153, "subraces": 96,
-    "traits": 1086, "backgrounds": 136, "items": 244, "spells": 936, "feats": 305, "spell_twins": 758,
-    "classes_2024": 12,
-}
+def _load_pins() -> dict[str, int]:
+    """The catalog sizes of the vendored bundle: read (not imported, this script is stdlib only) from the `FULL = dict(...)`
+    of server/tests/test_data_precedence.py, the one place the data-update procedure changes (S12, DATA-02)."""
+    import ast
+
+    tree = ast.parse((REPO / "server" / "tests" / "test_data_precedence.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "FULL" for t in node.targets):
+            call = node.value
+            if isinstance(call, ast.Call) and getattr(call.func, "id", "") == "dict":
+                return {kw.arg: ast.literal_eval(kw.value) for kw in call.keywords}
+    raise SystemExit("cannot find FULL = dict(...) in server/tests/test_data_precedence.py")
+
+
+PINNED_COUNTS = _load_pins()
 
 # A filled, non-SRD draft: Wizard 5 (School of the Scribes, TCE), Hobgoblin (VGM), XGE spells (Absorb Elements,
 # Catapult) in the spellbook, and the PHB feat Alert on the level-4 ASI. Every pending choice is already stored.

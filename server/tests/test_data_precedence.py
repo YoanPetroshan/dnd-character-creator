@@ -119,10 +119,27 @@ def test_5etools_override_still_wins_per_file(monkeypatch, tmp_path):
     (src / "spells" / "index.json").write_text("{}")
     (src / "optionalfeatures.json").write_text("{}")
     monkeypatch.setenv("DND_5ETOOLS_DATA", str(src))
-    monkeypatch.setenv("DND_OFFICIAL_DATA", "none")
     assert paths.spells_dir() == src / "spells"
     assert paths.optionalfeatures_file() == src / "optionalfeatures.json"
-    assert paths.items_base_file() is None  # not in the override, and none -> absent
+    assert paths.items_base_file() == paths.BUNDLED_DIR / "items-base.json"  # not in the override: the bundle answers
+
+
+def test_srd_only_beats_the_5etools_override(monkeypatch, tmp_path):
+    """S12 (DATA-03): DND_OFFICIAL_DATA=none means no official data from anywhere, also not from DND_5ETOOLS_DATA."""
+    src = tmp_path / "5etools" / "data"
+    for sub in ("spells", "class"):
+        (src / sub).mkdir(parents=True)
+        (src / sub / "index.json").write_text("{}")
+    (src / "optionalfeatures.json").write_text("{}")
+    (src / "items-base.json").write_text("{}")
+    monkeypatch.setenv("DND_5ETOOLS_DATA", str(src))
+    monkeypatch.setenv("DND_OFFICIAL_DATA", "none")
+    assert paths.data_source() == "srd-only"
+    assert paths.spells_dir() is None
+    assert paths.class_dir() is None
+    assert paths.optionalfeatures_file() is None
+    assert paths.items_base_file() is None
+    assert not paths.has_official_spells() and not paths.has_official_classes()
 
 
 def test_implicit_home_copy_is_ignored(clean_env):

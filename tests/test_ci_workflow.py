@@ -55,14 +55,28 @@ def _readme_normalised():
     return re.sub(r"(?:\.\./)?\.venv/bin/python -m pytest", "pytest", README)
 
 
+CLONE_SMOKE_JOB = "clone-smoke"
+
+
 def test_workflow_parses_and_has_exactly_the_expected_jobs():
-    assert set(_load()["jobs"]) == set(EXPECTED_COMMANDS) | {OFFLINE_JOB}
+    assert set(_load()["jobs"]) == set(EXPECTED_COMMANDS) | {OFFLINE_JOB, CLONE_SMOKE_JOB}
+
+
+def test_the_clone_smoke_job_runs_only_when_ci_is_started_by_hand():
+    job = _load()["jobs"][CLONE_SMOKE_JOB]
+    # not on push / pull_request, and not when pages.yml calls this workflow (github.workflow is then "pages")
+    assert job["if"] == "github.event_name == 'workflow_dispatch' && github.workflow == 'ci'"
+    runs = _run_steps(job)
+    assert runs[0] == "python -m venv .venv && .venv/bin/pip install -r server/requirements.txt"
+    assert runs[-1] == ".venv/bin/python -m pytest -q server/tests/test_clean_clone_smoke.py"
+    last = job["steps"][-1]
+    assert last["env"] == {"RUN_CLONE_SMOKE": "1"}
 
 
 def test_triggers_are_push_to_main_and_pull_request():
     on = _load()["on"]
     # workflow_call: pages.yml runs this whole workflow as its gate before it deploys
-    assert set(on) == {"push", "pull_request", "workflow_call"}
+    assert set(on) == {"push", "pull_request", "workflow_call", "workflow_dispatch"}
     assert on["push"] == {"branches": ["main"]}
     assert not on["pull_request"]  # no filters: every pull request
 
