@@ -1418,6 +1418,11 @@ class ResolveState:
     ruleset: Any = field(init=False)
     species_ability_choice_tpl: Any = field(init=False)
     species_bonuses: Any = field(init=False)
+    _origin_choices_raw: Any = field(init=False)
+    bg_grant_choices_raw: Any = field(init=False)
+    either_or_defaults: Any = field(init=False)
+    species_feat_templates: Any = field(init=False)
+    species_feats: Any = field(init=False)
 
 
 def _pass_classes(rs: ResolveState) -> None:
@@ -1826,44 +1831,26 @@ def _pass_abilities(rs: ResolveState) -> None:
     rs.warnings = warnings
 
 
-def _pass_rest(rs: ResolveState) -> dict:
-    """The remaining sections of the old single function."""
-    background_ability_choice_tpl = rs.background_ability_choice_tpl
+def _pass_origin_feats(rs: ResolveState) -> None:
+    """Feats granted by the species and the background feat slots."""
     background_bonuses = rs.background_bonuses
-    background_clamped_notes = rs.background_clamped_notes
     background_dict = rs.background_dict
     background_feats = rs.background_feats
     base_scores = rs.base_scores
     bg = rs.bg
     bg_id = rs.bg_id
     catalog = rs.catalog
-    classes = rs.classes
-    cls = rs.cls
-    cls_id = rs.cls_id
     draft = rs.draft
-    feat_options = rs.feat_options
-    granted_feats = rs.granted_feats
     held = rs.held
-    primary = rs.primary
     problems = rs.problems
     race = rs.race
     race_id = rs.race_id
-    resolved_classes = rs.resolved_classes
     ruleset = rs.ruleset
-    species = rs.species
-    species_ability_choice_tpl = rs.species_ability_choice_tpl
-    species_alt = rs.species_alt
     species_bonuses = rs.species_bonuses
     species_choices_raw = rs.species_choices_raw
-    species_size = rs.species_size
-    species_spell_ability = rs.species_spell_ability
-    species_variant = rs.species_variant
-    subclass_pruned = rs.subclass_pruned
     subrace = rs.subrace
-    subrace_id = rs.subrace_id
     total_level = rs.total_level
     use_feat_prereqs = rs.use_feat_prereqs
-    use_prerequisites_prefs = rs.use_prerequisites_prefs
     warnings = rs.warnings
     # Slice 8a: feats a species grants (Human/XPHB's Origin feat, Variant
     # Human's and Custom Lineage's free feat). Resolved BEFORE the ASI walk
@@ -1917,7 +1904,57 @@ def _pass_rest(rs: ResolveState) -> dict:
             _taken_add(taken_feat_indices, picked)
     for species_feat in species_feats:
         held.add_feat(species_feat)
+    rs._origin_choices_raw = _origin_choices_raw
+    rs.bg_grant_choices_raw = bg_grant_choices_raw
+    rs.either_or_defaults = either_or_defaults
+    rs.species_feat_templates = species_feat_templates
+    rs.species_feats = species_feats
 
+
+def _pass_rest(rs: ResolveState) -> dict:
+    """The remaining sections of the old single function."""
+    _origin_choices_raw = rs._origin_choices_raw
+    background_ability_choice_tpl = rs.background_ability_choice_tpl
+    background_bonuses = rs.background_bonuses
+    background_clamped_notes = rs.background_clamped_notes
+    background_dict = rs.background_dict
+    background_feats = rs.background_feats
+    base_scores = rs.base_scores
+    bg = rs.bg
+    bg_grant_choices_raw = rs.bg_grant_choices_raw
+    bg_id = rs.bg_id
+    catalog = rs.catalog
+    classes = rs.classes
+    cls = rs.cls
+    cls_id = rs.cls_id
+    draft = rs.draft
+    either_or_defaults = rs.either_or_defaults
+    feat_options = rs.feat_options
+    granted_feats = rs.granted_feats
+    held = rs.held
+    primary = rs.primary
+    problems = rs.problems
+    race = rs.race
+    race_id = rs.race_id
+    resolved_classes = rs.resolved_classes
+    ruleset = rs.ruleset
+    species = rs.species
+    species_ability_choice_tpl = rs.species_ability_choice_tpl
+    species_alt = rs.species_alt
+    species_bonuses = rs.species_bonuses
+    species_choices_raw = rs.species_choices_raw
+    species_feat_templates = rs.species_feat_templates
+    species_feats = rs.species_feats
+    species_size = rs.species_size
+    species_spell_ability = rs.species_spell_ability
+    species_variant = rs.species_variant
+    subclass_pruned = rs.subclass_pruned
+    subrace = rs.subrace
+    subrace_id = rs.subrace_id
+    total_level = rs.total_level
+    use_feat_prereqs = rs.use_feat_prereqs
+    use_prerequisites_prefs = rs.use_prerequisites_prefs
+    warnings = rs.warnings
     # C3: 2024 fighting-style feat cards (precedence: background, species, then
     # fighting-style cards and ASI picks together by class level, F1; first pick wins).
     fs_slots_by_class = {
@@ -3474,4 +3511,5 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     _pass_background(rs)
     _pass_species(rs)
     _pass_abilities(rs)
+    _pass_origin_feats(rs)
     return _pass_rest(rs)
