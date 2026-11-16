@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { Fragment, useId, useState } from "react";
 import { useT } from "../LanguageContext";
 import type { Copy } from "../copy";
 import { optionSource } from "../logic/sources";
@@ -96,9 +96,19 @@ function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
 
   function renderOption(option: ChoiceOption, prev: ChoiceOption | undefined) {
     const heading = option.group && option.group !== prev?.group ? option.group : null;
+    // a spell row keeps its own box (the eye button and the panel hang on it): its group heading is a row of its own
+    const spellHeading = heading && isSpellOption(option) ? heading : null;
     return (
-      <li key={option.id} className={preview.itemClass(option, heading ? "choice-picker__item--group-start" : undefined)} data-state={optionState(option)}>
-        {heading && (
+      <Fragment key={option.id}>
+        {spellHeading && (
+          <li className="choice-picker__group-row" role="presentation">
+            <span className="choice-picker__group" role="presentation">
+              {groupLabel(t, spellHeading)}
+            </span>
+          </li>
+        )}
+      <li className={preview.itemClass(option, heading && !spellHeading ? "choice-picker__item--group-start" : undefined)} data-state={optionState(option)}>
+        {heading && !spellHeading && (
           <span className="choice-picker__group" role="presentation">
             {groupLabel(t, heading)}
           </span>
@@ -123,6 +133,7 @@ function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
         {preview.button(option)}
         {preview.panel(option)}
       </li>
+      </Fragment>
     );
   }
 

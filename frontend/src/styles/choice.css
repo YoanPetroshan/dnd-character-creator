@@ -150,6 +150,10 @@ ul.choice-picker > li {
   display: contents;
 }
 
+.choice-picker-wrap:not(.choice-picker-wrap--long) .choice-picker__group-row {
+  grid-column: 1 / -1;
+}
+
 .choice-picker-wrap:not(.choice-picker-wrap--long) .choice-picker__group {
   grid-column: 1 / -1;
   padding-top: var(--space-3);
