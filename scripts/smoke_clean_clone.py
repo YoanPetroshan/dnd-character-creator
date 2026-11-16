@@ -55,7 +55,7 @@ SMOKE_DRAFT = {
     "name": "Smoke", "ruleset": "mixed", "sources": [],
     "abilities": {"method": "manual", "base": {"STR": 10, "DEX": 14, "CON": 14, "INT": 16, "WIS": 12, "CHA": 10}},
     "species": {"id": "hobgoblin-vgm", "choices": {}},
-    "background": {"id": "acolyte", "choices": {"background:acolyte:languages": ["common", "dwarvish"]}},
+    "background": {"id": "acolyte", "choices": {"background:acolyte:languages": ["elvish", "dwarvish"]}},
     "equipment": {"choices": {"class:wizard:1:equipment-choice-0": ["quarterstaff"],
                               "class:wizard:1:equipment-choice-1": ["component-pouch"],
                               "class:wizard:1:equipment-choice-2": ["scholars-pack"],
