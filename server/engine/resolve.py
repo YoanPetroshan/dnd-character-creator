@@ -1487,6 +1487,10 @@ class ResolveState:
     initiative_remarkable: Any = field(init=False)
     saves: Any = field(init=False)
     skills: Any = field(init=False)
+    derived: Any = field(init=False)
+    feat_inst: Any = field(init=False)
+    feat_numbers: Any = field(init=False)
+    weapon_masteries: Any = field(init=False)
 
 
 def _pass_classes(rs: ResolveState) -> None:
@@ -3509,46 +3513,27 @@ def _pass_hp_saves_skills(rs: ResolveState) -> None:
     rs.skills = skills
 
 
-def _pass_rest(rs: ResolveState) -> dict:
-    """The remaining sections of the old single function."""
+def _pass_speed_attacks_derived(rs: ResolveState) -> None:
+    """Speeds, attacks, carrying and the derived block."""
     added_resolved = rs.added_resolved
-    asi_selected_feats = rs.asi_selected_feats
-    bg = rs.bg
-    bg_id = rs.bg_id
     catalog = rs.catalog
     choices = rs.choices
     chosen_equipment = rs.chosen_equipment
     class_levels = rs.class_levels
-    details = rs.details
-    draft = rs.draft
     effects = rs.effects
     equipped_items = rs.equipped_items
-    expertise_all = rs.expertise_all
-    feat_options = rs.feat_options
     final_scores = rs.final_scores
-    fixed_languages = rs.fixed_languages
-    fs_feats = rs.fs_feats
     gear = rs.gear
     granted_equipment = rs.granted_equipment
-    granted_feats = rs.granted_feats
     hp_class_entries = rs.hp_class_entries
     hp_type = rs.hp_type
     initiative_jack = rs.initiative_jack
     initiative_remarkable = rs.initiative_remarkable
-    invocation_effects = rs.invocation_effects
-    lessons_feats = rs.lessons_feats
     modifiers = rs.modifiers
-    narrative_items = rs.narrative_items
     pact_weapon_id = rs.pact_weapon_id
-    positioned_languages = rs.positioned_languages
-    problems = rs.problems
     prof_bonus = rs.prof_bonus
     proficient_armor = rs.proficient_armor
-    proficient_save_abilities = rs.proficient_save_abilities
-    proficient_skills = rs.proficient_skills
-    proficient_tools = rs.proficient_tools
     proficient_weapons = rs.proficient_weapons
-    pruned = rs.pruned
     race = rs.race
     race_id = rs.race_id
     resolved_classes = rs.resolved_classes
@@ -3557,18 +3542,10 @@ def _pass_rest(rs: ResolveState) -> dict:
     saves = rs.saves
     skills = rs.skills
     slot_granting_class_ids = rs.slot_granting_class_ids
-    species_alt = rs.species_alt
-    species_feats = rs.species_feats
     species_size = rs.species_size
-    species_spell_ability = rs.species_spell_ability
     species_variant = rs.species_variant
     spell_slots = rs.spell_slots
-    spells_summary = rs.spells_summary
-    starting_gold = rs.starting_gold
     subrace = rs.subrace
-    subrace_id = rs.subrace_id
-    total_level = rs.total_level
-    variant_follow = rs.variant_follow
     warlock_slots = rs.warlock_slots
     warnings = rs.warnings
     speeds = _species_speeds(race, subrace, species_variant)
@@ -3688,7 +3665,68 @@ def _pass_rest(rs: ResolveState) -> dict:
         "carryingCapacity": carrying,
         "stealthDisadvantage": stealth_disadvantage,
     }
+    rs.derived = derived
+    rs.feat_inst = feat_inst
+    rs.feat_numbers = feat_numbers
+    rs.warnings = warnings
+    rs.weapon_masteries = weapon_masteries
 
+
+def _pass_rest(rs: ResolveState) -> dict:
+    """The remaining sections of the old single function."""
+    added_resolved = rs.added_resolved
+    asi_selected_feats = rs.asi_selected_feats
+    bg = rs.bg
+    bg_id = rs.bg_id
+    catalog = rs.catalog
+    choices = rs.choices
+    chosen_equipment = rs.chosen_equipment
+    derived = rs.derived
+    details = rs.details
+    draft = rs.draft
+    effects = rs.effects
+    expertise_all = rs.expertise_all
+    feat_inst = rs.feat_inst
+    feat_numbers = rs.feat_numbers
+    feat_options = rs.feat_options
+    final_scores = rs.final_scores
+    fixed_languages = rs.fixed_languages
+    fs_feats = rs.fs_feats
+    gear = rs.gear
+    granted_equipment = rs.granted_equipment
+    granted_feats = rs.granted_feats
+    invocation_effects = rs.invocation_effects
+    lessons_feats = rs.lessons_feats
+    modifiers = rs.modifiers
+    narrative_items = rs.narrative_items
+    positioned_languages = rs.positioned_languages
+    problems = rs.problems
+    proficient_armor = rs.proficient_armor
+    proficient_save_abilities = rs.proficient_save_abilities
+    proficient_skills = rs.proficient_skills
+    proficient_tools = rs.proficient_tools
+    proficient_weapons = rs.proficient_weapons
+    pruned = rs.pruned
+    race = rs.race
+    race_id = rs.race_id
+    resolved_classes = rs.resolved_classes
+    resolved_feats = rs.resolved_feats
+    ruleset = rs.ruleset
+    species_alt = rs.species_alt
+    species_feats = rs.species_feats
+    species_size = rs.species_size
+    species_spell_ability = rs.species_spell_ability
+    species_variant = rs.species_variant
+    spell_slots = rs.spell_slots
+    spells_summary = rs.spells_summary
+    starting_gold = rs.starting_gold
+    subrace = rs.subrace
+    subrace_id = rs.subrace_id
+    total_level = rs.total_level
+    variant_follow = rs.variant_follow
+    warlock_slots = rs.warlock_slots
+    warnings = rs.warnings
+    weapon_masteries = rs.weapon_masteries
     # fixed_languages: computed with the class language gate above (Phase 4c-i Task 6 feat grants included)
     chosen_languages = [
         s for c in choices
@@ -3847,4 +3885,5 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     _pass_equipment_and_spells(rs)
     _pass_proficiencies(rs)
     _pass_hp_saves_skills(rs)
+    _pass_speed_attacks_derived(rs)
     return _pass_rest(rs)
