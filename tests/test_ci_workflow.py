@@ -29,7 +29,7 @@ OFFLINE_JOB = "offline"
 OFFLINE_RUNS = [
     "python scripts/build_offline.py",
     "python scripts/build_offline.py --check",
-    "python -m venv .venv && .venv/bin/pip install -r server/requirements.txt",
+    "python -m venv .venv && .venv/bin/pip install -r server/requirements.txt -c server/constraints.txt",
     "cd frontend && npm ci",
     "cd frontend && npm run test:offline",
     "cd frontend && VITE_BASE=/dnd-character-creator/ VITE_SERVERLESS=1 npm run build:offline",
@@ -67,7 +67,7 @@ def test_the_clone_smoke_job_runs_only_when_ci_is_started_by_hand():
     # not on push / pull_request, and not when pages.yml calls this workflow (github.workflow is then "pages")
     assert job["if"] == "github.event_name == 'workflow_dispatch' && github.workflow == 'ci'"
     runs = _run_steps(job)
-    assert runs[0] == "python -m venv .venv && .venv/bin/pip install -r server/requirements.txt"
+    assert runs[0] == "python -m venv .venv && .venv/bin/pip install -r server/requirements-dev.txt -c server/constraints.txt"
     assert runs[-1] == ".venv/bin/python -m pytest -q server/tests/test_clean_clone_smoke.py"
     last = job["steps"][-1]
     assert last["env"] == {"RUN_CLONE_SMOKE": "1"}
@@ -96,7 +96,8 @@ def test_offline_job_creates_the_venv_and_requires_python_for_the_equivalence_te
     # without .venv/bin/python the Pyodide/native equality parts are skipped, so a green job would prove nothing
     job = _load()["jobs"][OFFLINE_JOB]
     runs = _run_steps(job)
-    venv = "python -m venv .venv && .venv/bin/pip install -r server/requirements.txt"
+    # the runtime set is enough for the native side of the equivalence test (it builds fixtures, it does not run pytest)
+    venv = "python -m venv .venv && .venv/bin/pip install -r server/requirements.txt -c server/constraints.txt"
     assert venv in runs and runs.index(venv) < runs.index("cd frontend && npm run test:offline")
     step = next(s for s in job["steps"] if s.get("run") == "cd frontend && npm run test:offline")
     assert step["env"] == {"REQUIRE_PYTHON": "1"}
@@ -121,7 +122,7 @@ def test_each_job_runs_the_expected_command_last():
 def test_python_jobs_install_the_server_requirements_first():
     jobs = _load()["jobs"]
     for name in ("server-bundle", "server-srd-only", "root"):
-        assert _run_steps(jobs[name])[0] == "pip install -r server/requirements.txt"
+        assert _run_steps(jobs[name])[0] == "pip install -r server/requirements-dev.txt -c server/constraints.txt"
 
 
 def test_commands_match_the_readme_test_commands():

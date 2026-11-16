@@ -1,9 +1,8 @@
+# What the app needs to run (what a host installs). Test tools are in requirements-dev.txt; every transitive package is
+# pinned in constraints.txt (`pip install -r server/requirements.txt -c server/constraints.txt`).
 flask==3.1.3
 flask-cors==6.0.5
 pyyaml==6.0.3
 fpdf2==2.8.8
 pypdf==6.18.1
-pytest==9.1.1
-pytest-xdist==3.8.0
-execnet==2.1.2
 waitress==3.0.2

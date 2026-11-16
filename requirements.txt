@@ -1,2 +1,2 @@
-# The repo-root tests (chargen + import isolation) need a subset of the server dependencies.
--r server/requirements.txt
+# The repo-root tests (CI workflow files, chargen.sync, the import-isolation guard) need pytest: the dev set.
+-r server/requirements-dev.txt

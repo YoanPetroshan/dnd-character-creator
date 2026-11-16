@@ -70,7 +70,8 @@ every origin (bulgar, slavic, dynastic, christian, folklore, revival, literary) 
 ## Setup
 
     python3 -m venv .venv
-    .venv/bin/pip install -r server/requirements.txt
+    .venv/bin/pip install -r server/requirements-dev.txt -c server/constraints.txt   # to develop and test (adds pytest)
+    # a host that only runs the app: -r server/requirements.txt -c server/constraints.txt (scripts/setup.sh does that)
     cd frontend && npm install     # or: scripts/setup.sh (venv, deps, frontend build)
 
 The full data ships in the repo: the SRD JSON in `chargen/data/srd/` and the official 5etools data (the ~150 non-SRD
@@ -201,7 +202,9 @@ numbers with an independent oracle (`checks.py`, which reads only the raw vendor
 
 Exact instructions, severity rules and what not to touch: `docs/CAMPAIGN-PROTOCOL.md`. Tests: `server/tests/test_chartest_harness.py`.
 
-Python dependencies are pinned in `server/requirements.txt` (the repo-root `requirements.txt` only includes it, so one install covers both suites). The frontend is locked by
+Python dependencies: `server/requirements.txt` is what the app runs on, `server/requirements-dev.txt` adds the test tools (pytest, xdist, execnet; the
+repo-root `requirements.txt` includes it, so one install covers both suites), and `server/constraints.txt` pins every transitive package (no hashes;
+the PDF packages have the versions of the offline pack). The frontend is locked by
 `frontend/package-lock.json`.
 
 **Official data and skips.** The server tests run against the bundled data by default, so none of them skip for a data
@@ -218,7 +221,7 @@ Skip markers evaluate at collection time, so the variable must be set before pyt
 
 **Timing.** The wall-clock "resolve() under 50 ms" tests are warm and take the best of N runs (`server/tests/perf_helpers.py`), so a busy machine does not fail them; the bound itself is unchanged. The server suite takes about 105 s on the development machine (126 s when another suite runs in parallel); the root suite takes about 5 s. Run either in the background if your tool has a timeout.
 
-**Parallel run (opt-in).** `pytest-xdist` is installed from `server/requirements.txt`. Serial `pytest -q` stays the default (no `-n` in `pytest.ini`); to use all cores run `cd server && ../.venv/bin/python -m pytest -q -n auto` (or `-n 4`). Pass/skip counts are identical to the serial run (7449 passed / 2 skipped with the data; 1493 passed / 5708 skipped with `DND_OFFICIAL_DATA=none`). Measured on 2026-11-03 on an 8-CPU Mac: serial about 110 s, `-n 4` about 40 s, `-n auto` (8 workers) about 45 s; with `DND_OFFICIAL_DATA=none` parallel is not faster (serial 10 s, `-n auto` 12 s). The repo-root suite (about 2 s) does not benefit.
+**Parallel run (opt-in).** `pytest-xdist` is installed from `server/requirements-dev.txt`. Serial `pytest -q` stays the default (no `-n` in `pytest.ini`); to use all cores run `cd server && ../.venv/bin/python -m pytest -q -n auto` (or `-n 4`). Pass/skip counts are identical to the serial run (7449 passed / 2 skipped with the data; 1493 passed / 5708 skipped with `DND_OFFICIAL_DATA=none`). Measured on 2026-11-03 on an 8-CPU Mac: serial about 110 s, `-n 4` about 40 s, `-n auto` (8 workers) about 45 s; with `DND_OFFICIAL_DATA=none` parallel is not faster (serial 10 s, `-n auto` 12 s). The repo-root suite (about 2 s) does not benefit.
 
 **Refreshing the official data.** The bundle is a frozen byte copy; refresh it only on purpose.
 

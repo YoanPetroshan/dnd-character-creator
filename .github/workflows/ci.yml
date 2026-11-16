@@ -25,8 +25,11 @@ jobs:
         with:
           python-version: "3.14"
           cache: pip
-          cache-dependency-path: server/requirements.txt
-      - run: pip install -r server/requirements.txt
+          cache-dependency-path: |
+            server/requirements.txt
+            server/requirements-dev.txt
+            server/constraints.txt
+      - run: pip install -r server/requirements-dev.txt -c server/constraints.txt
       - run: cd server && pytest -q -n auto
 
   server-srd-only:
@@ -39,8 +42,11 @@ jobs:
         with:
           python-version: "3.14"
           cache: pip
-          cache-dependency-path: server/requirements.txt
-      - run: pip install -r server/requirements.txt
+          cache-dependency-path: |
+            server/requirements.txt
+            server/requirements-dev.txt
+            server/constraints.txt
+      - run: pip install -r server/requirements-dev.txt -c server/constraints.txt
       - run: cd server && env DND_OFFICIAL_DATA=none pytest -q -n auto
 
   root:
@@ -53,8 +59,11 @@ jobs:
         with:
           python-version: "3.14"
           cache: pip
-          cache-dependency-path: server/requirements.txt
-      - run: pip install -r server/requirements.txt
+          cache-dependency-path: |
+            server/requirements.txt
+            server/requirements-dev.txt
+            server/constraints.txt
+      - run: pip install -r server/requirements-dev.txt -c server/constraints.txt
       - run: pytest -q
 
   frontend:
@@ -86,7 +95,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: python scripts/build_offline.py
       - run: python scripts/build_offline.py --check
-      - run: python -m venv .venv && .venv/bin/pip install -r server/requirements.txt
+      - run: python -m venv .venv && .venv/bin/pip install -r server/requirements.txt -c server/constraints.txt
       - run: cd frontend && npm ci
       - run: cd frontend && npm run test:offline
         env:
@@ -105,8 +114,11 @@ jobs:
         with:
           python-version: "3.14"
           cache: pip
-          cache-dependency-path: server/requirements.txt
-      - run: python -m venv .venv && .venv/bin/pip install -r server/requirements.txt
+          cache-dependency-path: |
+            server/requirements.txt
+            server/requirements-dev.txt
+            server/constraints.txt
+      - run: python -m venv .venv && .venv/bin/pip install -r server/requirements-dev.txt -c server/constraints.txt
       - run: .venv/bin/python -m pytest -q server/tests/test_clean_clone_smoke.py
         env:
           RUN_CLONE_SMOKE: "1"
