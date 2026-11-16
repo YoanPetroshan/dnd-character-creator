@@ -54,6 +54,7 @@ from __future__ import annotations
 import re
 from functools import lru_cache
 from dataclasses import dataclass, field
+from typing import Any
 
 from catalog import feat_effects_data, reference_data
 from catalog.choices import build_choice_template, build_equipment_choice, pack_quantities, pack_units
@@ -1376,7 +1377,27 @@ def _stale_pick_name(catalog: Catalog, pick: str, feats: bool = True):
     return msg("label-stale-pick", id=pick, label=_stale_pick_label(catalog, pick))
 
 
-def resolve(draft: dict, catalog: Catalog) -> dict:
+@dataclass(slots=True)
+class ResolveState:
+    """Everything the passes of resolve() hand to each other. A field is written by the pass that computes it and read by the
+    later passes that need it; a field nobody has written yet raises AttributeError, so a pass cannot read what is not there."""
+    draft: Any
+    catalog: Catalog
+    classes: Any = field(init=False)
+    cls: Any = field(init=False)
+    cls_id: Any = field(init=False)
+    primary: Any = field(init=False)
+    problems: Any = field(init=False)
+    resolved_classes: Any = field(init=False)
+    subclass_pruned: Any = field(init=False)
+    total_level: Any = field(init=False)
+    warnings: Any = field(init=False)
+
+
+def _pass_classes(rs: ResolveState) -> None:
+    """Sources, normalised draft, class entries -> resolved_classes, total level, primary class."""
+    catalog = rs.catalog
+    draft = rs.draft
     draft, problems = normalize_draft(draft)
     warnings: list[dict] = []
     # API-02: `sources` is read once into a bounded lowercase set that every filter below receives
@@ -1470,7 +1491,31 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     subclass = primary["subclass"] if primary else None
     level = primary["level"] if primary else 1
     class_choices = primary["class_choices"] if primary else {}
+    rs.classes = classes
+    rs.cls = cls
+    rs.cls_id = cls_id
+    rs.draft = draft
+    rs.primary = primary
+    rs.problems = problems
+    rs.resolved_classes = resolved_classes
+    rs.subclass_pruned = subclass_pruned
+    rs.total_level = total_level
+    rs.warnings = warnings
 
+
+def _pass_rest(rs: ResolveState) -> dict:
+    """The remaining sections of the old single function."""
+    catalog = rs.catalog
+    classes = rs.classes
+    cls = rs.cls
+    cls_id = rs.cls_id
+    draft = rs.draft
+    primary = rs.primary
+    problems = rs.problems
+    resolved_classes = rs.resolved_classes
+    subclass_pruned = rs.subclass_pruned
+    total_level = rs.total_level
+    warnings = rs.warnings
     background_raw = draft.get("background")
     if background_raw is not None and not isinstance(background_raw, dict):
         problems.append({"id": "malformed-background", "message": msg("malformed-background")})
@@ -3308,3 +3353,9 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         "warnings": warnings,
         "pruned": pruned,
     }
+
+
+def resolve(draft: dict, catalog: Catalog) -> dict:
+    rs = ResolveState(draft, catalog)
+    _pass_classes(rs)
+    return _pass_rest(rs)
