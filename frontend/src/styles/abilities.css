@@ -207,7 +207,85 @@
     grid-template-columns: 1fr 1fr;
     gap: 0 48px;
   }
+
+  /* an open species row spans both columns, like an open spell row */
+  .picker-list.picker-list--rows li.picker-list__item--open {
+    grid-column: 1 / -1;
+  }
 }
+
+/* Species preview: the eye button sits at the right end of the row (the row is a 48px box); the panel opens under it. */
+.picker-list.picker-list--rows li:has(> .species-eye) {
+  position: relative;
+  display: block;
+}
+
+.picker-list.picker-list--rows li:has(> .species-eye) label {
+  box-sizing: border-box;
+  padding-right: 48px;
+}
+
+.species-eye {
+  top: 2px;
+}
+
+.species-eye__body {
+  max-width: 68ch;
+}
+
+.species-eye__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0 0 var(--space-2);
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.species-eye__fact {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.species-eye__fact-label,
+.species-eye__trait-name {
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.species-eye__lore,
+.species-eye__status {
+  margin: 0 0 var(--space-2);
+}
+
+.species-eye__traits {
+  display: block;
+  margin: var(--space-3) 0 0;
+}
+
+.species-eye__trait {
+  margin: 0 0 var(--space-3);
+}
+
+.species-eye__trait-name {
+  display: block;
+  padding: 0;
+  border-bottom: 0;
+}
+
+.species-eye__trait-text {
+  margin: 2px 0 0;
+  padding: 0;
+  border-bottom: 0;
+  font-weight: 400;
+  font-variant-numeric: normal;
+  text-align: left;
+}
+
 
 /* 375px: the table fits without scrolling inside itself (headers wrap, tighter cells, a 56px number field). */
 .ability-table th,

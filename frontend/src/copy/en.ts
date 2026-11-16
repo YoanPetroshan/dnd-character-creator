@@ -552,6 +552,17 @@ export const en: Copy = {
     subspeciesNone: "— none —",
     noChoices: "There are no choices for this species.",
     noSourceGroup: "SRD",
+    showSpecies: (name: string) => `Show a short description of the species: ${name}`,
+    preview: {
+      size: g.size.en,
+      speed: g.speed.en,
+      darkvision: g.darkvision.en,
+      abilities: g.abilityScores.en,
+      resistance: g.resistance.en,
+      languages: g.languages.en,
+      chooseFrom: (count: number, list: string) => `choose ${count} of: ${list}`,
+      moreLanguages: (count: number) => `+${count} of your choice`,
+    },
   },
 
   equipmentPage: {
@@ -668,6 +679,7 @@ export const en: Copy = {
     "catalog.failed": (p: Msgs) => `The catalog did not load (error ${p.status}).`,
     "items.failed": (p: Msgs) => `The list did not load (error ${p.status}).`,
     "spells.failed": (p: Msgs) => `The spell list did not load (error ${p.status}).`,
+    "species.failed": (p: Msgs) => `The species did not load (error ${p.status}).`,
     "spell.failed": (p: Msgs) => `The spell did not load (error ${p.status}).`,
     "export.refused": (p: Msgs) => `The export was refused while the draft has problems: ${p.text}`,
     "export.failed": (p: Msgs) => `The export failed. ${p.detail}`,

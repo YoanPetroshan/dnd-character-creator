@@ -8,6 +8,7 @@ import { useResolutionContext } from "../ResolutionContext";
 import { useCatalogContext } from "../CatalogContext";
 import type { CatalogSource, CatalogSpecies } from "../useCatalog";
 import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
+import { SpeciesDetailBody, useSpeciesDetails } from "../components/SpeciesDetailBody";
 
 /** The core books come first, in this order; every other source follows as its own group. */
 const CORE_SOURCES = ["PHB", "XPHB", "DMG", "XDMG"];
@@ -45,7 +46,18 @@ export function SpeciesPage() {
   const [speciesFilter, setSpeciesFilter] = useState("");
   const { resolution, loading } = useResolutionContext();
   const catalog = useCatalogContext();
+  const { details, loadDetail } = useSpeciesDetails();
+  const [openSpecies, setOpenSpecies] = useState<Set<string>>(new Set());
 
+  function toggleSpecies(id: string) {
+    const next = new Set(openSpecies);
+    if (next.has(id)) next.delete(id);
+    else {
+      next.add(id);
+      loadDetail(id);
+    }
+    setOpenSpecies(next);
+  }
 
   const selectedSpeciesId = draft.species.id;
   // A selected species/subspecies the current ruleset/sources hide stays
@@ -118,7 +130,7 @@ export function SpeciesPage() {
               {g.label}
             </li>
             {g.items.map((s) => (
-              <li key={s.id}>
+              <li key={s.id} className={openSpecies.has(s.id) ? "picker-list__item--open" : undefined}>
                 <label>
                   <input
                     type="radio"
@@ -130,6 +142,18 @@ export function SpeciesPage() {
                   {speciesHidden && s.id === selectedSpeciesId ? ` (${t.common.hiddenByFilters})` : ""}
                   {s.source && !s.name.endsWith(`(${s.source})`) && <span className="picker-list__source">{s.source}</span>}
                 </label>
+                <button
+                  type="button"
+                  className="species-eye"
+                  aria-label={sp.showSpecies(s.name)}
+                  aria-expanded={openSpecies.has(s.id)}
+                  onClick={() => toggleSpecies(s.id)}
+                />
+                {openSpecies.has(s.id) && (
+                  <div className="species-eye__panel">
+                    <SpeciesDetailBody state={details[s.id]} />
+                  </div>
+                )}
               </li>
             ))}
           </Fragment>

@@ -560,6 +560,17 @@ export const bg = {
     subspeciesNone: "— none —",
     noChoices: "Няма избори за тази раса (Species).",
     noSourceGroup: "SRD",
+    showSpecies: (name: string) => `Покажи кратко описание на расата (Species): ${name}`,
+    preview: {
+      size: "Размер",
+      speed: "Скорост",
+      darkvision: "Тъмно зрение (Darkvision)",
+      abilities: "Характеристики (Ability Scores)",
+      resistance: "Устойчивост (Resistance)",
+      languages: "Езици",
+      chooseFrom: (count: number, list: string) => `избор ${count} от: ${list}`,
+      moreLanguages: (count: number) => `+${count} по избор`,
+    },
   },
 
   equipmentPage: {
@@ -661,6 +672,7 @@ export const bg = {
     "catalog.failed": (p: Msgs) => `Каталогът не се зареди (грешка ${p.status}).`,
     "items.failed": (p: Msgs) => `Списъкът не се зареди (грешка ${p.status}).`,
     "spells.failed": (p: Msgs) => `Списъкът със заклинания не се зареди (грешка ${p.status}).`,
+    "species.failed": (p: Msgs) => `Расата (Species) не се зареди (грешка ${p.status}).`,
     "spell.failed": (p: Msgs) => `Заклинанието не се зареди (грешка ${p.status}).`,
     "export.refused": (p: Msgs) => `Експортът е отказан, докато има проблеми в черновата: ${p.text}`,
     "export.failed": (p: Msgs) => `Експортът не успя. ${p.detail}`,
