@@ -177,7 +177,7 @@ while online, then `pip install --no-index --find-links <dir>`. `RUN_CLONE_SMOKE
 
     # v2 server (the main suite)
     cd server && ../.venv/bin/python -m pytest -q
-    # repo-root tests (the chargen package + the import-isolation guard that covers server/ too)
+    # repo-root tests (chargen.sync, the CI workflow files, the import-isolation guard that covers server/ too)
     .venv/bin/python -m pytest -q
     # frontend: type-check and build, then the unit tests of the pure logic modules
     cd frontend && npm run build && npm test
@@ -231,9 +231,8 @@ Skip markers evaluate at collection time, so the variable must be set before pyt
 
 A golden diff after a refresh is EXPECTED (the data changed) and needs its own named `--rebaseline` slice; never use
 `--regenerate`. Commit `server/data/official/**` (including `MANIFEST.json`) and update `DATA-SOURCES.md`.
-Note: the docstrings in `chargen/sync.py` and `chargen/sources.py` that say the official data is "never committed" are
-historical. `chargen/` is not edited here (it must stay byte-identical to its source repo, see
-`tests/test_chargen_isolation.py`), so those sentences were left as they are; the data now ships in `server/data/official`.
+Note: `chargen/` is no longer a mirror of another repository (slice S18 removed its unused rules engine); it keeps the SRD data,
+`chargen.sources` and `chargen.sync`, and is edited here like any other package. The data now ships in `server/data/official`.
 
 **Fuzz.** `server/tests/test_resolve_fuzz.py` runs 60 seeded random drafts by default. For a bigger run set `FUZZ_N`
 (and `FUZZ_SEED0` for the first seed): `FUZZ_N=2000 FUZZ_SEED0=0 .venv/bin/python -m pytest server/tests/test_resolve_fuzz.py -q`.
