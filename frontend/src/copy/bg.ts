@@ -559,6 +559,7 @@ export const bg = {
     subspecies: "Subspecies",
     subspeciesNone: "— none —",
     noChoices: "Няма избори за тази раса (Species).",
+    noSourceGroup: "SRD",
   },
 
   equipmentPage: {

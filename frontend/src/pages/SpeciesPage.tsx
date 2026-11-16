@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { StepProblems } from "../components/StepProblems";
 import { useDraft } from "../DraftContext";
 import { speciesChoicesOf } from "../logic/choiceRouting";
@@ -6,7 +6,37 @@ import { useT } from "../LanguageContext";
 import { renderMsg } from "../logic/messages";
 import { useResolutionContext } from "../ResolutionContext";
 import { useCatalogContext } from "../CatalogContext";
+import type { CatalogSource, CatalogSpecies } from "../useCatalog";
 import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
+
+/** The core books come first, in this order; every other source follows as its own group. */
+const CORE_SOURCES = ["PHB", "XPHB", "DMG", "XDMG"];
+
+interface SpeciesGroup {
+  key: string;
+  label: string;
+  items: CatalogSpecies[];
+}
+
+/** Groups species by source: core books first, then the rest by display name; names keep their order inside. */
+function groupBySource(list: CatalogSpecies[], sources: CatalogSource[], noSourceLabel: string): SpeciesGroup[] {
+  const nameOf = new Map(sources.map((x) => [x.id, x.name]));
+  const byKey = new Map<string, SpeciesGroup>();
+  for (const s of list) {
+    const key = s.source ?? "";
+    let g = byKey.get(key);
+    if (!g) {
+      g = { key, label: key ? (nameOf.get(key) ?? key) : noSourceLabel, items: [] };
+      byKey.set(key, g);
+    }
+    g.items.push(s);
+  }
+  const core = CORE_SOURCES.flatMap((k) => byKey.get(k) ?? []);
+  const rest = [...byKey.values()]
+    .filter((g) => !CORE_SOURCES.includes(g.key))
+    .sort((a, b) => a.label.localeCompare(b.label) || a.key.localeCompare(b.key));
+  return [...core, ...rest];
+}
 
 export function SpeciesPage() {
   const t = useT();
@@ -28,6 +58,7 @@ export function SpeciesPage() {
   const shownSpecies = needle
     ? speciesList.filter((s) => s.id === selectedSpeciesId || s.name.toLowerCase().includes(needle))
     : speciesList;
+  const speciesGroups = groupBySource(shownSpecies, catalog.sources, sp.noSourceGroup);
   const fullSpecies = catalog.allSpecies.find((s) => s.id === selectedSpeciesId);
   const subspeciesList = selectedSpecies
     ? [
@@ -81,20 +112,27 @@ export function SpeciesPage() {
       />
       {needle && shownSpecies.length === 0 && <p>{t.common.noMatches}</p>}
       <ul className="picker-list picker-list--rows">
-        {shownSpecies.map((s) => (
-          <li key={s.id}>
-            <label>
-              <input
-                type="radio"
-                name="species"
-                checked={selectedSpeciesId === s.id}
-                onChange={() => dispatch({ type: "SET_SPECIES", speciesId: s.id })}
-              />
-              {s.name}
-              {speciesHidden && s.id === selectedSpeciesId ? ` (${t.common.hiddenByFilters})` : ""}
-              {s.source && !s.name.endsWith(`(${s.source})`) && <span className="picker-list__source">{s.source}</span>}
-            </label>
-          </li>
+        {speciesGroups.map((g) => (
+          <Fragment key={g.key}>
+            <li className="picker-list__group" role="presentation">
+              {g.label}
+            </li>
+            {g.items.map((s) => (
+              <li key={s.id}>
+                <label>
+                  <input
+                    type="radio"
+                    name="species"
+                    checked={selectedSpeciesId === s.id}
+                    onChange={() => dispatch({ type: "SET_SPECIES", speciesId: s.id })}
+                  />
+                  {s.name}
+                  {speciesHidden && s.id === selectedSpeciesId ? ` (${t.common.hiddenByFilters})` : ""}
+                  {s.source && !s.name.endsWith(`(${s.source})`) && <span className="picker-list__source">{s.source}</span>}
+                </label>
+              </li>
+            ))}
+          </Fragment>
         ))}
       </ul>
       {selectedSpecies && subspeciesList.length > 0 && (

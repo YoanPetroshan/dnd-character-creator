@@ -551,6 +551,7 @@ export const en: Copy = {
     subspecies: "Subspecies",
     subspeciesNone: "— none —",
     noChoices: "There are no choices for this species.",
+    noSourceGroup: "SRD",
   },
 
   equipmentPage: {
