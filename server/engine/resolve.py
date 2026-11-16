@@ -1392,6 +1392,12 @@ class ResolveState:
     subclass_pruned: Any = field(init=False)
     total_level: Any = field(init=False)
     warnings: Any = field(init=False)
+    background_dict: Any = field(init=False)
+    background_feats: Any = field(init=False)
+    bg: Any = field(init=False)
+    bg_id: Any = field(init=False)
+    feat_options: Any = field(init=False)
+    granted_feats: Any = field(init=False)
 
 
 def _pass_classes(rs: ResolveState) -> None:
@@ -1503,18 +1509,11 @@ def _pass_classes(rs: ResolveState) -> None:
     rs.warnings = warnings
 
 
-def _pass_rest(rs: ResolveState) -> dict:
-    """The remaining sections of the old single function."""
+def _pass_background(rs: ResolveState) -> None:
+    """The background, its granted feats and feat options."""
     catalog = rs.catalog
-    classes = rs.classes
-    cls = rs.cls
-    cls_id = rs.cls_id
     draft = rs.draft
-    primary = rs.primary
     problems = rs.problems
-    resolved_classes = rs.resolved_classes
-    subclass_pruned = rs.subclass_pruned
-    total_level = rs.total_level
     warnings = rs.warnings
     background_raw = draft.get("background")
     if background_raw is not None and not isinstance(background_raw, dict):
@@ -1575,6 +1574,33 @@ def _pass_rest(rs: ResolveState) -> dict:
     # to before this fix).
     granted_feat_refs = list(bg.get("feat_refs", [])) if bg else []
     background_feats = _resolve_granted_feats(granted_feats, catalog, granted_feat_refs)
+    rs.background_dict = background_dict
+    rs.background_feats = background_feats
+    rs.bg = bg
+    rs.bg_id = bg_id
+    rs.feat_options = feat_options
+    rs.granted_feats = granted_feats
+
+
+def _pass_rest(rs: ResolveState) -> dict:
+    """The remaining sections of the old single function."""
+    background_dict = rs.background_dict
+    background_feats = rs.background_feats
+    bg = rs.bg
+    bg_id = rs.bg_id
+    catalog = rs.catalog
+    classes = rs.classes
+    cls = rs.cls
+    cls_id = rs.cls_id
+    draft = rs.draft
+    feat_options = rs.feat_options
+    granted_feats = rs.granted_feats
+    primary = rs.primary
+    problems = rs.problems
+    resolved_classes = rs.resolved_classes
+    subclass_pruned = rs.subclass_pruned
+    total_level = rs.total_level
+    warnings = rs.warnings
     # ASI-or-feat Task 3: a feat a class took INSTEAD of an ASI joins the
     # SAME `resolved_feats` list (assembled right after the per-class ASI
     # loop below, once each pick's prerequisite has been checked at its own
@@ -3358,4 +3384,5 @@ def _pass_rest(rs: ResolveState) -> dict:
 def resolve(draft: dict, catalog: Catalog) -> dict:
     rs = ResolveState(draft, catalog)
     _pass_classes(rs)
+    _pass_background(rs)
     return _pass_rest(rs)
