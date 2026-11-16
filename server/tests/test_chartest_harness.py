@@ -344,7 +344,9 @@ def test_feat_speed_bonus_reads_the_feat_text(feat, bonus):
 
 
 def test_speed_check_counts_a_speed_feat_and_still_catches_a_wrong_speed(catalog):
-    rec = _run("t3-041-arcane-trickster-levels-13-2024", catalog)  # Elf (Zendikar) 30 + Transmuted Anatomy 5
+    # Elf (Zendikar) 30 + Transmuted Anatomy 5. The species and the background are pinned: the matrix walks the sorted species, so the 16 `_copy`
+    # species of S13 moved the species of every later spec id.
+    rec = _run(_spec_json("t3-041-arcane-trickster-levels-13-2024", catalog, species="elf-(zendikar)-psz", subspecies=None, background="house-ghallanda-heir-efa"), catalog)
     assert "SPEED" not in _failed(rec) and rec["res"]["derived"]["speed"] == 35
     d, res = rec["draft"], copy.deepcopy(rec["res"])
     res["derived"]["speed"] = 30
@@ -390,9 +392,11 @@ def test_skills_check_rejects_a_non_skill_id_but_allows_tool_expertise(samples):
 
 def test_pruned_detector_ignores_stale_filler_picks_and_cap_notes_but_reports_a_persistent_prune(catalog):
     from engine.resolve import resolve
-    assert "W-PRUNED" not in _failed(_run("t1-065-fig2-2024", catalog))   # Kobold skill pick vs Draconic Sorcery variant
-    assert "W-PRUNED" not in _failed(_run("t3-044-feat-asi-caps-2024", catalog))  # "STR is already at maximum (20)"
-    spec = runner.find_spec("t1-065-fig2-2024", catalog)[0]
+    # the species are pinned (S13: the matrix walks the sorted species and the `_copy` species moved the later ids)
+    kobold = dict(species="kobold-mpmm", subspecies=None, background="house-sivis-heir-efa")
+    assert "W-PRUNED" not in _failed(_run(_spec_json("t1-065-fig2-2024", catalog, **kobold), catalog))   # Kobold skill pick vs Draconic Sorcery variant
+    assert "W-PRUNED" not in _failed(_run(_spec_json("t3-044-feat-asi-caps-2024", catalog, species="fairy-mpmm", subspecies=None, background="house-lyrandar-heir-efa"), catalog))  # "STR is already at maximum (20)"
+    spec = runner.find_spec(_spec_json("t1-065-fig2-2024", catalog, **kobold), catalog)[0]
     draft, res = S.resolve_spec(spec, catalog, resolve)
     assert res["pruned"] and "choiceId" in res["pruned"][0]
     persistent = lambda d, c: {"pruned": res["pruned"]}  # noqa: E731  (the prune survives removing the pick: an engine defect)

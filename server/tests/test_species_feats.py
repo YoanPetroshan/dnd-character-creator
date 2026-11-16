@@ -56,10 +56,11 @@ def test_catalog_carries_feat_grants(catalog):
     assert catalog.subraces["human-phb-variant-phb"]["feat_grants"] == [{"count": 1, "category": None}]
 
 
-def test_only_three_records_carry_feat_grants(catalog):
+def test_only_four_records_carry_feat_grants(catalog):
     holders = [r["index"] for r in catalog.races.values() if r.get("feat_grants")]
     holders += [s["index"] for s in catalog.subraces.values() if s.get("feat_grants")]
-    assert sorted(holders) == ["custom-lineage-tce", "human-phb-variant-phb", "human-xphb"]
+    # human-phb-amonkhet-psa is the Amonkhet human, a `_copy` of the Variant Human (S13)
+    assert sorted(holders) == ["custom-lineage-tce", "human-phb-amonkhet-psa", "human-phb-variant-phb", "human-xphb"]
 
 
 def test_srd_races_have_no_feat_grants(catalog):

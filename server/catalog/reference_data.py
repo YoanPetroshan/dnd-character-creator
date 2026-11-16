@@ -606,6 +606,10 @@ SPECIES_RESOURCES: dict[str, dict] = {
         "race": "halfling-xphb", "name": "Luck", "uses": None, "recharge": None,
         "note": "When you roll a 1 on the d20 of a D20 Test, reroll the die and use the new roll",
         "quotes": ("When you roll a 1 on the d20 of a D20 Test, you can reroll the die, and you must use the new roll",)},
+    "kithkin-lfl-trait-2": {  # S13: Kithkin (LFL) is a `_copy` reprint; its Luck is the Halfling's, word for word
+        "race": "kithkin-lfl", "name": "Luck", "uses": None, "recharge": None,
+        "note": "When you roll a 1 on the d20 of a D20 Test, reroll the die and use the new roll",
+        "quotes": ("When you roll a 1 on the d20 of a D20 Test, you can reroll the die, and you must use the new roll",)},
     "human-xphb-trait-0": {
         "race": "human-xphb", "name": "Resourceful", "uses": None, "recharge": "long",
         "note": "You gain Heroic Inspiration whenever you finish a Long Rest",
@@ -834,6 +838,17 @@ SPECIES_RESOURCES_2014.update({
     "goblin-vgm-trait-3": _e("goblin-vgm", "Fury of the Small", 1, "short-or-long",
         "When you damage a creature larger than you, extra damage equal to your level ({level})",
         ("The extra damage equals your level", "you can't use it again until you finish a short or long rest")),
+    # S13 (`_copy` reprints resolved): the same traits under their own ids
+    "goblin-erlw-trait-3": _e("goblin-erlw", "Fury of the Small", 1, "short-or-long",
+        "When you damage a creature larger than you, extra damage equal to your level ({level})",
+        ("The extra damage equals your level", "you can't use it again until you finish a short or long rest")),
+    "goblin-ggr-trait-3": _e("goblin-ggr", "Fury of the Small", 1, "short-or-long",
+        "When you damage a creature larger than you, extra damage equal to your level ({level})",
+        ("The extra damage equals your level", "you can't use it again until you finish a short or long rest")),
+    "boggart-lfl-trait-3": _e("boggart-lfl", "Fury of the Small", "pb", "long",
+        "When you damage a creature larger than you, extra damage equal to your Proficiency Bonus ({pb}); no more than once per turn",
+        ("The extra damage equals your proficiency bonus", "regaining all expended uses when you finish a long rest",
+         "no more than once per turn")),
     "goliath-mpmm-trait-2": _e("goliath-mpmm", "Stone's Endurance", "pb", "long",
         "Reaction when you take damage: roll 1d12 + your Constitution modifier ({con_mod:+d}) and reduce the damage by that total",
         ("roll a d12. Add your Constitution modifier to the number rolled and reduce the damage by that total", _PB_LONG), die="1d12"),
@@ -864,6 +879,9 @@ SPECIES_RESOURCES_2014.update({
         "When you miss with an attack or fail an ability check or saving throw, add a bonus equal to the allies you can see within 30 feet (maximum +3)",
         ("a bonus to the roll equal to the number of allies you can see within 30 feet of you (maximum bonus of +3)", _PB_LONG)),
     "hobgoblin-vgm-trait-4": _e("hobgoblin-vgm", "Saving Face", 1, "short-or-long",
+        "When you miss with an attack or fail an ability check or saving throw, add a bonus equal to the allies you can see within 30 feet (maximum +5)",
+        ("(maximum bonus of +5)", "you can't use it again until you finish a short or long rest")),
+    "hobgoblin-erlw-trait-4": _e("hobgoblin-erlw", "Saving Face", 1, "short-or-long",  # S13: the `_copy` reprint
         "When you miss with an attack or fail an ability check or saving throw, add a bonus equal to the allies you can see within 30 feet (maximum +5)",
         ("(maximum bonus of +5)", "you can't use it again until you finish a short or long rest")),
     # --- Halfling (PHB), Kor: WF, word-for-word the SRD Lucky (note only; the PHB text omits "the d20")
@@ -1049,6 +1067,8 @@ FLY_ARMOR_BAN: dict[str, dict] = {
     "fairy-mpmm-trait-2": {"race": "fairy-mpmm", "name": "Fairy", "categories": _FLY_MEDIUM_HEAVY,
                            "quote": "You can't use this flying speed if you're wearing medium or heavy armor."},
     "fairy-wbtw-trait-1": {"race": "fairy-wbtw", "name": "Fairy", "categories": _FLY_MEDIUM_HEAVY,
+                           "quote": "You can't use this flying speed if you're wearing medium or heavy armor."},
+    "faerie-lfl-trait-2": {"race": "faerie-lfl", "name": "Flight", "categories": _FLY_MEDIUM_HEAVY,  # S13: the `_copy` reprint of Fairy (MPMM)
                            "quote": "You can't use this flying speed if you're wearing medium or heavy armor."},
     "owlin-scc-trait-2": {"race": "owlin-scc", "name": "Owlin", "categories": _FLY_MEDIUM_HEAVY,
                           "quote": "You can't use this flying speed if you're wearing medium or heavy armor."},
@@ -6246,6 +6266,8 @@ SPECIES_NATURAL_WEAPONS: dict[str, dict] = {
         "quote": 'the strike deals {@damage 1d6} + your Strength modifier slashing damage'},
     "centaur-ggr-trait-5": {"name": "Hooves", "die": "1d4", "type": "bludgeoning", "ability": "STR",
         "quote": 'you deal bludgeoning damage equal to {@damage 1d4} + your Strength modifier'},
+    "centaur-mot-trait-5": {"name": "Hooves", "die": "1d4", "type": "bludgeoning", "ability": "STR",  # S13: `_copy` of Centaur (GGR)
+        "quote": 'you deal bludgeoning damage equal to {@damage 1d4} + your Strength modifier'},
     "centaur-mpmm-trait-3": {"name": "Hooves", "die": "1d6", "type": "bludgeoning", "ability": "STR",
         "quote": 'the strike deals {@damage 1d6} + your Strength modifier bludgeoning damage'},
     "dhampir-rhw-trait-3": {"name": "Vampiric Bite", "die": "1d4", "type": "piercing", "ability": "CON",
@@ -6263,6 +6285,8 @@ SPECIES_NATURAL_WEAPONS: dict[str, dict] = {
     "lizardfolk-vgm-trait-3": {"name": "Bite", "die": "1d6", "type": "piercing", "ability": "STR",
         "quote": 'you deal piercing damage equal to {@damage 1d6} + your Strength modifier'},
     "minotaur-ggr-trait-4": {"name": "Horns", "die": "1d6", "type": "piercing", "ability": "STR",
+        "quote": 'you deal piercing damage equal to {@damage 1d6} + your Strength modifier'},
+    "minotaur-mot-trait-4": {"name": "Horns", "die": "1d6", "type": "piercing", "ability": "STR",  # S13: `_copy` of Minotaur (GGR)
         "quote": 'you deal piercing damage equal to {@damage 1d6} + your Strength modifier'},
     "minotaur-mpmm-trait-0": {"name": "Horns", "die": "1d6", "type": "piercing", "ability": "STR",
         "quote": 'the strike deals {@damage 1d6} + your Strength modifier piercing damage'},

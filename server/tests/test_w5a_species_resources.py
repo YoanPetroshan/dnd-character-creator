@@ -84,7 +84,9 @@ def test_scan_every_2024_species_trait_with_a_rest_or_use_rule_is_modelled_or_li
     """Scan of catalog.traits for the 2024 species: nothing with a use count / rest rule is silently missed."""
     skipped = {  # trait id -> why (no use count; a rest only changes what the trait lets you swap or do)
         "elf-xphb-trait-1": "Elven Lineage: innate spells already modelled", "tiefling-xphb-trait-1": "Fiendish Legacy: innate spells already modelled",
-        "elf-xphb-trait-4": "Trance: 4-hour rest, no uses", "reborn-rhw-trait-1": "Everlasting: 4-hour rest, no uses",
+        "elf-xphb-trait-4": "Trance: 4-hour rest, no uses",
+        "elf-lfl-trait-1": "Elven Lineage (LFL, a `_copy` of the XPHB Elf): innate spells already modelled",
+        "elf-lfl-trait-4": "Trance (LFL): 4-hour rest, no uses", "reborn-rhw-trait-1": "Everlasting: 4-hour rest, no uses",
         "warforged-efa-trait-2": "Sentry's Rest: 6-hour rest, no uses",
         "kalashtar-efa-trait-3": "Severed from Dreams: skill swap per Long Rest, no uses",
         "khoravar-efa-trait-2": "Fey Gift: cantrip swap per Long Rest, no uses",

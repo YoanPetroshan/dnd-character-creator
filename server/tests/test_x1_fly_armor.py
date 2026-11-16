@@ -42,6 +42,8 @@ RECORDS = {
                          "You can't use your flying speed while you wear medium or heavy armor."),
     "fairy-mpmm-trait-2": ("fairy-mpmm", None, ("Medium", "Heavy"),
                            "You can't use this flying speed if you're wearing medium or heavy armor."),
+    "faerie-lfl-trait-2": ("faerie-lfl", None, ("Medium", "Heavy"),  # S13: the `_copy` reprint of Fairy (MPMM)
+                           "You can't use this flying speed if you're wearing medium or heavy armor."),
     "fairy-wbtw-trait-1": ("fairy-wbtw", None, ("Medium", "Heavy"),
                            "You can't use this flying speed if you're wearing medium or heavy armor."),
     "owlin-scc-trait-2": ("owlin-scc", None, ("Medium", "Heavy"),

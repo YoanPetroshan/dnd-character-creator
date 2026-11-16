@@ -433,7 +433,9 @@ def _plain(text) -> str:
 
 
 def _race_strings(name, source):
-    rec = next(r for r in _races_json()["race"] if r["name"] == name and r["source"] == source)
+    from catalog.official.common import resolve_copies  # S13: a `_copy` record has its parent's entries
+
+    rec = next(r for r in resolve_copies(_races_json()["race"]) if r["name"] == name and r["source"] == source)
     out = []
 
     def walk(o):
@@ -615,17 +617,19 @@ def test_vf2_2_it_replaces_the_half_bonus_of_jack_of_all_trades(catalog):
 # race record -> trait name (every race record whose entries say it; found by scanning races.json, `_copy` records are not imported)
 VF2_3 = {
     "bugbear-erlw": "Powerful Build", "bugbear-mpmm": "Powerful Build", "bugbear-vgm": "Powerful Build",
-    "centaur-ggr": "Equine Build", "centaur-mpmm": "Equine Build",
+    "centaur-ggr": "Equine Build", "centaur-mot": "Equine Build", "centaur-mpmm": "Equine Build",  # centaur-mot, orc-egw: S13 `_copy` records
     "firbolg-mpmm": "Powerful Build", "firbolg-vgm": "Powerful Build",
     "giff-aag": "Hippo Build",
     "goliath-mpmm": "Little Giant", "goliath-vgm": "Powerful Build", "goliath-xphb": "Powerful Build",
     "loxodon-ggr": "Powerful Build",
-    "orc-erlw": "Powerful Build", "orc-mpmm": "Powerful Build", "orc-vgm": "Powerful Build",
+    "orc-egw": "Powerful Build", "orc-erlw": "Powerful Build", "orc-mpmm": "Powerful Build", "orc-vgm": "Powerful Build",
 }
 
 
 def test_vf2_3_data_every_record_with_the_text(catalog):
-    raw = {f"{r['name'].lower().replace(' ', '-')}-{r['source'].lower()}": r for r in _races_json()["race"]}
+    from catalog.official.common import resolve_copies  # S13: the `_copy` reprints are full records now
+
+    raw = {f"{r['name'].lower().replace(' ', '-')}-{r['source'].lower()}": r for r in resolve_copies(_races_json()["race"])}
     found = {}
     for rid, rec in raw.items():
         if "_copy" in rec:
@@ -927,8 +931,8 @@ def _overwriting_subraces(catalog):
 
 def test_vf2_5_the_pairs(catalog):
     pairs = _overwriting_subraces(catalog)
-    assert len(pairs) == 33   # 33 official subraces replace at least one race trait (56 replaced trait names)
-    assert sum(len(s["overwrites_traits"]) for s in pairs.values()) == 56
+    assert len(pairs) == 34   # 34 official subraces replace at least one race trait (58 replaced trait names; S13: + Amonkhet Human, Age and Languages)
+    assert sum(len(s["overwrites_traits"]) for s in pairs.values()) == 58
 
 
 def test_vf2_5_every_replaced_race_trait_is_listed_only_as_the_subraces_own(catalog):
@@ -950,7 +954,7 @@ def test_vf2_5_every_replaced_race_trait_is_listed_only_as_the_subraces_own(cata
         for name in race_names:
             if name not in sub["overwrites_traits"] and not name.startswith("Skill Proficiency") and name != "Tool Proficiency":
                 assert name in names, (sid, name)
-    assert checked == 56
+    assert checked == 58
 
 
 def test_vf2_5_draconblood_and_ravenite(catalog):
@@ -1528,7 +1532,9 @@ def test_vf7_3_taken_enemy_types_are_disabled_later_and_stored_duplicates_pruned
 def _perf_spec_draft(catalog):
     from tools.chartest.runner import find_spec
     from tools.chartest.spec import resolve_spec
-    spec = find_spec("t2-126-fig19-sor1-mixed", catalog)[0]
+    # the species is pinned (Shifter, ERLW): the matrix walks the sorted species and S13's `_copy` species moved the later ids
+    base = find_spec("t2-126-fig19-sor1-mixed", catalog)[0]
+    spec = find_spec(json.dumps({**json.loads(base.to_json()), "species": "shifter-erlw", "subspecies": None, "background": "volstrucker-agent-egw"}), catalog)[0]
     draft, _res = resolve_spec(spec, catalog, resolve)
     assert draft["preferences"]["usePrerequisites"]["feats"] is True
     return draft
@@ -1581,7 +1587,7 @@ def _trait_text(catalog, trait_id):
 def test_vf7_5_natural_weapon_table_matches_the_trait_sentences(catalog):
     from catalog import reference_data as ref
     import re
-    assert len(ref.SPECIES_NATURAL_WEAPONS) == 21
+    assert len(ref.SPECIES_NATURAL_WEAPONS) == 23  # 21 + Centaur and Minotaur (MOT), `_copy` records of S13
     for tid, spec in ref.SPECIES_NATURAL_WEAPONS.items():
         text = _trait_text(catalog, tid)
         assert spec["quote"] in text, tid
@@ -1597,7 +1603,7 @@ def test_vf7_5_natural_weapon_table_matches_the_trait_sentences(catalog):
 
 
 def test_vf7_5_every_species_trait_that_says_unarmed_strike_or_natural_weapon_is_in_the_table_or_listed(catalog):
-    """Scan of the 153 imported species: a trait whose text says "natural weapon" / "make unarmed strikes" is modelled here or
+    """Scan of the 169 imported species (153 + the 16 `_copy` reprints of S13): a trait whose text says "natural weapon" / "make unarmed strikes" is modelled here or
     explicitly deferred below (with the reason in ARCHITECTURE VF7.5)."""
     from catalog import reference_data as ref
     import re

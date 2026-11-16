@@ -82,7 +82,7 @@ def test_feat_tags(catalog):
 def test_2024_race_count(catalog):
     from collections import Counter
     c = Counter(r["ruleset"] for r in catalog.races.values())
-    assert c["2024"] == 18  # XPHB 10 + EFA 5 + RHW 3
+    assert c["2024"] == 20  # XPHB 10 + EFA 5 + RHW 3 + LFL 2 (Elf, Kithkin: `_copy` reprints resolved by S13)
 
 
 # --- 10.4 /api/catalog filtering ---
@@ -101,8 +101,8 @@ def _cat(client, query=""):
 
 def test_catalog_unfiltered_is_complete(client):
     data = _cat(client)
-    assert len(data["species"]) == 153
-    assert len(data["backgrounds"]) == 136
+    assert len(data["species"]) == 169  # 153 + the 16 `_copy` species of S13
+    assert len(data["backgrounds"]) == 162  # 136 + the 26 `_copy` backgrounds of S13
     assert {"id": "PHB", "name": "Player's Handbook (2014)"}.items() <= next(s for s in data["sources"] if s["id"] == "PHB").items()
     assert all(s["count"] > 0 for s in data["sources"])
     assert all(s["id"] != "SRD" for s in data["sources"])

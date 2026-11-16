@@ -94,7 +94,8 @@ def test_every_background_gaming_card_offers_exactly_the_four(catalog, ruleset, 
         res = resolve(_draft(bg_id, ruleset, sources), catalog)
         for card in _gaming_cards(res):
             ids = [o["id"] for o in card["options"]]
-            if card["id"] == "background:soldier-phb:equipment-choice-0":  # the PHB text itself: "bone dice or deck of cards"
+            # the PHB text itself: "bone dice or deck of cards"; Baldur's Gate Soldier (BGDIA, a `_copy` of it, S13) has the same
+            if card["id"] in ("background:soldier-phb:equipment-choice-0", "background:baldurs-gate-soldier-bgdia:equipment-choice-0"):
                 assert ids == ["dice-set", "playing-card-set"]
                 continue
             assert ids == FOUR or set(ids) > set(FOUR), (bg_id, card["id"], ids)  # catalog-wide "any tool" is a superset

@@ -81,9 +81,9 @@ def test_goliath_variants_carry_no_data_keys(catalog):
     assert all(not v["resist"] and not v["innate_spells"] and v["speed"] is None and v["darkvision"] is None for v in variants)
 
 
-def test_thirteen_races_have_variants(catalog):
+def test_fourteen_races_have_variants(catalog):
     with_variants = sorted(r["index"] for r in catalog.races.values() if r.get("variants"))
-    assert len(with_variants) == 13
+    assert len(with_variants) == 14  # 13 + Elf (LFL), a `_copy` of Elf (XPHB) resolved by S13
     assert "aetherborn-psk" not in with_variants  # appendArr only: nothing to choose between
     assert catalog.races["aetherborn-psk"]["variants"] == []
     assert catalog.races["dwarf"].get("variants", []) == []
