@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 
 import sheet_layout as L
 from catalog.reference_data import LANGUAGE_NAMES, SKILL_ABILITY, SKILL_NAMES, proficiency_label
-from export_fields import _DAMAGE_SECTIONS, _title, fmt_mod, fmt_spell_slots, resource_line, species_label
+from export_fields import defense_lines, fmt_mod, fmt_spell_slots, resource_line, species_label
 from export_labels import DEFAULT_LANG, check_lang, label, sheet_label, weight, word
 
 STANDARD_ACTIONS = ("Attack", "Dash", "Disengage", "Dodge", "Help", "Hide", "Influence", "Magic", "Ready", "Search",
@@ -425,7 +425,8 @@ def _weapon_rows(resolution: dict, catalog, lang: str) -> list[tuple[str, str, s
     for a in resolution["derived"].get("attacks") or []:
         damage = ""
         if a.get("damage"):
-            damage = f"{a['damage']} {word(lang, 'damage', a['damageType'])}" if a.get("damageType") else a["damage"]
+            # S07 (Q3 = B): the damage type as the Markdown / PDF write it (English in both languages)
+            damage = f"{a['damage']} {a['damageType']}" if a.get("damageType") else a["damage"]
         notes = []
         if a.get("versatileDamage"):
             notes.append(label(lang, "attackVersatile", dice=a["versatileDamage"]))
@@ -451,7 +452,7 @@ def _weapon_rows(resolution: dict, catalog, lang: str) -> list[tuple[str, str, s
             how = _save_or_attack(spell, attack)
             hit = how if how in ("--",) or how.startswith(("+", "-")) else f"{how} {dc}" if dc is not None else how
             dice = _cantrip_dice(spell, level)
-            types = [word(lang, "damage", t) for t in (spell.get("damage_inflict") or [(spell.get("damage") or {}).get("damage_type", {}).get("index")]) if t]
+            types = [t for t in (spell.get("damage_inflict") or [(spell.get("damage") or {}).get("damage_type", {}).get("index")]) if t]
             damage = f"{dice} {', '.join(types)}".strip()
             rows.append((s["name"], hit, damage, compact_range(spell.get("range", ""))))
     return rows
@@ -471,14 +472,7 @@ def _skill_rows(resolution: dict) -> dict[str, tuple[str, str, str]]:
 
 
 def _defenses(sheet: dict, lang: str) -> list[str]:
-    blocks = []
-    damage = sheet.get("damageModifiers") or {}
-    for key, label_key in _DAMAGE_SECTIONS:
-        if damage.get(key):
-            blocks.append(f"{label(lang, label_key)}: " + ", ".join(_title(d) for d in damage[key]))
-    if sheet.get("conditionImmunities"):
-        blocks.append(f"{label(lang, 'conditionImmunities')}: " + ", ".join(_title(c) for c in sheet["conditionImmunities"]))
-    return blocks
+    return defense_lines(sheet, lang)  # S07: the same lines as the Markdown / PDF
 
 
 def _shortest_that_fits(options: list[str], field: str) -> str:

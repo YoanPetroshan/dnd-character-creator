@@ -66,6 +66,20 @@ def _title(slug: str) -> str:
     return slug.replace("-", " ").capitalize()
 
 
+def defense_lines(sheet: dict, lang: str = DEFAULT_LANG) -> list[str]:
+    """The resistance / immunity / vulnerability / condition-immunity lines, the one place that writes them: the
+    Markdown, the PDF and the fillable sheet call it (S07), so the damage types are spelled the same everywhere."""
+    lines = []
+    damage = sheet.get("damageModifiers") or {}
+    for key, label_key in _DAMAGE_SECTIONS:
+        if damage.get(key):
+            lines.append(f"{label(lang, label_key)}: " + ", ".join(_title(d) for d in damage[key]))
+    conditions = sheet.get("conditionImmunities") or []
+    if conditions:
+        lines.append(f"{label(lang, 'conditionImmunities')}: " + ", ".join(_title(c) for c in conditions))
+    return lines
+
+
 def expertise_label(entry: str) -> str:
     return SKILL_NAMES.get(entry) or proficiency_label(entry)
 
@@ -211,15 +225,10 @@ def extra_blocks(resolution: dict, lang: str = DEFAULT_LANG) -> list[tuple[str, 
         blocks.append(("h2", label(lang, "secExpertise")))
         blocks.append(("body", ", ".join(expertise_label(e) for e in expertise)))
 
-    damage = sheet.get("damageModifiers") or {}
-    conditions = sheet.get("conditionImmunities") or []
-    if any(damage.get(k) for k, _ in _DAMAGE_SECTIONS) or conditions:
+    lines = defense_lines(sheet, lang)
+    if lines:
         blocks.append(("h2", label(lang, "secResistances")))
-        for key, label_key in _DAMAGE_SECTIONS:
-            if damage.get(key):
-                blocks.append(("bullet", f"{label(lang, label_key)}: " + ", ".join(_title(d) for d in damage[key])))
-        if conditions:
-            blocks.append(("bullet", f"{label(lang, 'conditionImmunities')}: " + ", ".join(_title(c) for c in conditions)))
+        blocks.extend(("bullet", line) for line in lines)
 
     attacks = derived.get("attacks") or []
     per_action = derived.get("attacksPerAction") or 1
