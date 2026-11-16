@@ -491,8 +491,19 @@ def _shortest_that_fits(options: list[str], field: str) -> str:
     return min(options, key=len)
 
 
-def _paragraphs(text: str | None) -> list[str]:
-    return [p for p in re.split(r"\n\s*\n", (text or "").strip()) if p.strip()]
+MAX_FREE_TEXT = 20_000  # Q5 = A: characters of one free-text section kept on the sheet (the Markdown / YAML exports keep all)
+
+
+def _capped(text: str | None, lang: str) -> str:
+    """``text`` stripped, and cut to MAX_FREE_TEXT characters with a visible closing note when it is longer."""
+    text = (text or "").strip()
+    if len(text) <= MAX_FREE_TEXT:
+        return text
+    return text[:MAX_FREE_TEXT].rstrip() + "\n\n" + sheet_label(lang, "textCut", max=MAX_FREE_TEXT)
+
+
+def _paragraphs(text: str | None, lang: str = DEFAULT_LANG) -> list[str]:
+    return [p for p in re.split(r"\n\s*\n", _capped(text, lang)) if p.strip()]
 
 
 def build_sheet_data(resolution: dict, catalog, lang: str = DEFAULT_LANG, ruleset: str | None = None) -> SheetData:
@@ -609,11 +620,11 @@ def build_sheet_data(resolution: dict, catalog, lang: str = DEFAULT_LANG, rulese
     allies = []
     for key, head in (("allies", "headAllies"), ("organizations", "headOrganizations"), ("enemies", "headEnemies")):
         if details.get(key):
-            allies.append(sheet_label(lang, head) + "\n" + details[key].strip())
+            allies.append(sheet_label(lang, head) + "\n" + _capped(details[key], lang))
     blocks["Allies"] = allies
     for key, field_name in (("personalityTraits", "Personality"), ("ideals", "Ideals"), ("bonds", "Bonds"), ("flaws", "Flaws"),
                             ("backstory", "Backstory"), ("notes", "Notes1")):
-        blocks[field_name] = _paragraphs(details.get(key))
+        blocks[field_name] = _paragraphs(details.get(key), lang)
 
     # features flow
     desc = _Descriptions(catalog, sheet, ruleset)

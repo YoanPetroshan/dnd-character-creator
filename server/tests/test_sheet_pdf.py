@@ -280,7 +280,7 @@ def test_page_four_fields_and_the_shared_character_name(lang, catalog):
 
 def test_long_backstory_continues_on_notes_pages_without_loss(catalog):
     res = __import__("copy").deepcopy(resolution("paladin6", catalog))
-    paragraphs = [f"Chapter {i}. " + "the story goes on and on " * 40 for i in range(60)]
+    paragraphs = [f"Chapter {i}. " + "the story goes on and on " * 40 for i in range(19)]  # 19 x ~1000 characters: under the 20 000 cap of S04 (Q5)
     res["sheet"]["details"] = {"backstory": "\n\n".join(paragraphs), "notes": "\n\n".join("note " * 100 for _ in range(30))}
     r = reader(sheet_pdf.to_sheet(res, "en", catalog, CREATED, "2014"))
     f = r.get_fields()
@@ -290,8 +290,8 @@ def test_long_backstory_continues_on_notes_pages_without_loss(catalog):
     for n in cont:
         words += str(f[n].get("/V") or "").split()
     got = " ".join(words)
-    assert got.count("Chapter ") == 60
-    assert "Chapter 0." in got and "Chapter 59." in got and got.index("Chapter 5.") < got.index("Chapter 59.")
+    assert got.count("Chapter ") == 19
+    assert "Chapter 0." in got and "Chapter 18." in got and got.index("Chapter 5.") < got.index("Chapter 18.")
     assert (got + " " + f["Notes1"]["/V"] + " ").count("note ") == 3000
     assert len(r.pages) >= 6
     _fits_everywhere(r)

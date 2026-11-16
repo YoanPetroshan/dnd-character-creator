@@ -77,3 +77,31 @@ def test_a_5000_character_backstory_exports_a_sheet_in_under_two_seconds(backsto
     seconds = time.perf_counter() - t
     assert status == 200 and out[:4] == b"%PDF"
     assert seconds < 2.0, f"{seconds:.1f} s"
+
+
+# ---- Q5 = A: free text of a section is capped at 20 000 characters, with a visible note ---------------------------------
+
+@needs_data
+@pytest.mark.parametrize("lang,note", [("en", "cut to 20000 characters"), ("bg", "съкратен до 20000 знака")])
+@pytest.mark.parametrize("key", ["backstory", "notes", "allies", "personalityTraits"])
+def test_free_text_over_20000_characters_is_cut_with_a_visible_note(key, lang, note):
+    import sheet_data
+    from catalog.loader import load
+    from engine.resolve import resolve
+
+    catalog = load()
+
+    def texts(text):
+        draft = exportable_draft()
+        draft["details"] = {key: text}
+        data = sheet_data.build_sheet_data(resolve(draft, catalog), catalog, lang, "mixed")
+        values = data.as_dict()
+        field = {"backstory": "Backstory", "notes": "Notes1", "allies": "Allies", "personalityTraits": "Personality"}[key]
+        return "\n".join([str(values.get(field, "")), *(b.text for b in data.flow), *(t for rest in data.overflow.values() for t in rest)])
+
+    long = ("word " * 6000).strip()  # 29 999 characters
+    out = texts(long)
+    assert note in out
+    assert out.count("word") <= 20000 // 5 + 1  # nothing beyond the cap is kept
+    ok = ("word " * 3999).strip()  # 19 995 characters: untouched
+    assert note not in texts(ok)
