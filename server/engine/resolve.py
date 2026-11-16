@@ -945,7 +945,7 @@ def _visible_spell_ids(catalog: Catalog, sources, ruleset: str):
     reference to the spells dict and its size, so a patched or reloaded catalog never reads a stale set.
     Returns None (caller falls back to per-spell checks) for unhashable `sources`."""
     try:
-        key = (id(catalog.spells), len(catalog.spells), tuple(sources) if sources else (), ruleset)
+        key = (id(catalog.spells), len(catalog.spells), tuple(sorted(sources, key=str)) if sources else (), ruleset)
         hash(key)
     except TypeError:
         return None
@@ -1476,6 +1476,24 @@ def _apply_asi_progression(
     return scores_by_level, running, blocked_feat_cids
 
 
+MAX_SOURCES = 100  # Q5: more distinct books than this are ignored (the catalog has fewer than 50)
+
+
+def _normalised_sources(raw) -> tuple[frozenset | None, bool]:
+    """`draft.sources` as a frozenset of at most MAX_SOURCES distinct lowercase strings (other entries are dropped), plus
+    whether the list had more than that. None when there is nothing to filter by. The slice is taken before any work on the
+    list, so 100 000 entries cost no more than 100."""
+    if not isinstance(raw, list) or not raw:
+        return None, False
+    kept: set[str] = set()
+    for entry in raw:
+        if isinstance(entry, str):
+            kept.add(entry.lower())
+            if len(kept) > MAX_SOURCES:
+                return frozenset(sorted(kept)[:MAX_SOURCES]), True
+    return (frozenset(kept) if kept else None), False
+
+
 def _source_allowed(record: dict, sources) -> bool:
     """The ONE draft.sources filter, shared by species, subspecies,
     backgrounds and feats: no filtering when `sources` is empty or absent; a
@@ -1486,6 +1504,8 @@ def _source_allowed(record: dict, sources) -> bool:
     source = record.get("source") or ""
     if not source or source.upper() == "SRD":
         return True
+    if isinstance(sources, frozenset):  # already lowercase (resolve() normalises draft.sources once)
+        return source.lower() in sources
     try:
         allowed_sources = _lowered_sources(tuple(sources))
     except TypeError:  # unhashable junk in a hand-edited draft: no cache
@@ -5300,6 +5320,12 @@ def _stale_pick_name(catalog: Catalog, pick: str, feats: bool = True):
 def resolve(draft: dict, catalog: Catalog) -> dict:
     draft, problems = normalize_draft(draft)
     warnings: list[dict] = []
+    # API-02: `sources` is read once into a bounded lowercase set that every filter below receives
+    sources_set, too_many_sources = _normalised_sources(draft.get("sources"))
+    if sources_set is not None:
+        draft["sources"] = sources_set
+    if too_many_sources:
+        warnings.append({"id": "sources-too-many", "message": msg("sources-too-many", max=MAX_SOURCES)})
 
     classes_raw = draft.get("classes")
     if classes_raw is None:
@@ -6912,7 +6938,7 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
         if rc_hit_die is None:
             continue
         rc_hp_rolls_raw = classes[rc["index"]].get("hpRolls") if rc["index"] < len(classes) else None
-        rc_hp_rolls = {k: v for k, v in rc_hp_rolls_raw.items() if isinstance(v, int)} if isinstance(rc_hp_rolls_raw, dict) else {}
+        rc_hp_rolls = {k: v for k, v in rc_hp_rolls_raw.items() if isinstance(v, int) and not isinstance(v, bool)} if isinstance(rc_hp_rolls_raw, dict) else {}
         if hp_type == "manual" and isinstance(rc_hp_rolls_raw, dict):
             # Round-2 F11: a roll outside 1..hit die is replaced by the average
             # (derived.hit_point_gain_per_level) - say so instead of staying silent.

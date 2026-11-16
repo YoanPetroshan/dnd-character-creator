@@ -25,6 +25,8 @@ KNOWN_GAPS = {
     # a species / background feat pick whose feat has a structured prerequisite: no Origin feat in the data has one
     r"feat\-prerequisite\-unmet\-.*?  ||  .*?'s\ prerequisite\ isn't\ met,\ so\ the\ .*?\ pick\ isn't\ applied\.",
     r"feat\-prerequisite\-unmet\-.*?  ||  .*?'s\ prerequisite\ isn't\ met\.",
+    # S03: needs a source list of more than 100 distinct books; tests/test_robustness_s03.py triggers it
+    r"sources\-too\-many  ||  Only\ the\ first\ .*?\ distinct\ books\ of\ the\ source\ list\ are\ used;\ the\ rest\ were\ ignored\.",
 }
 
 

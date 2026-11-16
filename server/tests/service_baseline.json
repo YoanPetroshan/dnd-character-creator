@@ -346,8 +346,8 @@
   "status": 400
  },
  "export-markdown-invalid-json": {
-  "bodyLength": 221,
-  "bodySha256": "b6d43f16aaf0bcb51f7b4ad075d8a71c8429dda0a83f78df36ef8c981315629e",
+  "bodyLength": 51,
+  "bodySha256": "6455770f112268fe478a5d50bda651ff153a5df44c388fb4fd87a4f8d1a011a9",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -518,8 +518,8 @@
   "status": 400
  },
  "export-pdf-invalid-json": {
-  "bodyLength": 221,
-  "bodySha256": "b6d43f16aaf0bcb51f7b4ad075d8a71c8429dda0a83f78df36ef8c981315629e",
+  "bodyLength": 51,
+  "bodySha256": "6455770f112268fe478a5d50bda651ff153a5df44c388fb4fd87a4f8d1a011a9",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -681,8 +681,8 @@
   "status": 400
  },
  "export-sheet-invalid-json": {
-  "bodyLength": 221,
-  "bodySha256": "b6d43f16aaf0bcb51f7b4ad075d8a71c8429dda0a83f78df36ef8c981315629e",
+  "bodyLength": 51,
+  "bodySha256": "6455770f112268fe478a5d50bda651ff153a5df44c388fb4fd87a4f8d1a011a9",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -844,8 +844,8 @@
   "status": 400
  },
  "export-yaml-invalid-json": {
-  "bodyLength": 221,
-  "bodySha256": "b6d43f16aaf0bcb51f7b4ad075d8a71c8429dda0a83f78df36ef8c981315629e",
+  "bodyLength": 51,
+  "bodySha256": "6455770f112268fe478a5d50bda651ff153a5df44c388fb4fd87a4f8d1a011a9",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -1142,20 +1142,20 @@
   "status": 200
  },
  "resolve-invalid-json": {
-  "bodyLength": 1948,
-  "bodySha256": "b3ae4fd8c3a0428c12293350f201a7d8599e4939d496ef301e0d82117bf1740d",
+  "bodyLength": 51,
+  "bodySha256": "6455770f112268fe478a5d50bda651ff153a5df44c388fb4fd87a4f8d1a011a9",
   "headers": {
    "Content-Type": "application/json"
   },
-  "status": 200
+  "status": 400
  },
  "resolve-invalid-utf8": {
-  "bodyLength": 1948,
-  "bodySha256": "b3ae4fd8c3a0428c12293350f201a7d8599e4939d496ef301e0d82117bf1740d",
+  "bodyLength": 51,
+  "bodySha256": "6455770f112268fe478a5d50bda651ff153a5df44c388fb4fd87a4f8d1a011a9",
   "headers": {
    "Content-Type": "application/json"
   },
-  "status": 200
+  "status": 400
  },
  "resolve-json-charset-ct": {
   "bodyLength": 8214,

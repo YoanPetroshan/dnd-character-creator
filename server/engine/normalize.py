@@ -13,7 +13,7 @@ import re
 from i18n.messages import msg
 
 ABILITIES = ("STR", "DEX", "CON", "INT", "WIS", "CHA")
-_INT_STR = re.compile(r"^\s*[+-]?\d+\s*$")
+_INT_STR = re.compile(r"^\s*[+-]?\d{1,12}\s*$")  # API-01: int() refuses > 4300 digits, and no real value needs more than 12
 
 
 def coerce_int(value):

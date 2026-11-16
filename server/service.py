@@ -127,6 +127,7 @@ def _args(query) -> dict[str, str]:
 # VF7.6: a draft is about 8 levels deep; a body nested deeper than this is refused with a 400 (docs/API.md). The same limit and
 # text are in `frontend/src/api/engineCore.ts` for the offline worker.
 MAX_JSON_DEPTH = 64
+UNREADABLE_BODY = "The request body is not readable JSON."
 TOO_DEEP = f"The request body is nested too deeply (at most {MAX_JSON_DEPTH} levels)."
 # Flask enforces the 1 MB limit itself (MAX_CONTENT_LENGTH, `app.py`); the offline worker has no Flask, so the service knows the
 # limit and the text too (Werkzeug's RequestEntityTooLarge description, what the 413 always said).
@@ -183,10 +184,12 @@ def _json_draft(body) -> dict | None:
         raise _RejectedBody(_error(PAYLOAD_TOO_LARGE, 413))  # a caller other than Flask (which refuses it before the route runs)
     if _raw_depth_exceeds(body, MAX_JSON_DEPTH):  # also for a body json.loads cannot read: the same 400 the worker gives
         raise _RejectedBody(_error(TOO_DEEP, 400))
+    if not (body.strip() if isinstance(body, (str, bytes, bytearray)) else body):
+        return {}  # an absent body is an empty draft, as before
     try:
         parsed = json.loads(body)
-    except ValueError:  # includes JSONDecodeError and UnicodeDecodeError, what get_json(silent=True) swallowed
-        return {}
+    except ValueError:  # JSONDecodeError, UnicodeDecodeError, a number over 4300 digits: Q4 = B, unreadable is a 400, not an empty draft
+        raise _RejectedBody(_error(UNREADABLE_BODY, 400)) from None
     except RecursionError:  # cannot happen under the depth limit; kept as the last line of defence
         raise _RejectedBody(_error(TOO_DEEP, 400)) from None
     if parsed is None:
@@ -536,6 +539,20 @@ _EXPORT_RENDERERS = {
 }
 
 
+_NAME_DROPPED = re.compile("[\\x00-\\x1f\\x7f\u202a-\u202e\u2066-\u2069]")  # control and bidi-override characters (API-05)
+_WINDOWS_DEVICE = re.compile(r"(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?", re.I | re.S)
+
+
+def _download_name(raw, fallback: str) -> str:
+    """The draft name as a safe download filename stem: path / header-hostile characters replaced or dropped, cut to
+    MAX_DOWNLOAD_NAME (VF7.6: the sheet keeps the whole name), no trailing dots or spaces (Windows drops them), the fallback
+    when nothing is left, and a leading `_` on a reserved Windows device name (CON, PRN, AUX, NUL, COM1-9, LPT1-9)."""
+    name = _NAME_DROPPED.sub("", re.sub(r'[\\/:*?"<>|]', "_", str(raw or fallback)))[:MAX_DOWNLOAD_NAME].rstrip(" .")
+    if not name:
+        name = fallback
+    return "_" + name if _WINDOWS_DEVICE.fullmatch(name) else name
+
+
 MAX_DOWNLOAD_NAME = 200  # characters of the draft name kept in the download filename (Content-Disposition), documented in docs/API.md
 
 
@@ -560,7 +577,7 @@ def api_export(args, body, fmt: str):
     file_lang = lang if args.get("lang") is not None else EXPORT_DEFAULT_LANG
     # a nameless draft downloads as "character" (no lang, as before XL) or as the language's word (lang given)
     fallback = export_label(lang, "filenameFallback") if args.get("lang") is not None else "character"
-    name = re.sub(r'[\\/:*?"<>|]', "_", str(draft.get("name") or fallback))[:MAX_DOWNLOAD_NAME]  # VF7.6: cut, the sheet keeps the whole name
+    name = _download_name(draft.get("name"), fallback)
     filename = urllib.parse.quote(f"{name}.{extension}", safe="")
     if fmt == "yaml":  # the YAML document is the data as it is: no localized labels, nothing to translate
         out = renderer(resolution)
