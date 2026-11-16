@@ -35,15 +35,26 @@ export function chooseEngine(env: EngineEnvironment): EngineChoice {
 
 /** Does the server answer `<base>pyodide/pack.json` with the pack's JSON? (A dev server or the SPA catch-all answers a
  *  missing file with index.html and status 200, so the body is checked.) */
-export async function detectPack(fetchImpl: typeof fetch, baseUrl: string): Promise<boolean> {
-  try {
-    const resp = await fetchImpl(`${baseUrl}pyodide/pack.json`, { cache: "no-cache" });
-    if (!resp.ok) return false;
-    const pack = (await resp.json()) as Record<string, unknown>;
-    return typeof pack === "object" && pack !== null && "app.zip" in pack && "pyodide.asm.wasm" in pack;
-  } catch {
-    return false;
+export async function detectPack(
+  fetchImpl: typeof fetch,
+  baseUrl: string,
+  opts: { attempts?: number; pauseMs?: number; sleep?: (ms: number) => Promise<void> } = {},
+): Promise<boolean> {
+  const attempts = opts.attempts ?? 3;
+  const pauseMs = opts.pauseMs ?? 400;
+  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      const resp = await fetchImpl(`${baseUrl}pyodide/pack.json`, { cache: "no-cache" });
+      if (!resp.ok) return false; // FE-05: an answer (404 ...) is final; only a lost connection is retried
+      const pack = (await resp.json()) as Record<string, unknown>;
+      return typeof pack === "object" && pack !== null && "app.zip" in pack && "pyodide.asm.wasm" in pack;
+    } catch (error) {
+      if (error instanceof SyntaxError) return false; // an answer that is not JSON: the SPA's index.html
+      if (attempt < attempts) await sleep(pauseMs * attempt);
+    }
   }
+  return false;
 }
 
 export interface ApiTransport {

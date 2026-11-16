@@ -38,6 +38,41 @@ describe("detectPack", () => {
   });
 });
 
+describe("detectPack retries (FE-05)", () => {
+  const pack = () => new Response(JSON.stringify({ "app.zip": 1, "pyodide.asm.wasm": 1 }));
+  const instant = async () => undefined;
+
+  it("a network error is retried up to 3 times with a pause, then the pack counts as found", async () => {
+    let n = 0;
+    const f = vi.fn(async () => {
+      if (++n < 3) throw new TypeError("network");
+      return pack();
+    });
+    const pauses: number[] = [];
+    expect(await detectPack(f as unknown as typeof fetch, "/", { sleep: async (ms) => void pauses.push(ms) })).toBe(true);
+    expect(f).toHaveBeenCalledTimes(3);
+    expect(pauses.length).toBe(2);
+    expect(pauses.every((ms) => ms > 0)).toBe(true);
+  });
+
+  it("gives up after 3 failed attempts", async () => {
+    const f = vi.fn(async () => {
+      throw new TypeError("network");
+    });
+    expect(await detectPack(f as unknown as typeof fetch, "/", { sleep: instant })).toBe(false);
+    expect(f).toHaveBeenCalledTimes(3);
+  });
+
+  it("a 404 or a page that is not the pack is final at once", async () => {
+    const notFound = vi.fn(async () => new Response("", { status: 404 }));
+    expect(await detectPack(notFound as unknown as typeof fetch, "/", { sleep: instant })).toBe(false);
+    expect(notFound).toHaveBeenCalledTimes(1);
+    const html = vi.fn(async () => new Response("<!doctype html>"));
+    expect(await detectPack(html as unknown as typeof fetch, "/", { sleep: instant })).toBe(false);
+    expect(html).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("createApiTransport", () => {
   const plain = () => vi.fn(async () => new Response("server"));
   const fakeWorker = (): Transport & { calls: number } => {
