@@ -97,6 +97,34 @@ class FontMetrics:
         return "".join(back[int(hex_codes[i:i + 4], 16)] for i in range(0, len(hex_codes), 4))
 
 
+def _longest_fitting_prefix(measure, word: str, width: float) -> int:
+    """The largest n (0 when not even one character fits) with ``measure(word[:n]) <= width``. ``measure`` never shrinks
+    when text is appended, so the length is found by doubling and then bisecting: the work is about
+    O(answer * log(answer)) instead of one O(length) measure per candidate cut (a 5000 character word took 24 s)."""
+    n = len(word)
+    lo, hi = 0, n + 1  # lo fits (the empty prefix by convention), hi does not (n + 1: not found yet)
+    probe = 1
+    while probe <= n:
+        if measure(word[:probe]) <= width:
+            lo = probe
+            probe *= 2
+        else:
+            hi = probe
+            break
+    else:
+        if lo < n:
+            if measure(word) <= width:
+                return n
+            hi = n
+    while hi - lo > 1:
+        mid = (lo + hi) // 2
+        if measure(word[:mid]) <= width:
+            lo = mid
+        else:
+            hi = mid
+    return lo
+
+
 def wrap_text(measure, text: str, width: float) -> list[str]:
     """Greedy word wrap of ``text`` (paragraphs split on newlines); a word wider than the line is cut by characters."""
     lines: list[str] = []
@@ -110,10 +138,11 @@ def wrap_text(measure, text: str, width: float) -> list[str]:
             if cur:
                 lines.append(cur)
                 cur = ""
-            while measure(word) > width and len(word) > 1:
-                cut = len(word) - 1
-                while cut > 1 and measure(word[:cut]) > width:
-                    cut -= 1
+            while len(word) > 1:
+                fits = _longest_fitting_prefix(measure, word, width)
+                if fits >= len(word):
+                    break
+                cut = max(fits, 1)  # even a single character wider than the line is taken, as it always was
                 lines.append(word[:cut])
                 word = word[cut:]
             cur = word
