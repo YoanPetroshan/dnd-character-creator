@@ -1457,6 +1457,18 @@ class ResolveState:
     details: Any = field(init=False)
     equipment_dict: Any = field(init=False)
     pruned: Any = field(init=False)
+    added_resolved: Any = field(init=False)
+    chosen_equipment: Any = field(init=False)
+    equipped_items: Any = field(init=False)
+    gear: Any = field(init=False)
+    granted_equipment: Any = field(init=False)
+    narrative_items: Any = field(init=False)
+    pact_weapon_id: Any = field(init=False)
+    slot_granting_class_ids: Any = field(init=False)
+    spell_slots: Any = field(init=False)
+    spells_summary: Any = field(init=False)
+    starting_gold: Any = field(init=False)
+    warlock_slots: Any = field(init=False)
 
 
 def _pass_classes(rs: ResolveState) -> None:
@@ -2865,45 +2877,28 @@ def _pass_collect_choices(rs: ResolveState) -> None:
     rs.pruned = pruned
 
 
-def _pass_rest(rs: ResolveState) -> dict:
-    """The remaining sections of the old single function."""
-    asi_selected_feats = rs.asi_selected_feats
+def _pass_equipment_and_spells(rs: ResolveState) -> None:
+    """Added items, gear, gold, spell summaries, slots, inventory and worn items."""
     bg = rs.bg
     bg_id = rs.bg_id
     catalog = rs.catalog
     choices = rs.choices
-    classes = rs.classes
     cls = rs.cls
-    details = rs.details
-    draft = rs.draft
     equipment_dict = rs.equipment_dict
-    feat_options = rs.feat_options
-    final_scores = rs.final_scores
-    fs_feats = rs.fs_feats
-    fs_slots_by_class = rs.fs_slots_by_class
-    granted_feats = rs.granted_feats
-    lessons_feats = rs.lessons_feats
     modifiers = rs.modifiers
     problems = rs.problems
     prof_bonus = rs.prof_bonus
     pruned = rs.pruned
     race = rs.race
-    race_id = rs.race_id
     resolved_classes = rs.resolved_classes
     resolved_feats = rs.resolved_feats
     ruleset = rs.ruleset
     species_alt = rs.species_alt
-    species_feats = rs.species_feats
-    species_size = rs.species_size
     species_spell_ability = rs.species_spell_ability
     species_variant = rs.species_variant
-    srd_fs_slots_by_class = rs.srd_fs_slots_by_class
     subrace = rs.subrace
-    subrace_id = rs.subrace_id
-    total_level = rs.total_level
     variant_follow = rs.variant_follow
     warnings = rs.warnings
-    xphb_effects = rs.xphb_effects
     added_raw = equipment_dict.get("added")
     if added_raw is None:
         added_raw = []
@@ -3089,7 +3084,72 @@ def _pass_rest(rs: ResolveState) -> dict:
     equipped_items = gear.items
     warnings += gear.warnings
     pruned += gear.pruned
+    rs.added_resolved = added_resolved
+    rs.chosen_equipment = chosen_equipment
+    rs.equipped_items = equipped_items
+    rs.gear = gear
+    rs.granted_equipment = granted_equipment
+    rs.narrative_items = narrative_items
+    rs.pact_weapon_id = pact_weapon_id
+    rs.pruned = pruned
+    rs.slot_granting_class_ids = slot_granting_class_ids
+    rs.spell_slots = spell_slots
+    rs.spells_summary = spells_summary
+    rs.starting_gold = starting_gold
+    rs.warlock_slots = warlock_slots
+    rs.warnings = warnings
 
+
+def _pass_rest(rs: ResolveState) -> dict:
+    """The remaining sections of the old single function."""
+    added_resolved = rs.added_resolved
+    asi_selected_feats = rs.asi_selected_feats
+    bg = rs.bg
+    bg_id = rs.bg_id
+    catalog = rs.catalog
+    choices = rs.choices
+    chosen_equipment = rs.chosen_equipment
+    classes = rs.classes
+    cls = rs.cls
+    details = rs.details
+    draft = rs.draft
+    equipped_items = rs.equipped_items
+    feat_options = rs.feat_options
+    final_scores = rs.final_scores
+    fs_feats = rs.fs_feats
+    fs_slots_by_class = rs.fs_slots_by_class
+    gear = rs.gear
+    granted_equipment = rs.granted_equipment
+    granted_feats = rs.granted_feats
+    lessons_feats = rs.lessons_feats
+    modifiers = rs.modifiers
+    narrative_items = rs.narrative_items
+    pact_weapon_id = rs.pact_weapon_id
+    problems = rs.problems
+    prof_bonus = rs.prof_bonus
+    pruned = rs.pruned
+    race = rs.race
+    race_id = rs.race_id
+    resolved_classes = rs.resolved_classes
+    resolved_feats = rs.resolved_feats
+    ruleset = rs.ruleset
+    slot_granting_class_ids = rs.slot_granting_class_ids
+    species_alt = rs.species_alt
+    species_feats = rs.species_feats
+    species_size = rs.species_size
+    species_spell_ability = rs.species_spell_ability
+    species_variant = rs.species_variant
+    spell_slots = rs.spell_slots
+    spells_summary = rs.spells_summary
+    srd_fs_slots_by_class = rs.srd_fs_slots_by_class
+    starting_gold = rs.starting_gold
+    subrace = rs.subrace
+    subrace_id = rs.subrace_id
+    total_level = rs.total_level
+    variant_follow = rs.variant_follow
+    warlock_slots = rs.warlock_slots
+    warnings = rs.warnings
+    xphb_effects = rs.xphb_effects
     pruned += class_choices_2024.gate_additional_secrets(choices, catalog)  # RPX1: SRD Lore Bard 6, apart from the other spell cards
     # Derived stats.
     pruned += _gate_duplicate_skill_picks(choices, [rc["cls_id"] for rc in resolved_classes if rc["cls"]])  # RPF
@@ -3697,4 +3757,5 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     _pass_class_asi_loop(rs)
     _pass_spell_and_choice_templates(rs)
     _pass_collect_choices(rs)
+    _pass_equipment_and_spells(rs)
     return _pass_rest(rs)
