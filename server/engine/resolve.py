@@ -1444,6 +1444,13 @@ class ResolveState:
     final_scores: Any = field(init=False)
     fixed_clamped_notes: Any = field(init=False)
     species_feat_ability_tpls: Any = field(init=False)
+    asi_selected_feats: Any = field(init=False)
+    choice_templates: Any = field(init=False)
+    modifiers: Any = field(init=False)
+    prof_bonus: Any = field(init=False)
+    pruned_ability_notes: Any = field(init=False)
+    resolved_feats: Any = field(init=False)
+    xphb_effects: Any = field(init=False)
 
 
 def _pass_classes(rs: ResolveState) -> None:
@@ -2206,67 +2213,38 @@ def _pass_origin_ability_deltas(rs: ResolveState) -> None:
     rs.species_feat_ability_tpls = species_feat_ability_tpls
 
 
-def _pass_rest(rs: ResolveState) -> dict:
-    """The remaining sections of the old single function."""
-    _origin_choices_raw = rs._origin_choices_raw
+def _pass_class_asi_loop(rs: ResolveState) -> None:
+    """Per-class templates and the ASI progression, resolved feats, prerequisites, bonuses, modifiers, proficiency bonus."""
     applied_fixed_deltas_by_instance = rs.applied_fixed_deltas_by_instance
     asi_feat_deltas_by_cid = rs.asi_feat_deltas_by_cid
     asi_feat_picks = rs.asi_feat_picks
     asi_feats_by_cid = rs.asi_feats_by_cid
     asi_taken_before_cid = rs.asi_taken_before_cid
-    background_ability_choice_tpl = rs.background_ability_choice_tpl
     background_chosen_ability_deltas_by_instance = rs.background_chosen_ability_deltas_by_instance
-    background_clamped_notes = rs.background_clamped_notes
-    background_dict = rs.background_dict
     background_feats = rs.background_feats
-    bg = rs.bg
-    bg_id = rs.bg_id
     cap_skipped_asi_feat_cids = rs.cap_skipped_asi_feat_cids
     catalog = rs.catalog
-    classes = rs.classes
-    cls = rs.cls
-    cls_id = rs.cls_id
     draft = rs.draft
     ea_lessons = rs.ea_lessons
-    either_or_defaults = rs.either_or_defaults
-    feat_ability_choice_tpls = rs.feat_ability_choice_tpls
-    feat_options = rs.feat_options
     final_scores = rs.final_scores
     fixed_clamped_notes = rs.fixed_clamped_notes
     fs_feats = rs.fs_feats
     fs_slots_by_class = rs.fs_slots_by_class
     fs_taken_by_cid = rs.fs_taken_by_cid
-    granted_feats = rs.granted_feats
     held = rs.held
     lessons_feats = rs.lessons_feats
     lessons_resolver = rs.lessons_resolver
     lessons_slots_by_class = rs.lessons_slots_by_class
     prerequisite_blocked_asi_feat_cids = rs.prerequisite_blocked_asi_feat_cids
-    primary = rs.primary
     problems = rs.problems
-    race = rs.race
-    race_id = rs.race_id
     resolved_classes = rs.resolved_classes
     ruleset = rs.ruleset
-    species = rs.species
-    species_ability_choice_tpl = rs.species_ability_choice_tpl
-    species_alt = rs.species_alt
-    species_choices_raw = rs.species_choices_raw
-    species_feat_ability_tpls = rs.species_feat_ability_tpls
-    species_feat_templates = rs.species_feat_templates
     species_feats = rs.species_feats
-    species_size = rs.species_size
-    species_spell_ability = rs.species_spell_ability
-    species_variant = rs.species_variant
     srd_fs_slots_by_class = rs.srd_fs_slots_by_class
-    subclass_pruned = rs.subclass_pruned
-    subrace = rs.subrace
-    subrace_id = rs.subrace_id
     total_level = rs.total_level
     use_feat_prereqs = rs.use_feat_prereqs
     use_prerequisites_prefs = rs.use_prerequisites_prefs
     variant_follow = rs.variant_follow
-    warnings = rs.warnings
     choice_templates: list[dict] = []
     for rc in resolved_classes:
         rc_held_by_level: dict[int, _HeldFeatState] = {}
@@ -2460,7 +2438,71 @@ def _pass_rest(rs: ResolveState) -> dict:
     prof_bonus_lookup_cls_id = next((rc["cls_id"] for rc in resolved_classes if rc["cls"]), None)
     prof_bonus_row = catalog.class_level_row(prof_bonus_lookup_cls_id, total_level) if prof_bonus_lookup_cls_id else None
     prof_bonus = prof_bonus_row["prof_bonus"] if prof_bonus_row else 2
+    rs.asi_selected_feats = asi_selected_feats
+    rs.choice_templates = choice_templates
+    rs.final_scores = final_scores
+    rs.lessons_feats = lessons_feats
+    rs.modifiers = modifiers
+    rs.problems = problems
+    rs.prof_bonus = prof_bonus
+    rs.pruned_ability_notes = pruned_ability_notes
+    rs.resolved_feats = resolved_feats
+    rs.xphb_effects = xphb_effects
 
+
+def _pass_rest(rs: ResolveState) -> dict:
+    """The remaining sections of the old single function."""
+    _origin_choices_raw = rs._origin_choices_raw
+    asi_selected_feats = rs.asi_selected_feats
+    background_ability_choice_tpl = rs.background_ability_choice_tpl
+    background_clamped_notes = rs.background_clamped_notes
+    background_dict = rs.background_dict
+    background_feats = rs.background_feats
+    bg = rs.bg
+    bg_id = rs.bg_id
+    catalog = rs.catalog
+    choice_templates = rs.choice_templates
+    classes = rs.classes
+    cls = rs.cls
+    cls_id = rs.cls_id
+    draft = rs.draft
+    either_or_defaults = rs.either_or_defaults
+    feat_ability_choice_tpls = rs.feat_ability_choice_tpls
+    feat_options = rs.feat_options
+    final_scores = rs.final_scores
+    fixed_clamped_notes = rs.fixed_clamped_notes
+    fs_feats = rs.fs_feats
+    fs_slots_by_class = rs.fs_slots_by_class
+    granted_feats = rs.granted_feats
+    lessons_feats = rs.lessons_feats
+    modifiers = rs.modifiers
+    primary = rs.primary
+    problems = rs.problems
+    prof_bonus = rs.prof_bonus
+    pruned_ability_notes = rs.pruned_ability_notes
+    race = rs.race
+    race_id = rs.race_id
+    resolved_classes = rs.resolved_classes
+    resolved_feats = rs.resolved_feats
+    ruleset = rs.ruleset
+    species = rs.species
+    species_ability_choice_tpl = rs.species_ability_choice_tpl
+    species_alt = rs.species_alt
+    species_choices_raw = rs.species_choices_raw
+    species_feat_ability_tpls = rs.species_feat_ability_tpls
+    species_feat_templates = rs.species_feat_templates
+    species_feats = rs.species_feats
+    species_size = rs.species_size
+    species_spell_ability = rs.species_spell_ability
+    species_variant = rs.species_variant
+    srd_fs_slots_by_class = rs.srd_fs_slots_by_class
+    subclass_pruned = rs.subclass_pruned
+    subrace = rs.subrace
+    subrace_id = rs.subrace_id
+    total_level = rs.total_level
+    variant_follow = rs.variant_follow
+    warnings = rs.warnings
+    xphb_effects = rs.xphb_effects
     # Spell choices need `modifiers` (for spellcasting-ability-driven known-
     # spell counts), which isn't final until EVERY class's ASI progression
     # has run — hence this is a SECOND loop over resolved_classes, not
@@ -3601,4 +3643,5 @@ def resolve(draft: dict, catalog: Catalog) -> dict:
     _pass_origin_feats(rs)
     _pass_feat_walk(rs)
     _pass_origin_ability_deltas(rs)
+    _pass_class_asi_loop(rs)
     return _pass_rest(rs)
