@@ -191,6 +191,18 @@ describe("operations", () => {
     expect(back.notices).toEqual([]);
   });
 
+  it("open is refused, with the reason, when the index cannot be written: the active character stays (FE-08)", () => {
+    const { env, storage, boot, firstId } = twoCharacters();
+    const made = createCharacter(env, boot.library);
+    storage.failKeys.add(LIBRARY_KEY);
+    const back = openCharacter(env, made.library, firstId);
+    expect(back.ok).toBe(false);
+    expect(back.draft).toBeNull();
+    expect(back.library).toBe(made.library);
+    expect(back.library.activeId).toBe(made.library.activeId);
+    expect(back.reason && bgText(back.reason)).toContain("Не можа да се запази");
+  });
+
   it("saveDraft keeps the item name in sync with draft.name and bumps updatedAt", () => {
     const { env, storage, boot, firstId } = twoCharacters();
     const before = boot.library.items[firstId].updatedAt;

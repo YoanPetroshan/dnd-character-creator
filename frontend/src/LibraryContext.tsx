@@ -140,7 +140,10 @@ export function LibraryProvider({ children, env }: { children: ReactNode; env?: 
       openCharacter: (id) => {
         if (id === libRef.current.activeId) return;
         const r = openCharacter(envRef.current, libRef.current, id);
-        if (!r.draft) return;
+        if (!r.draft) {
+          if (!r.ok) setStorageFailed(true); // FE-08: the switch was refused because the index cannot be written
+          return;
+        }
         commit(r.library, r.draft);
         addNotices(r.notices, r.unsavedRaw);
         setStorageFailed(!r.ok);

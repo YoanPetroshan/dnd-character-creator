@@ -382,7 +382,7 @@ export function openCharacter(
   env: LibraryEnv,
   lib: Library,
   id: string,
-): { library: Library; draft: Draft | null; notices: Msg[]; unsavedRaw: string | null; ok: boolean } {
+): { library: Library; draft: Draft | null; notices: Msg[]; unsavedRaw: string | null; ok: boolean; reason?: Msg } {
   const item = lib.items[id];
   if (!item) return { library: lib, draft: null, notices: [], unsavedRaw: null, ok: true };
   const notices: Msg[] = [];
@@ -399,7 +399,10 @@ export function openCharacter(
     }
   }
   const next: Library = { ...lib, activeId: id };
-  return { library: next, draft, notices, unsavedRaw, ok: writeIndex(env, next) };
+  // FE-08: when the index cannot record the switch, a reload would bring the old character back while edits went to the
+  // new one; refuse the switch and say why (the UI shows the reason)
+  if (!writeIndex(env, next)) return { library: lib, draft: null, notices, unsavedRaw, ok: false, reason: msg("lib.cannotStore") };
+  return { library: next, draft, notices, unsavedRaw, ok: true };
 }
 
 /** Rename = set draft.name (kept in sync with the index). For the active character with unsaved
