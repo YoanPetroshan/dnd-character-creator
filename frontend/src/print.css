@@ -15,7 +15,8 @@
     display: none !important;
   }
 
-  [data-page="sheet"] {
+  [data-page="sheet"],
+  .sheet-reference {
     display: block !important;
   }
 
