@@ -480,6 +480,8 @@ Notes on the patterns:
 
 - "within N feet (of X)" → „на разстояние до N фута (X м) от …“. A bare „на N фута от теб“ reads as EXACTLY N feet away and is wrong for "within".
 
+- "must do X or Y" when the creature picks one → „трябва или да …, или да …“; never „…, иначе …“ (that turns a choice into a condition).
+
 ### 4.3 Typography
 - Quotes: „…“ (inner quotes ‚…‘). Never "…" or «…».
 - Dash: — with spaces around it („ … — …“). A hyphen only inside a word or a range: „2-6“, „по-високо“.
