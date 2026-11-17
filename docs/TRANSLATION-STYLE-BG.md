@@ -509,6 +509,8 @@ Notes on the patterns:
 
 - Avoid gendered participles with the reader: use the aorist/neutral form („посочи“, „влезе“) or reword.
 
+- Option / mode labels inside a spell (Solid Fog, Steal Life, disease names…): Bulgarian with the English in brackets at first occurrence („Твърда мъгла (Solid Fog)“); names of other SPELLS stay English only.
+
 ### 4.3 Typography
 - Quotes: „…“ (inner quotes ‚…‘). Never "…" or «…».
 - Dash: — with spaces around it („ … — …“). A hyphen only inside a word or a range: „2-6“, „по-високо“.
