@@ -489,6 +489,8 @@ Notes on the patterns:
 - "is/while X is incapacitated" (a state) → „има състоянието …“; „получи състоянието“ only for the moment it is gained.
 - "avoid doing X" → „избягва да …“, never „избягва“ + noun.
 
+- A bare condition adjective in 2014 texts ("becomes invisible", "is charmed") is still the condition: „има състоянието Невидим (Invisible)“.
+
 ### 4.3 Typography
 - Quotes: „…“ (inner quotes ‚…‘). Never "…" or «…».
 - Dash: — with spaces around it („ … — …“). A hyphen only inside a word or a range: „2-6“, „по-високо“.
