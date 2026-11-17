@@ -17,6 +17,7 @@ The quality bar: clean, natural, literate Bulgarian that a native reader would a
 7. **Dice and numbers are kept exactly**: 8d6, 1d10, 2d8 + 4, +5, DC 15, ниво 3. Do not change, merge or "fix" a number. If a number looks wrong, keep it and write it in your hand-over notes.
 8. **Reuse the app's existing terms exactly** (the term table below already contains them; the source is docs/TERMS-PROPOSAL.md, server/i18n/glossary.json and frontend/src/copy/bg.ts).
 9. **Bracket spelling** is the English rules term in PHB Title Case, singular or plural to match the Bulgarian: „хвърляне за атака (Attack Roll)“, „хвърлянията за атака (Attack Rolls)“, „Клас броня (Armor Class, AC)“.
+10. **Species words in running prose are Bulgarian common nouns.** When elves, dwarves, humans, orcs … are named as a kind of creature, write the Bulgarian noun in lower case, no bracket: "creatures that don't sleep, such as elves" → „същества, които не спят, като елфите“. Only a reference to the species as a game option (a heading, „раса (Species) Elf“, a prerequisite) stays English under rule 3.
 
 ---
 
@@ -241,7 +242,7 @@ A condition is a name: write it capitalised, in this fixed masculine form, after
 |---|---|---|
 | spell | заклинание | Never „магия“. |
 | cast a spell | изричаш заклинание | (app). „Когато изричаш това заклинание“. |
-| Spell Slot(s) | Spell Slot / Spell Slots | English, no bracket, masculine: „с по-висок Spell Slot“, „Spell Slot от ниво 3“, „изразходваш Spell Slot“. |
+| Spell Slot(s) | Spell Slot / Spell Slots | English, no bracket, masculine: „с по-висок Spell Slot“, „Spell Slot от ниво 3“, „изразходваш Spell Slot“. „Spell“ starts with [s], so the preposition is „със Spell Slot“. |
 | spell slot level | ниво на Spell Slot | „за всяко ниво на Spell Slot над 3“. |
 | spell level | ниво на заклинанието | „заклинание от ниво 3“ (not „3-то ниво“). |
 | Cantrip | трик (Cantrip) | (app). |
@@ -395,15 +396,15 @@ Use these renderings whenever the English matches; change only the variable part
 | 9 | Make a ranged spell attack against the target. On a hit, the target takes 1d10 Fire damage. | Направи атака със заклинание от разстояние (Ranged Spell Attack) срещу целта. При попадение целта получава 1d10 щети от огън (Fire). |
 | 10 | (2014) If the attack hits, the creature takes 3d8 damage of the type you chose. | Ако атаката улучи, съществото получава 3d8 щети от избрания от теб вид. |
 | 11 | The damage increases by 1d6 for each spell slot level above 3. | Щетите се увеличават с 1d6 за всяко ниво на Spell Slot над 3. |
-| 12 | (2014) When you cast this spell using a spell slot of 4th level or higher, the damage increases by 1d6 for each slot level above 3rd. | Когато изричаш това заклинание с Spell Slot от ниво 4 или по-високо, щетите се увеличават с 1d6 за всяко ниво на Spell Slot над 3. |
-| 13 | If you cast this spell using a spell slot of level 2 or higher, … | Ако изречеш това заклинание с Spell Slot от ниво 2 или по-високо, … |
+| 12 | (2014) When you cast this spell using a spell slot of 4th level or higher, the damage increases by 1d6 for each slot level above 3rd. | Когато изричаш това заклинание със Spell Slot от ниво 4 или по-високо, щетите се увеличават с 1d6 за всяко ниво на Spell Slot над 3. |
+| 13 | If you cast this spell using a spell slot of level 2 or higher, … | Ако изречеш това заклинание със Spell Slot от ниво 2 или по-високо, … |
 | 14 | You can target one additional creature for each spell slot level above 1. | Можеш да насочиш заклинанието към още едно същество за всяко ниво на Spell Slot над 1. |
 | 15 | The damage increases by 1d10 when you reach levels 5 (2d10), 11 (3d10), and 17 (4d10). | Щетите се увеличават с 1d10, когато достигнеш ниво 5 (2d10), ниво 11 (3d10) и ниво 17 (4d10). |
 | 16 | (2014) This spell's damage increases by 1d10 when you reach 5th level (2d10), 11th level (3d10), and 17th level (4d10). | Щетите от това заклинание се увеличават с 1d10, когато достигнеш ниво 5 (2d10), ниво 11 (3d10) и ниво 17 (4d10). |
 | 17 | The healing increases by 2d8 for each spell slot level above 1. | Лечението се увеличава с 2d8 за всяко ниво на Spell Slot над 1. |
 | 18 | A creature you touch regains a number of Hit Points equal to 2d8 plus your spellcasting ability modifier. | Същество, което докоснеш, възстановява брой точки живот (Hit Points), равен на 2d8 плюс модификатора на магическата ти характеристика (Spellcasting Ability). |
 | 19 | You gain 10 Temporary Hit Points for the duration. | Получаваш 10 временни точки живот (Temporary Hit Points), докато трае заклинанието. |
-| 20 | Choose a creature you can see within range. | Избери същество в обхвата, което виждаш. |
+| 20 | Choose a creature you can see within range. | Избери същество, което виждаш в обхвата. |
 | 21 | a creature or an object within range | същество или предмет в обхвата |
 | 22 | until the spell ends | до края на заклинанието |
 | 23 | for the duration | докато трае заклинанието |
@@ -453,7 +454,10 @@ Notes on the patterns:
 - **Verb aspect**: rules that repeat or describe a state use the imperfective (present): „Всеки път, когато целта прави хвърляне за атака…“, „получава“, „прави“. A single completed act in a conditional or temporal clause uses the perfective: „Ако изречеш това заклинание…“, „когато достигнеш ниво 5“, „Същество, което докоснеш“. „Когато изричаш това заклинание, избери…“ when the choice happens during the casting.
 - **Tense**: rules are in the present, never the future: „получава“, not „ще получи“.
 - **Gender-neutral "ти"**: never a gendered participle or adjective for the reader („Обвит в мъгла, ти…“, „ако си ранен“). Rebuild the sentence: „Мъгла те обгръща и…“, „ако имаш по-малко от половината си точки живот“.
-- **Word order**: Bulgarian prefers the time or condition first: „До края на заклинанието можеш…“, „При попадение целта получава…“. Put "within range" after the noun: „същество в обхвата, което виждаш“.
+- **Word order**: Bulgarian prefers the time or condition first: „До края на заклинанието можеш…“, „При попадение целта получава…“. "X you can see within range": the relative clause follows the noun and „в обхвата“ closes it: „същество, което виждаш в обхвата“, „хуманоид (Humanoid), когото виждаш в обхвата“ (not „същество в обхвата, което виждаш“).
+- **Say which spell, slot or roll**: when the English "that spell", "the slot", "the spell" points to a spell other than the one described (the interrupted, duplicated or triggering spell), name it: „прекъснатото заклинание“, „дублираното заклинание“, „този Spell Slot“. „Това заклинание“ always means the spell of the record.
+- **"any" picking one is „някое“**, not „всяко“: "forcing a reroll of any die roll" → „като накараш някое хвърляне на зар да бъде повторено“. „Всяко“ only for "each/every".
+- **Two antecedents of different gender** (същество или предмет): do not hang a gendered „който/което“ on them; use „ако носи…“, „го“, or rebuild the clause.
 - **No calques**: "succeed on a save" → „направи успешно спасително хвърляне“; "take damage" → „получава щети“; "make an attack" → „направи атака“ / „атакува“; "half as much damage" → „половината от тези щети“; "consult the table" → „виж таблицата“.
 
 ### 4.3 Typography
@@ -542,7 +546,7 @@ BG: Щетите се увеличават с 1d10, когато достигн�
 
 **desc[0]** EN: Choose a Humanoid that you can see within range. The target must succeed on a Wisdom saving throw or have the Paralyzed condition for the duration. At the end of each of its turns, the target repeats the save, ending the spell on itself on a success.
 
-BG: Избери хуманоид (Humanoid) в обхвата, когото виждаш. Целта трябва да направи успешно спасително хвърляне (Saving Throw) за Wisdom, иначе има състоянието Парализиран (Paralyzed), докато трае заклинанието. В края на всеки свой ход целта повтаря спасителното хвърляне и при успех заклинанието приключва за нея.
+BG: Избери хуманоид (Humanoid), когото виждаш в обхвата. Целта трябва да направи успешно спасително хвърляне (Saving Throw) за Wisdom, иначе има състоянието Парализиран (Paralyzed), докато трае заклинанието. В края на всеки свой ход целта повтаря спасителното хвърляне и при успех заклинанието приключва за нея.
 
 **higherLevel[0]** EN: You can target one additional Humanoid for each spell slot level above 2.
 
@@ -566,7 +570,7 @@ BG: За миг те обгръща сребриста мъгла и се тел
 
 **desc[0]** EN: You unleash a string of insults laced with subtle enchantments at one creature you can see or hear within range. The target must succeed on a Wisdom saving throw or take 1d6 Psychic damage and have Disadvantage on the next attack roll it makes before the end of its next turn.
 
-BG: Изсипваш порой от обиди, пропити с фини омагьосвания, върху едно същество в обхвата, което виждаш или чуваш. Целта трябва да направи успешно спасително хвърляне (Saving Throw) за Wisdom, иначе получава 1d6 щети от психична енергия (Psychic) и има Disadvantage на следващото си хвърляне за атака (Attack Roll) преди края на следващия си ход.
+BG: Изсипваш порой от обиди, пропити с фини омагьосвания, върху едно същество, което виждаш или чуваш в обхвата. Целта трябва да направи успешно спасително хвърляне (Saving Throw) за Wisdom, иначе получава 1d6 щети от психична енергия (Psychic) и има Disadvantage на следващото си хвърляне за атака (Attack Roll) преди края на следващия си ход.
 
 **higherLevel[0]** EN: The damage increases by 1d6 when you reach levels 5 (2d6), 11 (3d6), and 17 (4d6).
 
