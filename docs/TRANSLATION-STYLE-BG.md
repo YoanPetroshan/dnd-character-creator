@@ -2,6 +2,8 @@
 
 Who reads this: the translators who turn the long English rules texts into Bulgarian: spell descriptions first, then species traits and lore, item properties and class option texts. Follow this file exactly. Where it gives one rendering, use that one, even if you know a good synonym. One term, one word, everywhere.
 
+**CLARITY FIRST (owner, 2026-11-17, overrides everything about wording).** A player who reads the Bulgarian text once must understand exactly what happens: who acts, when, what roll, what result. If a faithful sentence is hard to follow, PARAPHRASE it: split long sentences, drop flavour metaphors that only obscure ("turn its momentary uncertainty into encouragement"), name the creature instead of "the triggering creature", say "next roll" plainly. The RULES must stay exact (every number, die, condition, range, target, duration, "or"/"and", limit); the English sentence shape and flavour words need not. Prefer short sentences in game order: trigger → effect → limit. Paragraph count still stays the same (the validator checks it). See the Silvery Barbs gold example in 5.0.
+
 The quality bar: clean, natural, literate Bulgarian that a native reader would accept in a published book. Do not translate word for word and do not clip sentences. Re-order a sentence when Bulgarian needs it. The grammar must be correct: full and short article, agreement, pronoun gender, verb aspect. The rules meaning must not change: every number, die, condition, range, target and "or"/"and" must survive.
 
 ---
@@ -497,6 +499,23 @@ GP / gp = „зл.“ (app), SP = „ср.“, CP = „мед.“, EP = „ел.
 ---
 
 ## 5. Gold examples
+
+### 5.0 Silvery Barbs (paraphrase for clarity)
+
+**castingCondition** EN: which you take when a creature you can see within 60 feet of yourself succeeds on an attack roll, an ability check, or a saving throw
+
+BG: Изричаш го като реакция (Reaction), когато същество, което виждаш на до 60 фута (18 м) от теб, успее с хвърляне за атака (Attack Roll), проверка на характеристика (Ability Check) или спасително хвърляне (Saving Throw).
+
+(The field is shown on its own, so make it a full sentence that says it is the trigger.)
+
+**desc[0]** EN: You magically distract the triggering creature and turn its momentary uncertainty into encouragement for another creature. The triggering creature must reroll the d20 and use the lower roll.
+
+BG: Разсейваш с магия съществото, което току-що е успяло. То трябва да хвърли d20 отново и да използва по-ниския от двата резултата.
+
+**desc[1]** EN: You can then choose a different creature you can see within range (you can choose yourself). The chosen creature has advantage on the next attack roll, ability check, or saving throw it makes within 1 minute. A creature can be empowered by only one use of this spell at a time.
+
+BG: След това можеш да избереш друго същество, което виждаш в обхвата (може и себе си). През следващата 1 минута то има Advantage при първото си хвърляне за атака (Attack Roll), проверка на характеристика (Ability Check) или спасително хвърляне (Saving Throw). Едно същество може да има само един такъв бонус от това заклинание наведнъж.
+
 
 Each example shows the record field by field: English, then the Bulgarian to deliver. These follow every rule above; copy their solutions.
 
