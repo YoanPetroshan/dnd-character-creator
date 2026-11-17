@@ -446,271 +446,339 @@
 
 ## Партида b23-L4
 
-### 81. Aura of Life — `aura-of-life` · desc[0]
-- **Защо:** „има център теб“ звучи тромаво; по-добре „е с център теб“ или „е винаги около теб“.
-- **Английски:** the aura moves with you, centered on you
-- **Български:** аурата се движи с теб и има център теб
-
-### 82. Aura of Life — `aura-of-life-xphb` · desc[0]
-- **Защо:** Emanation няма добър български еквивалент; перифразът е свободен.
-- **Английски:** An aura radiates from you in a 30-foot Emanation
-- **Български:** около теб има аура — излъчване (Emanation) от 30 фута (9 м)
-
-### 83. Banishment — `banishment` · desc[0]
-- **Защо:** „banished“ е предадено като „прогонена“; може би по-подходящо „изпратена в друг план“.
-- **Английски:** or be banished
-- **Български:** При неуспех тя е прогонена.
-
-### 84. Banishment — `banishment-xphb` · desc[1]
-- **Защо:** „вида ѝ същество“ е неясно; може би „с вида на съществото“.
-- **Английски:** transported to a random location on a plane (DM's choice) associated with its creature type
-- **Български:** прехвърлена на случайно място в план (по избор на DM), свързан с вида ѝ същество
-
-### 85. Charm Monster — `charm-monster` · desc[0]
-- **Защо:** Friendly е състояние на отношение; в XPHB е предадено с (Friendly), в 2014 без скоба.
-- **Английски:** The charmed creature is friendly to you.
-- **Български:** Съществото е приятелски настроено към теб.
-
-### 86. Conjure Minor Elementals — `conjure-minor-elementals` · desc[0]
-- **Защо:** Изходното „one the“ е печатна грешка; преводът е парафраза.
-- **Английски:** You choose one the following options for what appears:
-- **Български:** Избираш един от следните варианти за това, какво се появява:
-
-### 87. Conjure Minor Elementals — `conjure-minor-elementals-xphb` · desc[0]
-- **Защо:** Не е ясно дали е „Spirits“ или „духове“; „излъчване“ като обща дума за Emanation без скоба на второто срещане.
-- **Английски:** any attack you make deals an extra 2d8 damage when you hit a creature in the Emanation
-- **Български:** всяка атака, която направиш, нанася допълнителни 2d8 щети, когато улучиш същество в излъчването
-
-### 88. Control Water — `control-water` · desc[5]
-- **Защо:** „vortex“ е предадено като „фуния“; може би „вихър“.
-- **Английски:** this damage occurs each round it remains in the vortex
-- **Български:** тези щети се нанасят всеки рунд, докато предметът остава във фунията
-
-### 89. Black Tentacles — `black-tentacles` · material
-- **Защо:** Имената на същества остават на английски по правило, но в материал може да е по-естествено „гигантски октопод или калмар“.
-- **Английски:** A piece of tentacle from a giant octopus or a giant squid
-- **Български:** Парче от пипало на Giant Octopus или Giant Squid
+### 81. Control Water — `control-water` · desc[6]
+- **Защо:** „50 feet square“ е двусмислено (страна 50 фута или площ 50 кв. фута); предадено като „със страна поне 50 фута“.
+- **Английски:** a body of water at least 50 feet square and 25 feet deep
+- **Български:** Този ефект изисква водна маса със страна поне 50 фута (15 м) и дълбочина поне 25 фута (7,5 м)
 
 ## Партида b24-L4
 
-### 90. Fire Shield — `fire-shield` · desc[0]
-- **Защо:** В оригинала има повторение „bright light bright light“ и неясна граматика; превърнато е по смисъл.
+### 82. Fire Shield — `fire-shield` · desc[0]
+- **Защо:** Изходният текст е повреден („bright light bright light“); преведено по смисъл.
 - **Английски:** Thin and vaporous flame surround your body ... radiating a bright light bright light in a 10-foot radius
-- **Български:** Тънки, мъгляви пламъци обгръщат тялото ти ... излъчват ярка светлина (Bright Light) в радиус 10 фута (3 м)
+- **Български:** Тънки, мъгляви пламъци обгръщат тялото ти, докато трае заклинанието, и излъчват ярка светлина (Bright Light) в радиус 10 фута (3 м) и слаба светлина (Dim Light) в още 10 фута (3 м) извън този радиус. Можеш да прекратиш заклинанието с действие (Action), като накараш пламъците да изчезнат.
 
-### 91. Fire Shield — `fire-shield` · desc[2]
-- **Защо:** „model“ вероятно означава топъл/студен щит; оригиналът е неясен.
+### 83. Fire Shield — `fire-shield` · desc[2]
+- **Защо:** „depending on the model“ е повреден оригинал; тълкувано като топъл/студен щит (както в XPHB).
 - **Английски:** The attacker then suffers 2d8 points of fire damage or cold, depending on the model.
-- **Български:** Нападателят получава 2d8 щети от огън или от студ, в зависимост от щита.
+- **Български:** Освен това, когато същество на разстояние до 5 фута (1,5 м) от теб те улучи с атака в близък бой (Melee Attack), от щита лумват пламъци. Нападателят получава 2d8 щети от огън, ако щитът е топъл, или 2d8 щети от студ, ако щитът е студен.
 
-### 92. Doomtide — `doomtide-frhof` · desc[3]
-- **Защо:** Терминът „secondary casters“ — „вторични изричащи“ — не е в речника; не съм сигурен в най-добрия превод.
-- **Английски:** Casting this as a Circle spell requires a minimum of five secondary casters.
-- **Български:** Изричането на заклинанието като Circle Spell изисква поне петима вторични изричащи.
-
-### 93. Giant Insect — `giant-insect-xphb` · desc[0]
-- **Защо:** Не съм сигурен как да се предаде „stat block“ тук и дали Giant Insect е име, което остава английско.
-- **Английски:** uses the Giant Insect stat block
-- **Български:** използва показателите Giant Insect
-
-### 94. Giant Insect — `giant-insect` · desc[0]
+### 84. Giant Insect — `giant-insect` · desc[0]
 - **Защо:** Имената на същества остават английски, но тук са общи думи (многоножки, паяци…); звучи неестествено.
 - **Английски:** You transform up to ten centipedes, three spiders, five wasps, or one scorpion
-- **Български:** Превръщаш до десет Centipede, три Spider, пет Wasp или един Scorpion
+- **Български:** Превръщаш до десет Centipede, три Spider, пет Wasp или един Scorpion в обхвата в гигантски версии на природните им форми, докато трае заклинанието. Centipede става Giant Centipede, Spider става Giant Spider, Wasp става Giant Wasp, а Scorpion става Giant Scorpion.
 
-### 95. Dominate Beast — `dominate-beast` · desc[1]
-- **Защо:** Избегнато е „доколкото може“; проверете смисъла на „obey“ и „simple and general course of action“.
-- **Английски:** which it does its best to obey
-- **Български:** и то се старае да ги изпълни
-
-### 96. Galder's Speedy Courier — `galders-speedy-courier` · desc[0]
-- **Защо:** Свободен превод на „met and seen“.
-- **Английски:** a living creature you have met and seen at least once before
-- **Български:** живо същество, което познаваш от предишна среща лице в лице
-
-### 97. Galder's Speedy Courier — `galders-speedy-courier` · desc[1]
-- **Защо:** Неясно как да се предаде „proofed against“.
-- **Английски:** proofed against magical detection or location
-- **Български:** е защитено срещу магическо откриване или определяне на местоположението
-
-### 98. Find Greater Steed — `find-greater-steed` · desc[0]
-- **Защо:** Вложени скоби; проверете четимостта.
-- **Английски:** though it is a celestial, a fey, or a fiend (your choice) instead of its normal creature type
-- **Български:** но е небесно същество (Celestial), фея (Fey) или изчадие (Fiend) (по твой избор) вместо обичайния си вид същество
+### 85. Giant Insect — `giant-insect-xphb` · desc[0]
+- **Защо:** Формите са предадени на български (не са отделни имена на същества — блокът е Giant Insect); в SRD записа същите са оставени на английски.
+- **Английски:** You summon a giant centipede, spider, or wasp (chosen when you cast the spell).
+- **Български:** Призоваваш гигантска многоножка, гигантски паяк или гигантска оса (избираш при изричането на заклинанието).
 
 ## Партида b25-L4
 
-### 99. Leomund's Secret Chest — `leomunds-secret-chest-xphb` · desc[2]
-- **Защо:** „кумулативен шанс“ звучи тромаво; може би „шансът расте с 5 процента всеки ден“ — но правилото е натрупващо се, не съм сигурен в точния смисъл.
-- **Английски:** After 60 days, there is a cumulative 5 percent chance at the end of each day that the spell ends.
-- **Български:** След 60 дни в края на всеки ден има кумулативен шанс от 5 процента заклинанието да приключи.
+### 86. Locate Creature — `locate-creature` · material
+- **Защо:** Bloodhound не е stat block, затова е преведено; проверете дали „копой“ (или „бладхаунд“) е по-добре.
+- **Английски:** A bit of fur from a bloodhound.
+- **Български:** Малко козина от куче копой.
 
-### 100. Secret Chest — `secret-chest` · desc[2]
-- **Защо:** Същият израз „кумулативен шанс“; не съм сигурен в най-ясното българско изказване.
-- **Английски:** After 60 days, there is a cumulative 5 percent chance per day that the spell's effect ends.
-- **Български:** След 60 дни в края на всеки ден има кумулативен шанс от 5 процента ефектът на заклинанието да приключи.
-
-### 101. Ice Storm — `ice-storm-xphb` · material
-- **Защо:** Mitten е ръкавица с общ отсек за четирите пръста; не съм сигурен дали „ръкавица без отделни пръсти“ е най-добрият термин.
-- **Английски:** A mitten.
-- **Български:** Ръкавица без отделни пръсти.
-
-### 102. Hallucinatory Terrain — `hallucinatory-terrain` · desc[1]
-- **Защо:** „disbelieve“ преведено като „да не повярва в нея“; не съм сигурен в най-естествената формулировка.
-- **Английски:** A creature who discerns the illusion for what it is, sees it as a vague image superimposed on the terrain.
-- **Български:** Съществото, което разпознае илюзията за това, което е, я вижда като неясен образ, наложен върху терена.
-
-### 103. Guardian of Nature — `guardian-of-nature` · desc[10]
-- **Защо:** Повторението „на земята, земята“ е тромаво.
-- **Английски:** While you are on the ground, the ground within 15 feet of you is difficult terrain for your enemies.
-- **Български:** Докато си на земята, земята на разстояние до 15 фута (4,5 м) от теб е труден терен (Difficult Terrain) за враговете ти.
-
-### 104. Shadow of Moil — `shadow-of-moil` · desc[0]
-- **Защо:** Избягнах пол на „ти“; не съм сигурен, че „плътно закрит“ е ясно за играча.
-- **Английски:** causing you to become heavily obscured to others
-- **Български:** и тялото ти е плътно закрито (Heavily Obscured) за другите
+### 87. Guardian of Nature — `guardian-of-nature` · desc[0]
+- **Защо:** Имената на формите са преведени като опции с английски в скоби; проверете дали да останат само английски.
+- **Английски:** Primal Beast or Great Tree
+- **Български:** Първичен звяр (Primal Beast) или Велико дърво (Great Tree)
 
 ## Партида b26-L4
 
-### 105. Spellfire Storm — `spellfire-storm-frhof` · desc[0]
+### 88. Spellfire Storm — `spellfire-storm-frhof` · desc[0]
 - **Защо:** Не съм сигурен дали spellfire е име (оставено на английски) или обикновена дума („огън от магия“).
 - **Английски:** pillar of spellfire
 - **Български:** стълб от Spellfire
 
-### 106. Spellfire Storm — `spellfire-storm-frhof` · desc[3]
+### 89. Spellfire Storm — `spellfire-storm-frhof` · desc[3]
 - **Защо:** „Вторичен заклинател“ (secondary caster) е нов термин, който измислих.
 - **Английски:** each secondary caster must expend a level 3+ spell slot
 - **Български:** всеки вторичен заклинател трябва да изразходва Spell Slot от ниво 3 или по-високо
 
-### 107. Spellfire Storm — `spellfire-storm-frhof` · higherLevel[1]
-- **Защо:** Тромаво правило; не съм сигурен как най-ясно да се предаде „contributes to“.
-- **Английски:** The spell ends early if any caster who participated in this casting contributes to another casting of Spellfire Storm as a Circle spell.
-- **Български:** Заклинанието приключва предсрочно, ако някой заклинател, участвал в това изричане, допринесе за друго изричане на Spellfire Storm като кръгово заклинание.
+## Партида b27-L5
 
-### 108. Spirit of Death — `spirit-of-death` · desc[1]
-- **Защо:** Перифраза на „initiative count“; проверете дали е ясна.
-- **Английски:** shares your initiative count and takes its turn immediately after yours
-- **Български:** има същата инициатива като теб, но ходи веднага след теб
+### 90. Animate Objects — `animate-objects` · desc[11]
+- **Защо:** „Slam“ е име на атака в статблоковете (2024); предадено като „удар с тялото (Slam)“ — потвърди дали скобата е желана.
+- **Английски:** It makes a slam attack with an attack bonus and bludgeoning damage determined by its size.
+- **Български:** Ако наредиш на предмет да атакува, той може да направи една атака в близък бой (Melee Attack) срещу същество на разстояние до 5 фута (1,5 м) от него. Атаката е удар с тялото (Slam). Бонусът за атака и щетите от удар (Bludgeoning) зависят от размера на предмета. DM може да реши, че конкретен предмет нанася щети от рязане (Slashing) или пробождане (Piercing) заради формата му.
 
-### 109. Summon Construct — `summon-construct` · desc[0]
-- **Защо:** Не съм сигурен дали вариантите (Clay/Metal/Stone) са имена от stat block и остават английски.
-- **Английски:** choose a material: Clay, Metal, or Stone
-- **Български:** избери материал: Clay, Metal или Stone
-
-### 110. Summon Construct — `summon-construct-xphb` · desc[0]
-- **Защо:** Същото: варианти от stat block, оставени на английски.
-- **Английски:** choose a material: Clay, Metal, or Stone
-- **Български:** избери материал: Clay, Metal или Stone
-
-### 111. Summon Elemental — `summon-elemental` · desc[0]
-- **Защо:** Същото: имена на варианти от stat block, оставени на английски.
-- **Английски:** choose an element: Air, Earth, Fire, or Water
-- **Български:** избери стихия: Air, Earth, Fire или Water
-
-### 112. Summon Elemental — `summon-elemental-xphb` · desc[0]
-- **Защо:** Същото: имена на варианти от stat block, оставени на английски.
-- **Английски:** choose an element: Air, Earth, Fire, or Water
-- **Български:** избери стихия: Air, Earth, Fire или Water
-
-### 113. Summon Construct — `summon-construct` · desc[0]
-- **Защо:** Имена на същества, но са в общо значение; оставени на английски по правилото.
-- **Английски:** a golem or a modron
-- **Български:** Golem или Modron
-
-### 114. Summon Greater Demon — `summon-greater-demon` · desc[1]
-- **Защо:** Дали „any creature“ е „някое“ или „всяко“ — избрах „някое“.
-- **Английски:** it spends its turn attacking any creature within reach that has attacked it
-- **Български:** той прекарва хода си в атака срещу някое същество в обсега си, което го е атакувало
-
-### 115. Summon Greater Demon — `summon-greater-demon` · desc[3]
-- **Защо:** Тромаво; може да се перифразира („компонентът се изразходва, когато заклинанието приключи“).
-- **Английски:** Using the material component in this manner consumes it when the spell ends.
-- **Български:** Използването на материалния компонент по този начин го изразходва при приключването на заклинанието.
-
-### 116. Wall of Fire — `wall-of-fire` · desc[2]
-- **Защо:** В английския текст има печатна грешка „o f“ (поправих я мълчаливо в превода).
-- **Английски:** deals 5d8 fire damage to each creature that ends its turn within 10 feet o f that side
-- **Български:** нанася 5d8 щети от огън на всяко същество, което завърши хода си на разстояние до 10 фута (3 м) от тази страна
-
-### 117. Wall of Fire — `wall-of-fire` · desc[3]
-- **Защо:** Изречението е дублирано в изходния текст (края на desc[2] и отделен абзац desc[3]); запазих го.
-- **Английски:** The other side of the wall deals no damage.
-- **Български:** Другата страна на стената не нанася щети.
-
-### 118. Watery Sphere — `watery-sphere` · desc[2]
-- **Защо:** Преведох „lands prone“ като състояние; проверете дали звучи естествено.
-- **Английски:** falls out of it and lands prone
-- **Български:** изпада от нея и има състоянието Повален (Prone)
-
-### 119. Stone Shape — `stone-shape` · desc[0]
-- **Защо:** „Coffer“ = ковчеже; не съм напълно сигурен за най-подходящата дума.
-- **Английски:** a coffer / a small passage through a wall
-- **Български:** ковчеже / малък проход в стена
+### 91. Animate Objects — `animate-objects` · desc[5]
+- **Защо:** „+8 to hit“ е предадено като „+8 за попадение“; ръководството няма фиксиран израз (алтернатива: „+8 към атаката“).
+- **Английски:** | Tiny | 20 | 18 | +8 to hit, 1d4 + 4 damage | 4 | 18 |
+- **Български:** | Миниатюрен (Tiny) | 20 | 18 | +8 за попадение, 1d4 + 4 щети | 4 | 18 |
 
 ## Партида b28-L5
 
-### 120. Contact Other Plane — `contact-other-plane` · desc[0]
-- **Защо:** Как да се предаде „insane“: „безумие“ ли е най-добрият термин за състояние?
-- **Английски:** are insane until you finish a long rest
-- **Български:** изпадаш в безумие, докато не завършиш дълга почивка (Long Rest)
+### 92. Creation — `creation` · desc[8]
+- **Защо:** Няма термин в ръководството за adamantine: „адамант“ или „адамантий“? Еднакво в creation и creation-xphb.
+- **Английски:** | Adamantine or mithral | 1 minute |
+- **Български:** | Адамант или митрил | 1 минута |
 
-### 121. Contagion — `contagion` · desc[3]
-- **Защо:** Преведох имената на болестите като описателни етикети; може да са имена, които да останат на английски. „Slimy Doom“ е неясно име.
-- **Английски:** Blinding Sickness / Filth Fever / Flesh Rot / Mindfire / Seizure / Slimy Doom
-- **Български:** Сляпа болест / Мръсна треска / Гниене на плътта / Огън в ума / Гърч / Слузеста гибел
+### 93. Contact Other Plane — `contact-other-plane` · desc[0]
+- **Защо:** „entity“ е предадено като „същност“ (не „същество“), за да не звучи като игрово същество; същото в XPHB версията.
+- **Английски:** some other mysterious entity from another plane
+- **Български:** Свързваш се мислено с полубог, духа на отдавна мъртъв мъдрец или друга загадъчна същност от друг план на битието (Plane of Existence). Контактът с този разум от друг план може да обтегне или дори да пречупи ума ти. Когато изричаш това заклинание, направи спасително хвърляне (Saving Throw) за Intelligence с DC 15. При неуспех получаваш 6d6 щети от психична енергия (Psychic) и изпадаш в безумие, докато не завършиш дълга почивка (Long Rest). Докато си в безумие, не можеш да предприемаш действия, не разбираш какво казват другите същества, не можеш да четеш и говориш само безсмислици. Заклинанието Greater Restoration, изречено върху теб, прекратява този ефект.
 
-### 122. Contagion — `contagion` · desc[6]
-- **Защо:** Неясно дали ефектът важи само в битка; запазих формулировката.
-- **Английски:** behaves as if under the effects of the confusion spell during combat
-- **Български:** по време на битка се държи така, сякаш е под действието на заклинанието Confusion
+## Партида b29-L5
 
-### 123. Control Winds — `control-winds` · desc[1]
-- **Защо:** Преведох имената на трите ефекта като описателни етикети.
-- **Английски:** Gusts. / Downdraft. / Updraft.
-- **Български:** Пориви. / Низходящ поток. / Възходящ поток.
+### 94. Hold Monster — `hold-monster` · desc[0]
+- **Защо:** Източникът е разкривен; „reach“ тълкувам като „в обхвата“ (както в оригиналния SRD). Проверете.
+- **Английски:** Choose a creature you can see and reach.
+- **Български:** Избери същество, което виждаш в обхвата.
 
-### 124. Creation — `creation` · desc[8]
-- **Защо:** Материали: преведени като обикновени думи, а не оставени на английски.
-- **Английски:** Adamantine or mithral
-- **Български:** Адамант или митрил
+## Партида b30-L5
 
-### 125. Creation — `creation` · desc[0]
-- **Защо:** Разлика в източниците (1 ден в SRD, 24 часа в XPHB); запазено както е.
-- **Английски:** object... no larger than a 5-foot cube (SRD) / Vegetable matter 1 day vs 24 hours (XPHB)
-- **Български:** Растителна материя | 1 ден (SRD) / 24 часа (XPHB)
+### 95. Reincarnate — `reincarnate` · desc[4..17]
+- **Защо:** Валидаторът отхвърля ред без кирилица, затова българските пояснения след английските имена на расите остават. Чисто английски ред изисква промяна във валидатора.
+- **Английски:** | 05-13 | Dwarf, hill |
+- **Български:** | 05-13 | Dwarf, hill (хълмисто джудже) |
 
-### 126. Dispel Evil and Good — `dispel-evil-and-good` · desc[2]
-- **Защо:** Преведох имената на специалните функции; може да трябва да са английски.
-- **Английски:** Break Enchantment. / Dismissal.
-- **Български:** Прекъсване на омагьосване. / Прогонване.
+### 96. Reincarnate — `reincarnate-xphb` · desc[2..11]
+- **Защо:** Същото: пояснението е само заради проверката за кирилица.
+- **Английски:** 1 | Aasimar
+- **Български:** 1 | Aasimar (азимар)
 
-### 127. Dispel Evil and Good — `dispel-evil-and-good` · desc[2]
-- **Защо:** Пренаредих изречението за яснота; проверете дали съответства на правилото.
-- **Английски:** charmed, frightened, or possessed by a celestial...
-- **Български:** което е обладано или има състоянието Омаян или Уплашен заради небесно същество...
+### 97. Scrying — `scrying` · desc[6]
+- **Защо:** Празен абзац не минава валидатора; сложен е кратък неутрален надпис над втората таблица.
+- **Английски:** (празен абзац между двете таблици)
+- **Български:** Физическа връзка с целта:
 
-### 128. Dispel Evil and Good — `dispel-evil-and-good-xphb` · desc[2]
-- **Защо:** „They“ е смесено множествено число; запазено като в оригинала.
-- **Английски:** If they aren't on their home plane, Undead are sent to the Shadowfell
-- **Български:** Ако не са в родния си план, немъртвите се изпращат в Shadowfell
+### 98. Teleportation Circle — `teleportation-circle` · material
+- **Защо:** Изходът е повреден („with 50 gp“); тълкувано като „на стойност 50 зл.“.
+- **Английски:** Rare chalks and inks infused with precious gems with 50 gp, which the spell consumes.
+- **Български:** Редки тебешири и мастила, напоени със скъпоценни камъни на стойност 50 зл., които заклинанието изразходва.
 
-### 129. Dream — `dream` · desc[0]
-- **Защо:** Преработено за яснота, за да избегна съгласуване на лицето.
-- **Английски:** You, or a willing creature you touch, enters a trance state
-- **Български:** Влизаш в транс и действаш като пратеник или това прави същество, което докоснеш и което е съгласно.
+### 99. Songal's Elemental Suffusion — `songals-elemental-suffusion-frhof` · desc[1..3]
+- **Защо:** Етикетите са преведени с английски в скоби, както опциите на Hallow; „Immunity“ в английския всъщност дава устойчивост.
+- **Английски:** Elemental Immunity. / Elemental Pulse. / Flight.
+- **Български:** Стихиен имунитет (Elemental Immunity). / Стихиен импулс (Elemental Pulse). / Полет (Flight).
 
-### 130. Dream — `dream` · desc[3]
-- **Защо:** Образно изречение; „phantasmal monstrosity“ предадено като „призрачното чудовище“.
-- **Английски:** echoes of the phantasmal monstrosity spawn a nightmare
-- **Български:** отгласите от призрачното чудовище пораждат кошмар
+## Партида b31-L5
 
-### 131. Destructive Wave — `destructive-wave` · desc[0]
-- **Защо:** Две скоби една след друга звучат тромаво; няма по-добър вариант.
-- **Английски:** 5d6 radiant or necrotic damage (your choice)
-- **Български:** още 5d6 щети от сияйна енергия (Radiant) или от некротична енергия (Necrotic) (по твой избор)
+### 100. Wall of Stone — `wall-of-stone` · desc[4]
+- **Защо:** В SRD източника пише GM; предадено като DM (без превод). Само за сведение.
+- **Английски:** at the GM's discretion
+- **Български:** по преценка на DM
 
-### 132. Create Spelljamming Helm — `create-spelljamming-helm` · desc[0]
-- **Защо:** Оставено на английски като име на предмет.
-- **Английски:** Spelljamming Helm
-- **Български:** Spelljamming Helm
+## Партида b32-L6
+
+### 101. Blade Barrier — `blade-barrier-xphb` · desc[1]
+- **Защо:** Грешка в изходния текст („it“ вместо „its“), преведено по смисъл.
+- **Английски:** ends it turn there
+- **Български:** завърши хода си там
+
+### 102. Contingency — `contingency` · desc[1]
+- **Защо:** Грешна пунктуация в изходния текст („. and then“), преведено като едно изречение.
+- **Английски:** whether or not you want it to. and then contingency ends.
+- **Български:** независимо дали искаш това. След това Contingency приключва.
+
+### 103. Druid Grove — `druid-grove` · desc[3]-desc[6]
+- **Защо:** Етикетите на опциите са преведени по 4.1 (описания, не имена на заклинания); ако се предпочита английски, върни ги.
+- **Английски:** Solid Fog. / Grasping Undergrowth. / Grove Guardians. / Additional Spell Effect.
+- **Български:** Гъста мъгла. / Вкопчваща се растителност. / Пазители на горичката. / Допълнителен ефект.
+
+### 104. Elminster's Effulgent Spheres — `elminsters-effulgent-spheres-frhof` · desc[2], desc[3]
+- **Защо:** Етикети на опции, преведени като описания (Absorb Elements е друго заклинание, не се има предвид).
+- **Английски:** Absorb Energy. / Energy Blast.
+- **Български:** Поглъщане на енергия. / Енергиен взрив.
+
+### 105. Conjure Fey — `conjure-fey` · desc[0]
+- **Защо:** „fey spirit“ преведено като „дух от вида фея“; двете възможности са разделени с „едно от двете:“ за яснота.
+- **Английски:** a fey spirit that takes the form of a beast
+- **Български:** Призоваваш едно от двете: фея (Fey) с ниво на опасност (Challenge Rating) 6 или по-ниско или дух от вида фея, който приема формата на звяр (Beast) с ниво на опасност 6 или по-ниско. То се появява в не
+
+## Партида b33-L6
+
+### 106. Magic Jar — `magic-jar` · desc[0]
+- **Защо:** Грешка в английския източник (humanoids body, без апостроф); преведено като „тялото на хуманоид“.
+- **Английски:** attempting to possess a humanoids body
+- **Български:** или в опит да овладееш тялото на хуманоид (Humanoid)
+
+## Партида b34-L6
+
+### 107. Move Earth — `move-earth` · material
+- **Защо:** „Loam“ няма добър български еквивалент.
+- **Английски:** ...a small bag containing a mixture of soils--clay, loam, and sand.
+- **Български:** ...глина, плодородна почва и пясък.
+
+### 108. Mass Suggestion — `mass-suggestion` · material
+- **Защо:** „sweet oil“ (старо название на маслиновото масло) е предадено като „зехтин“; „сладко масло“ беше неясно.
+- **Английски:** A snake's tongue and either a bit of honeycomb or a drop of sweet oil.
+- **Български:** Змийски език и или късче пчелна пита, или капка зехтин.
+
+### 109. Soul Cage — `soul-cage` · desc[1]-desc[4]
+- **Защо:** Етикетите на опциите остават преведени (както в Druid Grove и Eyebite); собственикът да реши дали предпочита английски.
+- **Английски:** Steal Life. / Query Soul. / Borrow Experience. / Eyes of the Dead.
+- **Български:** Открадване на живот. / Разпит на душата. / Заемане на опит. / Очите на мъртвите.
+
+## Партида b35-L6
+
+### 110. Wind Walk — `wind-walk` · desc[0]
+- **Защо:** Вероятно грешка в SRD източника: „revert to cloud form“ (по смисъл: отново да приеме облачна форма). Преведено буквално по смисъла.
+- **Английски:** a creature can revert to cloud form, which also requires the 1-minute transformation
+- **Български:** съществото може отново да приеме облачна форма, което също изисква 1 минута за превръщането
+
+## Партида b36-L7
+
+### 111. Arcane Sword — `arcane-sword` · material
+- **Защо:** pommel — не съм сигурен в най-добрия български термин („топка на дръжката“, „навершие“)
+- **Английски:** A miniature platinum sword with a grip and pommel of copper and zinc, worth 250 gp.
+- **Български:** Миниатюрен платинен меч с дръжка и топка на дръжката от мед и цинк, на стойност 250 зл.
+
+### 112. Arcane Sword — `arcane-sword` · desc[0]
+- **Защо:** „plane of force“ е трудно за превод; „плоскост“ може да звучи странно
+- **Английски:** sword-shaped plane of force
+- **Български:** плоскост от силова енергия във формата на меч
+
+### 113. Create Magen — `create-magen` · desc[0]
+- **Защо:** Счупена препратка „See 21“ в източника; запазена както е.
+- **Английски:** See 21 for different kinds of magen and their statistics.
+- **Български:** Докато изричаш заклинанието, поставяш флакон с живак в гърдите на кукла в човешки ръст, натъпкана с пепел или прах. После зашиваш куклата и капваш от кръвта си върху нея. В края на изричането почукваш куклата с кристална пръчка и я превръщаш в Magen, облечен в каквото е носила куклата. Вида на Magen избираш ти по време на изричането на заклинанието. Виж 21 за различните видове Magen и техните игрови показатели.
+
+### 114. Delayed Blast Fireball — `delayed-blast-fireball` · desc[1]
+- **Защо:** Парафразирах към ясния вариант „всеки път“; оригиналът може да се чете и като еднократно увеличение
+- **Английски:** If at the end of your turn the bead has not yet detonated, the damage increases by 1d6.
+- **Български:** Всеки път, когато ходът ти приключи, а перлата още не е избухнала, щетите се увеличават с 1d6.
+
+### 115. Delayed Blast Fireball — `delayed-blast-fireball` · desc[2]
+- **Защо:** „interval“ е неясно в оригинала; тълкувах като края на заклинанието
+- **Английски:** before the interval has expired
+- **Български:** преди заклинанието да е приключило
+
+### 116. Mirage Arcane — `mirage-arcane` · desc[0]
+- **Защо:** „1 mile square“ — тълкувах като квадрат със страна 1 миля
+- **Английски:** an area up to 1 mile square
+- **Български:** зона с квадратна форма и страна до 1 миля (1,6 км)
+
+### 117. Plane Shift — `plane-shift` · material
+- **Защо:** „attuned“ — „настроена“ вместо „обвързана“; провери
+- **Английски:** attuned to a particular plane of existence
+- **Български:** настроена към определен план на битието (Plane of Existence)
+
+### 118. Conjure Celestial — `conjure-celestial` · desc[2]
+- **Защо:** В SRD е „GM“; заменено с DM по правило 5.
+- **Английски:** The GM has the celestial's statistics.
+- **Български:** DM разполага с игровите показатели на небесното същество.
+
+### 119. Plane Shift — `plane-shift` · desc[0]
+- **Защо:** В SRD е „GM“; заменено с DM по правило 5.
+- **Английски:** at the GM's discretion
+- **Български:** Ти и до осем същества, които са съгласни и се държат за ръце в кръг, биват пренесени в друг план на битието (Plane of Existence). Можеш да посочиш целевото място в общи линии, например City of Brass в Elemental Plane of Fire или двореца на Dispater на второто ниво на Nine Hells, и се появяваш в него или близо до него. Ако се опитваш например да стигнеш до City of Brass, може да се озовеш на Street of Steel, пред Gate of Ashes или с поглед към града отвъд Sea of Fire — по преценка на DM.
+
+### 120. Plane Shift — `plane-shift` · desc[1]
+- **Защо:** Избран единен термин „телепортационен кръг“ (и в Plane Shift XPHB, Teleport); провери дали го искаш в речника.
+- **Английски:** teleportation circle
+- **Български:** Като алтернатива, ако знаеш последователността от символи на телепортационен кръг на друг план на битието, това заклинание може да те отведе до този кръг. Ако телепортационният кръг е твърде малък, за да побере всички пренесени същества, те се появяват в най-близките незаети пространства до кръга.
+
+## Партида b37-L7
+
+### 121. Sequester — `sequester` · desc[1]
+- **Защо:** „Анабиоза“ за suspended animation не е в таблицата; използвано и в XPHB версията.
+- **Английски:** it falls into a state of suspended animation
+- **Български:** Ако целта е същество, то изпада в анабиоза. Времето спира да тече за него и то не остарява.
+
+### 122. Reverse Gravity — `reverse-gravity` · material
+- **Защо:** lodestone: „магнитен камък“ или „естествен магнит“ / „магнетит“?
+- **Английски:** A lodestone and iron filings.
+- **Български:** Магнитен камък и железни стружки.
+
+### 123. Regenerate — `regenerate` · material
+- **Защо:** prayer wheel: „молитвено колело“ или „молитвена мелница“; holy water може да е име на предмет (Holy Water)?
+- **Английски:** A prayer wheel and holy water.
+- **Български:** Молитвено колело и светена вода.
+
+### 124. Symbol — `symbol` · desc[5]
+- **Защо:** В SRD е „10d 10“ (вероятно 10d10); проверката на заровете не приема 10d10, затова е запазено както е.
+- **Английски:** taking 10d 10 necrotic damage
+- **Български:** ***Смърт.*** Всяка цел трябва да направи спасително хвърляне (Saving Throw) за Constitution и получава 10d 10 щети от некротична енергия (Necrotic) при неуспех или половината от тези щети при успех.
+
+### 125. Simulacrum — `simulacrum` · material
+- **Защо:** Грешка в оригинала („to made“); преведено по смисъл.
+- **Английски:** quantities sufficient to made a life-size copy
+- **Български:** Сняг или лед в количество, достатъчно за направата на копие в естествен ръст на копираното същество; малко коса, изрезки от нокти или друга част от тялото на това същество, поставена в снега или леда; и пудра от рубин на стойност 1500 зл., поръсена върху копието и изразходвана от заклинанието.
+
+### 126. Teleport — `teleport` · desc[2]
+- **Защо:** Етикетите на таблицата са преведени с английския в скоби при първа поява; проверете преводите (Познаване, Злополука, Подобна зона, Встрани от целта, В целта).
+- **Английски:** | Familiarity | Mishap | Similar Area | Off Target | On Target |
+- **Български:** | Познаване (Familiarity) | Злополука (Mishap) | Подобна зона (Similar Area) | Встрани от целта (Off Target) | В целта (On Target) |
+
+### 127. Teleport — `teleport` · desc[1]
+- **Защо:** В SRD е „GM“; заменено с DM (също в prismatic-spray desc[7] и symbol desc[9], teleport desc[19], desc[21]).
+- **Английски:** The GM rolls d100 and consults the table.
+- **Български:** Мястото, което избереш, трябва да ти е известно и трябва да е на същия план на битието (Plane of Existence), на който си ти. Колко добре познаваш мястото определя дали пристигаш успешно. DM хвърля d100 и проверява резултата в таблицата.
+
+### 128. Teleport — `teleport-xphb` · desc[19]
+- **Защо:** Метричният превод на зарове в мили не се изчислява директно; избрах описателна форма в скоби.
+- **Английски:** appear 2d12 miles away from the destination in a random direction
+- **Български:** Встрани от целта. Ти и групата ти (или целевият предмет) се появявате на 2d12 мили (по 1,6 км всяка) от желаното място в случайна посока. Хвърли 1d8 за посоката: 1 — изток; 2 — югоизток; 3 — юг; 4 — югозапад; 5 — запад; 6 — северозапад; 7 — север; 8 — североизток.
+
+### 129. Whirlwind — `whirlwind` · desc[2]
+- **Защо:** Метрична стойност на израз със зар.
+- **Английски:** hurled 3d6 × 10 feet away from it
+- **Български:** Същество, което има състоянието Обездвижен заради вихъра, може да използва действие, за да направи проверка на Strength или Dexterity срещу DC на спасяването от твоите заклинания (Spell Save DC). При успех съществото вече няма състоянието Обездвижен заради вихъра и е изхвърлено на 3d6 × 10 фута (3d6 × 3 м) от него в случайна посока.
+
+### 130. Teleport — `teleport-xphb` · desc[3]
+- **Защо:** Етикетите са същите като в SRD Teleport; Linked object = „Свързан предмет“ като Associated object.
+- **Английски:** Familiarity | Mishap | Similar Area | Off Target | On Target
+- **Български:** Познаване (Familiarity) | Злополука (Mishap) | Подобна зона (Similar Area) | Встрани от целта (Off Target) | В целта (On Target)
+
+### 131. Sequester — `sequester` · desc[0]
+- **Защо:** Изречението е разделено за яснота; „school of Divination“ е добавено, за да е ясно, че става дума за школа.
+- **Английски:** can't be targeted by divination spells or perceived through scrying sensors
+- **Български:** Чрез това заклинание можеш да скриеш от всякакво откриване същество, което е съгласно, или предмет, докато трае заклинанието. Когато изречеш заклинанието и докоснеш целта, тя получава състоянието Невидим (Invisible). Заклинания от школата Прорицание (Divination) не могат да бъдат насочени към нея, а сензори за ясновидство, създадени от такива заклинания, не могат да я възприемат.
+
+## Партида b38-L8
+
+### 132. Abi-Dalzim's Horrid Wilting — `abi-dalzims-horrid-wilting` · desc[0]
+- **Защо:** „water elementals“ е прочетено като името на съществото Water Elemental; ако се има предвид всеки воден елементал, да стане „водните елементали (Elementals)“.
+- **Английски:** plants and water elementals make this saving throw with disadvantage
+- **Български:** а растенията (Plants) и съществата Water Elemental правят това спасително хвърляне с Disadvantage
+
+### 133. Antipathy/Sympathy — `antipathy-sympathy` · desc[2]
+- **Защо:** „reach“ е двусмислено (обсег на съществото или на целта); избрах ясен смисъл „съвсем близо до целта“.
+- **Английски:** move within reach of the target
+- **Български:** да стигне на ръка разстояние от целта
+
+## Партида b39-L8
+
+### 134. Mighty Fortress — `mighty-fortress` · desc[2]
+- **Защо:** „keep“ (донжон) няма термин в ръководството; „цитадела“ с пояснение.
+- **Английски:** A small keep stands inside the enclosed area.
+- **Български:** Вътре в заграденото пространство стои малка цитадела (главна кула).
+
+## Партида b40-L9
+
+### 135. Astral Projection — `astral-projection` · desc[0]
+- **Защо:** „suspended animation“ предадено като „спряна жизнена дейност“ (и в XPHB версията); няма утвърден термин.
+- **Английски:** in a state of suspended animation
+- **Български:** Ти и до осем същества в обхвата, които са съгласни, проектирате астралните си тела в Astral Plane — ако вече си в този план на битието (Plane of Existence), заклинанието не действа, а изричането му е пропиляно. Материалното тяло, което оставяте зад себе си, има състоянието В безсъзнание (Unconscious) и е в състояние на спряна жизнена дейност: не се нуждае от храна и въздух и не остарява.
+
+### 136. Mass Polymorph — `mass-polymorph` · desc[0]
+- **Защо:** shapechanger няма термин; парафраза „същество, което може да променя формата си“, както в True Polymorph.
+- **Английски:** An unwilling shapechanger automatically succeeds on the save.
+- **Български:** Трансформираш до десет същества по твой избор, които виждаш в обхвата. Цел, която не е съгласна, трябва да направи успешно спасително хвърляне (Saving Throw) за Wisdom, за да устои на трансформацията. Същество, което може да променя формата си и не е съгласно, автоматично успява в това спасително хвърляне.
+
+### 137. Prismatic Wall — `prismatic-wall` · desc[4]
+- **Защо:** Етикетите на цветовете са без английски в скоби (като в Prismatic Spray); решете дали да има „Червен (Red)“.
+- **Английски:** ***1. Red.***
+- **Български:** ***1. Червен.*** При
+
+## Партида b41-L9
+
+### 138. Storm of Vengeance — `storm-of-vengeance-xphb` · desc[1]
+- **Защо:** Добавено изречение „Ходът, в който изричаш заклинанието, е ход 1.“, за да е ясно какво значи „Ход 2.“.
+- **Английски:** At the start of each of your later turns, the storm produces different effects, as detailed below.
+- **Български:** В началото на всеки от следващите ти ходове бурята предизвиква различни ефекти, описани по-долу. Ходът, в който изричаш заклинанието, е ход 1.
+
+### 139. True Polymorph — `true-polymorph` · desc[1]
+- **Защо:** „Shapechangers“ няма термин; парафраза без скоби.
+- **Английски:** Shapechangers aren't affected by this spell.
+- **Български:** Същества, които могат да променят формата си, не се влияят от това заклинание. Същество, което не е съгласно, може да направи спасително хвърляне (Saving Throw) за Wisdom и ако успее, заклинанието не го засяга.
+
+### 140. Wish — `wish` · desc[6]
+- **Защо:** Lich остава на английски; „life drain“ преведено описателно.
+- **Английски:** immune to a lich's life drain attack
+- **Български:** - До десет същества, които виждаш, получават за 8 часа имунитет (Immunity) към едно определено заклинание или друг магически ефект. Например можеш да направиш себе си и всичките си спътници имунни към атаката на Lich за изсмукване на живот.
 
