@@ -1270,16 +1270,16 @@
   "status": 404
  },
  "spell-cantrip": {
-  "bodyLength": 786,
-  "bodySha256": "4d65b7be536cd3196e860894c9f7e073ccbf0fd3bd65afd6db2f5260417be506",
+  "bodyLength": 802,
+  "bodySha256": "cbfb6022b9389bd9c19cc80b7351c5d5ef7532193fbdb4e66fc4e7a4ebd3b9a1",
   "headers": {
    "Content-Type": "application/json"
   },
   "status": 200
  },
  "spell-fireball": {
-  "bodyLength": 1014,
-  "bodySha256": "7e63f9028f0fffd4c87484d57089705df7ceadfb2adfee0638c881b8337d5b8e",
+  "bodyLength": 1030,
+  "bodySha256": "6e5641a6368e16165e07f572ab6c4710f8a0a636fe94a2701225197597eeae1b",
   "headers": {
    "Content-Type": "application/json"
   },
