@@ -84,6 +84,8 @@ How to use it: the **Bulgarian** column is the form for the first occurrence (wi
 | Challenge Rating | ниво на опасност (Challenge Rating) | |
 | Strength check (any ability) | проверка на Strength | a named ability check is „проверка на <Ability>“, no bracket; „проверка на характеристика (Ability Check)“ only when no ability is named |
 | statistics (game statistics, stat block) | игрови показатели | |
+| Melee weapon / Ranged weapon (the item) | оръжие за близък бой (Melee Weapon) / оръжие за далечен бой (Ranged Weapon) | |
+| until the spell ends / for the duration | докато трае заклинанието | one form everywhere |
 
 ### 2.2 Actions and the turn
 
@@ -473,7 +475,7 @@ Notes on the patterns:
 
 - "such as" introducing examples → „например“, not „като“ (which reads as "like/as").
 
-- "pushed/moved up to N feet away from you" → „избутан до N фута (X м) далеч от теб“. Never „на разстояние до N фута от теб“: that means it ends up WITHIN N feet of you.
+- "pushed/moved up to N feet away from you" → „избутан до N фута (X м) далеч от теб“; "pushed N feet away from you" (exact) → „избутан на N фута (X м) назад, далеч от теб“. Never „на разстояние до N фута от теб“: that means it ends up WITHIN N feet of you.
 
 - "within N feet (of X)" → „на разстояние до N фута (X м) от …“. A bare „на N фута от теб“ reads as EXACTLY N feet away and is wrong for "within".
 
