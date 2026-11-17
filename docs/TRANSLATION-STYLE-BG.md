@@ -88,6 +88,7 @@ How to use it: the **Bulgarian** column is the form for the first occurrence (wi
 | for the duration | докато трае заклинанието | "until the spell ends" stays „до края на заклинанието“ (2.11) |
 | 1 damage | 1 точка щети | never „1 щети“ |
 | for the first time on a turn | за пръв път в даден ход | not „през хода си“ |
+| bolts (crossbow ammunition, in prose) | стрели за арбалет | never „болтове“ |
 
 ### 2.2 Actions and the turn
 
