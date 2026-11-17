@@ -71,6 +71,8 @@ def validate(english: dict, record: dict) -> list[str]:
     for en, text in pairs:
         if not text.strip():
             problems.append("empty paragraph")
+        elif not re.search(r"[A-Za-z\u0400-\u04ff]", text) and text == en:
+            continue  # a table separator row such as |---|---| is copied as it is
         elif not CYRILLIC.search(text):
             problems.append(f"no Cyrillic in a paragraph: {text[:40]!r}")
         elif text == en and len(en.split()) > 3:
