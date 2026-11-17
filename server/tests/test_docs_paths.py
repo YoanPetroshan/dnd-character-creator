@@ -24,7 +24,7 @@ def _cited(doc: str):
 def _exists(path: str) -> bool:
     if "*" in path or "<" in path:  # a glob or a placeholder
         return True
-    if path.startswith(("frontend/dist", "frontend/node_modules")):  # build output, not in the repository
+    if path.startswith(("frontend/dist", "frontend/node_modules", "frontend/public/pyodide")):  # build output (scripts/build_offline.py), not in the repository
         return True
     return (ROOT / path.rstrip("/")).exists()
 

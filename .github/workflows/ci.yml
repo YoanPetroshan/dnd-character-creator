@@ -95,7 +95,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: python scripts/build_offline.py
       - run: python scripts/build_offline.py --check
-      - run: python -m venv .venv && .venv/bin/pip install -r server/requirements.txt -c server/constraints.txt
+      - run: python -m venv .venv && .venv/bin/pip install -r server/requirements-dev.txt -c server/constraints.txt
       - run: cd frontend && npm ci
       - run: cd frontend && npm run test:offline
         env:
