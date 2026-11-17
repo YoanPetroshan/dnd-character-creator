@@ -92,6 +92,7 @@ How to use it: the **Bulgarian** column is the form for the first occurrence (wi
 | steed | ездитно животно | |
 | scrying sensor | сензор за ясновидство | |
 | Use an Object (2014 action) | Използване на предмет (Use an Object) | 2024 text uses Utilize: „Използване (Utilize)“ |
+| teleportation circle | телепортационен кръг | one term everywhere |
 
 ### 2.2 Actions and the turn
 
