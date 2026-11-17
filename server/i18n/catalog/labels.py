@@ -85,7 +85,7 @@ MESSAGES: dict[str, dict[str, str]] = {
                                         "bg": "Заменя щетата на Unarmed Strike, когато ухапеш"},
     "label-attack-note-half-hp-advantage": {
         "en": "Advantage while you are missing half or more of your hit points",
-        "bg": "предимство (Advantage), докато ти липсва половината или повече от точките живот (Hit Points)",
+        "bg": "Advantage, докато ти липсва половината или повече от точките живот (Hit Points)",
     },
     "label-attack-note-naga-bite": {
         "en": "On a hit the target makes a Constitution save or takes poison damage (see the trait)",

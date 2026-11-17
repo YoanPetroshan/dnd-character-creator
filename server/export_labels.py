@@ -108,7 +108,7 @@ _BG: dict = {
     "overCapacity": " (претоварен)",
     "pushDragLift": ", тласкане/влачене/вдигане {n}",
     "secArmor": "Броня",
-    "stealthDisadvantage": "Недостатък (Disadvantage) при Скритост (носена броня).",
+    "stealthDisadvantage": "Disadvantage при Скритост (носена броня).",
     "secStartingGold": "Начално злато и други предмети",
     "startingGold": "Начално злато: {n} зл.",
     "secFeatures": "Способности на класа (Class Features)",

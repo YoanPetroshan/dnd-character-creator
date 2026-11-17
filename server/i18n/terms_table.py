@@ -261,14 +261,16 @@ TERMS: tuple[Term, ...] = (
          "Mastery). The short 'майсторство' (a weapon's mastery property, the attack-table column) has no brackets.",
          ((r"майсторство с оръжия|майсторство със заклинания", r"mastery"),), None),
     Term("Advantage / Disadvantage", None,
-         (("недостатък", r"недостатък"), ("disadvantage (English, old)", r"(?<!\()\bdisadvantage\b(?!\))")),
+         (("Advantage / Disadvantage (English, no brackets)", r"(?<!\()\b(dis)?advantage\b(?!\))"),
+          ("недостатък / предимство (old)", r"недостатък|предимство")),
          ("предимство / недостатък", "Advantage / Disadvantage (keep English)", "предимство / пречка"),
-         "предимство / недостатък.",
-         "The Bulgarian word for Advantage ('предимство') is not used anywhere yet. 'недостатък' is used in a message, the export and "
-         "the UI, and one LEGACY UI text still said 'disadvantage' in English.",
-         "DONE: недостатък (Disadvantage); the English UI text 'armor: disadvantage on Stealth' is now 'броня: недостатък "
-         "(Disadvantage) при Скритост'. 'предимство (Advantage)' is the form for any future text (no text uses it yet).",
-         ((r"недостатък|предимство", r"disadvantage|advantage"),), r"\bdisadvantage\b"),
+         "Advantage / Disadvantage: the English words, no Bulgarian word and no brackets (like Spell Slots).",
+         "The Bulgarian word for Advantage ('предимство') was never used. 'недостатък' was used in a message, the export and the "
+         "UI, in the form 'недостатък (Disadvantage)'.",
+         "DONE (owner decision, Bulgarian wording rules): Advantage and Disadvantage stay English with no Bulgarian word and no "
+         "brackets, as with Spell Slots: 'броня: Disadvantage при Скритост'. They are not in the bracket-term list "
+         "(bracket_terms.py): '(Disadvantage)' is no longer a valid bracket.",
+         (), r"недостатък|предимство"),
     Term("Bonus Action", None,
          (("бонус действие", r"бонус действие"),),
          ("бонус действие", "допълнително действие", "Bonus Action (keep English)"),

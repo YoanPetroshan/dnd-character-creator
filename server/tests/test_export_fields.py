@@ -157,7 +157,7 @@ def test_over_capacity_and_stealth_armor_are_flagged(catalog):
     assert "130/100 lb (59/45,4 kg) (претоварен), тласкане/влачене/вдигане 200 lb (90,7 kg)" in md
     en = to_markdown(res, "en")
     assert "130/100 lb (over capacity), push/drag/lift 200 lb" in en and " kg" not in en
-    assert "## Броня" in md and "Недостатък (Disadvantage) при Скритост" in md
+    assert "## Броня" in md and "Disadvantage при Скритост" in md
 
 
 def test_markdown_and_pdf_show_dueling_damage(catalog):

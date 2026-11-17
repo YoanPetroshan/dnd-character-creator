@@ -81,7 +81,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     "armor-not-proficient": {
         "en": ("Not proficient with {name}: disadvantage on STR/DEX ability checks, saves and attack rolls, "
                "and no spellcasting while it is worn."),
-        "bg": ("Нямаш владеене (Proficiency) на {name}: недостатък (Disadvantage) при проверки на характеристики (Ability Checks) STR/DEX, спасителни хвърляния (Saving Throws) и хвърляния за атака, и не можеш да изричаш заклинания, докато се носи."),
+        "bg": ("Нямаш владеене (Proficiency) на {name}: Disadvantage при проверки на характеристики (Ability Checks) STR/DEX, спасителни хвърляния (Saving Throws) и хвърляния за атака, и не можеш да изричаш заклинания, докато се носи."),
     },
     "armor-strength": {
         "en": "{name} needs Strength {minimum}; below that, speed is reduced by 10 ft.",

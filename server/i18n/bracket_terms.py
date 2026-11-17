@@ -15,10 +15,10 @@ import re
 BRACKET_TERMS = frozenset({
     "Ability Save DC", "Action", "Features & Traits", "Inventory", "Notes", "Spells", "Spell Attack Bonus", "Actions", "Character Sheet", "Encumbered", "Hit Dice", "Concentration", "Death Saves", "Defenses", "Heroic Inspiration", "Reaction", "Ritual",  # SHEET-S4: the fillable sheet (new for owner review)
     "Weapon Attacks",
-    "Advantage", "Ammunition", "Heavy", "Loading", "Reach", "Thrown", "Two-Handed",  # VF7.7a: attack-row notes (new for owner review)
+    "Ammunition", "Heavy", "Loading", "Reach", "Thrown", "Two-Handed",  # VF7.7a: attack-row notes (new for owner review)
     "Ability", "Ability Checks", "Ability Score", "Ability Score Improvement", "Ability Score Increase", "Ability Scores",
     "Armor Class", "Background", "Blindsight", "Bonus Action", "Breath Weapon", "Cantrip", "Cantrips", "Cantrips Known",
-    "Carrying Capacity", "Class Features", "Darkvision", "Devil's Sight", "Disadvantage", "Draconic Ancestry", "Expertise", "Feat",
+    "Carrying Capacity", "Class Features", "Darkvision", "Devil's Sight", "Draconic Ancestry", "Expertise", "Feat",
     "Feat Prerequisites", "Feats", "Feature", "Features", "General Feats", "Hit Point Dice", "Hit Points", "Immunities",
     "Immunity", "Long Rest", "Origin Feat", "Origin Feats", "Other Expertise", "Proficiencies", "Proficiency",
     "Proficiency Bonus", "Resistance", "Saving Throw", "Saving Throws", "Senses", "Short Rest", "Skill",

@@ -123,8 +123,9 @@ describe("scripts", () => {
     "rolling", "ruleset", "scores", "should", "six", "still", "the", "this", "type", "you",
   ]);
 
-  // Game terms kept in English on purpose (owner decision 2026-11-05): "Spell Slots" (glossary spellSlots, as in the BG export).
-  const TERMS = new Set("Spell Slot Slots".split(" "));
+  // Game terms kept in English on purpose (owner decision 2026-11-05): "Spell Slots" (glossary spellSlots, as in the BG export);
+  // Advantage / Disadvantage (owner decision, Bulgarian wording rules): English, no Bulgarian word and no brackets.
+  const TERMS = new Set("Spell Slot Slots Disadvantage".split(" "));
 
   // T1 (owner decision 2026-11-05): a Bulgarian rules term is followed by its English term in brackets, "Талант (Feat)".
   // Latin text is allowed inside such a bracket only when it is one of these terms (the same list as
@@ -150,7 +151,6 @@ describe("scripts", () => {
   "Reaction",
   "Ritual",
   "Weapon Attacks",
-  "Advantage",
   "Ammunition",
   "Heavy",
   "Loading",
@@ -175,7 +175,6 @@ describe("scripts", () => {
   "Class Features",
   "Darkvision",
   "Devil's Sight",
-  "Disadvantage",
   "Draconic Ancestry",
   "Expertise",
   "Feat",

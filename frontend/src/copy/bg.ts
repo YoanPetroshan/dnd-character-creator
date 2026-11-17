@@ -162,7 +162,7 @@ export const bg = {
 
     proficiencyBonus: { title: "Бонус за владеене (Proficiency Bonus)" },
 
-    armorClass: { title: "Клас броня (Armor Class, AC)", stealthDisadvantage: "Недостатък (Disadvantage) при Скритост (носена броня)." },
+    armorClass: { title: "Клас броня (Armor Class, AC)", stealthDisadvantage: "Disadvantage при Скритост (носена броня)." },
 
     hitPoints: { title: "Точки живот (Hit Points)", max: "Максимум", hitDice: "Зарове за точки живот (Hit Point Dice)" },
 
