@@ -466,6 +466,8 @@ Notes on the patterns:
 - **Two antecedents of different gender** (същество или предмет): do not hang a gendered „който/което“ on them; use „ако носи…“, „го“, or rebuild the clause.
 - **No calques**: "succeed on a save" → „направи успешно спасително хвърляне“; "take damage" → „получава щети“; "make an attack" → „направи атака“ / „атакува“; "half as much damage" → „половината от тези щети“; "consult the table" → „виж таблицата“.
 
+- "such as" introducing examples → „например“, not „като“ (which reads as "like/as").
+
 ### 4.3 Typography
 - Quotes: „…“ (inner quotes ‚…‘). Never "…" or «…».
 - Dash: — with spaces around it („ … — …“). A hyphen only inside a word or a range: „2-6“, „по-високо“.
