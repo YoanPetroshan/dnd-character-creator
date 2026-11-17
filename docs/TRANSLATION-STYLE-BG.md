@@ -489,7 +489,7 @@ Notes on the patterns:
 - "is/while X is incapacitated" (a state) → „има състоянието …“; „получи състоянието“ only for the moment it is gained.
 - "avoid doing X" → „избягва да …“, never „избягва“ + noun.
 
-- A bare condition adjective in 2014 texts ("becomes invisible", "is charmed") is still the condition: „има състоянието Невидим (Invisible)“.
+- A bare condition adjective in 2014 texts ("becomes invisible", "is charmed") is still the condition: „има състоянието Невидим (Invisible)“. Same for a verb that causes a condition ("it deafens you" → „имаш състоянието Оглушен (Deafened)“).
 
 - Several alternative triggers ("whenever A, B, or C") → „всеки път, когато A, когато B или когато C“; never „и когато … и когато“ (reads as all at once).
 
