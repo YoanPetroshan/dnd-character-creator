@@ -491,6 +491,8 @@ Notes on the patterns:
 
 - A bare condition adjective in 2014 texts ("becomes invisible", "is charmed") is still the condition: „има състоянието Невидим (Invisible)“.
 
+- Several alternative triggers ("whenever A, B, or C") → „всеки път, когато A, когато B или когато C“; never „и когато … и когато“ (reads as all at once).
+
 ### 4.3 Typography
 - Quotes: „…“ (inner quotes ‚…‘). Never "…" or «…».
 - Dash: — with spaces around it („ … — …“). A hyphen only inside a word or a range: „2-6“, „по-високо“.
