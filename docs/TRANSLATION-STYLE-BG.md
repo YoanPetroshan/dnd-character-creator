@@ -86,6 +86,7 @@ How to use it: the **Bulgarian** column is the form for the first occurrence (wi
 | statistics (game statistics, stat block) | игрови показатели | |
 | Melee weapon / Ranged weapon (the item) | оръжие за близък бой (Melee Weapon) / оръжие за далечен бой (Ranged Weapon) | |
 | until the spell ends / for the duration | докато трае заклинанието | one form everywhere |
+| 1 damage | 1 точка щети | never „1 щети“ |
 
 ### 2.2 Actions and the turn
 
