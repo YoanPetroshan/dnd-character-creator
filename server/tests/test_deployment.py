@@ -42,6 +42,7 @@ def test_app_is_wsgi_callable_and_serves_index(tmp_path):
 def _catalog_hash(cat) -> str:
     # _row_index style lazy caches are not part of the check if present
     state = {k: v for k, v in vars(cat).items() if not k.startswith("_row_index")}
+    state["item_properties"] = {"|".join(k): v for k, v in cat.item_properties.items()}  # tuple keys are not JSON keys
     return hashlib.sha256(json.dumps(state, default=str, sort_keys=True).encode()).hexdigest()
 
 

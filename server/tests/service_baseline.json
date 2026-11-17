@@ -973,6 +973,30 @@
   },
   "status": 200
  },
+ "item-backpack-bg": {
+  "bodyLength": 308,
+  "bodySha256": "41b812ea1404a6382ee63373c46b56e4d663add7d4244578bb421455466f2e61",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "item-longsword": {
+  "bodyLength": 748,
+  "bodySha256": "55c40b3bb57dd0b251c608f3203be838523e8cd59e45d618c72869cdb1fd41ab",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "item-unknown": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
  "items": {
   "bodyLength": 24521,
   "bodySha256": "0dad05b88e77b6a8c6c60e65f184672537b01302e832e76e6ae2aa816a2221eb",

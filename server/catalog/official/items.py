@@ -202,3 +202,39 @@ def attach_masteries(items: dict[str, dict], raw_items, masteries) -> int:
             item["mastery"] = mastery
             changed += 1
     return changed
+
+
+_PROPERTY_INDEX = {"F": "finesse", "L": "light", "H": "heavy", "2H": "two-handed", "T": "thrown", "V": "versatile",
+                   "R": "reach", "A": "ammunition", "LD": "loading"}
+
+
+def load_raw_item_properties(path) -> list[dict]:
+    """Every `itemProperty` record of `items-base.json`; [] when missing or broken."""
+    if not path:
+        return []
+    try:
+        with open(Path(path), encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return []
+    return [p for p in data.get("itemProperty", []) if isinstance(p, dict)] if isinstance(data, dict) else []
+
+
+def convert_item_properties(raw_properties) -> dict[tuple[str, str], list[str]]:
+    """{(property index, "PHB" | "XPHB"): rules paragraphs} from the `itemProperty` records of the two player books.
+    The index is the catalog's weapon-property index ("two-handed", "finesse", ...). The property's own name heading
+    is dropped (the response names the property separately). `monk` and `special` have no text and are absent."""
+    from .spells import _flatten_entries
+
+    out: dict[tuple[str, str], list[str]] = {}
+    for p in raw_properties or []:
+        index = _PROPERTY_INDEX.get(str(p.get("abbreviation")))
+        if index is None or p.get("source") not in ("PHB", "XPHB"):
+            continue
+        entries = p.get("entries") or []
+        if len(entries) == 1 and isinstance(entries[0], dict) and entries[0].get("type") == "entries":
+            entries = entries[0].get("entries") or []
+        paragraphs = [t for t in _flatten_entries(entries) if t]
+        if paragraphs:
+            out[(index, p["source"])] = paragraphs
+    return out

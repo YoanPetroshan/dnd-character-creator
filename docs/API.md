@@ -74,6 +74,12 @@ The record (species also with `subspecies`). 404 when unknown.
 
 Query: `category`, `q` (name substring, case-insensitive), `ruleset`, `sources`. Returns `{"items": [{id, name, category, source, ruleset}]}`.
 
+### `GET /api/items/<item_id>`
+
+One item with everything the item eye shows: `{id, name, category, source, ruleset, cost: {quantity, unit}, weight, damage: {dice, type} | null, twoHandedDamage: {dice, type} | null, range: {normal, long?} | null, throwRange | null, properties: [{id, name, desc: [text]}], mastery: {name, desc: [text]} | null, armor: {base, dexBonus, maxBonus | null, strMinimum, stealthDisadvantage} | null, contents: [{id, name, qty}], desc: [text], special: [text], textLang}`. `armor` is set for armor and shields, `contents` for equipment packs, `desc` / `special` hold the SRD text of the item (Net and Lance have `special`). 404 when the id is unknown.
+
+Query: `ruleset` (`2024`: the property texts of the 2024 Player's Handbook; anything else: those of the 2014 one; the `mastery` is left out under `2014`, otherwise it is the 2024 weapon mastery of the weapon). `properties[].desc` is `[]` for `special` and `monk` (the books give them no text) and when the official data is not installed (SRD-only mode: the property and mastery texts are then empty). `lang` (`bg` or `en`, missing is `en`; anything else is a 400). With `lang=bg` each text (the item's own `desc` / `special`, every property text, the mastery text) comes from the Bulgarian overlay (kind `items` for the item text, kind `item-rules` for the property and mastery texts) when it has an entry whose `hash` still matches; every other text stays English. Item, property and mastery names stay English. `textLang` is `bg` only when `lang=bg` and no English prose is left in the response (every non-empty text came from the overlay, or there is none); one missing or stale text makes it `en`, and the pieces that did come from the overlay are still Bulgarian. Overlay format and workflow: `server/data/i18n/README.md`.
+
 ### `GET /api/spells`
 
 Query: `class` (class id; no value or an unknown class gives an empty list), `level` (integer), `q`, `ruleset`, `sources`. Returns `{"spells": [...]}` (slim rows). 400 when `level` is not an integer.

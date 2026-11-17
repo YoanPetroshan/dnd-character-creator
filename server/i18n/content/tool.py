@@ -5,7 +5,7 @@
     python -m i18n.content.tool --kind spells apply work.json   # validates every record, merges the valid ones, exit 1 on a reject
     python -m i18n.content.tool --kind species status           # translated / stale / missing per source
 
-Kinds: spells, species, items, item-rules (item-rules needs the item-property loader and is not available yet).
+Kinds: spells, species, items, item-rules (property and mastery texts; keys `property:<index>:<PHB|XPHB>`, `mastery:<Name>`).
 `python -m i18n.content.spells ...` is the same tool with --kind spells.
 
 Work file: a JSON list of {id, name, source, hash, <the kind's fields>}; `export` writes the English texts, the translator
@@ -112,6 +112,15 @@ def validate(english: dict, record: dict, kind: str = "spells") -> list[str]:
     return problems
 
 
+def item_rule_records(catalog) -> dict[str, dict]:
+    """`property:<index>:<PHB|XPHB>` and `mastery:<Name>` -> {name, source, desc}: the rules texts the item route serves."""
+    out = {f"property:{index}:{book}": {"name": index.replace("-", " ").title(), "source": book, "desc": list(desc)}
+           for (index, book), desc in catalog.item_properties.items()}
+    out.update({f"mastery:{name}": {"name": name, "source": "XPHB", "desc": list(desc)}
+                for name, desc in catalog.weapon_masteries.items()})
+    return out
+
+
 def load_records(kind: str) -> dict[str, dict]:
     """The catalog records of a kind by overlay key. Species records carry `fluff` and `traitDetails` exactly as
     GET /api/catalog/species/<id> serves them; items are the catalog item records."""
@@ -131,7 +140,9 @@ def load_records(kind: str) -> dict[str, dict]:
             out[rid] = {**race, "fluff": species_fluff(race.get("name", ""), race.get("source", ""), [s.get("name", "") for s in subs]),
                         "traitDetails": trait_details(race, catalog.traits)}
         return out
-    raise NotImplementedError("item-rules: the item-property loader (catalog.item_properties) is built in T2; not available yet")
+    if kind == "item-rules":
+        return item_rule_records(catalog)
+    raise KeyError(kind)
 
 
 def _load_spells() -> dict[str, dict]:

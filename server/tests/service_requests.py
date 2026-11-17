@@ -106,6 +106,9 @@ def _build() -> list[tuple]:
     add("items-category-q", "GET", "/api/items?category=weapon&q=SWORD")
     add("items-2024-sources", "GET", "/api/items?ruleset=2024&sources=phb&q=rope")
     add("items-no-match", "GET", "/api/items?q=zzzzzz")
+    add("item-longsword", "GET", "/api/items/longsword")
+    add("item-unknown", "GET", "/api/items/no-such-item")
+    add("item-backpack-bg", "GET", "/api/items/backpack?lang=bg")
     # spells
     add("spells-all", "GET", "/api/spells")
     add("spells-wizard", "GET", "/api/spells?class=wizard")

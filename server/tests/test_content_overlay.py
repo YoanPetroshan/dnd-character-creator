@@ -310,7 +310,7 @@ def test_overlay_species_and_items(overlay_dir):
     assert store.overlay_rule("property:reach:PHB", ["x"], "bg") is None
 
 
-def test_the_cli_works_for_species_and_items_and_item_rules_is_not_ready(overlay_dir, tmp_path, capsys):
+def test_the_cli_works_for_species_items_and_item_rules(overlay_dir, tmp_path, capsys):
     out = tmp_path / "w.json"
     assert generic_tool.main(["--kind", "species", "export", "--ids", "elf", "--out", str(out)]) == 0
     rec = json.loads(out.read_text(encoding="utf-8"))[0]
@@ -318,5 +318,87 @@ def test_the_cli_works_for_species_and_items_and_item_rules_is_not_ready(overlay
     assert generic_tool.main(["--kind", "species", "apply", "--check", str(out)]) == 1  # still English
     assert "REJECT elf" in capsys.readouterr().out
     assert generic_tool.main(["--kind", "items", "status"]) == 0
-    assert generic_tool.main(["--kind", "item-rules", "status"]) == 2
+    assert generic_tool.main(["--kind", "item-rules", "status"]) == 0
     assert not (overlay_dir / "bg" / "species.json").exists()
+
+
+# --- the item route ----------------------------------------------------------------------------------------------------
+
+def _item(item_id, query=None):
+    status, _ctype, _headers, body = service.handle("GET", f"/api/items/{item_id}", query)
+    return status, json.loads(body)
+
+
+needs_official = pytest.mark.skipif(not service._catalog.item_properties, reason="needs the official data (SRD-only job)")
+
+
+@needs_official
+def test_item_detail_shape_for_weapon_armor_and_pack():
+    status, sword = _item("longsword")
+    assert status == 200 and sword["category"] == "weapon" and sword["damage"] == {"dice": "1d8", "type": "slashing"}
+    assert sword["twoHandedDamage"] == {"dice": "1d10", "type": "slashing"} and sword["armor"] is None
+    assert [p["id"] for p in sword["properties"]] == ["versatile"] and sword["textLang"] == "en"
+    assert sword["mastery"]["name"] == "Sap"
+    _, mail = _item("chain-mail")
+    assert mail["armor"] == {"base": 16, "dexBonus": False, "maxBonus": None, "strMinimum": 13, "stealthDisadvantage": True}
+    _, pack = _item("explorers-pack")
+    assert {"id": "torch", "name": "Torch", "qty": 10} in pack["contents"]
+    _, lance = _item("lance")
+    assert lance["special"] and [p["id"] for p in lance["properties"]] == ["reach", "special"]
+    assert lance["properties"][1]["desc"] == []
+
+
+@needs_official
+def test_item_detail_ruleset_picks_the_property_texts_and_hides_the_mastery_under_2014():
+    _, mixed = _item("longsword")
+    _, new = _item("longsword", "ruleset=2024")
+    _, old = _item("longsword", "ruleset=2014")
+    assert old["mastery"] is None and mixed["mastery"] and new["mastery"]
+    assert mixed["properties"][0]["desc"] == old["properties"][0]["desc"] != new["properties"][0]["desc"]
+    assert new["properties"][0]["desc"][0].startswith("A Versatile weapon")
+
+
+def test_item_detail_errors():
+    assert _item("no-such-item") == (404, {"error": "not found"})
+    assert _item("longsword", "lang=xx")[0] == 400
+
+
+@needs_official
+def test_item_detail_overlay_and_text_lang(overlay_dir):
+    lance = service._catalog.items["lance"]
+    write_kind = lambda kind, data: ((overlay_dir / "bg" / f"{kind}.json").write_text(json.dumps(data), encoding="utf-8"), store.load_overlay.cache_clear())
+    english = service._catalog.item_properties.get(("reach", "PHB"), [])
+    mastery_en = service._catalog.weapon_masteries["Topple"]
+    write_kind("items", {"lance": {"hash": store.source_hash("items", store.item_fields(lance)), "desc": [], "special": ["Специално."]}})
+    status, data = _item("lance", "lang=bg")
+    assert data["special"] == ["Специално."]
+    assert data["mastery"]["desc"] == mastery_en and data["textLang"] == "en"  # the mastery text is still English
+    rules = {"mastery:Topple": {"hash": store.source_hash("item-rules", {"desc": mastery_en}), "desc": ["Събаря."]}}
+    if english:
+        rules["property:reach:PHB"] = {"hash": store.source_hash("item-rules", {"desc": english}), "desc": ["Обхват."]}
+    write_kind("item-rules", rules)
+    _, data = _item("lance", "lang=bg")
+    assert data["mastery"]["desc"] == ["Събаря."] and data["name"] == "Lance"
+    assert data["properties"][1]["desc"] == []
+    if english:
+        assert data["properties"][0]["desc"] == ["Обхват."] and data["textLang"] == "bg"
+    assert _item("lance")[1]["textLang"] == "en"  # lang=en ignores the overlay
+    assert _item("lance", "lang=bg&ruleset=2014")[1]["mastery"] is None
+    # an item without any prose and without properties: nothing English is left
+    assert _item("backpack", "lang=bg")[1]["textLang"] == "bg"
+
+
+@needs_official
+def test_item_rule_records_and_cli(overlay_dir, tmp_path):
+    recs = generic_tool.load_records("item-rules")
+    assert "mastery:Sap" in recs
+    assert "property:versatile:PHB" in recs and "property:versatile:XPHB" in recs
+    assert not any(k.startswith(("property:special", "property:monk")) for k in recs)
+    out = tmp_path / "w.json"
+    assert generic_tool.main(["--kind", "item-rules", "export", "--ids", "mastery:Sap", "--out", str(out)]) == 0
+    assert json.loads(out.read_text(encoding="utf-8"))[0]["desc"] == service._catalog.weapon_masteries["Sap"]
+
+
+def test_item_detail_without_official_data_still_answers():
+    status, data = _item("longsword")
+    assert status == 200 and data["properties"][0]["id"] == "versatile" and data["id"] == "longsword"

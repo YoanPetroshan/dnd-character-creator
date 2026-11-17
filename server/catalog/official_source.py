@@ -194,9 +194,11 @@ from .official.spells import (  # noqa: F401
 from .official.items import (  # noqa: F401
     attach_masteries,
     convert_item_masteries,
+    convert_item_properties,
     convert_items,
     load_raw_base_items,
     load_raw_item_masteries,
+    load_raw_item_properties,
 )
 from .official.class_chassis import convert_class_chassis_2024, convert_class_spell_grants_2024  # noqa: F401
 from .official.subclasses import (  # noqa: F401
