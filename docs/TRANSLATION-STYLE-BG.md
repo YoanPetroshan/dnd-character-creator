@@ -80,6 +80,9 @@ How to use it: the **Bulgarian** column is the form for the first occurrence (wi
 | Draconic Ancestry | драконово потекло (Draconic Ancestry) | (app). |
 | Languages / Common | езици / Common | Language names stay English (Common, Draconic, Elvish). |
 
+| Alignment | мирогледие (Alignment) | (app) „Мирогледие“; not „мироглед“ |
+| Challenge Rating | ниво на опасност (Challenge Rating) | |
+
 ### 2.2 Actions and the turn
 
 | English | Bulgarian (first occurrence) | Notes / forms |
