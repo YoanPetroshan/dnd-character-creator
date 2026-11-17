@@ -468,6 +468,8 @@ Notes on the patterns:
 
 - "such as" introducing examples → „например“, not „като“ (which reads as "like/as").
 
+- "pushed/moved up to N feet away from you" → „избутан до N фута (X м) далеч от теб“. Never „на разстояние до N фута от теб“: that means it ends up WITHIN N feet of you.
+
 ### 4.3 Typography
 - Quotes: „…“ (inner quotes ‚…‘). Never "…" or «…».
 - Dash: — with spaces around it („ … — …“). A hyphen only inside a word or a range: „2-6“, „по-високо“.
