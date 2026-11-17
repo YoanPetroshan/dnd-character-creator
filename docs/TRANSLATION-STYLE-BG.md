@@ -412,7 +412,7 @@ Use these renderings whenever the English matches; change only the variable part
 | 23 | for the duration | докато трае заклинанието |
 | 24 | As a Bonus Action on your later turns, you can move the Sphere up to 30 feet. | В следващите си ходове можеш като бонус действие (Bonus Action) да преместиш сферата на разстояние до 30 фута (9 м). |
 | 25 | You can take a Magic action to … | Можеш да предприемеш действието Магия (Magic), за да … |
-| 26 | which you take when you are hit by an attack roll (castingCondition) | която предприемаш, когато те улучи хвърляне за атака (Attack Roll) |
+| 26 | which you take when you are hit by an attack roll (castingCondition) | Изричаш го като реакция (Reaction), когато те улучи хвърляне за атака (Attack Roll). (Full sentence, capital, full stop: the app shows it on its own line; this replaces the fragment form in 4.1 and 5.2.) |
 | 27 | The target has Advantage on attack rolls against … | Целта има Advantage при хвърлянията за атака (Attack Rolls) срещу … |
 | 28 | … and has Disadvantage on the next attack roll it makes before the end of its next turn. | … и има Disadvantage на следващото си хвърляне за атака (Attack Roll) преди края на следващия си ход. |
 | 29 | You have Resistance to Fire damage. | Имаш устойчивост (Resistance) към щети от огън (Fire). |
@@ -427,6 +427,10 @@ Use these renderings whenever the English matches; change only the variable part
 | 38 | This spell has no effect on Undead or Constructs. | Това заклинание няма ефект върху немъртви (Undead) и конструкти (Constructs). |
 | 39 | The spell ends early if … | Заклинанието приключва предсрочно, ако … |
 | 40 | A willing creature you touch gains … | Докосваш същество, което е съгласно, и то получава … |
+| 41 | (clarity) The target must succeed on a Wisdom saving throw or have the X condition … | Целта прави спасително хвърляне (Saving Throw) за Wisdom. При неуспех тя има състоянието X … (Two short sentences: save, then result. Prefer this to „трябва да направи успешно …, иначе“ whenever the result is more than a few words.) |
+| 42 | (clarity) whenever A, whenever B, or whenever C, the creature makes a save | Say who first, then list the triggers: „Такова същество прави спасително хвърляне … всеки път, когато A, когато B или когато C.“ Split any sentence that carries more than one trigger and one result. |
+| 43 | (clarity) the triggering creature / the triggering attack | Name it by what it did: „съществото, което току-що е успяло“, „атаката, заради която изричаш заклинанието“. Never „задействащото същество“. |
+| 44 | (clarity) If the target is missing any of its Hit Points, it instead takes 1d12 … | Ако целта има по-малко точки живот от максимума си, тя получава вместо това 1d12 … (Say the plain game state, not a literal "is missing".) |
 
 Notes on the patterns:
 - **Make a save** = „прави спасително хвърляне“ (XPHB states a fact: present tense, not „трябва да“). 2014 "must make" = „трябва да направи“. "must succeed on … or" = „трябва да направи успешно … , иначе“ (not the calque „да успее на“).
@@ -445,7 +449,7 @@ Notes on the patterns:
 - **Markdown tables (2014 / SRD records)**: rows look like "| d10 | Behavior |". Keep the leading and trailing pipes and the cell count; copy the separator row "|---|---|" exactly as it is.
 - **Markdown emphasis (2014 / SRD records)**: "***1. Red.*** The target …" → „***1. Червен.*** Целта …“. Keep the asterisks and their positions.
 - **`material`** is a noun phrase with a capital and a full stop: "A ball of bat guano and sulfur." → „Топче от прилепно гуано и сяра.“ Prices: "A diamond worth 300+ GP, which the spell consumes." → „Диамант на стойност поне 300 зл., който заклинанието изразходва.“
-- **`castingCondition`** is a fragment that completes the casting time "1 Reaction, …". Translate it as a relative clause that agrees with „реакция“ (feminine): "which you take when …" → „която предприемаш, когато …“. Start with a lower-case letter and add no final full stop, exactly like the English.
+- **`castingCondition`** is an English fragment that completes the casting time "1 Reaction, …". The app shows it on its own line, so translate it as a FULL SENTENCE that names the trigger: "which you take when …" → „Изричаш го като реакция (Reaction), когато ….“ Capital letter, final full stop (see pattern 26 and gold examples 5.0 and 5.2).
 
 ### 4.2 Grammar
 - **Full and short article (пълен/кратък член)**: a masculine singular noun takes -ът/-ят when it is the subject (test: you can replace it with „той“), -а/-я otherwise. „Предметът пламва.“ / „Удари предмета.“ / „Ходът ти приключва.“ / „в края на хода си“. Check every masculine noun with an article.
@@ -543,13 +547,13 @@ BG: Топче от прилепно гуано и сяра.
 
 **desc[0]** EN: An imperceptible barrier of magical force protects you. Until the start of your next turn, you have a +5 bonus to AC, including against the triggering attack, and you take no damage from Magic Missile.
 
-BG: Незабележима преграда от магическа сила те защитава. До началото на следващия си ход имаш бонус +5 към AC, включително срещу атаката, която е задействала заклинанието, и не получаваш щети от Magic Missile.
+BG: Незабележима преграда от магическа сила те защитава. До началото на следващия си ход имаш бонус +5 към AC. Бонусът важи и срещу атаката, заради която изричаш заклинанието. Освен това дотогава не получаваш щети от Magic Missile.
 
 **castingCondition** EN: which you take when you are hit by an attack roll or targeted by the Magic Missile spell
 
-BG: която предприемаш, когато те улучи хвърляне за атака (Attack Roll) или когато станеш цел на заклинанието Magic Missile
+BG: Изричаш го като реакция (Reaction), когато те улучи хвърляне за атака (Attack Roll) или когато станеш цел на заклинанието Magic Missile.
 
-(Why: „си“ because "ти" is the subject; „AC“ bare; Magic Missile is a name; the fragment agrees with „реакция“; no gendered „улучен“.)
+(Why: „си“ because "ти" is the subject; „AC“ bare; Magic Missile is a name; castingCondition is a full sentence; long sentence split for clarity; no gendered „улучен“.)
 
 ### 5.3 Fire Bolt
 
@@ -565,7 +569,7 @@ BG: Щетите се увеличават с 1d10, когато достигн�
 
 **desc[0]** EN: Choose a Humanoid that you can see within range. The target must succeed on a Wisdom saving throw or have the Paralyzed condition for the duration. At the end of each of its turns, the target repeats the save, ending the spell on itself on a success.
 
-BG: Избери хуманоид (Humanoid), когото виждаш в обхвата. Целта трябва да направи успешно спасително хвърляне (Saving Throw) за Wisdom, иначе има състоянието Парализиран (Paralyzed), докато трае заклинанието. В края на всеки свой ход целта повтаря спасителното хвърляне и при успех заклинанието приключва за нея.
+BG: Избери хуманоид (Humanoid), когото виждаш в обхвата. Целта прави спасително хвърляне (Saving Throw) за Wisdom. При неуспех тя има състоянието Парализиран (Paralyzed), докато трае заклинанието. В края на всеки свой ход целта повтаря спасителното хвърляне. При успех заклинанието приключва за нея.
 
 **higherLevel[0]** EN: You can target one additional Humanoid for each spell slot level above 2.
 
