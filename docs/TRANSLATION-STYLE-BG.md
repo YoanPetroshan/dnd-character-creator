@@ -85,8 +85,9 @@ How to use it: the **Bulgarian** column is the form for the first occurrence (wi
 | Strength check (any ability) | проверка на Strength | a named ability check is „проверка на <Ability>“, no bracket; „проверка на характеристика (Ability Check)“ only when no ability is named |
 | statistics (game statistics, stat block) | игрови показатели | |
 | Melee weapon / Ranged weapon (the item) | оръжие за близък бой (Melee Weapon) / оръжие за далечен бой (Ranged Weapon) | |
-| until the spell ends / for the duration | докато трае заклинанието | one form everywhere |
+| for the duration | докато трае заклинанието | "until the spell ends" stays „до края на заклинанието“ (2.11) |
 | 1 damage | 1 точка щети | never „1 щети“ |
+| for the first time on a turn | за пръв път в даден ход | not „през хода си“ |
 
 ### 2.2 Actions and the turn
 
@@ -481,6 +482,8 @@ Notes on the patterns:
 - "within N feet (of X)" → „на разстояние до N фута (X м) от …“. A bare „на N фута от теб“ reads as EXACTLY N feet away and is wrong for "within".
 
 - "must do X or Y" when the creature picks one → „трябва или да …, или да …“; never „…, иначе …“ (that turns a choice into a condition).
+
+- An animal (звяр, животно) takes „който“; „когото“ is only for people.
 
 ### 4.3 Typography
 - Quotes: „…“ (inner quotes ‚…‘). Never "…" or «…».
