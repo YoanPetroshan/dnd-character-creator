@@ -496,6 +496,8 @@ Notes on the patterns:
 
 - "less than or equal to N" → „равно на N или по-ниско“.
 
+- "unless they have X" → „освен ако имат X“; never „освен ако нямат“ (double negative flips the rule).
+
 ### 4.3 Typography
 - Quotes: „…“ (inner quotes ‚…‘). Never "…" or «…».
 - Dash: — with spaces around it („ … — …“). A hyphen only inside a word or a range: „2-6“, „по-високо“.
