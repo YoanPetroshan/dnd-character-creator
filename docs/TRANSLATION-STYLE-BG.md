@@ -485,6 +485,10 @@ Notes on the patterns:
 
 - An animal (звяр, животно) takes „който“; „когото“ is only for people.
 
+- Creature and item names stay English even in lower case inside example lists ("a scimitar", "a dire wolf" → „Scimitar“, „Dire Wolf“).
+- "is/while X is incapacitated" (a state) → „има състоянието …“; „получи състоянието“ only for the moment it is gained.
+- "avoid doing X" → „избягва да …“, never „избягва“ + noun.
+
 ### 4.3 Typography
 - Quotes: „…“ (inner quotes ‚…‘). Never "…" or «…».
 - Dash: — with spaces around it („ … — …“). A hyphen only inside a word or a range: „2-6“, „по-високо“.
