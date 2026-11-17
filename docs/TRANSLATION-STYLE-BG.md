@@ -89,6 +89,8 @@ How to use it: the **Bulgarian** column is the form for the first occurrence (wi
 | 1 damage | 1 точка щети | never „1 щети“ |
 | for the first time on a turn | за пръв път в даден ход | not „през хода си“ |
 | bolts (crossbow ammunition, in prose) | стрели за арбалет | never „болтове“ |
+| steed | ездитно животно | |
+| scrying sensor | сензор за ясновидство | |
 
 ### 2.2 Actions and the turn
 
@@ -497,6 +499,9 @@ Notes on the patterns:
 - "less than or equal to N" → „равно на N или по-ниско“.
 
 - "unless they have X" → „освен ако имат X“; never „освен ако нямат“ (double negative flips the rule).
+
+- "can't be targeted by X" → „X не може да бъде насочено към …“; never „не може да бъде насочен от X“.
+- The reader has no gender: avoid participles that agree with „ти“ („влязъл“, „срещнат“); reword („където вече си бил“ → „където вече ти се е случвало да бъдеш“, or an impersonal form).
 
 ### 4.3 Typography
 - Quotes: „…“ (inner quotes ‚…‘). Never "…" or «…».
