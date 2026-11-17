@@ -346,48 +346,371 @@
 
 ## Партида b17-L3
 
-### 63. Clockwork Force — `conjure-constructs-frhof` · desc[1]
-- **Защо:** Не съм сигурен дали името на опцията е име на игрово съдържание (остава English) или описателен етикет.
-- **Английски:** Clockwork Force.
-- **Български:** Часовникова сила.
+### 63. Clairvoyance — `clairvoyance-xphb` · desc[0]
+- **Защо:** XPHB пише Invisible с главна (състояние), затова е „със състоянието Невидим“; за сензор може би по-естествено е просто „невидим сензор“.
+- **Английски:** You create an Invisible sensor
+- **Български:** Създаваш сензор със състоянието Невидим (Invisible)
 
-### 64. Conjure Constructs — `conjure-constructs-frhof` · desc[2]
-- **Защо:** Същият въпрос за етикета; „Ward“ преведено като „закрила“.
-- **Английски:** Orderly Ward.
-- **Български:** Подредена закрила.
+### 64. Conjure Constructs — `conjure-constructs-frhof` · desc[1], desc[2]
+- **Защо:** Етикетите на опциите са преведени (описателни, не имена); проверете дали звучат добре.
+- **Английски:** Clockwork Force. / Orderly Ward.
+- **Български:** Часовникова сила. / Закрила на реда.
 
 ### 65. Conjure Animals — `conjure-animals` · desc[0]
-- **Защо:** Не съм сигурен как най-добре да се предаде „fey spirits“.
+- **Защо:** Оставено така: точно по правилата (вид същество), но звучи малко тежко.
 - **Английски:** fey spirits
 - **Български:** духове от вида фея (Fey)
 
-### 66. Bestow Curse — `bestow-curse` · higherLevel[0]
-- **Защо:** Перифразирано за яснота.
-- **Английски:** the duration is concentration, up to 10 minutes
-- **Български:** заклинанието изисква концентрация (Concentration) и трае до 10 минути
+## Партида b18-L3
 
-### 67. Blink — `blink` · desc[0]
-- **Защо:** Разделих дългото изречение на две; проверете смисъла.
-- **Английски:** you return to an unoccupied space ... (chosen at random if more than one space is equally near)
-- **Български:** (избира се на случаен принцип, ако няколко пространства са на равно разстояние)
+### 66. Feign Death — `feign-death` · desc[1]
+- **Защо:** „poisoned“ тук е отрова (вещество), не състоянието Отровен (Poisoned) — затова без скоба; съгласен ли си?
+- **Английски:** If the target is diseased or poisoned when you cast the spell, or becomes diseased or poisoned while under the spell's effect, the disease and poison have no effect until the spell ends.
+- **Български:** Ако целта е болна или отровена, когато изричаш заклинанието, или се разболее или бъде отровена, докато заклинанието действа, болестта и отровата нямат ефект до края на заклинанието.
 
-### 68. Clairvoyance — `clairvoyance` · desc[0]
-- **Защо:** Избегнат е мъжки род на причастие; формулировката е малко тромава.
-- **Английски:** a place you have visited or seen before
-- **Български:** в познато ти място (посещавано или виждано от теб преди)
+### 67. Create Food and Water — `create-food-and-water` · desc[0]
+- **Защо:** Бройна форма „хуманоида“ (неличностно съществително) вместо „хуманоиди“; ездитни животни за „steeds“ остава.
+- **Английски:** enough to sustain up to fifteen humanoids or five steeds for 24 hours
+- **Български:** Количеството стига да изхрани до петнадесет хуманоида (Humanoids) или пет ездитни животни за 24 часа.
 
-### 69. Clairvoyance — `clairvoyance` · material
-- **Защо:** Дали „фокус“ да е без скоба или да остане така.
-- **Английски:** A focus worth at least 100gp
-- **Български:** Фокус на стойност поне 100 зл.: ...
+### 68. Gaseous Form — `gaseous-form` · desc[1]
+- **Защо:** Преразказано, за да е ясно, че Зашеметен включва Обезвреден; провери дали звучи добре.
+- **Английски:** even when stunned or otherwise incapacitated
+- **Български:** дори когато има състоянието Обезвреден (Incapacitated), например заради състоянието Зашеметен (Stunned)
 
-### 70. Animate Dead — `animate-dead` · desc[0]
-- **Защо:** Перифразирано; целта е купчина кости или труп.
-- **Английски:** imbues the target with a foul mimicry of life
-- **Български:** вдъхва на целта зловещо подобие на живот
+## Партида b19-L3
 
-### 71. Antagonize — `antagonize` · desc[0]
-- **Защо:** „Antagonize“ е преведено като „раздразват“; може да е по-силно (насъскват).
-- **Английски:** antagonize
-- **Български:** раздразват
+### 69. Haste — `haste` · desc[0]
+- **Защо:** Действието Use an Object от 2014 няма ред в таблицата; „Използване (Utilize)“ е за текстовете от 2024 (Haste XPHB). Оставено „Използване на предмет“.
+- **Английски:** Dash, Disengage, Hide, or Use an Object action
+- **Български:** Спринт (Dash), Оттегляне (Disengage), Скриване (Hide) или Използване на предмет (Use an Object)
+
+## Партида b20-L3
+
+### 70. Nondetection — `nondetection-xphb` · desc[0]
+- **Защо:** Нов термин: „сензор за ясновидство“ за scrying sensor; същото и в SRD записа. Потвърди за речника.
+- **Английски:** perceived through magical scrying sensors
+- **Български:** Никое заклинание от школата Прорицание не може да бъде насочено към целта, а магически сензори за ясновидство не могат да я възприемат.
+
+### 71. Phantom Steed — `phantom-steed` · desc[0]
+- **Защо:** „мундщук“ = bit (металната част в устата на коня); steed = „ездитно животно“ като в по-ранните партиди. Същото в XPHB записа.
+- **Английски:** a saddle, bit, and bridle
+- **Български:** седло, мундщук и юзда
+
+### 72. Sending — `sending-xphb` · desc[0]
+- **Защо:** „сте се срещали“ избягва мъжко причастие за читателя; провери дали звучи естествено.
+- **Английски:** a creature you have met
+- **Български:** до същество, с което сте се срещали
+
+## Партида b21-L3
+
+### 73. Spirit Guardians — `spirit-guardians` · material
+- **Защо:** Holy Symbol е име на предмет (трябва да остане на английски), но валидаторът иска кирилица; избрано е „Свещен символ (Holy Symbol)“.
+- **Английски:** A holy symbol.
+- **Български:** Свещен символ (Holy Symbol).
+
+### 74. Stinking Cloud — `stinking-cloud` · material
+- **Защо:** Не съм сигурен как се казва „skunk cabbage“ на български.
+- **Английски:** A rotten egg or several skunk cabbage leaves.
+- **Български:** Развалено яйце или няколко листа от скункс-зеле.
+
+### 75. Summon Fey — `summon-fey` · desc[0]
+- **Защо:** Имената са преведени на настроенията (по примера на Summon Beast); възможно е да трябва да останат на английски като в игровите показатели.
+- **Английски:** choose a mood: Fuming, Mirthful, or Tricksy
+- **Български:** избери настроение: Гневно (Fuming), Весело (Mirthful) или Лукаво (Tricksy)
+
+### 76. Summon Fey — `summon-fey-xphb` · desc[0]
+- **Защо:** Същото като при Summon Fey (TCE).
+- **Английски:** choose a mood: Fuming, Mirthful, or Tricksy
+- **Български:** избери настроение: Гневно (Fuming), Весело (Mirthful) или Лукаво (Tricksy)
+
+### 77. Summon Shadowspawn — `summon-shadowspawn` · desc[0]
+- **Защо:** Имената на емоциите са преведени със скоби; може да трябва да останат английски.
+- **Английски:** choose an emotion: Fury, Despair, or Fear
+- **Български:** избери емоция: Ярост (Fury), Отчаяние (Despair) или Страх (Fear)
+
+### 78. Summon Undead — `summon-undead` · desc[0]
+- **Защо:** Имената на формите са преведени със скоби; може да трябва да останат английски.
+- **Английски:** choose the creature's form: Ghostly, Putrid, or Skeletal
+- **Български:** избери формата на съществото: Призрачна (Ghostly), Гнилостна (Putrid) или Скелетна (Skeletal)
+
+### 79. Summon Undead — `summon-undead-xphb` · desc[0]
+- **Защо:** Същото като при Summon Undead (TCE).
+- **Английски:** choose the creature's form: Ghostly, Putrid, or Skeletal
+- **Български:** избери формата на съществото: Призрачна (Ghostly), Гнилостна (Putrid) или Скелетна (Skeletal)
+
+### 80. Tiny Servant — `tiny-servant` · desc[0]
+- **Защо:** Текстът препраща към блок с игрови показатели, който приложението не показва; препратката е запазена.
+- **Английски:** See the stat block for its statistics.
+- **Български:** Виж игровите му показатели.
+
+## Партида b23-L4
+
+### 81. Aura of Life — `aura-of-life` · desc[0]
+- **Защо:** „има център теб“ звучи тромаво; по-добре „е с център теб“ или „е винаги около теб“.
+- **Английски:** the aura moves with you, centered on you
+- **Български:** аурата се движи с теб и има център теб
+
+### 82. Aura of Life — `aura-of-life-xphb` · desc[0]
+- **Защо:** Emanation няма добър български еквивалент; перифразът е свободен.
+- **Английски:** An aura radiates from you in a 30-foot Emanation
+- **Български:** около теб има аура — излъчване (Emanation) от 30 фута (9 м)
+
+### 83. Banishment — `banishment` · desc[0]
+- **Защо:** „banished“ е предадено като „прогонена“; може би по-подходящо „изпратена в друг план“.
+- **Английски:** or be banished
+- **Български:** При неуспех тя е прогонена.
+
+### 84. Banishment — `banishment-xphb` · desc[1]
+- **Защо:** „вида ѝ същество“ е неясно; може би „с вида на съществото“.
+- **Английски:** transported to a random location on a plane (DM's choice) associated with its creature type
+- **Български:** прехвърлена на случайно място в план (по избор на DM), свързан с вида ѝ същество
+
+### 85. Charm Monster — `charm-monster` · desc[0]
+- **Защо:** Friendly е състояние на отношение; в XPHB е предадено с (Friendly), в 2014 без скоба.
+- **Английски:** The charmed creature is friendly to you.
+- **Български:** Съществото е приятелски настроено към теб.
+
+### 86. Conjure Minor Elementals — `conjure-minor-elementals` · desc[0]
+- **Защо:** Изходното „one the“ е печатна грешка; преводът е парафраза.
+- **Английски:** You choose one the following options for what appears:
+- **Български:** Избираш един от следните варианти за това, какво се появява:
+
+### 87. Conjure Minor Elementals — `conjure-minor-elementals-xphb` · desc[0]
+- **Защо:** Не е ясно дали е „Spirits“ или „духове“; „излъчване“ като обща дума за Emanation без скоба на второто срещане.
+- **Английски:** any attack you make deals an extra 2d8 damage when you hit a creature in the Emanation
+- **Български:** всяка атака, която направиш, нанася допълнителни 2d8 щети, когато улучиш същество в излъчването
+
+### 88. Control Water — `control-water` · desc[5]
+- **Защо:** „vortex“ е предадено като „фуния“; може би „вихър“.
+- **Английски:** this damage occurs each round it remains in the vortex
+- **Български:** тези щети се нанасят всеки рунд, докато предметът остава във фунията
+
+### 89. Black Tentacles — `black-tentacles` · material
+- **Защо:** Имената на същества остават на английски по правило, но в материал може да е по-естествено „гигантски октопод или калмар“.
+- **Английски:** A piece of tentacle from a giant octopus or a giant squid
+- **Български:** Парче от пипало на Giant Octopus или Giant Squid
+
+## Партида b24-L4
+
+### 90. Fire Shield — `fire-shield` · desc[0]
+- **Защо:** В оригинала има повторение „bright light bright light“ и неясна граматика; превърнато е по смисъл.
+- **Английски:** Thin and vaporous flame surround your body ... radiating a bright light bright light in a 10-foot radius
+- **Български:** Тънки, мъгляви пламъци обгръщат тялото ти ... излъчват ярка светлина (Bright Light) в радиус 10 фута (3 м)
+
+### 91. Fire Shield — `fire-shield` · desc[2]
+- **Защо:** „model“ вероятно означава топъл/студен щит; оригиналът е неясен.
+- **Английски:** The attacker then suffers 2d8 points of fire damage or cold, depending on the model.
+- **Български:** Нападателят получава 2d8 щети от огън или от студ, в зависимост от щита.
+
+### 92. Doomtide — `doomtide-frhof` · desc[3]
+- **Защо:** Терминът „secondary casters“ — „вторични изричащи“ — не е в речника; не съм сигурен в най-добрия превод.
+- **Английски:** Casting this as a Circle spell requires a minimum of five secondary casters.
+- **Български:** Изричането на заклинанието като Circle Spell изисква поне петима вторични изричащи.
+
+### 93. Giant Insect — `giant-insect-xphb` · desc[0]
+- **Защо:** Не съм сигурен как да се предаде „stat block“ тук и дали Giant Insect е име, което остава английско.
+- **Английски:** uses the Giant Insect stat block
+- **Български:** използва показателите Giant Insect
+
+### 94. Giant Insect — `giant-insect` · desc[0]
+- **Защо:** Имената на същества остават английски, но тук са общи думи (многоножки, паяци…); звучи неестествено.
+- **Английски:** You transform up to ten centipedes, three spiders, five wasps, or one scorpion
+- **Български:** Превръщаш до десет Centipede, три Spider, пет Wasp или един Scorpion
+
+### 95. Dominate Beast — `dominate-beast` · desc[1]
+- **Защо:** Избегнато е „доколкото може“; проверете смисъла на „obey“ и „simple and general course of action“.
+- **Английски:** which it does its best to obey
+- **Български:** и то се старае да ги изпълни
+
+### 96. Galder's Speedy Courier — `galders-speedy-courier` · desc[0]
+- **Защо:** Свободен превод на „met and seen“.
+- **Английски:** a living creature you have met and seen at least once before
+- **Български:** живо същество, което познаваш от предишна среща лице в лице
+
+### 97. Galder's Speedy Courier — `galders-speedy-courier` · desc[1]
+- **Защо:** Неясно как да се предаде „proofed against“.
+- **Английски:** proofed against magical detection or location
+- **Български:** е защитено срещу магическо откриване или определяне на местоположението
+
+### 98. Find Greater Steed — `find-greater-steed` · desc[0]
+- **Защо:** Вложени скоби; проверете четимостта.
+- **Английски:** though it is a celestial, a fey, or a fiend (your choice) instead of its normal creature type
+- **Български:** но е небесно същество (Celestial), фея (Fey) или изчадие (Fiend) (по твой избор) вместо обичайния си вид същество
+
+## Партида b25-L4
+
+### 99. Leomund's Secret Chest — `leomunds-secret-chest-xphb` · desc[2]
+- **Защо:** „кумулативен шанс“ звучи тромаво; може би „шансът расте с 5 процента всеки ден“ — но правилото е натрупващо се, не съм сигурен в точния смисъл.
+- **Английски:** After 60 days, there is a cumulative 5 percent chance at the end of each day that the spell ends.
+- **Български:** След 60 дни в края на всеки ден има кумулативен шанс от 5 процента заклинанието да приключи.
+
+### 100. Secret Chest — `secret-chest` · desc[2]
+- **Защо:** Същият израз „кумулативен шанс“; не съм сигурен в най-ясното българско изказване.
+- **Английски:** After 60 days, there is a cumulative 5 percent chance per day that the spell's effect ends.
+- **Български:** След 60 дни в края на всеки ден има кумулативен шанс от 5 процента ефектът на заклинанието да приключи.
+
+### 101. Ice Storm — `ice-storm-xphb` · material
+- **Защо:** Mitten е ръкавица с общ отсек за четирите пръста; не съм сигурен дали „ръкавица без отделни пръсти“ е най-добрият термин.
+- **Английски:** A mitten.
+- **Български:** Ръкавица без отделни пръсти.
+
+### 102. Hallucinatory Terrain — `hallucinatory-terrain` · desc[1]
+- **Защо:** „disbelieve“ преведено като „да не повярва в нея“; не съм сигурен в най-естествената формулировка.
+- **Английски:** A creature who discerns the illusion for what it is, sees it as a vague image superimposed on the terrain.
+- **Български:** Съществото, което разпознае илюзията за това, което е, я вижда като неясен образ, наложен върху терена.
+
+### 103. Guardian of Nature — `guardian-of-nature` · desc[10]
+- **Защо:** Повторението „на земята, земята“ е тромаво.
+- **Английски:** While you are on the ground, the ground within 15 feet of you is difficult terrain for your enemies.
+- **Български:** Докато си на земята, земята на разстояние до 15 фута (4,5 м) от теб е труден терен (Difficult Terrain) за враговете ти.
+
+### 104. Shadow of Moil — `shadow-of-moil` · desc[0]
+- **Защо:** Избягнах пол на „ти“; не съм сигурен, че „плътно закрит“ е ясно за играча.
+- **Английски:** causing you to become heavily obscured to others
+- **Български:** и тялото ти е плътно закрито (Heavily Obscured) за другите
+
+## Партида b26-L4
+
+### 105. Spellfire Storm — `spellfire-storm-frhof` · desc[0]
+- **Защо:** Не съм сигурен дали spellfire е име (оставено на английски) или обикновена дума („огън от магия“).
+- **Английски:** pillar of spellfire
+- **Български:** стълб от Spellfire
+
+### 106. Spellfire Storm — `spellfire-storm-frhof` · desc[3]
+- **Защо:** „Вторичен заклинател“ (secondary caster) е нов термин, който измислих.
+- **Английски:** each secondary caster must expend a level 3+ spell slot
+- **Български:** всеки вторичен заклинател трябва да изразходва Spell Slot от ниво 3 или по-високо
+
+### 107. Spellfire Storm — `spellfire-storm-frhof` · higherLevel[1]
+- **Защо:** Тромаво правило; не съм сигурен как най-ясно да се предаде „contributes to“.
+- **Английски:** The spell ends early if any caster who participated in this casting contributes to another casting of Spellfire Storm as a Circle spell.
+- **Български:** Заклинанието приключва предсрочно, ако някой заклинател, участвал в това изричане, допринесе за друго изричане на Spellfire Storm като кръгово заклинание.
+
+### 108. Spirit of Death — `spirit-of-death` · desc[1]
+- **Защо:** Перифраза на „initiative count“; проверете дали е ясна.
+- **Английски:** shares your initiative count and takes its turn immediately after yours
+- **Български:** има същата инициатива като теб, но ходи веднага след теб
+
+### 109. Summon Construct — `summon-construct` · desc[0]
+- **Защо:** Не съм сигурен дали вариантите (Clay/Metal/Stone) са имена от stat block и остават английски.
+- **Английски:** choose a material: Clay, Metal, or Stone
+- **Български:** избери материал: Clay, Metal или Stone
+
+### 110. Summon Construct — `summon-construct-xphb` · desc[0]
+- **Защо:** Същото: варианти от stat block, оставени на английски.
+- **Английски:** choose a material: Clay, Metal, or Stone
+- **Български:** избери материал: Clay, Metal или Stone
+
+### 111. Summon Elemental — `summon-elemental` · desc[0]
+- **Защо:** Същото: имена на варианти от stat block, оставени на английски.
+- **Английски:** choose an element: Air, Earth, Fire, or Water
+- **Български:** избери стихия: Air, Earth, Fire или Water
+
+### 112. Summon Elemental — `summon-elemental-xphb` · desc[0]
+- **Защо:** Същото: имена на варианти от stat block, оставени на английски.
+- **Английски:** choose an element: Air, Earth, Fire, or Water
+- **Български:** избери стихия: Air, Earth, Fire или Water
+
+### 113. Summon Construct — `summon-construct` · desc[0]
+- **Защо:** Имена на същества, но са в общо значение; оставени на английски по правилото.
+- **Английски:** a golem or a modron
+- **Български:** Golem или Modron
+
+### 114. Summon Greater Demon — `summon-greater-demon` · desc[1]
+- **Защо:** Дали „any creature“ е „някое“ или „всяко“ — избрах „някое“.
+- **Английски:** it spends its turn attacking any creature within reach that has attacked it
+- **Български:** той прекарва хода си в атака срещу някое същество в обсега си, което го е атакувало
+
+### 115. Summon Greater Demon — `summon-greater-demon` · desc[3]
+- **Защо:** Тромаво; може да се перифразира („компонентът се изразходва, когато заклинанието приключи“).
+- **Английски:** Using the material component in this manner consumes it when the spell ends.
+- **Български:** Използването на материалния компонент по този начин го изразходва при приключването на заклинанието.
+
+### 116. Wall of Fire — `wall-of-fire` · desc[2]
+- **Защо:** В английския текст има печатна грешка „o f“ (поправих я мълчаливо в превода).
+- **Английски:** deals 5d8 fire damage to each creature that ends its turn within 10 feet o f that side
+- **Български:** нанася 5d8 щети от огън на всяко същество, което завърши хода си на разстояние до 10 фута (3 м) от тази страна
+
+### 117. Wall of Fire — `wall-of-fire` · desc[3]
+- **Защо:** Изречението е дублирано в изходния текст (края на desc[2] и отделен абзац desc[3]); запазих го.
+- **Английски:** The other side of the wall deals no damage.
+- **Български:** Другата страна на стената не нанася щети.
+
+### 118. Watery Sphere — `watery-sphere` · desc[2]
+- **Защо:** Преведох „lands prone“ като състояние; проверете дали звучи естествено.
+- **Английски:** falls out of it and lands prone
+- **Български:** изпада от нея и има състоянието Повален (Prone)
+
+### 119. Stone Shape — `stone-shape` · desc[0]
+- **Защо:** „Coffer“ = ковчеже; не съм напълно сигурен за най-подходящата дума.
+- **Английски:** a coffer / a small passage through a wall
+- **Български:** ковчеже / малък проход в стена
+
+## Партида b28-L5
+
+### 120. Contact Other Plane — `contact-other-plane` · desc[0]
+- **Защо:** Как да се предаде „insane“: „безумие“ ли е най-добрият термин за състояние?
+- **Английски:** are insane until you finish a long rest
+- **Български:** изпадаш в безумие, докато не завършиш дълга почивка (Long Rest)
+
+### 121. Contagion — `contagion` · desc[3]
+- **Защо:** Преведох имената на болестите като описателни етикети; може да са имена, които да останат на английски. „Slimy Doom“ е неясно име.
+- **Английски:** Blinding Sickness / Filth Fever / Flesh Rot / Mindfire / Seizure / Slimy Doom
+- **Български:** Сляпа болест / Мръсна треска / Гниене на плътта / Огън в ума / Гърч / Слузеста гибел
+
+### 122. Contagion — `contagion` · desc[6]
+- **Защо:** Неясно дали ефектът важи само в битка; запазих формулировката.
+- **Английски:** behaves as if under the effects of the confusion spell during combat
+- **Български:** по време на битка се държи така, сякаш е под действието на заклинанието Confusion
+
+### 123. Control Winds — `control-winds` · desc[1]
+- **Защо:** Преведох имената на трите ефекта като описателни етикети.
+- **Английски:** Gusts. / Downdraft. / Updraft.
+- **Български:** Пориви. / Низходящ поток. / Възходящ поток.
+
+### 124. Creation — `creation` · desc[8]
+- **Защо:** Материали: преведени като обикновени думи, а не оставени на английски.
+- **Английски:** Adamantine or mithral
+- **Български:** Адамант или митрил
+
+### 125. Creation — `creation` · desc[0]
+- **Защо:** Разлика в източниците (1 ден в SRD, 24 часа в XPHB); запазено както е.
+- **Английски:** object... no larger than a 5-foot cube (SRD) / Vegetable matter 1 day vs 24 hours (XPHB)
+- **Български:** Растителна материя | 1 ден (SRD) / 24 часа (XPHB)
+
+### 126. Dispel Evil and Good — `dispel-evil-and-good` · desc[2]
+- **Защо:** Преведох имената на специалните функции; може да трябва да са английски.
+- **Английски:** Break Enchantment. / Dismissal.
+- **Български:** Прекъсване на омагьосване. / Прогонване.
+
+### 127. Dispel Evil and Good — `dispel-evil-and-good` · desc[2]
+- **Защо:** Пренаредих изречението за яснота; проверете дали съответства на правилото.
+- **Английски:** charmed, frightened, or possessed by a celestial...
+- **Български:** което е обладано или има състоянието Омаян или Уплашен заради небесно същество...
+
+### 128. Dispel Evil and Good — `dispel-evil-and-good-xphb` · desc[2]
+- **Защо:** „They“ е смесено множествено число; запазено като в оригинала.
+- **Английски:** If they aren't on their home plane, Undead are sent to the Shadowfell
+- **Български:** Ако не са в родния си план, немъртвите се изпращат в Shadowfell
+
+### 129. Dream — `dream` · desc[0]
+- **Защо:** Преработено за яснота, за да избегна съгласуване на лицето.
+- **Английски:** You, or a willing creature you touch, enters a trance state
+- **Български:** Влизаш в транс и действаш като пратеник или това прави същество, което докоснеш и което е съгласно.
+
+### 130. Dream — `dream` · desc[3]
+- **Защо:** Образно изречение; „phantasmal monstrosity“ предадено като „призрачното чудовище“.
+- **Английски:** echoes of the phantasmal monstrosity spawn a nightmare
+- **Български:** отгласите от призрачното чудовище пораждат кошмар
+
+### 131. Destructive Wave — `destructive-wave` · desc[0]
+- **Защо:** Две скоби една след друга звучат тромаво; няма по-добър вариант.
+- **Английски:** 5d6 radiant or necrotic damage (your choice)
+- **Български:** още 5d6 щети от сияйна енергия (Radiant) или от некротична енергия (Necrotic) (по твой избор)
+
+### 132. Create Spelljamming Helm — `create-spelljamming-helm` · desc[0]
+- **Защо:** Оставено на английски като име на предмет.
+- **Английски:** Spelljamming Helm
+- **Български:** Spelljamming Helm
 
