@@ -210,3 +210,184 @@
 - **Английски:** hitting a target with a Melee weapon
 - **Български:** Изричаш го като бонус действие (Bonus Action) веднага след като улучиш цел с оръжие за близък бой (Melee Weapon) или с удар без оръжие (Unarmed Strike).
 
+## Партида b10-L2
+
+### 39. Arcanist's Magic Aura — `arcanists-magic-aura` · desc[3]
+- **Защо:** В SRD източника се споменава „that alignment“, без да се избира мирогледие (остатък от по-стар текст). Преведено буквално; собственикът да реши дали да се добави „и мирогледие“ към избора.
+- **Английски:** You choose a creature type and other spells and magical effects treat the target as if it were a creature of that type or of that alignment.
+- **Български:** Избираш вид същество. Другите заклинания и магически ефекти третират целта така, сякаш тя е същество от този вид или с това мирогледие (Alignment).
+
+### 40. Animal Messenger — `animal-messenger` · desc[0]
+- **Защо:** Перифраза без род за читателя („си бил/била“); изискването „трябва“ е предадено чрез „вече“. Същото в animal-messenger-xphb.
+- **Английски:** You specify a location, which you must have visited
+- **Български:** Посочваш място, където вече ти се е случвало да ходиш
+
+### 41. Alter Self — `alter-self-xphb` · desc[3]
+- **Защо:** Скобите на оригинала са разписани в отделно изречение за яснота („вида в скобите“ → „от своя вид“).
+- **Английски:** claws (Slashing), fangs (Piercing), horns (Piercing), or hooves (Bludgeoning) ... 1d6 damage of the type in parentheses
+- **Български:** Израстват ти нокти, зъби, рога или копита. Ноктите нанасят щети от рязане (Slashing), зъбите и рогата — щети от пробождане (Piercing), а копитата — щети от удар (Bludgeoning). … 1d6 щети от своя вид
+
+## Партида b11-L2
+
+### 42. Cordon of Arrows — `cordon-of-arrows-xphb` · desc[0]
+- **Защо:** Arrows/Bolts са имена на предмети (боеприпаси) и са оставени на английски; в material е „стрели или болта“.
+- **Английски:** nonmagical Arrows or Bolts
+- **Български:** немагически Arrows или Bolts
+
+### 43. Calm Emotions — `calm-emotions-xphb` · desc[2]
+- **Защо:** Indifferent/Hostile са отношения (Attitudes) от правилата за влияние; преведени са като обикновени думи без скоба — ако искаш термин, добави ги в речника.
+- **Английски:** The creature becomes Indifferent about creatures of your choice that it's Hostile toward.
+- **Български:** Съществото става безразлично към същества по твой избор, към които е враждебно.
+
+## Партида b12-L2
+
+### 44. Find Steed — `find-steed-xphb` · desc[1]
+- **Защо:** Camel, Dire Wolf и Elk са имена на създания и остават на английски (правило 3); за „horse“ в 2024 няма блок „Horse“ (има Riding Horse / Draft Horse), затова остана „кон“. Реши дали „кон“ или „Riding Horse“.
+- **Английски:** such as a horse, a camel, a dire wolf, or an elk
+- **Български:** например кон, Camel, Dire Wolf или Elk
+
+### 45. Find Steed — `find-steed` · desc[0]
+- **Защо:** Имената на създанията върнати на английски (правило 3); списъкът вече няма нито една българска дума — провери дали четецът ще ги разпознае като животни.
+- **Английски:** such as a warhorse, a pony, a camel, an elk, or a mastiff
+- **Български:** например Warhorse, Pony, Camel, Elk или Mastiff
+
+### 46. Gift of Gab — `gift-of-gab` · desc[1]
+- **Защо:** Шеговит текст, предаден свободно; провери тона.
+- **Английски:** We've all been there! ... for an honest slip of the tongue
+- **Български:** Случвало се е на всеки! ... заради едно невинно изпускане
+
+## Партида b13-L2
+
+### 47. Magic Mouth — `magic-mouth` · desc[0]
+- **Защо:** Английският SRD текст е повреден („listening“); преведено вярно като „слушането“. По смисъл посланието може да се изговаря до 10 минути (както в XPHB). Да се оправи ли на „изговарянето“?
+- **Английски:** Then say the message, which should not exceed 25 words but listening can take up to 10 minutes.
+- **Български:** После изговори посланието, което не бива да надвишава 25 думи, но слушането му може да трае до 10 минути.
+
+### 48. Magic Mouth — `magic-mouth` · material
+- **Защо:** Източникът е сгрешен (10 инча; другаде е „на стойност поне 10 зл.“); числото е запазено.
+- **Английски:** A honeycomb and jade dust of at least 10 inches, the spell consumes.
+- **Български:** Пчелна пита и нефритен прах от поне 10 инча (25 см), които заклинанието изразходва.
+
+## Партида b14-L2
+
+### 49. Moonbeam — `moonbeam` · desc[2]
+- **Защо:** Shapechanger е таг на същество без термин в речника; предадено описателно, без скоби.
+- **Английски:** A shapechanger makes its saving throw with disadvantage.
+- **Български:** Същество, което може да променя формата си, прави това спасително хвърляне с Disadvantage.
+
+### 50. Moonbeam — `moonbeam` · material
+- **Защо:** Не съм сигурен в българското име на moonseed.
+- **Английски:** Several seeds of any moonseed plant
+- **Български:** Няколко семена от растение лунно семе (moonseed)
+
+### 51. Moonbeam — `moonbeam-xphb` · material
+- **Защо:** Не съм сигурен в българското име на moonseed.
+- **Английски:** A moonseed leaf.
+- **Български:** Лист от лунно семе (moonseed).
+
+### 52. Phantasmal Force — `phantasmal-force` · desc[0]
+- **Защо:** Нов термин: phantasm -> фантом, phantasmal -> илюзорен.
+- **Английски:** phantasmal object ... phantasm
+- **Български:** фантом — илюзорен предмет
+
+### 53. Pyrotechnics — `pyrotechnics` · desc[1]
+- **Защо:** „target“ тук е зоната с пламъка; заменено със „зоната“.
+- **Английски:** The target explodes with a dazzling display of colors.
+- **Български:** Зоната избухва в ярка феерия от цветове.
+
+### 54. Rope Trick — `rope-trick` · material
+- **Защо:** Не съм сигурен в „corn extract“ (царевица или зърно).
+- **Английски:** Powdered corn extract
+- **Български:** Прахообразен екстракт от царевица
+
+### 55. Shatter — `shatter` · higherLevel[0]
+- **Защо:** Английският текст в SRD е развален; преводът следва смисъла от XPHB (1d8 за всяко ниво на Spell Slot над 2). Да се провери източникът.
+- **Английски:** When you cast this spell using a 3 or higher level spell slot, the damage of the spell increases by 1d8 for each level of higher spell slot 2.
+- **Български:** Когато изричаш това заклинание със Spell Slot от ниво 3 или по-високо, щетите на заклинанието се увеличават с 1d8 за всяко ниво на Spell Slot над 2.
+
+### 56. Moonbeam — `moonbeam` · desc[3]
+- **Защо:** В SRD пише точно „60 feet“ (не „up to“); оставено „на 60 фута“, макар XPHB да казва „до 60 фута“.
+- **Английски:** you can use an action to move the beam 60 feet in any direction
+- **Български:** След като изречеш това заклинание, във всеки свой ход можеш да използваш действие (Action), за да преместиш лъча на 60 фута (18 м) в произволна посока.
+
+### 57. Nathair's Mischief — `nathairs-mischief` · desc[3]
+- **Защо:** „Омаян спрямо теб“ — няма установена форма в речника за „charmed by you“.
+- **Английски:** become charmed by you
+- **Български:** 1 | Във въздуха се разнася мирис на ябълков пай. Всяко същество в куба прави спасително хвърляне (Saving Throw) за Wisdom. При неуспех то получава състоянието Омаян (Charmed) спрямо теб до началото на следващия ти ход.
+
+## Партида b15-L2
+
+### 58. Warp Sense — `warp-sense` · material
+- **Защо:** Razorvine е растение от Sigil; превод „бръсначова лоза“ е мой.
+- **Английски:** A razorvine leaf.
+- **Български:** Лист от бръсначова лоза.
+
+### 59. Spiritual Weapon — `spiritual-weapon-xphb` · desc[0]
+- **Защо:** „force“ е предадено като „оръжие от силова енергия“, защото „сила“ е двусмислено; проверете дали звучи добре.
+- **Английски:** You create a floating, spectral force that resembles a weapon of your choice
+- **Български:** Създаваш плаващо призрачно оръжие от силова енергия, с форма по твой избор. То съществува, докато трае заклинанието. Оръжието се появява в обхвата в пространство по твой избор и можеш веднага да направиш една атака със заклинание в близък бой (Melee Spell Attack) срещу едно същество на разстояние до 5 фута (1,5 м) от него. При попадение целта получава щети от силова енергия (Force), равни на 1d8 плюс модификатора на магическата ти характеристика (Spellcasting Ability).
+
+### 60. Warding Wind — `warding-wind` · desc[4]
+- **Защо:** „Hedges out“ разбрано като „не допуска навлизането“; потвърдете.
+- **Английски:** It hedges out vapor, gas, and fog that can be dispersed by strong wind.
+- **Български:** Не пуска в зоната си изпарения, газове и мъгла, които силен вятър може да разпръсне.
+
+## Партида b16-L2
+
+### 61. Wristpocket — `wristpocket` · desc[0]
+- **Защо:** Няма термин в речника за „extradimensional space“; „извънизмерно пространство“ е решение на преводача. „Pocket plane“ в desc[1] е предадено със същото пространство („там“) за яснота.
+- **Английски:** is transported to an extradimensional space
+- **Български:** Той се пренася в извънизмерно пространство и остава там, докато трае заклинанието.
+
+### 62. Zone of Truth — `zone-of-truth` · desc[0]
+- **Защо:** „in the radius“ предадено като „в зоната“ за яснота (същото и в XPHB записа).
+- **Английски:** can't speak a deliberate lie while in the radius
+- **Български:** При неуспех съществото не може да изрече преднамерена лъжа, докато е в зоната.
+
+## Партида b17-L3
+
+### 63. Clockwork Force — `conjure-constructs-frhof` · desc[1]
+- **Защо:** Не съм сигурен дали името на опцията е име на игрово съдържание (остава English) или описателен етикет.
+- **Английски:** Clockwork Force.
+- **Български:** Часовникова сила.
+
+### 64. Conjure Constructs — `conjure-constructs-frhof` · desc[2]
+- **Защо:** Същият въпрос за етикета; „Ward“ преведено като „закрила“.
+- **Английски:** Orderly Ward.
+- **Български:** Подредена закрила.
+
+### 65. Conjure Animals — `conjure-animals` · desc[0]
+- **Защо:** Не съм сигурен как най-добре да се предаде „fey spirits“.
+- **Английски:** fey spirits
+- **Български:** духове от вида фея (Fey)
+
+### 66. Bestow Curse — `bestow-curse` · higherLevel[0]
+- **Защо:** Перифразирано за яснота.
+- **Английски:** the duration is concentration, up to 10 minutes
+- **Български:** заклинанието изисква концентрация (Concentration) и трае до 10 минути
+
+### 67. Blink — `blink` · desc[0]
+- **Защо:** Разделих дългото изречение на две; проверете смисъла.
+- **Английски:** you return to an unoccupied space ... (chosen at random if more than one space is equally near)
+- **Български:** (избира се на случаен принцип, ако няколко пространства са на равно разстояние)
+
+### 68. Clairvoyance — `clairvoyance` · desc[0]
+- **Защо:** Избегнат е мъжки род на причастие; формулировката е малко тромава.
+- **Английски:** a place you have visited or seen before
+- **Български:** в познато ти място (посещавано или виждано от теб преди)
+
+### 69. Clairvoyance — `clairvoyance` · material
+- **Защо:** Дали „фокус“ да е без скоба или да остане така.
+- **Английски:** A focus worth at least 100gp
+- **Български:** Фокус на стойност поне 100 зл.: ...
+
+### 70. Animate Dead — `animate-dead` · desc[0]
+- **Защо:** Перифразирано; целта е купчина кости или труп.
+- **Английски:** imbues the target with a foul mimicry of life
+- **Български:** вдъхва на целта зловещо подобие на живот
+
+### 71. Antagonize — `antagonize` · desc[0]
+- **Защо:** „Antagonize“ е преведено като „раздразват“; може да е по-силно (насъскват).
+- **Английски:** antagonize
+- **Български:** раздразват
+
