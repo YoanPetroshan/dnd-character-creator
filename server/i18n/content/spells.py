@@ -21,6 +21,12 @@ from i18n.content import store
 DICE = re.compile(r"\b\d*d\d+\b")
 INTEGER = re.compile(r"(?<!\w)\d+(?!\w)")
 CYRILLIC = re.compile(r"[Ѐ-ӿ]")
+# Thousands groups: "1,000" (English) and "1 000" / "1\u2009000" / "1\u00a0000" (Bulgarian) both count as 1000.
+_GROUPED = re.compile(r"(?<=\d)[,\u2009\u00a0 ](?=\d{3}(?!\d))")
+
+
+def _numbers(text: str) -> list[str]:
+    return INTEGER.findall(_GROUPED.sub("", text))
 LATIN = re.compile(r"[A-Za-z]")
 LANG = "bg"
 
@@ -75,7 +81,7 @@ def validate(english: dict, record: dict) -> list[str]:
     # Every English die must survive; Bulgarian may repeat a die the English names ("още един d8" for "these d8s").
     if (en_dice - bg_dice) or any(d not in en_dice for d in bg_dice - en_dice):
         problems.append(f"dice expressions differ: English {sorted(DICE.findall(en_all))}, Bulgarian {sorted(DICE.findall(bg_all))}")
-    missing = collections.Counter(INTEGER.findall(en_all)) - collections.Counter(INTEGER.findall(bg_all))
+    missing = collections.Counter(_numbers(en_all)) - collections.Counter(_numbers(bg_all))
     if missing:
         problems.append(f"numbers missing from the Bulgarian text: {sorted(missing.elements())}")
     return problems
