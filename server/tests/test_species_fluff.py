@@ -4,7 +4,12 @@ import json
 import pytest
 
 import service
+from catalog.official_source import has_official
 from catalog.official.race_fluff import MAX_CHARS, MAX_PARAGRAPHS, _strip_tags, species_fluff
+
+
+# the species records and their lore come from the official data; the SRD-only CI job has neither
+needs_official = pytest.mark.skipif(not has_official(), reason="official data not fetched on this machine")
 
 
 def species(sid):
@@ -13,6 +18,7 @@ def species(sid):
     return json.loads(body)
 
 
+@needs_official
 def test_elf_xphb_has_short_lore_without_sublineage_blocks_or_tags():
     data = species("elf-xphb")
     assert 1 <= len(data["fluff"]) <= MAX_PARAGRAPHS
@@ -21,12 +27,14 @@ def test_elf_xphb_has_short_lore_without_sublineage_blocks_or_tags():
     assert not any(p.startswith(("Drow.", "High Elves.", "Wood Elves.")) for p in data["fluff"])
 
 
+@needs_official
 def test_old_phb_species_keep_named_blocks_as_name_dot_text():
     data = species("dwarf-phb")
     assert any(p.startswith("Short and Stout. ") for p in data["fluff"])
     assert not any(p.startswith(("Hill Dwarves.", "Mountain Dwarves.")) for p in data["fluff"])
 
 
+@needs_official
 def test_trait_details_are_plain_text_and_nonempty():
     details = species("elf-xphb")["traitDetails"]
     names = [d["name"] for d in details]
@@ -35,10 +43,12 @@ def test_trait_details_are_plain_text_and_nonempty():
         assert d["desc"] and all(isinstance(t, str) and "{@" not in t for t in d["desc"])
 
 
+@needs_official
 def test_species_without_fluff_get_an_empty_list():
     assert species("kobold-dmg")["fluff"] == []
 
 
+@needs_official
 def test_srd_species_fall_back_to_phb_text_and_unknown_is_404():
     assert species("dwarf")["fluff"]
     assert service.handle("GET", "/api/catalog/species/nope")[0] == 404
