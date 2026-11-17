@@ -202,15 +202,15 @@ MESSAGES: dict[str, dict[str, str]] = {
     # --- the export gate (app._pending_export_problems) -------------------------------------------------------
     "export-missing-class": {
         "en": "Choose a class first.",
-        "bg": "Първо изберете клас.",
+        "bg": "Първо избери клас.",
     },
     "export-missing-species": {
         "en": "Choose a species first.",
-        "bg": "Първо изберете раса (Species).",
+        "bg": "Първо избери раса (Species).",
     },
     "export-missing-background": {
         "en": "Choose a background first.",
-        "bg": "Първо изберете произход (Background).",
+        "bg": "Първо избери произход (Background).",
     },
     "unresolved-choice": {
         "en": "'{label}' isn't fully chosen yet.",

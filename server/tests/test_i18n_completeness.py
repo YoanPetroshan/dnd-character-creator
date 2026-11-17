@@ -423,7 +423,7 @@ def test_export_gate_lang_bg_is_bulgarian_for_mixed_drafts(client):
 @pytestmark_data
 def test_the_english_left_check_has_teeth(data_texts):
     assert _english_left("x", "Choose 2 skills.", data_texts, kind="description")
-    assert _english_left("x", "Изберете 2 умения.", data_texts, kind="description") is None
+    assert _english_left("x", "Избери 2 умения.", data_texts, kind="description") is None
     assert _english_left("x", "Skill Expert: Expertise", data_texts, kind="label") is None
     assert _english_left("x", "Skill Expert: Anything", data_texts, kind="label")
     assert json.dumps(sorted(TERM_TAILS))

@@ -1174,8 +1174,8 @@
   "status": 200
  },
  "resolve-lang-bg": {
-  "bodyLength": 9228,
-  "bodySha256": "c9fcd26e462668ee1102c368be4c14b6a6b09337862229aa0bffd945656cd659",
+  "bodyLength": 9216,
+  "bodySha256": "b9070191249b0e6d12ec424bb32bd9ba17bbb6bca7a7b61a890238e67be9ae62",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -1198,8 +1198,8 @@
   "status": 200
  },
  "resolve-lang-twice-first-wins": {
-  "bodyLength": 9228,
-  "bodySha256": "c9fcd26e462668ee1102c368be4c14b6a6b09337862229aa0bffd945656cd659",
+  "bodyLength": 9216,
+  "bodySha256": "b9070191249b0e6d12ec424bb32bd9ba17bbb6bca7a7b61a890238e67be9ae62",
   "headers": {
    "Content-Type": "application/json"
   },

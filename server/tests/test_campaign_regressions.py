@@ -1818,13 +1818,13 @@ def test_vf7_7b_skill_and_tool_descriptions_are_tagged_with_plural_handling(cata
     en = _chassis_desc(res, "class:fighter:1:prof-choice-0")
     assert isinstance(en, Msg) and en.startswith("Choose two skills from Acrobatics, Animal Handling, Athletics")
     bg = _chassis_desc(localize(res, "bg"), "class:fighter:1:prof-choice-0")
-    assert bg.startswith("Изберете 2 умения (Skills) от Acrobatics, Animal Handling, Athletics")
+    assert bg.startswith("Избери 2 умения (Skills) от Acrobatics, Animal Handling, Athletics")
     res = resolve(_draft([("bard", 1)], ruleset="2024"), catalog)
     assert _chassis_desc(res, "class:bard:1:prof-choice-0") == "Choose any three skills."
     assert _chassis_desc(res, "class:bard:1:prof-choice-1") == "Choose three musical instruments."  # was "instrument"
     loc = localize(res, "bg")
-    assert _chassis_desc(loc, "class:bard:1:prof-choice-0") == "Изберете 3 умения (Skills) по ваш избор."
-    assert _chassis_desc(loc, "class:bard:1:prof-choice-1") == "Изберете 3 музикални инструмента."
+    assert _chassis_desc(loc, "class:bard:1:prof-choice-0") == "Избери 3 умения (Skills) по твой избор."
+    assert _chassis_desc(loc, "class:bard:1:prof-choice-1") == "Избери 3 музикални инструмента."
 
 
 def test_vf7_7b_a_single_pick_reads_one_skill_not_one_skills(catalog):
@@ -1832,9 +1832,9 @@ def test_vf7_7b_a_single_pick_reads_one_skill_not_one_skills(catalog):
     from i18n.messages import localize
     one = _skill_envelopes([{"choose": {"from": ["athletics", "acrobatics"], "count": 1}}])[0]["desc"]
     assert one == "Choose one skill from Athletics, Acrobatics."
-    assert localize({"d": one}, "bg")["d"] == "Изберете 1 умение (Skill) от Athletics, Acrobatics."
+    assert localize({"d": one}, "bg")["d"] == "Избери 1 умение (Skill) от Athletics, Acrobatics."
     anyone = _skill_envelopes([{"any": 1}])[0]["desc"]
-    assert anyone == "Choose any one skill." and localize({"d": anyone}, "bg")["d"] == "Изберете 1 умение (Skill) по ваш избор."
+    assert anyone == "Choose any one skill." and localize({"d": anyone}, "bg")["d"] == "Избери 1 умение (Skill) по твой избор."
     six = _skill_envelopes([{"any": 6}])[0]["desc"]
     assert six == "Choose any 6 skills."
 

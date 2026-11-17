@@ -115,11 +115,11 @@ def test_nested_card_texts_localize():
     noun = msg("noun-from-list", noun=msg("noun-cantrip", n=2), classes=["Cleric"])
     desc = msg("desc-choose-noun", count=2, noun=noun)
     assert desc == "Choose 2 cantrips from the Cleric list."
-    assert render(desc, "bg") == "Изберете 2 трика (Cantrips) от списъка на Cleric."
+    assert render(desc, "bg") == "Избери 2 трика (Cantrips) от списъка на Cleric."
     spells = msg("noun-school", schools=["Evocation", "Illusion"], noun=msg("noun-spell-levels", n=1, levels=[1]))
     assert msg("desc-choose-noun", count=1, noun=spells) == "Choose 1 Evocation or Illusion level 1 spell."
     assert render(msg("desc-choose-noun", count=1, noun=spells), "bg") == \
-        "Изберете 1 заклинание от ниво 1 от школа Evocation или Illusion."
+        "Избери 1 заклинание от ниво 1 от школа Evocation или Illusion."
     # a pruned reason nests the card label it quotes
     pruned = msg("pruned-proficient", label=msg("label-skill-proficiencies"), names=["Arcana"])
     assert render(pruned, "bg").startswith("'Владеене на умения (Skill Proficiencies)':")
@@ -423,10 +423,10 @@ def test_resolve_lang_bg_returns_bulgarian_card_texts(client):
     assert set(e) == set(b)
     asi = "class:fighter:4:asi"
     assert e[asi]["label"] == "Ability Score Improvement" and b[asi]["label"] == "Увеличение на характеристики (Ability Score Improvement)"
-    assert e[asi]["description"].startswith("Increase one ability score by 2") and b[asi]["description"].startswith("Увеличете една")
+    assert e[asi]["description"].startswith("Increase one ability score by 2") and b[asi]["description"].startswith("Увеличи една")
     # fixed engine cards: the 2024 origin languages, Weapon Mastery, Starting Equipment
     langs = next(cid for cid in e if cid.endswith("languages") and e[cid]["label"] == "Languages")
-    assert b[langs]["label"] == "Езици" and b[langs]["description"].startswith("Героят ви знае Common")
+    assert b[langs]["label"] == "Езици" and b[langs]["description"].startswith("Героят ти знае Common")
     mastery = next(cid for cid in e if cid.endswith("weapon-mastery"))
     assert b[mastery]["label"] == "Майсторство с оръжия (Weapon Mastery)" and "вида оръжия" in b[mastery]["description"]
     equip = next(cid for cid in e if "equipment-choice" in cid and e[cid]["label"] == "Starting Equipment")
@@ -446,7 +446,7 @@ def test_resolve_lang_bg_spell_cards_and_nested_card_labels(client):
     assert en["class:wizard:spells-cantrips"]["label"] == "Cantrips Known"
     assert bg["class:wizard:spells-cantrips"]["label"] == "Известни трикове (Cantrips Known)"
     assert en["class:wizard:spells-cantrips"]["description"] == "Choose 5 cantrips from the Wizard spell list."
-    assert bg["class:wizard:spells-cantrips"]["description"] == "Изберете 5 трика (Cantrips) от списъка със заклинания на Wizard."
+    assert bg["class:wizard:spells-cantrips"]["description"] == "Избери 5 трика (Cantrips) от списъка със заклинания на Wizard."
     mastery = "class:wizard:18:spell-mastery-1"
     assert en[mastery]["status"] == bg[mastery]["status"] == "unavailable"
     assert en[mastery]["label"] == "Spell Mastery (level 1)" and bg[mastery]["label"] == "Spell Mastery (ниво 1)"

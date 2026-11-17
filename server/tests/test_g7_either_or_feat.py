@@ -232,4 +232,4 @@ def test_description_message_has_both_languages():
     m = msg("desc-feat-or-dark-gift", name="Survivor")
     assert render(m, "en") == "Choose Survivor or a Dark Gift feat."
     bg = render(m, "bg")
-    assert bg == "Изберете Survivor или талант (Feat) Dark Gift."  # T1: the Bulgarian term, then the English in brackets
+    assert bg == "Избери Survivor или талант (Feat) Dark Gift."  # T1: the Bulgarian term, then the English in brackets

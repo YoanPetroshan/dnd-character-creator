@@ -119,7 +119,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "wielded-main-shield": {
         "en": "{name} is a shield; put it in the off hand.",
-        "bg": "{name} е щит; сложете го във втората ръка.",
+        "bg": "{name} е щит; сложи го във втората ръка.",
     },
     "wielded-same-item-twice": {
         "en": "{name} is in both hands but the inventory has only one.",

@@ -13,7 +13,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     # --- languages -----------------------------------------------------------------------------------------------
     "pruned-language-replacement-lost": {
         "en": "'{label}': {names:, } no longer applies because you do not already know {lang}; the language selection was ignored.",
-        "bg": "'{label}': {names:, } вече не се прилага, защото още не знаете {lang}; изборът на език беше пренебрегнат.",
+        "bg": "'{label}': {names:, } вече не се прилага, защото още не знаеш {lang}; изборът на език беше пренебрегнат.",
     },
     "pruned-language-known": {
         "en": "'{label}': {names:, } is already known; the language selection was ignored.",
@@ -64,7 +64,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "pruned-minor-illusion-required": {
         "en": "'{label}' applies only when you already know Minor Illusion; the selection was ignored.",
-        "bg": "'{label}' се прилага само когато вече знаете Minor Illusion; изборът беше пренебрегнат.",
+        "bg": "'{label}' се прилага само когато вече знаеш Minor Illusion; изборът беше пренебрегнат.",
     },
     # --- invocations -------------------------------------------------------------------------------------------------
     "pruned-invocation-prereq": {
@@ -129,7 +129,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "pruned-weapon-not-proficient": {
         "en": "'{label}': {names:, } is no longer a proficient weapon and was ignored.",
-        "bg": "'{label}': вече не е оръжие, което владеете: {names:, }; изборът беше пренебрегнат.",
+        "bg": "'{label}': вече не е оръжие, което владееш: {names:, }; изборът беше пренебрегнат.",
     },
     "pruned-mastery-unavailable-class": {
         "en": "'{label}': {names:, } is not an available weapon for this class and was ignored.",

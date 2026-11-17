@@ -305,7 +305,7 @@ def test_filename_fallback_per_language(client, lang, fallback):
 def test_gate_problems_are_still_localized_by_lang(client):
     body = {"name": "x", "ruleset": "mixed"}
     assert client.post("/api/export/pdf?lang=en", json=body).get_json()["problems"][0]["message"] == "Choose a class first."
-    assert client.post("/api/export/pdf?lang=bg", json=body).get_json()["problems"][0]["message"] == "Първо изберете клас."
+    assert client.post("/api/export/pdf?lang=bg", json=body).get_json()["problems"][0]["message"] == "Първо избери клас."
 
 
 def test_frontend_filename_fallbacks_equal_the_servers():
