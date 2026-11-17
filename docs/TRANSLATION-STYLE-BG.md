@@ -82,6 +82,8 @@ How to use it: the **Bulgarian** column is the form for the first occurrence (wi
 
 | Alignment | мирогледие (Alignment) | (app) „Мирогледие“; not „мироглед“ |
 | Challenge Rating | ниво на опасност (Challenge Rating) | |
+| Strength check (any ability) | проверка на Strength | a named ability check is „проверка на <Ability>“, no bracket; „проверка на характеристика (Ability Check)“ only when no ability is named |
+| statistics (game statistics, stat block) | игрови показатели | |
 
 ### 2.2 Actions and the turn
 
