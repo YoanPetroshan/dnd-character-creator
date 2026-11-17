@@ -571,6 +571,26 @@ export const en: Copy = {
     },
   },
 
+  /** The item eye (equipment page, starting-equipment choices): the quick facts and the rules texts of one item. */
+  itemDetail: {
+    cost: "Cost",
+    weight: "Weight",
+    damage: "Damage",
+    twoHanded: "Two-handed",
+    range: "Range",
+    thrown: "Thrown range",
+    properties: "Properties",
+    mastery: "Mastery",
+    ac: "Armor Class",
+    dexMax: (max: number | null) => (max == null ? " + Dexterity" : ` + Dexterity (max +${max})`),
+    strMin: "Strength required",
+    stealth: "Stealth",
+    stealthValue: "Disadvantage",
+    contents: "Contents:",
+    feetShort: "ft",
+    coins: { gp: g.gold.en, sp: "SP", cp: "CP", ep: "EP", pp: "PP" } as Record<string, string>,
+  },
+
   equipmentPage: {
     title: "Equipment",
     categories: {
@@ -598,6 +618,7 @@ export const en: Copy = {
     add: "Add",
     addLabel: (name: string) => `Add ${name}`,
     removeLabel: (name: string) => `Remove ${name}`,
+    showItem: (name: string) => `Show a short description of the item: ${name}`,
     noAdded: "No items have been added.",
     equipped: "Equipped",
   },
@@ -639,6 +660,7 @@ export const en: Copy = {
     hideUnavailable: "Hide the unavailable",
     showUnavailable: (n: number) => `Show the unavailable (${n})`,
     showSpell: "Show spell description",
+    showItem: "Show item description",
     selectedTitle: "Selected",
     selectedCount: (selected: number, count: number) => `Selected (${selected}/${count})`,
     removeLabel: (label: string) => `Remove: ${label}`,
@@ -684,6 +706,7 @@ export const en: Copy = {
     "net.timeout": () => "The server did not answer in time.",
     "catalog.failed": (p: Msgs) => `The catalog did not load (error ${p.status}).`,
     "items.failed": (p: Msgs) => `The list did not load (error ${p.status}).`,
+    "item.failed": (p: Msgs) => `The item did not load (error ${p.status}).`,
     "spells.failed": (p: Msgs) => `The spell list did not load (error ${p.status}).`,
     "species.failed": (p: Msgs) => `The species did not load (error ${p.status}).`,
     "spell.failed": (p: Msgs) => `The spell did not load (error ${p.status}).`,

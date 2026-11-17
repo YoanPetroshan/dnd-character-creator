@@ -91,6 +91,11 @@ function ActiveDraft({ activeId, initial, children }: { activeId: string; initia
   return <DraftContext.Provider value={value}>{children}</DraftContext.Provider>;
 }
 
+/** The draft's ruleset, or "mixed" outside a DraftProvider (components that only need it to pick rule texts). */
+export function useDraftRuleset(): string {
+  return useContext(DraftContext)?.draft.ruleset ?? "mixed";
+}
+
 export function useDraft(): DraftContextValue {
   const ctx = useContext(DraftContext);
   if (!ctx) throw new Error("useDraft must be used within a DraftProvider");

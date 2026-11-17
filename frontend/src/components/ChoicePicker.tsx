@@ -3,6 +3,9 @@ import { useT } from "../LanguageContext";
 import type { Copy } from "../copy";
 import { optionSource } from "../logic/sources";
 import type { Choice, ChoiceOption } from "../types";
+import { useDraftRuleset } from "../DraftContext";
+import { optionItemIds } from "../logic/optionItems";
+import { ItemDetailBody, useItemDetails } from "./ItemDetailBody";
 import { SpellDetailBody, useSpellDetails } from "./SpellDetailBody";
 
 interface ChoicePickerProps {
@@ -37,49 +40,60 @@ export function groupLabel(t: Copy, group: string): string {
 
 const isSpellOption = (o: ChoiceOption): boolean => /^spell-level-\d+$/.test(o.group ?? "");
 
-/** The eye button of a spell row (a sibling of the label, so it never toggles the checkbox) and the panel under it. */
-function useSpellPreview() {
+/** The eye button of a spell row or an item row (a sibling of the label, so it never toggles the checkbox) and the panel
+ *  under it. A spell option is a spell id; an option of an equipment (or weapon mastery) choice is one or several item
+ *  ids joined with "+", and its panel stacks one item body per id. */
+function useOptionPreview(choice: Choice) {
   const t = useT();
-  const { details, loadDetail } = useSpellDetails();
+  const spells = useSpellDetails();
+  const items = useItemDetails(useDraftRuleset());
   const [open, setOpen] = useState<Set<string>>(new Set());
   const isOpen = (o: ChoiceOption) => open.has(o.id);
-  function toggle(id: string) {
+  const itemIds = (o: ChoiceOption) => optionItemIds(choice, o);
+  const hasEye = (o: ChoiceOption) => isSpellOption(o) || itemIds(o).length > 0;
+  function toggle(o: ChoiceOption) {
     const next = new Set(open);
-    if (next.has(id)) next.delete(id);
+    if (next.has(o.id)) next.delete(o.id);
     else {
-      next.add(id);
-      loadDetail(id);
+      next.add(o.id);
+      if (isSpellOption(o)) spells.loadDetail(o.id);
+      else itemIds(o).forEach(items.loadDetail);
     }
     setOpen(next);
   }
   const button = (o: ChoiceOption) =>
-    isSpellOption(o) && (
+    hasEye(o) && (
       <button
         type="button"
         className="spell-eye"
-        aria-label={t.choice.showSpell}
+        aria-label={isSpellOption(o) ? t.choice.showSpell : t.choice.showItem}
         aria-expanded={isOpen(o)}
-        onClick={() => toggle(o.id)}
+        onClick={() => toggle(o)}
       />
     );
   const panel = (o: ChoiceOption) =>
-    isSpellOption(o) && isOpen(o) && (
+    hasEye(o) &&
+    isOpen(o) && (
       <div className="spell-eye__panel">
-        <SpellDetailBody state={details[o.id]} />
+        {isSpellOption(o) ? (
+          <SpellDetailBody state={spells.details[o.id]} />
+        ) : (
+          itemIds(o).map((id) => <ItemDetailBody key={id} state={items.detailOf(id)} />)
+        )}
       </div>
     );
   const itemClass = (o: ChoiceOption, extra?: string) =>
-    [extra, isSpellOption(o) ? "choice-picker__item--spell" : null, isSpellOption(o) && isOpen(o) ? "choice-picker__item--spell-open" : null]
+    [extra, hasEye(o) ? "choice-picker__item--spell" : null, hasEye(o) && isOpen(o) ? "choice-picker__item--spell-open" : null]
       .filter(Boolean)
       .join(" ") || undefined;
-  return { button, panel, itemClass };
+  return { button, panel, itemClass, hasEye };
 }
 
 function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
   const t = useT();
   const [filter, setFilter] = useState("");
   const [showUnavailable, setShowUnavailable] = useState(false);
-  const preview = useSpellPreview();
+  const preview = useOptionPreview(choice);
 
   const selected = new Set(choice.selected);
   const needle = filter.trim().toLowerCase();
@@ -97,7 +111,7 @@ function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
   function renderOption(option: ChoiceOption, prev: ChoiceOption | undefined) {
     const heading = option.group && option.group !== prev?.group ? option.group : null;
     // a spell row keeps its own box (the eye button and the panel hang on it): its group heading is a row of its own
-    const spellHeading = heading && isSpellOption(option) ? heading : null;
+    const spellHeading = heading && preview.hasEye(option) ? heading : null;
     return (
       <Fragment key={option.id}>
         {spellHeading && (
@@ -176,7 +190,7 @@ function LongPicker({ choice, onToggle }: ChoicePickerProps) {
   const [showUnavailable, setShowUnavailable] = useState(false);
   /** User choices only; a group with no entry follows its default. */
   const [openState, setOpenState] = useState<Record<string, boolean>>({});
-  const preview = useSpellPreview();
+  const preview = useOptionPreview(choice);
 
   const selected = new Set(choice.selected);
   const needle = filter.trim().toLowerCase();

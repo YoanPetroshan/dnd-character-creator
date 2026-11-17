@@ -579,6 +579,26 @@ export const bg = {
     },
   },
 
+  /** The item eye (equipment page, starting-equipment choices): the quick facts and the rules texts of one item. */
+  itemDetail: {
+    cost: "Цена",
+    weight: "Тегло",
+    damage: "Щета",
+    twoHanded: "Двуръчно",
+    range: "Обхват",
+    thrown: "Обхват при хвърляне",
+    properties: "Свойства",
+    mastery: "Майсторство с оръжия (Weapon Mastery)",
+    ac: "Клас броня (Armor Class, AC)",
+    dexMax: (max: number | null) => (max == null ? " + DEX" : ` + DEX (макс. +${max})`),
+    strMin: "Минимална STR",
+    stealth: "Скритост",
+    stealthValue: "Disadvantage",
+    contents: "Съдържание:",
+    feetShort: "фута",
+    coins: { gp: "зл.", sp: "ср.", cp: "мед.", ep: "ел.", pp: "пл." } as Record<string, string>,
+  },
+
   equipmentPage: {
     title: "Equipment",
     categories: {
@@ -606,6 +626,7 @@ export const bg = {
     add: "Add",
     addLabel: (name: string) => `Добави ${name}`,
     removeLabel: (name: string) => `Премахни ${name}`,
+    showItem: (name: string) => `Покажи кратко описание на предмета: ${name}`,
     noAdded: "Няма добавени предмети.",
     equipped: "Екипиран",
   },
@@ -631,6 +652,7 @@ export const bg = {
     hideUnavailable: "Скриване на недостъпните",
     showUnavailable: (n: number) => `Показване на недостъпните (${n})`,
     showSpell: "Покажи описанието на заклинанието",
+    showItem: "Покажи описанието на предмета",
     selectedTitle: "Избрано",
     selectedCount: (selected: number, count: number) => `Избрано (${selected}/${count})`,
     removeLabel: (label: string) => `Премахни: ${label}`,
@@ -677,6 +699,7 @@ export const bg = {
     "net.timeout": () => "Сървърът не отговори навреме.",
     "catalog.failed": (p: Msgs) => `Каталогът не се зареди (грешка ${p.status}).`,
     "items.failed": (p: Msgs) => `Списъкът не се зареди (грешка ${p.status}).`,
+    "item.failed": (p: Msgs) => `Предметът не се зареди (грешка ${p.status}).`,
     "spells.failed": (p: Msgs) => `Списъкът със заклинания не се зареди (грешка ${p.status}).`,
     "species.failed": (p: Msgs) => `Расата (Species) не се зареди (грешка ${p.status}).`,
     "spell.failed": (p: Msgs) => `Заклинанието не се зареди (грешка ${p.status}).`,

@@ -28,6 +28,28 @@
   border-bottom: none;
 }
 
+/* The item eye sits in the flex row before the Add / Remove button (not absolute, or it would cover the button); its panel
+   wraps onto a row of its own. In the plain granted / chosen lists it follows the text inline. */
+.item-browser-list li,
+.inventory-list li {
+  flex-wrap: wrap;
+}
+
+.spell-eye.item-eye {
+  position: relative;
+  top: auto;
+  right: auto;
+  flex: none;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.item-browser-list li > .item-eye__panel,
+.inventory-list li > .item-eye__panel {
+  flex: 0 0 calc(100% - var(--space-2));
+  box-sizing: border-box;
+}
+
 .item-browser-list li span,
 .inventory-list li span {
   flex: 1;
