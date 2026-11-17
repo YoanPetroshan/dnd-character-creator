@@ -473,6 +473,8 @@ Notes on the patterns:
 
 - "pushed/moved up to N feet away from you" → „избутан до N фута (X м) далеч от теб“. Never „на разстояние до N фута от теб“: that means it ends up WITHIN N feet of you.
 
+- "within N feet (of X)" → „на разстояние до N фута (X м) от …“. A bare „на N фута от теб“ reads as EXACTLY N feet away and is wrong for "within".
+
 ### 4.3 Typography
 - Quotes: „…“ (inner quotes ‚…‘). Never "…" or «…».
 - Dash: — with spaces around it („ … — …“). A hyphen only inside a word or a range: „2-6“, „по-високо“.
