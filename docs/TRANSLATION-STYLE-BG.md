@@ -494,6 +494,8 @@ Notes on the patterns:
 
 - Several alternative triggers ("whenever A, B, or C") → „всеки път, когато A, когато B или когато C“; never „и когато … и когато“ (reads as all at once).
 
+- "less than or equal to N" → „равно на N или по-ниско“.
+
 ### 4.3 Typography
 - Quotes: „…“ (inner quotes ‚…‘). Never "…" or «…».
 - Dash: — with spaces around it („ … — …“). A hyphen only inside a word or a range: „2-6“, „по-високо“.
