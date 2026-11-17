@@ -630,7 +630,7 @@ export const bg = {
     searchLabel: (label: string) => `Търсене: ${label}`,
     hideUnavailable: "Скриване на недостъпните",
     showUnavailable: (n: number) => `Показване на недостъпните (${n})`,
-    showSpell: "Покажи описанието на магията",
+    showSpell: "Покажи описанието на заклинанието",
     selectedTitle: "Избрано",
     selectedCount: (selected: number, count: number) => `Избрано (${selected}/${count})`,
     removeLabel: (label: string) => `Премахни: ${label}`,
