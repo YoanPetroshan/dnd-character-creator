@@ -88,7 +88,7 @@ _ATTACK_WORDS = {
     "mw,rw": "Melee or Ranged Weapon Attack:", "ms,rs": "Melee or Ranged Spell Attack:",
 }
 # Tags whose later "|" segments are not display text.
-_FIRST_SEGMENT_TAGS = {"filter", "scaledamage", "scaledice", "dice", "damage", "d20", "autodice", "note", "footnote", "book", "i", "b", "u", "s"}
+_FIRST_SEGMENT_TAGS = {"filter", "dice", "damage", "d20", "autodice", "note", "footnote", "book", "i", "b", "u", "s"}
 
 
 def _tag_repl(m: re.Match) -> str:
@@ -107,6 +107,11 @@ def _tag_repl(m: re.Match) -> str:
         return f"{first} percent"
     if tag == "quickref":
         return parts[3] if len(parts) > 3 and parts[3] else first
+    if tag in ("scaledamage", "scaledice"):
+        # {@scaledamage base|levels|per-level|display}: the text shows the per-level amount
+        if len(parts) > 3 and parts[3]:
+            return parts[3]
+        return parts[2] if len(parts) >= 3 and parts[2] else first
     if tag in _FIRST_SEGMENT_TAGS:
         return first
     return parts[2] if len(parts) >= 3 and parts[2] else first
