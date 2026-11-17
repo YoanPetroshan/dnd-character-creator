@@ -158,6 +158,7 @@ def main(argv=None) -> int:
     ex.add_argument("--out", required=True)
     ap_apply = sub.add_parser("apply", help="validate a translated work file and merge the valid records")
     ap_apply.add_argument("file")
+    ap_apply.add_argument("--check", action="store_true", help="validate only, write nothing")
     sub.add_parser("status", help="translated / stale / missing per source")
     args = ap.parse_args(argv)
 
@@ -181,7 +182,7 @@ def main(argv=None) -> int:
         merged, results = apply_records(spells, overlay, records)
         for sid, reasons in results:
             print(f"OK     {sid}" if not reasons else f"REJECT {sid}: " + "; ".join(reasons))
-        if merged != overlay:
+        if merged != overlay and not args.check:
             write_overlay(merged)
         return 1 if any(reasons for _, reasons in results) else 0
     counts = status_counts(spells, overlay)
