@@ -1,14 +1,20 @@
 import { useEffect, useRef, useState } from "react";
-import { useT } from "../LanguageContext";
+import { useLang, useT } from "../LanguageContext";
+import { cacheFor, cachePut, emptyCache, type LangCache } from "../logic/langCache";
 import { renderMsg, toMsg, type Msg } from "../logic/messages";
+import type { Lang } from "../copy";
 import { fetchSpellDetail, type SpellDetail } from "../useSpells";
 
 export type DetailState = { status: "loading" } | { status: "error"; message: Msg } | { status: "ready"; spell: SpellDetail };
 
-/** Lazily fetched spell texts keyed by spell id: `loadDetail(id)` fetches once (a failed fetch may be retried). */
+/** Lazily fetched spell texts keyed by spell id and the app language: `loadDetail(id)` fetches once per language (a
+ *  failed fetch may be retried), and switching the language hides the other language's texts. */
 export function useSpellDetails() {
-  const [details, setDetails] = useState<Record<string, DetailState>>({});
-  const requested = useRef(new Set<string>());
+  const { lang } = useLang();
+  const [cache, setCache] = useState<LangCache<DetailState>>(() => emptyCache(lang));
+  const requested = useRef<{ lang: Lang; ids: Set<string> }>({ lang, ids: new Set() });
+  const current = useRef(lang);
+  current.current = lang;
   const alive = useRef(true);
   useEffect(() => {
     alive.current = true; // StrictMode runs mount, cleanup, mount
@@ -18,21 +24,39 @@ export function useSpellDetails() {
   }, []);
 
   function loadDetail(id: string) {
-    if (requested.current.has(id)) return;
-    requested.current.add(id);
-    setDetails((d) => ({ ...d, [id]: { status: "loading" } }));
-    fetchSpellDetail(id)
+    if (requested.current.lang !== lang) requested.current = { lang, ids: new Set() };
+    const ids = requested.current.ids;
+    if (ids.has(id)) return;
+    ids.add(id);
+    const put = (state: DetailState) => setCache((c) => cachePut(c, lang, id, state, current.current));
+    put({ status: "loading" });
+    fetchSpellDetail(id, lang)
       .then((spell) => {
-        if (alive.current) setDetails((d) => ({ ...d, [id]: { status: "ready", spell } }));
+        if (alive.current) put({ status: "ready", spell });
       })
       .catch((err: unknown) => {
         if (!alive.current) return;
-        requested.current.delete(id); // closing and reopening the card retries
-        setDetails((d) => ({ ...d, [id]: { status: "error", message: toMsg(err) } }));
+        ids.delete(id); // closing and reopening the card retries
+        put({ status: "error", message: toMsg(err) });
       });
   }
 
-  return { details, loadDetail };
+  // A card that was opened before a language switch is still open: fetch its text again in the new language.
+  const loadRef = useRef(loadDetail);
+  loadRef.current = loadDetail;
+  const opened = useRef(new Set<string>());
+  useEffect(() => {
+    const ids = [...opened.current];
+    ids.forEach((id) => loadRef.current(id));
+  }, [lang]);
+
+  return {
+    details: cacheFor(cache, lang),
+    loadDetail: (id: string) => {
+      opened.current.add(id);
+      loadDetail(id);
+    },
+  };
 }
 
 export function SpellDetailBody({ state }: { state: DetailState | undefined }) {
