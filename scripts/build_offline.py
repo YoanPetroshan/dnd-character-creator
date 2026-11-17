@@ -5,7 +5,7 @@
     .venv/bin/python scripts/build_offline.py --check    # verify only (no build, no network): exit 1 on any mismatch
 
 Output (all under frontend/public/pyodide/, gitignored):
-  app.zip     server engine + catalog + service + export code, i18n catalogs, the bundled official data, and
+  app.zip     server engine + catalog + service + export code, i18n catalogs, the translated-text overlays (server/data/i18n/*/*.json), the bundled official data, and
               chargen/{__init__,sources}.py + chargen/data/srd. Unzipped at "/app" it gives /app/server and /app/chargen.
   fonts.zip   server/assets/fonts (the PDF export's DejaVu fonts); unzipped at "/app" too, so it is a separate file
               the app can fetch lazily with the PDF stack.
@@ -45,8 +45,10 @@ EXCLUDE_FILES = {
     "server/i18n/review_table.py", "server/i18n/ts_copy.py", "server/i18n/review_sheet.py", "server/i18n/terms_table.py",
     "server/i18n/glossary.py", "server/i18n/bracket_terms.py",  # used by the review tools and the tests only
     "server/catalog/official/bundle.py",
+    "server/i18n/content/spells.py",  # the translators' export / apply / status tool (python -m i18n.content.spells)
 }
 SERVER_DATA = "server/data/official"
+SERVER_I18N_DATA = "server/data/i18n"  # the translated-text overlays; i18n/content/store.py finds them at ../../data/i18n
 CHARGEN_FILES = ("chargen/__init__.py", "chargen/sources.py")
 CHARGEN_DATA = "chargen/data/srd"
 FONTS = "server/assets/fonts"
@@ -81,6 +83,7 @@ def app_files() -> list[str]:
     for pkg in SERVER_PACKAGES:
         files += _walk(f"server/{pkg}")
     files += _walk(SERVER_DATA)
+    files += [f for f in _walk(SERVER_I18N_DATA) if f.endswith(".json")]  # not the README
     files += list(CHARGEN_FILES)
     files += _walk(CHARGEN_DATA)
     return sorted(f for f in files if f not in EXCLUDE_FILES)
