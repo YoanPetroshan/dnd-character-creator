@@ -1,0 +1,4 @@
+{
+  "schema": 1,
+  "about": "Storage format of the saved characters (library index, drafts, portraits). Raise it by one in any release whose code cannot read the data an older release wrote, or whose older data cannot be read back after it: the app then asks for a backup instead of updating by itself. The service worker carries this number (dist/sw.js)."
+}

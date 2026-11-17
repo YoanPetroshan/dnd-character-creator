@@ -5,7 +5,10 @@
 //             one cache named after the manifest version. Files an older cache already holds under the same revision are
 //             copied locally (a new version re-downloads only what changed, not the 9.6 MB wasm). One failed file fails
 //             the install (the browser retries later); the files already stored are kept so a retry resumes.
-//   waiting   a new version never takes over by itself: the page shows "update available" and sends SKIP_WAITING.
+//   waiting   a new version never takes over by itself: the page decides and sends SKIP_WAITING. It first asks
+//             GET_VERSION and compares the answer's `schema` (the storage format of the saved characters, see
+//             src/storageSchema.json) with its own: equal = the page applies the update by itself when the app is opened,
+//             different = the page asks the person to download a backup first.
 //   activate  delete every older `dnd-builder-precache-*` cache, claim the open pages.
 //   fetch     same-origin GET inside the scope: answered from the cache when the file is in the manifest; a page
 //             navigation inside the scope gets index.html (single-page app). Everything else (the /api calls of a
@@ -71,7 +74,8 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("message", (event) => {
   const data = event.data || {};
   if (data.type === "SKIP_WAITING") self.skipWaiting();
-  else if (data.type === "GET_VERSION" && event.source) event.source.postMessage({ type: "VERSION", version: MANIFEST.version, files: MANIFEST.entries.length });
+  else if (data.type === "GET_VERSION" && event.source)
+    event.source.postMessage({ type: "VERSION", version: MANIFEST.version, files: MANIFEST.entries.length, schema: MANIFEST.schema });
 });
 
 self.addEventListener("fetch", (event) => {

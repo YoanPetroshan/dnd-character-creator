@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { buildPrecacheManifest, collectFiles, manifestProblems, readManifestFromServiceWorker, renderServiceWorker } from "../../pwa/precache.mjs";
+import { buildPrecacheManifest, collectFiles, manifestProblems, readManifestFromServiceWorker, readStorageSchema, renderServiceWorker } from "../../pwa/precache.mjs";
 
 const dir = mkdtempSync(join(tmpdir(), "dnd-precache-"));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
@@ -99,5 +99,27 @@ describe("renderServiceWorker", () => {
   it("does not interpret $ patterns in file names", () => {
     const m = { version: "v", entries: [{ url: "a$&b.js", revision: "r" }] };
     expect(readManifestFromServiceWorker(renderServiceWorker(template, m)).entries[0].url).toBe("a$&b.js");
+  });
+});
+
+describe("storage schema", () => {
+  it("is written into the rendered worker and read back (null when none is given)", () => {
+    const m = buildPrecacheManifest([{ path: "index.html", size: 1, sha256: "a".repeat(64) }]);
+    expect(readManifestFromServiceWorker(renderServiceWorker("const MANIFEST = __PRECACHE_MANIFEST__;", m, 4)).schema).toBe(4);
+    expect(readManifestFromServiceWorker(renderServiceWorker("const MANIFEST = __PRECACHE_MANIFEST__;", m)).schema).toBeNull();
+  });
+
+  it("readStorageSchema reads the JSON file the app also imports, and rejects nonsense", () => {
+    const dir = mkdtempSync(join(tmpdir(), "schema-"));
+    try {
+      writeFileSync(join(dir, "ok.json"), JSON.stringify({ schema: 2 }));
+      writeFileSync(join(dir, "bad.json"), JSON.stringify({ schema: "2" }));
+      expect(readStorageSchema(join(dir, "ok.json"))).toBe(2);
+      expect(readStorageSchema(null)).toBeNull();
+      expect(() => readStorageSchema(join(dir, "bad.json"))).toThrow(/positive integer/);
+      expect(readStorageSchema(new URL("../storageSchema.json", import.meta.url).pathname)).toBeGreaterThanOrEqual(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

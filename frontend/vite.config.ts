@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
       pwaPlugin({
         enabled: () => /^(1|true|on|worker)$/i.test((env.VITE_OFFLINE_ENGINE ?? "").trim()),
         templatePath: decodeURIComponent(new URL("./pwa/sw.template.js", import.meta.url).pathname),
+        schemaPath: decodeURIComponent(new URL("./src/storageSchema.json", import.meta.url).pathname),
       }),
     ],
     // Pure-logic tests (src/logic/*.test.ts) run in plain node: no DOM, no React.

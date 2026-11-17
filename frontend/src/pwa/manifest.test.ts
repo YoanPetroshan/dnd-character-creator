@@ -98,7 +98,9 @@ describe("PWA components carry state in data attributes only", () => {
   });
   it("the update prompt activates the new version only from a button press", () => {
     expect(banner).toMatch(/<button type="button" onClick=\{\(\) => pwa\(\)\.applyUpdate\(\)\}>/);
-    expect(banner.match(/applyUpdate/g)).toHaveLength(1);
+    // two buttons: the plain update prompt, and the one after the backup download (disabled until the file is made)
+    expect(banner.match(/applyUpdate/g)).toHaveLength(2);
+    expect(banner.match(/onClick=\{\(\) => pwa\(\)\.applyUpdate\(\)\}/g)).toHaveLength(2);
   });
   it("the Help page is routed and linked from the header", () => {
     const app = text("src/App.tsx");
