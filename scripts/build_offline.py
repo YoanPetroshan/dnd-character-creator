@@ -45,7 +45,7 @@ EXCLUDE_FILES = {
     "server/i18n/review_table.py", "server/i18n/ts_copy.py", "server/i18n/review_sheet.py", "server/i18n/terms_table.py",
     "server/i18n/glossary.py", "server/i18n/bracket_terms.py",  # used by the review tools and the tests only
     "server/catalog/official/bundle.py",
-    "server/i18n/content/spells.py",  # the translators' export / apply / status tool (python -m i18n.content.spells)
+    "server/i18n/content/tool.py", "server/i18n/content/spells.py",  # the translators' export / apply / status tool (python -m i18n.content.tool --kind ...; spells.py is its shim)
 }
 SERVER_DATA = "server/data/official"
 SERVER_I18N_DATA = "server/data/i18n"  # the translated-text overlays; i18n/content/store.py finds them at ../../data/i18n

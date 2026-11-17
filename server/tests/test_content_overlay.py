@@ -11,6 +11,7 @@ import pytest
 
 import service
 from i18n.content import spells as tool
+from i18n.content import tool as generic_tool
 from i18n.content import store
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -205,9 +206,117 @@ def test_the_pack_ships_the_overlays_but_not_the_tool_or_the_readme():
     pack = module.app_files()
     assert "server/data/i18n/bg/spells.json" in pack
     assert "server/i18n/content/store.py" in pack and "server/i18n/content/__init__.py" in pack
-    assert "server/i18n/content/spells.py" not in pack
+    assert "server/i18n/content/spells.py" not in pack and "server/i18n/content/tool.py" not in pack
     assert not any(f.endswith("README.md") and "data/i18n" in f for f in pack)
 
 
 def test_the_store_finds_the_overlay_where_the_pack_puts_it():
     assert store.I18N_DIR == ROOT / "server" / "data" / "i18n"
+
+
+# --- species / items / item-rules ------------------------------------------------------------------------------------
+
+SPECIES = {"index": "sp", "name": "Sp", "source": "SRD", "fluff": ["Elves live 750 years.", "They love art."],
+           "traitDetails": [{"name": "Darkvision", "desc": ["You see 60 feet in the dark."]},
+                            {"name": "Trance", "desc": ["Rest 4 hours.", "Dream a bit."]}]}
+SP_EN = store.fields_for("species", SPECIES)
+SP_BG = {"id": "sp", "hash": store.source_hash("species", SP_EN), "fluff": ["Елфите живеят 750 години.", "Обичат изкуството."],
+         "traits": [{"desc": ["Виждаш на 60 фута в тъмното."]}, {"desc": ["Почивка 4 часа.", "Сънуваш малко."]}]}
+ITEM = {"index": "it", "name": "It", "source": "SRD", "desc": ["Deals 2d6 acid damage."], "special": ["Needs 2 hands."]}
+IT_EN = store.fields_for("items", ITEM)
+IT_BG = {"id": "it", "hash": store.source_hash("items", IT_EN), "desc": ["Нанася 2d6 щета от киселина."], "special": ["Иска 2 ръце."]}
+
+
+def test_spell_hash_is_unchanged_by_the_generalization():
+    import hashlib
+
+    assert store.source_hash("spells", EN) == store.source_hash(EN)
+    # Frozen form of the pre-generalization hash: sorted-key JSON of the four spell fields.
+    canon = json.dumps({"castingCondition": None, "desc": EN["desc"], "higherLevel": EN["higherLevel"], "material": EN["material"]},
+                       ensure_ascii=False, sort_keys=True)
+    assert store.source_hash(EN) == hashlib.sha1(canon.encode()).hexdigest()
+    assert store.source_hash({"desc": None, "higherLevel": None, "material": None, "castingCondition": None}) == \
+        store.source_hash({"desc": [], "higherLevel": [], "material": None, "castingCondition": None})
+
+
+def test_the_committed_spell_overlay_is_all_fresh():
+    from catalog.loader import load
+
+    overlay = json.loads((ROOT / "server" / "data" / "i18n" / "bg" / "spells.json").read_text(encoding="utf-8"))
+    spells = load().spells
+    stale = [k for k, v in overlay.items() if k in spells and v["hash"] != store.source_hash(store.spell_fields(spells[k]))]
+    assert stale == []
+
+
+def test_kind_hashes_differ_and_follow_their_fields():
+    assert store.source_hash("species", SP_EN) != store.source_hash("species", {**SP_EN, "fluff": ["x"]})
+    assert store.source_hash("species", SP_EN) != store.source_hash("species", {**SP_EN, "traits": SP_EN["traits"][:1]})
+    assert store.source_hash("items", IT_EN) != store.source_hash("items", {**IT_EN, "special": []})
+    assert store.source_hash("items", {"desc": None, "special": None}) == store.source_hash("items", {"desc": [], "special": []})
+    assert store.source_hash("item-rules", {"desc": ["a"]}) == store.source_hash("item-rules", {"desc": ["a"], "other": 1})
+
+
+def test_species_validator():
+    v = lambda **over: generic_tool.validate(SP_EN, {**SP_BG, **over}, "species")
+    assert v() == []
+    assert any("hash" in r for r in v(hash="0" * 40))
+    assert any("fluff: 1 paragraphs" in r for r in v(fluff=["Елфи 750."]))
+    assert any("traits: 1 traits" in r for r in v(traits=SP_BG["traits"][:1]))
+    assert any("traits[1].desc: 1 paragraphs" in r for r in v(traits=[SP_BG["traits"][0], {"desc": ["Само един 4."]}]))
+    assert any("numbers missing" in r for r in v(fluff=["Елфите живеят дълго.", "Обичат изкуството."]))
+    assert any("no Cyrillic" in r for r in v(traits=[{"desc": ["You see 60 feet in the dark."]}, SP_BG["traits"][1]]))
+    assert any("traits:" in r for r in v(traits="x"))
+
+
+def test_items_validator():
+    v = lambda **over: generic_tool.validate(IT_EN, {**IT_BG, **over}, "items")
+    assert v() == []
+    assert any("dice expressions differ" in r for r in v(desc=["Нанася 2d8 щета."]))
+    assert any("special: 0 paragraphs" in r for r in v(special=[]))
+    assert any("numbers missing" in r for r in v(special=["Иска две ръце."]))
+    assert any("empty paragraph" in r for r in v(desc=[" "]))
+    assert generic_tool.validate({"desc": ["Reach 5 feet."]}, {"hash": store.source_hash("item-rules", {"desc": ["Reach 5 feet."]}),
+                                                            "desc": ["Обхват 5 фута."]}, "item-rules") == []
+
+
+def test_apply_export_status_for_species_and_items(overlay_dir):
+    recs = {"sp": SPECIES}
+    exported = generic_tool.export_records(recs, {}, kind="species")
+    assert exported[0]["hash"] == SP_BG["hash"] and exported[0]["traits"][0] == {"name": "Darkvision", "desc": SP_EN["traits"][0]}
+    merged, results = generic_tool.apply_records(recs, {}, [SP_BG, {**SP_BG, "id": "nope"}], "species")
+    assert merged == {"sp": {"hash": SP_BG["hash"], "fluff": SP_BG["fluff"], "traits": SP_BG["traits"]}}
+    assert dict(results)["nope"] == ["id: unknown species"]
+    assert generic_tool.status_counts(recs, merged, "species")["SRD"]["translated"] == 1
+    assert generic_tool.status_counts(recs, {"sp": {"hash": "old"}}, "species")["SRD"]["stale"] == 1
+    merged, results = generic_tool.apply_records({"it": ITEM}, {}, [IT_BG], "items")
+    assert merged["it"] == {"hash": IT_BG["hash"], "desc": IT_BG["desc"], "special": IT_BG["special"]}
+    assert generic_tool.export_records({"it": ITEM}, merged, only_missing=True, kind="items") == []
+
+
+def test_overlay_species_and_items(overlay_dir):
+    (overlay_dir / "bg" / "species.json").write_text(json.dumps({"sp": {k: v for k, v in SP_BG.items() if k != "id"}}), encoding="utf-8")
+    (overlay_dir / "bg" / "items.json").write_text(json.dumps({"it": {k: v for k, v in IT_BG.items() if k != "id"}}), encoding="utf-8")
+    store.load_overlay.cache_clear()
+    out = store.overlay_species("sp", SPECIES, "bg")
+    assert out["textLang"] == "bg" and out["fluff"] == SP_BG["fluff"]
+    assert [t["desc"] for t in out["traitDetails"]] == [t["desc"] for t in SP_BG["traits"]]
+    assert [t["name"] for t in out["traitDetails"]] == ["Darkvision", "Trance"]  # names stay English
+    assert store.overlay_species("sp", SPECIES, "en")["textLang"] == "en"
+    assert store.overlay_species("sp", {**SPECIES, "fluff": ["changed"]}, "bg")["fluff"] == ["changed"]
+    assert store.overlay_species("other", SPECIES, "bg")["textLang"] == "en"
+    out = store.overlay_items(ITEM, {"name": "It", "desc": ITEM["desc"], "special": ITEM["special"]}, "bg")
+    assert out["textLang"] == "bg" and out["desc"] == IT_BG["desc"] and out["special"] == IT_BG["special"] and out["name"] == "It"
+    assert store.overlay_items({**ITEM, "desc": ["new"]}, {"desc": ["new"]}, "bg")["textLang"] == "en"
+    assert store.overlay_rule("property:reach:PHB", ["x"], "bg") is None
+
+
+def test_the_cli_works_for_species_and_items_and_item_rules_is_not_ready(overlay_dir, tmp_path, capsys):
+    out = tmp_path / "w.json"
+    assert generic_tool.main(["--kind", "species", "export", "--ids", "elf", "--out", str(out)]) == 0
+    rec = json.loads(out.read_text(encoding="utf-8"))[0]
+    assert rec["id"] == "elf" and rec["traits"][0]["name"]
+    assert generic_tool.main(["--kind", "species", "apply", "--check", str(out)]) == 1  # still English
+    assert "REJECT elf" in capsys.readouterr().out
+    assert generic_tool.main(["--kind", "items", "status"]) == 0
+    assert generic_tool.main(["--kind", "item-rules", "status"]) == 2
+    assert not (overlay_dir / "bg" / "species.json").exists()
