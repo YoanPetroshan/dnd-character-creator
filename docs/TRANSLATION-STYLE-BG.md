@@ -504,6 +504,9 @@ Notes on the patterns:
 - "can't be targeted by X" → „X не може да бъде насочено към …“; never „не може да бъде насочен от X“.
 - The reader has no gender: avoid participles that agree with „ти“ („влязъл“, „срещнат“); reword („където вече си бил“ → „където вече ти се е случвало да бъдеш“, or an impersonal form).
 
+- No nested brackets: write „(30 фута, 9 м)“ never „(30 фута (9 м))“; a verb never carries a bracket („не владееш“, not „не владееш (Proficiency)“).
+- „takes its turn“ → „ходът му е веднага след твоя“ (not „ходи“).
+
 ### 4.3 Typography
 - Quotes: „…“ (inner quotes ‚…‘). Never "…" or «…».
 - Dash: — with spaces around it („ … — …“). A hyphen only inside a word or a range: „2-6“, „по-високо“.
