@@ -71,7 +71,9 @@ def validate(english: dict, record: dict) -> list[str]:
             problems.append(f"paragraph left in English: {en[:40]!r}")
     effective = {**bg, **{k: english[k] for k in ("material", "castingCondition") if bg[k] is None}}
     en_all, bg_all = " ".join(_paragraphs(english)), " ".join(_paragraphs(effective))
-    if collections.Counter(DICE.findall(en_all)) != collections.Counter(DICE.findall(bg_all)):
+    en_dice, bg_dice = collections.Counter(DICE.findall(en_all)), collections.Counter(DICE.findall(bg_all))
+    # Every English die must survive; Bulgarian may repeat a die the English names ("още един d8" for "these d8s").
+    if (en_dice - bg_dice) or any(d not in en_dice for d in bg_dice - en_dice):
         problems.append(f"dice expressions differ: English {sorted(DICE.findall(en_all))}, Bulgarian {sorted(DICE.findall(bg_all))}")
     missing = collections.Counter(INTEGER.findall(en_all)) - collections.Counter(INTEGER.findall(bg_all))
     if missing:
