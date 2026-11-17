@@ -1,3 +1,5 @@
+import re
+
 from markdown_export import to_markdown
 
 
@@ -414,3 +416,53 @@ def test_markdown_prints_the_spellbook_line_only_when_there_is_a_book():
     resolution = _wizard_with_book()
     del resolution["sheet"]["spells"][0]["spellbook"]
     assert "Книга със заклинания" not in to_markdown(resolution)
+
+
+# ---- S06 (EXP-03): free text cannot turn into Markdown structure ----------------------------------------------------
+
+def _with(name=None, **details):
+    res = _sample_resolution()
+    if name is not None:
+        res["sheet"]["name"] = name
+    res["sheet"]["details"] = details or None
+    return res
+
+
+def _lines(text):
+    return text.split("\n")
+
+
+def test_a_detail_line_starting_with_hashes_is_not_a_heading():
+    out = to_markdown(_with(backstory="# Big title\n## Another\ntext"), "en")
+    assert not any(ln.startswith("#") and "Big title" in ln for ln in _lines(out))
+    assert "\\# Big title" in out and "\\## Another" in out
+
+
+def test_a_code_fence_in_free_text_stays_closed():
+    out = to_markdown(_with(notes="```\nnot code at all"), "en")
+    assert not any(ln.lstrip().startswith("```") for ln in _lines(out))
+    assert out.count("```") == 0 or all("\\`" in ln for ln in _lines(out) if "```" in ln)
+
+
+def test_raw_html_in_free_text_is_escaped():
+    out = to_markdown(_with(notes="<script>alert(1)</script> and <b>bold</b> and 3 < 5"), "en")
+    assert not re.search(r"(?<!\\)<(script|b)>", out)  # every tag-opening `<` is preceded by a backslash
+    assert "\\<script>" in out and "\\<b>" in out
+    assert "3 < 5" in out  # a plain less-than sign is left alone
+
+
+def test_control_characters_are_removed_from_free_text_and_the_name():
+    out = to_markdown(_with(name="Gr\x00im\x1bnar", backstory="a\x07b\x7fc\td\nnext"), "en")
+    assert "\x00" not in out and "\x1b" not in out and "\x07" not in out and "\x7f" not in out
+    assert "Grimnar" in out and "abc\td\nnext" in out
+
+
+def test_a_name_with_a_line_break_stays_one_heading_line():
+    out = to_markdown(_with(name="Hero\n## Injected"), "en")
+    assert _lines(out)[0] == "# Hero ## Injected"
+
+
+def test_ordinary_text_is_unchanged():
+    text = "Born in a village.\n\nHe likes C# and a < b, 50% of the time.\n- one\n- two"
+    out = to_markdown(_with(backstory=text), "en")
+    assert text in out

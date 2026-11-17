@@ -1,0 +1,27 @@
+# Exact versions of every package the app and its tests install, direct and transitive. Use with either requirements file:
+#   pip install -r server/requirements.txt -c server/constraints.txt
+# There are no hashes (they would have to be taken per platform). The three PDF packages that the offline pack also ships as
+# wheels (scripts/offline_manifest.json) have the pack's versions, so the native and the browser engine render alike;
+# server/tests/test_requirements_files.py checks that. Refresh: install into a clean venv, `pip freeze`, keep this list in step.
+blinker==1.9.0
+click==8.5.0
+defusedxml==0.7.1
+execnet==2.1.2
+flask==3.1.3
+flask-cors==6.0.5
+fonttools==4.62.1
+fpdf2==2.8.8
+iniconfig==2.3.0
+itsdangerous==2.2.0
+jinja2==3.1.6
+markupsafe==3.0.3
+packaging==26.3
+pillow==12.2.0
+pluggy==1.6.0
+pygments==2.21.0
+pypdf==6.18.1
+pytest==9.1.1
+pytest-xdist==3.8.0
+pyyaml==6.0.3
+waitress==3.0.2
+werkzeug==3.1.8

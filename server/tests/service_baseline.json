@@ -153,48 +153,48 @@
   "status": 404
  },
  "catalog": {
-  "bodyLength": 36552,
-  "bodySha256": "53eb40b2e9965c36c0fd5707e800b9c021397d63472808a7d6fa3e483b26a7fa",
+  "bodyLength": 40798,
+  "bodySha256": "e04459f99a3a6015e03348e8cd216f9973149d2cba0a16e10e70160276db164e",
   "headers": {
    "Content-Type": "application/json"
   },
   "status": 200
  },
  "catalog-2014": {
-  "bodyLength": 29877,
-  "bodySha256": "fd6e8834dd4eebb7c90d66ad90fa09c7a1cf6faf2279b31504806297e221fd59",
+  "bodyLength": 33959,
+  "bodySha256": "ec2e85a449f5a25beefb08470bbb2661cfede3bce6fe57bc3b72b99f8d587c3b",
   "headers": {
    "Content-Type": "application/json"
   },
   "status": 200
  },
  "catalog-2024": {
-  "bodyLength": 30350,
-  "bodySha256": "2b090346c9823547d5062514d53c02e1f02fa336e94c22542d6157042286d148",
+  "bodyLength": 31925,
+  "bodySha256": "f925e418725e1697a640df3be5b80052078cc31ec563f66d617b1d031f4c84ef",
   "headers": {
    "Content-Type": "application/json"
   },
   "status": 200
  },
  "catalog-2024-srd-fallback": {
-  "bodyLength": 4150,
-  "bodySha256": "f5a44fff7e82aefd62acd5a3a43244c88e48f99b14a3bb0a82ed521aed31a1ba",
+  "bodyLength": 4209,
+  "bodySha256": "4597659a0f1026a546a3552429223369b66b58f6afede2a5f7a0d49d8ea6b0c6",
   "headers": {
    "Content-Type": "application/json"
   },
   "status": 200
  },
  "catalog-junk-ruleset": {
-  "bodyLength": 36552,
-  "bodySha256": "53eb40b2e9965c36c0fd5707e800b9c021397d63472808a7d6fa3e483b26a7fa",
+  "bodyLength": 40798,
+  "bodySha256": "e04459f99a3a6015e03348e8cd216f9973149d2cba0a16e10e70160276db164e",
   "headers": {
    "Content-Type": "application/json"
   },
   "status": 200
  },
  "catalog-sources": {
-  "bodyLength": 6802,
-  "bodySha256": "912933080779c4ce83aad4b00b278ac328f831cfa053b5650b148148c0ea0782",
+  "bodyLength": 7519,
+  "bodySha256": "ff11ab72be513e337eaa4333710b653000dd14315d9705387ac132958c5f45f1",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -346,8 +346,8 @@
   "status": 400
  },
  "export-markdown-invalid-json": {
-  "bodyLength": 221,
-  "bodySha256": "b6d43f16aaf0bcb51f7b4ad075d8a71c8429dda0a83f78df36ef8c981315629e",
+  "bodyLength": 51,
+  "bodySha256": "6455770f112268fe478a5d50bda651ff153a5df44c388fb4fd87a4f8d1a011a9",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -518,8 +518,8 @@
   "status": 400
  },
  "export-pdf-invalid-json": {
-  "bodyLength": 221,
-  "bodySha256": "b6d43f16aaf0bcb51f7b4ad075d8a71c8429dda0a83f78df36ef8c981315629e",
+  "bodyLength": 51,
+  "bodySha256": "6455770f112268fe478a5d50bda651ff153a5df44c388fb4fd87a4f8d1a011a9",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -632,8 +632,8 @@
   "status": 400
  },
  "export-sheet": {
-  "bodyLength": 266757,
-  "bodySha256": "cbd081df2d176eaf97a1262331c062522c7032a1a93c55fa7961874709902d61",
+  "bodyLength": 266722,
+  "bodySha256": "d2c0a24cbda9bc2853adb797045cb7aeec575aeae2a7b5e6da335af0e742b438",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''Torvin%20Bracewell.pdf",
    "Content-Type": "application/pdf"
@@ -681,16 +681,16 @@
   "status": 400
  },
  "export-sheet-invalid-json": {
-  "bodyLength": 221,
-  "bodySha256": "b6d43f16aaf0bcb51f7b4ad075d8a71c8429dda0a83f78df36ef8c981315629e",
+  "bodyLength": 51,
+  "bodySha256": "6455770f112268fe478a5d50bda651ff153a5df44c388fb4fd87a4f8d1a011a9",
   "headers": {
    "Content-Type": "application/json"
   },
   "status": 400
  },
  "export-sheet-lang-bg": {
-  "bodyLength": 266757,
-  "bodySha256": "cbd081df2d176eaf97a1262331c062522c7032a1a93c55fa7961874709902d61",
+  "bodyLength": 266722,
+  "bodySha256": "d2c0a24cbda9bc2853adb797045cb7aeec575aeae2a7b5e6da335af0e742b438",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''Torvin%20Bracewell.pdf",
    "Content-Type": "application/pdf"
@@ -707,8 +707,8 @@
   "status": 200
  },
  "export-sheet-name-5000-chars": {
-  "bodyLength": 351762,
-  "bodySha256": "2663689ed7245130acf3f870308f87113cbd525410585afb0eac6dd74f991d85",
+  "bodyLength": 351727,
+  "bodySha256": "f70171d3f3741c3c3f5c2bcf20d3eeb7994fd62ebdb62b248ba20d4f88c17460",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN.pdf",
    "Content-Type": "application/pdf"
@@ -716,8 +716,8 @@
   "status": 200
  },
  "export-sheet-name-cyrillic": {
-  "bodyLength": 266655,
-  "bodySha256": "7af519e9a1c6eeae4c7d878c1077f374b8bea964e23ade943acc5ce73fb753d6",
+  "bodyLength": 266620,
+  "bodySha256": "b1d3f637205cae98977085acb650bb79cb310ad0d33e0b6aa3397f6bb4418579",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''%D0%90%D0%BD%D0%B0_%D0%91%D0%BE%D1%80%D0%B8%D1%81.pdf",
    "Content-Type": "application/pdf"
@@ -725,8 +725,8 @@
   "status": 200
  },
  "export-sheet-name-lone-surrogate": {
-  "bodyLength": 266589,
-  "bodySha256": "75f21d0288cc0d280753853d7741a22a4222c68a791c4f7be8504c34b0745544",
+  "bodyLength": 266554,
+  "bodySha256": "77a363abb38f90087c862782c9de148db8de30fc67bac7ec24c4cdd2219b8779",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''%EF%BF%BD.pdf",
    "Content-Type": "application/pdf"
@@ -734,8 +734,8 @@
   "status": 200
  },
  "export-sheet-name-special": {
-  "bodyLength": 266883,
-  "bodySha256": "9b12ad505aa55de52311a6e34d9cb869338e6d8dd1e78f8a162dddf5634adc0e",
+  "bodyLength": 266848,
+  "bodySha256": "82f4965c39d2dd27eff99397002d06ced71598e010b7fbca6a75f52e1b36e952",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''A_B_C_D_E__F_G_H_I.pdf",
    "Content-Type": "application/pdf"
@@ -752,8 +752,8 @@
   "status": 200
  },
  "export-sheet-nameless": {
-  "bodyLength": 266346,
-  "bodySha256": "f2418e0cd3c5d55e344252be9e0888f44c203a44d58a09b80c9a038badd52b1c",
+  "bodyLength": 266311,
+  "bodySha256": "dd44626844fa021962146f0394c86cf48d63cccb5982f3836873406700061ad9",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''character.pdf",
    "Content-Type": "application/pdf"
@@ -761,8 +761,8 @@
   "status": 200
  },
  "export-sheet-nameless-bg": {
-  "bodyLength": 266346,
-  "bodySha256": "f2418e0cd3c5d55e344252be9e0888f44c203a44d58a09b80c9a038badd52b1c",
+  "bodyLength": 266311,
+  "bodySha256": "dd44626844fa021962146f0394c86cf48d63cccb5982f3836873406700061ad9",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''%D0%B3%D0%B5%D1%80%D0%BE%D0%B9.pdf",
    "Content-Type": "application/pdf"
@@ -844,8 +844,8 @@
   "status": 400
  },
  "export-yaml-invalid-json": {
-  "bodyLength": 221,
-  "bodySha256": "b6d43f16aaf0bcb51f7b4ad075d8a71c8429dda0a83f78df36ef8c981315629e",
+  "bodyLength": 51,
+  "bodySha256": "6455770f112268fe478a5d50bda651ff153a5df44c388fb4fd87a4f8d1a011a9",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -1142,20 +1142,20 @@
   "status": 200
  },
  "resolve-invalid-json": {
-  "bodyLength": 1948,
-  "bodySha256": "b3ae4fd8c3a0428c12293350f201a7d8599e4939d496ef301e0d82117bf1740d",
+  "bodyLength": 51,
+  "bodySha256": "6455770f112268fe478a5d50bda651ff153a5df44c388fb4fd87a4f8d1a011a9",
   "headers": {
    "Content-Type": "application/json"
   },
-  "status": 200
+  "status": 400
  },
  "resolve-invalid-utf8": {
-  "bodyLength": 1948,
-  "bodySha256": "b3ae4fd8c3a0428c12293350f201a7d8599e4939d496ef301e0d82117bf1740d",
+  "bodyLength": 51,
+  "bodySha256": "6455770f112268fe478a5d50bda651ff153a5df44c388fb4fd87a4f8d1a011a9",
   "headers": {
    "Content-Type": "application/json"
   },
-  "status": 200
+  "status": 400
  },
  "resolve-json-charset-ct": {
   "bodyLength": 8214,

@@ -14,6 +14,7 @@ import {
 class FakeWorker implements WorkerLike {
   onmessage: ((event: { data: FromWorker }) => void) | null = null;
   onerror: ((event: unknown) => void) | null = null;
+  onmessageerror: ((event: unknown) => void) | null = null;
   sent: ToWorker[] = [];
   terminated = false;
   postMessage(m: ToWorker) {
@@ -216,7 +217,7 @@ describe("worker transport", () => {
     expect(t.store.get().engine).toBe("fallback");
   });
 
-  it("a crash after boot fails the waiting calls like a lost connection (TypeError)", async () => {
+  it("a crash after boot fails the waiting calls like a lost connection (TypeError); the engine restarts (FE-04)", async () => {
     const t = make();
     worker.emit({ t: "ready" });
     const caught = t.fetch("/api/x").catch((e) => e);
@@ -224,7 +225,7 @@ describe("worker transport", () => {
     worker.onerror?.({});
     const err = await caught;
     expect(err).toBeInstanceOf(TypeError);
-    expect(t.store.get().engine).toBe("fallback");
+    expect(t.store.get().engine).toBe("starting"); // make() hands the same fake worker back: it is booting again
   });
 
   it("an engine failure on one request is a TypeError for that request only", async () => {
@@ -408,5 +409,122 @@ describe("plain fetch with a timeout", () => {
     const q = fetchWithTimeout(hang, "/x", { timeoutMs: 500, signal: c.signal }).catch((e) => e);
     c.abort();
     expect((await q).name).toBe("AbortError");
+  });
+});
+
+describe("restarting the worker (FE-04)", () => {
+  /** A transport whose spawn hands out a new FakeWorker each time. */
+  const makeMany = (timeoutMs = 30_000) => {
+    const workers: FakeWorker[] = [];
+    fallback.mockClear();
+    const t = createWorkerTransport({
+      spawn: () => {
+        const w = new FakeWorker();
+        workers.push(w);
+        return w;
+      },
+      fallback,
+      timeoutMs,
+    });
+    return { t, workers };
+  };
+
+  it("a request that times out while the engine runs it terminates the worker and starts a new one that serves the next request", async () => {
+    const { t, workers } = makeMany(1000);
+    workers[0].emit({ t: "ready" });
+    const stuck = t.fetch("/api/resolve").catch((e) => e);
+    await flush();
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(isTimeoutError(await stuck)).toBe(true);
+    expect(workers[0].terminated).toBe(true);
+    expect(workers).toHaveLength(2);
+    expect(t.store.get().engine).toBe("starting");
+    const next = t.fetch("/api/health");
+    await flush();
+    expect(workers[1].requests()).toHaveLength(0); // the new worker is still booting
+    workers[1].emit({ t: "ready" });
+    await flush();
+    expect(t.store.get().engine).toBe("ready");
+    const [req] = workers[1].requests();
+    workers[1].emit(reply(req.id, 200, '"ok"'));
+    expect((await next).status).toBe(200);
+  });
+
+  it("the other waiting requests are rejected like a lost connection (TypeError), only they", async () => {
+    const { t, workers } = makeMany(1000);
+    workers[0].emit({ t: "ready" });
+    const first = t.fetch("/api/a").catch((e) => e);
+    const second = t.fetch("/api/b", { timeoutMs: 60_000 }).catch((e) => e);
+    await flush();
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(isTimeoutError(await first)).toBe(true);
+    expect(await second).toBeInstanceOf(TypeError);
+  });
+
+  it("a request that times out while queued behind an older one does not restart the worker", async () => {
+    const { t, workers } = makeMany(30_000);
+    workers[0].emit({ t: "ready" });
+    const older = t.fetch("/api/older", { timeoutMs: 60_000 }).catch((e) => e);
+    const younger = t.fetch("/api/younger", { timeoutMs: 1000 }).catch((e) => e);
+    await flush();
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(isTimeoutError(await younger)).toBe(true);
+    expect(workers).toHaveLength(1);
+    expect(workers[0].terminated).toBe(false);
+    const [req] = workers[0].requests();
+    workers[0].emit(reply(req.id));
+    expect((await older) instanceof Response).toBe(true);
+  });
+
+  it("a crash restarts the worker twice, then the engine is the plain-fetch fallback for good", async () => {
+    const { t, workers } = makeMany();
+    workers[0].emit({ t: "ready" });
+    const lost = t.fetch("/api/x").catch((e) => e);
+    await flush();
+    workers[0].onerror?.({});
+    expect(await lost).toBeInstanceOf(TypeError);
+    expect(workers).toHaveLength(2);
+    workers[1].emit({ t: "ready" });
+    workers[1].onerror?.({});
+    expect(workers).toHaveLength(3);
+    expect(t.store.get().engine).toBe("starting");
+    workers[2].emit({ t: "ready" });
+    workers[2].onerror?.({}); // the third crash: no more restarts
+    expect(workers).toHaveLength(3);
+    expect(t.store.get().engine).toBe("fallback");
+    expect(await (await t.fetch("/api/health")).text()).toBe("from the network");
+  });
+
+  it("a worker that answers well again gets its restarts back", async () => {
+    const { t, workers } = makeMany();
+    workers[0].emit({ t: "ready" });
+    workers[0].onerror?.({});
+    workers[1].emit({ t: "ready" });
+    const ok = t.fetch("/api/ok");
+    await flush();
+    workers[1].emit(reply(workers[1].requests()[0].id));
+    await ok;
+    workers[1].onerror?.({});
+    workers[2].emit({ t: "ready" });
+    workers[2].onerror?.({});
+    expect(workers).toHaveLength(4); // two more restarts were allowed
+    expect(t.store.get().engine).toBe("starting");
+  });
+
+  it("onmessageerror is handled like a crash", async () => {
+    const { t, workers } = makeMany();
+    workers[0].emit({ t: "ready" });
+    const lost = t.fetch("/api/x").catch((e) => e);
+    await flush();
+    workers[0].onmessageerror?.({});
+    expect(await lost).toBeInstanceOf(TypeError);
+    expect(workers).toHaveLength(2);
+  });
+
+  it("a boot error is final: no restart", async () => {
+    const { t, workers } = makeMany();
+    workers[0].emit({ t: "boot-error", message: "no wasm" });
+    expect(workers).toHaveLength(1);
+    expect(t.store.get().engine).toBe("fallback");
   });
 });

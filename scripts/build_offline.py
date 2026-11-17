@@ -38,8 +38,14 @@ DATE_TIME = (1980, 1, 1, 0, 0, 0)
 # server/*.py modules that ship (app.py is the Flask adapter and stays out), and the packages that ship whole.
 SERVER_MODULES_EXCLUDE = {"app.py"}
 SERVER_PACKAGES = ("catalog", "engine", "i18n")
-# Developer-only files inside those packages (parse the TypeScript copy / render the review table).
-EXCLUDE_FILES = {"server/i18n/review_table.py", "server/i18n/ts_copy.py"}
+# Developer-only files inside those packages: the translation review tools (read the TypeScript copy, render the review
+# table, the terms table, the CSV, the glossary generator and the bracket-term list) and the data-bundle builder (`python -m catalog.official.bundle`). Nothing the app
+# imports needs them; server/tests/test_pack_contents.py checks that no module of the pack is left without a user.
+EXCLUDE_FILES = {
+    "server/i18n/review_table.py", "server/i18n/ts_copy.py", "server/i18n/review_sheet.py", "server/i18n/terms_table.py",
+    "server/i18n/glossary.py", "server/i18n/bracket_terms.py",  # used by the review tools and the tests only
+    "server/catalog/official/bundle.py",
+}
 SERVER_DATA = "server/data/official"
 CHARGEN_FILES = ("chargen/__init__.py", "chargen/sources.py")
 CHARGEN_DATA = "chargen/data/srd"

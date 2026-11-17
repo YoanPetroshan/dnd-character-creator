@@ -764,6 +764,7 @@ SERVER_FILES = sorted(glob.glob(str(SERVER / "engine" / "*.py"))) + [str(SERVER 
 # scan SERVER_FILES only (data tables carry plain "reason" keys of their own)
 CATALOG_FILES = [str(SERVER / n) for n in ("catalog/choices.py", "catalog/reference_data.py", "catalog/feat_effects_data.py",
                                                     "catalog/official/class_chassis.py")]  # VF7.7b: the 2024 chassis "Choose ..." texts
+CATALOG_FILES += sorted(glob.glob(str(SERVER / "catalog" / "reference" / "*.py")))  # S17: the tables of reference_data.py live here now
 
 
 def server_trees(*, with_catalog: bool = False):

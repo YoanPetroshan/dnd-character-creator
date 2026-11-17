@@ -36,7 +36,7 @@ The texts are English and meant for humans; clients branch on the status code (a
 | 413 | `{"error": "The data value transmitted exceeds the capacity limit."}` | request body over 1,000,000 bytes (the two draft routes, after their `lang` check); Flask enforces it, and so do `service.handle` and the offline worker (`frontend/src/api/bodyGuard.ts` checks size and depth before the bytes enter WebAssembly) |
 | 500 | `{"error": "The server couldn't process this character. Check the draft and try again."}` | unexpected failure (logged on the server) |
 
-An absent, empty or unparseable body of the two POST routes counts as an empty draft `{}` (a valid draft), not an error.
+An absent, empty (or `null`) body of the two POST routes counts as an empty draft `{}` (a valid draft), not an error. A body that is not readable JSON (invalid text or UTF-8, a number over 4300 digits) is a 400 `{"error": "The request body is not readable JSON."}`.
 
 ## Endpoints
 
@@ -88,7 +88,7 @@ Same gate, `lang` handling (missing means `bg`), name rule (200 characters, `.pd
 
 ### `POST /api/export/<fmt>`
 
-`fmt` is `yaml`, `markdown`, `pdf` or `sheet`. Body: a draft. The draft is resolved and the **export gate** is applied; when it passes the response is the file (`application/x-yaml`, `text/markdown`, `application/pdf`) with `Content-Disposition: attachment; filename*=UTF-8''<name>.<ext>`. `<name>` is the draft's `name` (`character`, or the language's word with `lang`, when it is empty) with `\ / : * ? " < > |` replaced by `_`, cut to the first 200 characters (the sheet title inside the Markdown / PDF keeps the whole name) and percent-encoded; a lone UTF-16 surrogate (`"\ud800"`, valid JSON) in any text of the draft becomes U+FFFD before the export is written (it used to be a 500).
+`fmt` is `yaml`, `markdown`, `pdf` or `sheet`. Body: a draft. The draft is resolved and the **export gate** is applied; when it passes the response is the file (`application/x-yaml`, `text/markdown`, `application/pdf`) with `Content-Disposition: attachment; filename*=UTF-8''<name>.<ext>`. `<name>` is the draft's `name` (`character`, or the language's word with `lang`, when it is empty) with `\ / : * ? " < > |` replaced by `_`, control and bidi-override characters (`U+0000-001F`, `U+007F`, `U+202A-202E`, `U+2066-2069`) dropped, cut to the first 200 characters, trailing dots and spaces removed (nothing left: the fallback) and a reserved Windows device name (`CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, `LPT1-9`) given a leading `_` (the sheet title inside the Markdown / PDF keeps the whole name) and percent-encoded; a lone UTF-16 surrogate (`"\ud800"`, valid JSON) in any text of the draft becomes U+FFFD before the export is written (it used to be a 500).
 
 Export gate: the export is refused with 400 `{"problems": [...]}` when the resolution has any `problems`, or when:
 

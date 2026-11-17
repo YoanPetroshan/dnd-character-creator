@@ -1,7 +1,7 @@
 """Slice 11a: sourcebook spells (5etools spells/*.json -> SRD spell shape).
 
 Every number asserted against real data was computed by script from
-/Users/yoanpetrov/Documents/5etools-src/data/spells (2026-10-09); tests that
+~/Documents/5etools-src/data/spells (2026-10-09); tests that
 need the files skip when they are absent (no `DND_5ETOOLS_DATA`, nothing
 synced into official_dir()/spells)."""
 import json
@@ -36,6 +36,7 @@ def _write_spell_dir(root, files=None):
 
 def test_spells_dir_honours_the_env_override(tmp_path, monkeypatch):
     d = _write_spell_dir(tmp_path / "data")
+    monkeypatch.delenv("DND_OFFICIAL_DATA", raising=False)  # S12: SRD-only (`none`) ignores the override, this test is about the override
     monkeypatch.setenv("DND_5ETOOLS_DATA", str(tmp_path / "data"))
     assert paths.spells_dir() == d
     assert paths.has_official_spells()
@@ -104,6 +105,7 @@ SRD_ONLY_UNRESOLVED_INNATE = {  # distinct innate spell ids no SRD spell matches
     "armor-of-agathys", "battle-familiar", "beast-sense", "crown-of-madness", "friends", "hex", "ice-knife",
     "ottos-irresistible-dance", "ray-of-sickness", "searing-smite", "tensers-floating-disk", "thunderclap",
     "wall-of-water", "gust", "shape-water", "blade-ward",
+    "starry-wisp",  # S13: Elf (LFL), Shadowmoor; resolves to the 2024 spell starry-wisp-xphb through the aliases
 }
 
 
@@ -306,7 +308,7 @@ def _innate_spell_ids(catalog):
 def test_unresolved_innate_spell_refs_go_from_13_to_1(catalog):
     ids = _innate_spell_ids(catalog)
     srd_ids = {k for k, v in catalog.spells.items() if v["source"] == "SRD"}
-    assert {i for i in ids if i not in srd_ids} == SRD_ONLY_UNRESOLVED_INNATE and len(SRD_ONLY_UNRESOLVED_INNATE) == 16
+    assert {i for i in ids if i not in srd_ids} == SRD_ONLY_UNRESOLVED_INNATE and len(SRD_ONLY_UNRESOLVED_INNATE) == 17
     assert {i for i in ids if catalog.resolve_spell_id(i) is None} == {"battle-familiar"}  # an Unearthed Arcana spell
 
 

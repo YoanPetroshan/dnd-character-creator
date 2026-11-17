@@ -91,7 +91,11 @@ export function createPwa(deps: PwaDeps): Pwa {
   function watch(worker: WorkerLike | null) {
     if (!worker || watched.has(worker)) return;
     watched.add(worker);
-    worker.addEventListener("statechange", evaluate);
+    worker.addEventListener("statechange", () => {
+      // FE-03: a first install that is thrown away (nothing active or waiting to fall back on) is a failure, not a wait
+      if (worker.state === "redundant" && registration && !registration.active && !registration.waiting) set({ phase: "error" });
+      else evaluate();
+    });
   }
 
   function evaluate() {
@@ -114,31 +118,52 @@ export function createPwa(deps: PwaDeps): Pwa {
     }
   }
 
+  let hadController = false;
+  let listening = false;
+  let reloaded = false;
+  function start(): Promise<void> {
+    const container = deps.container;
+    if (!container) return Promise.resolve();
+    started ??= (async () => {
+      if (!listening) {
+        listening = true;
+        hadController = !!container.controller;
+        container.addEventListener("controllerchange", () => {
+          // the new version took over: load its files. Our own applyUpdate, or (FE-09) another tab's, when this tab was
+          // already controlled; not on the very first claim of a tab that started without a controller
+          if ((applying || hadController) && !reloaded) {
+            reloaded = true;
+            deps.reload();
+          }
+        });
+      }
+      try {
+        registration = await container.register(deps.swUrl, { scope: deps.scope, updateViaCache: "none" });
+      } catch {
+        set({ phase: "error" });
+        return;
+      }
+      registration.addEventListener("updatefound", evaluate);
+      evaluate();
+    })();
+    return started;
+  }
+
   return {
     get: () => snapshot,
     subscribe(listener) {
       listeners.add(listener);
       return () => void listeners.delete(listener);
     },
-    start() {
-      const container = deps.container;
-      if (!container) return Promise.resolve();
-      started ??= (async () => {
-        container.addEventListener("controllerchange", () => {
-          if (applying) deps.reload(); // the new version took over: load its files; not on the very first claim
-        });
-        try {
-          registration = await container.register(deps.swUrl, { scope: deps.scope, updateViaCache: "none" });
-        } catch {
-          set({ phase: "error" });
-          return;
-        }
-        registration.addEventListener("updatefound", evaluate);
-        evaluate();
-      })();
-      return started;
-    },
+    start,
     async checkForUpdate() {
+      if (snapshot.phase === "error") {
+        // FE-03: a failed registration or install is tried again when the app is shown again
+        started = null;
+        registration = null;
+        await start();
+        return;
+      }
       try {
         await registration?.update();
       } catch {

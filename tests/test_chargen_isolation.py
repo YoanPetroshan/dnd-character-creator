@@ -1,7 +1,7 @@
 """Repo-wide import-boundary check.
 
-The whole point of this app is that nothing outside `chargen/` can drag in
-the source repo's play engine (`engine/`, `skills/`, or any of its modules
+The whole point of this guard is that nothing in the repo can drag in
+the old first-generation play engine (`engine/`, `skills/`, or any of its modules
 like `library`, `paths`, `lookup`, `char_state_schema`, `char_state_sync`,
 `char_state_derive`) or a server/model dependency `chargen` itself must
 never see. An earlier version of this test only denied five module names
@@ -11,19 +11,6 @@ back in the repo (exactly what happened once already; see the plan's Task 1
 incident). This version is an allowlist walk over every `.py` file in the
 repo instead: anything not stdlib, not `chargen`, and not one of the
 declared third-party dependencies is a violation, full stop.
-
-Two narrow, explicit exemptions exist, both already known-and-intentional
-(see the final review, I6/Minor 7):
-
-- `chargen/cli.py` has one lazy `import library` inside `_save_to_library()`,
-  behind a `--save` CLI flag no test exercises. It cannot be fixed without
-  touching `chargen/`, which must stay byte-identical to the source repo.
-- `tests/test_chargen_build.py`'s `RoundTripTest` (class-level
-  `@unittest.skip`) and one skipped test method in `tests/test_chargen_cli.py`
-  contain `import paths` / `import library` / `import char_state_derive` /
-  `import char_state_schema` calls that are ported, dead-by-design code —
-  they never run. Only the decorated (skipped) class/function bodies are
-  exempted, not the rest of either file.
 """
 from __future__ import annotations
 
@@ -58,16 +45,11 @@ LOCAL_MODULES = {p.stem for p in ROOT.glob("*.py")} | {"chargen", "tests"}
 # inside server/ itself — an `import engine` anywhere else in the repo is
 # still exactly the violation this test is designed to flag.
 # "service" is server/service.py, the framework-free API (O0); "app" is server/app.py (the root app.py was removed in D-5, so it is no longer a LOCAL_MODULES stem).
-SERVER_LOCAL_MODULES = {"app", "catalog", "engine", "export", "export_fields", "markdown_export", "pdf_export", "test_export", "kitchen_sink", "c7c_helpers", "perf_helpers", "test_feat_tail", "test_types_drift", "test_resolve_fuzz", "test_export_completeness", "i18n", "i18n_zoo", "export_labels", "test_export_baseline", "test_export_labels", "test_pdf_export", "test_i18n_completeness", "service", "test_service", "service_requests", "test_service_baseline", "tools", "chartest", "test_chartest_harness", "test_export_completeness", "sheet_layout", "sheet_form", "sheet_data", "sheet_pdf"}
+SERVER_LOCAL_MODULES = {"app", "catalog", "engine", "export", "export_fields", "markdown_export", "pdf_export", "test_export", "kitchen_sink", "c7c_helpers", "perf_helpers", "test_feat_tail", "test_types_drift", "test_resolve_fuzz", "test_export_completeness", "i18n", "i18n_zoo", "export_labels", "test_export_baseline", "test_sheet_baseline", "baseline_guard", "test_data_precedence", "test_export_labels", "test_pdf_export", "test_i18n_completeness", "service", "test_service", "service_requests", "test_service_baseline", "tools", "chartest", "test_chartest_harness", "test_export_completeness", "sheet_layout", "sheet_form", "sheet_data", "sheet_pdf"}
 
 # O1: the two offline-pack files that drive the server packages from outside server/ (the fixture emitter runs natively
 # with server/ and server/tests on sys.path; the harness runs inside Pyodide with the app mounted at /app/server).
 OFFLINE_SERVER_USERS = {pathlib.Path("scripts") / "offline_fixtures.py", pathlib.Path("scripts") / "dev_sample_sheets.py", pathlib.Path("frontend") / "src" / "offline" / "harness.py"}
-
-# The one lazy import chargen/cli.py is allowed to keep — see module
-# docstring above and final-review.md's I6/Minor 7.
-_CLI_LAZY_IMPORT_EXEMPTION = (pathlib.Path("chargen") / "cli.py", "library")
-
 
 def _iter_repo_py_files():
     for py in sorted(ROOT.rglob("*.py")):
@@ -75,26 +57,6 @@ def _iter_repo_py_files():
         if _EXCLUDED_DIR_PARTS & set(rel.parts):
             continue
         yield py, rel
-
-
-def _decorator_is_skip(dec: ast.expr) -> bool:
-    target = dec.func if isinstance(dec, ast.Call) else dec
-    try:
-        text = ast.unparse(target)
-    except Exception:
-        return False
-    return text == "skip" or text.endswith(".skip")
-
-
-def _skipped_line_ranges(tree: ast.AST) -> list[tuple[int, int]]:
-    """Line ranges of every class/function carrying an @unittest.skip(...)
-    (or bare @skip) decorator — imports inside these never actually run."""
-    ranges = []
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
-            if any(_decorator_is_skip(d) for d in node.decorator_list):
-                ranges.append((node.lineno, getattr(node, "end_lineno", node.lineno)))
-    return ranges
 
 
 def test_engine_and_skills_directories_do_not_exist():
@@ -109,7 +71,6 @@ def test_every_top_level_import_is_stdlib_chargen_or_a_declared_dependency():
     offenders = []
     for py, rel in _iter_repo_py_files():
         tree = ast.parse(py.read_text(encoding="utf-8"), filename=str(py))
-        skipped_ranges = _skipped_line_ranges(tree) if rel.parts[0] == "tests" else []
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
@@ -129,10 +90,6 @@ def test_every_top_level_import_is_stdlib_chargen_or_a_declared_dependency():
                         or top in STDLIB_MODULES):
                     continue
                 if (rel.parts[0] == "server" or rel in OFFLINE_SERVER_USERS) and top in SERVER_LOCAL_MODULES:
-                    continue
-                if (rel, top) == _CLI_LAZY_IMPORT_EXEMPTION:
-                    continue
-                if any(start <= lineno <= end for start, end in skipped_ranges):
                     continue
                 offenders.append(f"{rel}:{lineno}: import {mod}")
 

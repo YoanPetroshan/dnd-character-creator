@@ -50,6 +50,14 @@ def _resolve() -> tuple[Path, str]:
     return BUNDLED_DIR, "bundled"
 
 
+def _override() -> str:
+    """`DND_5ETOOLS_DATA` (a 5etools-src `data` directory) as text; empty when unset, and ALWAYS empty under
+    `DND_OFFICIAL_DATA=none`: SRD-only means no official data from anywhere (S12, DATA-03)."""
+    if _resolve()[1] == "srd-only":
+        return ""
+    return os.environ.get("DND_5ETOOLS_DATA", "").strip()
+
+
 def official_dir() -> Path:
     """Directory the official-data converters read (see `_resolve`)."""
     return _resolve()[0]
@@ -73,7 +81,7 @@ def spells_dir() -> Path | None:
     otherwise `official_dir()/spells` as filled by
     `python3 -m chargen.sync --official`. Read at call time, so tests and
     shells can switch it without reloading anything."""
-    override = os.environ.get("DND_5ETOOLS_DATA", "").strip()
+    override = _override()
     candidates = []
     if override:
         candidates.append(Path(override).expanduser() / "spells")
@@ -92,7 +100,7 @@ def class_dir() -> Path | None:
     """Where the 5etools class files live (class/index.json), or None.
     Same lookup as `spells_dir()`: `DND_5ETOOLS_DATA` first, then
     `official_dir()/class`."""
-    override = os.environ.get("DND_5ETOOLS_DATA", "").strip()
+    override = _override()
     candidates = []
     if override:
         candidates.append(Path(override).expanduser() / "class")
@@ -110,7 +118,7 @@ def has_official_classes() -> bool:
 def optionalfeatures_file() -> Path | None:
     """`optionalfeatures.json` (maneuvers, arcane shots, runes...): the
     `DND_5ETOOLS_DATA` override first, then `official_dir()`, else None."""
-    override = os.environ.get("DND_5ETOOLS_DATA", "").strip()
+    override = _override()
     candidates = []
     if override:
         candidates.append(Path(override).expanduser() / "optionalfeatures.json")
@@ -124,7 +132,7 @@ def optionalfeatures_file() -> Path | None:
 def items_base_file() -> Path | None:
     """`items-base.json` (mundane weapons and armor): the `DND_5ETOOLS_DATA`
     override first, then `official_dir()`, else None."""
-    override = os.environ.get("DND_5ETOOLS_DATA", "").strip()
+    override = _override()
     candidates = []
     if override:
         candidates.append(Path(override).expanduser() / "items-base.json")

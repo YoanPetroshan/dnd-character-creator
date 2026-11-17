@@ -4,11 +4,11 @@ Written 2026-10-23 at the close of the remaining program (RP22). Nothing here co
 
 ## Setup
 
-1. On the dev machine run both servers on the LAN: `cd /Users/yoanpetrov/dnd-character-creator && .venv/bin/flask --app server/app.py run --host 0.0.0.0 --port 8000` and `npm --prefix frontend run dev:lan` (script `dev:lan` = `vite --host`; the Vite proxy forwards `/api` to 127.0.0.1:8000). Open `http://<machine-LAN-IP>:5173/home` on the phone.
+1. On the dev machine run both servers on the LAN: `cd <repo> && .venv/bin/flask --app server/app.py run --host 0.0.0.0 --port 8000` and `npm --prefix frontend run dev:lan` (script `dev:lan` = `vite --host`; the Vite proxy forwards `/api` to 127.0.0.1:8000). Open `http://<machine-LAN-IP>:5173/home` on the phone.
 2. Put a draft on the phone. Easiest: write the JSON files on the dev machine and send them to the phone (AirDrop, Files), then open Home and use the "Качи чернова (.json)" button (the same file the "Изтегли чернова (.json)" button downloads). The files come from the kitchen-sink drafts (all picks made):
 
 ```
-cd /Users/yoanpetrov/dnd-character-creator/server && ../.venv/bin/python - <<'EOF'
+cd <repo>/server && ../.venv/bin/python - <<'EOF'
 import sys, json; sys.path[:0] = ["tests", "."]
 from catalog.loader import load
 from engine.resolve import resolve

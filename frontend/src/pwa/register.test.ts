@@ -111,8 +111,6 @@ describe("createPwa", () => {
     const pwa = createPwa(deps(container, { reload }));
     await pwa.start();
     expect(pwa.get().phase).toBe("update-available");
-    container.claim(); // not asked for: no reload
-    expect(reload).not.toHaveBeenCalled();
     pwa.applyUpdate();
     expect(waiting.posted).toEqual([{ type: "SKIP_WAITING" }]);
     expect(reload).not.toHaveBeenCalled();
@@ -121,7 +119,7 @@ describe("createPwa", () => {
   });
 
   it("applyUpdate with nothing waiting does nothing", async () => {
-    const container = fakeContainer(fakeRegistration({ active: fakeWorker("activated") }), {});
+    const container = fakeContainer(fakeRegistration({ active: fakeWorker("activated") }), null); // an uncontrolled tab
     const reload = vi.fn();
     const pwa = createPwa(deps(container, { reload }));
     await pwa.start();
@@ -184,5 +182,65 @@ describe("requestPersistence", () => {
         },
       }),
     ).toBe("unknown");
+  });
+});
+
+describe("FE-03: a first install that turns redundant is an error, and the next visit tries again", () => {
+  it("installing -> redundant with no active or waiting worker: phase error", async () => {
+    const installing = fakeWorker("installing");
+    const pwa = createPwa(deps(fakeContainer(fakeRegistration({ installing }), null)));
+    await pwa.start();
+    expect(pwa.get().phase).toBe("installing");
+    installing.move("redundant");
+    expect(pwa.get().phase).toBe("error");
+  });
+
+  it("a redundant update behind an active worker is not an error", async () => {
+    const active = fakeWorker("activated");
+    const update = fakeWorker("installing");
+    const pwa = createPwa(deps(fakeContainer(fakeRegistration({ active, installing: update }), {})));
+    await pwa.start();
+    update.move("redundant");
+    expect(pwa.get().phase).toBe("offline-ready");
+  });
+
+  it("checkForUpdate in the error phase registers again and recovers", async () => {
+    const reg = fakeRegistration({ active: fakeWorker("activated") });
+    const changes: (() => void)[] = [];
+    let calls = 0;
+    const container = {
+      controller: null,
+      register: vi.fn(async () => {
+        if (++calls === 1) throw new Error("offline");
+        return reg;
+      }),
+      addEventListener: (_t: "controllerchange", l: () => void) => void changes.push(l),
+    } as unknown as ContainerLike;
+    const pwa = createPwa(deps(container));
+    await pwa.start();
+    expect(pwa.get().phase).toBe("error");
+    await pwa.checkForUpdate();
+    expect(pwa.get().phase).toBe("offline-ready");
+    expect(calls).toBe(2);
+    expect(changes.length).toBe(1); // the controllerchange listener is not added twice
+  });
+});
+
+describe("FE-09: a tab that had a controller reloads when another tab's update takes over", () => {
+  it("reloads on a controllerchange it did not ask for, once", async () => {
+    const reload = vi.fn();
+    const container = fakeContainer(fakeRegistration({ active: fakeWorker("activated") }), {});
+    await createPwa(deps(container, { reload })).start();
+    container.claim();
+    container.claim();
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not reload on the very first claim of a tab that started uncontrolled", async () => {
+    const reload = vi.fn();
+    const container = fakeContainer(fakeRegistration({ installing: fakeWorker("installing") }), null);
+    await createPwa(deps(container, { reload })).start();
+    container.claim();
+    expect(reload).not.toHaveBeenCalled();
   });
 });

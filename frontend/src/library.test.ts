@@ -17,6 +17,7 @@ import {
   portraitKey,
   readPortrait,
   readPortraits,
+  refreshFromStorage,
   renameCharacter,
   resetActiveDraft,
   saveDraft,
@@ -193,6 +194,18 @@ describe("operations", () => {
     expect(back.library.activeId).toBe(firstId);
     expect(back.draft?.classes[0].classId).toBe("warlock");
     expect(back.notices).toEqual([]);
+  });
+
+  it("open is refused, with the reason, when the index cannot be written: the active character stays (FE-08)", () => {
+    const { env, storage, boot, firstId } = twoCharacters();
+    const made = createCharacter(env, boot.library);
+    storage.failKeys.add(LIBRARY_KEY);
+    const back = openCharacter(env, made.library, firstId);
+    expect(back.ok).toBe(false);
+    expect(back.draft).toBeNull();
+    expect(back.library).toBe(made.library);
+    expect(back.library.activeId).toBe(made.library.activeId);
+    expect(back.reason && bgText(back.reason)).toContain("Не можа да се запази");
   });
 
   it("saveDraft keeps the item name in sync with draft.name and bumps updatedAt", () => {
@@ -494,6 +507,15 @@ describe("export and import", () => {
     expect(stored(h.storage, "fresh").name).toBe("Вносен");
   });
 
+  it("a draft whose stored form is over about 2 MB is rejected with a message, the others are added (FE-06)", () => {
+    const { env } = makeEnv();
+    const boot = bootLibrary(env);
+    const huge = { ...draftOf("Огромен", [["rogue", 1]]), details: { backstory: "x".repeat(2_100_000) } };
+    const r = importDrafts(env, boot.library, { kind: "dnd-builder-library", version: 1, drafts: [huge, draftOf("Малък", [["cleric", 1]])] });
+    expect(r.report.map((e) => e.status)).toEqual(["rejected", "accepted"]);
+    expect(bgText(r.report[0].message)).toContain("2 MB");
+  });
+
   it("a single draft (not a bundle) is imported as a new character", () => {
     const { env } = makeEnv();
     const boot = bootLibrary(env);
@@ -642,3 +664,96 @@ describe("portraits (stored outside the draft)", () => {
     expect(bad.report.filter((e) => e.status === "accepted").map((e) => readPortrait(c.env, e.id as string))).toEqual([null, null]);
   });
 });
+
+// ---- S09 / FE-01: two tabs on one storage -----------------------------------------------------------------------------
+
+describe("two tabs share one library (FE-01)", () => {
+  /** Two tabs: separate in-memory state and id sequences over the same storage. */
+  function twoTabs() {
+    const storage = new MemoryStorage();
+    let clock = 1000; // one clock for both tabs, so "newer" is well defined
+    const env = (ids: string[]): LibraryEnv => ({ storage, now: () => (clock += 10), newId: () => ids.shift() as string });
+    const a = env(["a1", "a2", "a3", "a4"]);
+    const b = env(["b1", "b2", "b3", "b4"]);
+    const bootA = bootLibrary(a);
+    const bootB = bootLibrary(b);
+    return { storage, a, b, bootA, bootB };
+  }
+  const idsIn = (s: MemoryStorage) => Object.keys(idx(s).items).sort();
+
+  it("a save in tab A does not drop the character tab B created meanwhile", () => {
+    const { storage, a, b, bootA, bootB } = twoTabs();
+    const made = createCharacter(b, bootB.library, draftOf("Герой на B", [["rogue", 2]]));
+    expect(idsIn(storage)).toContain(made.id);
+    // tab A still holds the library it booted with and now saves its own character
+    saveDraft(a, bootA.library, bootA.library.activeId, draftOf("Нещо на A", [["bard", 1]]));
+    expect(idsIn(storage)).toContain(made.id);
+    expect(idsIn(storage)).toContain(bootA.library.activeId);
+  });
+
+  it("a character deleted in tab A is not brought back by a stale save in tab B", () => {
+    const { storage, a, b, bootA, bootB } = twoTabs();
+    const second = createCharacter(a, bootA.library, draftOf("Втори", [["cleric", 1]]));
+    // B learns about both characters, then A deletes the second one
+    const seenByB = refreshFromStorage(b, bootB.library).library;
+    expect(Object.keys(seenByB.items)).toContain(second.id);
+    deleteCharacter(a, second.library, second.id);
+    expect(idsIn(storage)).not.toContain(second.id);
+    // B (stale: it still lists the second) saves its own character
+    saveDraft(b, seenByB, seenByB.activeId, draftOf("Още на B", [["monk", 1]]));
+    expect(idsIn(storage)).not.toContain(second.id);
+  });
+
+  it("the newer updatedAt wins for the same character", () => {
+    const { storage, a, b, bootA, bootB } = twoTabs();
+    const id = bootA.library.activeId;
+    refreshFromStorage(b, bootB.library);
+    saveDraft(a, bootA.library, id, draftOf("Старо", [["bard", 1]]));
+    const afterB = saveDraft(b, bootB.library, id, draftOf("Ново", [["bard", 2]]));
+    expect(idx(storage).items[id].name).toBe("Ново");
+    expect(afterB.ok).toBe(true);
+  });
+
+  it("boot adopts draft keys that are missing from the index (orphans), except deleted ones", () => {
+    const { env, storage } = makeEnv();
+    const boot = bootLibrary(env);
+    storage.setItem(draftKey("orphan"), JSON.stringify(draftOf("Сираче", [["wizard", 4]])));
+    storage.setItem(backupKey("orphan2"), "raw"); // a backup is not a draft
+    const later = makeEnv(storage).env; // one clock for the rest of the test
+    const second = bootLibrary(later);
+    expect(Object.keys(second.library.items).sort()).toEqual([boot.library.activeId, "orphan"].sort());
+    expect(second.library.items.orphan.name).toBe("Сираче");
+    expect(idsIn2(storage)).toContain("orphan");
+    // a deleted character whose draft key survived is not adopted again
+    const del = deleteCharacter(later, second.library, "orphan");
+    storage.setItem(draftKey("orphan"), JSON.stringify(draftOf("Сираче", [["wizard", 4]])));
+    const third = bootLibrary(later);
+    expect(Object.keys(third.library.items)).not.toContain("orphan");
+    expect(del.ok).toBe(true);
+  });
+
+  it("refreshFromStorage reports a change made in another tab, and no change when there is none", () => {
+    const { b, bootA, bootB, a } = twoTabs();
+    expect(refreshFromStorage(a, bootA.library).changed).toBe(false);
+    const made = createCharacter(b, bootB.library, draftOf("Нов", [["druid", 1]]));
+    const r = refreshFromStorage(a, bootA.library);
+    expect(r.changed).toBe(true);
+    expect(Object.keys(r.library.items)).toContain(made.id);
+    expect(r.library.activeId).toBe(bootA.library.activeId); // this tab keeps its own active character
+    expect(r.activeGone).toBe(false);
+  });
+
+  it("refreshFromStorage tells when the active character was deleted elsewhere", () => {
+    const { a, b, bootA, bootB } = twoTabs();
+    const second = createCharacter(b, bootB.library, draftOf("Втори", [["druid", 1]]));
+    const aSees = refreshFromStorage(a, bootA.library).library;
+    deleteCharacter(b, second.library, bootA.library.activeId);
+    const r = refreshFromStorage(a, aSees);
+    expect(r.activeGone).toBe(true);
+    expect(Object.keys(r.library.items)).not.toContain(bootA.library.activeId);
+  });
+});
+
+function idsIn2(s: MemoryStorage) {
+  return Object.keys(JSON.parse(s.getItem(LIBRARY_KEY) as string).items);
+}

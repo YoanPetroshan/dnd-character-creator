@@ -708,6 +708,8 @@ export const en: Copy = {
     "lib.bundleNoList": () => "The character bundle has no list of drafts.",
     "lib.bundleEmpty": () => "The character bundle is empty.",
     "lib.tooMany": (p: Msgs) => `The bundle is too large: at most ${p.max} characters are accepted.`,
+    "lib.draftTooBig": (p: Msgs) => `This draft is too large: at most ${p.max} MB per character are accepted.`,
+    "lib.changedElsewhere": () => "The character list was changed in another tab and has been updated.",
     "lib.cannotStore": () => "Could not be saved: the browser storage is full or blocked.",
     "lib.added": () => "Added as a new character.",
   },

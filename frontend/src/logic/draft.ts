@@ -320,17 +320,67 @@ function mergeInto(defaults: unknown, stored: unknown): unknown {
 export function sanitizeDraft(d: Draft): Draft {
   const classes = (Array.isArray(d.classes) ? d.classes : [])
     .filter((c): c is Draft["classes"][number] => isPlainObject(c) && typeof c.classId === "string" && c.classId !== "")
-    .map((c) => ({
-      ...c,
-      level: typeof c.level === "number" && Number.isFinite(c.level) ? Math.min(20, Math.max(1, Math.trunc(c.level))) : 1,
-      choices: isPlainObject(c.choices) ? c.choices : {},
-    }));
+    .map((c) => {
+      const out: Draft["classes"][number] = {
+        ...c,
+        level: typeof c.level === "number" && Number.isFinite(c.level) ? Math.min(20, Math.max(1, Math.trunc(c.level))) : 1,
+        choices: choiceMap(c.choices),
+      };
+      if (typeof c.subclassId !== "string") delete out.subclassId;
+      if (c.hpRolls !== undefined) {
+        out.hpRolls = isPlainObject(c.hpRolls)
+          ? Object.fromEntries(Object.entries(c.hpRolls).filter(([, v]) => typeof v === "number" && Number.isFinite(v)))
+          : {};
+      }
+      return out;
+    });
   const seen = new Set<string>();
   const uniqueClasses = classes.filter((c) => (seen.has(c.classId) ? false : (seen.add(c.classId), true)));
   const added = (Array.isArray(d.equipment?.added) ? d.equipment.added : []).filter(
     (e) => isPlainObject(e) && typeof e.itemId === "string" && typeof e.qty === "number" && Number.isFinite(e.qty)
   );
-  return { ...d, classes: uniqueClasses, equipment: { ...d.equipment, added } };
+  const species = { ...d.species, choices: choiceMap(d.species?.choices) };
+  if (typeof species.id !== "string") delete species.id;
+  if (typeof species.subspeciesId !== "string") delete species.subspeciesId;
+  const background = { ...d.background, choices: choiceMap(d.background?.choices) };
+  if (typeof background.id !== "string") delete background.id;
+  // FE-06: only the keys of a draft, and only well-typed values in them
+  const out: Record<string, unknown> = {};
+  for (const key of DRAFT_TOP_KEYS) if (key in d) out[key] = (d as unknown as Record<string, unknown>)[key];
+  return {
+    ...(out as unknown as Draft),
+    name: typeof d.name === "string" ? d.name : "",
+    sources: Array.isArray(d.sources) ? d.sources.filter((s): s is string => typeof s === "string") : [],
+    classes: uniqueClasses,
+    species,
+    background,
+    equipment: { ...d.equipment, added },
+    details: detailStrings(d.details),
+  };
+}
+
+/** The keys of a draft (the others of a stored or uploaded object are dropped). */
+const DRAFT_TOP_KEYS = ["draftVersion", "name", "sources", "ruleset", "preferences", "classes", "background", "species", "abilities", "equipment", "details"];
+
+/** `Record<string, string[]>` from whatever is stored: lists keep their strings, anything else is dropped. */
+function choiceMap(value: unknown): Record<string, string[]> {
+  if (!isPlainObject(value)) return {};
+  const out: Record<string, string[]> = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (Array.isArray(v)) out[k] = v.filter((x): x is string => typeof x === "string");
+  }
+  return out;
+}
+
+/** Detail fields are text: strings stay, numbers become their text, everything else is dropped. */
+function detailStrings(value: unknown): Draft["details"] {
+  if (!isPlainObject(value)) return {};
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (typeof v === "string") out[k] = v;
+    else if (typeof v === "number" && Number.isFinite(v)) out[k] = String(v);
+  }
+  return out as Draft["details"];
 }
 
 /** Deep-merge a stored/imported draft over the defaults so keys added by a

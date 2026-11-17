@@ -74,6 +74,10 @@ CLASSES = ["barbarian", "bard", "cleric", "druid", "fighter", "monk", "paladin",
            "rogue", "sorcerer", "warlock", "wizard"]
 LEVELS = (1, 3, 11, 20)
 RULESETS = ("mixed", "2014")
+# S14 (TEST-03, Q11 = A): a 2024 slice, added with --append: the 12 classes at these levels, 2024 origin (Human, Soldier),
+# the first XPHB subclass (by id) from level 3, sources [] and the first-option filler. Named `y2024/<class><level>`: no glob of REBASELINES (`*/src-*/...`) can match them. Mixed / 2014 cases above are untouched.
+LEVELS_2024 = (1, 5, 11, 20)
+GOLDEN_RULESETS = RULESETS + ("2024",)
 SOURCES = ([], ["srd"])
 MULTICLASS = {
     "wizard1-fighter1": [("wizard", 1), ("fighter", 1)],
@@ -507,6 +511,20 @@ def _draft(catalog, classes, ruleset, sources):
             "equipment": {"choices": {}, "added": [], "skipped": False}, "classes": out}
 
 
+def _draft_2024(catalog, cid, lvl):
+    sub = None
+    if lvl >= 3:
+        sub = next((i for i in sorted(catalog.subclasses) if catalog.subclasses[i]["class"]["index"] == cid
+                    and catalog.subclasses[i].get("source") == "XPHB"), None)
+    c = {"classId": cid, "level": lvl, "choices": {}}
+    if sub:
+        c["subclassId"] = sub
+    return {"name": "golden", "ruleset": "2024", "sources": [],
+            "abilities": {"method": "manual", "base": dict(ks._BASE)},
+            "species": {"id": "human-xphb", "choices": {}}, "background": {"id": "soldier-xphb", "choices": {}},
+            "equipment": {"choices": {}, "added": [], "skipped": False}, "classes": [c]}
+
+
 def _label(sources):
     return "src-" + ("all" if not sources else "srd")
 
@@ -521,6 +539,9 @@ def case_drafts(catalog) -> dict[str, dict]:
                     cases[f"{rs}/{_label(src)}/{cid}{lvl}"] = (_draft(catalog, [(cid, lvl)], rs, src), {})
             for name, cl in MULTICLASS.items():
                 cases[f"{rs}/{_label(src)}/multi-{name}"] = (_draft(catalog, cl, rs, src), {})
+    for cid in CLASSES:  # S14: the 2024 slice
+        for lvl in LEVELS_2024:
+            cases[f"y2024/{cid}{lvl}"] = (_draft_2024(catalog, cid, lvl), {})
     for sid, spec in ks.KITCHEN_SINK.items():
         if spec["ruleset"] == "2024":
             continue
@@ -704,7 +725,11 @@ def _load_golden() -> dict:
     return json.load(gzip.open(GOLDEN, "rt")) if GOLDEN.exists() else {}
 
 
-_GOLDEN = _load_golden() if not _NEEDS_DATA else {}
+_GOLDEN_ALL = _load_golden() if not _NEEDS_DATA else {}
+# the mixed / 2014 / kitchen-sink cases the slice tests below reason about; the 2024 slice (S14, `y2024/*`) is guarded by
+# its own tests (every entry re-resolves unchanged, and no rebaseline glob can match it)
+_GOLDEN = {n: v for n, v in _GOLDEN_ALL.items() if not n.startswith("y2024/")}
+_GOLDEN_2024 = {n: v for n, v in _GOLDEN_ALL.items() if n.startswith("y2024/")}
 pytestmark = pytest.mark.skipif(bool(_NEEDS_DATA), reason=f"5etools data missing: {', '.join(_NEEDS_DATA)}")
 
 
@@ -717,8 +742,18 @@ def test_golden_file_present_and_covers_every_case():
     assert _GOLDEN, "golden file missing: regenerate (see module docstring)"
     names = set(case_drafts(load()))
     kitchen = {n for n in names if n.startswith("ks/") and ks.skip_reason(ks.KITCHEN_SINK[n.rsplit("/", 1)[-1]])}
-    assert set(_GOLDEN) == names - kitchen
-    assert all(json.loads(json.dumps(v["draft"]))["ruleset"] in RULESETS for v in _GOLDEN.values())
+    assert set(_GOLDEN_ALL) == names - kitchen
+    assert all(json.loads(json.dumps(v["draft"]))["ruleset"] in GOLDEN_RULESETS for v in _GOLDEN_ALL.values())
+
+
+def test_the_2024_slice_is_48_cases_and_no_rebaseline_glob_matches_it():
+    assert len(_GOLDEN_2024) == len(CLASSES) * len(LEVELS_2024) == 48
+    assert all(v["draft"]["ruleset"] == "2024" and not v["result"]["problems"] for v in _GOLDEN_2024.values())
+    for slice_id, spec in REBASELINES.items():
+        for pattern in spec["cases"]:
+            if pattern == "*":  # RPX2 (applied once): every case, but only through its path allowlist
+                continue
+            assert not any(fnmatch.fnmatchcase(n, pattern) for n in _GOLDEN_2024), (slice_id, pattern)
 
 
 # --- RP6 / P0: rebaseline mode, tested on a synthetic two-case golden (the real file is never touched) ---
@@ -1040,9 +1075,9 @@ def test_keyed_normalization_and_diff_paths():
     assert isinstance(dup["c"], list)
 
 
-@pytest.mark.parametrize("name", sorted(_GOLDEN))
-def test_mixed_and_2014_resolve_is_unchanged(catalog, name):
-    entry = _GOLDEN[name]
+@pytest.mark.parametrize("name", sorted(_GOLDEN_ALL))
+def test_mixed_and_2014_resolve_is_unchanged(catalog, name):  # also the 2024 slice (S14): a regression guard
+    entry = _GOLDEN_ALL[name]
     now = strip(json.loads(json.dumps(resolve(copy.deepcopy(entry["draft"]), catalog))))
     assert now == strip(entry["result"])
 

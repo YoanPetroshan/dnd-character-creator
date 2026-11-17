@@ -85,7 +85,8 @@ def test_vf7_6b_a_body_at_the_limit_depth_and_ordinary_drafts_still_work():
     ok = b'{"name":' + b"[" * 60 + b"]" * 60 + b"}"
     assert _post("/api/resolve", ok)[0] == 200  # 61 levels with the object, under the limit
     assert _post("/api/resolve", exportable_draft())[0] == 200
-    assert _post("/api/resolve", b"not json")[0] == 200  # unparseable stays an empty draft
+    assert _post("/api/resolve", b"not json")[0] == 400  # S03 (Q4 = B): unparseable is a 400, no longer an empty draft
+    assert _post("/api/resolve", b"")[0] == 200  # an absent body is still an empty draft
     assert _post("/api/resolve", b"[1,2]")[0] == 400  # a shallow non-object stays the old 400
     assert json.loads(_post("/api/resolve", b"[1,2]")[3])["error"] == "draft must be a JSON object"
 
@@ -125,5 +126,5 @@ def test_vf7_6c_body_problem_callable_answers_only_the_two_draft_routes_after_th
 
 def test_vf7_6b_an_unparseable_body_nested_too_deeply_is_the_same_400():
     assert _post("/api/resolve", b"[" * 65)[0] == 400  # unbalanced: json.loads says "Expecting value", the raw nesting is 65
-    assert _post("/api/resolve", b"[" * 64)[0] == 200  # at the limit, unparseable: still an empty draft
-    assert _post("/api/resolve", b'{"a": "' + b"[" * 100 + b'" oops')[0] == 200  # brackets inside a string do not count
+    assert _post("/api/resolve", b"[" * 64)[0] == 400  # at the limit, unparseable: a 400 from the parse (S03, Q4 = B)
+    assert _post("/api/resolve", b'{"a": "' + b"[" * 100 + b'" oops')[0] == 400  # brackets inside a string do not count (the 400 is the plain parse error)

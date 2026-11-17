@@ -18,6 +18,8 @@ from datetime import datetime, timezone
 
 import pytest
 
+import baseline_guard
+
 import sheet_pdf
 from catalog.loader import load
 from engine.resolve import resolve
@@ -63,8 +65,8 @@ def test_the_sheet_bytes_match_the_baseline(catalog, sid, lang):
     key = f"{sid}:{lang}"
     stored = json.loads(BASELINE.read_text(encoding="utf-8")) if BASELINE.exists() else {}
     if os.environ.get("WRITE_SHEET_BASELINE") == "1":
-        stored[key] = got  # merge-only: other entries stay
-        BASELINE.write_text(json.dumps(stored, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+        new = {**stored, key: got}  # merge-only: other entries stay
+        baseline_guard.write_baseline(BASELINE, new, stored, f"sheet baseline {key}")
         return
     assert key in stored, f"no baseline for {key}"
     assert got == stored[key], f"{key}: the sheet bytes changed"

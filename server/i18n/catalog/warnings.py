@@ -11,6 +11,10 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Unknown ruleset '{ruleset}'; using mixed.",
         "bg": "Непознат набор от правила '{ruleset}'; използва се mixed.",
     },
+    "sources-too-many": {
+        "en": "Only the first {max} distinct books of the source list are used; the rest were ignored.",
+        "bg": "Използват се само първите {max} различни книги от списъка с източници (Sources); останалите са пренебрегнати.",
+    },
     "ruleset-2014-background-asi-ignored": {
         "en": "{name} is a 2024 background; under the 2014 rules its ability score increase is ignored.",
         "bg": "{name} е произход (Background) от 2024; според правилата от 2014 увеличението на характеристиките (Ability Scores) му се пренебрегва.",

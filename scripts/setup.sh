@@ -6,6 +6,6 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 python3 -m venv .venv
-.venv/bin/pip install -r server/requirements.txt
+.venv/bin/pip install -r server/requirements.txt -c server/constraints.txt
 (cd frontend && npm ci && npm run build)
 echo "done. Start with scripts/start.sh" >&2

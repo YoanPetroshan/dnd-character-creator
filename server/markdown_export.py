@@ -8,6 +8,8 @@ already produces them — no new engine computation happens here.
 """
 from __future__ import annotations
 
+import re
+
 from catalog.reference_data import ABILITIES, LANGUAGE_NAMES, SKILL_NAMES, proficiency_label
 from export_fields import DETAIL_SECTIONS, SPELL_PICK_KEYS, extra_blocks, pack_contents_suffix, worn_wielded_line
 from export_labels import DEFAULT_LANG, check_lang, label, word
@@ -84,6 +86,27 @@ def _skill_lines(derived: dict, proficient: list[str], expertise: list[str] = ()
     return lines
 
 
+_C0 = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")  # control characters except tab, line feed and carriage return
+_HTML_START = re.compile(r"<(?=[A-Za-z/!?])")  # a `<` that begins a tag, comment or declaration
+
+
+def _free_text(text) -> str:
+    """User-written text (a detail field) for the Markdown file: control characters dropped, a line that would start a
+    heading (`#`) or a code fence (``` / ~~~) escaped, and `<` that begins raw HTML escaped. Plain text is returned as it is."""
+    out = []
+    for line in _C0.sub("", str(text)).split("\n"):
+        head = line.lstrip()
+        if head.startswith("#") or head.startswith("```") or head.startswith("~~~"):
+            line = line[: len(line) - len(head)] + "\\" + head
+        out.append(_HTML_START.sub("\\<", line))
+    return "\n".join(out)
+
+
+def _heading_text(text) -> str:
+    """A name for a one-line heading: control characters dropped, line breaks become spaces."""
+    return _C0.sub("", re.sub(r"[\r\n]+", " ", str(text))).strip()
+
+
 def to_markdown(resolution: dict, lang: str = DEFAULT_LANG) -> str:
     """The character sheet as Markdown in `lang` ("bg", the default, or "en"): the labels come from export_labels,
     every name from the data stays as it is."""
@@ -97,7 +120,7 @@ def to_markdown(resolution: dict, lang: str = DEFAULT_LANG) -> str:
 
     class_label = _class_label(classes)
 
-    lines.append(f"# {sheet['name'] or label(lang, 'unnamed')}")
+    lines.append(f"# {_heading_text(sheet['name']) or label(lang, 'unnamed')}")
     lines.append("")
     lines.append(
         f"**{label(lang, 'level', level=sheet['level'])} {class_label}** | "
@@ -260,7 +283,7 @@ def to_markdown(resolution: dict, lang: str = DEFAULT_LANG) -> str:
             for field_label, value in present:
                 lines.append(f"**{field_label}:**")
                 lines.append("")
-                lines.append(value)
+                lines.append(_free_text(value))
                 lines.append("")
 
     return "\n".join(lines).rstrip() + "\n"

@@ -5,7 +5,9 @@
 // Error shapes are fetch's: an aborted signal rejects with an AbortError DOMException (the reply, if it still comes, is
 // dropped); the 30 s timeout rejects with a TimeoutError DOMException and starts only when the request is handed to the
 // booted engine (never while Pyodide is still starting); an engine that cannot be reached rejects with a TypeError, like
-// a failed network request. A worker that cannot boot at all hands the call to the plain-fetch fallback.
+// a failed network request. A worker that cannot boot at all hands the call to the plain-fetch fallback. A worker that
+// crashes, sends an unreadable message, or is stuck on a request that timed out is terminated and replaced (up to
+// MAX_RESTARTS times in a row, FE-04): only the calls waiting on it fail; the next call waits for the new boot.
 //
 // The PDF stack is not part of the boot: the first POST /api/export/pdf asks the worker to load it (state `pdf:
 // "loading"`, which the Export page shows as "preparing PDF") and is sent when that is done; the timeout of that request
@@ -14,6 +16,8 @@ import type { EngineSnapshot, FromWorker, ToWorker } from "./engineProtocol";
 import { createStatusStore, type StatusStore } from "./engineStatus";
 
 export const DEFAULT_TIMEOUT_MS = 30_000;
+/** FE-04: how many times in a row a crashed or stuck worker is replaced before the engine is given up. */
+export const MAX_RESTARTS = 2;
 
 /** The part of a Worker the transport uses (a fake in the tests). */
 export interface WorkerLike {
@@ -139,8 +143,10 @@ export function createWorkerTransport(options: WorkerTransportOptions): Transpor
   };
 
   let bootDone!: (ok: boolean) => void;
-  const booted = new Promise<boolean>((r) => (bootDone = r));
+  let booted = new Promise<boolean>((r) => (bootDone = r));
   let bootSettled = false;
+  // FE-04: a crashed or stuck worker is replaced (at most MAX_RESTARTS times in a row) before the engine is given up
+  let restarts = 0;
 
   const settleBoot = (ok: boolean) => {
     if (bootSettled) return;
@@ -149,16 +155,17 @@ export function createWorkerTransport(options: WorkerTransportOptions): Transpor
     bootDone(ok);
   };
 
-  /** The worker is gone or broken: fail what is waiting on it like a lost connection and use plain fetch from now on. */
-  const lose = (reason: string) => {
-    settleBoot(false);
-    store.set({ engine: "fallback" });
+  /** Fail what is waiting on the worker like a lost connection (a TypeError), and forget its PDF stack. */
+  const failWaiting = (reason: string) => {
     for (const [, p] of pending) p.reject(new TypeError(reason));
     pending.clear();
     pdfSettle?.reject(new TypeError(reason));
     pdfSettle = null;
     pdfReady = null;
     store.set({ pdf: "idle" });
+  };
+
+  const terminate = () => {
     try {
       worker?.terminate();
     } catch {
@@ -167,13 +174,49 @@ export function createWorkerTransport(options: WorkerTransportOptions): Transpor
     worker = null;
   };
 
-  try {
-    worker = options.spawn();
-    worker.onmessage = (e) => {
+  /** The worker is gone or broken for good: fail what is waiting on it and use plain fetch from now on. */
+  const lose = (reason: string) => {
+    settleBoot(false);
+    store.set({ engine: "fallback" });
+    failWaiting(reason);
+    terminate();
+  };
+
+  /** Replace the worker: terminate it, reject the waiting calls, boot a new one (the boot starts over). After
+   *  MAX_RESTARTS restarts without an answer in between, the engine is lost instead. */
+  const restart = (reason: string) => {
+    if (restarts >= MAX_RESTARTS) {
+      lose(reason);
+      return;
+    }
+    restarts++;
+    terminate();
+    failWaiting(reason);
+    bootSettled = false;
+    booted = new Promise<boolean>((r) => (bootDone = r));
+    store.set({ engine: "starting" });
+    attach();
+  };
+
+  function attach(): void {
+    let w: WorkerLike;
+    try {
+      w = options.spawn();
+    } catch {
+      // no Worker / no module workers: plain fetch
+      worker = null;
+      settleBoot(false);
+      return;
+    }
+    worker = w;
+    const current = () => worker === w; // messages of a terminated worker are ignored
+    w.onmessage = (e) => {
+      if (!current()) return;
       const m = e.data;
       if (m.t === "ready") settleBoot(true);
       else if (m.t === "boot-error") lose(`engine failed to start: ${m.message}`);
       else if (m.t === "response") {
+        restarts = 0; // the engine answers: its restarts are given back
         const p = pending.get(m.id);
         if (p) {
           pending.delete(m.id);
@@ -201,12 +244,15 @@ export function createWorkerTransport(options: WorkerTransportOptions): Transpor
         }
       }
     };
-    worker.onerror = () => lose("engine worker crashed");
-  } catch {
-    // no Worker / no module workers: plain fetch
-    worker = null;
-    settleBoot(false);
+    w.onerror = () => {
+      if (current()) restart("engine worker crashed");
+    };
+    w.onmessageerror = () => {
+      if (current()) restart("engine worker sent a message that could not be read");
+    };
   }
+
+  attach();
 
   /** Wait for `p`; reject early when the caller aborts meanwhile (the work itself goes on). */
   function orAbort<T>(p: Promise<T>, signal: AbortSignal | null): Promise<T> {
@@ -258,7 +304,13 @@ export function createWorkerTransport(options: WorkerTransportOptions): Transpor
       });
       signal?.addEventListener("abort", onAbort, { once: true });
       // the clock starts here: the engine is booted and has the request
-      timer = setTimeout(() => drop(timeoutError()), timeoutMs ?? timeoutDefault);
+      timer = setTimeout(() => {
+        // the oldest waiting request is the one the single-threaded engine is running: when it times out the worker is
+        // stuck on it (FE-04), so it is replaced; a younger one is only queued behind it
+        const running = pending.has(id) && Math.min(...pending.keys()) === id;
+        drop(timeoutError());
+        if (running && worker === w) restart("engine worker was restarted after a request timed out");
+      }, timeoutMs ?? timeoutDefault);
       const msg: ToWorker = { t: "request", id, method: req.method, path: req.path, query: req.query, body: req.body };
       w.postMessage(msg, req.body ? [req.body.buffer as ArrayBuffer] : []);
     });

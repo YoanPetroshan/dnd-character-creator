@@ -39,9 +39,9 @@ official = pytest.mark.skipif(not has_official(), reason="official data not fetc
 
 
 @official
-def test_thirty_races_offer_a_size_choice(catalog):
+def test_thirty_one_races_offer_a_size_choice(catalog):
     multi = [r["index"] for r in catalog.races.values() if r.get("size_options")]
-    assert len(multi) == 30
+    assert len(multi) == 31  # 30 + Flamekin (LFL), a `_copy` resolved by S13
     assert catalog.races["human-xphb"]["size_options"] == ["Small", "Medium"]
     assert catalog.races["human-xphb"]["size"] == "Small"  # first value stays the plain size
     assert catalog.races["elf-xphb"].get("size_options") == []

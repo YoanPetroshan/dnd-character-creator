@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Draft } from "./types";
 import {
   bootLibrary,
@@ -10,6 +10,7 @@ import {
   importDrafts,
   openCharacter,
   readPortraits,
+  refreshFromStorage,
   renameCharacter,
   saveDraft,
   setSeenChoices,
@@ -20,9 +21,10 @@ import {
   type Library,
   type LibraryNames,
   type LibraryEnv,
+  LIBRARY_KEY,
 } from "./library";
 import { totalLevel } from "./logic/draft";
-import type { Msg } from "./logic/messages";
+import { msg, type Msg } from "./logic/messages";
 import { useT } from "./LanguageContext";
 
 export interface LibraryContextValue {
@@ -44,6 +46,9 @@ export interface LibraryContextValue {
   setSeen: (seenChoiceIds: string[], baselined: boolean) => void;
   /** Called by DraftProvider after each edit of the active character; returns whether the write succeeded. */
   persistActive: (id: string, draft: Draft) => boolean;
+  /** FE-07: tell the library the live draft of the active character without saving it (exports and copies use it while
+   *  the debounced save has not run yet). */
+  noteLive: (id: string, draft: Draft) => void;
   newCharacter: () => void;
   openCharacter: (id: string) => void;
   /** Rename a character that is NOT the active one (the active one is renamed with SET_NAME). */
@@ -114,6 +119,31 @@ export function LibraryProvider({ children, env }: { children: ReactNode; env?: 
     return r.ok;
   }, []);
 
+  // FE-01: another tab changed the library (a character added, deleted or renamed): merge it in and say so
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== null && e.key !== LIBRARY_KEY) return;
+      const r = refreshFromStorage(envRef.current, libRef.current);
+      if (!r.changed) return;
+      if (r.activeGone) {
+        const opened = openCharacter(envRef.current, r.library, r.library.activeId);
+        if (opened.draft) {
+          commit(opened.library, opened.draft);
+          setStorageFailed(!opened.ok);
+        } else commit(r.library);
+      } else {
+        commit(r.library);
+      }
+      setNotices((n) => [...n, msg("lib.changedElsewhere")]);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [commit]);
+
+  const noteLive = useCallback((id: string, draft: Draft) => {
+    liveRef.current = { id, draft };
+  }, []);
+
   const addNotices = (more: Msg[], raw: string | null) => {
     if (more.length) setNotices((n) => [...n, ...more]);
     if (raw) setUnsavedRaw(raw);
@@ -132,6 +162,7 @@ export function LibraryProvider({ children, env }: { children: ReactNode; env?: 
       unsavedRaw,
       storageFailed,
       persistActive,
+      noteLive,
       seenChoiceIds: lib.items[lib.activeId]?.seenChoiceIds ?? [],
       seenBaselined: lib.items[lib.activeId]?.seenBaselined === true,
       setSeen: (seen, baselined) => {
@@ -148,7 +179,10 @@ export function LibraryProvider({ children, env }: { children: ReactNode; env?: 
       openCharacter: (id) => {
         if (id === libRef.current.activeId) return;
         const r = openCharacter(envRef.current, libRef.current, id);
-        if (!r.draft) return;
+        if (!r.draft) {
+          if (!r.ok) setStorageFailed(true); // FE-08: the switch was refused because the index cannot be written
+          return;
+        }
         commit(r.library, r.draft);
         addNotices(r.notices, r.unsavedRaw);
         setStorageFailed(!r.ok);
@@ -187,7 +221,7 @@ export function LibraryProvider({ children, env }: { children: ReactNode; env?: 
       },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [summaries, lib, activeDraft, notices, unsavedRaw, storageFailed, persistActive, commit, portraits],
+    [summaries, lib, activeDraft, notices, unsavedRaw, storageFailed, persistActive, noteLive, commit, portraits],
   );
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;

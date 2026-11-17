@@ -59,7 +59,11 @@ The `_meta` blocks inside the data files record no licence.
 
 ### Game content and source codes
 
-The game content (races, backgrounds, feats, spells, classes, items) is taken from Wizards of the Coast publications.
+The game content (races, backgrounds, feats, spells, classes, items) is taken from Wizards of the Coast publications and
+from other publishers' books and community material listed in the 5etools data (for example the Plane Shift PDFs `PSA` ... `PSZ`,
+`LR`, `TTP`). Two source codes are not published books at all: `AU` (29 feats) and `UATheMysticClass` are Unearthed Arcana /
+playtest material; the app names `AU` "Unearthed Arcana (AU)" in the source picker. The owner decided (2026-11-16, Q2) to keep the
+repository public with this data; the statement above is therefore a description of origin, not a licence.
 The `source` codes found in the vendored records (derived by script from all records of all bundled files):
 
 AAG, ABH, AI, AU, AWM, AitFR-AVT, BGDIA, BGG, BMT, DMG, DSotDQ, EEPC, EFA, EGW, ERLW, FRHoF, FTD, GGR, GoS, IDRotF,

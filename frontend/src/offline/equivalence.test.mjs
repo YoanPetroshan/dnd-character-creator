@@ -26,6 +26,13 @@ const packPresent = existsSync(path.join(pack, "app.zip")) && existsSync(path.jo
 const hasPython = existsSync(python);
 const testData = path.join(repo, "server/tests");
 
+// CI sets REQUIRE_PYTHON=1: a green job must mean the export / request parts really ran, so a missing venv fails.
+describe("the repo venv python for the equivalence parts", () => {
+  it.skipIf(process.env.REQUIRE_PYTHON !== "1")("exists when REQUIRE_PYTHON=1 (python -m venv .venv && pip install -r server/requirements.txt)", () => {
+    expect(hasPython).toBe(true);
+  });
+});
+
 /** @typedef {{checked: number, mismatches: string[], seconds: number, [k: string]: unknown}} Report */
 let py;
 let fixtures;

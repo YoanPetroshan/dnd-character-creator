@@ -1,8 +1,20 @@
-/** A file name safe on common file systems: the user's name (or `fallback`, the
- *  language's word for a character: "character" / "герой")
- *  with \ / : * ? " < > | replaced by "_", plus the extension. */
+const MAX_NAME = 200; // as the server: the name part of a download is cut to 200 characters
+const DROPPED = /[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g; // control and bidi-override characters
+const WINDOWS_DEVICE = /^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$/i;
+
+/** A file name safe on common file systems and the same as the server's download name (`service._download_name`): the
+ *  user's name (or `fallback`, the language's word for a character: "character" / "герой") with \ / : * ? " < > |
+ *  replaced by "_", control and bidi characters dropped, cut to 200 characters, trailing dots and spaces removed
+ *  (nothing left: the fallback), a reserved Windows device name (CON, PRN, AUX, NUL, COM1-9, LPT1-9) prefixed with "_",
+ *  plus the extension. */
 export function safeFilename(name: string | undefined, extension: string, fallback = "character"): string {
-  return `${(name || fallback).replace(/[\\/:*?"<>|]/g, "_")}.${extension}`;
+  let stem = Array.from((name || fallback).replace(/[\\/:*?"<>|]/g, "_").replace(DROPPED, ""))
+    .slice(0, MAX_NAME)
+    .join("")
+    .replace(/[ .]+$/, "");
+  if (!stem) stem = fallback;
+  if (WINDOWS_DEVICE.test(stem)) stem = `_${stem}`;
+  return `${stem}.${extension}`;
 }
 
 /** Click a temporary link to download the blob. */

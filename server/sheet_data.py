@@ -24,8 +24,8 @@ from dataclasses import dataclass, field
 
 import sheet_layout as L
 from catalog.reference_data import LANGUAGE_NAMES, SKILL_ABILITY, SKILL_NAMES, proficiency_label
-from export_fields import _DAMAGE_SECTIONS, _title, fmt_mod, fmt_spell_slots, resource_line, species_label
-from export_labels import DEFAULT_LANG, check_lang, label, sheet_label, weight, word
+from export_fields import defense_lines, fmt_mod, fmt_spell_slots, resource_line, species_label
+from export_labels import DEFAULT_LANG, check_lang, kilograms, label, sheet_label, weight, word
 
 STANDARD_ACTIONS = ("Attack", "Dash", "Disengage", "Dodge", "Help", "Hide", "Influence", "Magic", "Ready", "Search",
                     "Study", "Utilize")
@@ -397,7 +397,16 @@ def _casting_ability(catalog, class_id: str) -> str:
 # ---------------------------------------------------------------------------------------------------------------
 # the field map
 # ---------------------------------------------------------------------------------------------------------------
-def _equipment_rows(resolution: dict, catalog) -> list[tuple[str, str, str]]:
+def _weight_cell(total, lang: str) -> str:
+    """The weight of one equipment row. English "3 lb"; Bulgarian "3 lb (1,4 kg)" (S05, EXP-02), or, when the narrow cell cannot
+    hold that even at the smallest size, "3 lb/1,4 kg", or the kilograms alone."""
+    if lang != "bg":
+        return f"{total} lb"
+    kg = kilograms(total)
+    return _shortest_that_fits([weight(total, lang), f"{total} lb/{kg}", kg], "Eq0Weight")
+
+
+def _equipment_rows(resolution: dict, catalog, lang: str = DEFAULT_LANG) -> list[tuple[str, str, str]]:
     eq = resolution["sheet"].get("equipment") or {}
     rows: list[tuple[str, str, str]] = []
 
@@ -406,7 +415,7 @@ def _equipment_rows(resolution: dict, catalog) -> list[tuple[str, str, str]]:
         if not isinstance(w, (int, float)) or isinstance(w, bool) or w == 0:
             return "--"
         total = w * qty
-        return f"{int(total) if float(total).is_integer() else total} lb"
+        return _weight_cell(int(total) if float(total).is_integer() else total, lang)
 
     for key in ("granted", "chosen", "added"):
         for e in eq.get(key) or []:
@@ -425,7 +434,8 @@ def _weapon_rows(resolution: dict, catalog, lang: str) -> list[tuple[str, str, s
     for a in resolution["derived"].get("attacks") or []:
         damage = ""
         if a.get("damage"):
-            damage = f"{a['damage']} {word(lang, 'damage', a['damageType'])}" if a.get("damageType") else a["damage"]
+            # S07 (Q3 = B): the damage type as the Markdown / PDF write it (English in both languages)
+            damage = f"{a['damage']} {a['damageType']}" if a.get("damageType") else a["damage"]
         notes = []
         if a.get("versatileDamage"):
             notes.append(label(lang, "attackVersatile", dice=a["versatileDamage"]))
@@ -451,7 +461,7 @@ def _weapon_rows(resolution: dict, catalog, lang: str) -> list[tuple[str, str, s
             how = _save_or_attack(spell, attack)
             hit = how if how in ("--",) or how.startswith(("+", "-")) else f"{how} {dc}" if dc is not None else how
             dice = _cantrip_dice(spell, level)
-            types = [word(lang, "damage", t) for t in (spell.get("damage_inflict") or [(spell.get("damage") or {}).get("damage_type", {}).get("index")]) if t]
+            types = [t for t in (spell.get("damage_inflict") or [(spell.get("damage") or {}).get("damage_type", {}).get("index")]) if t]
             damage = f"{dice} {', '.join(types)}".strip()
             rows.append((s["name"], hit, damage, compact_range(spell.get("range", ""))))
     return rows
@@ -471,14 +481,7 @@ def _skill_rows(resolution: dict) -> dict[str, tuple[str, str, str]]:
 
 
 def _defenses(sheet: dict, lang: str) -> list[str]:
-    blocks = []
-    damage = sheet.get("damageModifiers") or {}
-    for key, label_key in _DAMAGE_SECTIONS:
-        if damage.get(key):
-            blocks.append(f"{label(lang, label_key)}: " + ", ".join(_title(d) for d in damage[key]))
-    if sheet.get("conditionImmunities"):
-        blocks.append(f"{label(lang, 'conditionImmunities')}: " + ", ".join(_title(c) for c in sheet["conditionImmunities"]))
-    return blocks
+    return defense_lines(sheet, lang)  # S07: the same lines as the Markdown / PDF
 
 
 def _shortest_that_fits(options: list[str], field: str) -> str:
@@ -491,8 +494,19 @@ def _shortest_that_fits(options: list[str], field: str) -> str:
     return min(options, key=len)
 
 
-def _paragraphs(text: str | None) -> list[str]:
-    return [p for p in re.split(r"\n\s*\n", (text or "").strip()) if p.strip()]
+MAX_FREE_TEXT = 20_000  # Q5 = A: characters of one free-text section kept on the sheet (the Markdown / YAML exports keep all)
+
+
+def _capped(text: str | None, lang: str) -> str:
+    """``text`` stripped, and cut to MAX_FREE_TEXT characters with a visible closing note when it is longer."""
+    text = (text or "").strip()
+    if len(text) <= MAX_FREE_TEXT:
+        return text
+    return text[:MAX_FREE_TEXT].rstrip() + "\n\n" + sheet_label(lang, "textCut", max=MAX_FREE_TEXT)
+
+
+def _paragraphs(text: str | None, lang: str = DEFAULT_LANG) -> list[str]:
+    return [p for p in re.split(r"\n\s*\n", _capped(text, lang)) if p.strip()]
 
 
 def build_sheet_data(resolution: dict, catalog, lang: str = DEFAULT_LANG, ruleset: str | None = None) -> SheetData:
@@ -587,7 +601,7 @@ def build_sheet_data(resolution: dict, catalog, lang: str = DEFAULT_LANG, rulese
         action_blocks.append(sheet_label(lang, "headAttacks") + "\n" + "\n".join(attack_lines))
 
     # equipment, coins, carrying
-    rows = _equipment_rows(resolution, catalog)
+    rows = _equipment_rows(resolution, catalog, lang)
     for i in range(EQUIPMENT_FIELD_ROWS):
         name, qty, wt = rows[i] if i < len(rows) else ("", "", "")
         v[f"Eq{i}Name"], v[f"Eq{i}Qty"], v[f"Eq{i}Weight"] = name, qty, wt
@@ -609,11 +623,11 @@ def build_sheet_data(resolution: dict, catalog, lang: str = DEFAULT_LANG, rulese
     allies = []
     for key, head in (("allies", "headAllies"), ("organizations", "headOrganizations"), ("enemies", "headEnemies")):
         if details.get(key):
-            allies.append(sheet_label(lang, head) + "\n" + details[key].strip())
+            allies.append(sheet_label(lang, head) + "\n" + _capped(details[key], lang))
     blocks["Allies"] = allies
     for key, field_name in (("personalityTraits", "Personality"), ("ideals", "Ideals"), ("bonds", "Bonds"), ("flaws", "Flaws"),
                             ("backstory", "Backstory"), ("notes", "Notes1")):
-        blocks[field_name] = _paragraphs(details.get(key))
+        blocks[field_name] = _paragraphs(details.get(key), lang)
 
     # features flow
     desc = _Descriptions(catalog, sheet, ruleset)

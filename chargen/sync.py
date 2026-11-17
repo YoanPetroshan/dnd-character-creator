@@ -2,7 +2,7 @@
 """
 sync.py — fetch 5e SRD reference data from 5e-bits/5e-database
 
-Downloads the ten JSON datasets chargen's rules engine is built on (spells,
+Downloads the ten JSON datasets the app's catalog is built on (spells,
 levels, classes, subclasses, features, races, subraces, traits, equipment,
 backgrounds) from the open 5e-bits/5e-database repo (MIT + OGL licensed) and
 saves them to chargen/data/srd/. The result is committed to the repo — see

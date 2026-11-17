@@ -16,6 +16,8 @@ import re
 
 import pytest
 
+import baseline_guard
+
 import app as app_module
 from app import app
 from catalog.official.paths import data_source
@@ -85,7 +87,7 @@ def test_request_names_are_unique():
 def test_flask_responses_match_the_baseline(client):
     current = _current(client)
     if os.environ.get("WRITE_SERVICE_BASELINE") == "1":
-        BASELINE.write_text(json.dumps(current, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+        baseline_guard.write_baseline(BASELINE, current, json.loads(BASELINE.read_text(encoding="utf-8")), "service baseline")
     baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
     assert sorted(current) == sorted(baseline)
     for name in sorted(baseline):

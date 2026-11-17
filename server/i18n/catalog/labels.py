@@ -156,7 +156,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "desc-feat-expertise": {
         "en": "Choose {n} {n|skill|skills} you are proficient in to gain Expertise.",
-        "bg": "Изберете {n} {n|умение (Skill)|умения (Skills)}, които владеете, за да получите експертиза (Expertise).",
+        "bg": "Изберете {n} {n|умение (Skill), което владеете|умения (Skills), които владеете}, за да получите експертиза (Expertise).",
     },
     "desc-feat-saves": {
         "en": "Choose {n} {n|ability|abilities} to gain saving throw proficiency in.",
@@ -164,7 +164,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "desc-weapon-proficiency-choice": {
         "en": "Choose {n} {n|weapon|weapons} you gain proficiency with.",
-        "bg": "Изберете {n} {n|оръжие|оръжия}, с които получавате владеене (Proficiency).",
+        "bg": "Изберете {n} {n|оръжие, с което получавате|оръжия, с които получавате} владеене (Proficiency).",
     },
     # --- descriptions: ability scores, damage, size, lineage, feats ------------------------------------------------------
     "desc-asi-option-one": {
@@ -234,7 +234,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "desc-pick-fighting-style": {
         "en": "Learn {n} Fighting Style {n|option|options} from the fighter class. It must differ from any style you already have.",
-        "bg": "Научете {n} {n|опция|опции} Fighting Style от класа fighter. Тя трябва да се различава от всеки стил, който вече имате.",
+        "bg": "Научете {n} {n|опция|опции} Fighting Style от класа fighter. {n|Тя трябва да се различава|Те трябва да се различават} от всеки стил, който вече имате.",
     },
     "desc-pick-maneuver": {
         "en": "Learn {n} {n|maneuver|maneuvers} from those available to the Battle Master.",
@@ -257,7 +257,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     "desc-weapon-mastery-feat": {
         "en": "Choose {n} {n|kind|kinds} of weapon you are proficient with to use its mastery property. "
               "You can change the choice after a long rest.",
-        "bg": "Изберете {n} {n|вид оръжие|вида оръжие}, с които владеете, за да използвате свойството му от Майсторство с оръжия (Weapon Mastery). Можете да смените избора след дълга почивка (Long Rest).",
+        "bg": "Изберете {n} {n|вид оръжие, с което владеете, за да използвате свойството му|вида оръжие, с които владеете, за да използвате свойствата им} от Майсторство с оръжия (Weapon Mastery). Можете да смените избора след дълга почивка (Long Rest).",
     },
     "desc-weapon-mastery-class": {
         "en": "Choose {count} kinds of weapons you are proficient with to use their mastery properties. "

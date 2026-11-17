@@ -37,7 +37,7 @@ describe("requests carry the language", () => {
   it("useResolution and the export bar build their URLs with withLang(…, lang) and re-resolve on lang", () => {
     const res = readFileSync(new URL("./useResolution.ts", import.meta.url)).toString("utf8");
     expect(res).toContain('withLang("/api/resolve", lang)');
-    expect(res).toContain("[draft, retryNonce, lang]");
+    expect(res).toContain("[body, retryNonce, lang]"); // body = the draft's JSON text (FE-07)
     const exp = readFileSync(new URL("./components/sheetpage/ExportBar.tsx", import.meta.url)).toString("utf8");
     expect(exp).toContain("withLang(config.endpoint, lang)");
   });

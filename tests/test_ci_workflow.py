@@ -29,6 +29,7 @@ OFFLINE_JOB = "offline"
 OFFLINE_RUNS = [
     "python scripts/build_offline.py",
     "python scripts/build_offline.py --check",
+    "python -m venv .venv && .venv/bin/pip install -r server/requirements.txt -c server/constraints.txt",
     "cd frontend && npm ci",
     "cd frontend && npm run test:offline",
     "cd frontend && VITE_BASE=/dnd-character-creator/ VITE_SERVERLESS=1 npm run build:offline",
@@ -54,13 +55,28 @@ def _readme_normalised():
     return re.sub(r"(?:\.\./)?\.venv/bin/python -m pytest", "pytest", README)
 
 
+CLONE_SMOKE_JOB = "clone-smoke"
+
+
 def test_workflow_parses_and_has_exactly_the_expected_jobs():
-    assert set(_load()["jobs"]) == set(EXPECTED_COMMANDS) | {OFFLINE_JOB}
+    assert set(_load()["jobs"]) == set(EXPECTED_COMMANDS) | {OFFLINE_JOB, CLONE_SMOKE_JOB}
+
+
+def test_the_clone_smoke_job_runs_only_when_ci_is_started_by_hand():
+    job = _load()["jobs"][CLONE_SMOKE_JOB]
+    # not on push / pull_request, and not when pages.yml calls this workflow (github.workflow is then "pages")
+    assert job["if"] == "github.event_name == 'workflow_dispatch' && github.workflow == 'ci'"
+    runs = _run_steps(job)
+    assert runs[0] == "python -m venv .venv && .venv/bin/pip install -r server/requirements-dev.txt -c server/constraints.txt"
+    assert runs[-1] == ".venv/bin/python -m pytest -q server/tests/test_clean_clone_smoke.py"
+    last = job["steps"][-1]
+    assert last["env"] == {"RUN_CLONE_SMOKE": "1"}
 
 
 def test_triggers_are_push_to_main_and_pull_request():
     on = _load()["on"]
-    assert set(on) == {"push", "pull_request"}
+    # workflow_call: pages.yml runs this whole workflow as its gate before it deploys
+    assert set(on) == {"push", "pull_request", "workflow_call", "workflow_dispatch"}
     assert on["push"] == {"branches": ["main"]}
     assert not on["pull_request"]  # no filters: every pull request
 
@@ -76,6 +92,25 @@ def test_offline_job_builds_the_pack_runs_the_node_test_and_checks_the_precache_
     assert node and node[0]["with"]["cache"] == "npm"
 
 
+def test_offline_job_creates_the_venv_and_requires_python_for_the_equivalence_test():
+    # without .venv/bin/python the Pyodide/native equality parts are skipped, so a green job would prove nothing
+    job = _load()["jobs"][OFFLINE_JOB]
+    runs = _run_steps(job)
+    # the runtime set is enough for the native side of the equivalence test (it builds fixtures, it does not run pytest)
+    venv = "python -m venv .venv && .venv/bin/pip install -r server/requirements.txt -c server/constraints.txt"
+    assert venv in runs and runs.index(venv) < runs.index("cd frontend && npm run test:offline")
+    step = next(s for s in job["steps"] if s.get("run") == "cd frontend && npm run test:offline")
+    assert step["env"] == {"REQUIRE_PYTHON": "1"}
+
+
+def test_every_job_has_a_timeout():
+    for name, job in _load()["jobs"].items():
+        assert job["timeout-minutes"] == 20, name
+    for name, job in _load(PAGES)["jobs"].items():
+        if "uses" not in job:  # a reusable-workflow call takes its timeouts from the called workflow
+            assert job["timeout-minutes"] == 30, name
+
+
 def test_each_job_runs_the_expected_command_last():
     jobs = _load()["jobs"]
     for name, cmd in EXPECTED_COMMANDS.items():
@@ -87,7 +122,7 @@ def test_each_job_runs_the_expected_command_last():
 def test_python_jobs_install_the_server_requirements_first():
     jobs = _load()["jobs"]
     for name in ("server-bundle", "server-srd-only", "root"):
-        assert _run_steps(jobs[name])[0] == "pip install -r server/requirements.txt"
+        assert _run_steps(jobs[name])[0] == "pip install -r server/requirements-dev.txt -c server/constraints.txt"
 
 
 def test_commands_match_the_readme_test_commands():
@@ -133,12 +168,20 @@ def test_pages_workflow_triggers_are_push_to_main_and_manual_dispatch():
 def test_pages_workflow_permissions_are_least_privilege():
     data = _load(PAGES)
     assert data["permissions"] == {"contents": "read"}
-    assert set(data["jobs"]) == {"build", "deploy"}
+    assert set(data["jobs"]) == {"ci", "build", "deploy"}
     assert "permissions" not in data["jobs"]["build"]  # inherits contents: read only
     assert data["jobs"]["deploy"]["permissions"] == {"pages": "write", "id-token": "write"}
     assert data["jobs"]["deploy"]["needs"] == "build"
     assert data["jobs"]["deploy"]["environment"]["name"] == "github-pages"
     assert data["concurrency"] == {"group": "pages", "cancel-in-progress": False}
+
+
+def test_pages_deploy_waits_for_the_whole_ci_workflow():
+    # Q6 = A: nothing is published unless every ci.yml job is green (ci.yml is called as a reusable workflow)
+    jobs = _load(PAGES)["jobs"]
+    assert jobs["ci"]["uses"] == "./.github/workflows/ci.yml"
+    assert jobs["build"]["needs"] == "ci"
+    assert jobs["deploy"]["needs"] == "build"  # so deploy needs ci transitively
 
 
 def test_pages_workflow_uses_no_secrets_and_only_the_page_url_expression():
@@ -150,7 +193,8 @@ def test_pages_workflow_uses_no_secrets_and_only_the_page_url_expression():
 
 def test_pages_workflow_pins_every_action_by_commit_sha_with_a_version_comment():
     text = PAGES.read_text(encoding="utf-8")
-    uses = [ln.strip() for ln in text.splitlines() if ln.strip().lstrip("- ").startswith("uses:")]
+    uses = [ln.strip() for ln in text.splitlines()
+            if ln.strip().lstrip("- ").startswith("uses:") and "./.github/workflows/" not in ln]
     assert len(uses) == 6
     for ln in uses:
         assert re.fullmatch(r"-?\s*uses: " + PINNED, ln), ln
