@@ -231,6 +231,42 @@ describe("automatic update", () => {
     expect(waiting.posted).toContainEqual({ type: "SKIP_WAITING" });
   });
 
+  it("an update whose download started inside the window is still applied when the download ends after it (slow network)", async () => {
+    const clock = { t: 0 };
+    const installing = fakeWorker("installing");
+    const reg = fakeRegistration({ active: fakeWorker("activated"), installing });
+    const container = fakeContainer(reg, {});
+    const mark = vi.fn();
+    const pwa = createPwa(deps(container, { reload: vi.fn(), schema: 3, dataAtRisk: () => false, autoApply: { windowMs: 1000, now: () => clock.t, allowed: () => true, mark } }));
+    await pwa.start();
+    clock.t = 5000; // the 20 MB download took longer than the window
+    (reg as unknown as { installing: unknown; waiting: unknown }).installing = null;
+    (reg as unknown as { waiting: unknown }).waiting = installing;
+    installing.move("installed");
+    container.say(SAME, installing);
+    expect(installing.posted).toContainEqual({ type: "SKIP_WAITING" });
+    expect(mark).toHaveBeenCalledTimes(1);
+  });
+
+  it("an update whose download started after the window waits for the next open (the person is already working)", async () => {
+    const clock = { t: 0 };
+    const reg = fakeRegistration({ active: fakeWorker("activated") });
+    const container = fakeContainer(reg, {});
+    const pwa = createPwa(deps(container, { reload: vi.fn(), schema: 3, dataAtRisk: () => false, autoApply: { windowMs: 1000, now: () => clock.t, allowed: () => true, mark: vi.fn() } }));
+    await pwa.start();
+    clock.t = 5000;
+    const late = fakeWorker("installing");
+    (reg as unknown as { installing: unknown }).installing = late;
+    reg.fire();
+    clock.t = 6000;
+    (reg as unknown as { installing: unknown; waiting: unknown }).installing = null;
+    (reg as unknown as { waiting: unknown }).waiting = late;
+    late.move("installed");
+    container.say(SAME, late);
+    expect(pwa.get().phase).toBe("update-available");
+    expect(late.posted).not.toContainEqual({ type: "SKIP_WAITING" });
+  });
+
   it("the reload guard (allowed() false) stops a second automatic update", async () => {
     const { waiting, container, pwa } = setup({ allowed: false });
     await pwa.start();

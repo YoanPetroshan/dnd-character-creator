@@ -102,6 +102,9 @@ export function createPwa(deps: PwaDeps): Pwa {
   const arm = () => {
     if (auto) armedUntil = auto.now() + auto.windowMs;
   };
+  // a download that BEGAN inside the window keeps the right to apply itself when it ends (the 20 MB pack can take longer than
+  // the window on a slow network); one that began later is the person already working: it waits for the next open
+  let downloadStartedArmed = false;
   // what the waiting worker said about its storage schema: "ok" (same as this page) or "backup"
   const verdicts = new WeakMap<object, "ok" | "backup">();
   const asked = new WeakSet<object>();
@@ -118,12 +121,17 @@ export function createPwa(deps: PwaDeps): Pwa {
     if (!reg || !deps.container) return;
     watch(reg.installing);
     watch(reg.waiting);
+    if (auto && reg.installing && deps.container.controller && auto.now() <= armedUntil) downloadStartedArmed = true;
     if (reg.waiting && deps.container.controller) {
       const v = verdicts.get(reg.waiting);
       set({ phase: v === "backup" || (v === "ok" && deps.dataAtRisk?.()) ? "update-needs-backup" : "update-available" });
       if (deps.schema !== undefined && !asked.has(reg.waiting)) {
         asked.add(reg.waiting);
         reg.waiting.postMessage({ type: "GET_VERSION" });
+      }
+      if (auto && downloadStartedArmed) {
+        downloadStartedArmed = false;
+        armedUntil = Math.max(armedUntil, auto.now() + auto.windowMs); // the clock starts when the version is ready
       }
       tryAutoApply();
     } else if (reg.active && reg.active.state === "activated") {

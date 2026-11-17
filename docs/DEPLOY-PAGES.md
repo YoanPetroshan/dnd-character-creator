@@ -46,7 +46,8 @@ while the app is already usable online.
 The installed copy keeps working while the new version downloads in the background (only the changed files; the big runtime
 file does not change between normal updates). The new version is applied **by itself** when the app is opened, or shown
 again after being in the background (a 60-second window after that; it checks `sw.js`, which the browser never takes from
-its HTTP cache), and the page reloads once. The characters are not touched: they live in the browser's `localStorage`,
+its HTTP cache), and the page reloads once. A download that began inside the window keeps the right to apply itself when it
+ends, even on a slow network (the window restarts when the version is ready); one that began later waits for the next open. The characters are not touched: they live in the browser's `localStorage`,
 which a service worker or cache update never clears, and every change is written to it at once.
 
 It is **not** applied silently when data could be at risk. Then the banner "update-needs-backup" asks the person to press
@@ -55,7 +56,8 @@ It is **not** applied silently when data could be at risk. Then the banner "upda
 1. **The storage schema differs.** `frontend/src/storageSchema.json` holds a number that goes into `dist/sw.js`. Raise it by
    one in any release whose code cannot read what an older release stored (a new `DRAFT_VERSION` or library `version`
    without a lossless migration), or whose data an older release cannot read. The page asks the waiting worker for its
-   number (`GET_VERSION`); a worker that does not state one counts as different.
+   number (`GET_VERSION`); a worker that does not state one counts as different. `pwa/storageSchema.test.ts` pins what each number
+   stands for (draft version and storage keys) and fails when a format changes without the number being raised.
 2. **The last save failed** (full or blocked storage): that draft exists only in memory and a reload would lose it.
 
 Other rules: the first update after this feature is installed still needs the button (the old page has no such code); an
