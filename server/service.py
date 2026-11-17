@@ -44,6 +44,7 @@ from engine.resolve import _source_allowed, _spell_visible, _subclass_visible, r
 from catalog.official.race_fluff import species_fluff, trait_details
 from export import to_yaml
 from export_labels import DEFAULT_LANG as EXPORT_DEFAULT_LANG, label as export_label
+from i18n.content.store import overlay_spell
 from i18n.messages import localize, msg, parse_lang
 from markdown_export import to_markdown
 
@@ -467,12 +468,15 @@ def api_spells(args, body, **_):
 
 
 def api_spell_detail(args, body, spell_id: str):
+    lang, bad_lang = _request_lang(args)
+    if bad_lang:
+        return bad_lang
     sid = _catalog.resolve_spell_id(spell_id)
     if sid is None:
         return _error("not found", 404)
     spell = _catalog.spells[sid]
     source = spell.get("source", "SRD")
-    return _json({
+    return _json(overlay_spell(spell, {
         **_spell_items[sid],
         "material": spell.get("material"),
         "desc": spell.get("desc", []),
@@ -480,7 +484,7 @@ def api_spell_detail(args, body, spell_id: str):
         "castingCondition": spell.get("casting_condition"),
         "classes": [{"id": c["index"], "name": c["name"]} for c in spell.get("classes", [])],
         "sourceName": SOURCE_NAMES.get(source, source),
-    })
+    }, lang))
 
 
 def _pending_export_problems(resolution: dict) -> list[dict]:
