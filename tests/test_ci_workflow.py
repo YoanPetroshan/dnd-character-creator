@@ -29,7 +29,7 @@ OFFLINE_JOB = "offline"
 OFFLINE_RUNS = [
     "python scripts/build_offline.py",
     "python scripts/build_offline.py --check",
-    "python -m venv .venv && .venv/bin/pip install -r server/requirements.txt -c server/constraints.txt",
+    "python -m venv .venv && .venv/bin/pip install -r server/requirements-dev.txt -c server/constraints.txt",
     "cd frontend && npm ci",
     "cd frontend && npm run test:offline",
     "cd frontend && VITE_BASE=/dnd-character-creator/ VITE_SERVERLESS=1 npm run build:offline",
@@ -97,7 +97,7 @@ def test_offline_job_creates_the_venv_and_requires_python_for_the_equivalence_te
     job = _load()["jobs"][OFFLINE_JOB]
     runs = _run_steps(job)
     # the runtime set is enough for the native side of the equivalence test (it builds fixtures, it does not run pytest)
-    venv = "python -m venv .venv && .venv/bin/pip install -r server/requirements.txt -c server/constraints.txt"
+    venv = "python -m venv .venv && .venv/bin/pip install -r server/requirements-dev.txt -c server/constraints.txt"
     assert venv in runs and runs.index(venv) < runs.index("cd frontend && npm run test:offline")
     step = next(s for s in job["steps"] if s.get("run") == "cd frontend && npm run test:offline")
     assert step["env"] == {"REQUIRE_PYTHON": "1"}
