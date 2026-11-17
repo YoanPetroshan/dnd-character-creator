@@ -507,6 +507,8 @@ Notes on the patterns:
 - No nested brackets: write „(30 фута, 9 м)“ never „(30 фута (9 м))“; a verb never carries a bracket („не владееш“, not „не владееш (Proficiency)“).
 - „takes its turn“ → „ходът му е веднага след твоя“ (not „ходи“).
 
+- Avoid gendered participles with the reader: use the aorist/neutral form („посочи“, „влезе“) or reword.
+
 ### 4.3 Typography
 - Quotes: „…“ (inner quotes ‚…‘). Never "…" or «…».
 - Dash: — with spaces around it („ … — …“). A hyphen only inside a word or a range: „2-6“, „по-високо“.
