@@ -5,7 +5,8 @@
     python -m i18n.content.tool --kind spells apply work.json   # validates every record, merges the valid ones, exit 1 on a reject
     python -m i18n.content.tool --kind species status           # translated / stale / missing per source
 
-Kinds: spells, species, items, feats, choice-texts, item-rules (property and mastery texts; keys `property:<index>:<PHB|XPHB>`, `mastery:<Name>`).
+Kinds: spells, species, items, feats, features (class / subclass features, keyed by catalog feature id; `--class <id>` filters
+`export`; `seed` copies the choice-text translations whose English text is exactly a feature's text), choice-texts, item-rules (property and mastery texts; keys `property:<index>:<PHB|XPHB>`, `mastery:<Name>`).
 `python -m i18n.content.spells ...` is the same tool with --kind spells.
 
 Work file: a JSON list of {id, name, source, hash, <the kind's fields>}; `export` writes the English texts, the translator
@@ -35,7 +36,7 @@ def _numbers(text: str) -> list[str]:
 LATIN = re.compile(r"[A-Za-z]")
 LANG = "bg"
 SCALARS = {"spells": ("material", "castingCondition")}  # optional string fields (null = keep the English)
-LISTS = {"spells": ("desc", "higherLevel"), "species": ("fluff",), "items": ("desc", "special"), "item-rules": ("desc",), "feats": ("desc",), "choice-texts": ("desc",)}
+LISTS = {"spells": ("desc", "higherLevel"), "species": ("fluff",), "items": ("desc", "special"), "item-rules": ("desc",), "feats": ("desc",), "choice-texts": ("desc",), "features": ("desc",)}
 
 
 def _is_strings(value) -> bool:
@@ -162,6 +163,32 @@ def harvest_choice_texts(catalog, drafts=None) -> dict[str, dict]:
     return dict(sorted(found.items(), key=lambda kv: (kv[1]["name"] or "", kv[0])))
 
 
+def feature_records(catalog) -> dict[str, dict]:
+    """Catalog feature id -> the feature record with `desc` as a list of paragraphs and `source` set (an SRD feature counts as
+    "SRD"); features without any text are left out (nothing to translate). `class` stays the catalog's {index, name}."""
+    out = {}
+    for fid, feature in catalog.features.items():
+        desc = feature.get("desc")
+        desc = [desc] if isinstance(desc, str) else [p for p in desc or [] if isinstance(p, str)]
+        if desc:
+            out[fid] = {**feature, "desc": desc, "source": feature.get("source") or "SRD"}
+    return out
+
+
+def seed_features(records: dict[str, dict], overlay: dict, choice_texts: dict) -> dict:
+    """`overlay` plus an entry (hash, desc: [the Bulgarian text]) for every feature whose English text, joined by a space (as
+    the choice-text harvest joins it), is a translated `choice-texts` key and that has no fresh entry yet. The choice text is one
+    paragraph, so a multi-paragraph feature is seeded with a single paragraph."""
+    merged = dict(overlay)
+    for fid, rec in records.items():
+        fields = store.fields_for("features", rec)
+        entry = choice_texts.get(store.text_hash(" ".join(fields["desc"])))
+        bg = entry.get("bg") if isinstance(entry, dict) else None
+        if isinstance(bg, str) and bg.strip() and not _fresh("features", overlay.get(fid), store.source_hash("features", fields)):
+            merged[fid] = {"hash": store.source_hash("features", fields), "desc": [bg]}
+    return merged
+
+
 def load_records(kind: str) -> dict[str, dict]:
     """The catalog records of a kind by overlay key. Species records carry `fluff` and `traitDetails` exactly as
     GET /api/catalog/species/<id> serves them; items are the catalog item records."""
@@ -185,6 +212,8 @@ def load_records(kind: str) -> dict[str, dict]:
         return item_rule_records(catalog)
     if kind == "choice-texts":
         return harvest_choice_texts(catalog)
+    if kind == "features":
+        return feature_records(catalog)
     if kind == "feats":
         from sheet_data import flatten_entries
 
@@ -197,7 +226,7 @@ def _load_spells() -> dict[str, dict]:
 
 
 def _label(kind: str) -> str:
-    return {"spells": "spell", "species": "species", "items": "item", "item-rules": "item rule", "feats": "feat", "choice-texts": "choice text"}[kind]
+    return {"spells": "spell", "species": "species", "items": "item", "item-rules": "item rule", "feats": "feat", "choice-texts": "choice text", "features": "feature"}[kind]
 
 
 def _export_fields(kind: str, fields: dict, record: dict) -> dict:
@@ -214,7 +243,7 @@ def _fresh(kind: str, entry, hash_: str) -> bool:
 
 
 def export_records(records: dict[str, dict], overlay: dict, *, ids=None, source=None, limit=None, only_missing=False,
-                   kind: str = "spells") -> list[dict]:
+                   kind: str = "spells", class_id=None) -> list[dict]:
     chosen = sorted(records) if ids is None else list(ids)
     out = []
     for rid in chosen:
@@ -222,6 +251,8 @@ def export_records(records: dict[str, dict], overlay: dict, *, ids=None, source=
         if rec is None:
             raise KeyError(f"unknown {_label(kind)} id {rid!r}")
         if source and rec.get("source", "SRD") != source:
+            continue
+        if class_id and (rec.get("class") or {}).get("index") != class_id:
             continue
         fields = store.fields_for(kind, rec)
         h = store.source_hash(kind, fields)
@@ -299,16 +330,18 @@ def main(argv=None, *, default_kind: str | None = None, prog: str = "python -m i
                     help="which overlay: spells, species, items, feats, choice-texts, item-rules")
     sub = ap.add_subparsers(dest="cmd", required=True)
     ex = sub.add_parser("export", help="write the English texts of some records to a work file")
-    which = ex.add_mutually_exclusive_group(required=True)
+    which = ex.add_mutually_exclusive_group(required=False)
     which.add_argument("--ids", help="comma-separated ids")
     which.add_argument("--source", help="book code, e.g. XPHB")
     which.add_argument("--all", action="store_true", help="every record")
+    ex.add_argument("--class", dest="class_id", help="features only: class id (barbarian, wizard...); alone it means every source")
     ex.add_argument("--limit", type=int)
     ex.add_argument("--only-missing", action="store_true", help="skip records whose translation is present and fresh")
     ex.add_argument("--out", required=True)
     ap_apply = sub.add_parser("apply", help="validate a translated work file and merge the valid records")
     ap_apply.add_argument("file")
     ap_apply.add_argument("--check", action="store_true", help="validate only, write nothing")
+    sub.add_parser("seed", help="features only: copy the translated choice-texts whose English text is exactly a feature's text")
     sub.add_parser("status", help="translated / stale / missing per source")
     args = ap.parse_args(argv)
     kind = args.kind
@@ -319,10 +352,27 @@ def main(argv=None, *, default_kind: str | None = None, prog: str = "python -m i
         print(err.args[0], file=sys.stderr)
         return 2
     overlay = store.load_overlay(kind, LANG)
+    if args.cmd == "seed":
+        if kind != "features":
+            print("seed exists for --kind features only", file=sys.stderr)
+            return 2
+        merged = seed_features(records, overlay, store.load_overlay("choice-texts", LANG))
+        added = sum(1 for k in merged if merged[k] != overlay.get(k))
+        if merged != overlay:
+            write_overlay(merged, kind)
+        print(f"seeded {added} feature(s) from choice-texts ({len(merged)} in {overlay_path(kind).name})")
+        return 0
     if args.cmd == "export":
+        if not (args.ids or args.source or args.all or args.class_id):
+            print("export needs one of --ids, --source, --all, --class", file=sys.stderr)
+            return 2
+        if args.class_id and kind != "features":
+            print("--class exists for --kind features only", file=sys.stderr)
+            return 2
         ids = [i for i in args.ids.split(",") if i] if args.ids else None
         try:
-            out = export_records(records, overlay, ids=ids, source=args.source, limit=args.limit, only_missing=args.only_missing, kind=kind)
+            out = export_records(records, overlay, ids=ids, source=args.source, limit=args.limit, only_missing=args.only_missing, kind=kind,
+                             class_id=args.class_id)
         except KeyError as err:
             print(err.args[0], file=sys.stderr)
             return 1

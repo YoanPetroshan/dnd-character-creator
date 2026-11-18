@@ -973,6 +973,54 @@
   },
   "status": 404
  },
+ "feature-background-acolyte": {
+  "bodyLength": 1010,
+  "bodySha256": "ddf2ec97a4ef25c81beeaef845caf48c8f391cc00140cab8d1d27f88b514d05b",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "feature-bad-lang": {
+  "bodyLength": 40,
+  "bodySha256": "ee60dac6b21ae6a61d4968384661143ac2bd670750a0e658fadf7cd58c5c2746",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "feature-srd-rage": {
+  "bodyLength": 1127,
+  "bodySha256": "ef6634d46c8a7086e6b566c654ae71dc6aa128273a4f4482cb17470b0f832eb6",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "feature-trait-dwarf": {
+  "bodyLength": 372,
+  "bodySha256": "d20deb3e840c178a3c11d662dcc8027b37669c7bbdf43aaf213a1df1bbef7353",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "feature-unknown": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
+ "feature-xphb-berserker-example": {
+  "bodyLength": 502,
+  "bodySha256": "aeccf28342cec4956c69224a9e758e2234f56e7f22258228420fa361e6166a49",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
  "health": {
   "bodyLength": 149,
   "bodySha256": "2793992538f4dfe54c68d52b42acaef44fb6474bd4b98d74b35e1d2050334ed5",
@@ -1428,5 +1476,37 @@
    "Content-Type": "application/json"
   },
   "status": 200
+ },
+ "subclass-bad-lang": {
+  "bodyLength": 40,
+  "bodySha256": "ee60dac6b21ae6a61d4968384661143ac2bd670750a0e658fadf7cd58c5c2746",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "subclass-berserker-xphb": {
+  "bodyLength": 2147,
+  "bodySha256": "23ff77b8536685d1346d4b16d368d6d81e579bd4fff2277558274c5eaf96587e",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "subclass-champion": {
+  "bodyLength": 1590,
+  "bodySha256": "6b1e75478aa77c5cb744f5c24552bab824768f428b4ee3d698712103479ee0bd",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "subclass-unknown": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
  }
 }
