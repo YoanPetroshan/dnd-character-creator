@@ -285,7 +285,11 @@
      "choice": [
       "Stealth",
       "Sleight of Hand"
-     ]
+     ],
+     "ref": {
+      "kind": "feature",
+      "id": "xphb-rogue-1-expertise"
+     }
     },
     {
      "source": {
@@ -294,7 +298,11 @@
       "label": "Rogue"
      },
      "name": "Sneak Attack",
-     "level": 1
+     "level": 1,
+     "ref": {
+      "kind": "feature",
+      "id": "xphb-rogue-1-sneak-attack"
+     }
     },
     {
      "source": {
@@ -306,7 +314,11 @@
      "level": 1,
      "choice": [
       "Dwarvish"
-     ]
+     ],
+     "ref": {
+      "kind": "feature",
+      "id": "xphb-rogue-1-thieves-cant"
+     }
     },
     {
      "source": {
@@ -319,7 +331,11 @@
      "choice": [
       "Club (Slow)",
       "Dagger (Nick)"
-     ]
+     ],
+     "ref": {
+      "kind": "feature",
+      "id": "xphb-rogue-1-weapon-mastery"
+     }
     },
     {
      "source": {
@@ -328,7 +344,11 @@
       "label": "Rogue"
      },
      "name": "Cunning Action",
-     "level": 2
+     "level": 2,
+     "ref": {
+      "kind": "feature",
+      "id": "xphb-rogue-2-cunning-action"
+     }
     },
     {
      "source": {
@@ -337,7 +357,11 @@
       "label": "Rogue"
      },
      "name": "Steady Aim",
-     "level": 3
+     "level": 3,
+     "ref": {
+      "kind": "feature",
+      "id": "xphb-rogue-3-steady-aim"
+     }
     },
     {
      "source": {
@@ -346,7 +370,11 @@
       "label": "Rogue"
      },
      "name": "Cunning Strike",
-     "level": 5
+     "level": 5,
+     "ref": {
+      "kind": "feature",
+      "id": "xphb-rogue-5-cunning-strike"
+     }
     },
     {
      "source": {
@@ -355,7 +383,11 @@
       "label": "Rogue"
      },
      "name": "Uncanny Dodge",
-     "level": 5
+     "level": 5,
+     "ref": {
+      "kind": "feature",
+      "id": "xphb-rogue-5-uncanny-dodge"
+     }
     },
     {
      "source": {
@@ -368,7 +400,11 @@
      "choice": [
       "Perception",
       "Acrobatics"
-     ]
+     ],
+     "ref": {
+      "kind": "feature",
+      "id": "xphb-rogue-6-expertise"
+     }
     },
     {
      "source": {
@@ -377,7 +413,11 @@
       "label": "Human"
      },
      "name": "Resourceful",
-     "level": null
+     "level": null,
+     "ref": {
+      "kind": "trait",
+      "id": "trait:human-xphb:human-xphb-trait-0"
+     }
     },
     {
      "source": {
@@ -386,7 +426,11 @@
       "label": "Human"
      },
      "name": "Skillful",
-     "level": null
+     "level": null,
+     "ref": {
+      "kind": "trait",
+      "id": "trait:human-xphb:human-xphb-trait-1"
+     }
     },
     {
      "source": {
@@ -395,7 +439,11 @@
       "label": "Human"
      },
      "name": "Versatile",
-     "level": null
+     "level": null,
+     "ref": {
+      "kind": "trait",
+      "id": "trait:human-xphb:human-xphb-trait-2"
+     }
     },
     {
      "source": {
@@ -416,7 +464,11 @@
       "label": "Savage Attacker"
      },
      "name": "Savage Attacker",
-     "level": null
+     "level": null,
+     "ref": {
+      "kind": "feat",
+      "id": "savage-attacker-xphb"
+     }
     },
     {
      "source": {
@@ -425,7 +477,11 @@
       "label": "Alert"
      },
      "name": "Alert",
-     "level": null
+     "level": null,
+     "ref": {
+      "kind": "feat",
+      "id": "alert-xphb"
+     }
     }
    ],
    "feats": [

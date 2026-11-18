@@ -275,7 +275,11 @@
       "label": "Bard"
      },
      "name": "Spellcasting: Bard",
-     "level": 1
+     "level": 1,
+     "ref": {
+      "kind": "feature",
+      "id": "spellcasting-bard"
+     }
     },
     {
      "source": {
@@ -284,7 +288,11 @@
       "label": "Bard"
      },
      "name": "Bardic Inspiration (d6)",
-     "level": 1
+     "level": 1,
+     "ref": {
+      "kind": "feature",
+      "id": "bardic-inspiration-d6"
+     }
     },
     {
      "source": {
@@ -293,7 +301,11 @@
       "label": "Bard"
      },
      "name": "Jack of All Trades",
-     "level": 2
+     "level": 2,
+     "ref": {
+      "kind": "feature",
+      "id": "jack-of-all-trades"
+     }
     },
     {
      "source": {
@@ -302,7 +314,11 @@
       "label": "Bard"
      },
      "name": "Song of Rest (d6)",
-     "level": 2
+     "level": 2,
+     "ref": {
+      "kind": "feature",
+      "id": "song-of-rest-d6"
+     }
     },
     {
      "source": {
@@ -315,7 +331,11 @@
      "choice": [
       "Acrobatics",
       "Animal Handling"
-     ]
+     ],
+     "ref": {
+      "kind": "feature",
+      "id": "bard-expertise-1"
+     }
     },
     {
      "source": {
@@ -324,7 +344,11 @@
       "label": "Bard"
      },
      "name": "Bard College",
-     "level": 3
+     "level": 3,
+     "ref": {
+      "kind": "feature",
+      "id": "bard-college"
+     }
     },
     {
      "source": {
@@ -333,7 +357,11 @@
       "label": "Bard"
      },
      "name": "Bardic Inspiration (d8)",
-     "level": 5
+     "level": 5,
+     "ref": {
+      "kind": "feature",
+      "id": "bardic-inspiration-d8"
+     }
     },
     {
      "source": {
@@ -342,7 +370,11 @@
       "label": "Bard"
      },
      "name": "Font of Inspiration",
-     "level": 5
+     "level": 5,
+     "ref": {
+      "kind": "feature",
+      "id": "font-of-inspiration"
+     }
     },
     {
      "source": {
@@ -351,7 +383,11 @@
       "label": "Bard"
      },
      "name": "Countercharm",
-     "level": 6
+     "level": 6,
+     "ref": {
+      "kind": "feature",
+      "id": "countercharm"
+     }
     },
     {
      "source": {
@@ -360,7 +396,11 @@
       "label": "Bard"
      },
      "name": "Bard College feature",
-     "level": 6
+     "level": 6,
+     "ref": {
+      "kind": "feature",
+      "id": "bard-college-improvement-1"
+     }
     },
     {
      "source": {
@@ -369,7 +409,11 @@
       "label": "Bard"
      },
      "name": "Song of Rest (d8)",
-     "level": 9
+     "level": 9,
+     "ref": {
+      "kind": "feature",
+      "id": "song-of-rest-d8"
+     }
     },
     {
      "source": {
@@ -382,7 +426,11 @@
      "choice": [
       "Acrobatics",
       "Animal Handling"
-     ]
+     ],
+     "ref": {
+      "kind": "feature",
+      "id": "bard-expertise-2"
+     }
     },
     {
      "source": {
@@ -391,7 +439,11 @@
       "label": "Bard"
      },
      "name": "Bardic Inspiration (d10)",
-     "level": 10
+     "level": 10,
+     "ref": {
+      "kind": "feature",
+      "id": "bardic-inspiration-d10"
+     }
     },
     {
      "source": {
@@ -400,7 +452,11 @@
       "label": "Bard"
      },
      "name": "Magical Secrets",
-     "level": 10
+     "level": 10,
+     "ref": {
+      "kind": "feature",
+      "id": "magical-secrets-1"
+     }
     },
     {
      "source": {
@@ -409,7 +465,11 @@
       "label": "Acolyte"
      },
      "name": "Shelter of the Faithful",
-     "level": null
+     "level": null,
+     "ref": {
+      "kind": "background",
+      "id": "acolyte"
+     }
     }
    ],
    "feats": [],

@@ -1,7 +1,10 @@
 """Builds sheet.features / sheet.feats: what the character can do, as a flat
 list for the sheet and the exports. Pure; resolve() passes in everything.
 
-A feature is {source: {kind, id, label}, name, level, choice?}:
+A feature is {source: {kind, id, label}, name, level, choice?, ref?}; `ref` = {kind: feature|trait|feat|background, id} points at
+the text (feature / trait: GET /api/features/<id>; feat: /api/feats/<id>; background: the background id, text at
+/api/features/background:<id>); rows with no text behind them (the synthetic species proficiency picks, a Fighting Style /
+Weapon Mastery / Order row the class list does not carry) have none:
  * class / subclass features up to the current class level, `level` being the
    class level that grants them; ASI rows are left out (they show up as
    ability scores or feats);
@@ -49,10 +52,12 @@ def _prefixed_labels(choices: list[dict], kind: str, prefix: str) -> list[str]:
     return out
 
 
-def _entry(source: dict, name: str, level, choice: list[str]) -> dict:
+def _entry(source: dict, name: str, level, choice: list[str], ref: tuple[str, str] | None = None) -> dict:
     entry = {"source": source, "name": name, "level": level}
     if choice:
         entry["choice"] = choice
+    if ref:  # (kind, id): what GET /api/features/<id> (feature, trait) or /api/feats/<id> (feat) serves; background: the background id
+        entry["ref"] = {"kind": ref[0], "id": ref[1]}
     return entry
 
 
@@ -189,11 +194,11 @@ def build_features(catalog, resolved_classes, refs_by_class, race, race_id, subr
                     labels += fs_labels[(cls_id, lvl)]
                     fs_used.add((cls_id, lvl))
                 source = {"kind": "subclass", "id": rc["subclass_id"], "label": rc["subclass"]["name"]}
-                subclass_entries.append(_entry(source, feature["name"], lvl, labels))
+                subclass_entries.append(_entry(source, feature["name"], lvl, labels, ("feature", ref["index"])))
             elif not overlay:
                 labels = [_strip_prefix(l, feature["name"]) for l in class_choices.get((cls_id, ref["index"]), [])]
                 labels += spell_pick_labels.get((cls_id, feature["name"]), [])  # RP15: SRD Spell Mastery / Signature Spell
-                class_entries.append(_entry(class_source, feature["name"], lvl, labels))
+                class_entries.append(_entry(class_source, feature["name"], lvl, labels, ("feature", ref["index"])))
         if overlay:
             # Choices that belong to an XPHB row, in SRD level order.
             by_target: dict[tuple[str, int], list[str]] = {}
@@ -227,7 +232,7 @@ def build_features(catalog, resolved_classes, refs_by_class, race, race_id, subr
                 labels = by_target.get((name, ordinal), []) + by_fid.get(fid, [])
                 if labels:
                     placed.add((name, ordinal))
-                class_entries.append(_entry(class_source, name, lvl, labels))
+                class_entries.append(_entry(class_source, name, lvl, labels, ("feature", fid)))
             # Anything that found no XPHB row keeps its SRD row (nothing is dropped).
             for srd_id, lvl in sorted(srd_levels.items(), key=lambda kv: kv[1]):
                 if srd_id in consumed or not class_choices.get((cls_id, srd_id)):
@@ -235,7 +240,8 @@ def build_features(catalog, resolved_classes, refs_by_class, race, race_id, subr
                 if SRD_TO_XPHB_FEATURE.get((cls_id, srd_id)) in placed:
                     continue
                 name = catalog.features[srd_id]["name"]
-                class_entries.append(_entry(class_source, name, lvl, [_strip_prefix(l, name) for l in class_choices[(cls_id, srd_id)]]))
+                class_entries.append(_entry(class_source, name, lvl, [_strip_prefix(l, name) for l in class_choices[(cls_id, srd_id)]],
+                                            ("feature", srd_id)))
             for key in class_fs:
                 if key not in fs_used:
                     class_entries.append(_entry(class_source, "Fighting Style", key[1], fs_labels[key]))
@@ -276,16 +282,18 @@ def build_features(catalog, resolved_classes, refs_by_class, race, race_id, subr
                 if labels:
                     kept["choice"] = list(kept.get("choice") or []) + labels
                 continue
-            entry = _entry(source, trait["name"], None, labels)
+            # VF: a synthetic proficiency-choice trait (`...-trait-choice-...`) has no text of its own: no ref
+            entry = _entry(source, trait["name"], None, labels,
+                           None if "-trait-choice-" in ref["index"] else ("trait", f"trait:{race_id}:{ref['index']}"))
             by_name.setdefault(trait["name"], entry)
             out.append(entry)
 
     feature = (bg or {}).get("feature") or {}
     if bg and feature.get("name"):
-        out.append(_entry({"kind": "background", "id": bg_id, "label": bg["name"]}, feature["name"], None, []))
+        out.append(_entry({"kind": "background", "id": bg_id, "label": bg["name"]}, feature["name"], None, [], ("background", bg_id)))
 
     for feat in feats_summary(feats, choices):
-        out.append(_entry({"kind": "feat", "id": feat["id"], "label": feat["name"]}, feat["name"], feat["level"], feat.get("choice", [])))
+        out.append(_entry({"kind": "feat", "id": feat["id"], "label": feat["name"]}, feat["name"], feat["level"], feat.get("choice", []), ("feat", feat["id"])))
     return out
 
 

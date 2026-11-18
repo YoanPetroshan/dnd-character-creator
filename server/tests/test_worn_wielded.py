@@ -90,6 +90,8 @@ def strip_g2(res: dict) -> dict:
                                  if not (a["itemId"] == "unarmed-strike" and a["notes"] == []) and not a["itemId"].startswith("natural-")]
     res["derived"].pop("featResources", None)  # FE3 additive key (feat-less baseline drafts: always [])
     res["derived"].pop("speciesResources", None)  # W5a additive key (empty for the baseline drafts)
+    for row in res["sheet"].get("features", []):  # SF1 additive key: where the text of a feature row is served
+        row.pop("ref", None)
     for card in res["choices"]:  # SK10 (Y2) additive key: the book code of an option (the pre-G2 baseline has none)
         for o in card.get("options", []):
             o.pop("source", None)
