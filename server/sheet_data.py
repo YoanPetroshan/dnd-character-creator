@@ -23,6 +23,7 @@ import re
 from dataclasses import dataclass, field
 
 import sheet_layout as L
+from i18n.catalog.feat_prereq import text as _prereq_msg
 from catalog.tag_text import strip_tags
 from catalog.reference_data import LANGUAGE_NAMES, SKILL_ABILITY, SKILL_NAMES, proficiency_label
 from export_fields import defense_lines, fmt_mod, fmt_spell_slots, resource_line, species_label
@@ -98,17 +99,30 @@ class SheetData:
 _ABILITY_WORDS = {"str": "Strength", "dex": "Dexterity", "con": "Constitution", "int": "Intelligence", "wis": "Wisdom", "cha": "Charisma"}
 
 
-def _prereq_alt_text(alt: dict, feats: dict) -> str:
-    parts: list[str] = []
+_PROF_KEYS = {("armor", "light"): "feat-prereq-prof-armor-light", ("armor", "medium"): "feat-prereq-prof-armor-medium",
+              ("armor", "heavy"): "feat-prereq-prof-armor-heavy", ("weapon", "martial"): "feat-prereq-prof-weapons-martial",
+              ("weapon", "simple"): "feat-prereq-prof-weapons-simple"}
+_OTHER_KEYS = {"No other dragonmark": "feat-prereq-no-other-dragonmark", "Special": "feat-prereq-special"}
+
+
+def _prereq_parts(alt: dict, feats: dict, lang: str) -> list[str]:
+    """The pieces of one prerequisite alternative in `lang`: the catalog text (`i18n/catalog/feat_prereq.py`) where there
+    is one, else the plain English text the data carries."""
+    def msg(key: str, **params) -> str:
+        return _prereq_msg(key, lang, **params)
+
+    parts: list = []
     level = alt.get("level")
     if isinstance(level, int):
-        parts.append(f"Level {level}")
+        parts.append(msg("feat-prereq-level", n=level))
     elif isinstance(level, dict):
         cls = (level.get("class") or {}).get("name")
-        parts.append(f"{cls} level {level.get('level')}" if cls else f"Level {level.get('level')}")
+        parts.append(msg("feat-prereq-class-level", cls=cls, n=level.get("level")) if cls
+                     else msg("feat-prereq-level", n=level.get("level")))
     if alt.get("ability"):
-        parts.append(" or ".join(f"{_ABILITY_WORDS.get(ab, ab.upper())} {n}"
-                                 for e in alt["ability"] if isinstance(e, dict) for ab, n in e.items()))
+        items = [msg("feat-prereq-ability-one", ability=_ABILITY_WORDS.get(ab, ab.upper()), n=n)
+                 for e in alt["ability"] if isinstance(e, dict) for ab, n in e.items()]
+        parts.append(msg("feat-prereq-ability", items=items))
     for ref in alt.get("race") or []:
         name = " ".join(x for x in (str(ref.get("subrace") or "").title(), str(ref.get("name") or "").title()) if x)
         parts.append(strip_tags(ref["displayEntry"]) if ref.get("displayEntry") else name)
@@ -120,33 +134,48 @@ def _prereq_alt_text(alt: dict, feats: dict) -> str:
             name, _, source = str(ref).partition("|")
             rec = feats.get(f"{re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')}-{source.lower()}")
             names.append(rec["name"] if rec else re.sub(r"\b(Of|The|To|And)\b", lambda m: m.group(1).lower(), name.title()))
-        parts.append(" or ".join(names) + " feat")
+        parts.append(msg("feat-prereq-feat", names=names))
     if alt.get("feature"):
-        parts.append(" or ".join(alt["feature"]) + " feature")
+        parts.append(msg("feat-prereq-feature", names=list(alt["feature"])))
     if alt.get("spellcasting2020") or alt.get("spellcastingFeature"):
-        parts.append("Spellcasting or Pact Magic feature")
+        parts.append(msg("feat-prereq-spellcasting-feature"))
     elif alt.get("spellcasting"):
-        parts.append("The ability to cast at least one spell")
+        parts.append(msg("feat-prereq-spellcasting"))
     for entry in alt.get("proficiency") or []:
         for kind, value in entry.items():
-            what = "shield" if value == "shield" else f"{value} armor" if kind == "armor" else f"{value} weapons"
-            parts.append(f"Proficiency with {what}")
+            if value == "shield":
+                parts.append(msg("feat-prereq-prof-shield"))
+                continue
+            group = "armor" if kind == "armor" else "weapon"
+            key = _PROF_KEYS.get((group, value))
+            parts.append(msg(key) if key else msg(f"feat-prereq-prof-{group if group == 'armor' else 'weapons'}", value=value))
     if alt.get("featCategory"):
-        parts.append("A Dragonmark feat" if alt["featCategory"] == ["D"] else "A feat of a required category")
+        parts.append(msg("feat-prereq-dragonmark-feat") if alt["featCategory"] == ["D"] else msg("feat-prereq-feat-category"))
     if alt.get("other"):
-        parts.append(str(alt["other"]))
+        other = str(alt["other"])
+        parts.append(msg(_OTHER_KEYS[other]) if other in _OTHER_KEYS else other)
     if alt.get("otherSummary"):
-        parts.append(strip_tags(str(alt["otherSummary"].get("entrySummary") or alt["otherSummary"].get("entry") or "")))
+        text = strip_tags(str(alt["otherSummary"].get("entrySummary") or alt["otherSummary"].get("entry") or ""))
+        parts.append(msg(_OTHER_KEYS[text]) if text in _OTHER_KEYS else text)
     if alt.get("campaign"):
-        parts.append("Campaign: " + ", ".join(alt["campaign"]))
-    return ", ".join(p for p in parts if p)
+        parts.append(msg("feat-prereq-campaign", names=list(alt["campaign"])))
+    return [p for p in parts if p]
 
 
-def feat_prerequisite_text(feat: dict, feats: dict) -> str:
-    """A feat's 5etools `prerequisite` (alternatives; each alternative is the AND of its keys) as readable English,
-    e.g. "Level 4, Strength 13 or Dexterity 13"; "" when it has none. `feats` is the catalog's feats by index."""
-    alts = [t for t in (_prereq_alt_text(a, feats) for a in feat.get("prerequisite") or [] if isinstance(a, dict)) if t]
-    return "; or ".join(dict.fromkeys(alts))
+def feat_prerequisite_text(feat: dict, feats: dict, lang: str = "en") -> str:
+    """A feat's 5etools `prerequisite` (alternatives; each alternative is the AND of its keys) as readable text,
+    e.g. "Level 4, Strength 13 or Dexterity 13"; "" when it has none. `feats` is the catalog's feats by index.
+    `lang="bg"` renders each piece that has a Bulgarian catalog text (`feat-prereq-*`) in Bulgarian; names and the
+    free text the data carries stay English, so an unknown pattern falls back to its English text."""
+    check_lang(lang)
+    alts: dict[str, str] = {}  # English text -> text in `lang` (alternatives that read the same in English are one)
+    for a in feat.get("prerequisite") or []:
+        if not isinstance(a, dict):
+            continue
+        en = ", ".join(_prereq_parts(a, feats, "en"))
+        if en:
+            alts.setdefault(en, _prereq_msg("feat-prereq-part-join", lang).join(_prereq_parts(a, feats, lang)))
+    return _prereq_msg("feat-prereq-alt-join", lang).join(alts.values())
 
 
 def flatten_entries(entries, depth: int = 0) -> list[str]:

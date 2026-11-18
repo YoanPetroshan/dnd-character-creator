@@ -500,7 +500,7 @@ def api_feat_detail(args, body, feat_id: str):
         return _error("not found", 404)
     from sheet_data import feat_prerequisite_text, flatten_entries  # lazy: sheet_data pulls the sheet stack
     return _json(overlay_feats(feat_id, {
-        "id": feat["index"], "name": feat["name"], "prerequisite": feat_prerequisite_text(feat, _catalog.feats),
+        "id": feat["index"], "name": feat["name"], "prerequisite": feat_prerequisite_text(feat, _catalog.feats, lang),
         "desc": flatten_entries(feat.get("entries") or []),
     }, lang))
 
