@@ -685,3 +685,12 @@ Go through every record:
 10. Quotes „…“, dash —, no English words left except those allowed by rules 3 and 5.
 11. Read the Bulgarian aloud once without the English: it must sound like a book, not like a translation. If a sentence is hard to follow, re-order it.
 12. Anything that looks wrong in the English source (a number, a missing word, a "8d6" in an upcast line) goes into your notes, not into a silent fix.
+
+
+## 6. Species texts (lore + traits) — decisions of 2026-11-18
+
+- People in running prose are Bulgarian common nouns, ONE form each: драконороден/драконородни, тифлинги, халфлинги, гномове, полуорки, полуелфи, елфи, джуджета, хора, орки, гоблини, хобгоблини, аасимари, ааракокри, бъгбери, гитянки, гитзераи, голиати; Kenku and Genasi (and other unusual names: Loxodon, Vedalken, Kithkin, Changeling, Kalashtar, Warforged, Giff, Hadozee, Thri-kreen, Hag, Siren, Fairy …) stay English and invariable. Adjectives: орчески, елфийски.
+- Trait names stay English (they are shown as names in the app); a rules paragraph about a trait says „способността (Feature)“; „черта“ = trait.
+- Armour categories: тежка/средна броня (Heavy/Medium Armor); „владеене на …“, plural „владеения (Proficiencies)“; „четиристенни зарове (d4s)“ is allowed.
+- The „Fey“ creature type is „фея (Fey)“ ONLY for the creature type; a fairy is English „Fairy“. Plain „edge/advantage“ in lore is „преднина“, never „предимство“ (Advantage stays English as a rules term).
+- A bracket's unit is one species entry (not one trait).
