@@ -696,3 +696,7 @@ Go through every record:
 - A bracket's unit is one species entry (not one trait).
 - „Ти си <размер/същество>“ gives the reader a gender: write „Размерът ти е …“ / „Ти принадлежиш към …“. Item lists in traits keep item names English („1d4 Darts или Blowgun Needles“). Species names (additional): коболди, хобгоблини, голиати, тритони (ask owner: newt ambiguity), кентаври, троглодити stay Bulgarian; Shadar-kai, Shifter, Tabaxi, Tortle, Yuan-ti, Aasimar, Bugbear, Firbolg, Lizardfolk, Autognome, Plasmoid, Verdan, Kender stay English. Class names English („по пътя на Bard“).
 - „Encumbered“ = „носиш товар над допустимото (Encumbered)“ (not a condition); „band“ = „дружина“, never „банда“. Aether, Aven, Khenra, Naga, Aetherborn, Siren, Kor, Merfolk, Owlin, Dhampir, Hexblood, Reborn, Harengon, Pixie, Sprite, Mind Flayers stay English and invariable; гити, минотаври, сатири, вампири are Bulgarian.
+
+## 7. Items (2026-11-18)
+
+- One canonical version for shared boilerplate (artisan's tools, musical instruments, gaming sets, Holy Symbol, Arcane/Druidic Focus, Barding, boats): the same Bulgarian text in every record. flask = колба, vial = флакон; „X се смята за …“ instead of „третираш X като“; ammunition in prose is Bulgarian (стрели, куршуми за прашка); „Barding: цената е четири пъти повече и тежи два пъти повече“. Property names (Versatile, Finesse, Reach…) stay English; the app shows them as names.
