@@ -96,7 +96,7 @@ def test_s3_texts_en_and_bg():
     companion = _options(res, "primal-companion")
     assert set(companion) == {"beast-of-the-land", "beast-of-the-sea", "beast-of-the-sky"}
     assert all(t.startswith("Summary (not the full stat block)") for t in companion.values())
-    assert _options(localize(res, "bg"), "primal-companion")["beast-of-the-sea"].startswith("Резюме (не пълният блок")
+    assert _options(localize(res, "bg"), "primal-companion")["beast-of-the-sea"].startswith("Резюме (не е пълното описание")
     res = resolve(_draft("dragonborn-xphb", "sorcerer", "draconic-xphb", 6), cat)
     assert _options(res, ":variant")["dragonborn-black"] == "Resistance to acid damage."
     assert _options(localize(res, "bg"), ":variant")["dragonborn-black"] == "Устойчивост (Resistance) към щети от киселина (Acid)."

@@ -35,23 +35,23 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Summary (not the full stat block): a Medium beast built for the ground, with a Speed of 40 feet and a "
               "Climb Speed of 40 feet. Its signature trait, Charge, lets it dash at a foe and hit harder after a "
               "straight run.",
-        "bg": "Резюме (не пълният блок с характеристики): звяр със среден размер, създаден за сушата, със "
-              "скорост 40 фута (12 м) и скорост на катерене 40 фута (12 м). Особеното му умение, "
-              "Charge, му позволява да се втурне към враг и да удари по-силно след права тичане.",
+        "bg": "Резюме (не е пълното описание на звяра): звяр със среден размер, създаден за сушата, със "
+              "скорост 40 фута (12 м) и скорост на катерене 40 фута (12 м). Отличителната му черта "
+              "Charge му позволява да се засили към враг и да удари по-силно след прав бяг.",
     },
     "opt-companion-sea": {
         "en": "Summary (not the full stat block): a Medium beast of the water, with a Swim Speed of 60 feet. Its "
               "signature trait, Amphibious, lets it breathe both air and water.",
-        "bg": "Резюме (не пълният блок с характеристики): звяр със среден размер на водата, със скорост "
-              "на плуване 60 фута (18 м). Особеното му умение, Amphibious, му позволява да диша и "
+        "bg": "Резюме (не е пълното описание на звяра): звяр със среден размер на водата, със скорост "
+              "на плуване 60 фута (18 м). Отличителната му черта Amphibious му позволява да диша и "
               "въздух, и вода.",
     },
     "opt-companion-sky": {
         "en": "Summary (not the full stat block): a Small beast of the air, with a Fly Speed of 60 feet. Its "
               "signature trait, Flyby, keeps it from provoking Opportunity Attacks when it flies out of an "
               "enemy's reach.",
-        "bg": "Резюме (не пълният блок с характеристики): малък звяр на въздуха, със скорост на летене "
-              "60 фута (18 м). Особеното му умение, Flyby, не му позволява да предизвиква "
+        "bg": "Резюме (не е пълното описание на звяра): малък звяр на въздуха, със скорост на летене "
+              "60 фута (18 м). Отличителната му черта Flyby му пречи да предизвиква "
               "възможни атаки, когато излиза от обсега на враг.",
     },
 }
