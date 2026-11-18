@@ -1150,16 +1150,16 @@
   "status": 200
  },
  "resolve-exportable": {
-  "bodyLength": 9013,
-  "bodySha256": "1f6180475340e0366ce336424bd273b61d494fbe0e4a2f6b7e0b19da10d26748",
+  "bodyLength": 9950,
+  "bodySha256": "ea690e16de569e2c17d15dfc130465fb5ceae30af08d1ca3f22dea1cc9e6417f",
   "headers": {
    "Content-Type": "application/json"
   },
   "status": 200
  },
  "resolve-fighter": {
-  "bodyLength": 8214,
-  "bodySha256": "c8b47ca2d09d7b14fed84c6670acb8a0cdf7f5034921cdc126cdb1d43b7d1a21",
+  "bodyLength": 9151,
+  "bodySha256": "f17dfd5d046858e74b1a23fccfe960a6caa235b65df0d51c0ded57347fa53202",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -1182,8 +1182,8 @@
   "status": 400
  },
  "resolve-json-charset-ct": {
-  "bodyLength": 8214,
-  "bodySha256": "c8b47ca2d09d7b14fed84c6670acb8a0cdf7f5034921cdc126cdb1d43b7d1a21",
+  "bodyLength": 9151,
+  "bodySha256": "f17dfd5d046858e74b1a23fccfe960a6caa235b65df0d51c0ded57347fa53202",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -1198,8 +1198,8 @@
   "status": 200
  },
  "resolve-lang-bg": {
-  "bodyLength": 9216,
-  "bodySha256": "b9070191249b0e6d12ec424bb32bd9ba17bbb6bca7a7b61a890238e67be9ae62",
+  "bodyLength": 10153,
+  "bodySha256": "60faa8535592416d9d2bd432b9e05347eafab5f55a739702a5352a03fca0c07b",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -1214,16 +1214,16 @@
   "status": 200
  },
  "resolve-lang-en": {
-  "bodyLength": 8214,
-  "bodySha256": "c8b47ca2d09d7b14fed84c6670acb8a0cdf7f5034921cdc126cdb1d43b7d1a21",
+  "bodyLength": 9151,
+  "bodySha256": "f17dfd5d046858e74b1a23fccfe960a6caa235b65df0d51c0ded57347fa53202",
   "headers": {
    "Content-Type": "application/json"
   },
   "status": 200
  },
  "resolve-lang-twice-first-wins": {
-  "bodyLength": 9216,
-  "bodySha256": "b9070191249b0e6d12ec424bb32bd9ba17bbb6bca7a7b61a890238e67be9ae62",
+  "bodyLength": 10153,
+  "bodySha256": "60faa8535592416d9d2bd432b9e05347eafab5f55a739702a5352a03fca0c07b",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -1238,8 +1238,8 @@
   "status": 200
  },
  "resolve-nonascii-name": {
-  "bodyLength": 8236,
-  "bodySha256": "34b9eec1490edf0b5ea100371129365ee55c3111c2a6c44fbb02cd951d89fde5",
+  "bodyLength": 9173,
+  "bodySha256": "a8a7e0bbe7b57c0a581976817f297776bd865f8845c118d61ad31c848f08fdcf",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -1254,8 +1254,8 @@
   "status": 200
  },
  "resolve-vendor-json-ct": {
-  "bodyLength": 8214,
-  "bodySha256": "c8b47ca2d09d7b14fed84c6670acb8a0cdf7f5034921cdc126cdb1d43b7d1a21",
+  "bodyLength": 9151,
+  "bodySha256": "f17dfd5d046858e74b1a23fccfe960a6caa235b65df0d51c0ded57347fa53202",
   "headers": {
    "Content-Type": "application/json"
   },

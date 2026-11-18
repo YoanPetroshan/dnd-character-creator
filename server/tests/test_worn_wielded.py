@@ -148,6 +148,7 @@ def test_drafts_without_worn_or_wielded_resolve_exactly_as_before_g2(catalog, na
             for o in card.get("options", []):
                 if "quantities" in o:
                     o.pop("quantities")
+                o.pop("description", None)  # C1: option rules text is additive for subfeature_options / 2024 Fighting Style options
                 o["label"] = re.sub(r"^\d+x ", "", o["label"]) if card["id"].endswith(tuple(f"equipment-choice-{i}" for i in range(9))) else o["label"]
     _neutralise_class_feature_tails(now, baseline)
     for res in (now, baseline):  # VF2.4b: a known language is disabled "already known" in the species / background cards (the pre-G2 baseline has none)

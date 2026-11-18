@@ -463,6 +463,13 @@ REBASELINES: dict[str, dict] = {
         "paths": [r"^result\.derived\.attacks$"],
         "why": "plain Unarmed Strike row for everyone and species natural weapon rows (VF7.5)",
     },
+    # C1: options of SRD `subfeature_options` cards (fighting styles, pact boon, ...) and of the 2024 Fighting Style feat cards
+    # now carry `description` (the English rules text). Only `description` keys on options may move.
+    "C1": {
+        "cases": ["*"],
+        "paths": [r"^result\.choices\[[^\]]+\]\.options\[[^\]]+\]\.description$"],
+        "why": "option descriptions for subfeature_options and 2024 Fighting Style feat options (C1)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -846,7 +853,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a", "VF2b", "VF2c", "VF2d", "VF4a", "VF7a", "VF7b", "VF7c", "VF7e") and STRIP == ()
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a", "VF2b", "VF2c", "VF2d", "VF4a", "VF7a", "VF7b", "VF7c", "VF7e", "C1") and STRIP == ()
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 
