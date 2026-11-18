@@ -700,3 +700,7 @@ Go through every record:
 ## 7. Items (2026-11-18)
 
 - One canonical version for shared boilerplate (artisan's tools, musical instruments, gaming sets, Holy Symbol, Arcane/Druidic Focus, Barding, boats): the same Bulgarian text in every record. flask = колба, vial = флакон; „X се смята за …“ instead of „третираш X като“; ammunition in prose is Bulgarian (стрели, куршуми за прашка); „Barding: цената е четири пъти повече и тежи два пъти повече“. Property names (Versatile, Finesse, Reach…) stay English; the app shows them as names.
+
+## 8. Feats and choice texts (2026-11-18)
+
+- Canonical patterns: „кратка почивка (Short Rest) или дълга почивка (Long Rest)“; „владееш X“ (not „с X“; „владеене на“ as noun); „DC 8 плюс модификатора ти на X и бонуса ти за владеене (Proficiency Bonus)“ — no nested brackets; Grapple: „държиш в състоянието Сграбчен (Grappled)“; weapon properties (Finesse, Heavy, Loading, Light, Thrown) stay English; D20 Test = „D20 тест (D20 Test)“; Luck Points = „точки на късмета (Luck Points)“; Superiority Dice = „зарове на превъзходството (Superiority Dice)“; Bloodied = „ранен (Bloodied)“ at first use; Ki Points = „точки ки (Ki Points)“; Sorcery Points = „точки на чародейство (Sorcery Points)“; Pact Weapon = „оръжие на пакта (Pact Weapon)“; Book of Shadows = „Книга на сенките (Book of Shadows)“; Long Range = „голям обсег (Long Range)“; character flaws = „слабости“ (never „недостатък“).
