@@ -35,6 +35,12 @@ describe("description eye in the picker", () => {
     expect(h).not.toContain("Покажи какво дава: Plain");
     expect(h).not.toContain("While you wear armor"); // closed: nothing inline until opened
   });
+  it("the eye button follows its label as a sibling (outside it, so it never toggles the checkbox)", () => {
+    const h = picker("en", choice({ id: "c", options } as never));
+    const row = h.match(/<li[^>]*>.*?Defense.*?<\/li>/)![0];
+    expect(row).toMatch(/<\/label><button type="button" class="spell-eye"[^>]*aria-expanded="false"/);
+    expect(row.match(/<label[^>]*>.*?<\/label>/)![0]).not.toContain("spell-eye");
+  });
   it("the long picker renders the same eyes", () => {
     const many = Array.from({ length: 40 }, (_, i) => ({ id: `o${i}`, label: `O${i}`, description: "Text." }));
     const h = picker("en", choice({ id: "c", options: many } as never));

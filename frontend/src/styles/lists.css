@@ -35,13 +35,14 @@
   flex-wrap: wrap;
 }
 
+/* the eye follows the name; the controls after it (Add, Equipped, Remove) stay at the right end */
 .spell-eye.item-eye {
-  position: relative;
-  top: auto;
-  right: auto;
   flex: none;
-  display: inline-block;
-  vertical-align: middle;
+}
+
+.item-browser-list li > .item-eye,
+.inventory-list li > .item-eye {
+  margin-right: auto;
 }
 
 .item-browser-list li > .item-eye__panel,
@@ -52,7 +53,7 @@
 
 .item-browser-list li span,
 .inventory-list li span {
-  flex: 1;
+  flex: 0 1 auto;
 }
 
 /* Tabs: plain text, display serif; a 1px line under the row and a 3px ink line under the active tab. */

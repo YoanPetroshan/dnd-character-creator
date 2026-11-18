@@ -140,7 +140,6 @@ export function SpeciesPage() {
                   />
                   {s.name}
                   {speciesHidden && s.id === selectedSpeciesId ? ` (${t.common.hiddenByFilters})` : ""}
-                  {s.source && !s.name.endsWith(`(${s.source})`) && <span className="picker-list__source">{s.source}</span>}
                 </label>
                 <button
                   type="button"
@@ -149,6 +148,7 @@ export function SpeciesPage() {
                   aria-expanded={openSpecies.has(s.id)}
                   onClick={() => toggleSpecies(s.id)}
                 />
+                {s.source && !s.name.endsWith(`(${s.source})`) && <span className="picker-list__source">{s.source}</span>}
                 {openSpecies.has(s.id) && (
                   <div className="species-eye__panel">
                     <SpeciesDetailBody state={details[s.id]} />

@@ -214,19 +214,28 @@
   }
 }
 
-/* Species preview: the eye button sits at the right end of the row (the row is a 48px box); the panel opens under it. */
+/* Species preview: the eye button follows the name (the radio label shrinks to its text); the source tag stays at the right
+   end of the row and the panel opens under the row at full width. */
 .picker-list.picker-list--rows li:has(> .species-eye) {
-  position: relative;
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
-.picker-list.picker-list--rows li:has(> .species-eye) label {
+.picker-list.picker-list--rows li:has(> .species-eye) > label {
   box-sizing: border-box;
-  padding-right: 48px;
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 0;
 }
 
-.species-eye {
-  top: 2px;
+.picker-list.picker-list--rows li > .picker-list__source {
+  padding-right: 4px;
+}
+
+.picker-list.picker-list--rows li > .species-eye__panel {
+  flex: 0 0 100%;
+  box-sizing: border-box;
 }
 
 .species-eye__body {
