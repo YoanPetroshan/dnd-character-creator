@@ -431,10 +431,24 @@ def test_resolve_lang_bg_returns_bulgarian_card_texts(client):
     assert b[mastery]["label"] == "Майсторство с оръжия (Weapon Mastery)" and "вида оръжия" in b[mastery]["description"]
     equip = next(cid for cid in e if "equipment-choice" in cid and e[cid]["label"] == "Starting Equipment")
     assert b[equip]["label"] == "Начална екипировка"
-    # the description of a starting-equipment card is the data's own text and stays English
-    assert b[equip]["description"] == e[equip]["description"]
+    # the starting-equipment card's description is a Bulgarian choice text now (item names stay as the data has them)
+    assert e[equip]["description"].startswith("Choose A, B") and b[equip]["description"].startswith("Избери A, B")
     # every card keeps its id, count, selected, status, source and options (only the texts differ)
     assert zoo.without_localized(bg) == zoo.without_localized(en)
+
+
+@pytestmark_data
+def test_resolve_lang_bg_option_descriptions_differ_from_english(client):
+    """The Bulgarian choice texts localize option descriptions (zoo.without_localized drops them on purpose)."""
+    draft = zoo._fighter_2024()
+
+    def defense(lang):
+        res = client.post(f"/api/resolve?lang={lang}", json=draft).get_json()
+        card = next(c for c in res["choices"] if c["id"] == "class:fighter:1:fighting-style")
+        return next(o for o in card["options"] if o["id"] == "feat:defense-xphb")["description"]
+    en, bg = defense("en"), defense("bg")
+    assert en.startswith("While you're wearing Light, Medium, or Heavy armor")
+    assert re.search("[А-Яа-я]", bg) and not re.search("[А-Яа-я]", en)
 
 
 @pytestmark_data
