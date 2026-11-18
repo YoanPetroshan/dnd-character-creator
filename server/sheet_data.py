@@ -23,6 +23,7 @@ import re
 from dataclasses import dataclass, field
 
 import sheet_layout as L
+from catalog.tag_text import strip_tags
 from catalog.reference_data import LANGUAGE_NAMES, SKILL_ABILITY, SKILL_NAMES, proficiency_label
 from export_fields import defense_lines, fmt_mod, fmt_spell_slots, resource_line, species_label
 from export_labels import DEFAULT_LANG, check_lang, kilograms, label, sheet_label, weight, word
@@ -94,34 +95,6 @@ class SheetData:
 # ---------------------------------------------------------------------------------------------------------------
 # text helpers
 # ---------------------------------------------------------------------------------------------------------------
-_TAG = re.compile(r"\{@(\w+)(?: ([^{}]*))?\}")
-
-
-def strip_tags(text: str) -> str:
-    """5etools inline tags -> plain text: ``{@spell fire bolt|phb}`` -> ``fire bolt``, ``{@dc 13}`` -> ``DC 13``."""
-    def one(m: re.Match) -> str:
-        tag, body = m.group(1), m.group(2) or ""
-        parts = body.split("|")
-        shown = parts[2] if len(parts) > 2 and parts[2] else parts[0]
-        if tag == "dc":
-            return f"DC {parts[0]}"
-        if tag == "hit":
-            return fmt_mod(int(parts[0])) if re.fullmatch(r"-?\d+", parts[0]) else parts[0]
-        if tag == "h":
-            return "Hit: "
-        if tag == "atk":
-            return {"mw": "Melee Weapon Attack:", "rw": "Ranged Weapon Attack:", "ms": "Melee Spell Attack:",
-                    "rs": "Ranged Spell Attack:"}.get(parts[0], "Attack:")
-        if tag == "recharge":
-            return f"(Recharge {parts[0] or 6})"
-        return shown
-
-    prev = None
-    while prev != text:  # tags may nest
-        prev, text = text, _TAG.sub(one, text)
-    return text
-
-
 _ABILITY_WORDS = {"str": "Strength", "dex": "Dexterity", "con": "Constitution", "int": "Intelligence", "wis": "Wisdom", "cha": "Charisma"}
 
 

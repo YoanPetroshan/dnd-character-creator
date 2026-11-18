@@ -325,3 +325,24 @@ def test_skill_marks_are_one_character_fields_and_saves_are_dot_checkboxes():
     for lang in LANGS:
         legend = LABELS[lang]["sheet"]["legend"]
         assert ("P - владеене" in legend and "E - експертиза" in legend) if lang == "bg" else ("P = Proficiency" in legend and "E = Expertise" in legend)
+
+
+def test_strip_tags_matches_the_spell_converter():
+    s = D.strip_tags
+    assert s("{@filter cantrip from the Wizard spell list|spells|level=0|class=Wizard}") == "cantrip from the Wizard spell list"
+    assert s("{@filter 1st-level spells|spells|level=1;2|class=Bard}") == "1st-level spells"
+    assert s("{@scaledamage 8d6|3-9|1d6}") == "1d6"
+    assert s("{@scaledice 2d6|1-9|1d6|2d6}") == "2d6"
+    assert s("{@damage 1d6} {@dice 2d4+1|display} {@d20 5}") == "1d6 2d4+1 5"
+    assert s("{@chance 25|display}") == "25 percent"
+    assert s("{@quickref Cover||3|half cover}") == "half cover"
+    assert s("{@spell fire bolt|phb} {@item shortsword|phb|Short Sword}") == "fire bolt Short Sword"
+    # nested tags flatten innermost first
+    assert s("{@b {@filter wizard spells|spells|class=Wizard}} and {@i {@dc 15}}") == "wizard spells and DC 15"
+
+
+def test_strip_tags_dc_hit_atk_recharge():
+    s = D.strip_tags
+    assert s("{@dc 13} {@hit 5} {@hit -1} {@h}3 damage {@recharge 5} {@recharge}") == \
+        "DC 13 +5 -1 Hit: 3 damage (Recharge 5) (Recharge 6)"
+    assert s("{@atk mw,rw}") == "Melee or Ranged Weapon Attack:"

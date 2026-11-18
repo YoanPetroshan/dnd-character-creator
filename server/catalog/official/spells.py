@@ -53,6 +53,7 @@ def load_spell_class_lookup(spell_dir) -> dict:
 import re
 
 from catalog.reference_data import ruleset_for_feat
+from catalog.tag_text import strip_tags
 from .common import slug
 from .innate_spells import _SPELL_SCHOOL_CODES
 
@@ -81,49 +82,7 @@ SRD_SPELL_ALIASES: dict[str, str] = {
 
 _SCHOOL_NAMES = {code: (index, index.capitalize()) for code, index in _SPELL_SCHOOL_CODES.items()}
 
-_TAG_RE = re.compile(r"\{@(\w+)(?: ([^{}]*))?\}")
-_ATTACK_WORDS = {
-    "mw": "Melee Weapon Attack:", "rw": "Ranged Weapon Attack:", "ms": "Melee Spell Attack:",
-    "rs": "Ranged Spell Attack:", "m": "Melee Attack:", "r": "Ranged Attack:",
-    "mw,rw": "Melee or Ranged Weapon Attack:", "ms,rs": "Melee or Ranged Spell Attack:",
-}
-# Tags whose later "|" segments are not display text.
-_FIRST_SEGMENT_TAGS = {"filter", "dice", "damage", "d20", "autodice", "note", "footnote", "book", "i", "b", "u", "s"}
-
-
-def _tag_repl(m: re.Match) -> str:
-    tag, body = m.group(1), m.group(2) or ""
-    parts = body.split("|")
-    first = parts[0]
-    if tag == "dc":
-        return f"DC {first}"
-    if tag == "hit":
-        return first if first[:1] in "+-" else f"+{first}"
-    if tag == "h":
-        return "Hit: "
-    if tag == "atk":
-        return _ATTACK_WORDS.get(first, first)
-    if tag == "chance":
-        return f"{first} percent"
-    if tag == "quickref":
-        return parts[3] if len(parts) > 3 and parts[3] else first
-    if tag in ("scaledamage", "scaledice"):
-        # {@scaledamage base|levels|per-level|display}: the text shows the per-level amount
-        if len(parts) > 3 and parts[3]:
-            return parts[3]
-        return parts[2] if len(parts) >= 3 and parts[2] else first
-    if tag in _FIRST_SEGMENT_TAGS:
-        return first
-    return parts[2] if len(parts) >= 3 and parts[2] else first
-
-
-def _strip_tags(text: str) -> str:
-    """Flattens 5etools `{@tag a|b|c}` markup (innermost first) to plain text."""
-    previous = None
-    while previous != text:
-        previous = text
-        text = _TAG_RE.sub(_tag_repl, text)
-    return text
+_strip_tags = strip_tags
 
 
 def _cell(cell) -> str:
