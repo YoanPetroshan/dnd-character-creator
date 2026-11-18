@@ -80,7 +80,7 @@
   "ref": "opt-transmuted-spell-xphb"
  },
  "0a44255260d22cf2a0af95926639c46d2a32db5e": {
-  "bg": "На ниво 6 научаваш две заклинания по твой избор от списъка със заклинания на произволен клас. Всяко избрано заклинание трябва да е от ниво, което можеш да изречеш според таблицата на Bard, или да е трик (Cantrip). Избраните заклинания се броят за заклинания на Bard при теб, но не се броят към броя на заклинанията на Bard, които знаеш. Тези избори не се броят към броя на заклинанията, които знаеш.",
+  "bg": "На ниво 6 научаваш две заклинания по твой избор от списъка със заклинания на произволен клас. Всяко избрано заклинание трябва да е от ниво, което можеш да изречеш според таблицата на Bard, или да е Cantrip. Избраните заклинания се броят за заклинания на Bard при теб, но не се броят към броя на заклинанията на Bard, които знаеш. Тези избори не се броят към броя на заклинанията, които знаеш.",
   "en": "At 6th level, you learn two spells of your choice from any class. A spell you choose must be of a level you can cast, as shown on the Bard table, or a cantrip. The chosen spells count as bard spells for you but don't count against the number of bard spells you know. These picks do not count against the number of spells you know.",
   "ref": "class:bard:6:feature:additional-magical-secrets"
  },
@@ -140,7 +140,7 @@
   "ref": "class:wizard:1:equipment-choice-0"
  },
  "0f34843fa5632d8a82ca652aa0b65e55721609f2": {
-  "bg": "Избери 14 заклинания от ниво 5 или по-ниско, които да знаеш, от списъка със заклинания на Bard. Magical Secrets: до 2 от тях могат да са заклинания от списъка на произволен клас или трикове (Cantrips) на друг клас; те влизат в този брой.",
+  "bg": "Избери 14 заклинания от ниво 5 или по-ниско, които да знаеш, от списъка със заклинания на Bard. Magical Secrets: до 2 от тях могат да са заклинания от списъка на произволен клас или Cantrips на друг клас; те влизат в този брой.",
   "en": "Choose 14 level-5-or-lower spells to know from the Bard spell list. Magical Secrets: up to 2 of them may be spells of any class's list, or another class's cantrips; they count in this number.",
   "ref": "class:bard:spells-known"
  },
@@ -195,7 +195,7 @@
   "ref": "species:astral-elf-aag:spell-ability"
  },
  "14a882a9b13ea8a0ea391136f6423f09ffc09baa": {
-  "bg": "Избери 3 трика (Cantrips) от списъка със заклинания на Wizard.",
+  "bg": "Избери 3 Cantrips от списъка със заклинания на Wizard.",
   "en": "Choose 3 cantrips from the Wizard spell list.",
   "ref": "class:wizard:spells-cantrips"
  },
@@ -210,7 +210,7 @@
   "ref": "species:human:languages"
  },
  "159e54bef984556a85f3048a633841d49129c81e": {
-  "bg": "Избери 22 заклинания от ниво 9 или по-ниско, които да знаеш, от списъка със заклинания на Bard. Magical Secrets: до 6 от тях могат да са заклинания от списъка на произволен клас или трикове (Cantrips) на друг клас; те влизат в този брой.",
+  "bg": "Избери 22 заклинания от ниво 9 или по-ниско, които да знаеш, от списъка със заклинания на Bard. Magical Secrets: до 6 от тях могат да са заклинания от списъка на произволен клас или Cantrips на друг клас; те влизат в този брой.",
   "en": "Choose 22 level-9-or-lower spells to know from the Bard spell list. Magical Secrets: up to 6 of them may be spells of any class's list, or another class's cantrips; they count in this number.",
   "ref": "class:bard:spells-known"
  },
@@ -240,7 +240,7 @@
   "ref": "class:paladin:spells-known"
  },
  "196a437760ada8ae477e4f2312a96208fffe798a": {
-  "bg": "Преплитайки нишки от сенки, призоваваш книга в ръката си в края на кратка почивка (Short Rest) или дълга почивка (Long Rest). Тази Книга на сенките (Book of Shadows) — ти решаваш как изглежда — съдържа мрачна магия, до която имаш достъп само ти, и ти дава ползите по-долу. Книгата изчезва, ако призовеш друга книга с тази способност (Feature) или ако умреш.\n\nТрикове и ритуали (Cantrips and Rituals). Когато книгата се появи, избери три трика и две заклинания от ниво 1 с етикета Ritual. Заклинанията могат да са от списъка със заклинания на който и да е клас, но трябва да са такива, които още нямаш подготвени. Докато книгата е у теб, имаш избраните заклинания подготвени и те са заклинания на Warlock за теб.\n\nФокус за заклинания (Spellcasting Focus). Можеш да използваш книгата като фокус за заклинания.",
+  "bg": "Преплитайки нишки от сенки, призоваваш книга в ръката си в края на кратка почивка (Short Rest) или дълга почивка (Long Rest). Тази Книга на сенките (Book of Shadows) — ти решаваш как изглежда — съдържа мрачна магия, до която имаш достъп само ти, и ти дава ползите по-долу. Книгата изчезва, ако призовеш друга книга с тази способност (Feature) или ако умреш.\n\nCantrips и ритуали (Cantrips and Rituals). Когато книгата се появи, избери три Cantrips и две заклинания от ниво 1 с етикета Ritual. Заклинанията могат да са от списъка със заклинания на който и да е клас, но трябва да са такива, които още нямаш подготвени. Докато книгата е у теб, имаш избраните заклинания подготвени и те са заклинания на Warlock за теб.\n\nФокус за заклинания (Spellcasting Focus). Можеш да използваш книгата като фокус за заклинания.",
   "en": "Stitching together strands of shadow, you conjure forth a book in your hand at the end of a Short or Long Rest. This Book of Shadows (you determine its appearance) contains eldritch magic that only you can access, granting you the benefits below. The book disappears if you conjure another book with this feature or if you die.\n\nCantrips and Rituals. When the book appears, choose three cantrips, and choose two level 1 spells that have the Ritual tag. The spells can be from any class's spell list, and they must be spells you don't already have prepared. While the book is on your person, you have the chosen spells prepared, and they function as Warlock spells for you.\n\nSpellcasting Focus. You can use the book as a Spellcasting Focus.",
   "ref": "opt-pact-of-the-tome-xphb"
  },
@@ -285,7 +285,7 @@
   "ref": "class:paladin:1:prof-choice-0"
  },
  "1f31268e2c8b9297723f2c85e7f69b85abebebe2": {
-  "bg": "Знаеш един допълнителен трик (Cantrip) от списъка със заклинания на Cleric. Освен това мистичната ти връзка с божественото ти дава бонус към проверките ти на Intelligence (Arcana или Religion). Бонусът е равен на модификатора ти на Wisdom (минимум +1).",
+  "bg": "Знаеш един допълнителен Cantrip от списъка със заклинания на Cleric. Освен това мистичната ти връзка с божественото ти дава бонус към проверките ти на Intelligence (Arcana или Religion). Бонусът е равен на модификатора ти на Wisdom (минимум +1).",
   "en": "You know one extra cantrip from the Cleric spell list. In addition, your mystical connection to the divine gives you a bonus to your Intelligence (Arcana or Religion) checks. The bonus equals your Wisdom modifier (minimum of +1).",
   "ref": "xphb-cleric-1-thaumaturge"
  },
@@ -340,7 +340,7 @@
   "ref": "opt-trip-attack-xphb"
  },
  "22233c09aa86c35e131bfc83edb835c22aea7459": {
-  "bg": "Избери 4 трика (Cantrips) от списъка със заклинания на Cleric.",
+  "bg": "Избери 4 Cantrips от списъка със заклинания на Cleric.",
   "en": "Choose 4 cantrips from the Cleric spell list.",
   "ref": "class:cleric:spells-cantrips"
  },
@@ -380,7 +380,7 @@
   "ref": "class:wizard:spells-known"
  },
  "26a4172919b535d296510d2d212a319828592d76": {
-  "bg": "Избери 2 трика (Cantrips) от списъка със заклинания на Wizard.",
+  "bg": "Избери 2 Cantrips от списъка със заклинания на Wizard.",
   "en": "Choose 2 cantrips from the Wizard spell list.",
   "ref": "class:rogue:spells-cantrips"
  },
@@ -515,7 +515,7 @@
   "ref": "class:sorcerer:spells-known"
  },
  "32a1fdb886efef71cfd656f0548ff4b612a99756": {
-  "bg": "Избери 4 трика (Cantrips) от списъка със заклинания на Warlock.",
+  "bg": "Избери 4 Cantrips от списъка със заклинания на Warlock.",
   "en": "Choose 4 cantrips from the Warlock spell list.",
   "ref": "class:warlock:spells-cantrips"
  },
@@ -570,7 +570,7 @@
   "ref": "class:bard:multiclass-prof-choice-0"
  },
  "353d3ded4e44f805ede89749ae5a0a79c208bbba": {
-  "bg": "Избери 2 трика (Cantrips) от списъка със заклинания на Druid.",
+  "bg": "Избери 2 Cantrips от списъка със заклинания на Druid.",
   "en": "Choose 2 cantrips from the Druid spell list.",
   "ref": "class:druid:spells-cantrips"
  },
@@ -585,7 +585,7 @@
   "ref": "metamagic-heightened-spell"
  },
  "36ecedff3c6f78d3789c87de726bcfe524172145": {
-  "bg": "Избери 3 трика (Cantrips) от списъка със заклинания на произволен клас, които още нямаш подготвени. Докато Книгата на сенките (Book of Shadows) е у теб, ги имаш подготвени и те действат като заклинания на Warlock.",
+  "bg": "Избери 3 Cantrips от списъка със заклинания на произволен клас, които още нямаш подготвени. Докато Книгата на сенките (Book of Shadows) е у теб, ги имаш подготвени и те действат като заклинания на Warlock.",
   "en": "Choose 3 cantrips from any class's spell list that you don't already have prepared. While the Book of Shadows is on your person you have them prepared and they function as Warlock spells.",
   "ref": "class:warlock:invocation:opt-pact-of-the-tome-xphb:cantrips"
  },
@@ -625,7 +625,7 @@
   "ref": "class:cleric:1:equipment-choice-1"
  },
  "38f7f984160589860c5831fe2b3fd8e995580bee": {
-  "bg": "Избери 3 трика (Cantrips) от списъка със заклинания на Druid.",
+  "bg": "Избери 3 Cantrips от списъка със заклинания на Druid.",
   "en": "Choose 3 cantrips from the Druid spell list.",
   "ref": "class:druid:spells-cantrips"
  },
@@ -645,7 +645,7 @@
   "ref": "opt-gong-of-the-summit-phb"
  },
  "39f6f71573b8dd75043e453df14e67a4b9f52bab": {
-  "bg": "Покровителят (Patron) ти дава гримоар, наречен Книга на сенките (Book of Shadows). Когато получиш тази способност (Feature), избери три трика (Cantrips) от списъка със заклинания на който и да е клас (не е нужно и трите да са от един и същи списък). Докато книгата е у теб, можеш да изричаш тези трикове неограничено. Те не се броят към броя на известните ти трикове. Ако не са в списъка със заклинания на Warlock, за теб те въпреки това са заклинания на Warlock. Ако загубиш Книгата на сенките, можеш да проведеш 1-часова церемония, за да получиш заместваща книга от покровителя си. Церемонията може да се проведе по време на кратка почивка (Short Rest) или дълга почивка (Long Rest) и унищожава предишната книга. Книгата се превръща в пепел, когато умреш. Твоята Книга на сенките може да е тежък том, подвързан с демонска кожа и обкован с желязо, съдържащ заклинания от школата Призоваване (Conjuration) и богатство от забранено знание за зловещите области на космоса — дар от Fiend.",
+  "bg": "Покровителят (Patron) ти дава гримоар, наречен Книга на сенките (Book of Shadows). Когато получиш тази способност (Feature), избери три Cantrips от списъка със заклинания на който и да е клас (не е нужно и трите да са от един и същи списък). Докато книгата е у теб, можеш да изричаш тези Cantrips неограничено. Те не се броят към броя на известните ти Cantrips. Ако не са в списъка със заклинания на Warlock, за теб те въпреки това са заклинания на Warlock. Ако загубиш Книгата на сенките, можеш да проведеш 1-часова церемония, за да получиш заместваща книга от покровителя си. Церемонията може да се проведе по време на кратка почивка (Short Rest) или дълга почивка (Long Rest) и унищожава предишната книга. Книгата се превръща в пепел, когато умреш. Твоята Книга на сенките може да е тежък том, подвързан с демонска кожа и обкован с желязо, съдържащ заклинания от школата Призоваване (Conjuration) и богатство от забранено знание за зловещите области на космоса — дар от Fiend.",
   "en": "Your patron gives you a grimoire called a Book of Shadows. When you gain this feature, choose three cantrips from any class's spell list (the three needn't be from the same list). While the book is on your person, you can cast those cantrips at will. They don't count against your number of cantrips known. If they don't appear on the warlock spell list, they are nonetheless warlock spells for you. If you lose your Book of Shadows, you can perform a 1-hour ceremony to receive a replacement from your patron. This ceremony can be performed during a short or long rest, and it destroys the previous book. The book turns to ash when you die. Your Book of Shadows could be a weighty tome bound in demon hide studded with iron, holding spells of conjuration and a wealth of forbidden lore about the sinister regions of the cosmos, a gift of the Fiend.",
   "ref": "pact-of-the-tome"
  },
@@ -655,7 +655,7 @@
   "ref": "class:rogue:1:prof-choice-0"
  },
  "3a14d4767ccfd49db018b6fbabdf34f2e711911f": {
-  "bg": "Избери един от известните ти трикове (Cantrips) на Warlock, който изисква хвърляне за атака (Attack Roll). Когато улучиш голямо (Large) или по-малко същество с този трик, можеш да го избуташ до 10 фута (3 м) право назад, далеч от теб. Повтаряема. Можеш да получиш тази инвокация (Invocation) повече от веднъж. Всеки път избирай различен допустим трик.",
+  "bg": "Избери един от известните ти Cantrips на Warlock, който изисква хвърляне за атака (Attack Roll). Когато улучиш голямо (Large) или по-малко същество с този Cantrip, можеш да го избуташ до 10 фута (3 м) право назад, далеч от теб. Повтаряема. Можеш да получиш тази инвокация (Invocation) повече от веднъж. Всеки път избирай различен допустим Cantrip.",
   "en": "Choose one of your known Warlock cantrips that requires an attack roll. When you hit a Large or smaller creature with that cantrip, you can push the creature up to 10 feet straight away from you. Repeatable. You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
   "ref": "opt-repelling-blast-xphb"
  },
@@ -710,7 +710,7 @@
   "ref": "class:druid:spells-known"
  },
  "3d8f769c7db8267817f63f626a695263eab18b4f": {
-  "bg": "Избери 3 трика (Cantrips) от списъка със заклинания на Warlock.",
+  "bg": "Избери 3 Cantrips от списъка със заклинания на Warlock.",
   "en": "Choose 3 cantrips from the Warlock spell list.",
   "ref": "class:warlock:spells-cantrips"
  },
@@ -895,7 +895,7 @@
   "ref": "eldritch-invocation-repelling-blast"
  },
  "4ba38c47780123b91a5a530ed5b8f22b99ee488e": {
-  "bg": "Когато изричаш заклинание, което е насочено само към едно същество и чийто обхват не е себе си (Self), можеш да изразходваш точки на чародейство (Sorcery Points), равни на нивото на заклинанието, за да насочиш същото заклинание към второ същество в обхвата. Ако заклинанието е трик (Cantrip), това струва 1 точка на чародейство. За да е допустимо, заклинанието не трябва да може да бъде насочено към повече от едно същество при текущото си ниво. Например Magic Missile и Scorching Ray не са допустими, а Ray of Frost е.",
+  "bg": "Когато изричаш заклинание, което е насочено само към едно същество и чийто обхват не е себе си (Self), можеш да изразходваш точки на чародейство (Sorcery Points), равни на нивото на заклинанието, за да насочиш същото заклинание към второ същество в обхвата. Ако заклинанието е Cantrip, това струва 1 точка на чародейство. За да е допустимо, заклинанието не трябва да може да бъде насочено към повече от едно същество при текущото си ниво. Например Magic Missile и Scorching Ray не са допустими, а Ray of Frost е.",
   "en": "When you cast a spell that targets only one creature and doesn't have a range of self, you can spend a number of sorcery points equal to the spell's level to target a second creature in range with the same spell (1 sorcery point if the spell is a cantrip). To be eligible, a spell must be incapable of targeting more than one creature at the spell's current level. For example, magic missile and scorching ray aren't eligible, but ray of frost is.",
   "ref": "metamagic-twinned-spell"
  },
@@ -935,7 +935,7 @@
   "ref": "class:bard:spells-known"
  },
  "4f8913977b3bdf3151567045949bdff180f4ad28": {
-  "bg": "Избери 2 трика (Cantrips) от списъка със заклинания на Warlock.",
+  "bg": "Избери 2 Cantrips от списъка със заклинания на Warlock.",
   "en": "Choose 2 cantrips from the Warlock spell list.",
   "ref": "class:warlock:spells-cantrips"
  },
@@ -965,7 +965,7 @@
   "ref": "class:warlock:spells-known"
  },
  "52a3406e58575d26337548a2fea897e5aacffa12": {
-  "bg": "Избери 3 трика (Cantrips) от списъка със заклинания на Cleric.",
+  "bg": "Избери 3 Cantrips от списъка със заклинания на Cleric.",
   "en": "Choose 3 cantrips from the Cleric spell list.",
   "ref": "class:cleric:spells-cantrips"
  },
@@ -1045,7 +1045,7 @@
   "ref": "opt-brace-tce"
  },
  "57167b9cbee6993e704ea1b12e7a18844629745e": {
-  "bg": "Избери 5 трика (Cantrips) от списъка със заклинания на Sorcerer.",
+  "bg": "Избери 5 Cantrips от списъка със заклинания на Sorcerer.",
   "en": "Choose 5 cantrips from the Sorcerer spell list.",
   "ref": "class:sorcerer:spells-cantrips"
  },
@@ -1100,7 +1100,7 @@
   "ref": "hunters-prey-giant-killer"
  },
  "5c0635e6663db21c7eda65174a245e7de1e25040": {
-  "bg": "Добавяш модификатора на Wisdom към щетите, които нанасяш с всеки трик (Cantrip) на Cleric.",
+  "bg": "Добавяш модификатора на Wisdom към щетите, които нанасяш с всеки Cantrip на Cleric.",
   "en": "Add your Wisdom modifier to the damage you deal with any Cleric cantrip.",
   "ref": "xphb-cleric-7-potent-spellcasting"
  },
@@ -1125,7 +1125,7 @@
   "ref": "class:bard:1:equipment-choice-0"
  },
  "5ceffefe2a54690796deea3acfcdc58b4828b2d4": {
-  "bg": "Избери 5 трика (Cantrips) от списъка със заклинания на Cleric.",
+  "bg": "Избери 5 Cantrips от списъка със заклинания на Cleric.",
   "en": "Choose 5 cantrips from the Cleric spell list.",
   "ref": "class:cleric:spells-cantrips"
  },
@@ -1150,7 +1150,7 @@
   "ref": "class:wizard:4:asi:feat:martial-adept-phb:maneuvers"
  },
  "5f71f90cb58e379dea5966a037cdbb2330293061": {
-  "bg": "Избери 3 трика (Cantrips) от списъка със заклинания на Bard.",
+  "bg": "Избери 3 Cantrips от списъка със заклинания на Bard.",
   "en": "Choose 3 cantrips from the Bard spell list.",
   "ref": "class:bard:spells-cantrips"
  },
@@ -1260,7 +1260,7 @@
   "ref": "class:bard:spells-known"
  },
  "6d442637d78e9ee8ca95beeeadbd3beb2da0270e": {
-  "bg": "Избери кой трик (Cantrip) знае тази раса (Species).",
+  "bg": "Избери кой Cantrip знае тази раса (Species).",
   "en": "Choose which cantrip this species knows.",
   "ref": "species:astral-elf-aag:innate-cantrip"
  },
@@ -1320,7 +1320,7 @@
   "ref": "feat:great-weapon-fighting-xphb"
  },
  "74c725217f599dab4befd07d8fce9b6f88f7f2c9": {
-  "bg": "Избери един от известните ти трикове (Cantrips) на Warlock, който нанася щети. Можеш да добавяш модификатора на Charisma към хвърлянията за щети (Damage Rolls) на този трик.\n\nПовтаряема. Можеш да получиш тази инвокация (Invocation) повече от веднъж. Всеки път избирай различен допустим трик.",
+  "bg": "Избери един от известните ти Cantrips на Warlock, който нанася щети. Можеш да добавяш модификатора на Charisma към хвърлянията за щети (Damage Rolls) на този Cantrip.\n\nПовтаряема. Можеш да получиш тази инвокация (Invocation) повече от веднъж. Всеки път избирай различен допустим Cantrip.",
   "en": "Choose one of your known Warlock cantrips that deals damage. You can add your Charisma modifier to that spell's damage rolls.\n\nRepeatable. You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
   "ref": "opt-agonizing-blast-xphb"
  },
@@ -1335,7 +1335,7 @@
   "ref": "opt-clench-of-the-north-wind-phb"
  },
  "7610580967c2ecf5e2966e38871b8b49afba247e": {
-  "bg": "Избери 18 заклинания от ниво 7 или по-ниско, които да знаеш, от списъка със заклинания на Bard. Magical Secrets: до 4 от тях могат да са заклинания от списъка на произволен клас или трикове (Cantrips) на друг клас; те влизат в този брой.",
+  "bg": "Избери 18 заклинания от ниво 7 или по-ниско, които да знаеш, от списъка със заклинания на Bard. Magical Secrets: до 4 от тях могат да са заклинания от списъка на произволен клас или Cantrips на друг клас; те влизат в този брой.",
   "en": "Choose 18 level-7-or-lower spells to know from the Bard spell list. Magical Secrets: up to 4 of them may be spells of any class's list, or another class's cantrips; they count in this number.",
   "ref": "class:bard:spells-known"
  },
@@ -1515,7 +1515,7 @@
   "ref": "opt-seeking-spell-tce"
  },
  "83c941f7eb229f3975a7932c907ef39de6753488": {
-  "bg": "Избери един от известните ти трикове (Cantrips) на Warlock, който изисква хвърляне за атака (Attack Roll). Когато улучиш голямо (Large) или по-малко същество с този трик, можеш да го избуташ до 10 фута (3 м) право назад, далеч от теб.\n\nПовтаряема. Можеш да получиш тази инвокация (Invocation) повече от веднъж. Всеки път избирай различен допустим трик.",
+  "bg": "Избери един от известните ти Cantrips на Warlock, който изисква хвърляне за атака (Attack Roll). Когато улучиш голямо (Large) или по-малко същество с този Cantrip, можеш да го избуташ до 10 фута (3 м) право назад, далеч от теб.\n\nПовтаряема. Можеш да получиш тази инвокация (Invocation) повече от веднъж. Всеки път избирай различен допустим Cantrip.",
   "en": "Choose one of your known Warlock cantrips that requires an attack roll. When you hit a Large or smaller creature with that cantrip, you can push the creature up to 10 feet straight away from you.\n\nRepeatable. You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
   "ref": "opt-repelling-blast-xphb"
  },
@@ -1615,7 +1615,7 @@
   "ref": "class:wizard:18:spell-mastery-2"
  },
  "8b78f29f43d57d64fd631850bacdcd6a89d9ab86": {
-  "bg": "Избери 4 трика (Cantrips) от списъка със заклинания на Wizard.",
+  "bg": "Избери 4 Cantrips от списъка със заклинания на Wizard.",
   "en": "Choose 4 cantrips from the Wizard spell list.",
   "ref": "class:wizard:spells-cantrips"
  },
@@ -1765,7 +1765,7 @@
   "ref": "class:bard:1:equipment-choice-0:0"
  },
  "95651c2c7dfe88459ea61da4c72d98f6ed5aceb3": {
-  "bg": "Избери 5 трика (Cantrips) от списъка със заклинания на Druid.",
+  "bg": "Избери 5 Cantrips от списъка със заклинания на Druid.",
   "en": "Choose 5 cantrips from the Druid spell list.",
   "ref": "class:druid:spells-cantrips"
  },
@@ -1800,7 +1800,7 @@
   "ref": "class:wizard:spellbook"
  },
  "97dc58cc0e991ff081e1404dbfc2d343934d6ce4": {
-  "bg": "Знаеш един допълнителен трик (Cantrip) от списъка със заклинания на Druid. Освен това мистичната ти връзка с природата ти дава бонус към проверките ти на Intelligence (Arcana или Nature). Бонусът е равен на модификатора ти на Wisdom (минимум +1).",
+  "bg": "Знаеш един допълнителен Cantrip от списъка със заклинания на Druid. Освен това мистичната ти връзка с природата ти дава бонус към проверките ти на Intelligence (Arcana или Nature). Бонусът е равен на модификатора ти на Wisdom (минимум +1).",
   "en": "You know one extra cantrip from the Druid spell list. In addition, your mystical connection to nature gives you a bonus to your Intelligence (Arcana or Nature) checks. The bonus equals your Wisdom modifier (minimum bonus of +1).",
   "ref": "xphb-druid-1-magician"
  },
@@ -1810,7 +1810,7 @@
   "ref": "class:bard:spells-known"
  },
  "987d886614a38a479e44d565c8c2ec7da3fe5171": {
-  "bg": "Избери 5 трика (Cantrips) от списъка със заклинания на Wizard.",
+  "bg": "Избери 5 Cantrips от списъка със заклинания на Wizard.",
   "en": "Choose 5 cantrips from the Wizard spell list.",
   "ref": "class:wizard:spells-cantrips"
  },
@@ -1820,7 +1820,7 @@
   "ref": "opt-goading-attack-phb"
  },
  "99b66ca14a34e1a3efa40884d0d496fcc30d1d41": {
-  "bg": "Избери 4 трика (Cantrips) от списъка със заклинания на Sorcerer.",
+  "bg": "Избери 4 Cantrips от списъка със заклинания на Sorcerer.",
   "en": "Choose 4 cantrips from the Sorcerer spell list.",
   "ref": "class:sorcerer:spells-cantrips"
  },
@@ -1840,7 +1840,7 @@
   "ref": "class:ranger:spells-known"
  },
  "9a95a1a14ae1c81796457736a92c5865a5fd5744": {
-  "bg": "Избери 4 трика (Cantrips) от списъка със заклинания на Bard.",
+  "bg": "Избери 4 Cantrips от списъка със заклинания на Bard.",
   "en": "Choose 4 cantrips from the Bard spell list.",
   "ref": "class:bard:spells-cantrips"
  },
@@ -1890,7 +1890,7 @@
   "ref": "eldritch-invocation-gaze-of-two-minds"
  },
  "9f01b40a560b72dad84efad2f389c225be94a7ff": {
-  "bg": "Преплитайки нишки от сенки, призоваваш книга в ръката си в края на кратка почивка (Short Rest) или дълга почивка (Long Rest). Тази Книга на сенките (Book of Shadows) — ти решаваш как изглежда — съдържа мрачна магия, до която имаш достъп само ти, и ти дава ползите по-долу. Книгата изчезва, ако призовеш друга книга с тази способност (Feature) или ако умреш. Трикове и ритуали (Cantrips and Rituals). Когато книгата се появи, избери три трика и две заклинания от ниво 1 с етикета Ritual. Заклинанията могат да са от списъка със заклинания на който и да е клас, но трябва да са такива, които още нямаш подготвени. Докато книгата е у теб, имаш избраните заклинания подготвени и те са заклинания на Warlock за теб. Фокус за заклинания (Spellcasting Focus). Можеш да използваш книгата като фокус за заклинания.",
+  "bg": "Преплитайки нишки от сенки, призоваваш книга в ръката си в края на кратка почивка (Short Rest) или дълга почивка (Long Rest). Тази Книга на сенките (Book of Shadows) — ти решаваш как изглежда — съдържа мрачна магия, до която имаш достъп само ти, и ти дава ползите по-долу. Книгата изчезва, ако призовеш друга книга с тази способност (Feature) или ако умреш. Cantrips и ритуали (Cantrips and Rituals). Когато книгата се появи, избери три Cantrips и две заклинания от ниво 1 с етикета Ritual. Заклинанията могат да са от списъка със заклинания на който и да е клас, но трябва да са такива, които още нямаш подготвени. Докато книгата е у теб, имаш избраните заклинания подготвени и те са заклинания на Warlock за теб. Фокус за заклинания (Spellcasting Focus). Можеш да използваш книгата като фокус за заклинания.",
   "en": "Stitching together strands of shadow, you conjure forth a book in your hand at the end of a Short or Long Rest. This Book of Shadows (you determine its appearance) contains eldritch magic that only you can access, granting you the benefits below. The book disappears if you conjure another book with this feature or if you die. Cantrips and Rituals. When the book appears, choose three cantrips, and choose two level 1 spells that have the Ritual tag. The spells can be from any class's spell list, and they must be spells you don't already have prepared. While the book is on your person, you have the chosen spells prepared, and they function as Warlock spells for you. Spellcasting Focus. You can use the book as a Spellcasting Focus.",
   "ref": "opt-pact-of-the-tome-xphb"
  },
@@ -1900,7 +1900,7 @@
   "ref": "class:paladin:spells-known"
  },
  "9f8265bf0ec0143a1e55d438bb9d8e26a6b7463e": {
-  "bg": "Избери 2 трика (Cantrips) от списъка със заклинания на Cleric.",
+  "bg": "Избери 2 Cantrips от списъка със заклинания на Cleric.",
   "en": "Choose 2 cantrips from the Cleric list.",
   "ref": "feat:magic-initiate-phb:spell-choice-3"
  },
@@ -1935,7 +1935,7 @@
   "ref": "hunters-prey-horde-breaker"
  },
  "a23a2f74a9b5f2edd5447479a20d19c7e9b3c88f": {
-  "bg": "Избери един от известните ти трикове (Cantrips) на Warlock, който нанася щети. Можеш да добавяш модификатора на Charisma към хвърлянията за щети (Damage Rolls) на този трик. Повтаряема. Можеш да получиш тази инвокация (Invocation) повече от веднъж. Всеки път избирай различен допустим трик.",
+  "bg": "Избери един от известните ти Cantrips на Warlock, който нанася щети. Можеш да добавяш модификатора на Charisma към хвърлянията за щети (Damage Rolls) на този Cantrip. Повтаряема. Можеш да получиш тази инвокация (Invocation) повече от веднъж. Всеки път избирай различен допустим Cantrip.",
   "en": "Choose one of your known Warlock cantrips that deals damage. You can add your Charisma modifier to that spell's damage rolls. Repeatable. You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
   "ref": "opt-agonizing-blast-xphb"
  },
@@ -2025,7 +2025,7 @@
   "ref": "class:wizard:3:feature:abjurer-xphb-3-abjuration-savant"
  },
  "aadda76729417416c165f52858f59bf20ce45d50": {
-  "bg": "Добавяш модификатора на Wisdom към щетите, които нанасяш с всеки трик (Cantrip) на Druid.",
+  "bg": "Добавяш модификатора на Wisdom към щетите, които нанасяш с всеки Cantrip на Druid.",
   "en": "Add your Wisdom modifier to the damage you deal with any Druid cantrip.",
   "ref": "xphb-druid-7-potent-spellcasting"
  },
@@ -2185,7 +2185,7 @@
   "ref": "class:paladin:1:prof-choice-0"
  },
  "b7930247facb581757eb44b4fe7d1b01940210c6": {
-  "bg": "Избери 2 трика (Cantrips) от списъка със заклинания на Bard.",
+  "bg": "Избери 2 Cantrips от списъка със заклинания на Bard.",
   "en": "Choose 2 cantrips from the Bard spell list.",
   "ref": "class:bard:spells-cantrips"
  },
@@ -2215,7 +2215,7 @@
   "ref": "class:ranger:spells-known"
  },
  "ba2d87cb395d6eda7afd22181b069225049f9b50": {
-  "bg": "Научаваш два трика (Cantrips) на Cleric по твой избор. Препоръчителни са Guidance и Sacred Flame. Избраните трикове се броят за заклинания на Paladin за теб, а магическата ти характеристика (Spellcasting Ability) за тях е Charisma. Всеки път, когато получиш ниво на Paladin, можеш да замениш един от тези трикове с друг трик на Cleric.",
+  "bg": "Научаваш два Cantrips на Cleric по твой избор. Препоръчителни са Guidance и Sacred Flame. Избраните Cantrips се броят за заклинания на Paladin за теб, а магическата ти характеристика (Spellcasting Ability) за тях е Charisma. Всеки път, когато получиш ниво на Paladin, можеш да замениш един от тези Cantrips с друг Cantrip на Cleric.",
   "en": "You learn two Cleric cantrips of your choice. Guidance and Sacred Flame are recommended. The chosen cantrips count as Paladin spells for you, and Charisma is your spellcasting ability for them. Whenever you gain a Paladin level, you can replace one of these cantrips with another Cleric cantrip.",
   "ref": "feat:blessed-warrior-xphb"
  },
@@ -2375,7 +2375,7 @@
   "ref": "class:cleric:1:divine-order"
  },
  "c87f6986337151af5b3cde73f5621f02fc1ad348": {
-  "bg": "Избери 15 заклинания от ниво 6 или по-ниско, които да знаеш, от списъка със заклинания на Bard. Magical Secrets: до 2 от тях могат да са заклинания от списъка на произволен клас или трикове (Cantrips) на друг клас; те влизат в този брой.",
+  "bg": "Избери 15 заклинания от ниво 6 или по-ниско, които да знаеш, от списъка със заклинания на Bard. Magical Secrets: до 2 от тях могат да са заклинания от списъка на произволен клас или Cantrips на друг клас; те влизат в този брой.",
   "en": "Choose 15 level-6-or-lower spells to know from the Bard spell list. Magical Secrets: up to 2 of them may be spells of any class's list, or another class's cantrips; they count in this number.",
   "ref": "class:bard:spells-known"
  },
@@ -2410,7 +2410,7 @@
   "ref": "multiattack-volley"
  },
  "cb0a73140b6dab8744f50d8196f89092c93004f9": {
-  "bg": "Избери един от известните ти трикове (Cantrips) на Warlock, който нанася щети и има обхват поне 10 фута (3 м). Когато изричаш този трик, обхватът му се увеличава с 30 фута (9 м), умножени по нивото ти на Warlock. Повтаряема. Можеш да получиш тази инвокация (Invocation) повече от веднъж. Всеки път избирай различен допустим трик.",
+  "bg": "Избери един от известните ти Cantrips на Warlock, който нанася щети и има обхват поне 10 фута (3 м). Когато изричаш този Cantrip, обхватът му се увеличава с 30 фута (9 м), умножени по нивото ти на Warlock. Повтаряема. Можеш да получиш тази инвокация (Invocation) повече от веднъж. Всеки път избирай различен допустим Cantrip.",
   "en": "Choose one of your known Warlock cantrips that deals damage and has a range of 10+ feet. When you cast that spell, its range increases by a number of feet equal to 30 times your Warlock level. Repeatable. You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
   "ref": "opt-eldritch-spear-xphb"
  },
@@ -2675,7 +2675,7 @@
   "ref": "totem-warrior-phb-3-totem-spirit--elk"
  },
  "e5e95276b7c6e11fe57f4665769723417a959c98": {
-  "bg": "Избери един от известните ти трикове (Cantrips) на Warlock, който нанася щети и има обхват поне 10 фута (3 м). Когато изричаш този трик, обхватът му се увеличава с 30 фута (9 м) за всяко ниво на Warlock.",
+  "bg": "Избери един от известните ти Cantrips на Warlock, който нанася щети и има обхват поне 10 фута (3 м). Когато изричаш този Cantrip, обхватът му се увеличава с 30 фута (9 м) за всяко ниво на Warlock.",
   "en": "Choose one of your known Warlock cantrips that deals damage and has a range of 10+ feet. When you cast that spell, its range increases by a number of feet equal to 30 times your Warlock level.",
   "ref": "class:warlock:invocation:opt-eldritch-spear-xphb:cantrip"
  },
@@ -2690,7 +2690,7 @@
   "ref": "opt-ascendant-step-xphb"
  },
  "e80f50943a7afbcef3729d7c64d4cba123b55b1c": {
-  "bg": "Избери един от известните ти трикове (Cantrips) на Warlock, който нанася щети и има обхват поне 10 фута (3 м). Когато изричаш този трик, обхватът му се увеличава с 30 фута (9 м), умножени по нивото ти на Warlock.\n\nПовтаряема. Можеш да получиш тази инвокация (Invocation) повече от веднъж. Всеки път избирай различен допустим трик.",
+  "bg": "Избери един от известните ти Cantrips на Warlock, който нанася щети и има обхват поне 10 фута (3 м). Когато изричаш този Cantrip, обхватът му се увеличава с 30 фута (9 м), умножени по нивото ти на Warlock.\n\nПовтаряема. Можеш да получиш тази инвокация (Invocation) повече от веднъж. Всеки път избирай различен допустим Cantrip.",
   "en": "Choose one of your known Warlock cantrips that deals damage and has a range of 10+ feet. When you cast that spell, its range increases by a number of feet equal to 30 times your Warlock level.\n\nRepeatable. You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
   "ref": "opt-eldritch-spear-xphb"
  },
@@ -2710,7 +2710,7 @@
   "ref": "class:rogue:1:prof-choice-0"
  },
  "e93311166eba3a8ec2a2e4611391e59292bddbf7": {
-  "bg": "Избери 2 трика (Cantrips) от списъка със заклинания на Wizard.",
+  "bg": "Избери 2 Cantrips от списъка със заклинания на Wizard.",
   "en": "Choose 2 cantrips from the Wizard list.",
   "ref": "feat:magic-initiate-xphb:spell-choice-5"
  },
@@ -2720,7 +2720,7 @@
   "ref": "class:wizard:spells-known"
  },
  "e9a4222734eb22d3d5b087bc68552279e01e5b1c": {
-  "bg": "Избери един от известните ти трикове (Cantrips) на Warlock, който нанася щети. Можеш да добавяш модификатора на Charisma към хвърлянията за щети (Damage Rolls) на това заклинание.",
+  "bg": "Избери един от известните ти Cantrips на Warlock, който нанася щети. Можеш да добавяш модификатора на Charisma към хвърлянията за щети (Damage Rolls) на това заклинание.",
   "en": "Choose one of your known Warlock cantrips that deals damage. You can add your Charisma modifier to that spell's damage rolls.",
   "ref": "class:warlock:invocation:opt-agonizing-blast-xphb:cantrip"
  },
@@ -2755,7 +2755,7 @@
   "ref": "class:druid:3:feature:land-xphb-3-circle-of-the-land-spells"
  },
  "ee56d04bfcd68b6538a799736d2e6c2837d03b2a": {
-  "bg": "Избери 6 трика (Cantrips) от списъка със заклинания на Sorcerer.",
+  "bg": "Избери 6 Cantrips от списъка със заклинания на Sorcerer.",
   "en": "Choose 6 cantrips from the Sorcerer spell list.",
   "ref": "class:sorcerer:spells-cantrips"
  },
@@ -2785,7 +2785,7 @@
   "ref": "class:warlock:13:mystic-arcanum-7"
  },
  "f0e8b2a2c3cea61fa8e4d19280f701ad962c95ab": {
-  "bg": "Научаваш два трика (Cantrips) на Druid по твой избор. Препоръчителни са Guidance и Starry Wisp. Избраните трикове се броят за заклинания на Ranger за теб, а магическата ти характеристика (Spellcasting Ability) за тях е Wisdom. Всеки път, когато получиш ниво на Ranger, можеш да замениш един от тези трикове с друг трик на Druid.",
+  "bg": "Научаваш два Cantrips на Druid по твой избор. Препоръчителни са Guidance и Starry Wisp. Избраните Cantrips се броят за заклинания на Ranger за теб, а магическата ти характеристика (Spellcasting Ability) за тях е Wisdom. Всеки път, когато получиш ниво на Ranger, можеш да замениш един от тези Cantrips с друг Cantrip на Druid.",
   "en": "You learn two Druid cantrips of your choice. Guidance and Starry Wisp are recommended. The chosen cantrips count as Ranger spells for you, and Wisdom is your spellcasting ability for them. Whenever you gain a Ranger level, you can replace one of these cantrips with another Druid cantrip.",
   "ref": "feat:druidic-warrior-xphb"
  },
@@ -2925,7 +2925,7 @@
   "ref": "class:wizard:spellbook"
  },
  "fa94f726ac20c7b8f2903859f3d0a919783e69ca": {
-  "bg": "Избери 4 трика (Cantrips) от списъка със заклинания на Druid.",
+  "bg": "Избери 4 Cantrips от списъка със заклинания на Druid.",
   "en": "Choose 4 cantrips from the Druid spell list.",
   "ref": "class:druid:spells-cantrips"
  },
