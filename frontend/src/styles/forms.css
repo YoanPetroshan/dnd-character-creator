@@ -189,11 +189,26 @@
 
 .class-subclass {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: flex-end;
   gap: var(--space-1);
   padding-top: var(--space-3);
   border-top: 1px solid var(--color-border);
   font-weight: 600;
+}
+
+.class-subclass__label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  max-width: calc(100% - 48px);
+}
+
+.class-subclass > .spell-eye__panel {
+  font-weight: 400;
+  flex: 0 0 100%;
+  box-sizing: border-box;
 }
 
 .add-class {

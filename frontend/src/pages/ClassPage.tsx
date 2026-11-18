@@ -15,6 +15,9 @@ import { ClassResourcesList } from "../components/ClassResourcesList";
 import { SpellSlotsSummary } from "../components/SpellSlotsSummary";
 import { classChoicesFor, splitClassChoices } from "../logic/choiceRouting";
 import { cidFromHash } from "../logic/hashTarget";
+import { DetailEye, DetailPanel } from "../components/DetailEye";
+import { SubclassPreview } from "../components/SubclassPreview";
+import { useSubclassDetails } from "../useSubclassDetail";
 
 type ClassTab = "features" | "spells";
 
@@ -36,6 +39,8 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
   const sheetClass = resolution?.sheet.classes.find((c) => c.id === classId);
   const [tab, setTab] = useState<ClassTab>("features");
   const [classDetail, setClassDetail] = useState<ClassDetail | null>(null);
+  const [subOpen, setSubOpen] = useState(false);
+  const subclasses = useSubclassDetails();
 
   const classEntry = draft.classes.find((c) => c.classId === classId);
   const classLevel = classEntry?.level ?? 1;
@@ -64,6 +69,11 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
       cancelled = true;
     };
   }, [classId, draft.ruleset, sourcesKey, selectedSubclassId]);
+
+  const { loadDetail: loadSubclass } = subclasses;
+  useEffect(() => {
+    if (subOpen && selectedSubclassId) loadSubclass(selectedSubclassId);
+  }, [subOpen, selectedSubclassId]);
 
   const classChoices = resolution ? classChoicesFor(resolution.choices, classId) : [];
   const { featureChoices, spellChoices } = splitClassChoices(classChoices);
@@ -125,7 +135,8 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
       </span>
 
       {classDetail && classDetail.subclassUnlockLevel !== null && classLevel >= classDetail.subclassUnlockLevel && (
-        <label className="class-subclass">
+        <div className="class-subclass">
+        <label className="class-subclass__label">
           {cp.subclass}
           <select
             value={classEntry?.subclassId ?? ""}
@@ -141,6 +152,19 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
             ))}
           </select>
         </label>
+        {selectedSubclassId && (
+          <DetailEye
+            label={cp.showSubclass(classDetail.subclasses.find((s) => s.index === selectedSubclassId)?.name ?? selectedSubclassId)}
+            open={subOpen}
+            onToggle={() => setSubOpen((v) => !v)}
+          />
+        )}
+        {selectedSubclassId && subOpen && (
+          <DetailPanel>
+            <SubclassPreview state={subclasses.detailOf(selectedSubclassId)} />
+          </DetailPanel>
+        )}
+        </div>
       )}
 
       {classDetail && (
