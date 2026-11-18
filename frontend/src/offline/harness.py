@@ -119,6 +119,22 @@ def sheets(fixture="/fixtures.json", baseline="/sheet_baseline.json"):
 def requests(fixture="/fixtures.json", baseline="/service_baseline.json"):
     import service
     import base64
+    import tempfile
+    from pathlib import Path
+    from i18n.content import store
+    # The corpus pins the English-fallback answers (the committed Bulgarian overlay grows with every translation batch):
+    # use an empty overlay directory, like test_service_baseline.py does.
+    real_dir = store.I18N_DIR
+    store.I18N_DIR = Path(tempfile.mkdtemp())
+    store.load_overlay.cache_clear()
+    try:
+        return _requests(service, base64, fixture, baseline)
+    finally:
+        store.I18N_DIR = real_dir
+        store.load_overlay.cache_clear()
+
+
+def _requests(service, base64, fixture, baseline):
     t0 = time.perf_counter()
     reqs = json.load(open(fixture, encoding="utf-8"))["requests"]
     expected = json.load(open(baseline, encoding="utf-8"))
