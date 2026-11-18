@@ -25,6 +25,7 @@ BRACKET_TERMS = frozenset({
     "Skill Proficiencies", "Skill Proficiency", "Skill or Tool Proficiency", "Skills", "Species", "Spell Attack Modifier",
     "Spell Mastery", "Spell Save DC", "Spellcasting Ability", "Tool Proficiencies", "Tool Proficiency", "Tremorsense",
     "Truesight", "Vulnerability", "Weapon Mastery", "Weapon Proficiencies",
+    "Acid", "Bludgeoning", "Cold", "Fire", "Force", "Lightning", "Necrotic", "Piercing", "Poison", "Psychic", "Radiant", "Slashing", "Thunder",  # damage types (species facts line)
 })
 
 # Latin words in brackets that are not rules terms (abbreviations, codes, other glosses the app always had).

@@ -560,6 +560,8 @@ export const en: Copy = {
     noSourceGroup: "SRD",
     showSpecies: (name: string) => `Show a short description of the species: ${name}`,
     preview: {
+      sizes: { Tiny: "Tiny", Small: "Small", Medium: "Medium", Large: "Large", Huge: "Huge", Gargantuan: "Gargantuan" } as Record<string, string>,
+      damageTypes: { acid: "acid", bludgeoning: "bludgeoning", cold: "cold", fire: "fire", force: "force", lightning: "lightning", necrotic: "necrotic", piercing: "piercing", poison: "poison", psychic: "psychic", radiant: "radiant", slashing: "slashing", thunder: "thunder" } as Record<string, string>,
       size: g.size.en,
       speed: g.speed.en,
       darkvision: g.darkvision.en,
@@ -685,6 +687,23 @@ export const en: Copy = {
     levelBadge: (n: number) => `level ${n}`,
     concentration: "Concentration",
     ritual: "Ritual",
+  },
+
+  spellRow: {
+    localize: false,
+    schools: { Abjuration: "Abjuration", Conjuration: "Conjuration", Divination: "Divination", Enchantment: "Enchantment", Evocation: "Evocation", Illusion: "Illusion", Necromancy: "Necromancy", Transmutation: "Transmutation" } as Record<string, string>,
+    words: { "self": "self", "touch": "touch", "sight": "sight", "unlimited": "unlimited", "special": "special", "instantaneous": "instantaneous", "until dispelled": "until dispelled", "triggered": "triggered" } as Record<string, string>,
+    actions: { "1 action": "1 action", "1 bonus action": "1 bonus action", "1 reaction": "1 reaction" } as Record<string, string>,
+    units: { minute: "minute", minutes: "minutes", hour: "hour", hours: "hours", round: "round", rounds: "rounds", day: "day", days: "days" } as Record<string, string>,
+    mile: { one: "mile", many: "miles" },
+    feet: (n: number) => (n === 1 ? "1 foot" : `${n} feet`),
+    withMetres: (feet: string, metres: string) => `${feet} (${metres})`,
+    shapes: { radius: "radius", emanation: "emanation", cone: "cone", line: "line" } as Record<string, string>,
+    selfShape: (self: string, shape: string, size: string) => `${self}, ${shape} ${size}`,
+    upTo: "up to",
+    or: "or",
+    kilometres: (km: string) => `${km} km`,
+    metres: (m: string) => `${m} m`,
   },
 
   traits: {

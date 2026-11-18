@@ -69,12 +69,14 @@ interface Fact {
 
 const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
 
+const damageLabel = (p: Copy["speciesPage"]["preview"], type: string): string => p.damageTypes[type.toLowerCase()] ?? type;
+
 /** The quick facts of a species, only those the record has: size, speed, darkvision, ability scores, resistance, languages. */
 export function speciesFacts(t: Copy, s: SpeciesDetail): Fact[] {
   const p = t.speciesPage.preview;
   const facts: Fact[] = [];
   const sizes = s.size_options?.length > 1 ? s.size_options : [s.size];
-  facts.push({ key: "size", label: p.size, value: sizes.join(" / ") });
+  facts.push({ key: "size", label: p.size, value: sizes.map((z) => p.sizes[z] ?? z).join(" / ") });
 
   const modes = Object.entries(s.movement ?? {}).map(
     ([mode, v]) => `${t.sheet.speeds.modes[mode] ?? mode} ${t.common.feet(v === true ? s.speed : v)}`,
@@ -92,10 +94,10 @@ export function speciesFacts(t: Copy, s: SpeciesDetail): Fact[] {
   }
 
   const pickResist = s.resist_options
-    ? [p.chooseFrom(s.resist_options.choose, (s.resist_options.from.options ?? []).map((o) => o.string ?? "").join(", "))]
+    ? [p.chooseFrom(s.resist_options.choose, (s.resist_options.from.options ?? []).map((o) => damageLabel(p, o.string ?? "")).join(", "))]
     : [];
   if ((s.resist ?? []).length + pickResist.length > 0) {
-    facts.push({ key: "resist", label: p.resistance, value: [...s.resist, ...pickResist].join("; ") });
+    facts.push({ key: "resist", label: p.resistance, value: [...s.resist.map((r) => damageLabel(p, r)), ...pickResist].join("; ") });
   }
 
   const languages = (s.languages ?? []).map((l) => l.name);

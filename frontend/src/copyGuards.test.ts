@@ -216,6 +216,19 @@ describe("scripts", () => {
   "Vulnerability",
   "Weapon Mastery",
   "Weapon Proficiencies",
+  "Acid",
+  "Bludgeoning",
+  "Cold",
+  "Fire",
+  "Force",
+  "Lightning",
+  "Necrotic",
+  "Piercing",
+  "Poison",
+  "Psychic",
+  "Radiant",
+  "Slashing",
+  "Thunder",
   ]);
   // BRACKET_TERMS_END
   const BRACKET_ABBREVIATIONS = new Set(["AC"]);
