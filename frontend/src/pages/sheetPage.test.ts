@@ -203,7 +203,7 @@ describe("eyes on the sheet (the text of a name opens under its row)", () => {
 
   it("actions tab: the weapon name in the first cell and the mastery list carry an item eye", () => {
     const h = page(fighter4.resolution as unknown as Resolution, "/sheet?tab=actions", "en");
-    expect(h).toMatch(/<span class="attack__name">Greatsword<\/span><button type="button" class="spell-eye" aria-label="Show the item description: Greatsword"/);
+    expect(h).toMatch(/<span class="attack__name">Greatsword<button type="button" class="spell-eye" aria-label="Show the item description: Greatsword"/);
     const masteries = h.slice(h.indexOf("<h3>", h.indexOf("</table>")));
     expect(eyeLabels(masteries).length).toBe(fighter4.resolution.sheet.weaponMasteries.length);
     expect(masteries).toMatch(/<li>[^<]+<button type="button" class="spell-eye"[^>]*><\/button>: /);

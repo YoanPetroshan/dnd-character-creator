@@ -42,8 +42,10 @@ export function AttacksSection({ data }: { data: SheetSectionData["attacks"] }) 
               <Fragment key={a.itemId}>
               <tr data-proficient={a.proficient} data-wielded={a.wielded ?? undefined}>
                 <th scope="row">
-                  <span className="attack__name">{a.name}</span>
-                  <SheetEye rowKey={`attack:${a.itemId}`} kind="item" id={a.itemId} name={a.name} />
+                  <span className="attack__name">
+                    {a.name}
+                    <SheetEye rowKey={`attack:${a.itemId}`} kind="item" id={a.itemId} name={a.name} />
+                  </span>
                   <span className="attack__sub">
                     {[a.ability, ...(a.wielded ? [c.wielded] : []), ...(a.mastery ? [`${c.columns.mastery}: ${a.mastery}`] : [])].join(" · ")}
                   </span>

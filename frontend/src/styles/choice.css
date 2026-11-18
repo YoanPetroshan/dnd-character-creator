@@ -384,6 +384,11 @@ ul.choice-picker > li.choice-picker__item--spell > .spell-eye__panel {
   padding: 0;
 }
 
+/* a wide table scrolls sideways on a phone: the panel stays as wide as the screen and follows the scroll */
 [data-page="sheet"] .sheet-eye-row .spell-eye__panel {
+  position: sticky;
+  left: 0;
+  box-sizing: border-box;
+  max-width: calc(100vw - 80px);
   margin: var(--space-1) 0 var(--space-2);
 }

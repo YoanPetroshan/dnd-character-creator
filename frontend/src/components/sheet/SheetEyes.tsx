@@ -38,13 +38,13 @@ export function SheetEyesProvider({ children }: { children: ReactNode }) {
   const eyes: Eyes = {
     isOpen: (rowKey) => open.has(rowKey),
     toggle: (rowKey, kind, id) => {
-      const next = new Set(open);
-      if (next.has(rowKey)) next.delete(rowKey);
-      else {
-        next.add(rowKey);
-        load(kind, id);
-      }
-      setOpen(next);
+      if (!open.has(rowKey)) load(kind, id);
+      setOpen((prev) => {
+        const next = new Set(prev);
+        if (next.has(rowKey)) next.delete(rowKey);
+        else next.add(rowKey);
+        return next;
+      });
     },
     body: (kind, id) => {
       if (kind === "spell") return <SpellDetailBody state={spells.details[id]} />;
