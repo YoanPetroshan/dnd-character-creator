@@ -284,6 +284,11 @@ li.choice-picker__item--spell label {
   padding-right: 48px;
 }
 
+/* the short layout's pill label sets its own padding with higher specificity: keep the text clear of the eye */
+.choice-picker-wrap:not(.choice-picker-wrap--long) .choice-picker li.choice-picker__item--spell label {
+  padding-right: 44px;
+}
+
 .choice-picker-wrap:not(.choice-picker-wrap--long) > ul.choice-picker > li.choice-picker__item--spell-open {
   grid-column: 1 / -1;
 }
