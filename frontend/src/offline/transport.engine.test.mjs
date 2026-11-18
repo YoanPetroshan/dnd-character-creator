@@ -83,6 +83,10 @@ describe.skipIf(!packPresent)("worker transport on the real Pyodide engine", () 
     expect(spells.spells.length).toBeGreaterThan(3);
     expect((await t.fetch("/api/spells/fireball")).status).toBe(200);
     expect((await t.fetch("/api/spells/no-such-spell")).status).toBe(404);
+    const feat = await (await t.fetch("/api/feats/tough-xphb?lang=bg")).json();
+    expect(feat.id).toBe("tough-xphb");
+    expect(feat.desc.length).toBeGreaterThan(0);
+    expect((await t.fetch("/api/feats/no-such-feat")).status).toBe(404);
     const sword = await (await t.fetch("/api/items/longsword?lang=bg&ruleset=2024")).json();
     expect(sword.id).toBe("longsword");
     expect(sword.properties[0].id).toBe("versatile");

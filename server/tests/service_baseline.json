@@ -957,6 +957,22 @@
   },
   "status": 400
  },
+ "feat-tough": {
+  "bodyLength": 299,
+  "bodySha256": "4801a5d699c71d1baea651de2f7443bdf440bfd3b6e1d823e96027e24804b83a",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "feat-unknown": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
  "health": {
   "bodyLength": 149,
   "bodySha256": "2793992538f4dfe54c68d52b42acaef44fb6474bd4b98d74b35e1d2050334ed5",

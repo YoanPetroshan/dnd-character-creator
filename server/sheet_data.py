@@ -122,6 +122,60 @@ def strip_tags(text: str) -> str:
     return text
 
 
+_ABILITY_WORDS = {"str": "Strength", "dex": "Dexterity", "con": "Constitution", "int": "Intelligence", "wis": "Wisdom", "cha": "Charisma"}
+
+
+def _prereq_alt_text(alt: dict, feats: dict) -> str:
+    parts: list[str] = []
+    level = alt.get("level")
+    if isinstance(level, int):
+        parts.append(f"Level {level}")
+    elif isinstance(level, dict):
+        cls = (level.get("class") or {}).get("name")
+        parts.append(f"{cls} level {level.get('level')}" if cls else f"Level {level.get('level')}")
+    if alt.get("ability"):
+        parts.append(" or ".join(f"{_ABILITY_WORDS.get(ab, ab.upper())} {n}"
+                                 for e in alt["ability"] if isinstance(e, dict) for ab, n in e.items()))
+    for ref in alt.get("race") or []:
+        name = " ".join(x for x in (str(ref.get("subrace") or "").title(), str(ref.get("name") or "").title()) if x)
+        parts.append(strip_tags(ref["displayEntry"]) if ref.get("displayEntry") else name)
+    for ref in alt.get("background") or []:
+        parts.append(strip_tags(ref.get("displayEntry") or ref.get("name") or ""))
+    if alt.get("feat"):
+        names = []
+        for ref in alt["feat"]:
+            name, _, source = str(ref).partition("|")
+            rec = feats.get(f"{re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')}-{source.lower()}")
+            names.append(rec["name"] if rec else re.sub(r"\b(Of|The|To|And)\b", lambda m: m.group(1).lower(), name.title()))
+        parts.append(" or ".join(names) + " feat")
+    if alt.get("feature"):
+        parts.append(" or ".join(alt["feature"]) + " feature")
+    if alt.get("spellcasting2020") or alt.get("spellcastingFeature"):
+        parts.append("Spellcasting or Pact Magic feature")
+    elif alt.get("spellcasting"):
+        parts.append("The ability to cast at least one spell")
+    for entry in alt.get("proficiency") or []:
+        for kind, value in entry.items():
+            what = "shield" if value == "shield" else f"{value} armor" if kind == "armor" else f"{value} weapons"
+            parts.append(f"Proficiency with {what}")
+    if alt.get("featCategory"):
+        parts.append("A Dragonmark feat" if alt["featCategory"] == ["D"] else "A feat of a required category")
+    if alt.get("other"):
+        parts.append(str(alt["other"]))
+    if alt.get("otherSummary"):
+        parts.append(strip_tags(str(alt["otherSummary"].get("entrySummary") or alt["otherSummary"].get("entry") or "")))
+    if alt.get("campaign"):
+        parts.append("Campaign: " + ", ".join(alt["campaign"]))
+    return ", ".join(p for p in parts if p)
+
+
+def feat_prerequisite_text(feat: dict, feats: dict) -> str:
+    """A feat's 5etools `prerequisite` (alternatives; each alternative is the AND of its keys) as readable English,
+    e.g. "Level 4, Strength 13 or Dexterity 13"; "" when it has none. `feats` is the catalog's feats by index."""
+    alts = [t for t in (_prereq_alt_text(a, feats) for a in feat.get("prerequisite") or [] if isinstance(a, dict)) if t]
+    return "; or ".join(dict.fromkeys(alts))
+
+
 def flatten_entries(entries, depth: int = 0) -> list[str]:
     """5etools ``entries`` (strings and nested objects) -> plain paragraphs."""
     out: list[str] = []

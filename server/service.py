@@ -44,7 +44,7 @@ from engine.resolve import _source_allowed, _spell_visible, _subclass_visible, r
 from catalog.official.race_fluff import species_fluff, trait_details
 from export import to_yaml
 from export_labels import DEFAULT_LANG as EXPORT_DEFAULT_LANG, label as export_label
-from i18n.content.store import overlay_items, overlay_rule, overlay_species, overlay_spell
+from i18n.content.store import overlay_feats, overlay_items, overlay_rule, overlay_species, overlay_spell
 from i18n.messages import localize, msg, parse_lang
 from markdown_export import to_markdown
 
@@ -491,6 +491,20 @@ def api_spell_detail(args, body, spell_id: str):
     }, lang))
 
 
+def api_feat_detail(args, body, feat_id: str):
+    lang, bad_lang = _request_lang(args)
+    if bad_lang:
+        return bad_lang
+    feat = _catalog.feats.get(feat_id)
+    if not feat:
+        return _error("not found", 404)
+    from sheet_data import feat_prerequisite_text, flatten_entries  # lazy: sheet_data pulls the sheet stack
+    return _json(overlay_feats(feat_id, {
+        "id": feat["index"], "name": feat["name"], "prerequisite": feat_prerequisite_text(feat, _catalog.feats),
+        "desc": flatten_entries(feat.get("entries") or []),
+    }, lang))
+
+
 def _item_damage(damage: dict | None) -> dict | None:
     if not damage:
         return None
@@ -690,6 +704,7 @@ ROUTES: tuple[tuple[str, tuple[str, ...], Callable[..., Response]], ...] = (
     ("/api/items/<item_id>", ("GET",), api_item_detail),
     ("/api/spells", ("GET",), api_spells),
     ("/api/spells/<spell_id>", ("GET",), api_spell_detail),
+    ("/api/feats/<feat_id>", ("GET",), api_feat_detail),
     ("/api/export/<fmt>", ("POST",), api_export),
 )
 

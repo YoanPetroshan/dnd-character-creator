@@ -5,7 +5,7 @@
     python -m i18n.content.tool --kind spells apply work.json   # validates every record, merges the valid ones, exit 1 on a reject
     python -m i18n.content.tool --kind species status           # translated / stale / missing per source
 
-Kinds: spells, species, items, item-rules (property and mastery texts; keys `property:<index>:<PHB|XPHB>`, `mastery:<Name>`).
+Kinds: spells, species, items, feats, item-rules (property and mastery texts; keys `property:<index>:<PHB|XPHB>`, `mastery:<Name>`).
 `python -m i18n.content.spells ...` is the same tool with --kind spells.
 
 Work file: a JSON list of {id, name, source, hash, <the kind's fields>}; `export` writes the English texts, the translator
@@ -35,7 +35,7 @@ def _numbers(text: str) -> list[str]:
 LATIN = re.compile(r"[A-Za-z]")
 LANG = "bg"
 SCALARS = {"spells": ("material", "castingCondition")}  # optional string fields (null = keep the English)
-LISTS = {"spells": ("desc", "higherLevel"), "species": ("fluff",), "items": ("desc", "special"), "item-rules": ("desc",)}
+LISTS = {"spells": ("desc", "higherLevel"), "species": ("fluff",), "items": ("desc", "special"), "item-rules": ("desc",), "feats": ("desc",)}
 
 
 def _is_strings(value) -> bool:
@@ -142,6 +142,10 @@ def load_records(kind: str) -> dict[str, dict]:
         return out
     if kind == "item-rules":
         return item_rule_records(catalog)
+    if kind == "feats":
+        from sheet_data import flatten_entries
+
+        return {i: {**f, "desc": flatten_entries(f.get("entries") or [])} for i, f in catalog.feats.items()}
     raise KeyError(kind)
 
 
@@ -150,7 +154,7 @@ def _load_spells() -> dict[str, dict]:
 
 
 def _label(kind: str) -> str:
-    return {"spells": "spell", "species": "species", "items": "item", "item-rules": "item rule"}[kind]
+    return {"spells": "spell", "species": "species", "items": "item", "item-rules": "item rule", "feats": "feat"}[kind]
 
 
 def _export_fields(kind: str, fields: dict, record: dict) -> dict:
@@ -235,7 +239,7 @@ def write_overlay(overlay: dict, kind: str = "spells") -> None:
 def main(argv=None, *, default_kind: str | None = None, prog: str = "python -m i18n.content.tool") -> int:
     ap = argparse.ArgumentParser(prog=prog, description=__doc__.split("\n")[0])
     ap.add_argument("--kind", choices=store.KINDS, default=default_kind, required=default_kind is None,
-                    help="which overlay: spells, species, items, item-rules")
+                    help="which overlay: spells, species, items, feats, item-rules")
     sub = ap.add_subparsers(dest="cmd", required=True)
     ex = sub.add_parser("export", help="write the English texts of some records to a work file")
     which = ex.add_mutually_exclusive_group(required=True)

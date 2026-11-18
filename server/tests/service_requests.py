@@ -117,6 +117,8 @@ def _build() -> list[tuple]:
     add("spells-wizard-level-q", "GET", "/api/spells?class=wizard&level=1&q=FIRE")
     add("spells-cantrips", "GET", "/api/spells?class=cleric&level=0&ruleset=2024&sources=phb")
     add("spells-unknown-class", "GET", "/api/spells?class=nope")
+    add("feat-tough", "GET", "/api/feats/tough-xphb?lang=bg")
+    add("feat-unknown", "GET", "/api/feats/no-such-feat")
     add("spells-level-empty", "GET", "/api/spells?class=wizard&level=")
     add("spells-level-bad", "GET", "/api/spells?class=wizard&level=x")
     add("spells-level-float", "GET", "/api/spells?class=wizard&level=1.5")

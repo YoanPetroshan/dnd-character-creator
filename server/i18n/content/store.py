@@ -17,6 +17,7 @@ KIND_FIELDS = {
     "spells": SPELL_FIELDS,
     "species": ("fluff", "traits"),  # fluff: paragraphs; traits: one list of desc paragraphs per trait, in served order
     "items": ("desc", "special"),
+    "feats": ("desc",),  # GET /api/feats/<id>: the flattened feat text, one paragraph per entry line
     "item-rules": ("desc",),  # item properties (`property:<index>:<PHB|XPHB>`) and weapon masteries (`mastery:<Name>`)
 }
 KINDS = tuple(KIND_FIELDS)
@@ -46,7 +47,8 @@ def rule_fields(record: dict) -> dict:
     return {"desc": list(record.get("desc") or [])}
 
 
-_FIELD_FUNCS = {"spells": spell_fields, "species": species_fields, "items": item_fields, "item-rules": rule_fields}
+_FIELD_FUNCS = {"spells": spell_fields, "species": species_fields, "items": item_fields, "item-rules": rule_fields,
+                "feats": rule_fields}
 
 
 def fields_for(kind: str, record: dict) -> dict:
@@ -142,3 +144,16 @@ def overlay_rule(key: str, english_desc: list, lang: str) -> list | None:
     else None (serve `english_desc`)."""
     entry = _fresh_entry("item-rules", key, {"desc": english_desc}, lang)
     return None if entry is None else list(entry.get("desc") or [])
+
+
+def overlay_feats(feat_id: str, payload: dict, lang: str) -> dict:
+    """`payload` (a feat-detail response body with `desc`) with the Bulgarian paragraphs when the overlay has a fresh entry
+    for the feat; always with `textLang`. Name and prerequisite stay English."""
+    out = dict(payload)
+    out["textLang"] = "en"
+    entry = _fresh_entry("feats", feat_id, {"desc": payload.get("desc") or []}, lang)
+    if entry is None:
+        return out
+    out["desc"] = list(entry.get("desc") or [])
+    out["textLang"] = "bg"
+    return out
