@@ -1262,16 +1262,32 @@
   "status": 200
  },
  "species-elf": {
-  "bodyLength": 5184,
-  "bodySha256": "80e230c2cfd46a200d5f33e861e81d6745a2540f41f21aa2310990a2cbd5222c",
+  "bodyLength": 5200,
+  "bodySha256": "debcd933dc9e7c63ab54e19ab4d447b76426bcc28d9d06f4ffad95f87b821a8f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "species-elf-bad-lang": {
+  "bodyLength": 40,
+  "bodySha256": "ee60dac6b21ae6a61d4968384661143ac2bd670750a0e658fadf7cd58c5c2746",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "species-elf-bg": {
+  "bodyLength": 5200,
+  "bodySha256": "debcd933dc9e7c63ab54e19ab4d447b76426bcc28d9d06f4ffad95f87b821a8f",
   "headers": {
    "Content-Type": "application/json"
   },
   "status": 200
  },
  "species-human": {
-  "bodyLength": 4923,
-  "bodySha256": "79fe7e3d0d39e8f9a81378358e916e8cef04fbe97c9112219c9ca003765c2f07",
+  "bodyLength": 4939,
+  "bodySha256": "ba30271e3f88e97745a1027a0ee8a2c6fcf57870fe1a1dabab8ca775458990e6",
   "headers": {
    "Content-Type": "application/json"
   },

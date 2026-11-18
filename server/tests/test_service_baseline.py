@@ -62,6 +62,19 @@ def send(client, method, url, body, ctype):
 SPA_FIXTURE = pathlib.Path(__file__).with_name("spa_dist")
 
 
+@pytest.fixture(autouse=True, scope="module")
+def _no_content_overlay(tmp_path_factory):
+    """The corpus pins the English-fallback answers: the committed Bulgarian overlay grows with every translation batch, so
+    it is swapped for an empty directory here (the overlay is tested in test_content_overlay.py)."""
+    from i18n.content import store
+    mp = pytest.MonkeyPatch()
+    mp.setattr(store, "I18N_DIR", tmp_path_factory.mktemp("no-overlay"))
+    store.load_overlay.cache_clear()
+    yield
+    mp.undo()
+    store.load_overlay.cache_clear()
+
+
 @pytest.fixture(scope="module")
 def client():
     app.config["TESTING"] = True

@@ -1,4 +1,6 @@
 import { apiFetch } from "./api/transport";
+import type { Lang } from "./copy";
+import { withLang } from "./logic/langQuery";
 import { MsgError, msg } from "./logic/messages";
 
 interface NamedRef {
@@ -32,10 +34,12 @@ export interface SpeciesDetail {
   language_options: { choose: number } | null;
   fluff: string[];
   traitDetails: { name: string; desc: string[] }[];
+  /** "bg" when `fluff` and the trait descriptions are the Bulgarian text, else "en" (names stay English). */
+  textLang?: "bg" | "en";
 }
 
-export async function fetchSpeciesDetail(id: string, signal?: AbortSignal): Promise<SpeciesDetail> {
-  const resp = await apiFetch(`/api/catalog/species/${encodeURIComponent(id)}`, { signal });
+export async function fetchSpeciesDetail(id: string, lang: Lang, signal?: AbortSignal): Promise<SpeciesDetail> {
+  const resp = await apiFetch(withLang(`/api/catalog/species/${encodeURIComponent(id)}`, lang), { signal });
   if (!resp.ok) throw new MsgError(msg("species.failed", { status: resp.status }));
   return (await resp.json()) as SpeciesDetail;
 }

@@ -402,3 +402,38 @@ def test_item_rule_records_and_cli(overlay_dir, tmp_path):
 def test_item_detail_without_official_data_still_answers():
     status, data = _item("longsword")
     assert status == 200 and data["properties"][0]["id"] == "versatile" and data["id"] == "longsword"
+
+
+def _species(query=None, sid="elf"):
+    status, _ctype, _headers, body = service.handle("GET", f"/api/catalog/species/{sid}", query)
+    return status, json.loads(body)
+
+
+def _write_species(overlay_dir, data):
+    (overlay_dir / "bg" / "species.json").write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+
+
+def test_species_route_serves_the_overlay_in_bg(overlay_dir):
+    _status, en = _species()
+    assert en["textLang"] == "en"
+    entry = {"hash": store.source_hash("species", store.species_fields(en)),
+             "fluff": ["БГ"] * len(en["fluff"]),
+             "traits": [{"desc": ["бг"] * len(t["desc"])} for t in en["traitDetails"]]}
+    _write_species(overlay_dir, {"elf": entry})
+    status, bg = _species("lang=bg")
+    assert status == 200 and bg["textLang"] == "bg"
+    assert bg["fluff"] == entry["fluff"]
+    assert [t["name"] for t in bg["traitDetails"]] == [t["name"] for t in en["traitDetails"]]
+    assert all(t["desc"][0] == "бг" for t in bg["traitDetails"])
+    assert _species("lang=en")[1] == en  # English ignores the overlay
+
+
+def test_species_route_stale_hash_falls_back(overlay_dir):
+    _write_species(overlay_dir, {"elf": {"hash": "bad", "fluff": ["x"], "traits": []}})
+    status, data = _species("lang=bg")
+    assert status == 200 and data["textLang"] == "en" and data["fluff"] != ["x"]
+
+
+def test_species_route_rejects_a_bad_lang():
+    assert _species("lang=xx")[0] == 400
+    assert _species("lang=xx", "nope")[0] == 400

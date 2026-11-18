@@ -100,6 +100,8 @@ def _build() -> list[tuple]:
     add("background-unknown", "GET", "/api/catalog/background/nope")
     add("species-human", "GET", "/api/catalog/species/human")
     add("species-elf", "GET", "/api/catalog/species/elf")
+    add("species-elf-bg", "GET", "/api/catalog/species/elf?lang=bg")
+    add("species-elf-bad-lang", "GET", "/api/catalog/species/elf?lang=fr")
     add("species-unknown", "GET", "/api/catalog/species/nope")
     # items
     add("items", "GET", "/api/items")

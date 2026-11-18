@@ -68,7 +68,7 @@ Query: `ruleset`, `sources`, `include=<subclassId>` (keeps the draft's current s
 
 ### `GET /api/catalog/background/<background_id>` and `GET /api/catalog/species/<species_id>`
 
-The record (species also with `subspecies`). 404 when unknown.
+The record (species also with `subspecies`, `fluff`, `traitDetails`). 404 when unknown. The species route takes `lang=bg|en` (a bad value is a 400): with `bg` the `fluff` paragraphs and each `traitDetails[i].desc` are the Bulgarian text from the content overlay when its hash matches the current English, else English; trait names stay English. The species body always carries `textLang` (`"bg"` when the Bulgarian text was applied, else `"en"`).
 
 ### `GET /api/items`
 

@@ -44,7 +44,7 @@ from engine.resolve import _source_allowed, _spell_visible, _subclass_visible, r
 from catalog.official.race_fluff import species_fluff, trait_details
 from export import to_yaml
 from export_labels import DEFAULT_LANG as EXPORT_DEFAULT_LANG, label as export_label
-from i18n.content.store import overlay_items, overlay_rule, overlay_spell
+from i18n.content.store import overlay_items, overlay_rule, overlay_species, overlay_spell
 from i18n.messages import localize, msg, parse_lang
 from markdown_export import to_markdown
 
@@ -378,13 +378,17 @@ def api_catalog_background(args, body, background_id: str):
 
 
 def api_catalog_species(args, body, species_id: str):
+    lang, bad_lang = _request_lang(args)
+    if bad_lang:
+        return bad_lang
     race = _catalog.races.get(species_id)
     if not race:
         return _error("not found", 404)
     subspecies = _catalog.subraces_of(species_id)
-    return _json({**race, "subspecies": subspecies,
-                  "fluff": species_fluff(race.get("name", ""), race.get("source", ""), [s.get("name", "") for s in subspecies]),
-                  "traitDetails": trait_details(race, _catalog.traits)})
+    return _json(overlay_species(species_id, {
+        **race, "subspecies": subspecies,
+        "fluff": species_fluff(race.get("name", ""), race.get("source", ""), [s.get("name", "") for s in subspecies]),
+        "traitDetails": trait_details(race, _catalog.traits)}, lang))
 
 
 def api_items(args, body, **_):

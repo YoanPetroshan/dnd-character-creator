@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { useT } from "../LanguageContext";
-import type { Copy } from "../copy";
+import { useLang, useT } from "../LanguageContext";
+import { cacheFor, cachePut, emptyCache, type LangCache } from "../logic/langCache";
+import type { Copy, Lang } from "../copy";
 import { renderMsg, toMsg, type Msg } from "../logic/messages";
 import { fetchSpeciesDetail, type SpeciesDetail } from "../useSpeciesDetail";
 
@@ -9,10 +10,15 @@ export type SpeciesDetailState =
   | { status: "error"; message: Msg }
   | { status: "ready"; species: SpeciesDetail };
 
-/** Lazily fetched species details keyed by species id: `loadDetail(id)` fetches once (a failed fetch may be retried). */
+/** Lazily fetched species texts keyed by species id and the app language: `loadDetail(id)` fetches once per language
+ *  (a failed fetch may be retried), and switching the language hides the other language's texts and refetches the
+ *  cards that were opened. */
 export function useSpeciesDetails() {
-  const [details, setDetails] = useState<Record<string, SpeciesDetailState>>({});
-  const requested = useRef(new Set<string>());
+  const { lang } = useLang();
+  const [cache, setCache] = useState<LangCache<SpeciesDetailState>>(() => emptyCache(lang));
+  const requested = useRef<{ lang: Lang; ids: Set<string> }>({ lang, ids: new Set() });
+  const current = useRef(lang);
+  current.current = lang;
   const alive = useRef(true);
   useEffect(() => {
     alive.current = true; // StrictMode runs mount, cleanup, mount
@@ -22,21 +28,37 @@ export function useSpeciesDetails() {
   }, []);
 
   function loadDetail(id: string) {
-    if (requested.current.has(id)) return;
-    requested.current.add(id);
-    setDetails((d) => ({ ...d, [id]: { status: "loading" } }));
-    fetchSpeciesDetail(id)
+    if (requested.current.lang !== lang) requested.current = { lang, ids: new Set() };
+    const ids = requested.current.ids;
+    if (ids.has(id)) return;
+    ids.add(id);
+    const put = (state: SpeciesDetailState) => setCache((c) => cachePut(c, lang, id, state, current.current));
+    put({ status: "loading" });
+    fetchSpeciesDetail(id, lang)
       .then((species) => {
-        if (alive.current) setDetails((d) => ({ ...d, [id]: { status: "ready", species } }));
+        if (alive.current) put({ status: "ready", species });
       })
       .catch((err: unknown) => {
         if (!alive.current) return;
-        requested.current.delete(id); // closing and reopening the row retries
-        setDetails((d) => ({ ...d, [id]: { status: "error", message: toMsg(err) } }));
+        ids.delete(id); // closing and reopening the row retries
+        put({ status: "error", message: toMsg(err) });
       });
   }
 
-  return { details, loadDetail };
+  const loadRef = useRef(loadDetail);
+  loadRef.current = loadDetail;
+  const opened = useRef(new Set<string>());
+  useEffect(() => {
+    [...opened.current].forEach((id) => loadRef.current(id));
+  }, [lang]);
+
+  return {
+    details: cacheFor(cache, lang),
+    loadDetail: (id: string) => {
+      opened.current.add(id);
+      loadDetail(id);
+    },
+  };
 }
 
 interface Fact {

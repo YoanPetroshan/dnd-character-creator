@@ -87,6 +87,10 @@ describe.skipIf(!packPresent)("worker transport on the real Pyodide engine", () 
     expect(sword.id).toBe("longsword");
     expect(sword.properties[0].id).toBe("versatile");
     expect((await t.fetch("/api/items/no-such-item")).status).toBe(404);
+    const elf = await (await t.fetch("/api/catalog/species/elf?lang=bg")).json();
+    expect(["bg", "en"]).toContain(elf.textLang);
+    expect(elf.traitDetails.length).toBeGreaterThan(0);
+    expect((await t.fetch("/api/catalog/species/elf?lang=xx")).status).toBe(400);
   });
 
   it("keeps the server's error shapes: 400 for a bad level, 404 for an unknown path", async () => {
