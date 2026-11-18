@@ -15,3 +15,10 @@ export function optionItemIds(choice: Choice, option: ChoiceOption): string[] {
   if (!isItemChoice(choice)) return [];
   return option.id.split("+").filter((part) => part !== "" && !NOT_AN_ITEM.test(part));
 }
+
+/** The catalog feat index behind a feat option ("feat:tough-xphb" -> "tough-xphb"), or null when the option is not a
+ *  feat pick. Sub-ids such as "feat:x:ability-bonus" belong to choices, not to options, and give null. */
+export function optionFeatId(option: ChoiceOption): string | null {
+  const m = /^feat:([^:]+)$/.exec(option.id);
+  return m ? m[1] : null;
+}

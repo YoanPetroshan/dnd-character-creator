@@ -4,7 +4,8 @@ import type { Copy } from "../copy";
 import { optionSource } from "../logic/sources";
 import type { Choice, ChoiceOption } from "../types";
 import { useDraftRuleset } from "../DraftContext";
-import { optionItemIds } from "../logic/optionItems";
+import { optionFeatId, optionItemIds } from "../logic/optionItems";
+import { FeatDetailBody, useFeatDetails } from "./FeatDetailBody";
 import { ItemDetailBody, useItemDetails } from "./ItemDetailBody";
 import { SpellDetailBody, useSpellDetails } from "./SpellDetailBody";
 
@@ -47,16 +48,21 @@ function useOptionPreview(choice: Choice) {
   const t = useT();
   const spells = useSpellDetails();
   const items = useItemDetails(useDraftRuleset());
+  const feats = useFeatDetails();
   const [open, setOpen] = useState<Set<string>>(new Set());
   const isOpen = (o: ChoiceOption) => open.has(o.id);
   const itemIds = (o: ChoiceOption) => optionItemIds(choice, o);
-  const hasEye = (o: ChoiceOption) => isSpellOption(o) || itemIds(o).length > 0;
+  const featId = (o: ChoiceOption) => (isSpellOption(o) || itemIds(o).length > 0 ? null : optionFeatId(o));
+  // the rules text the option carries itself (Fighting Style, invocations, ...): shown without a fetch
+  const ownText = (o: ChoiceOption) => (isSpellOption(o) || itemIds(o).length > 0 || featId(o) ? "" : (o.description ?? "").trim());
+  const hasEye = (o: ChoiceOption) => isSpellOption(o) || itemIds(o).length > 0 || featId(o) !== null || ownText(o) !== "";
   function toggle(o: ChoiceOption) {
     const next = new Set(open);
     if (next.has(o.id)) next.delete(o.id);
     else {
       next.add(o.id);
       if (isSpellOption(o)) spells.loadDetail(o.id);
+      else if (featId(o)) feats.loadDetail(featId(o)!);
       else itemIds(o).forEach(items.loadDetail);
     }
     setOpen(next);
@@ -66,7 +72,7 @@ function useOptionPreview(choice: Choice) {
       <button
         type="button"
         className="spell-eye"
-        aria-label={isSpellOption(o) ? t.choice.showSpell : t.choice.showItem}
+        aria-label={isSpellOption(o) ? t.choice.showSpell : itemIds(o).length > 0 ? t.choice.showItem : t.choice.showDetails(o.label)}
         aria-expanded={isOpen(o)}
         onClick={() => toggle(o)}
       />
@@ -77,8 +83,18 @@ function useOptionPreview(choice: Choice) {
       <div className="spell-eye__panel">
         {isSpellOption(o) ? (
           <SpellDetailBody state={spells.details[o.id]} />
-        ) : (
+        ) : itemIds(o).length > 0 ? (
           itemIds(o).map((id) => <ItemDetailBody key={id} state={items.detailOf(id)} />)
+        ) : featId(o) ? (
+          <FeatDetailBody state={feats.detailOf(featId(o)!)} />
+        ) : (
+          <div className="species-eye__body">
+            {ownText(o).split(/\n{2,}/).map((paragraph, i) => (
+              <p key={i} className="species-eye__lore">
+                {paragraph}
+              </p>
+            ))}
+          </div>
         )}
       </div>
     );
