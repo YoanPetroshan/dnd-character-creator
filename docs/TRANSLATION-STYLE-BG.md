@@ -694,3 +694,4 @@ Go through every record:
 - Armour categories: тежка/средна броня (Heavy/Medium Armor); „владеене на …“, plural „владеения (Proficiencies)“; „четиристенни зарове (d4s)“ is allowed.
 - The „Fey“ creature type is „фея (Fey)“ ONLY for the creature type; a fairy is English „Fairy“. Plain „edge/advantage“ in lore is „преднина“, never „предимство“ (Advantage stays English as a rules term).
 - A bracket's unit is one species entry (not one trait).
+- „Ти си <размер/същество>“ gives the reader a gender: write „Размерът ти е …“ / „Ти принадлежиш към …“. Item lists in traits keep item names English („1d4 Darts или Blowgun Needles“). Species names (additional): коболди, хобгоблини, голиати, тритони (ask owner: newt ambiguity), кентаври, троглодити stay Bulgarian; Shadar-kai, Shifter, Tabaxi, Tortle, Yuan-ti, Aasimar, Bugbear, Firbolg, Lizardfolk, Autognome, Plasmoid, Verdan, Kender stay English. Class names English („по пътя на Bard“).
