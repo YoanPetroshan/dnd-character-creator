@@ -127,8 +127,8 @@ def test_vf32_draconic_ancestry_and_breath_weapon_carry_their_english_terms():
     assert data["breathWeapon"]["bg"] == "Дъх (Breath Weapon)"
     assert {"Draconic Ancestry", "Breath Weapon"} <= BRACKET_TERMS
     m = MESSAGES["desc-dragon-colour"]
-    assert m["bg"] == ("Изберете дракона от таблицата за драконово потекло (Draconic Ancestry); той определя вида щети, зоната и "
-                       "спасителния хвърлей (Saving Throw) на дъха ви (Breath Weapon).")
+    assert m["bg"] == ("Избери дракона от таблицата за драконово потекло (Draconic Ancestry); той определя вида щети, зоната и "
+                       "спасителния хвърлей (Saving Throw) на дъха ти (Breath Weapon).")
     assert m["en"] == "Choose the dragon of your Draconic Ancestry; it sets the damage type, area and saving throw of your Breath Weapon."
     assert MESSAGES["label-dragon-colour"] == {"en": "Dragon Colour (Draconic Ancestry)", "bg": "Цвят на дракона"}
     assert bracket_problems(m["bg"]) == []

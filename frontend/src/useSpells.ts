@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "./api/transport";
+import type { Lang } from "./copy";
+import { withLang } from "./logic/langQuery";
 import { MsgError, msg, toMsg, type Msg } from "./logic/messages";
 
 export interface CatalogSpell {
@@ -26,10 +28,12 @@ export interface SpellDetail extends CatalogSpell {
   castingCondition: string | null;
   classes: { id: string; name: string }[];
   sourceName: string;
+  /** Which language the texts (desc, higherLevel, material, castingCondition) are in: "en" when no fresh translation exists. */
+  textLang?: "bg" | "en";
 }
 
-export async function fetchSpellDetail(id: string, signal?: AbortSignal): Promise<SpellDetail> {
-  const resp = await apiFetch(`/api/spells/${encodeURIComponent(id)}`, { signal });
+export async function fetchSpellDetail(id: string, lang: Lang, signal?: AbortSignal): Promise<SpellDetail> {
+  const resp = await apiFetch(withLang(`/api/spells/${encodeURIComponent(id)}`, lang), { signal });
   if (!resp.ok) throw new MsgError(msg("spell.failed", { status: resp.status }));
   return (await resp.json()) as SpellDetail;
 }

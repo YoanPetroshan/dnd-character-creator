@@ -44,6 +44,7 @@ from engine.resolve import _source_allowed, _spell_visible, _subclass_visible, r
 from catalog.official.race_fluff import species_fluff, trait_details
 from export import to_yaml
 from export_labels import DEFAULT_LANG as EXPORT_DEFAULT_LANG, label as export_label
+from i18n.content.store import localize_content, overlay_feats, overlay_items, overlay_rule, overlay_species, overlay_spell
 from i18n.messages import localize, msg, parse_lang
 from markdown_export import to_markdown
 
@@ -263,7 +264,7 @@ def api_resolve(args, body, **_):
     draft = _json_draft(body)
     if draft is None:
         return _error("draft must be a JSON object", 400)
-    return _json(localize(resolve(draft, _catalog), lang))
+    return _json(localize_content(localize(resolve(draft, _catalog), lang), lang))
 
 
 def _catalog_sources() -> list[dict]:
@@ -377,13 +378,17 @@ def api_catalog_background(args, body, background_id: str):
 
 
 def api_catalog_species(args, body, species_id: str):
+    lang, bad_lang = _request_lang(args)
+    if bad_lang:
+        return bad_lang
     race = _catalog.races.get(species_id)
     if not race:
         return _error("not found", 404)
     subspecies = _catalog.subraces_of(species_id)
-    return _json({**race, "subspecies": subspecies,
-                  "fluff": species_fluff(race.get("name", ""), race.get("source", ""), [s.get("name", "") for s in subspecies]),
-                  "traitDetails": trait_details(race, _catalog.traits)})
+    return _json(overlay_species(species_id, {
+        **race, "subspecies": subspecies,
+        "fluff": species_fluff(race.get("name", ""), race.get("source", ""), [s.get("name", "") for s in subspecies]),
+        "traitDetails": trait_details(race, _catalog.traits)}, lang))
 
 
 def api_items(args, body, **_):
@@ -467,12 +472,15 @@ def api_spells(args, body, **_):
 
 
 def api_spell_detail(args, body, spell_id: str):
+    lang, bad_lang = _request_lang(args)
+    if bad_lang:
+        return bad_lang
     sid = _catalog.resolve_spell_id(spell_id)
     if sid is None:
         return _error("not found", 404)
     spell = _catalog.spells[sid]
     source = spell.get("source", "SRD")
-    return _json({
+    return _json(overlay_spell(spell, {
         **_spell_items[sid],
         "material": spell.get("material"),
         "desc": spell.get("desc", []),
@@ -480,7 +488,91 @@ def api_spell_detail(args, body, spell_id: str):
         "castingCondition": spell.get("casting_condition"),
         "classes": [{"id": c["index"], "name": c["name"]} for c in spell.get("classes", [])],
         "sourceName": SOURCE_NAMES.get(source, source),
-    })
+    }, lang))
+
+
+def api_feat_detail(args, body, feat_id: str):
+    lang, bad_lang = _request_lang(args)
+    if bad_lang:
+        return bad_lang
+    feat = _catalog.feats.get(feat_id)
+    if not feat:
+        return _error("not found", 404)
+    from sheet_data import feat_prerequisite_text, flatten_entries  # lazy: sheet_data pulls the sheet stack
+    return _json(overlay_feats(feat_id, {
+        "id": feat["index"], "name": feat["name"], "prerequisite": feat_prerequisite_text(feat, _catalog.feats),
+        "desc": flatten_entries(feat.get("entries") or []),
+    }, lang))
+
+
+def _item_damage(damage: dict | None) -> dict | None:
+    if not damage:
+        return None
+    return {"dice": damage.get("damage_dice"), "type": (damage.get("damage_type") or {}).get("index")}
+
+
+def _item_armor(item: dict) -> dict | None:
+    ac = item.get("armor_class")
+    if not ac:
+        return None
+    return {"base": ac.get("base"), "dexBonus": bool(ac.get("dex_bonus")), "maxBonus": ac.get("max_bonus"),
+            "strMinimum": item.get("str_minimum") or 0, "stealthDisadvantage": bool(item.get("stealth_disadvantage"))}
+
+
+def api_item_detail(args, body, item_id: str):
+    """One item with everything the item eye shows. Property and mastery texts follow the ruleset (`2024` -> the 2024
+    texts, else the 2014 ones; the mastery is left out under `2014`). `textLang` is "bg" only when `lang=bg` and no
+    English prose is left in the response (the item's own text, each property text and the mastery text all came from
+    the overlay, or there was none); one missing or stale Bulgarian text makes it "en" while the translated pieces
+    are still served in Bulgarian. Item and property names stay English."""
+    lang, bad_lang = _request_lang(args)
+    if bad_lang:
+        return bad_lang
+    item = _catalog.items.get(item_id)
+    if item is None:
+        return _error("not found", 404)
+    ruleset = args.get("ruleset", "mixed")
+    book = "XPHB" if ruleset == "2024" else "PHB"
+    category = item.get("equipment_category", {}).get("index")
+    translated = lang == "bg"  # cleared as soon as one piece of English prose is served in English
+
+    def rule_text(key: str, english: list[str]) -> list[str]:
+        nonlocal translated
+        if not english:
+            return []
+        bg = overlay_rule(key, english, lang)
+        if bg is None:
+            translated = False
+            return list(english)
+        return bg
+
+    properties = [
+        {"id": p["index"], "name": p["name"],
+         "desc": rule_text(f"property:{p['index']}:{book}", _catalog.item_properties.get((p["index"], book), []))}
+        for p in item.get("properties") or []
+    ]
+    mastery_name = item.get("mastery")
+    mastery = None
+    if mastery_name and ruleset != "2014":
+        mastery = {"name": mastery_name,
+                   "desc": rule_text(f"mastery:{mastery_name}", _catalog.weapon_masteries.get(mastery_name, []))}
+    contents = []
+    for entry in item.get("contents") or []:
+        ref = entry.get("item") or {}
+        contents.append({"id": ref.get("index"), "name": ref.get("name"), "qty": entry.get("quantity", 1)})
+    payload = overlay_items(item, {
+        "id": item["index"], "name": item["name"], "category": category,
+        "source": item.get("source", "SRD"), "ruleset": item.get("ruleset", "2014"),
+        "cost": item.get("cost"), "weight": item.get("weight"),
+        "damage": _item_damage(item.get("damage")), "twoHandedDamage": _item_damage(item.get("two_handed_damage")),
+        "range": item.get("range"), "throwRange": item.get("throw_range"),
+        "properties": properties, "mastery": mastery, "armor": _item_armor(item), "contents": contents,
+        "desc": list(item.get("desc") or []), "special": list(item.get("special") or []),
+    }, lang)
+    if payload["textLang"] != "bg" and (payload["desc"] or payload["special"]):
+        translated = False
+    payload["textLang"] = "bg" if translated else "en"
+    return _json(payload)
 
 
 def _pending_export_problems(resolution: dict) -> list[dict]:
@@ -587,9 +679,9 @@ def api_export(args, body, fmt: str):
         out = renderer(resolution)
     elif fmt == "sheet":  # the edition of the feature texts is the draft's, the resolution does not carry it
         ruleset = draft.get("ruleset") if isinstance(draft.get("ruleset"), str) else None
-        out = renderer(localize(resolution, file_lang), file_lang, ruleset)
+        out = renderer(localize_content(localize(resolution, file_lang), file_lang), file_lang, ruleset)
     else:
-        out = renderer(localize(resolution, file_lang), file_lang)
+        out = renderer(localize_content(localize(resolution, file_lang), file_lang), file_lang)
     if isinstance(out, str):
         out = out.encode("utf-8")
     return 200, content_type, {"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"}, bytes(out)
@@ -609,8 +701,10 @@ ROUTES: tuple[tuple[str, tuple[str, ...], Callable[..., Response]], ...] = (
     ("/api/catalog/background/<background_id>", ("GET",), api_catalog_background),
     ("/api/catalog/species/<species_id>", ("GET",), api_catalog_species),
     ("/api/items", ("GET",), api_items),
+    ("/api/items/<item_id>", ("GET",), api_item_detail),
     ("/api/spells", ("GET",), api_spells),
     ("/api/spells/<spell_id>", ("GET",), api_spell_detail),
+    ("/api/feats/<feat_id>", ("GET",), api_feat_detail),
     ("/api/export/<fmt>", ("POST",), api_export),
 )
 

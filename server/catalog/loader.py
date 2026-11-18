@@ -99,6 +99,8 @@ class Catalog:
     class_2024_records: dict[str, dict] = field(default_factory=dict)
     class_2024_level_features: dict[str, dict[int, list[str]]] = field(default_factory=dict)
     weapon_masteries: dict[str, list[str]] = field(default_factory=dict)
+    # Item-property rules texts {(weapon-property index, "PHB" | "XPHB"): paragraphs} (empty without the official data).
+    item_properties: dict[tuple[str, str], list[str]] = field(default_factory=dict)
     # C9a: full merged class dicts with the XPHB proficiencies / skill and tool choices /
     # multiclass proficiencies; read by resolve() only under ruleset "2024".
     classes_2024: dict[str, dict] = field(default_factory=dict)
@@ -249,8 +251,8 @@ def _merge_official_items(catalog: Catalog) -> None:
     """Tags the SRD items and merges the mundane non-SRD weapons and armor of
     `items-base.json`. SRD records win a key clash."""
     from .official_source import (
-        attach_masteries, convert_item_masteries, convert_items, items_base_file, load_raw_base_items,
-        load_raw_item_masteries,
+        attach_masteries, convert_item_masteries, convert_item_properties, convert_items, items_base_file,
+        load_raw_base_items, load_raw_item_masteries, load_raw_item_properties,
     )
 
     for item in catalog.items.values():
@@ -261,6 +263,7 @@ def _merge_official_items(catalog: Catalog) -> None:
     for index, item in convert_items(raw_items, set(catalog.items)).items():
         catalog.items.setdefault(index, item)
     catalog.weapon_masteries = convert_item_masteries(load_raw_item_masteries(items_base_file()))
+    catalog.item_properties = convert_item_properties(load_raw_item_properties(items_base_file()))
     attach_masteries(catalog.items, raw_items, catalog.weapon_masteries)
 
 

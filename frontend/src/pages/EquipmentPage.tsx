@@ -6,6 +6,7 @@ import { useT } from "../LanguageContext";
 import { renderMsg } from "../logic/messages";
 import { useItems } from "../useItems";
 import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
+import { ItemDetailBody, useItemDetails } from "../components/ItemDetailBody";
 
 /** Values of the category filter; the labels are `t.equipmentPage.categories[value || "all"]`. */
 const CATEGORIES = ["", "weapon", "armor", "adventuring-gear", "tools", "mounts-and-vehicles"];
@@ -13,6 +14,37 @@ const CATEGORIES = ["", "weapon", "armor", "adventuring-gear", "tools", "mounts-
 /** RP8: the items of a 2024 equipment pack, one plain line ("Backpack, Oil ×2"). */
 function contentsText(contents: { name: string; qty: number }[]): string {
   return contents.map((c) => (c.qty !== 1 ? `${c.name} ×${c.qty}` : c.name)).join(", ");
+}
+
+/** The eye button of an item row and its panel. `rowKey` is the row (the same item can be in several lists at once). */
+function useItemEyes(ruleset: string, label: (name: string) => string) {
+  const { detailOf, loadDetail } = useItemDetails(ruleset);
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  function toggle(rowKey: string, itemId: string) {
+    const next = new Set(open);
+    if (next.has(rowKey)) next.delete(rowKey);
+    else {
+      next.add(rowKey);
+      loadDetail(itemId);
+    }
+    setOpen(next);
+  }
+  const button = (rowKey: string, itemId: string, name: string) => (
+    <button
+      type="button"
+      className="spell-eye item-eye"
+      aria-label={label(name)}
+      aria-expanded={open.has(rowKey)}
+      onClick={() => toggle(rowKey, itemId)}
+    />
+  );
+  const panel = (rowKey: string, itemId: string) =>
+    open.has(rowKey) && (
+      <div className="spell-eye__panel item-eye__panel">
+        <ItemDetailBody state={detailOf(itemId)} />
+      </div>
+    );
+  return { button, panel };
 }
 
 export function EquipmentPage() {
@@ -24,6 +56,7 @@ export function EquipmentPage() {
   const [category, setCategory] = useState("");
   const [query, setQuery] = useState("");
   const items = useItems(category, query, draft.ruleset, draft.sources);
+  const eyes = useItemEyes(draft.ruleset, ep.showItem);
 
   if (!resolution) return <div className="page">{error ? null : t.common.loading}</div>;
 
@@ -53,6 +86,8 @@ export function EquipmentPage() {
               <li key={`${g.itemId}-${i}`}>
                 {g.name} ×{g.qty}
                 {g.contents && g.contents.length > 0 && ` ${ep.contains(contentsText(g.contents))}`}
+                {eyes.button(`granted-${i}`, g.itemId, g.name)}
+                {eyes.panel(`granted-${i}`, g.itemId)}
               </li>
             ))}
           </ul>
@@ -68,6 +103,8 @@ export function EquipmentPage() {
                 {c.name}
                 {c.qty !== 1 ? ` ×${c.qty}` : ""}
                 {c.contents && c.contents.length > 0 && ` ${ep.contains(contentsText(c.contents))}`}
+                {eyes.button(`chosen-${i}`, c.itemId, c.name)}
+                {eyes.panel(`chosen-${i}`, c.itemId)}
               </li>
             ))}
           </ul>
@@ -176,9 +213,11 @@ export function EquipmentPage() {
         {items.items.map((item) => (
           <li key={item.id}>
             <span>{item.name}</span>
+            {eyes.button(`browse-${item.id}`, item.id, item.name)}
             <button type="button" aria-label={ep.addLabel(item.name)} onClick={() => dispatch({ type: "ADD_ITEM", itemId: item.id })}>
               {ep.add}
             </button>
+            {eyes.panel(`browse-${item.id}`, item.id)}
           </li>
         ))}
       </ul>
@@ -193,6 +232,7 @@ export function EquipmentPage() {
                 {entry.name} ×{entry.qty}
                 {entry.contents && entry.contents.length > 0 && ` ${ep.contains(contentsText(entry.contents))}`}
               </span>
+              {eyes.button(`added-${entry.itemId}`, entry.itemId, entry.name)}
               <label>
                 <input
                   type="checkbox"
@@ -204,6 +244,7 @@ export function EquipmentPage() {
               <button type="button" aria-label={ep.removeLabel(entry.name)} onClick={() => dispatch({ type: "REMOVE_ITEM", itemId: entry.itemId })}>
                 {t.common.remove}
               </button>
+              {eyes.panel(`added-${entry.itemId}`, entry.itemId)}
             </li>
           ))}
         </ul>

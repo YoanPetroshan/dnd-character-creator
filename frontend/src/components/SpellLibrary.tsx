@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useDraft } from "../DraftContext";
 import { useT } from "../LanguageContext";
+import { localizeSpellRow } from "../logic/spellRow";
 import { renderMsg } from "../logic/messages";
 import { useSpells, type CatalogSpell } from "../useSpells";
 import { SpellDetailBody, useSpellDetails } from "./SpellDetailBody";
@@ -60,7 +61,9 @@ export function SpellLibrary({ classId }: SpellLibraryProps) {
         </p>
       )}
       <ul className="spell-library-list">
-        {visible.map((spell) => (
+        {visible.map((spell) => {
+          const row = localizeSpellRow(t.spellRow, spell);
+          return (
           <li key={spell.id} className="spell-library-card">
             <details
               onToggle={(e) => {
@@ -73,11 +76,11 @@ export function SpellLibrary({ classId }: SpellLibraryProps) {
                   <span className="spell-library-card__level">{spell.level === 0 ? sl.cantrip : sl.levelBadge(spell.level)}</span>
                 </span>
                 <span className="spell-library-card__meta">
-                  {spell.school && <span>{spell.school}</span>}
-                  {spell.castingTime && <span>{spell.castingTime}</span>}
-                  {spell.range && <span>{spell.range}</span>}
+                  {row.school && <span>{row.school}</span>}
+                  {row.castingTime && <span>{row.castingTime}</span>}
+                  {row.range && <span>{row.range}</span>}
                   {spell.components.length > 0 && <span>{spell.components.join(", ")}</span>}
-                  {spell.duration && <span>{spell.duration}</span>}
+                  {row.duration && <span>{row.duration}</span>}
                   {spell.concentration && <span>{sl.concentration}</span>}
                   {spell.ritual && <span>{sl.ritual}</span>}
                 </span>
@@ -85,7 +88,8 @@ export function SpellLibrary({ classId }: SpellLibraryProps) {
               <SpellDetailBody state={details[spell.id]} />
             </details>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </>
   );

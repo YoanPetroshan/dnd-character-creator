@@ -68,11 +68,21 @@ Query: `ruleset`, `sources`, `include=<subclassId>` (keeps the draft's current s
 
 ### `GET /api/catalog/background/<background_id>` and `GET /api/catalog/species/<species_id>`
 
-The record (species also with `subspecies`). 404 when unknown.
+The record (species also with `subspecies`, `fluff`, `traitDetails`). 404 when unknown. The species route takes `lang=bg|en` (a bad value is a 400): with `bg` the `fluff` paragraphs and each `traitDetails[i].desc` are the Bulgarian text from the content overlay when its hash matches the current English, else English; trait names stay English. The species body always carries `textLang` (`"bg"` when the Bulgarian text was applied, else `"en"`).
 
 ### `GET /api/items`
 
 Query: `category`, `q` (name substring, case-insensitive), `ruleset`, `sources`. Returns `{"items": [{id, name, category, source, ruleset}]}`.
+
+### `GET /api/items/<item_id>`
+
+One item with everything the item eye shows: `{id, name, category, source, ruleset, cost: {quantity, unit}, weight, damage: {dice, type} | null, twoHandedDamage: {dice, type} | null, range: {normal, long?} | null, throwRange | null, properties: [{id, name, desc: [text]}], mastery: {name, desc: [text]} | null, armor: {base, dexBonus, maxBonus | null, strMinimum, stealthDisadvantage} | null, contents: [{id, name, qty}], desc: [text], special: [text], textLang}`. `armor` is set for armor and shields, `contents` for equipment packs, `desc` / `special` hold the SRD text of the item (Net and Lance have `special`). 404 when the id is unknown.
+
+Query: `ruleset` (`2024`: the property texts of the 2024 Player's Handbook; anything else: those of the 2014 one; the `mastery` is left out under `2014`, otherwise it is the 2024 weapon mastery of the weapon). `properties[].desc` is `[]` for `special` and `monk` (the books give them no text) and when the official data is not installed (SRD-only mode: the property and mastery texts are then empty). `lang` (`bg` or `en`, missing is `en`; anything else is a 400). With `lang=bg` each text (the item's own `desc` / `special`, every property text, the mastery text) comes from the Bulgarian overlay (kind `items` for the item text, kind `item-rules` for the property and mastery texts) when it has an entry whose `hash` still matches; every other text stays English. Item, property and mastery names stay English. `textLang` is `bg` only when `lang=bg` and no English prose is left in the response (every non-empty text came from the overlay, or there is none); one missing or stale text makes it `en`, and the pieces that did come from the overlay are still Bulgarian. Overlay format and workflow: `server/data/i18n/README.md`.
+
+### `GET /api/feats/<feat_id>`
+
+One feat as the choice pickers' eye shows it: `{id, name, prerequisite, desc: [text], textLang}`. `id` is the catalog feat index, the `<idx>` of the option ids `feat:<idx>`. `prerequisite` is the feat's prerequisite as readable English (`"Level 4, Strength 13; or Level 4, Dexterity 13"`, alternatives joined by `; or `), `""` when it has none. `desc` is the feat text flattened to paragraphs. 404 when the id is unknown. Query: `lang` (`bg` or `en`, missing is `en`; anything else is a 400). With `lang=bg` `desc` comes from the Bulgarian overlay (kind `feats`) when it has an entry whose `hash` still matches the English paragraphs; otherwise English. Name and prerequisite stay English. `textLang` is `bg` or `en`. Overlay format and workflow: `server/data/i18n/README.md`.
 
 ### `GET /api/spells`
 
@@ -81,6 +91,8 @@ Query: `class` (class id; no value or an unknown class gives an empty list), `le
 ### `GET /api/spells/<spell_id>`
 
 One spell with `desc`, `higherLevel`, `material`, `castingCondition`, `classes`, `sourceName`. 404 when unknown.
+
+Query: `lang` (`bg` or `en`, missing is `en`; anything else is a 400). With `lang=bg` the long texts (`desc`, `higherLevel`, `material`, `castingCondition`) come from the Bulgarian overlay `server/data/i18n/bg/spells.json` when it has an entry whose `hash` still matches the English text; otherwise the English text is served. `textLang` (`bg` or `en`) says which language the texts are in. The list route `/api/spells` does not take `lang`. Overlay format and workflow: `server/data/i18n/README.md`.
 
 ### `POST /api/export/sheet` (the fillable character sheet)
 

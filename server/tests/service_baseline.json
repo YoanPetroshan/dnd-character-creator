@@ -297,8 +297,8 @@
   "status": 404
  },
  "export-markdown": {
-  "bodyLength": 2468,
-  "bodySha256": "d44f03e7c4f30601bdbea365b6b524e3a3dbc8cd055df30d3f7d1db485dd5e69",
+  "bodyLength": 2445,
+  "bodySha256": "71d3f96e845ac96a0f8af1049a90e4b42353d540a9966ff5a815ce27db8622ad",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''Torvin%20Bracewell.md",
    "Content-Type": "text/markdown; charset=utf-8"
@@ -354,8 +354,8 @@
   "status": 400
  },
  "export-markdown-lang-bg": {
-  "bodyLength": 2468,
-  "bodySha256": "d44f03e7c4f30601bdbea365b6b524e3a3dbc8cd055df30d3f7d1db485dd5e69",
+  "bodyLength": 2445,
+  "bodySha256": "71d3f96e845ac96a0f8af1049a90e4b42353d540a9966ff5a815ce27db8622ad",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''Torvin%20Bracewell.md",
    "Content-Type": "text/markdown; charset=utf-8"
@@ -372,8 +372,8 @@
   "status": 200
  },
  "export-markdown-name-5000-chars": {
-  "bodyLength": 7452,
-  "bodySha256": "1ec4198ef2de134f0445512a9612021a1ada19b1115b781ca56d2177ee87bd15",
+  "bodyLength": 7429,
+  "bodySha256": "ef4b950773cd3162fe75a04289f75985aaec0f506ef21cfbd2a16a6cdf77d091",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN.md",
    "Content-Type": "text/markdown; charset=utf-8"
@@ -381,8 +381,8 @@
   "status": 200
  },
  "export-markdown-name-cyrillic": {
-  "bodyLength": 2469,
-  "bodySha256": "e1db6e633244514fc27294ddd793821ed341b534d8aec4f722d31d13ff27ba72",
+  "bodyLength": 2446,
+  "bodySha256": "0d5022e22bf5290bf68f7b907505a6878ea917e54815f74bccdf939f72741752",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''%D0%90%D0%BD%D0%B0_%D0%91%D0%BE%D1%80%D0%B8%D1%81.md",
    "Content-Type": "text/markdown; charset=utf-8"
@@ -390,8 +390,8 @@
   "status": 200
  },
  "export-markdown-name-empty-string": {
-  "bodyLength": 2481,
-  "bodySha256": "e87f8352be6350ee1c61165a56dfcd6b2f5bee4367c82fb41f685dcb69c31ddb",
+  "bodyLength": 2458,
+  "bodySha256": "17b33fe8a9ab909ec0a0c951ceb6e5339921eb6df5e57f0af3823bd3241cd9c4",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''%D0%B3%D0%B5%D1%80%D0%BE%D0%B9.md",
    "Content-Type": "text/markdown; charset=utf-8"
@@ -399,8 +399,8 @@
   "status": 200
  },
  "export-markdown-name-lone-surrogate": {
-  "bodyLength": 2455,
-  "bodySha256": "7a10b2a239f816daae09ca14ea497d4932a1587104fec126e7e6a69c8cc145d0",
+  "bodyLength": 2432,
+  "bodySha256": "54bd1e1cc41d22d7af894d491b0cd1440284958690b87d0dca7e17d48fe9b6ba",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''%EF%BF%BD.md",
    "Content-Type": "text/markdown; charset=utf-8"
@@ -416,8 +416,8 @@
   "status": 400
  },
  "export-markdown-name-special": {
-  "bodyLength": 2470,
-  "bodySha256": "578780d595e22e3b7715828f9455a1add4b143d5773f79e77f7f26b784bb0c6c",
+  "bodyLength": 2447,
+  "bodySha256": "6a4fca4f221575739d85e3e940e722e2fd11fb256eff801a7ef52b1536a550ae",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''A_B_C_D_E__F_G_H_I.md",
    "Content-Type": "text/markdown; charset=utf-8"
@@ -425,8 +425,8 @@
   "status": 200
  },
  "export-markdown-nameless": {
-  "bodyLength": 2481,
-  "bodySha256": "e87f8352be6350ee1c61165a56dfcd6b2f5bee4367c82fb41f685dcb69c31ddb",
+  "bodyLength": 2458,
+  "bodySha256": "17b33fe8a9ab909ec0a0c951ceb6e5339921eb6df5e57f0af3823bd3241cd9c4",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''character.md",
    "Content-Type": "text/markdown; charset=utf-8"
@@ -434,8 +434,8 @@
   "status": 200
  },
  "export-markdown-nameless-bg": {
-  "bodyLength": 2481,
-  "bodySha256": "e87f8352be6350ee1c61165a56dfcd6b2f5bee4367c82fb41f685dcb69c31ddb",
+  "bodyLength": 2458,
+  "bodySha256": "17b33fe8a9ab909ec0a0c951ceb6e5339921eb6df5e57f0af3823bd3241cd9c4",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''%D0%B3%D0%B5%D1%80%D0%BE%D0%B9.md",
    "Content-Type": "text/markdown; charset=utf-8"
@@ -460,8 +460,8 @@
   "status": 400
  },
  "export-name-unicode-md-bg": {
-  "bodyLength": 2461,
-  "bodySha256": "cdc6af306f45a2c93fbfcb4ef8aa26c1dbf60850d881a8e86c5ea4d3f28c856f",
+  "bodyLength": 2438,
+  "bodySha256": "9c2dce2776243878c4b91171a7500f1291305809927260028d2c300ae8a32c3b",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''%D0%96%C3%A9%20%F0%9F%90%89.md",
    "Content-Type": "text/markdown; charset=utf-8"
@@ -469,8 +469,8 @@
   "status": 200
  },
  "export-pdf": {
-  "bodyLength": 32348,
-  "bodySha256": "a45c6526ca2778814d033f23b61b23809e0cb8fd49902a6c9ac0f1fb26985e3e",
+  "bodyLength": 32334,
+  "bodySha256": "837762df787e72b21ba32b50ac25530349809fb3c1d3c2e4b11547b4ff190a72",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''Torvin%20Bracewell.pdf",
    "Content-Type": "application/pdf"
@@ -526,8 +526,8 @@
   "status": 400
  },
  "export-pdf-lang-bg": {
-  "bodyLength": 32348,
-  "bodySha256": "a45c6526ca2778814d033f23b61b23809e0cb8fd49902a6c9ac0f1fb26985e3e",
+  "bodyLength": 32334,
+  "bodySha256": "837762df787e72b21ba32b50ac25530349809fb3c1d3c2e4b11547b4ff190a72",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''Torvin%20Bracewell.pdf",
    "Content-Type": "application/pdf"
@@ -544,8 +544,8 @@
   "status": 200
  },
  "export-pdf-name-5000-chars": {
-  "bodyLength": 35534,
-  "bodySha256": "1d2f68a491af4743ce265127ca48d9e75ce26e581852eb97007804db52d39dc7",
+  "bodyLength": 35521,
+  "bodySha256": "405ee44402922609782b623b0d3d8b38b596ca3ab61523550cba6b7ee1c35c80",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN.pdf",
    "Content-Type": "application/pdf"
@@ -553,8 +553,8 @@
   "status": 200
  },
  "export-pdf-name-cyrillic": {
-  "bodyLength": 32394,
-  "bodySha256": "fc54ae0838703b2e52faa973ada876721a053d8ba9ec70d65d00d71d2813cd0b",
+  "bodyLength": 32381,
+  "bodySha256": "60612140edfcd0d0eb979571f603a079aeae9233ba2b4ae34c0e551b141083cd",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''%D0%90%D0%BD%D0%B0_%D0%91%D0%BE%D1%80%D0%B8%D1%81.pdf",
    "Content-Type": "application/pdf"
@@ -562,8 +562,8 @@
   "status": 200
  },
  "export-pdf-name-empty-string": {
-  "bodyLength": 32326,
-  "bodySha256": "2b0408d7afff8cde0df393f7975cb7320d68d5df7419fa1c3275608db42d3e86",
+  "bodyLength": 32315,
+  "bodySha256": "7f48ccdbe30470303c3ca8f796a00f0a423dd5db88076a5273b0d7ac1df33132",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''%D0%B3%D0%B5%D1%80%D0%BE%D0%B9.pdf",
    "Content-Type": "application/pdf"
@@ -571,8 +571,8 @@
   "status": 200
  },
  "export-pdf-name-lone-surrogate": {
-  "bodyLength": 32468,
-  "bodySha256": "edf2d261401b062ec707f1974ddc3b4aad7218f2b6d54dd923f5a96c37e7785e",
+  "bodyLength": 32457,
+  "bodySha256": "09bf741f806a693897c557d14c842a54144e075ce364b989f9dc43505fef3832",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''%EF%BF%BD.pdf",
    "Content-Type": "application/pdf"
@@ -588,8 +588,8 @@
   "status": 400
  },
  "export-pdf-name-special": {
-  "bodyLength": 33536,
-  "bodySha256": "96e91d8bef1be0396a1fd5c8315c46c5dd1749f55bdf653c942509bac69ceb48",
+  "bodyLength": 33522,
+  "bodySha256": "4eb230e57d26c4fba5865affedf80eeecc991e92e1d407a03e6c536cdfa96194",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''A_B_C_D_E__F_G_H_I.pdf",
    "Content-Type": "application/pdf"
@@ -597,8 +597,8 @@
   "status": 200
  },
  "export-pdf-nameless": {
-  "bodyLength": 32326,
-  "bodySha256": "2b0408d7afff8cde0df393f7975cb7320d68d5df7419fa1c3275608db42d3e86",
+  "bodyLength": 32315,
+  "bodySha256": "7f48ccdbe30470303c3ca8f796a00f0a423dd5db88076a5273b0d7ac1df33132",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''character.pdf",
    "Content-Type": "application/pdf"
@@ -606,8 +606,8 @@
   "status": 200
  },
  "export-pdf-nameless-bg": {
-  "bodyLength": 32326,
-  "bodySha256": "2b0408d7afff8cde0df393f7975cb7320d68d5df7419fa1c3275608db42d3e86",
+  "bodyLength": 32315,
+  "bodySha256": "7f48ccdbe30470303c3ca8f796a00f0a423dd5db88076a5273b0d7ac1df33132",
   "headers": {
    "Content-Disposition": "attachment; filename*=UTF-8''%D0%B3%D0%B5%D1%80%D0%BE%D0%B9.pdf",
    "Content-Type": "application/pdf"
@@ -957,6 +957,22 @@
   },
   "status": 400
  },
+ "feat-tough": {
+  "bodyLength": 299,
+  "bodySha256": "4801a5d699c71d1baea651de2f7443bdf440bfd3b6e1d823e96027e24804b83a",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "feat-unknown": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
+ },
  "health": {
   "bodyLength": 149,
   "bodySha256": "2793992538f4dfe54c68d52b42acaef44fb6474bd4b98d74b35e1d2050334ed5",
@@ -972,6 +988,30 @@
    "Content-Type": "application/json"
   },
   "status": 200
+ },
+ "item-backpack-bg": {
+  "bodyLength": 308,
+  "bodySha256": "41b812ea1404a6382ee63373c46b56e4d663add7d4244578bb421455466f2e61",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "item-longsword": {
+  "bodyLength": 748,
+  "bodySha256": "55c40b3bb57dd0b251c608f3203be838523e8cd59e45d618c72869cdb1fd41ab",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "item-unknown": {
+  "bodyLength": 22,
+  "bodySha256": "b52893b7fcb4d0203d423e9572b847dbb93a1b9a58f76f2c4075b99d9661a50f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 404
  },
  "items": {
   "bodyLength": 24521,
@@ -1126,16 +1166,16 @@
   "status": 200
  },
  "resolve-exportable": {
-  "bodyLength": 9013,
-  "bodySha256": "1f6180475340e0366ce336424bd273b61d494fbe0e4a2f6b7e0b19da10d26748",
+  "bodyLength": 9950,
+  "bodySha256": "ea690e16de569e2c17d15dfc130465fb5ceae30af08d1ca3f22dea1cc9e6417f",
   "headers": {
    "Content-Type": "application/json"
   },
   "status": 200
  },
  "resolve-fighter": {
-  "bodyLength": 8214,
-  "bodySha256": "c8b47ca2d09d7b14fed84c6670acb8a0cdf7f5034921cdc126cdb1d43b7d1a21",
+  "bodyLength": 9151,
+  "bodySha256": "f17dfd5d046858e74b1a23fccfe960a6caa235b65df0d51c0ded57347fa53202",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -1158,8 +1198,8 @@
   "status": 400
  },
  "resolve-json-charset-ct": {
-  "bodyLength": 8214,
-  "bodySha256": "c8b47ca2d09d7b14fed84c6670acb8a0cdf7f5034921cdc126cdb1d43b7d1a21",
+  "bodyLength": 9151,
+  "bodySha256": "f17dfd5d046858e74b1a23fccfe960a6caa235b65df0d51c0ded57347fa53202",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -1174,8 +1214,8 @@
   "status": 200
  },
  "resolve-lang-bg": {
-  "bodyLength": 9228,
-  "bodySha256": "c9fcd26e462668ee1102c368be4c14b6a6b09337862229aa0bffd945656cd659",
+  "bodyLength": 10153,
+  "bodySha256": "60faa8535592416d9d2bd432b9e05347eafab5f55a739702a5352a03fca0c07b",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -1190,16 +1230,16 @@
   "status": 200
  },
  "resolve-lang-en": {
-  "bodyLength": 8214,
-  "bodySha256": "c8b47ca2d09d7b14fed84c6670acb8a0cdf7f5034921cdc126cdb1d43b7d1a21",
+  "bodyLength": 9151,
+  "bodySha256": "f17dfd5d046858e74b1a23fccfe960a6caa235b65df0d51c0ded57347fa53202",
   "headers": {
    "Content-Type": "application/json"
   },
   "status": 200
  },
  "resolve-lang-twice-first-wins": {
-  "bodyLength": 9228,
-  "bodySha256": "c9fcd26e462668ee1102c368be4c14b6a6b09337862229aa0bffd945656cd659",
+  "bodyLength": 10153,
+  "bodySha256": "60faa8535592416d9d2bd432b9e05347eafab5f55a739702a5352a03fca0c07b",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -1214,8 +1254,8 @@
   "status": 200
  },
  "resolve-nonascii-name": {
-  "bodyLength": 8236,
-  "bodySha256": "34b9eec1490edf0b5ea100371129365ee55c3111c2a6c44fbb02cd951d89fde5",
+  "bodyLength": 9173,
+  "bodySha256": "a8a7e0bbe7b57c0a581976817f297776bd865f8845c118d61ad31c848f08fdcf",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -1230,24 +1270,40 @@
   "status": 200
  },
  "resolve-vendor-json-ct": {
-  "bodyLength": 8214,
-  "bodySha256": "c8b47ca2d09d7b14fed84c6670acb8a0cdf7f5034921cdc126cdb1d43b7d1a21",
+  "bodyLength": 9151,
+  "bodySha256": "f17dfd5d046858e74b1a23fccfe960a6caa235b65df0d51c0ded57347fa53202",
   "headers": {
    "Content-Type": "application/json"
   },
   "status": 200
  },
  "species-elf": {
-  "bodyLength": 5184,
-  "bodySha256": "80e230c2cfd46a200d5f33e861e81d6745a2540f41f21aa2310990a2cbd5222c",
+  "bodyLength": 5200,
+  "bodySha256": "debcd933dc9e7c63ab54e19ab4d447b76426bcc28d9d06f4ffad95f87b821a8f",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "species-elf-bad-lang": {
+  "bodyLength": 40,
+  "bodySha256": "ee60dac6b21ae6a61d4968384661143ac2bd670750a0e658fadf7cd58c5c2746",
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 400
+ },
+ "species-elf-bg": {
+  "bodyLength": 5200,
+  "bodySha256": "debcd933dc9e7c63ab54e19ab4d447b76426bcc28d9d06f4ffad95f87b821a8f",
   "headers": {
    "Content-Type": "application/json"
   },
   "status": 200
  },
  "species-human": {
-  "bodyLength": 4923,
-  "bodySha256": "79fe7e3d0d39e8f9a81378358e916e8cef04fbe97c9112219c9ca003765c2f07",
+  "bodyLength": 4939,
+  "bodySha256": "ba30271e3f88e97745a1027a0ee8a2c6fcf57870fe1a1dabab8ca775458990e6",
   "headers": {
    "Content-Type": "application/json"
   },
@@ -1270,16 +1326,16 @@
   "status": 404
  },
  "spell-cantrip": {
-  "bodyLength": 786,
-  "bodySha256": "4d65b7be536cd3196e860894c9f7e073ccbf0fd3bd65afd6db2f5260417be506",
+  "bodyLength": 802,
+  "bodySha256": "cbfb6022b9389bd9c19cc80b7351c5d5ef7532193fbdb4e66fc4e7a4ebd3b9a1",
   "headers": {
    "Content-Type": "application/json"
   },
   "status": 200
  },
  "spell-fireball": {
-  "bodyLength": 1014,
-  "bodySha256": "7e63f9028f0fffd4c87484d57089705df7ceadfb2adfee0638c881b8337d5b8e",
+  "bodyLength": 1030,
+  "bodySha256": "6e5641a6368e16165e07f572ab6c4710f8a0a636fe94a2701225197597eeae1b",
   "headers": {
    "Content-Type": "application/json"
   },

@@ -76,7 +76,7 @@ def test_no_old_wording_is_left():
 
 def test_the_checks_are_sensitive(monkeypatch):
     """A text with a noun and no bracket is reported, a bracket makes it pass, a forbidden word is reported."""
-    corpus = [("msg", "x", "Изберете талант."), ("msg", "y", "Изберете талант (Feat)."), ("msg", "z", "Устойчивост на съпротива")]
+    corpus = [("msg", "x", "Избери талант."), ("msg", "y", "Избери талант (Feat)."), ("msg", "z", "Устойчивост на съпротива")]
     gaps = tt.coverage_gaps(corpus)
     assert ("Feat / Feats", "msg:x", "талант") in gaps and not [g for g in gaps if g[1] == "msg:y"]
     assert any(h[1] == "msg:z" for h in tt.forbidden_hits(corpus))

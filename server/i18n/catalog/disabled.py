@@ -15,7 +15,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     "disabled-already-known": {"en": "already known", "bg": "вече се знае"},
     "disabled-already-proficient": {"en": "already proficient", "bg": "вече се владее"},
     "disabled-already-prepared": {"en": "already prepared", "bg": "вече подготвено"},
-    "disabled-in-spellbook": {"en": "already in your spellbook", "bg": "вече е във вашата книга със заклинания"},
+    "disabled-in-spellbook": {"en": "already in your spellbook", "bg": "вече е в твоята книга със заклинания"},
     "disabled-always-prepared": {"en": "always prepared ({source})", "bg": "винаги подготвено ({source})"},
     "disabled-chosen-as": {"en": "chosen as {label}", "bg": "избрано като {label}"},
     "disabled-already-chosen-for": {"en": "already chosen for {name}", "bg": "вече избрано за {name}"},
@@ -59,8 +59,8 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "requires a Warlock cantrip that deals damage",
         "bg": "изисква трик (Cantrip) на Warlock, който нанася щети",
     },
-    "disabled-take-first": {"en": "take {name} first", "bg": "първо вземете {name}"},
-    "disabled-take-first-n": {"en": "take {name} ({n}) first", "bg": "първо вземете {name} ({n})"},
+    "disabled-take-first": {"en": "take {name} first", "bg": "първо вземи {name}"},
+    "disabled-take-first-n": {"en": "take {name} ({n}) first", "bg": "първо вземи {name} ({n})"},
     "disabled-needs-another-cantrip": {"en": "needs another eligible cantrip", "bg": "изисква още един подходящ трик (Cantrip)"},
     "disabled-needs-cantrip": {"en": "needs an eligible cantrip", "bg": "изисква подходящ трик (Cantrip)"},
     # --- Eldritch Spear / Agonizing / Repelling Blast target cantrips -------------------------------------------------------
@@ -83,7 +83,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     "prereq-spellcasting": {"en": "the Spellcasting feature", "bg": "способността (Feature) Spellcasting"},
     "prereq-cast-spell": {
         "en": "the ability to cast at least one spell",
-        "bg": "способността да изричате поне едно заклинание",
+        "bg": "способността да изричаш поне едно заклинание",
     },
     "prereq-race": {"en": "a {name} character", "bg": "герой {name}"},
     "prereq-dragonmark": {"en": "a Dragonmark feat", "bg": "талант (Feat) Dragonmark"},

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { localizeSpellRow } from "../../logic/spellRow";
 import { useDraft } from "../../DraftContext";
 import { useT } from "../../LanguageContext";
 import { formatModifier } from "../../logic/abilities";
@@ -89,6 +90,7 @@ function SpellRows({ caster, catalog }: { caster: ReturnType<typeof mergeSpellRo
             <tbody>
               {group.spells.map((s) => {
                 const info = catalog.get(s.id);
+                const row = info ? localizeSpellRow(t.spellRow, info) : null;
                 const notes = [
                   ...(info?.concentration ? [c.concentration] : []),
                   ...(info?.ritual ? [c.ritual] : []),
@@ -97,10 +99,10 @@ function SpellRows({ caster, catalog }: { caster: ReturnType<typeof mergeSpellRo
                 return (
                   <tr key={s.id} data-spell={s.id}>
                     <th scope="row">{s.name}</th>
-                    <td>{info?.castingTime ?? t.common.none}</td>
-                    <td>{info?.range ?? t.common.none}</td>
+                    <td>{row?.castingTime ?? t.common.none}</td>
+                    <td>{row?.range ?? t.common.none}</td>
                     <td>{info && info.components.length > 0 ? info.components.join(", ") : t.common.none}</td>
-                    <td>{info?.duration ?? t.common.none}</td>
+                    <td>{row?.duration ?? t.common.none}</td>
                     <td>{notes.length > 0 ? notes.join(", ") : t.common.none}</td>
                   </tr>
                 );

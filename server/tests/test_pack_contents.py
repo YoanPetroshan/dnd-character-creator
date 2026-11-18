@@ -56,6 +56,11 @@ def test_the_developer_only_i18n_tools_are_not_in_the_pack():
         assert f"server/i18n/{tool}.py" not in PACK, tool
 
 
+def test_the_content_overlay_tool_is_not_in_the_pack():
+    assert "server/i18n/content/tool.py" not in PACK and "server/i18n/content/spells.py" not in PACK
+    assert "server/i18n/content/store.py" in PACK
+
+
 def test_the_data_bundle_builder_is_not_in_the_pack():
     assert "server/catalog/official/bundle.py" not in PACK
 

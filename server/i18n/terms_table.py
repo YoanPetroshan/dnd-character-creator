@@ -116,14 +116,14 @@ TERMS: tuple[Term, ...] = (
          "'всички видове щети освен психични' and 'типове щети' in the resource lines (damage as a category is plural).",
          (), r"към щета|на щети|видове щета|типове щета"),
     Term("Proficiency / proficient", None,
-         (("владеене", r"владеене"), ("владее / се владее", r"владее|владеят|владеете|се владее"),
+         (("владеене", r"владеене"), ("владее / се владее", r"владее|владеят|владееш|се владее"),
           ("Умение (also 'skill')", r"умени[ея]")),
          ("Владеене", "Опитност", "Proficiency (keep English)"),
          "Keep Владеене / владее.",
          "Consistent for the noun and verb. The risk is 'Умение', which is both the glossary word for Skills and part of "
          "'Бонус за умение' (Proficiency Bonus); see the next row.",
          "DONE (wording kept): Владеене (Proficiency) / Владеене на ... (Skill Proficiencies ...) as noun, heading, label and "
-         "column title; the verb 'владее / се владее / владеете' has no brackets.",
+         "column title; the verb 'владее / се владее / владееш' has no brackets.",
          ((r"владеене", r"proficienc"),), None),
     Term("Proficiency Bonus", "proficiencyBonus",
          (("Бонус за умение (old)", r"бонус за умение"), ("Бонус за владеене", r"бонус за владеене")),
@@ -150,13 +150,13 @@ TERMS: tuple[Term, ...] = (
          "label-expertise); sheet / export: експертиза (Expertise), tag '(експертиза, Expertise)'.",
          ((r"експертиза", r"expertise"),), None),
     Term("Cast (a spell)", None,
-         (("изричам / изречете", r"изрич|изреч"),),
+         (("изричам / изречеш", r"изрич|изреч"),),
          ("изричам заклинание", "прилагам заклинание", "cast (keep English)"),
          "изричам.",
          "Only four messages (descriptions of invocation, arcanum, wizard picks, armour penalty) use a verb; all use 'изричам'. "
          "Listed so the choice is made once for any future text.",
-         "DONE (kept): изричам; the one message that said 'произнасяте' (prerequisite 'способността да произнасяте ...') now "
-         "says 'изричате'. A verb has no brackets.",
+         "DONE (kept): изричам; the one message that said 'произнасяш' (prerequisite 'способността да произнасяш ...') now "
+         "says 'изричаш'. A verb has no brackets.",
          (), r"произнас"),
     Term("Cantrip / Cantrips", "cantrips",
          (("Трик / Трикове", r"трик"),),
@@ -261,14 +261,16 @@ TERMS: tuple[Term, ...] = (
          "Mastery). The short 'майсторство' (a weapon's mastery property, the attack-table column) has no brackets.",
          ((r"майсторство с оръжия|майсторство със заклинания", r"mastery"),), None),
     Term("Advantage / Disadvantage", None,
-         (("недостатък", r"недостатък"), ("disadvantage (English, old)", r"(?<!\()\bdisadvantage\b(?!\))")),
+         (("Advantage / Disadvantage (English, no brackets)", r"(?<!\()\b(dis)?advantage\b(?!\))"),
+          ("недостатък / предимство (old)", r"недостатък|предимство")),
          ("предимство / недостатък", "Advantage / Disadvantage (keep English)", "предимство / пречка"),
-         "предимство / недостатък.",
-         "The Bulgarian word for Advantage ('предимство') is not used anywhere yet. 'недостатък' is used in a message, the export and "
-         "the UI, and one LEGACY UI text still said 'disadvantage' in English.",
-         "DONE: недостатък (Disadvantage); the English UI text 'armor: disadvantage on Stealth' is now 'броня: недостатък "
-         "(Disadvantage) при Скритост'. 'предимство (Advantage)' is the form for any future text (no text uses it yet).",
-         ((r"недостатък|предимство", r"disadvantage|advantage"),), r"\bdisadvantage\b"),
+         "Advantage / Disadvantage: the English words, no Bulgarian word and no brackets (like Spell Slots).",
+         "The Bulgarian word for Advantage ('предимство') was never used. 'недостатък' was used in a message, the export and the "
+         "UI, in the form 'недостатък (Disadvantage)'.",
+         "DONE (owner decision, Bulgarian wording rules): Advantage and Disadvantage stay English with no Bulgarian word and no "
+         "brackets, as with Spell Slots: 'броня: Disadvantage при Скритост'. They are not in the bracket-term list "
+         "(bracket_terms.py): '(Disadvantage)' is no longer a valid bracket.",
+         (), r"недостатък|предимство"),
     Term("Bonus Action", None,
          (("бонус действие", r"бонус действие"),),
          ("бонус действие", "допълнително действие", "Bonus Action (keep English)"),
@@ -326,7 +328,7 @@ TERMS: tuple[Term, ...] = (
          ("Дъх", "Дихателно оръжие", "Breath Weapon (keep English)"),
          "Дъх.",
          "The Dragonborn trait whose damage type, area and saving throw follow the Draconic Ancestry; the dragon-colour card text "
-         "already said 'дъха ви'. Added by the owner after T1 (VF3.2).",
+         "already said 'дъха ти'. Added by the owner after T1 (VF3.2).",
          "DONE (VF3.2): Дъх (Breath Weapon).",
          ((r"\bдъх\w*", r"breath weapon"),), None),
 )

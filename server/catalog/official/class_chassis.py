@@ -28,6 +28,7 @@ from catalog.reference_data import (
     proficiency_label,
 )
 
+from catalog.tag_text import strip_tags
 from i18n.messages import msg
 
 from .common import slug
@@ -153,7 +154,6 @@ _NESTED_PICKS = {  # the nested "choice" member: (category index, category name,
     "holy symbol": ("holy-symbols", "Holy Symbols", "a holy symbol"),  # PHB ch. 6 table: Amulet / Emblem / Reliquary
     "instrumentMusical": ("musical-instruments", "Musical Instruments", "a musical instrument"),
 }
-_TAG = re.compile(r"\{@\w+ ([^}]*)\}")
 _GOLD = re.compile(r"(\d+) GP")
 
 
@@ -198,11 +198,7 @@ def _equipment_member(raw) -> dict:
     return member
 
 
-def _strip_tags(text: str) -> str:
-    def plain(match):
-        parts = match.group(1).split("|")
-        return parts[2] if len(parts) > 2 and parts[2] else parts[0]
-    return _TAG.sub(plain, text)
+_strip_tags = strip_tags
 
 
 def _class_equipment_options_2024(raw: dict) -> list[dict] | None:

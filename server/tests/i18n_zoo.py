@@ -454,10 +454,11 @@ LOCALIZED_CARD_KEYS = ("label", "description", "unavailableReason")
 
 def without_localized(resolution: dict) -> dict:
     """The resolution with every engine-localized card text dropped (card label / description / unavailableReason and
-    each option's disabledReason; I4, I5), to compare the rest of two languages' resolutions."""
+    each option's disabledReason; I4, I5) and each option's description (the Bulgarian choice texts, which are
+    intended to differ from the English ones), to compare the rest of two languages' resolutions."""
     out = dict(resolution)
     out["choices"] = [{**{k: v for k, v in c.items() if k not in LOCALIZED_CARD_KEYS},
-                       "options": [{k: v for k, v in o.items() if k != "disabledReason"} for o in c.get("options") or []]}
+                       "options": [{k: v for k, v in o.items() if k not in ("disabledReason", "description")} for o in c.get("options") or []]}
                       for c in resolution.get("choices") or []]
     if isinstance(out.get("derived"), dict) and "attacks" in out["derived"]:  # VF7.7a: the attack-row notes are localized messages
         out["derived"] = {**out["derived"], "attacks": [{k: v for k, v in a.items() if k != "notes"} for a in out["derived"]["attacks"]]}

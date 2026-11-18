@@ -594,6 +594,11 @@ def _feature_choice_templates(
         if specific.get("subfeature_options"):
             cid = f"class:{cls_id}:{lvl}:feature:{feature['index']}"
             tpl = build_choice_template(specific["subfeature_options"], cid, source, feature["name"], description=description)
+            if tpl:
+                for option in tpl["options"]:  # C1: the option's own feature text (fighting styles, pact boon, ...)
+                    opt_desc = _join_desc((catalog.features.get(option["id"]) or {}).get("desc"))
+                    if opt_desc and "description" not in option:
+                        option["description"] = opt_desc
             if tpl and feature["index"] in reference_data.SRD_METAMAGIC_FEATURES:  # G2: the TCE options
                 tpl["options"] = _with_extra_metamagic(catalog, tpl["options"], "Metamagic: ")
         elif specific.get("expertise_options"):
@@ -883,6 +888,11 @@ class _FightingStyleResolver:
             self.picks.append({**feat, "_fs_cid": cid, "_asi_level": lvl, "_asi_origin": f"{cid}:feat:{feat['index']}"})
 
 
+def _flatten_entries(entries) -> list[str]:
+    from sheet_data import flatten_entries  # lazy: sheet_data pulls the sheet stack
+    return flatten_entries(entries)
+
+
 def _fighting_style_templates(
     catalog: Catalog, rc: dict, slots: list[tuple[str, int, str]], sources, ruleset: str, total_level: int,
     scores: dict[str, int], use_prerequisites: bool, held: "_HeldFeatState", taken_by_cid: dict[str, dict[str, str]],
@@ -902,6 +912,9 @@ def _fighting_style_templates(
         options = []
         for feat, option in _feat_options(feats, ruleset):
             option.pop("group", None)
+            fs_text = " ".join(_flatten_entries(feat.get("entries") or [])).strip()  # C1
+            if fs_text:
+                option["description"] = fs_text
             if feat.get("_hidden_by_filters"):
                 option["hiddenByFilters"] = True
             reason = (

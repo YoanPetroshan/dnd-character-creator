@@ -172,7 +172,7 @@ def test_converter_flattens_entries_and_strips_tags():
         "Each creature makes a DC 15 Dexterity save, taking 8d6 fire damage; see fireball.",
         "Sub. Inner knocked down.", "one", "Two. second", "Roll", "d4 | Result", "1 | Hit",
     ]
-    assert rec["higher_level"] == ["8d6 more."]
+    assert rec["higher_level"] == ["1d6 more."]  # the per-level amount
     assert "{@" not in " ".join(rec["desc"] + rec["higher_level"])
 
 
