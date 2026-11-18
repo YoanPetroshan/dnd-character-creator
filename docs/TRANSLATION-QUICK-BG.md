@@ -11,7 +11,7 @@ Distilled from docs/TRANSLATION-STYLE-BG.md (the full guide wins on any conflict
 5. **Bracket rule**: Bulgarian term + English Title Case term in brackets at the FIRST occurrence per record only; later Bulgarian only. Record = one spell/trait/item/species entry; `desc` + `higherLevel` = one text; `material` and `castingCondition` each bracket on their own. Singular/plural count as the same term; a term inside a longer bracketed term counts as used. Bracket number follows the noun: „хвърлянията за атака (Attack Rolls)“.
 6. **Never nested brackets** („(30 фута, 9 м)“, not „(30 фута (9 м))“); **never a bracket on a verb**, plain adjective, name, or the bare words of rule 7.
 7. **Bare English, no bracket, no Bulgarian**: Spell Slot(s) (masc.; „със Spell Slot“), Advantage, Disadvantage, AC, DC, DM.
-8. **spell = заклинание** (never „магия“); magic = магия; cantrip = трик (Cantrip); cast = изричам (изричаш, изречеш).
+8. **spell = заклинание** (never „магия“); magic = магия; cantrip = Cantrip (stays English: „един Cantrip“, „два Cantrips“; never „трик“); cast = изричам (изричаш, изречеш).
 9. **Metric in brackets**, feet kept: lookup — 5=1,5 м; 10=3; 15=4,5; 20=6; 25=7,5; 30=9; 35=10,5; 40=12; 45=13,5; 50=15; 60=18; 70=21; 90=27; 100=30; 120=36; 150=45; 200=60; 300=90; 500=150; 1000=300 м; 1 фут (0,3 м); else ×0,3. Miles ×1,6 (1 миля (1,6 км)); inches ×2,5 (1 инч (2,5 см)); lb: 1 фунт (0,45 кг), 5 (2,3), 10 (4,5), 20 (9), 50 (23), 100 (45) кг. Hyphen units → phrase: „сфера с радиус 20 фута (6 м)“, „конус с дължина 60 фута (18 м)“, „куб с ръб 20 фута (6 м)“. Money: GP = „зл.“, SP ср., CP мед., EP ел., PP пл.
 10. **Numbers and dice exact** (8d6, 2d8 + 4, +5, DC 15, ниво 3). Never fix; note suspicious ones. Digits stay digits, words stay words. Decimal comma; drop English thousands comma (1000); 5+ digits take a thin space („10 000“). Ordinals → „ниво 4“, „над 3“.
 11. **Reader has no gender**: no participle/adjective agreeing with „ти“ („ранен“, „обгърнат“, „влязъл“). Rebuild: „Мъгла те обгръща…“.
@@ -112,7 +112,7 @@ Light / vision
 - Lightly / Heavily Obscured = леко / плътно закрит (… Obscured)
 
 Spellcasting
-- Cantrip = трик (Cantrip); Concentration = концентрация (Concentration); Ritual = ритуал (Ritual)
+- Cantrip = Cantrip (English, never „трик“); Concentration = концентрация (Concentration); Ritual = ритуал (Ritual)
 - Casting Time = време за изричане (Casting Time); Duration = продължителност (Duration); Components = компоненти (Components)
 - Verbal / Somatic / Material = вербален / соматичен / материален компонент (…)
 - Spellcasting Focus = фокус за заклинания (Spellcasting Focus)
@@ -139,7 +139,7 @@ Creature types (lower case in prose)
 9. unless you have X → „освен ако имаш X“ (never „освен ако нямаш“)
 10. whenever A, B or C → „всеки път, когато A, когато B или когато C“; say who first
 11. must do X or Y (creature chooses) → „трябва или да …, или да …“
-12. choose cantrips → „Избери N трика (Cantrips) от списъка със заклинания на X.“
+12. choose cantrips → „Избери N Cantrips от списъка със заклинания на X.“
 13. choose spells → „Избери N заклинания [от ниво L или по-ниско], които да знаеш/подготвиш, от списъка със заклинания на X.“
 14. choose skills → „Избери три умения (Skills) по твой избор“; weapon → „обикновено оръжие (Simple Weapon) по твой избор“; feat → „талант (Feat) от категорията X“
 15. Repeatable → „Повтаряема. Можеш да получиш тази инвокация (Invocation) повече от веднъж…“
