@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 
 from catalog import reference_data
+from engine import option_texts
 
 _CARD_RE = re.compile(r"^class:([^:]+):\d+:feature:(.+)$")
 # The class-effect keys an option may carry (same readers as CLASS_FEATURE_EFFECTS_2024).
@@ -32,7 +33,7 @@ def _line_description(record: dict, name: str) -> str | None:
     return None
 
 
-def _options(record: dict, spec: dict, feature_id: str) -> list[dict] | None:
+def _options(record: dict, spec: dict, feature_id: str, catalog=None) -> list[dict] | None:
     """The card options, or None when the record's text no longer carries them (a changed catalog)."""
     text = _join(record.get("desc"))
     out = []
@@ -47,6 +48,12 @@ def _options(record: dict, spec: dict, feature_id: str) -> list[dict] | None:
             if desc is None:
                 return None
             option["description"] = desc
+        elif "summary" in o:  # S3: our own summary / the table sentence (Elemental Affinity, Primal Companion, Feywild Gifts)
+            option["description"] = o["summary"]
+        elif "variant" in o and catalog is not None:  # S3: the spells of the land
+            land = option_texts.land_description(catalog, o["variant"])
+            if land:
+                option["description"] = land
         out.append(option)
     return out
 
@@ -63,7 +70,7 @@ def templates(catalog, rc: dict, ruleset: str) -> list[dict]:
         record = catalog.features.get(fid)
         if not record or rc["level"] < (record.get("level") or 1):
             continue
-        options = _options(record, spec, fid)
+        options = _options(record, spec, fid, catalog)
         if not options:
             continue
         level = record.get("level") or 1

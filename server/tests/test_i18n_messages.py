@@ -283,9 +283,10 @@ def test_catalog_is_wired_to_the_modules():
     """I2 filled problems and warnings, I3 pruned, I4 disabled, I5 labels."""
     assert catalog_pkg.MESSAGES is m.MESSAGES
     assert (catalog_pkg.problems.MESSAGES and catalog_pkg.warnings.MESSAGES and catalog_pkg.pruned.MESSAGES
-            and catalog_pkg.disabled.MESSAGES and catalog_pkg.labels.MESSAGES)
+            and catalog_pkg.disabled.MESSAGES and catalog_pkg.labels.MESSAGES and catalog_pkg.option_texts.MESSAGES)
     assert m.MESSAGES == {**catalog_pkg.problems.MESSAGES, **catalog_pkg.warnings.MESSAGES, **catalog_pkg.pruned.MESSAGES,
-                          **catalog_pkg.disabled.MESSAGES, **catalog_pkg.labels.MESSAGES}
+                          **catalog_pkg.disabled.MESSAGES, **catalog_pkg.labels.MESSAGES,
+                          **catalog_pkg.option_texts.MESSAGES}
 
 
 def test_catalog_modules_merge_and_reject_duplicates(monkeypatch):

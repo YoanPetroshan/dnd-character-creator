@@ -6,9 +6,9 @@ A key is unique across the modules; a duplicate raises at import.
 """
 from __future__ import annotations
 
-from i18n.catalog import disabled, labels, problems, pruned, warnings
+from i18n.catalog import disabled, labels, option_texts, problems, pruned, warnings
 
-_MODULES = (problems, warnings, pruned, disabled, labels)
+_MODULES = (problems, warnings, pruned, disabled, labels, option_texts)
 
 
 def build() -> dict[str, dict[str, str]]:

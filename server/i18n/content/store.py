@@ -186,7 +186,13 @@ def overlay_features(feature_id: str, payload: dict, lang: str) -> dict:
 def _localized_text(text, overlay: dict):
     entry = overlay.get(text_hash(text)) if isinstance(text, str) and text else None
     bg = entry.get("bg") if isinstance(entry, dict) else None
-    return bg if isinstance(bg, str) and bg.strip() else text
+    if isinstance(bg, str) and bg.strip():
+        return bg
+    if isinstance(text, str) and "\n" in text:  # S3: a generated line + book paragraphs: each line is looked up on its own
+        lines = [_localized_text(line, overlay) if line else line for line in text.split("\n")]
+        joined = "\n".join(lines)
+        return joined if joined != text else text
+    return text
 
 
 def localize_content(resolution, lang: str):

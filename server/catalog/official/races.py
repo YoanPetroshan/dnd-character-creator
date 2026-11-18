@@ -8,6 +8,7 @@ from catalog.reference_data import SPECIES_DIALECT_LANGUAGES, SPECIES_OTHER_LANG
 from .common import _ability_bonus_options_from_5etools, _ability_bonuses_from_5etools, _condition_immunities_from_5etools, _damage_modifiers_from_5etools, _darkvision_from_5etools, _speed_from_5etools, resolve_copies, slug
 from .innate_spells import _innate_spells_from_5etools
 from .languages import _language_grants_from_5etools
+from catalog.tag_text import strip_tags
 from .proficiencies import _attach_choice_proficiencies, _attach_fixed_proficiencies, _proficiencies_from_5etools
 
 
@@ -54,7 +55,38 @@ def _mod_replaces_entry(version: dict) -> bool:
     return any(isinstance(m, dict) and m.get("mode") == "replaceArr" for m in mods)
 
 
-def _variant_from_source(vid: str, name: str, src: dict, resist: list[str]) -> dict:
+def _entry_paragraphs(entries) -> list[str]:
+    """Plain paragraphs of 5etools `entries` (strings, nested `entries`, list items as "Name. text"; tables are skipped)."""
+    out: list[str] = []
+    for e in entries if isinstance(entries, list) else [entries]:
+        if isinstance(e, str):
+            out.append(strip_tags(e).strip())
+        elif isinstance(e, dict):
+            kind = e.get("type")
+            if kind == "table":
+                continue
+            if kind == "item":
+                body = " ".join(_entry_paragraphs(e.get("entries") if "entries" in e else e.get("entry")))
+                out.append(f"{strip_tags(e['name']).strip()}. {body}" if e.get("name") else body)
+            elif kind == "list":
+                out.extend(_entry_paragraphs(e.get("items") or []))
+            else:
+                out.extend(_entry_paragraphs(e.get("entries") or []))
+    return [p for p in out if p]
+
+
+def _version_paragraphs(version: dict) -> list[str]:
+    """The book text of an explicit `_versions` item: the first `replaceArr` entry mod is the lineage / ancestry trait it
+    swaps in (the other mods only restate a Darkvision or Speed line the structured fields already carry)."""
+    mods = (version.get("_mod") or {}).get("entries")
+    for mod in mods if isinstance(mods, list) else [mods]:
+        if isinstance(mod, dict) and mod.get("mode") == "replaceArr":
+            items = mod.get("items")
+            return _entry_paragraphs(items if isinstance(items, list) else [items])
+    return []
+
+
+def _variant_from_source(vid: str, name: str, src: dict, resist: list[str], text: str = "") -> dict:
     """One variant: only the structured data keys a version can change.
     A key explicitly set to null is recorded in `removes`."""
     removes = [k for k in ("skillProficiencies", "darkvision", "additionalSpells", "speed") if k in src and src[k] is None]
@@ -67,6 +99,7 @@ def _variant_from_source(vid: str, name: str, src: dict, resist: list[str]) -> d
         "innate_spells": _innate_spells_from_5etools({"additionalSpells": src.get("additionalSpells") or []}),
         "skill_proficiencies": src.get("skillProficiencies") if isinstance(src.get("skillProficiencies"), list) else None,
         "removes": removes,
+        "text": text,  # the book paragraphs ("\n"-joined; "" when the data has none); the trait `desc` is untouched
     }
 
 
@@ -78,6 +111,7 @@ def _race_variants_from_5etools(raw: dict) -> list[dict]:
     resist from the implementation or its `_variables`). Races without
     `_versions` (almost all) get []."""
     variants: list[dict] = []
+    paragraphs: list[list[str]] = []
     for version in raw.get("_versions") or []:
         if not isinstance(version, dict):
             continue
@@ -94,6 +128,14 @@ def _race_variants_from_5etools(raw: dict) -> list[dict]:
             name = version["name"].split("; ", 1)[-1]
             resist = [r for r in (version.get("resist") or []) if isinstance(r, str)]
             variants.append(_variant_from_source(_variant_slug(name), name, version, resist))
+            paragraphs.append(_version_paragraphs(version))
+    # a leading paragraph every explicit variant repeats (Aasimar's, Goliath's intro) is dropped from each
+    explicit = [v for v, p in zip(variants[len(variants) - len(paragraphs):], paragraphs)]
+    if len(paragraphs) > 1:
+        while all(p for p in paragraphs) and len({p[0] for p in paragraphs}) == 1 and all(len(p) > 1 for p in paragraphs):
+            paragraphs = [p[1:] for p in paragraphs]
+    for v, p in zip(explicit, paragraphs):
+        v["text"] = "\n".join(p)
     return variants
 
 

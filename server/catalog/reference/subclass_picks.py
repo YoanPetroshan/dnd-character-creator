@@ -5,6 +5,23 @@ Split from catalog/reference_data.py (S17); the text below is moved unchanged.
 from __future__ import annotations
 from .core_tables import msg
 
+# literal keys (a test pins that every msg() key is a literal)
+DTYPE_MSG = {
+    "acid": lambda: msg("opt-dtype-acid"),
+    "bludgeoning": lambda: msg("opt-dtype-bludgeoning"),
+    "cold": lambda: msg("opt-dtype-cold"),
+    "fire": lambda: msg("opt-dtype-fire"),
+    "force": lambda: msg("opt-dtype-force"),
+    "lightning": lambda: msg("opt-dtype-lightning"),
+    "necrotic": lambda: msg("opt-dtype-necrotic"),
+    "piercing": lambda: msg("opt-dtype-piercing"),
+    "poison": lambda: msg("opt-dtype-poison"),
+    "psychic": lambda: msg("opt-dtype-psychic"),
+    "radiant": lambda: msg("opt-dtype-radiant"),
+    "slashing": lambda: msg("opt-dtype-slashing"),
+    "thunder": lambda: msg("opt-dtype-thunder"),
+}
+
 SUBCLASS_PICKS_2024: tuple[dict, ...] = (
     {"subclass": "lore-xphb", "class": "bard", "feature": "lore-xphb-3-bonus-proficiencies",
      "kind": "skills", "pool": "any", "count": 3, "cid": "feature", "label": "Bonus Proficiencies",
@@ -411,7 +428,7 @@ SUBCLASS_OPTIONS_2024: dict[str, dict] = {
                    "You have Resistance to that damage type, and when you cast a spell that deals damage of that "
                    "type, you can add your Charisma modifier to one damage roll of that spell."),
         "options": {
-            t: {"name": t.title(), "resist": [t],
+            t: {"name": t.title(), "resist": [t], "summary": msg("opt-affinity", dtype=DTYPE_MSG[t]()),
                 "note": f"Add your Charisma modifier ({{cha:+d}}) to one damage roll of a {t} damage spell"}
             for t in ("acid", "cold", "fire", "lightning", "poison")},
     },
@@ -419,26 +436,26 @@ SUBCLASS_OPTIONS_2024: dict[str, dict] = {
         "class": "ranger", "subclass": "beast-master-xphb", "label": "Primal Companion",
         "quotes": ("Choose its stat block: Beast of the Land, Beast of the Sea, or Beast of the Sky.",),
         "options": {
-            "beast-of-the-land": {"name": "Beast of the Land"},
-            "beast-of-the-sea": {"name": "Beast of the Sea"},
-            "beast-of-the-sky": {"name": "Beast of the Sky"},
+            "beast-of-the-land": {"name": "Beast of the Land", "summary": msg("opt-companion-land")},
+            "beast-of-the-sea": {"name": "Beast of the Sea", "summary": msg("opt-companion-sea")},
+            "beast-of-the-sky": {"name": "Beast of the Sky", "summary": msg("opt-companion-sky")},
         }},
     "fey-wanderer-xphb-3-fey-wanderer-spells": {
         "class": "ranger", "subclass": "fey-wanderer-xphb", "label": "Feywild Gifts",
         "optional": True,  # RPF: a cosmetic table pick; an unpicked card does not block export
         "quotes": ("You also possess a fey blessing. Choose it from the Feywild Gifts table or determine it randomly.",),
         "options": {
-            "gift-1": {"name": "Illusory butterflies flutter around you while you take a Short or Long Rest.",
+            "gift-1": {"name": "Illusory butterflies flutter around you while you take a Short or Long Rest.", "summary": "Illusory butterflies flutter around you while you take a Short or Long Rest.",
                        "quote": "1 | Illusory butterflies flutter around you while you take a Short or Long Rest."},
-            "gift-2": {"name": "Flowers bloom from your hair each dawn.",
+            "gift-2": {"name": "Flowers bloom from your hair each dawn.", "summary": "Flowers bloom from your hair each dawn.",
                        "quote": "2 | Flowers bloom from your hair each dawn."},
-            "gift-3": {"name": "You faintly smell of cinnamon, lavender, nutmeg, or another comforting herb or spice.",
+            "gift-3": {"name": "You faintly smell of cinnamon, lavender, nutmeg, or another comforting herb or spice.", "summary": "You faintly smell of cinnamon, lavender, nutmeg, or another comforting herb or spice.",
                        "quote": "3 | You faintly smell of cinnamon, lavender, nutmeg, or another comforting herb or spice."},
-            "gift-4": {"name": "Your shadow dances while no one is looking directly at it.",
+            "gift-4": {"name": "Your shadow dances while no one is looking directly at it.", "summary": "Your shadow dances while no one is looking directly at it.",
                        "quote": "4 | Your shadow dances while no one is looking directly at it."},
-            "gift-5": {"name": "Horns or antlers sprout from your head.",
+            "gift-5": {"name": "Horns or antlers sprout from your head.", "summary": "Horns or antlers sprout from your head.",
                        "quote": "5 | Horns or antlers sprout from your head."},
-            "gift-6": {"name": "Your skin and hair change color each dawn.",
+            "gift-6": {"name": "Your skin and hair change color each dawn.", "summary": "Your skin and hair change color each dawn.",
                        "quote": "6 | Your skin and hair change color each dawn."},
         }},
     # RP17: Circle of the Land. The picked land decides the Circle Spells (catalog `spells_by_variant`, by `variant`) and

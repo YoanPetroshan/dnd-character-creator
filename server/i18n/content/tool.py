@@ -138,6 +138,10 @@ def harvest_choice_texts(catalog, drafts=None) -> dict[str, dict]:
     found: dict[str, dict] = {}
 
     def add(text, name, source):
+        if getattr(text, "key", None) == "opt-variant":  # S3: generated summary line + book paragraphs: the paragraphs are the texts
+            for line in text.params["text"].split("\n"):
+                add(line, name, source)
+            return
         if isinstance(text, str) and text.strip():
             found.setdefault(store.text_hash(text), {"name": name, "source": source if isinstance(source, str) else "", "text": text})
 
