@@ -1,9 +1,11 @@
+import { Fragment } from "react";
 import type { Copy } from "../../copy";
 import { useT } from "../../LanguageContext";
 import { formatModifier } from "../../logic/abilities";
 import type { SheetSectionData } from "../../logic/sheetSections";
 import type { Attack } from "../../types";
 import { SectionFrame } from "./SectionFrame";
+import { SheetEye, SheetEyePanel, SheetEyeRow } from "./SheetEyes";
 
 function damageText(t: Copy, a: Attack): string {
   const c = t.sheet.attacks;
@@ -37,9 +39,11 @@ export function AttacksSection({ data }: { data: SheetSectionData["attacks"] }) 
           </thead>
           <tbody>
             {data.attacks.map((a) => (
-              <tr key={a.itemId} data-proficient={a.proficient} data-wielded={a.wielded ?? undefined}>
+              <Fragment key={a.itemId}>
+              <tr data-proficient={a.proficient} data-wielded={a.wielded ?? undefined}>
                 <th scope="row">
                   <span className="attack__name">{a.name}</span>
+                  <SheetEye rowKey={`attack:${a.itemId}`} kind="item" id={a.itemId} name={a.name} />
                   <span className="attack__sub">
                     {[a.ability, ...(a.wielded ? [c.wielded] : []), ...(a.mastery ? [`${c.columns.mastery}: ${a.mastery}`] : [])].join(" · ")}
                   </span>
@@ -53,6 +57,8 @@ export function AttacksSection({ data }: { data: SheetSectionData["attacks"] }) 
                 </td>
                 <td className="attack__notes">{a.notes.length > 0 ? a.notes.join("; ") : t.common.none}</td>
               </tr>
+              <SheetEyeRow rowKey={`attack:${a.itemId}`} kind="item" id={a.itemId} colSpan={5} />
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -63,7 +69,9 @@ export function AttacksSection({ data }: { data: SheetSectionData["attacks"] }) 
           <ul>
             {data.masteries.map((m) => (
               <li key={m.itemId}>
-                {m.name}: {m.mastery}
+                {m.name}
+                <SheetEye rowKey={`mastery:${m.itemId}`} kind="item" id={m.itemId} name={m.name} />: {m.mastery}
+                <SheetEyePanel rowKey={`mastery:${m.itemId}`} kind="item" id={m.itemId} />
               </li>
             ))}
           </ul>

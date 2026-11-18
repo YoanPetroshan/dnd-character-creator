@@ -191,3 +191,61 @@ describe("sections grow with their content", () => {
     }
   });
 });
+
+describe("eyes on the sheet (the text of a name opens under its row)", () => {
+  const eyeLabels = (h: string) => [...h.matchAll(/<button type="button" class="spell-eye" aria-label="([^"]*)"/g)].map((m) => m[1]);
+  it("spells tab: every spell row has an eye right after the name, in the name cell, labelled in the app language", () => {
+    const h = page(wizard20.resolution as unknown as Resolution, "/sheet?tab=spells", "bg", wizard20.base as Draft["abilities"]["base"]);
+    expect(h).toMatch(/<th scope="row">Fireball<button type="button" class="spell-eye" aria-label="Покажи описанието на заклинанието: Fireball" aria-expanded="false"><\/button><\/th>/);
+    expect(h.match(/data-spell="/g)?.length).toBe(eyeLabels(h).length);
+    expect(h).not.toContain("spell-eye__panel"); // closed: no panel
+  });
+
+  it("actions tab: the weapon name in the first cell and the mastery list carry an item eye", () => {
+    const h = page(fighter4.resolution as unknown as Resolution, "/sheet?tab=actions", "en");
+    expect(h).toMatch(/<span class="attack__name">Greatsword<\/span><button type="button" class="spell-eye" aria-label="Show the item description: Greatsword"/);
+    const masteries = h.slice(h.indexOf("<h3>", h.indexOf("</table>")));
+    expect(eyeLabels(masteries).length).toBe(fighter4.resolution.sheet.weaponMasteries.length);
+    expect(masteries).toMatch(/<li>[^<]+<button type="button" class="spell-eye"[^>]*><\/button>: /);
+  });
+
+  it("inventory tab: every item line has an item eye after its name", () => {
+    const h = page(fighter4.resolution as unknown as Resolution, "/sheet?tab=inventory", "bg");
+    const labels = eyeLabels(h);
+    expect(labels.length).toBeGreaterThan(0);
+    for (const l of labels) expect(l).toContain("Покажи описанието на предмета: ");
+  });
+
+  it("features tab: feature, trait and background refs get a details eye; a row without a ref gets none", () => {
+    const base = fighter4.resolution as unknown as Resolution;
+    const mk = (ref?: { kind: "feature" | "trait" | "feat" | "background"; id: string }) => ({ source: { kind: "class" as const, id: "fighter", label: "Fighter" }, name: ref ? `N-${ref.kind}` : "N-none", level: 1, ...(ref ? { ref } : {}) });
+    const r = { ...base, sheet: { ...base.sheet, features: [mk({ kind: "feature", id: "rage" }), mk({ kind: "trait", id: "trait:elf:0" }), mk({ kind: "background", id: "soldier" }), mk()] } } as Resolution;
+    const h = page(r, "/sheet?tab=features", "en");
+    expect(h).toContain('<strong class="feature__name">N-feature</strong><button type="button" class="spell-eye" aria-label="Show what it gives: N-feature"');
+    expect(h).toContain('aria-label="Show what it gives: N-trait"');
+    expect(h).toContain('aria-label="Show what it gives: N-background"');
+    expect(h).not.toContain("N-none</strong><button");
+  });
+
+  it("features tab: every feat row has a details eye (the feat id is the key)", () => {
+    const h = page(fighter4.resolution as unknown as Resolution, "/sheet?tab=features&x=1", "bg");
+    const feats = fighter4.resolution.sheet.feats;
+    for (const f of feats) expect(h).toContain(`Покажи какво дава: ${f.name}`);
+  });
+
+  it("the eye target of a feature ref: feature / trait use the ref id, background gets its prefix, feat the feat route", async () => {
+    const { featureEyeTarget } = await import("../components/sheet/SheetEyes");
+    expect(featureEyeTarget({ kind: "feature", id: "rage" })).toEqual({ kind: "feature", id: "rage" });
+    expect(featureEyeTarget({ kind: "trait", id: "trait:elf:2" })).toEqual({ kind: "feature", id: "trait:elf:2" });
+    expect(featureEyeTarget({ kind: "background", id: "soldier" })).toEqual({ kind: "feature", id: "background:soldier" });
+    expect(featureEyeTarget({ kind: "feat", id: "alert" })).toEqual({ kind: "feat", id: "alert" });
+    expect(featureEyeTarget(undefined)).toBeNull();
+  });
+
+  it("the print stylesheet hides the eye buttons and their panels", () => {
+    const css = readFileSync(new URL("../print.css", import.meta.url)).toString("utf8");
+    const start = css.indexOf("@media print {") + "@media print {".length;
+    const hidden = css.slice(start, css.indexOf("{", start));
+    for (const sel of [".spell-eye", ".spell-eye__panel", ".sheet-eye-row"]) expect(hidden).toContain(sel);
+  });
+});

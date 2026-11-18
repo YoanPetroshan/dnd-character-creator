@@ -1,6 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import { ExportBar } from "../components/sheetpage/ExportBar";
 import { CombatRow, SheetHero, SummaryStrip } from "../components/sheetpage/SummaryStrip";
+import { SheetEyesProvider } from "../components/sheet/SheetEyes";
 import { Tabs, type TabDef } from "../components/sheetpage/Tabs";
 import { ActionsPanel, BackgroundPanel, FeaturesPanel, InventoryPanel, NotesPanel, ReferenceBlock, SpellsPanel } from "../components/sheetpage/panels";
 import { useDraft } from "../DraftContext";
@@ -58,6 +59,7 @@ export function SheetPage() {
       <div className="sheet-body">
       <div className="sheet-main">
       <CombatRow sections={sections} />
+      <SheetEyesProvider>
       <Tabs
         idPrefix="sheet"
         label={t.sheet.tabs.label}
@@ -81,6 +83,7 @@ export function SheetPage() {
           }
         }}
       />
+      </SheetEyesProvider>
       </div>
       <ReferenceBlock sections={sections} />
       </div>

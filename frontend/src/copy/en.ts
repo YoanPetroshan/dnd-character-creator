@@ -80,6 +80,12 @@ export const en: Copy = {
   sheet: {
     title: "Character Sheet",
     print: "Print",
+    /** The eye after a name on the sheet opens its text under the row. */
+    eye: {
+      spell: (name: string) => `Show the spell description: ${name}`,
+      item: (name: string) => `Show the item description: ${name}`,
+      details: (name: string) => `Show what it gives: ${name}`,
+    },
     tabs: {
       label: "Sheet sections",
       actions: "Actions",

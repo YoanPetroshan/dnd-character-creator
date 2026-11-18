@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { localizeSpellRow } from "../../logic/spellRow";
 import { useDraft } from "../../DraftContext";
 import { useT } from "../../LanguageContext";
@@ -14,6 +14,7 @@ import { CarryingCapacitySection, EquipmentSection } from "../sheet/EquipmentSec
 import { LanguagesSection, ProficienciesSection, SavingThrowsSection, SkillsSection } from "../sheet/ProficiencySections";
 import { ResourcesSection } from "../sheet/ResourcesSection";
 import { SectionFrame } from "../sheet/SectionFrame";
+import { SheetEye, SheetEyePanel, SheetEyeRow, featureEyeTarget } from "../sheet/SheetEyes";
 import { InnateSpellsSection } from "../sheet/SpellsSection";
 import { PassivesSection, SensesSection } from "../sheet/StatSections";
 
@@ -97,14 +98,20 @@ function SpellRows({ caster, catalog }: { caster: ReturnType<typeof mergeSpellRo
                   ...s.marks.map((m: SpellMark) => c.marks[m]),
                 ];
                 return (
-                  <tr key={s.id} data-spell={s.id}>
-                    <th scope="row">{s.name}</th>
-                    <td>{row?.castingTime ?? t.common.none}</td>
-                    <td>{row?.range ?? t.common.none}</td>
-                    <td>{info && info.components.length > 0 ? info.components.join(", ") : t.common.none}</td>
-                    <td>{row?.duration ?? t.common.none}</td>
-                    <td>{notes.length > 0 ? notes.join(", ") : t.common.none}</td>
-                  </tr>
+                  <Fragment key={s.id}>
+                    <tr data-spell={s.id}>
+                      <th scope="row">
+                        {s.name}
+                        <SheetEye rowKey={`spell:${s.id}`} kind="spell" id={s.id} name={s.name} />
+                      </th>
+                      <td>{row?.castingTime ?? t.common.none}</td>
+                      <td>{row?.range ?? t.common.none}</td>
+                      <td>{info && info.components.length > 0 ? info.components.join(", ") : t.common.none}</td>
+                      <td>{row?.duration ?? t.common.none}</td>
+                      <td>{notes.length > 0 ? notes.join(", ") : t.common.none}</td>
+                    </tr>
+                    <SheetEyeRow rowKey={`spell:${s.id}`} kind="spell" id={s.id} colSpan={6} />
+                  </Fragment>
                 );
               })}
             </tbody>
@@ -209,13 +216,19 @@ export function FeaturesPanel({ resolution }: { resolution: Resolution }) {
                 {g.label} <span className="feature__source">{c.source[g.kind as "class" | "species" | "background"]}</span>
               </h3>
               <ul className="feature-list">
-                {g.features.map((f, i) => (
+                {g.features.map((f, i) => {
+                  const target = featureEyeTarget(f.ref);
+                  const rowKey = `feature:${g.key}:${i}`;
+                  return (
                   <li key={`${f.name}:${i}`} className="feature">
                     <strong className="feature__name">{f.name}</strong>
+                    {target && <SheetEye rowKey={rowKey} kind={target.kind} id={target.id} name={f.name} />}
                     {f.level ? <span className="feature__meta">{t.sheet.features.level(f.level)}</span> : null}
                     {f.choice && f.choice.length > 0 && <span className="feature__nested">{f.choice.join(", ")}</span>}
+                    {target && <SheetEyePanel rowKey={rowKey} kind={target.kind} id={target.id} />}
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </div>
           ))}
@@ -228,12 +241,14 @@ export function FeaturesPanel({ resolution }: { resolution: Resolution }) {
               // a repeatable feat appears once per pick with the same id
               <li key={`${f.id}:${f.origin}:${f.level ?? ""}:${i}`} className="feature">
                 <strong className="feature__name">{f.name}</strong>
+                <SheetEye rowKey={`feat:${i}`} kind="feat" id={f.id} name={f.name} />
                 {f.level ? <span className="feature__meta">{t.sheet.feats.level(f.level)}</span> : null}
                 {((f.choice && f.choice.length > 0) || (f.notes && f.notes.length > 0)) && (
                   <span className="feature__nested">
                     {[...(f.choice && f.choice.length > 0 ? [f.choice.join(", ")] : []), ...(f.notes ?? [])].join("; ")}
                   </span>
                 )}
+                <SheetEyePanel rowKey={`feat:${i}`} kind="feat" id={f.id} />
               </li>
             ))}
           </ul>

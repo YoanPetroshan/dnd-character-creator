@@ -374,3 +374,16 @@ ul.choice-picker > li.choice-picker__item--spell > .spell-eye__panel {
   font-style: normal;
   color: var(--color-text-secondary);
 }
+
+/* Eyes on the character sheet sit inline right after a name; the 44px touch target hangs over the row without making it taller. */
+[data-page="sheet"] .spell-eye {
+  margin: -12px 0 -12px 2px;
+}
+
+[data-page="sheet"] .sheet-eye-row > td {
+  padding: 0;
+}
+
+[data-page="sheet"] .sheet-eye-row .spell-eye__panel {
+  margin: var(--space-1) 0 var(--space-2);
+}

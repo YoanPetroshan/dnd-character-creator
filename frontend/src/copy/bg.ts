@@ -86,6 +86,12 @@ export const bg = {
   sheet: {
     title: "Лист на героя",
     print: "Печат",
+    /** The eye after a name on the sheet opens its text under the row. */
+    eye: {
+      spell: (name: string) => `Покажи описанието на заклинанието: ${name}`,
+      item: (name: string) => `Покажи описанието на предмета: ${name}`,
+      details: (name: string) => `Покажи какво дава: ${name}`,
+    },
     tabs: {
       label: "Раздели на листа",
       actions: "Действия (Actions)",
