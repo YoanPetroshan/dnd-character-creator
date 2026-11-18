@@ -18,6 +18,7 @@ KIND_FIELDS = {
     "species": ("fluff", "traits"),  # fluff: paragraphs; traits: one list of desc paragraphs per trait, in served order
     "items": ("desc", "special"),
     "feats": ("desc",),  # GET /api/feats/<id>: the flattened feat text, one paragraph per entry line
+    "choice-texts": ("desc",),  # one paragraph: the whole English text, keyed by its own sha1 (see localize_content)
     "item-rules": ("desc",),  # item properties (`property:<index>:<PHB|XPHB>`) and weapon masteries (`mastery:<Name>`)
 }
 KINDS = tuple(KIND_FIELDS)
@@ -44,11 +45,13 @@ def item_fields(record: dict) -> dict:
 
 
 def rule_fields(record: dict) -> dict:
+    if "text" in record and "desc" not in record:  # a `choice-texts` record: its one English text
+        return {"desc": [record["text"]]}
     return {"desc": list(record.get("desc") or [])}
 
 
 _FIELD_FUNCS = {"spells": spell_fields, "species": species_fields, "items": item_fields, "item-rules": rule_fields,
-                "feats": rule_fields}
+                "feats": rule_fields, "choice-texts": rule_fields}
 
 
 def fields_for(kind: str, record: dict) -> dict:
@@ -56,10 +59,17 @@ def fields_for(kind: str, record: dict) -> dict:
     return _FIELD_FUNCS[kind](record)
 
 
+def text_hash(text: str) -> str:
+    """sha1 hex of an English choice text (the key of a `choice-texts` entry)."""
+    return hashlib.sha1(text.encode("utf-8")).hexdigest()
+
+
 def source_hash(*args) -> str:
     """sha1 hex of the English values of a kind's fields (sorted-key JSON, non-ASCII kept). `source_hash(fields)` is the
     spell hash (kept byte-identical); `source_hash(kind, fields)` any kind."""
     kind, record_fields = ("spells", args[0]) if len(args) == 1 else args
+    if kind == "choice-texts":  # the hash of a choice text is the sha1 of the English text itself (also its overlay key)
+        return text_hash(" ".join(record_fields.get("desc") or []))
     canon = {name: record_fields.get(name) for name in KIND_FIELDS[kind]}
     for name in ("desc", "higherLevel", "fluff", "traits", "special"):
         if name in canon and canon[name] is None:
@@ -157,3 +167,42 @@ def overlay_feats(feat_id: str, payload: dict, lang: str) -> dict:
     out["desc"] = list(entry.get("desc") or [])
     out["textLang"] = "bg"
     return out
+
+
+def _localized_text(text, overlay: dict):
+    entry = overlay.get(text_hash(text)) if isinstance(text, str) and text else None
+    bg = entry.get("bg") if isinstance(entry, dict) else None
+    return bg if isinstance(bg, str) and bg.strip() else text
+
+
+def localize_content(resolution, lang: str):
+    """`resolution` with the Bulgarian text in place of every English `description` of a choice card and of its options
+    whose sha1 is in the `choice-texts` overlay (`server/data/i18n/bg/choice-texts.json`, keyed by the sha1 of the English
+    text, so a changed English text simply stops matching). Any other text stays as it is. Meant to run after `localize`
+    (the engine's own message descriptions are already strings then). For "en", or no overlay, the input itself is returned
+    untouched; otherwise the input is not modified (changed cards and options are copies)."""
+    if lang != "bg" or not isinstance(resolution, dict) or not isinstance(resolution.get("choices"), list):
+        return resolution
+    overlay = load_overlay("choice-texts", lang)
+    if not overlay:
+        return resolution
+    choices, changed = [], False
+    for choice in resolution["choices"]:
+        if not isinstance(choice, dict):
+            choices.append(choice)
+            continue
+        new = choice
+        text = _localized_text(choice.get("description"), overlay)
+        if text is not choice.get("description"):
+            new = {**new, "description": text}
+        options = choice.get("options")
+        if isinstance(options, list):
+            new_options = []
+            for option in options:
+                text = _localized_text(option.get("description"), overlay) if isinstance(option, dict) else None
+                new_options.append({**option, "description": text} if text is not None and text is not option.get("description") else option)
+            if any(a is not b for a, b in zip(new_options, options)):
+                new = {**new, "options": new_options}
+        changed = changed or new is not choice
+        choices.append(new)
+    return {**resolution, "choices": choices} if changed else resolution

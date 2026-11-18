@@ -44,7 +44,7 @@ from engine.resolve import _source_allowed, _spell_visible, _subclass_visible, r
 from catalog.official.race_fluff import species_fluff, trait_details
 from export import to_yaml
 from export_labels import DEFAULT_LANG as EXPORT_DEFAULT_LANG, label as export_label
-from i18n.content.store import overlay_feats, overlay_items, overlay_rule, overlay_species, overlay_spell
+from i18n.content.store import localize_content, overlay_feats, overlay_items, overlay_rule, overlay_species, overlay_spell
 from i18n.messages import localize, msg, parse_lang
 from markdown_export import to_markdown
 
@@ -264,7 +264,7 @@ def api_resolve(args, body, **_):
     draft = _json_draft(body)
     if draft is None:
         return _error("draft must be a JSON object", 400)
-    return _json(localize(resolve(draft, _catalog), lang))
+    return _json(localize_content(localize(resolve(draft, _catalog), lang), lang))
 
 
 def _catalog_sources() -> list[dict]:
@@ -679,9 +679,9 @@ def api_export(args, body, fmt: str):
         out = renderer(resolution)
     elif fmt == "sheet":  # the edition of the feature texts is the draft's, the resolution does not carry it
         ruleset = draft.get("ruleset") if isinstance(draft.get("ruleset"), str) else None
-        out = renderer(localize(resolution, file_lang), file_lang, ruleset)
+        out = renderer(localize_content(localize(resolution, file_lang), file_lang), file_lang, ruleset)
     else:
-        out = renderer(localize(resolution, file_lang), file_lang)
+        out = renderer(localize_content(localize(resolution, file_lang), file_lang), file_lang)
     if isinstance(out, str):
         out = out.encode("utf-8")
     return 200, content_type, {"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"}, bytes(out)

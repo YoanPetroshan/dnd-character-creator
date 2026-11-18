@@ -5,7 +5,7 @@
     python -m i18n.content.tool --kind spells apply work.json   # validates every record, merges the valid ones, exit 1 on a reject
     python -m i18n.content.tool --kind species status           # translated / stale / missing per source
 
-Kinds: spells, species, items, feats, item-rules (property and mastery texts; keys `property:<index>:<PHB|XPHB>`, `mastery:<Name>`).
+Kinds: spells, species, items, feats, choice-texts, item-rules (property and mastery texts; keys `property:<index>:<PHB|XPHB>`, `mastery:<Name>`).
 `python -m i18n.content.spells ...` is the same tool with --kind spells.
 
 Work file: a JSON list of {id, name, source, hash, <the kind's fields>}; `export` writes the English texts, the translator
@@ -35,7 +35,7 @@ def _numbers(text: str) -> list[str]:
 LATIN = re.compile(r"[A-Za-z]")
 LANG = "bg"
 SCALARS = {"spells": ("material", "castingCondition")}  # optional string fields (null = keep the English)
-LISTS = {"spells": ("desc", "higherLevel"), "species": ("fluff",), "items": ("desc", "special"), "item-rules": ("desc",), "feats": ("desc",)}
+LISTS = {"spells": ("desc", "higherLevel"), "species": ("fluff",), "items": ("desc", "special"), "item-rules": ("desc",), "feats": ("desc",), "choice-texts": ("desc",)}
 
 
 def _is_strings(value) -> bool:
@@ -68,6 +68,11 @@ def validate(english: dict, record: dict, kind: str = "spells") -> list[str]:
             problems.append(f"{key}: must be a list of strings")
             continue
         bg[key] = value
+        if kind == "choice-texts":  # one English text; the translation may be split into any number of paragraphs (joined by a space)
+            if not value:
+                problems.append("desc: empty")
+            groups.append((english[key] and [" ".join(english[key])], value and [" ".join(value)]))
+            continue
         if len(value) != len(english[key]):
             problems.append(f"{key}: {len(value)} paragraphs, the English has {len(english[key])}")
         groups.append((english[key], value))
@@ -121,6 +126,42 @@ def item_rule_records(catalog) -> dict[str, dict]:
     return out
 
 
+def harvest_choice_texts(catalog, drafts=None) -> dict[str, dict]:
+    """sha1(English text) -> {name, source, text} for every distinct `description` DATA string (not a message, so English
+    prose from the catalog) of a choice card or option that the engine serves: the resolutions of the 1,524 i18n-zoo drafts
+    (server/tests/i18n_zoo.py; `drafts` overrides them, e.g. in tests) plus every catalog feature `opt-*` (the text it would
+    serve as an option description). `name` is the option or card id the text was first seen on; sorted by id."""
+    from engine.resolve import resolve
+    from engine.resolve_feats import _join_desc
+
+    found: dict[str, dict] = {}
+
+    def add(text, name, source):
+        if isinstance(text, str) and text.strip():
+            found.setdefault(store.text_hash(text), {"name": name, "source": source if isinstance(source, str) else "", "text": text})
+
+    if drafts is None:
+        tests_dir = str(Path(__file__).resolve().parent.parent.parent / "tests")
+        if tests_dir not in sys.path:
+            sys.path.insert(0, tests_dir)
+        import i18n_zoo
+
+        drafts = {name: draft for name, draft in i18n_zoo.zoo(catalog).items()}
+        cat_for = lambda name: i18n_zoo.catalog_for(name, catalog)  # noqa: E731
+    else:
+        cat_for = lambda name: catalog  # noqa: E731
+    for name in sorted(drafts):
+        resolution = resolve(json.loads(json.dumps(drafts[name])), cat_for(name))
+        for choice in resolution.get("choices") or []:
+            add(choice.get("description"), choice.get("id"), choice.get("source"))
+            for option in choice.get("options") or []:
+                add(option.get("description"), option.get("id"), option.get("source"))
+    for index, feature in catalog.features.items():
+        if str(index).startswith("opt-"):
+            add(_join_desc(feature.get("desc")), index, feature.get("source", "SRD"))
+    return dict(sorted(found.items(), key=lambda kv: (kv[1]["name"] or "", kv[0])))
+
+
 def load_records(kind: str) -> dict[str, dict]:
     """The catalog records of a kind by overlay key. Species records carry `fluff` and `traitDetails` exactly as
     GET /api/catalog/species/<id> serves them; items are the catalog item records."""
@@ -142,6 +183,8 @@ def load_records(kind: str) -> dict[str, dict]:
         return out
     if kind == "item-rules":
         return item_rule_records(catalog)
+    if kind == "choice-texts":
+        return harvest_choice_texts(catalog)
     if kind == "feats":
         from sheet_data import flatten_entries
 
@@ -154,7 +197,7 @@ def _load_spells() -> dict[str, dict]:
 
 
 def _label(kind: str) -> str:
-    return {"spells": "spell", "species": "species", "items": "item", "item-rules": "item rule", "feats": "feat"}[kind]
+    return {"spells": "spell", "species": "species", "items": "item", "item-rules": "item rule", "feats": "feat", "choice-texts": "choice text"}[kind]
 
 
 def _export_fields(kind: str, fields: dict, record: dict) -> dict:
@@ -162,6 +205,12 @@ def _export_fields(kind: str, fields: dict, record: dict) -> dict:
         names = [t.get("name", "") for t in record.get("traitDetails") or []]
         return {"fluff": fields["fluff"], "traits": [{"name": n, "desc": d} for n, d in zip(names, fields["traits"])]}
     return fields
+
+
+def _fresh(kind: str, entry, hash_: str) -> bool:
+    if kind == "choice-texts":  # keyed by the hash itself: an entry of this key is the translation of this very text
+        return isinstance(entry, dict) and bool(entry.get("bg"))
+    return (entry or {}).get("hash") == hash_
 
 
 def export_records(records: dict[str, dict], overlay: dict, *, ids=None, source=None, limit=None, only_missing=False,
@@ -176,7 +225,7 @@ def export_records(records: dict[str, dict], overlay: dict, *, ids=None, source=
             continue
         fields = store.fields_for(kind, rec)
         h = store.source_hash(kind, fields)
-        if only_missing and (overlay.get(rid) or {}).get("hash") == h:
+        if only_missing and _fresh(kind, overlay.get(rid), h):
             continue
         out.append({"id": rid, "name": rec["name"], "source": rec.get("source", "SRD"), "hash": h, **_export_fields(kind, fields, rec)})
         if limit is not None and len(out) >= limit:
@@ -184,7 +233,9 @@ def export_records(records: dict[str, dict], overlay: dict, *, ids=None, source=
     return out
 
 
-def _entry(kind: str, rec: dict) -> dict:
+def _entry(kind: str, rec: dict, english: dict | None = None) -> dict:
+    if kind == "choice-texts":
+        return {"ref": english["name"], "en": english["text"], "bg": " ".join(rec["desc"])}
     if kind == "spells":
         return {"hash": rec["hash"], "desc": rec["desc"], "higherLevel": rec["higherLevel"],
                 "material": rec.get("material"), "castingCondition": rec.get("castingCondition")}
@@ -207,7 +258,7 @@ def apply_records(records: dict[str, dict], overlay: dict, work: list, kind: str
         reasons = validate(store.fields_for(kind, records[rid]), rec, kind)
         results.append((rid, reasons))
         if not reasons:
-            merged[rid] = _entry(kind, rec)
+            merged[rid] = _entry(kind, rec, records[rid])
     return merged, results
 
 
@@ -217,11 +268,17 @@ def status_counts(records: dict[str, dict], overlay: dict, kind: str = "spells")
         entry = overlay.get(rid)
         if not isinstance(entry, dict):
             state = "missing"
+        elif kind == "choice-texts":
+            state = "translated" if _fresh(kind, entry, rid) else "missing"
         elif entry.get("hash") == store.source_hash(kind, store.fields_for(kind, rec)):
             state = "translated"
         else:
             state = "stale"
         counts[rec.get("source", "SRD")][state] += 1
+    if kind == "choice-texts":  # an entry whose English text the engine no longer serves is stale
+        for key in overlay:
+            if key not in records:
+                counts["(unused)"]["stale"] += 1
     return counts
 
 
@@ -239,7 +296,7 @@ def write_overlay(overlay: dict, kind: str = "spells") -> None:
 def main(argv=None, *, default_kind: str | None = None, prog: str = "python -m i18n.content.tool") -> int:
     ap = argparse.ArgumentParser(prog=prog, description=__doc__.split("\n")[0])
     ap.add_argument("--kind", choices=store.KINDS, default=default_kind, required=default_kind is None,
-                    help="which overlay: spells, species, items, feats, item-rules")
+                    help="which overlay: spells, species, items, feats, choice-texts, item-rules")
     sub = ap.add_subparsers(dest="cmd", required=True)
     ex = sub.add_parser("export", help="write the English texts of some records to a work file")
     which = ex.add_mutually_exclusive_group(required=True)

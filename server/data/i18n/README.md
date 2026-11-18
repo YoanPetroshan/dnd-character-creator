@@ -1,6 +1,6 @@
 # Translated long texts (overlays)
 
-`<lang>/<kind>.json` holds translations of long catalog texts that the English data does not carry. Kinds: `bg/spells.json`, `bg/species.json`, `bg/items.json`, `bg/item-rules.json` (the last three are filled batch by batch).
+`<lang>/<kind>.json` holds translations of long catalog texts that the English data does not carry. Kinds: `bg/spells.json`, `bg/species.json`, `bg/items.json`, `bg/item-rules.json`, `bg/feats.json`, `bg/choice-texts.json` (the last four are filled batch by batch).
 
     { "<spell index>": { "hash": "<sha1>", "desc": [...], "higherLevel": [...], "material": str|null, "castingCondition": str|null } }
 
@@ -19,7 +19,7 @@ Workflow (run from `server/`):
 Validation: hash current, same paragraph counts, same dice expressions (`8d6`), every English number present in the
 Bulgarian text (extra ones are fine: "20 фута (6 м)"), no empty or untranslated paragraph, Cyrillic in every paragraph.
 
-Other kinds (same `export` / `apply` / `status`, `--kind species|items|item-rules`; `python -m i18n.content.spells ...` stays as a shim for spells):
+Other kinds (same `export` / `apply` / `status`, `--kind species|items|item-rules|feats|choice-texts`; `python -m i18n.content.spells ...` stays as a shim for spells):
 
     species     { "<race id>": { "hash", "fluff": [...], "traits": [ { "desc": [...] }, ... ] } }
                 hash = sha1 of the served English fluff and every trait's desc list; the trait count and order must match
@@ -29,3 +29,18 @@ Other kinds (same `export` / `apply` / `status`, `--kind species|items|item-rule
 
 The same validation applies to every kind (paragraph counts per list, dice, numbers, Cyrillic, nothing left in English).
 `store.overlay_species` / `overlay_items` / `overlay_rule` apply a fresh entry to a response body and set `textLang`.
+
+    feats       { "<feat index>": { "hash", "desc": [...] } }
+                hash = sha1 of the English `desc` paragraphs (the feat text flattened as GET /api/feats/<id> serves it);
+                same validation as the other kinds (paragraph count, dice, numbers, Cyrillic)
+    choice-texts  { "<sha1 of the English text>": { "ref": "<option or card id it was found on>", "en": "<English>", "bg": "<Bulgarian>" } }
+                The descriptions the choice cards and their options carry (`choices[].description`, `choices[].options[].description`)
+                are plain English data strings. `store.localize_content(resolution, lang)` (after `localize`, in /api/resolve
+                and the exports) replaces every one whose sha1 is a key with `bg`; the key IS the hash, so a changed English
+                text stops matching and English is served (ten `opt-*-xphb` ids carry two different texts, hence text keys, not ids).
+                `export` harvests the distinct texts by resolving the drafts of `server/tests/i18n_zoo.py` plus a sweep of the
+                catalog `opt-*` features, and writes records `{id: <sha1>, name: <option or card id>, source, hash: <sha1>,
+                desc: [<the whole English text>]}`; the translator returns `desc` as usual, `apply` stores it joined by spaces
+                (no paragraph-count check; dice, every English number, Cyrillic and non-empty are still checked).
+                `status` lists a key that no harvested text matches any more as stale (`(unused)`). Needs the official data
+                to see all texts. The en payload never changes.
