@@ -38,7 +38,7 @@ import sys
 from i18n import glossary as glossary_mod
 from i18n import review_table
 from i18n.bracket_terms import BRACKET_TERMS
-from i18n.catalog import MESSAGES, disabled, labels, problems, pruned, warnings
+from i18n.catalog import MESSAGES, disabled, labels, option_texts, problems, pruned, warnings
 from i18n.messages import msg, render
 from i18n.ts_copy import COPY_DIR, Leaf, flatten, parse_catalog
 
@@ -513,7 +513,8 @@ _KIND_NAME = [(problems, "Проблем или предупреждение в 
               (warnings, "Предупреждение за героя"),
               (pruned, "Отпаднал избор (показва се, когато запазен избор вече не важи)"),
               (disabled, "Причина под недостъпна опция"),
-              (labels, "Етикет, описание или причина на карта за избор")]
+              (labels, "Етикет, описание или причина на карта за избор"),
+              (option_texts, "Описание на опция, написано от програмата (родова линия, земя, афинитет, спътник)")]
 _DEFAULT_PARAMS: dict = {
     "ab": "STR", "value": "abc", "n": 2, "count": 2, "cls": "Wizard", "id": "class:fighter:1:skills", "name": "Longsword",
     "names": ["Athletics", "Stealth"], "level": 5, "feat": "Alert", "source": "Fighter, ниво 4", "where": "Fighter, ниво 4",
@@ -544,6 +545,14 @@ def _message_params(key: str) -> dict:
 
 
 MESSAGE_SAMPLES: dict[str, dict] = {
+    "opt-variant": {"summary": msg("opt-summary", parts=[msg("opt-speed", n=35, m="10,5")]), "text": "Your Speed increases to 35 feet."},  # S3
+    "opt-summary": {"parts": [msg("opt-speed", n=35, m="10,5"), msg("opt-darkvision", n=60, m="18")]},
+    "opt-speed": {"n": 35, "m": "10,5"}, "opt-darkvision": {"n": 60, "m": "18"},
+    "opt-resist": {"types": [msg("opt-dtype-fire"), msg("opt-dtype-cold")]},
+    "opt-spells": {"spells": [msg("opt-spell", name="Longstrider", level=3)]}, "opt-spell": {"name": "Longstrider", "level": 3},
+    "opt-affinity": {"dtype": msg("opt-dtype-fire")},
+    "opt-land": {"levels": [msg("opt-land-level", level=3, names=["Blur", "Fire Bolt"])]},
+    "opt-land-level": {"level": 3, "names": ["Blur", "Fire Bolt"]},
     "label-stale-pick": {"id": "any-martial-weapons", "label": "Any martial weapons"},  # VF7.7c
     "desc-class-skills-from": {"word": msg("label-number-2"), "n": 2, "names": ["Athletics", "Stealth"]},  # VF7.7b
     "desc-class-skills-any": {"word": msg("label-number-3"), "n": 3},

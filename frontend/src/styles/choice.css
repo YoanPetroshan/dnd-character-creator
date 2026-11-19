@@ -274,34 +274,41 @@ ul.choice-picker > li {
   padding: 2px 0;
 }
 
-/* Spell and species preview: a round eye button at the right end of a spell row (44px tap target, 32px circle) opens the
-   spell text under the row, set off by a 2px rule on the left. */
+/* Spell, item and species preview: a round eye button sits right after the name (44px tap target, 32px circle), outside
+   the label so it never toggles the checkbox; the row is a wrapping flex box and the text opens under it at full width. */
 ul.choice-picker > li.choice-picker__item--spell {
-  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
-li.choice-picker__item--spell label {
-  padding-right: 48px;
+ul.choice-picker > li.choice-picker__item--spell > label,
+.choice-picker-wrap:not(.choice-picker-wrap--long) .choice-picker li.choice-picker__item--spell > label {
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 0;
+  max-width: calc(100% - 44px);
 }
 
-/* the short layout's pill label sets its own padding with higher specificity: keep the text clear of the eye */
-.choice-picker-wrap:not(.choice-picker-wrap--long) .choice-picker li.choice-picker__item--spell label {
-  padding-right: 44px;
+.choice-picker-wrap:not(.choice-picker-wrap--long) .choice-picker li.choice-picker__item--spell > label {
+  height: auto;
+}
+
+ul.choice-picker > li.choice-picker__item--spell > .spell-eye__panel {
+  flex: 0 0 100%;
+  box-sizing: border-box;
 }
 
 .choice-picker-wrap:not(.choice-picker-wrap--long) > ul.choice-picker > li.choice-picker__item--spell-open {
   grid-column: 1 / -1;
 }
 
-.choice-picker-wrap:not(.choice-picker-wrap--long) .choice-picker li.choice-picker__item--spell-open label {
-  height: auto;
-}
-
 .spell-eye,
 .species-eye {
-  position: absolute;
-  top: 0;
-  right: 0;
+  position: relative;
+  flex: none;
+  display: inline-block;
+  vertical-align: middle;
   width: 44px;
   height: 44px;
   min-height: 44px;
@@ -366,4 +373,22 @@ li.choice-picker__item--spell label {
   line-height: 18px;
   font-style: normal;
   color: var(--color-text-secondary);
+}
+
+/* Eyes on the character sheet sit inline right after a name; the 44px touch target hangs over the row without making it taller. */
+[data-page="sheet"] .spell-eye {
+  margin: -12px 0 -12px 2px;
+}
+
+[data-page="sheet"] .sheet-eye-row > td {
+  padding: 0;
+}
+
+/* a wide table scrolls sideways on a phone: the panel stays as wide as the screen and follows the scroll */
+[data-page="sheet"] .sheet-eye-row .spell-eye__panel {
+  position: sticky;
+  left: 0;
+  box-sizing: border-box;
+  max-width: calc(100vw - 80px);
+  margin: var(--space-1) 0 var(--space-2);
 }

@@ -5,6 +5,7 @@ import { optionSource } from "../logic/sources";
 import type { Choice, ChoiceOption } from "../types";
 import { useDraftRuleset } from "../DraftContext";
 import { optionFeatId, optionItemIds } from "../logic/optionItems";
+import { DetailEye, DetailPanel, ParagraphsBody } from "./DetailEye";
 import { FeatDetailBody, useFeatDetails } from "./FeatDetailBody";
 import { ItemDetailBody, useItemDetails } from "./ItemDetailBody";
 import { SpellDetailBody, useSpellDetails } from "./SpellDetailBody";
@@ -69,18 +70,16 @@ function useOptionPreview(choice: Choice) {
   }
   const button = (o: ChoiceOption) =>
     hasEye(o) && (
-      <button
-        type="button"
-        className="spell-eye"
-        aria-label={isSpellOption(o) ? t.choice.showSpell : itemIds(o).length > 0 ? t.choice.showItem : t.choice.showDetails(o.label)}
-        aria-expanded={isOpen(o)}
-        onClick={() => toggle(o)}
+      <DetailEye
+        label={isSpellOption(o) ? t.choice.showSpell : itemIds(o).length > 0 ? t.choice.showItem : t.choice.showDetails(o.label)}
+        open={isOpen(o)}
+        onToggle={() => toggle(o)}
       />
     );
   const panel = (o: ChoiceOption) =>
     hasEye(o) &&
     isOpen(o) && (
-      <div className="spell-eye__panel">
+      <DetailPanel>
         {isSpellOption(o) ? (
           <SpellDetailBody state={spells.details[o.id]} />
         ) : itemIds(o).length > 0 ? (
@@ -88,15 +87,9 @@ function useOptionPreview(choice: Choice) {
         ) : featId(o) ? (
           <FeatDetailBody state={feats.detailOf(featId(o)!)} />
         ) : (
-          <div className="species-eye__body">
-            {ownText(o).split(/\n{2,}/).map((paragraph, i) => (
-              <p key={i} className="species-eye__lore">
-                {paragraph}
-              </p>
-            ))}
-          </div>
+          <ParagraphsBody paragraphs={ownText(o).split(/\n{2,}/)} />
         )}
-      </div>
+      </DetailPanel>
     );
   const itemClass = (o: ChoiceOption, extra?: string) =>
     [extra, hasEye(o) ? "choice-picker__item--spell" : null, hasEye(o) && isOpen(o) ? "choice-picker__item--spell-open" : null]

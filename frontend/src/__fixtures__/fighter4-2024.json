@@ -259,7 +259,11 @@
      "level": 1,
      "choice": [
       "Archery"
-     ]
+     ],
+     "ref": {
+      "kind": "feature",
+      "id": "xphb-fighter-1-fighting-style"
+     }
     },
     {
      "source": {
@@ -268,7 +272,11 @@
       "label": "Fighter"
      },
      "name": "Second Wind",
-     "level": 1
+     "level": 1,
+     "ref": {
+      "kind": "feature",
+      "id": "xphb-fighter-1-second-wind"
+     }
     },
     {
      "source": {
@@ -283,7 +291,11 @@
       "Dagger (Nick)",
       "Greatclub (Push)",
       "Handaxe (Vex)"
-     ]
+     ],
+     "ref": {
+      "kind": "feature",
+      "id": "xphb-fighter-1-weapon-mastery"
+     }
     },
     {
      "source": {
@@ -292,7 +304,11 @@
       "label": "Fighter"
      },
      "name": "Action Surge",
-     "level": 2
+     "level": 2,
+     "ref": {
+      "kind": "feature",
+      "id": "xphb-fighter-2-action-surge"
+     }
     },
     {
      "source": {
@@ -301,7 +317,11 @@
       "label": "Fighter"
      },
      "name": "Tactical Mind",
-     "level": 2
+     "level": 2,
+     "ref": {
+      "kind": "feature",
+      "id": "xphb-fighter-2-tactical-mind"
+     }
     },
     {
      "source": {
@@ -310,7 +330,11 @@
       "label": "Human"
      },
      "name": "Resourceful",
-     "level": null
+     "level": null,
+     "ref": {
+      "kind": "trait",
+      "id": "trait:human-xphb:human-xphb-trait-0"
+     }
     },
     {
      "source": {
@@ -319,7 +343,11 @@
       "label": "Human"
      },
      "name": "Skillful",
-     "level": null
+     "level": null,
+     "ref": {
+      "kind": "trait",
+      "id": "trait:human-xphb:human-xphb-trait-1"
+     }
     },
     {
      "source": {
@@ -328,7 +356,11 @@
       "label": "Human"
      },
      "name": "Versatile",
-     "level": null
+     "level": null,
+     "ref": {
+      "kind": "trait",
+      "id": "trait:human-xphb:human-xphb-trait-2"
+     }
     },
     {
      "source": {
@@ -349,7 +381,11 @@
       "label": "Savage Attacker"
      },
      "name": "Savage Attacker",
-     "level": null
+     "level": null,
+     "ref": {
+      "kind": "feat",
+      "id": "savage-attacker-xphb"
+     }
     },
     {
      "source": {
@@ -358,7 +394,11 @@
       "label": "Alert"
      },
      "name": "Alert",
-     "level": null
+     "level": null,
+     "ref": {
+      "kind": "feat",
+      "id": "alert-xphb"
+     }
     },
     {
      "source": {
@@ -367,7 +407,11 @@
       "label": "Archery"
      },
      "name": "Archery",
-     "level": 1
+     "level": 1,
+     "ref": {
+      "kind": "feat",
+      "id": "archery-xphb"
+     }
     }
    ],
    "feats": [

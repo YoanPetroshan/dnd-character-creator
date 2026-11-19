@@ -86,6 +86,12 @@ export const bg = {
   sheet: {
     title: "Лист на героя",
     print: "Печат",
+    /** The eye after a name on the sheet opens its text under the row. */
+    eye: {
+      spell: (name: string) => `Покажи описанието на заклинанието: ${name}`,
+      item: (name: string) => `Покажи описанието на предмета: ${name}`,
+      details: (name: string) => `Покажи какво дава: ${name}`,
+    },
     tabs: {
       label: "Раздели на листа",
       actions: "Действия (Actions)",
@@ -531,6 +537,7 @@ export const bg = {
     classResources: "Ресурси на класа",
     hpRolls: "Хвърляния за точки живот (Hit Points)",
     levelN: (n: number) => `Ниво ${n}`,
+    showSubclass: (name: string) => `Покажи какво дава подкласът: ${name}`,
     tabFeatures: "Способности (Features)",
     tabSpells: "Заклинания",
     noChoices: "Няма избори за този клас.",
@@ -743,6 +750,8 @@ export const bg = {
     "spells.failed": (p: Msgs) => `Списъкът със заклинания не се зареди (грешка ${p.status}).`,
     "species.failed": (p: Msgs) => `Расата (Species) не се зареди (грешка ${p.status}).`,
     "feat.failed": (p: Msgs) => `Талантът (Feat) не се зареди (грешка ${p.status}).`,
+    "subclass.failed": (p: Msgs) => `Подкласът не се зареди (грешка ${p.status}).`,
+    "feature.failed": (p: Msgs) => `Текстът не се зареди (грешка ${p.status}).`,
     "spell.failed": (p: Msgs) => `Заклинанието не се зареди (грешка ${p.status}).`,
     "export.refused": (p: Msgs) => `Експортът е отказан, докато има проблеми в черновата: ${p.text}`,
     "export.failed": (p: Msgs) => `Експортът не успя. ${p.detail}`,

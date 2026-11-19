@@ -477,6 +477,19 @@ REBASELINES: dict[str, dict] = {
         "paths": [r"^result\.choices\[[^\]]+\]\.options\[[^\]]+\]\.description$"],
         "why": "{@filter ...} tag text in class option descriptions (fix(text))",
     },
+    # SF1 (sheet(features): ref ids): every `sheet.features` row that has text behind it gains `ref: {kind, id}`.
+    "SF1": {
+        "cases": ["*"],
+        "paths": [r"^result\.sheet\.features\[\d+\]\.ref(\.(kind|id))?$"],
+        "why": "sheet.features rows point at their text (GET /api/features/<id>, /api/feats/<id>)",
+    },
+    # S3 (engine(options): texts for lineages and option cards): species lineage / ancestry options, Circle of the Land,
+    # Elemental Affinity, Primal Companion and Feywild Gifts options gain `description`. Only option descriptions may move.
+    "S3": {
+        "cases": ["*"],
+        "paths": [r"^result\.choices\[[^\]]+\]\.options\[[^\]]+\]\.description$"],
+        "why": "generated / own-words option descriptions for lineages, land, affinity, companion, Feywild gifts (S3)",
+    },
 }
 
 _NEEDS_DATA = [m for m, ok in (("classes", official.has_official_classes), ("official", official.has_official),
@@ -860,7 +873,7 @@ def test_rebaseline_unknown_slice_raises(tmp_path, monkeypatch):
 
 def test_rebaselines_constant_is_append_only_and_strip_unchanged():
     """Append-only record: a later slice adds a key, never edits or removes one (extend this tuple then)."""
-    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a", "VF2b", "VF2c", "VF2d", "VF4a", "VF7a", "VF7b", "VF7c", "VF7e", "C1", "TXT1") and STRIP == ()
+    assert tuple(REBASELINES) == ("RP7", "RPF", "RP15", "RP16", "RPX1", "RPX2", "RPX3", "W6", "W7", "X2", "Y2", "G1", "G2", "F1", "B2", "VF2a", "VF2b", "VF2c", "VF2d", "VF4a", "VF7a", "VF7b", "VF7c", "VF7e", "C1", "TXT1", "SF1", "S3") and STRIP == ()
     rp7 = REBASELINES["RP7"]
     assert rp7["cases"] == ["*/src-*/monk[0-9]*", "ks/src-*/monk14"] and len(rp7["paths"]) == 3
 

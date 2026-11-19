@@ -340,7 +340,11 @@
       "Lessons of the First Ones",
       "Devil's Sight",
       "Armor of Shadows"
-     ]
+     ],
+     "ref": {
+      "kind": "feature",
+      "id": "xphb-warlock-1-eldritch-invocations"
+     }
     },
     {
      "source": {
@@ -349,7 +353,11 @@
       "label": "Warlock"
      },
      "name": "Pact Magic",
-     "level": 1
+     "level": 1,
+     "ref": {
+      "kind": "feature",
+      "id": "xphb-warlock-1-pact-magic"
+     }
     },
     {
      "source": {
@@ -358,7 +366,11 @@
       "label": "Warlock"
      },
      "name": "Eldritch Invocation Options",
-     "level": 1
+     "level": 1,
+     "ref": {
+      "kind": "feature",
+      "id": "xphb-warlock-1-eldritch-invocation-options"
+     }
     },
     {
      "source": {
@@ -367,7 +379,11 @@
       "label": "Warlock"
      },
      "name": "Magical Cunning",
-     "level": 2
+     "level": 2,
+     "ref": {
+      "kind": "feature",
+      "id": "xphb-warlock-2-magical-cunning"
+     }
     },
     {
      "source": {
@@ -376,7 +392,11 @@
       "label": "Acolyte"
      },
      "name": "Shelter of the Faithful",
-     "level": null
+     "level": null,
+     "ref": {
+      "kind": "background",
+      "id": "acolyte"
+     }
     },
     {
      "source": {
@@ -385,7 +405,11 @@
       "label": "Alert"
      },
      "name": "Alert",
-     "level": 2
+     "level": 2,
+     "ref": {
+      "kind": "feat",
+      "id": "alert-xphb"
+     }
     }
    ],
    "feats": [

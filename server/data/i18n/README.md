@@ -33,6 +33,11 @@ The same validation applies to every kind (paragraph counts per list, dice, numb
     feats       { "<feat index>": { "hash", "desc": [...] } }
                 hash = sha1 of the English `desc` paragraphs (the feat text flattened as GET /api/feats/<id> serves it);
                 same validation as the other kinds (paragraph count, dice, numbers, Cyrillic)
+    features    { "<catalog feature id>": { "hash", "desc": [...] } }
+                hash = sha1 of the English `desc` paragraphs of the catalog feature (class and subclass features of every book, an SRD
+                feature counts as source `SRD`). Served by GET /api/features/<id> and, one by one, GET /api/subclasses/<id>.
+                `export --kind features --class <id> --source <book>` filters; `python -m i18n.content.tool --kind features seed`
+                copies the `choice-texts` translations whose English text is exactly a feature's text (one paragraph per entry).
     choice-texts  { "<sha1 of the English text>": { "ref": "<option or card id it was found on>", "en": "<English>", "bg": "<Bulgarian>" } }
                 The descriptions the choice cards and their options carry (`choices[].description`, `choices[].options[].description`)
                 are plain English data strings. `store.localize_content(resolution, lang)` (after `localize`, in /api/resolve

@@ -48,6 +48,8 @@ EXPORT_OMITTED: dict[str, str] = {
     "sheet.feats.[].id": _ID, "sheet.feats.[].origin": "id: where the feat came from (internal enum); the feat name is printed",
     "sheet.grantedFeats.[]": _IDLIST,
     "sheet.features.[].source.id": _SRC, "sheet.features.[].source.kind": _SRC,
+    "sheet.features.[].ref.id": "id: pointer to the feature text (GET /api/features/<id>, /api/feats/<id>); the exports print the name and text themselves",
+    "sheet.features.[].ref.kind": "id: kind of that pointer (feature, trait, feat, background)",
     "sheet.equipment.granted.[].itemId": _ID, "sheet.equipment.chosen.[].itemId": _ID,
     "sheet.equipment.added.[].itemId": _ID,
     "sheet.equipment.chosen.[].contents.[].itemId": _ID, 

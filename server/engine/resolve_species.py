@@ -11,6 +11,7 @@ from i18n.messages import msg
 from catalog.official_source import slug, SAVE_ABILITY_NAMES
 from catalog.reference_data import SRD_TRAIT_EFFECTS
 from . import feat_effects as feat_effects_mod
+from . import option_texts
 from .resolve_feats import _background_proficiency_choice_label, _feat_cid_prefix, _feat_offered, _feat_options, _feat_prerequisite_unmet_reason, _innate_entry_to_sheet, _join_desc, _race_name_key, _taken_reason
 
 def _ability_sources(race: dict | None, subrace: dict | None) -> list[dict]:
@@ -459,7 +460,8 @@ def _species_variant_template(race: dict | None, race_id: str | None) -> dict | 
         "label": msg("label-lineage"),
         "description": msg("desc-lineage"),
         "count": 1,
-        "options": [{"id": v["id"], "label": v["name"]} for v in race["variants"]],
+        "options": [{"id": v["id"], "label": v["name"], **({"description": d} if (d := option_texts.variant_description(v)) else {})}
+                    for v in race["variants"]],
     }
 
 def _species_alternatives(race: dict | None, subrace: dict | None, catalog: Catalog) -> list[dict]:

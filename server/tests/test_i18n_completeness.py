@@ -28,13 +28,13 @@ import export_labels
 import i18n_zoo as zoo
 from app import app
 from i18n import glossary
-from i18n.catalog import MESSAGES, disabled, labels, problems, pruned, warnings
+from i18n.catalog import MESSAGES, disabled, labels, option_texts, problems, pruned, warnings
 from i18n.messages import validate_catalog
 from i18n.ts_copy import COPY_DIR, flatten, load_glossary_ts, parse_catalog
 
 CYRILLIC = re.compile("[Ѐ-ӿ]")
 FRONTEND_SRC = COPY_DIR.parent
-MODULES = {"problems": problems, "warnings": warnings, "pruned": pruned, "disabled": disabled, "labels": labels}
+MODULES = {"problems": problems, "warnings": warnings, "pruned": pruned, "disabled": disabled, "labels": labels, "option_texts": option_texts}
 
 pytestmark_data = pytest.mark.skipif(bool(zoo.NEEDS_DATA), reason=f"5etools data missing: {', '.join(zoo.NEEDS_DATA)}")
 

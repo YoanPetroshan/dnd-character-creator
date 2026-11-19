@@ -44,7 +44,7 @@ from engine.resolve import _source_allowed, _spell_visible, _subclass_visible, r
 from catalog.official.race_fluff import species_fluff, trait_details
 from export import to_yaml
 from export_labels import DEFAULT_LANG as EXPORT_DEFAULT_LANG, label as export_label
-from i18n.content.store import localize_content, overlay_feats, overlay_items, overlay_rule, overlay_species, overlay_spell
+from i18n.content.store import localize_content, overlay_feats, overlay_features, overlay_items, overlay_rule, overlay_species, overlay_spell
 from i18n.messages import localize, msg, parse_lang
 from markdown_export import to_markdown
 
@@ -377,6 +377,13 @@ def api_catalog_background(args, body, background_id: str):
     return _json(bg)
 
 
+def _species_payload(species_id: str, race: dict) -> dict:
+    subspecies = _catalog.subraces_of(species_id)
+    return {**race, "subspecies": subspecies,
+            "fluff": species_fluff(race.get("name", ""), race.get("source", ""), [s.get("name", "") for s in subspecies]),
+            "traitDetails": trait_details(race, _catalog.traits)}
+
+
 def api_catalog_species(args, body, species_id: str):
     lang, bad_lang = _request_lang(args)
     if bad_lang:
@@ -384,11 +391,7 @@ def api_catalog_species(args, body, species_id: str):
     race = _catalog.races.get(species_id)
     if not race:
         return _error("not found", 404)
-    subspecies = _catalog.subraces_of(species_id)
-    return _json(overlay_species(species_id, {
-        **race, "subspecies": subspecies,
-        "fluff": species_fluff(race.get("name", ""), race.get("source", ""), [s.get("name", "") for s in subspecies]),
-        "traitDetails": trait_details(race, _catalog.traits)}, lang))
+    return _json(overlay_species(species_id, _species_payload(species_id, race), lang))
 
 
 def api_items(args, body, **_):
@@ -500,9 +503,87 @@ def api_feat_detail(args, body, feat_id: str):
         return _error("not found", 404)
     from sheet_data import feat_prerequisite_text, flatten_entries  # lazy: sheet_data pulls the sheet stack
     return _json(overlay_feats(feat_id, {
-        "id": feat["index"], "name": feat["name"], "prerequisite": feat_prerequisite_text(feat, _catalog.feats),
+        "id": feat["index"], "name": feat["name"], "prerequisite": feat_prerequisite_text(feat, _catalog.feats, lang),
         "desc": flatten_entries(feat.get("entries") or []),
     }, lang))
+
+
+def _paragraphs(desc) -> list[str]:
+    if isinstance(desc, str):
+        desc = [desc]
+    return [p for p in desc or [] if isinstance(p, str)]
+
+
+def _trait_feature(species_id: str, trait_id: str, lang: str) -> dict | None:
+    """The feature body of a species trait ref (`trait:<species id>:<trait index>`): the species overlay's Bulgarian text when
+    the trait is one of the species' own listed traits (a subspecies trait or a stale overlay stays English)."""
+    race, trait = _catalog.races.get(species_id), _catalog.traits.get(trait_id)
+    if not race or not trait:
+        return None
+    desc = trait_details({"traits": [{"index": trait_id}]}, _catalog.traits)
+    body = {"id": f"trait:{species_id}:{trait_id}", "name": trait.get("name") or "", "level": None, "className": None,
+            "subclassName": None, "source": race.get("source") or "SRD", "desc": desc[0]["desc"] if desc else [], "textLang": "en"}
+    position = 0
+    for ref in race.get("traits") or []:
+        listed = trait_details({"traits": [ref]}, _catalog.traits)
+        if ref.get("index") == trait_id:
+            if listed and lang == "bg":
+                overlaid = overlay_species(species_id, _species_payload(species_id, race), lang)
+                if overlaid["textLang"] == "bg":
+                    body["desc"], body["textLang"] = overlaid["traitDetails"][position]["desc"], "bg"
+            break
+        position += len(listed)
+    return body
+
+
+def api_feature_detail(args, body, feature_id: str):
+    lang, bad_lang = _request_lang(args)
+    if bad_lang:
+        return bad_lang
+    if feature_id.startswith("trait:"):
+        _, _, rest = feature_id.partition(":")
+        species_id, _, trait_id = rest.partition(":")
+        detail = _trait_feature(species_id, trait_id, lang)
+        return _error("not found", 404) if detail is None else _json(detail)
+    if feature_id.startswith("background:"):
+        bg = _catalog.backgrounds.get(feature_id.partition(":")[2])
+        if not bg:
+            return _error("not found", 404)
+        feature = bg.get("feature") or {}
+        return _json({"id": feature_id, "name": feature.get("name") or "", "level": None, "className": None, "subclassName": None,
+                      "source": bg.get("source") or "SRD", "desc": _paragraphs(feature.get("desc")), "textLang": "en"})
+    feature = _catalog.features.get(feature_id)
+    if not feature:
+        return _error("not found", 404)
+    return _json(overlay_features(feature_id, {
+        "id": feature_id, "name": feature.get("name") or "", "level": feature.get("level"),
+        "className": (feature.get("class") or {}).get("name"), "subclassName": (feature.get("subclass") or {}).get("name"),
+        "source": feature.get("source") or "SRD", "desc": _paragraphs(feature.get("desc")),
+    }, lang))
+
+
+def api_subclass_detail(args, body, subclass_id: str):
+    lang, bad_lang = _request_lang(args)
+    if bad_lang:
+        return bad_lang
+    sub = _catalog.subclasses.get(subclass_id)
+    if not sub:
+        return _error("not found", 404)
+    features, seen = [], set()
+    for level in range(1, 21):
+        for ref in ((_catalog.subclass_level_row(subclass_id, level) or {}).get("features") or []):
+            feature = _catalog.features.get(ref.get("index"))
+            if not feature or ref["index"] in seen:
+                continue
+            seen.add(ref["index"])
+            one = overlay_features(ref["index"], {"desc": _paragraphs(feature.get("desc"))}, lang)
+            features.append({"id": ref["index"], "name": feature.get("name") or ref.get("name") or "",
+                             "level": feature.get("level", level), "desc": one["desc"], "_lang": one["textLang"]})
+    intro = _paragraphs(sub.get("desc"))
+    # No overlay for the subclass's own intro text (only the SRD subclasses have one): it stays English, so it keeps `textLang` en.
+    text_lang = "bg" if lang == "bg" and not intro and all(f["_lang"] == "bg" for f in features if f["desc"]) else "en"
+    return _json({"id": subclass_id, "name": sub.get("name") or "", "source": sub.get("source") or "SRD", "ruleset": sub.get("ruleset"),
+                  "desc": intro, "features": [{k: v for k, v in f.items() if k != "_lang"} for f in features], "textLang": text_lang})
 
 
 def _item_damage(damage: dict | None) -> dict | None:
@@ -705,6 +786,8 @@ ROUTES: tuple[tuple[str, tuple[str, ...], Callable[..., Response]], ...] = (
     ("/api/spells", ("GET",), api_spells),
     ("/api/spells/<spell_id>", ("GET",), api_spell_detail),
     ("/api/feats/<feat_id>", ("GET",), api_feat_detail),
+    ("/api/features/<feature_id>", ("GET",), api_feature_detail),
+    ("/api/subclasses/<subclass_id>", ("GET",), api_subclass_detail),
     ("/api/export/<fmt>", ("POST",), api_export),
 )
 

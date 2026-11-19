@@ -80,6 +80,12 @@ export const en: Copy = {
   sheet: {
     title: "Character Sheet",
     print: "Print",
+    /** The eye after a name on the sheet opens its text under the row. */
+    eye: {
+      spell: (name: string) => `Show the spell description: ${name}`,
+      item: (name: string) => `Show the item description: ${name}`,
+      details: (name: string) => `Show what it gives: ${name}`,
+    },
     tabs: {
       label: "Sheet sections",
       actions: "Actions",
@@ -523,6 +529,7 @@ export const en: Copy = {
     classResources: "Class Resources",
     hpRolls: "Hit Point rolls",
     levelN: (n: number) => `Level ${n}`,
+    showSubclass: (name: string) => `Show what the subclass gives: ${name}`,
     tabFeatures: "Features",
     tabSpells: "Spells",
     noChoices: "There are no choices for this class.",
@@ -731,6 +738,8 @@ export const en: Copy = {
     "spells.failed": (p: Msgs) => `The spell list did not load (error ${p.status}).`,
     "species.failed": (p: Msgs) => `The species did not load (error ${p.status}).`,
     "feat.failed": (p: Msgs) => `The feat did not load (error ${p.status}).`,
+    "subclass.failed": (p: Msgs) => `The subclass did not load (error ${p.status}).`,
+    "feature.failed": (p: Msgs) => `The feature did not load (error ${p.status}).`,
     "spell.failed": (p: Msgs) => `The spell did not load (error ${p.status}).`,
     "export.refused": (p: Msgs) => `The export was refused while the draft has problems: ${p.text}`,
     "export.failed": (p: Msgs) => `The export failed. ${p.detail}`,

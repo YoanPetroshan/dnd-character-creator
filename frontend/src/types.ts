@@ -204,6 +204,9 @@ export interface SheetFeature {
   level: number | null;
   /** Labels of what the player picked for this feature (fighting style, metamagic, ...). */
   choice?: string[];
+  /** Where the text of this row is served: feature / trait -> GET /api/features/<id>, feat -> /api/feats/<id>,
+   *  background -> the background id (GET /api/features/background:<id>). Absent when there is no text behind the row. */
+  ref?: { kind: "feature" | "trait" | "feat" | "background"; id: string };
 }
 
 export interface SheetFeat {

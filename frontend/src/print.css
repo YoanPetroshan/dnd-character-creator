@@ -11,6 +11,9 @@
   .tabs__list,
   .feature-filters,
   .no-print,
+  .spell-eye,
+  .spell-eye__panel,
+  .sheet-eye-row,
   button {
     display: none !important;
   }

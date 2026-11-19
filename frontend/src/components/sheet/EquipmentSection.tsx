@@ -1,6 +1,7 @@
 import { useT } from "../../LanguageContext";
 import type { SheetSectionData } from "../../logic/sheetSections";
 import { SectionFrame } from "./SectionFrame";
+import { SheetEye, SheetEyePanel } from "./SheetEyes";
 
 export function EquipmentSection({ data }: { data: SheetSectionData["equipment"] }) {
   const t = useT();
@@ -14,6 +15,7 @@ export function EquipmentSection({ data }: { data: SheetSectionData["equipment"]
             {group.entries.map((e, i) => (
               <li key={`${e.itemId}:${i}`}>
                 {e.name}
+                <SheetEye rowKey={`item:${group.kind}:${i}`} kind="item" id={e.itemId} name={e.name} />
                 {e.qty !== 1 ? ` ${c.quantity(e.qty)}` : ""}
                 {e.equipped ? ` (${c.equipped})` : ""}
                 {e.contents && e.contents.length > 0 && (
@@ -23,6 +25,7 @@ export function EquipmentSection({ data }: { data: SheetSectionData["equipment"]
                     {e.contents.map((p) => p.name + (p.qty !== 1 ? ` ${c.quantity(p.qty)}` : "")).join(", ")})
                   </>
                 )}
+                <SheetEyePanel rowKey={`item:${group.kind}:${i}`} kind="item" id={e.itemId} />
               </li>
             ))}
           </ul>
