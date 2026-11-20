@@ -27,6 +27,9 @@ const BACKUP_SUFFIX = ".unreadable-backup";
 export const MAX_IMPORT = 200;
 /** FE-06: the largest stored form of one imported draft (characters are a few KB; this is room for a long backstory). */
 export const MAX_IMPORT_DRAFT_CHARS = 2_000_000;
+/** FE-06: the largest import FILE that is read at all (a whole file is parsed in memory). A bundle of 200 characters with
+ *  pictures is far below it; a long backstory never counts against it because each character has its own 2 MB limit. */
+export const MAX_IMPORT_FILE_MB = 50;
 
 export const PORTRAIT_KEY_PREFIX = "dnd-builder-portrait-v1:";
 export const draftKey = (id: string) => `${DRAFT_KEY_PREFIX}${id}`;

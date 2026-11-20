@@ -4,7 +4,7 @@
     .venv/bin/python scripts/make_pwa_icons.py
 
 The d20 line mark of the header brand (frontend/src/App.tsx, viewBox 32: outer hexagon, inner triangle, seven edges
-between them) drawn as strokes in --color-page on a --color-accent background (first occurrence of each in
+between them) drawn as strokes in --color-page on a --color-highlight (brand green) background (first occurrence of each in
 frontend/src/styles/tokens.css, i.e. the light theme). The stroke is 5.5 % of the mark's box, with round joins.
 Output (committed):
   icon-192.png, icon-512.png            "any" icons (the mark's box is 62 % of the square)
@@ -69,8 +69,8 @@ def png(size: int, pixels: bytes) -> bytes:
 
 
 def icon(size: int, box_fraction: float) -> bytes:
-    """Accent-coloured square with the d20 mark in the page colour; the 32-unit viewBox of the mark is box_fraction of the side."""
-    bg = token("color-accent")
+    """Brand-green square with the d20 mark in the page colour; the 32-unit viewBox of the mark is box_fraction of the side."""
+    bg = token("color-highlight")  # the site's brand green (owner, 2026-11-20)
     fg = token("color-page")
     box = size * box_fraction
     scale = box / 32
