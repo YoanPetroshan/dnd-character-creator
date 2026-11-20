@@ -121,6 +121,8 @@ describe("scripts", () => {
     "choice", "current", "drop", "from", "here", "level", "lowest",
     "name", "none", "page", "pending", "reload", "replaces", "resolve",
     "rolling", "ruleset", "scores", "should", "six", "still", "the", "this", "type", "you",
+    // damage types stay English like the weapon table (owner, 2026-11-20)
+    "acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder",
   ]);
 
   // Game terms kept in English on purpose (owner decision 2026-11-05): "Spell Slots" (glossary spellSlots, as in the BG export);

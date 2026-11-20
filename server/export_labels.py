@@ -141,9 +141,8 @@ _BG: dict = {
     "senses": {"darkvision": "тъмно зрение (Darkvision)", "blindsight": "сляпо зрение (Blindsight)",
                "tremorsense": "усещане за вибрации (Tremorsense)", "truesight": "истинско зрение (Truesight)",
                "devilsSight": "дяволско зрение (Devil's Sight)"},
-    "damage": {"acid": "киселинни", "bludgeoning": "дробящи", "cold": "студени", "fire": "огнени", "force": "силови",
-               "lightning": "мълниеносни", "necrotic": "некротични", "piercing": "пробождащи", "poison": "отровни",
-               "psychic": "психични", "radiant": "лъчисти", "slashing": "режещи", "thunder": "гръмотевични"},
+    "damage": {t: t for t in ("acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing",
+                              "poison", "psychic", "radiant", "slashing", "thunder")},  # English, like the weapon table (owner, 2026-11-20)
     # --- character details (sections and their fields)
     "detailSections": {
         "identity": "Данни за героя", "physical": "Физически характеристики", "personality": "Личност", "notes": "Бележки"},

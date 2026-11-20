@@ -397,13 +397,13 @@ def _expected_strings(res) -> list[tuple[str, str]]:
 def test_kitchen_sink_rage_details_are_printed(catalog):
     """F2-A: the Rage resistances and (2024) short-rest regain reach Markdown and PDF."""
     for sid, want in (("barbarian20-2024", "1 използване се възстановява при кратка почивка (Short Rest)"),
-                      ("barbarian20-2014", "устойчивост (Resistance): дробящи, пробождащи, режещи"),
+                      ("barbarian20-2014", "устойчивост (Resistance): bludgeoning, piercing, slashing"),
                       ("totem-bear6", "устойчивост (Resistance): всички видове щети освен психични")):
         res = _sink(sid, catalog)
         assert want in _flat(to_markdown(res)), (sid, want)
         assert want in _pdf_text(res), (sid, want)
     res = _sink("barbarian20-2024", catalog)
-    assert "устойчивост (Resistance): дробящи, пробождащи, режещи" in _flat(to_markdown(res))
+    assert "устойчивост (Resistance): bludgeoning, piercing, slashing" in _flat(to_markdown(res))
 
 
 @pytest.mark.parametrize("sid", list(KITCHEN_SINK))

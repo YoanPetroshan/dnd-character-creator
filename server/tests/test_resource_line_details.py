@@ -10,7 +10,7 @@ def _line(details, **extra):
 
 def test_rage_resistances_list_damage_types():
     line = _line({"damageBonus": 2, "resistances": ["bludgeoning", "piercing", "slashing"]})
-    assert "устойчивост (Resistance): дробящи, пробождащи, режещи" in line
+    assert "устойчивост (Resistance): bludgeoning, piercing, slashing" in line
 
 
 def test_totem_bear_resistances_summarised():

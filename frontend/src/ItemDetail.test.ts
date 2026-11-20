@@ -31,7 +31,7 @@ describe("ItemDetailBody", () => {
   });
   it("Bulgarian labels, item names stay English", () => {
     const h = html("bg", longsword);
-    for (const s of ["Versatile", "15 зл.", "Тегло", "режещи", "Двуръчно", "Свойства", "Майсторство с оръжия (Weapon Mastery): Sap"]) expect(h, s).toContain(s);
+    for (const s of ["Versatile", "15 зл.", "Тегло", "slashing", "Двуръчно", "Свойства", "Майсторство с оръжия (Weapon Mastery): Sap"]) expect(h, s).toContain(s);
   });
   it("armor shows AC, Dexterity cap, Strength minimum and Stealth Disadvantage", () => {
     const armor: ItemDetail = { ...base, category: "armor", name: "Half Plate", armor: { base: 15, dexBonus: true, maxBonus: 2, strMinimum: 13, stealthDisadvantage: true } };

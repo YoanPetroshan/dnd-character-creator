@@ -2,8 +2,8 @@
 "versatile", "range"); the fillable sheet is aligned to them instead of the other way round, so one language no longer has
 two spellings of the same thing.
 
-Known and left as it is (it would move export_baseline.json): the Rage row of a class resource still writes its damage
-types with the Bulgarian words in the Markdown / PDF / sheet alike (`resource_detail_parts`), so it agrees with itself."""
+Decided later (owner, 2026-11-20): the Rage row of a class resource writes its damage types in English too, so the Bulgarian
+labels have no damage words of their own left."""
 from __future__ import annotations
 
 import re
