@@ -50,6 +50,11 @@ export function StatusBanner() {
           {t.pwa.installing}
         </p>
       )}
+      {offline.phase === "error" && (
+        <p className="status-banner" role="status" data-state="pwa-error">
+          {t.pwa.installFailed}
+        </p>
+      )}
       {offline.phase === "update-available" && (
         <p className="status-banner" role="status" data-state="update-available">
           {t.pwa.updateAvailable}{" "}

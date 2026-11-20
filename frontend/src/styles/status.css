@@ -31,6 +31,7 @@
 }
 
 .status-banner[data-state="update-needs-backup"],
+.status-banner[data-state="pwa-error"],
 .status-banner[data-state="storage-failed"],
 .status-banner[data-state="server-older"],
 .status-banner[data-state="pruned"] {

@@ -487,7 +487,7 @@ export function openCharacter(
   const next: Library = { ...lib, activeId: id };
   // FE-08: when the index cannot record the switch, a reload would bring the old character back while edits went to the
   // new one; refuse the switch and say why (the UI shows the reason)
-  if (!writeIndex(env, next)) return { library: lib, draft: null, notices, unsavedRaw, ok: false, reason: msg("lib.cannotStore") };
+  if (!writeIndex(env, next)) return { library: lib, draft: null, notices, unsavedRaw, ok: false, reason: msg("lib.switchRefused") };
   return { library: next, draft, notices, unsavedRaw, ok: true };
 }
 

@@ -205,7 +205,7 @@ describe("operations", () => {
     expect(back.draft).toBeNull();
     expect(back.library).toBe(made.library);
     expect(back.library.activeId).toBe(made.library.activeId);
-    expect(back.reason && bgText(back.reason)).toContain("Не можа да се запази");
+    expect(back.reason && bgText(back.reason)).toContain("не беше сменен");
   });
 
   it("saveDraft keeps the item name in sync with draft.name and bumps updatedAt", () => {
