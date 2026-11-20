@@ -1249,3 +1249,27 @@ main .next-button::after {
 .stat-box--hp dd {
   font-size: 32px;
 }
+
+/* Class page: what the levels give, one block per level; the species / background pages list what they grant. */
+.class-level-features,
+.granted-features {
+  margin: var(--space-3) 0;
+}
+
+.level-features__level {
+  padding: 2px 0 6px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.level-features__level h4 {
+  margin: 10px 0 2px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text-strong);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.level-features {
+  margin: 0;
+}

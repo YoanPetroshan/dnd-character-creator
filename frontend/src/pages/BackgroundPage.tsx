@@ -6,6 +6,8 @@ import { renderMsg } from "../logic/messages";
 import { useResolutionContext } from "../ResolutionContext";
 import { useCatalogContext } from "../CatalogContext";
 import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
+import { FeatureEyeList, grantedFeatures } from "../components/FeatureEyeList";
+import { SheetEyesProvider } from "../components/sheet/SheetEyes";
 
 export function BackgroundPage() {
   const t = useT();
@@ -43,6 +45,7 @@ export function BackgroundPage() {
     : [];
 
   return (
+    <SheetEyesProvider>
     <div className="page">
       <h1>{bp.title} {loading && "…"}</h1>
       <StepProblems step="background" />
@@ -81,6 +84,12 @@ export function BackgroundPage() {
           </option>
         ))}
       </select>
+      {selectedBackgroundId && grantedFeatures(resolution?.sheet, "background").length > 0 && (
+        <div className="granted-features">
+          <h2>{bp.gives}</h2>
+          <FeatureEyeList idPrefix="background" features={grantedFeatures(resolution?.sheet, "background")} />
+        </div>
+      )}
       {selectedBackgroundId && !loading && choices.length === 0 && <p>{bp.noChoices}</p>}
       {choices.map((choice) => (
         <ChoiceCard key={choice.id} choice={choice} onToggle={handleChange} defaultExpanded={choice.id === firstPendingId(choices)} />
@@ -185,5 +194,6 @@ export function BackgroundPage() {
         </label>
       </details>
     </div>
+    </SheetEyesProvider>
   );
 }

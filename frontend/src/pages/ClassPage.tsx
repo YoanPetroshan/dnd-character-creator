@@ -17,6 +17,8 @@ import { classChoicesFor, splitClassChoices } from "../logic/choiceRouting";
 import { cidFromHash } from "../logic/hashTarget";
 import { DetailEye, DetailPanel } from "../components/DetailEye";
 import { SubclassPreview } from "../components/SubclassPreview";
+import { LevelFeatureList } from "../components/FeatureEyeList";
+import { SheetEyesProvider } from "../components/sheet/SheetEyes";
 import { useSubclassDetails } from "../useSubclassDetail";
 
 type ClassTab = "features" | "spells";
@@ -74,6 +76,24 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
   useEffect(() => {
     if (subOpen && selectedSubclassId) loadSubclass(selectedSubclassId);
   }, [subOpen, selectedSubclassId]);
+
+  // What the levels give: the class features (and the chosen subclass's) up to the current level, with an eye each, plus the
+  // Ability Score Improvement of a level and the subclass pick, which are not in the feature list.
+  const levelFeatures = (resolution?.sheet.features ?? []).filter(
+    (f) => (f.source.kind === "class" && f.source.id === classId) || (f.source.kind === "subclass" && !!selectedSubclassId && f.source.id === selectedSubclassId),
+  );
+  const levelExtras: { level: number; key: string; name: string; choice?: string[] }[] = [];
+  for (const c of resolution?.choices ?? []) {
+    const m = new RegExp(`^class:${classId}:(\\d+):asi$`).exec(c.id);
+    if (!m || Number(m[1]) > classLevel) continue;
+    const labels = c.selected.map((id) => c.options.find((o) => o.id === id)?.label ?? id);
+    levelExtras.push({ level: Number(m[1]), key: c.id, name: cp.asiRow, choice: labels });
+  }
+  if (classDetail && classDetail.subclassUnlockLevel !== null && classLevel >= classDetail.subclassUnlockLevel) {
+    const subName = classDetail.subclasses.find((s) => s.index === selectedSubclassId)?.name ?? selectedSubclassId;
+    // the chosen subclass's own features are in the list; this row marks the level where the subclass is picked
+    levelExtras.push({ level: classDetail.subclassUnlockLevel, key: `subclass:${classId}`, name: cp.subclass, choice: subName ? [subName] : undefined });
+  }
 
   const classChoices = resolution ? classChoicesFor(resolution.choices, classId) : [];
   const { featureChoices, spellChoices } = splitClassChoices(classChoices);
@@ -174,6 +194,13 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
             .filter(([lvl]) => Number(lvl) > classLevel)
             .reduce((sum, [, count]) => sum + count, 0)}
         </p>
+      )}
+
+      {levelFeatures.length + levelExtras.length > 0 && (
+        <div className="class-level-features">
+          <h3>{cp.levelFeatures}</h3>
+          <LevelFeatureList idPrefix={`class:${classId}`} features={levelFeatures} extra={levelExtras} />
+        </div>
       )}
 
       {(resolution?.derived.classResources ?? []).some((r) => r.classId === classId) && (
@@ -296,6 +323,7 @@ export function ClassPage() {
   const primaryClassId = draft.classes[0]?.classId;
 
   return (
+    <SheetEyesProvider>
     <div className="page">
       <h1>{cp.title} {loading && "…"}</h1>
       <StepProblems step="class" />
@@ -362,5 +390,6 @@ export function ClassPage() {
         </div>
       )}
     </div>
+    </SheetEyesProvider>
   );
 }

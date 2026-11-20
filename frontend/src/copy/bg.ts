@@ -536,6 +536,8 @@ export const bg = {
     higherLevels: "Способности (Features) на по-високи нива:",
     classResources: "Ресурси на класа",
     hpRolls: "Хвърляния за точки живот (Hit Points)",
+    levelFeatures: "Какво получаваш по нива",
+    asiRow: "Увеличение на характеристики (Ability Score Improvement)",
     levelN: (n: number) => `Ниво ${n}`,
     showSubclass: (name: string) => `Покажи какво дава подкласът: ${name}`,
     tabFeatures: "Способности (Features)",
@@ -550,6 +552,7 @@ export const bg = {
     fallbackNote:
       "Няма произход (Background) от 2024 в избраните източници — показан е само SRD произход от 2014, без бонус към характеристики (Ability Scores) и талант от произхода (Origin Feat) по правилата от 2024.",
     selectLabel: "Произход (Background)",
+    gives: "Какво дава произходът (Background)",
     choose: "— избери произход (Background) —",
     noChoices: "Няма избори за този произход (Background).",
     alignments: {
@@ -570,6 +573,7 @@ export const bg = {
     searchLabel: "Търсене на раса (Species)",
     searchPlaceholder: "Търсене на раса (Species)…",
     subspecies: "Subspecies",
+    traits: "Какво дава расата",
     subspeciesNone: "— none —",
     noChoices: "Няма избори за тази раса (Species).",
     noSourceGroup: "SRD",

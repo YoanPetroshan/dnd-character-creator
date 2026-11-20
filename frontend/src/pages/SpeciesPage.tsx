@@ -5,6 +5,8 @@ import { speciesChoicesOf } from "../logic/choiceRouting";
 import { useT } from "../LanguageContext";
 import { renderMsg } from "../logic/messages";
 import { useResolutionContext } from "../ResolutionContext";
+import { FeatureEyeList, grantedFeatures } from "../components/FeatureEyeList";
+import { SheetEyesProvider } from "../components/sheet/SheetEyes";
 import { useCatalogContext } from "../CatalogContext";
 import type { CatalogSource, CatalogSpecies } from "../useCatalog";
 import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
@@ -96,6 +98,7 @@ export function SpeciesPage() {
     : [];
 
   return (
+    <SheetEyesProvider>
     <div className="page">
       <h1>{sp.title} {loading && "…"}</h1>
       <StepProblems step="species" />
@@ -176,10 +179,17 @@ export function SpeciesPage() {
           </select>
         </>
       )}
+      {selectedSpeciesId && grantedFeatures(resolution?.sheet, "species").length > 0 && (
+        <div className="granted-features">
+          <h2>{sp.traits}</h2>
+          <FeatureEyeList idPrefix="species" features={grantedFeatures(resolution?.sheet, "species")} />
+        </div>
+      )}
       {selectedSpeciesId && !loading && choices.length === 0 && <p>{sp.noChoices}</p>}
       {choices.map((choice) => (
         <ChoiceCard key={choice.id} choice={choice} onToggle={handleChange} defaultExpanded={choice.id === firstPendingId(choices)} />
       ))}
     </div>
+    </SheetEyesProvider>
   );
 }

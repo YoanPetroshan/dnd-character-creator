@@ -528,6 +528,8 @@ export const en: Copy = {
     higherLevels: "Features at higher levels:",
     classResources: "Class Resources",
     hpRolls: "Hit Point rolls",
+    levelFeatures: "What you get at each level",
+    asiRow: "Ability Score Improvement",
     levelN: (n: number) => `Level ${n}`,
     showSubclass: (name: string) => `Show what the subclass gives: ${name}`,
     tabFeatures: "Features",
@@ -542,6 +544,7 @@ export const en: Copy = {
     fallbackNote:
       "There are no 2024 backgrounds in the selected sources — only the SRD background is shown (from 2014, without the ability score bonus and Origin feat of the 2024 rules).",
     selectLabel: "Background",
+    gives: "What the background gives",
     choose: "— choose a background —",
     noChoices: "There are no choices for this background.",
     alignments: {
@@ -562,6 +565,7 @@ export const en: Copy = {
     searchLabel: "Search species",
     searchPlaceholder: "Search species…",
     subspecies: "Subspecies",
+    traits: "What the species gives",
     subspeciesNone: "— none —",
     noChoices: "There are no choices for this species.",
     noSourceGroup: "SRD",
