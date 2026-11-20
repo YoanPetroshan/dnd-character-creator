@@ -370,6 +370,29 @@ def api_catalog_class(args, body, class_id: str):
     })
 
 
+def api_catalog_class_levels(args, body, class_id: str):
+    """`{levelFeatures: [{level, name, ref}]}`: every class feature by level (the name and the id of its text, for the eye on
+    the Class page's "next levels" list). `?ruleset=` as in api_catalog_class. A subclass's features depend on the pick and are
+    not here; Ability Score Improvement rows are left out like on the sheet."""
+    if not _catalog.classes.get(class_id):
+        return _error("not found", 404)
+    ruleset = args.get("ruleset", "mixed")
+    cls_2024 = _catalog.classes_2024.get(class_id) if ruleset == "2024" else None
+    xphb_levels = _catalog.class_2024_level_features.get(class_id) if cls_2024 else None
+    level_features = []
+    for lvl in range(1, 21):
+        if xphb_levels:
+            refs = [{"index": fid} for fid in xphb_levels.get(lvl, [])]
+        else:
+            row = _catalog.class_level_row(class_id, lvl)
+            refs = (row or {}).get("features", [])
+        for ref in refs:
+            feature = _catalog.features.get(ref.get("index"))
+            if feature and not feature["name"].startswith("Ability Score Improvement"):
+                level_features.append({"level": lvl, "name": feature["name"], "ref": ref["index"]})
+    return _json({"levelFeatures": level_features})
+
+
 def api_catalog_background(args, body, background_id: str):
     bg = _catalog.backgrounds.get(background_id)
     if not bg:
@@ -786,6 +809,7 @@ ROUTES: tuple[tuple[str, tuple[str, ...], Callable[..., Response]], ...] = (
     ("/api/spells", ("GET",), api_spells),
     ("/api/spells/<spell_id>", ("GET",), api_spell_detail),
     ("/api/feats/<feat_id>", ("GET",), api_feat_detail),
+    ("/api/catalog/class/<class_id>/levels", ("GET",), api_catalog_class_levels),
     ("/api/features/<feature_id>", ("GET",), api_feature_detail),
     ("/api/subclasses/<subclass_id>", ("GET",), api_subclass_detail),
     ("/api/export/<fmt>", ("POST",), api_export),

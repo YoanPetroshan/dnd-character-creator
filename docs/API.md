@@ -66,6 +66,10 @@ Query: `ruleset`, `sources`. Returns `{classes, backgrounds, backgroundsFallback
 
 Query: `ruleset`, `sources`, `include=<subclassId>` (keeps the draft's current subclass in the list, marked `hidden: true`, when the filters would hide it). Returns the class record plus `subclasses`, `levelFeatureCounts` (level 1-20) and `subclassUnlockLevel`. 404 for an unknown class.
 
+### `GET /api/catalog/class/<class_id>/levels`
+
+Query: `ruleset`. Returns `{levelFeatures: [{level, name, ref}]}`: every class feature of the class by level (ASI rows left out), `ref` being the id of its text (`GET /api/features/<ref>`). A subclass's own features are not in it (they depend on the pick). Used by the Class page's "next levels" list. 404 for an unknown class.
+
 ### `GET /api/catalog/background/<background_id>` and `GET /api/catalog/species/<species_id>`
 
 The record (species also with `subspecies`, `fluff`, `traitDetails`). 404 when unknown. The species route takes `lang=bg|en` (a bad value is a 400): with `bg` the `fluff` paragraphs and each `traitDetails[i].desc` are the Bulgarian text from the content overlay when its hash matches the current English, else English; trait names stay English. The species body always carries `textLang` (`"bg"` when the Bulgarian text was applied, else `"en"`).

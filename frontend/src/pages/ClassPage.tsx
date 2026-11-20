@@ -18,6 +18,7 @@ import { cidFromHash } from "../logic/hashTarget";
 import { DetailEye, DetailPanel } from "../components/DetailEye";
 import { SubclassPreview } from "../components/SubclassPreview";
 import { LevelFeatureList } from "../components/FeatureEyeList";
+import type { SheetFeature } from "../types";
 import { SheetEyesProvider } from "../components/sheet/SheetEyes";
 import { useSubclassDetails } from "../useSubclassDetail";
 
@@ -42,6 +43,8 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
   const [tab, setTab] = useState<ClassTab>("features");
   const [classDetail, setClassDetail] = useState<ClassDetail | null>(null);
   const [subOpen, setSubOpen] = useState(false);
+  // every class feature by level (names and the id of their text), for the "next levels" list
+  const [levelList, setLevelList] = useState<{ level: number; name: string; ref: string }[]>([]);
   const subclasses = useSubclassDetails();
 
   const classEntry = draft.classes.find((c) => c.classId === classId);
@@ -72,6 +75,21 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
     };
   }, [classId, draft.ruleset, sourcesKey, selectedSubclassId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch(`/api/catalog/class/${classId}/levels${draft.ruleset !== "mixed" ? `?ruleset=${draft.ruleset}` : ""}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((data: { levelFeatures?: { level: number; name: string; ref: string }[] }) => {
+        if (!cancelled) setLevelList(Array.isArray(data?.levelFeatures) ? data.levelFeatures : []);
+      })
+      .catch(() => {
+        if (!cancelled) setLevelList([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [classId, draft.ruleset]);
+
   const { loadDetail: loadSubclass } = subclasses;
   useEffect(() => {
     if (subOpen && selectedSubclassId) loadSubclass(selectedSubclassId);
@@ -94,6 +112,11 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
     // the chosen subclass's own features are in the list; this row marks the level where the subclass is picked
     levelExtras.push({ level: classDetail.subclassUnlockLevel, key: `subclass:${classId}`, name: cp.subclass, choice: subName ? [subName] : undefined });
   }
+
+  // the class features of the levels still ahead, from the class catalog (a subclass's own are not known before the pick)
+  const upcoming: SheetFeature[] = levelList
+    .filter((f) => f.level > classLevel)
+    .map((f) => ({ source: { kind: "class", id: classId, label: classId }, name: f.name, level: f.level, ref: { kind: "feature", id: f.ref } }));
 
   const classChoices = resolution ? classChoicesFor(resolution.choices, classId) : [];
   const { featureChoices, spellChoices } = splitClassChoices(classChoices);
@@ -194,6 +217,13 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
             .filter(([lvl]) => Number(lvl) > classLevel)
             .reduce((sum, [, count]) => sum + count, 0)}
         </p>
+      )}
+
+      {upcoming.length > 0 && (
+        <details className="details-section class-next-levels">
+          <summary>{cp.nextLevels}</summary>
+          <LevelFeatureList idPrefix={`next:${classId}`} features={upcoming} extra={[]} />
+        </details>
       )}
 
       {levelFeatures.length + levelExtras.length > 0 && (

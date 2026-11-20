@@ -443,6 +443,14 @@ export const en: Copy = {
     keepText:
       "Characters are stored only in this browser. An iPhone may clear the data of a website you have not opened for 7 days unless it was added to the home screen; changing phones or clearing site data also loses them. Keep a copy in a file.",
     keepLink: "Download all characters (.json) on Home",
+    aboutTitle: "About the app",
+    aboutText:
+      "A free, unofficial tool for building D&D 5e characters, made by a fan. It is not connected to the publisher of the game and is not endorsed by it. Please buy the official books.",
+    privacyTitle: "Your data",
+    privacyText:
+      "Your characters are kept only on your device, in the browser. The app has no accounts and sends nothing anywhere. Download your characters as a file from Home now and then: clearing the browser data deletes them.",
+    feedbackTitle: "Found a mistake or have an idea?",
+    feedbackText: "Write on the project page:",
     lockdownTitle: "If it does not start",
     lockdownText:
       "On an iPhone, Lockdown Mode turns WebAssembly off and the app cannot run in it: turn it off for Safari or use another device. If something broke, clear the site data in the browser settings (the characters are lost: download them first) and open the app again.",
@@ -530,6 +538,7 @@ export const en: Copy = {
     classResources: "Class Resources",
     hpRolls: "Hit Point rolls",
     levelFeatures: "What you get at each level",
+    nextLevels: "Next levels",
     asiRow: "Ability Score Improvement",
     levelN: (n: number) => `Level ${n}`,
     showSubclass: (name: string) => `Show what the subclass gives: ${name}`,

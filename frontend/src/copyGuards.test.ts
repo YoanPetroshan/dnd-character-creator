@@ -111,7 +111,7 @@ describe("scripts", () => {
   // Permanent: abbreviations and proper nouns the Bulgarian text keeps (dice, ability codes, file formats, units).
   const PERMANENT = new Set(["AC", "DC", "HP", "CR", "SRD", "PDF", "YAML", "JSON", "json", "MB", "Markdown", "EN", "STR", "DEX", "CON", "INT", "WIS", "CHA", "d", "lb", "kg",
     // product and platform names the offline/install text keeps (T-O4)
-    "iPhone", "iPad", "iOS", "Android", "Safari", "Chrome", "Edge", "Lockdown", "Mode", "WebAssembly"]);
+    "D", "e", "iPhone", "iPad", "iOS", "Android", "Safari", "Chrome", "Edge", "Lockdown", "Mode", "WebAssembly"]);
   // Legacy: English words the Bulgarian UI already showed before the copy catalog existed (page titles, labels,
   // sentences). They stay so that the BG rendering is byte-identical; translating them is a deliberate later change.
   const LEGACY = new Set([

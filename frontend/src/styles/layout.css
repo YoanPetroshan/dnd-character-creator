@@ -1273,3 +1273,13 @@ main .next-button::after {
 .level-features {
   margin: 0;
 }
+
+.class-next-levels {
+  margin: var(--space-3) 0;
+}
+
+.help-page__notice {
+  margin-top: var(--space-3);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
