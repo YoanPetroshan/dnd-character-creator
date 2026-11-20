@@ -176,7 +176,7 @@ copy:sheet.spells.title",Spells,Заклинания,"Страница „Кла
 126,Интерфейс,copy:backgroundPage.alignments.Chaotic Evil,Chaotic Evil,Хаотично зъл,"Страница „Произход (Background)“, подсказка за мирогледа на произхода · стойност от списък: „Хаотично зъл“",преведено,,,
 127,Интерфейс,copy:speciesPage.searchLabel,Search species,Търсене на раса (Species),Страница „Раса (Species)“ · етикет на поле (чете се и от екранен четец): „Търсене на раса (Species)“,преведено + английско в скоби,,,
 128,Интерфейс,copy:speciesPage.searchPlaceholder,Search species…,Търсене на раса (Species)…,Страница „Раса (Species)“ · подсказка в празно поле: „Търсене на раса (Species)…“,преведено + английско в скоби,,,
-129,Интерфейс,copy:speciesPage.traits,What the species gives,Какво дава расата,Страница „Раса (Species)“ · текст: „Какво дава расата“,преведено,,,
+129,Интерфейс,copy:speciesPage.traits,What the species gives,Какво дава расата (Species),Страница „Раса (Species)“ · текст: „Какво дава расата (Species)“,преведено + английско в скоби,,,
 130,Интерфейс,copy:speciesPage.noChoices,There are no choices for this species.,Няма избори за тази раса (Species).,Страница „Раса (Species)“ · текст: „Няма избори за тази раса (Species).“,преведено + английско в скоби,,,
 131,Интерфейс,copy:speciesPage.noSourceGroup,SRD,SRD,Страница „Раса (Species)“ · текст: „SRD“,преведено,,,
 132,Интерфейс,copy:speciesPage.showSpecies,Show a short description of the species: Longsword,Покажи кратко описание на расата (Species): Longsword,"Страница „Раса (Species)“ · текст: „Покажи кратко описание на расата (Species): Longsword“  [шаблон, попълнен с примерни стойности]",преведено + английско в скоби,,,

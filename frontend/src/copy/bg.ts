@@ -573,7 +573,7 @@ export const bg = {
     searchLabel: "Търсене на раса (Species)",
     searchPlaceholder: "Търсене на раса (Species)…",
     subspecies: "Subspecies",
-    traits: "Какво дава расата",
+    traits: "Какво дава расата (Species)",
     subspeciesNone: "— none —",
     noChoices: "Няма избори за тази раса (Species).",
     noSourceGroup: "SRD",
