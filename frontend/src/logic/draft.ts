@@ -2,6 +2,7 @@
 import type { Ability, ChoiceSourceKind, Draft, Ruleset } from "../types";
 import { MsgError, msg } from "./messages";
 import { migrateDraft } from "./migrations";
+import { DEFAULT_SOURCES } from "./sources";
 
 /** Bump when the draft shape changes incompatibly. Stored/imported drafts
  *  with a NEWER version than this build are rejected rather than guessed at.
@@ -13,16 +14,12 @@ export const DRAFT_VERSION = 2;
 export const emptyDraft: Draft = {
   draftVersion: DRAFT_VERSION,
   name: "",
-  // Empty = "everything available" (server/engine/resolve.py's permissive
-  // default). This was `["srd"]` since Phase 0, before any sourcebook data
-  // existed — but SpeciesPage already lets a player pick any official race
-  // from the unfiltered /api/catalog list, and this draft is the base
-  // template for every new/persisted draft, so a non-empty default here
-  // silently breaks every sourcebook race pick with a spurious
-  // "unknown species" resolve() problem. The Sources picker on the Home
-  // page narrows this down (and "None except SRD" stores ["srd"], since
-  // an empty list means "everything").
-  sources: [],
+  // A NEW draft starts with the core books on (owner, 2026-11-20): the Player's Handbook and the Dungeon Master's Guide of
+  // both rulesets, plus the SRD; every other book is off until the player turns it on. An EMPTY list still means
+  // "everything available" (server/engine/resolve.py's permissive default), and it is what older saved drafts and
+  // "Select all" hold. "Clear all" stores ["srd"], since an empty list means "everything". A record the filters hide
+  // stays pickable when the draft already holds it (the catalog keeps it, flagged hidden).
+  sources: [...DEFAULT_SOURCES],
   ruleset: "mixed",
   preferences: {
     hitPointType: "fixed",

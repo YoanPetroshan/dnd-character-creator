@@ -502,8 +502,8 @@ export const en: Copy = {
     } as Record<string, string>,
     sourcesSummary: (selected: number | null) =>
       selected === null ? "Sources — all" : `Sources — ${selected} selected`,
-    sourcesAll: "All",
-    sourcesSrdOnly: "SRD only",
+    sourcesAll: "Select all",
+    sourcesSrdOnly: "Clear all",
     preferencesTitle: "Preferences",
     hpPerLevel: "Hit Points per level",
     hpFixed: "Fixed (average value)",
@@ -745,6 +745,7 @@ export const en: Copy = {
     "export.failed": (p: Msgs) => `The export failed. ${p.detail}`,
     "export.offline": () => "No connection to the server. The export was not downloaded.",
     "file.notJson": () => "The file is not valid JSON.",
+    "file.tooBig": (p: Msgs) => `The file is too large: files up to ${p.max} MB are accepted.`,
     "draft.notADraft": () => "The file is not a character draft.",
     "draft.newer": () => "This draft was saved by a newer version of the application.",
     "draft.notRecognised": () => "The file does not look like a character draft.",

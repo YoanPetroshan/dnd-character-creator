@@ -1,4 +1,5 @@
 import { bg } from "../copy";
+import { DEFAULT_SOURCES } from "./sources";
 import { MsgError, renderMsg } from "./messages";
 import { describe, expect, it } from "vitest";
 import { DRAFT_VERSION, MAX_TOTAL_LEVEL, emptyDraft, mergeDraft, reducer, sanitizeDraft, totalLevel } from "./draft";
@@ -145,7 +146,7 @@ describe("mergeDraft keeps only well-typed values (FE-06)", () => {
 
   it("sources: only strings survive", () => {
     expect(merge({ sources: [1, "PHB", null, { a: 1 }, "xge"] }).sources).toEqual(["PHB", "xge"]);
-    expect(merge({ sources: "PHB" }).sources).toEqual([]);
+    expect(merge({ sources: "PHB" }).sources).toEqual([...DEFAULT_SOURCES]); // not a list: the default of a new draft
   });
   it("name and the detail values are strings; other detail values are dropped", () => {
     const d = merge({ name: 5, details: { backstory: "x", age: 30, faith: { a: 1 }, notes: null, alignment: true } });

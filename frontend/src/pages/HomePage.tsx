@@ -2,14 +2,14 @@ import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useDraft } from "../DraftContext";
 import { useLibrary } from "../LibraryContext";
-import type { ImportEntry } from "../library";
+import { MAX_IMPORT_FILE_MB, type ImportEntry } from "../library";
 import { useLang, useT } from "../LanguageContext";
 import { randomName } from "../logic/randomName";
 import { msg, renderMsg, toMsg } from "../logic/messages";
 import { useResolutionContext } from "../ResolutionContext";
 import { useCatalogContext } from "../CatalogContext";
 import { safeFilename, shareOrDownload } from "../logic/files";
-import { sourceOn, toggleSource } from "../logic/sources";
+import { sourceLabel, sourceOn, toggleSource } from "../logic/sources";
 import type { Ruleset } from "../types";
 import { formatDateTime } from "../logic/formatDate";
 import { ClassGlyph } from "../components/ClassGlyph";
@@ -46,6 +46,11 @@ export function HomePage() {
 
   async function importFile(file: File | undefined) {
     if (!file) return;
+    if (file.size > MAX_IMPORT_FILE_MB * 1_000_000) {
+      setImportReport([{ index: 0, name: "", status: "rejected", message: msg("file.tooBig", { max: MAX_IMPORT_FILE_MB }) }]);
+      if (fileInput.current) fileInput.current.value = "";
+      return;
+    }
     try {
       setImportReport(library.importParsed(JSON.parse(await file.text())));
     } catch (e) {
@@ -292,7 +297,7 @@ export function HomePage() {
       <p>{t.home.rulesetHelp[draft.ruleset] ?? t.home.rulesetHelp.mixed}</p>
       <details className="details-section">
         <summary>
-          {t.home.sourcesSummary(draft.sources.length === 0 ? null : draft.sources.filter((x) => x.toLowerCase() !== "srd").length)}
+          {t.home.sourcesSummary(draft.sources.length === 0 ? null : draft.sources.filter((x) => x.toLowerCase() !== "srd" && allSourceIds.some((id) => id.toLowerCase() === x.toLowerCase())).length)}
         </summary>
         <div>
           <button type="button" onClick={() => dispatch({ type: "SET_SOURCES", sources: [] })}>
@@ -305,7 +310,7 @@ export function HomePage() {
         {catalog.sources.map((src) => (
           <label key={src.id}>
             <input type="checkbox" checked={sourceOnFor(src.id)} onChange={(e) => toggle(src.id, e.target.checked)} />
-            {src.name} ({src.count})
+            {sourceLabel(src)} <span className="source-count">({src.count})</span>
           </label>
         ))}
       </details>

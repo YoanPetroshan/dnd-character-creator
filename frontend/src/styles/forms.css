@@ -244,3 +244,7 @@
 .help-page li + li {
   margin-top: 6px;
 }
+
+.details-section .source-count {
+  color: var(--color-text-muted);
+}

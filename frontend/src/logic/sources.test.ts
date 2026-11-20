@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { optionSource, sourceOn, toggleSource } from "./sources";
+import { DEFAULT_SOURCES, optionSource, sourceLabel, sourceOn, toggleSource } from "./sources";
 
 const ALL = ["srd", "PHB", "XGE", "TCE"];
 
@@ -62,5 +62,17 @@ describe("option source (Y2)", () => {
   it("the picker uses the server's source and falls back to the label suffix", () => {
     const src = readFileSync(new URL("../components/ChoicePicker.tsx", import.meta.url)).toString("utf8");
     expect(src).toContain("o.source ?? optionSource(o.label)");
+  });
+});
+
+describe("the picker's defaults and labels (owner, 2026-11-20)", () => {
+  it("a new draft has the SRD, the Player's Handbook and the Dungeon Master's Guide on and nothing else", () => {
+    expect([...DEFAULT_SOURCES].map((x) => x.toLowerCase()).sort()).toEqual(["dmg", "phb", "srd", "xdmg", "xphb"]);
+  });
+  it("sourceLabel: full name, then the code in brackets", () => {
+    expect(sourceLabel({ id: "TCE", name: "Tasha's Cauldron of Everything" })).toBe("Tasha's Cauldron of Everything (TCE)");
+    expect(sourceLabel({ id: "PHB", name: "Player's Handbook (2014)" })).toBe("Player's Handbook, 2014 (PHB)");
+    expect(sourceLabel({ id: "AU", name: "Unearthed Arcana (AU)" })).toBe("Unearthed Arcana (AU)");
+    expect(sourceLabel({ id: "RHW", name: "RHW" })).toBe("RHW");
   });
 });

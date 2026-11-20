@@ -198,6 +198,7 @@ def ruleset_allows(record: dict, kind: str, ruleset: str) -> bool:
 # to the bare source code).
 SOURCE_NAMES: dict[str, str] = {
     "AAG": "Astral Adventurer's Guide",
+    "AWM": "Adventure with Muk",
     "ABH": "Astarion's Book of Hungers",
     "AU": "Unearthed Arcana (AU)",  # playtest material; the feats of this source are not a published book (audit DATA-07)
     "AI": "Acquisitions Incorporated",
