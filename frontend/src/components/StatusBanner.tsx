@@ -58,7 +58,6 @@ export function StatusBanner() {
           </button>
         </p>
       )}
-      {/* КОНФЛИКТ С ДИЗАЙН: new banner state, same markup as the neighbours; restyle freely. */}
       {offline.phase === "update-needs-backup" && (
         <div className="status-banner" role="alert" data-state="update-needs-backup">
           <p>{t.pwa.needsBackup}</p>

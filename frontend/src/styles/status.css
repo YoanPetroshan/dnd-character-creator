@@ -30,12 +30,23 @@
   color: var(--color-ok);
 }
 
+.status-banner[data-state="update-needs-backup"],
 .status-banner[data-state="storage-failed"],
 .status-banner[data-state="server-older"],
 .status-banner[data-state="pruned"] {
   border-left-color: var(--color-warning-border);
   background: var(--color-warning-bg);
   color: var(--color-warning-text);
+}
+
+/* The "download your characters first" banner holds a few lines and two buttons, so it stacks instead of wrapping in a row. */
+.status-banner[data-state="update-needs-backup"] {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.status-banner[data-state="update-needs-backup"] p {
+  margin: 0;
 }
 
 .status-banner a {
