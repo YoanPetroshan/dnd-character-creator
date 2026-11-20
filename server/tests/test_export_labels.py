@@ -86,7 +86,8 @@ def test_english_has_no_cyrillic_and_bulgarian_has_it_where_it_translates():
     assert not [p for p, t in _leaves(LABELS["en"]) if CYRILLIC.search(t)]
     # a BG label without Cyrillic is deliberately the English word the export always printed (see export_labels.py)
     english_in_bg = {p[-1] for p, t in _leaves(LABELS["bg"]) if not CYRILLIC.search(t)}
-    assert english_in_bg == {"spellSlots", "pactSlots", "attackVersatile", "attackOffhand", "attackRange"}, english_in_bg
+    damage_types = {"acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder"}  # the damage types stay English, like the weapon table (owner, 2026-11-20)
+    assert english_in_bg == {"spellSlots", "pactSlots", "attackVersatile", "attackOffhand", "attackRange"} | damage_types, english_in_bg
 
 
 def test_the_english_wording_of_the_spell_slot_labels_is_the_glossary_term():

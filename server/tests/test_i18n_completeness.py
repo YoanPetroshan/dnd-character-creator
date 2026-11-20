@@ -249,7 +249,8 @@ def test_the_english_side_has_no_inconsistency(front):
 
 def test_export_english_words_in_the_bulgarian_labels_are_the_known_set():
     english_in_bg = {p for p, t in _leaves(export_labels.LABELS["bg"]) if not CYRILLIC.search(t)}
-    assert {p.split(".")[-1] for p in english_in_bg} == {"spellSlots", "pactSlots", "attackVersatile", "attackOffhand", "attackRange"}
+    damage_types = {"acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder"}  # the damage types stay English, like the weapon table (owner, 2026-11-20)
+    assert {p.split(".")[-1] for p in english_in_bg} == {"spellSlots", "pactSlots", "attackVersatile", "attackOffhand", "attackRange"} | damage_types
 
 
 # ---- 6. end to end ----------------------------------------------------------------------------------------------------
