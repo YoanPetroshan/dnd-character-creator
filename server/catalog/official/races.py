@@ -198,6 +198,32 @@ def _merge_nameless_subraces(data: dict) -> tuple[list[dict], list[dict]]:
     return races, named
 
 
+def _list_item_line(item) -> str:
+    """One entry of a 5etools `list` as a paragraph: a plain string as it is, a named item as "Name. text"."""
+    if isinstance(item, str):
+        return item
+    if not isinstance(item, dict):
+        return ""
+    body = item.get("entry") if "entry" in item else item.get("entries")
+    text = " ".join(b for b in (body if isinstance(body, list) else [body]) if isinstance(b, str))
+    name = item.get("name")
+    if isinstance(name, str) and name and text:
+        return f"{name} {text}" if name.endswith(":") else f"{name}. {text}"  # "At will:" labels keep their colon
+    return text
+
+
+def _trait_lines(entries) -> list[str]:
+    """The paragraphs of a trait: its strings in order, plus the entries of its `list` blocks (one paragraph each);
+    tables and insets stay out (the structured data carries them)."""
+    lines: list[str] = []
+    for e in entries if isinstance(entries, list) else []:
+        if isinstance(e, str):
+            lines.append(e)
+        elif isinstance(e, dict) and e.get("type") == "list":
+            lines.extend(line for line in (_list_item_line(i) for i in e.get("items") or []) if line)
+    return lines
+
+
 def _trait_refs_from_entries(entries: list, id_prefix: str, race_ref: list[dict], subrace_ref: list[dict],
                               traits_by_index: dict[str, dict]) -> list[dict]:
     """Mints one synthetic trait per top-level `entries` item, added to
@@ -214,7 +240,7 @@ def _trait_refs_from_entries(entries: list, id_prefix: str, race_ref: list[dict]
         if not isinstance(entry, dict) or not entry.get("name"):
             continue  # skip bare strings / unnamed entries — not real traits
         trait_id = f"{id_prefix}-trait-{i}"
-        desc_lines = [e for e in entry.get("entries", []) if isinstance(e, str)]
+        desc_lines = _trait_lines(entry.get("entries"))
         traits_by_index[trait_id] = {
             "index": trait_id, "races": race_ref, "subraces": subrace_ref,
             "name": entry["name"], "desc": desc_lines, "proficiencies": [], "url": "",

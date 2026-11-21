@@ -206,6 +206,8 @@ BOOK_IDS = [t for t, s in ref.SPECIES_RESOURCES_2014.items() if t not in SRD_IDS
 # trait id -> why it is not a resource. Every non-SRD, non-2024 species (and subspecies) trait whose text matches the
 # use / rest pattern below is either in SPECIES_RESOURCES_2014 or here (the scan test fails on a new, unlisted one).
 SKIPPED_BOOK_TRAITS = {
+    "reborn-vrgr-trait-2": "Deathless Nature: 4-hour Long Rest wording only, no uses",
+    "simic-hybrid-ggr-trait-5": "Animal Enhancement: the Acid Spit uses (Constitution modifier per Long Rest) sit in a list option imported later; not modelled as a resource yet",
     "aarakocra-mpmm-trait-0": "Flight: armor restriction wording, no uses",
     "aetherborn-psk-trait-7": "Gift of the Aetherborn: hit point maximum penalty over days, no use count",
     "fairy-mpmm-trait-2": "Flight: armor restriction wording, no uses",

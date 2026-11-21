@@ -91,6 +91,8 @@ def test_scan_every_2024_species_trait_with_a_rest_or_use_rule_is_modelled_or_li
         "kalashtar-efa-trait-3": "Severed from Dreams: skill swap per Long Rest, no uses",
         "khoravar-efa-trait-2": "Fey Gift: cantrip swap per Long Rest, no uses",
         "khoravar-efa-trait-4": "Skill Versatility: proficiency swap per Long Rest, no uses",
+        "gnome-xphb-trait-2": "Gnomish Lineage: the Forest Gnome Speak with Animals uses (PB per Long Rest) sit in a list option whose text only became visible when list entries were imported; not modelled as a resource yet",
+        "hexblood-rhw-trait-1": "Eerie Token: the Hex Magic once-per-Long-Rest casts sit in a list option imported later; not modelled as a resource yet",
     }
     pat = re.compile(r"Long Rest|Short Rest|expended|times equal|can't (?:do so|use it) again", re.I)
     for race in catalog.races.values():
