@@ -14,16 +14,16 @@ export const bg = {
   /** The language control in the header: its group label and the two button labels. */
   lang: { label: "Език", bg: "БГ", en: "EN" },
 
-  /** The step navigation. `steps` are the labels of the eight routes (Home, Abilities, Equipment and Export are English words on purpose: legacy wording kept as it was). */
+  /** The step navigation. `steps` are the labels of the eight routes (Export stays an English word on purpose: legacy wording; Home, Abilities and Equipment are Bulgarian with the English term in brackets). */
   nav: {
     label: "Стъпки",
     steps: {
-      home: "Home",
+      home: "Начало",
       class: "Клас",
       background: "Произход (Background)",
       species: "Раса (Species)",
-      abilities: "Abilities",
-      equipment: "Equipment",
+      abilities: "Характеристики (Abilities)",
+      equipment: "Екипировка (Equipment)",
       sheet: "Лист",
     },
     sheet: "Лист",
@@ -74,7 +74,7 @@ export const bg = {
 
   /** Abilities page: the table has base, bonus, total and modifier columns. */
   abilitiesPage: {
-    title: "Abilities",
+    title: "Характеристики (Abilities)",
     methods: { standard: "Standard Array", pointbuy: "Point Buy", roll: "Roll (4d6, drop lowest)", manual: "Manual" },
     rollAll: "Roll all six scores",
     rerollNote: "Re-rolling replaces the current scores.",
@@ -393,13 +393,13 @@ export const bg = {
     copyText: "Копирай текста",
     dismiss: "Разбрах",
     storageFailed:
-      "Черновата не може да се запази в браузъра (пълно или забранено хранилище). Изтегли я от Home като файл, за да не я загубиш.",
+      "Черновата не може да се запази в браузъра (пълно или забранено хранилище). Изтегли я от Начало като файл, за да не я загубиш.",
     pruned: (n: number) => `Отпаднали избори: ${n}.`,
     serverOlder: "Сървърът е по-стара версия от приложението и може да не разпознае всички данни на героя. Обнови сървъра.",
     engineStarting: "Стартира се двигателят на приложението… Първото стартиране може да отнеме няколко секунди.",
     engineUnavailable:
       "Двигателят на приложението не може да стартира: браузърът няма WebAssembly (на iPhone това става в режим Lockdown Mode) или файловете на приложението не са изтеглени. Отвори приложението с интернет връзка или го пусни в друг браузър.",
-    seeInHome: "Виж в Home",
+    seeInHome: "Виж в Начало",
   },
 
   /** Offline use (service worker): banner lines and the Help page. */
@@ -409,7 +409,7 @@ export const bg = {
     updateAvailable: "Има нова версия на приложението.",
     installFailed: "Не се получи изтеглянето за работа без връзка (може да няма място или връзката да е прекъсната). Приложението работи, но не и без интернет. Ще опитаме пак, когато отвориш страницата отново.",
     updateNow: "Обнови сега",
-    needsBackup: "Новата версия променя начина, по който се пазят героите, затова не се пуска сама. Стъпки: 1) натисни „Изтегли всички герои (.json)“ и запази файла; 2) натисни „Обнови сега“; 3) ако после героите липсват, в Home избери „Качи герой или пакет (.json)“ и файла. Копие на героите е нужно и когато последното запазване е неуспешно.",
+    needsBackup: "Новата версия променя начина, по който се пазят героите, затова не се пуска сама. Стъпки: 1) натисни „Изтегли всички герои (.json)“ и запази файла; 2) натисни „Обнови сега“; 3) ако после героите липсват, в Начало избери „Качи герой или пакет (.json)“ и файла. Копие на героите е нужно и когато последното запазване е неуспешно.",
     downloadAll: "Изтегли всички герои (.json)",
     backupDone: "Файлът е изтеглен. Сега можеш да обновиш.",
     backupSkipped: "Не са включени: ",
@@ -452,13 +452,13 @@ export const bg = {
     keepTitle: "Пази героите си",
     keepText:
       "Героите се пазят само в този браузър. iPhone може да изчисти данните на сайт, който не е отварян 7 дни, освен ако не е добавен към началния екран; смяна на телефон или изчистване на данните също ги губи. Дръж копие във файл.",
-    keepLink: "Изтегли всички герои (.json) в Home",
+    keepLink: "Изтегли всички герои (.json) в Начало",
     aboutTitle: "За приложението",
     aboutText:
       "Безплатен, неофициален инструмент за създаване на герои за D&D 5e, направен от фен. Не е свързан с издателя на играта и не е одобрен от него. Купувай официалните книги.",
     privacyTitle: "Твоите данни",
     privacyText:
-      "Героите ти се пазят само в твоето устройство, в браузъра. Приложението няма акаунти и не изпраща нищо никъде. От време на време изтегляй героите като файл от Home: изчистването на данните на браузъра ги изтрива.",
+      "Героите ти се пазят само в твоето устройство, в браузъра. Приложението няма акаунти и не изпраща нищо никъде. От време на време изтегляй героите като файл от Начало: изчистването на данните на браузъра ги изтрива.",
     feedbackTitle: "Намери грешка или имаш идея?",
     feedbackText: "Пиши на страницата на проекта:",
     lockdownTitle: "Ако не тръгва",
@@ -475,7 +475,7 @@ export const bg = {
   },
 
   home: {
-    title: "Home",
+    title: "Начало",
     nameLabel: "Character Name",
     randomName: "Случайно име",
     randomNameIcon: "🎲",
@@ -626,7 +626,7 @@ export const bg = {
   },
 
   equipmentPage: {
-    title: "Equipment",
+    title: "Екипировка (Equipment)",
     categories: {
       all: "Всички",
       weapon: "Оръжия",

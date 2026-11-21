@@ -76,7 +76,7 @@ describe("Help / install and PWA copy", () => {
     expect(en.help.keepText).toMatch(/7 days/);
     expect(bg.help.keepText).toMatch(/7 дни/);
     expect(en.help.keepLink).toMatch(/Home/);
-    expect(bg.help.keepLink).toMatch(/Home/);
+    expect(bg.help.keepLink).toMatch(/Начало/);
   });
   it("the engine-unavailable text names WebAssembly / Lockdown Mode in both languages", () => {
     expect(bg.status.engineUnavailable).toMatch(/Lockdown Mode/);

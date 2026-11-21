@@ -115,7 +115,7 @@ describe("scripts", () => {
   // Legacy: English words the Bulgarian UI already showed before the copy catalog existed (page titles, labels,
   // sentences). They stay so that the BG rendering is byte-identical; translating them is a deliberate later change.
   const LEGACY = new Set([
-    "Abilities", "Add", "Array", "Buy", "Character", "Equipment", "Home",
+    "Add", "Array", "Buy", "Character",
     "Manual", "Name", "Point", "Points", "Preferences", "Re", "Remaining", "Resolution", "Roll", "Saved",
     "Sources", "Standard", "Subspecies", "all", "and", "api", "as", "be",
     "choice", "current", "drop", "from", "here", "level", "lowest",
@@ -136,6 +136,8 @@ describe("scripts", () => {
   // BRACKET_TERMS_START
   const BRACKET_TERMS = new Set([
   "Ability Save DC",
+  "Abilities",
+  "Equipment",
   "Features & Traits",
   "Inventory",
   "Notes",
