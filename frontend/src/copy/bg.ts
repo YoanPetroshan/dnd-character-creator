@@ -22,7 +22,7 @@ export const bg = {
       class: "Клас",
       background: "Произход (Background)",
       species: "Раса (Species)",
-      abilities: "Характеристики (Abilities)",
+      abilities: "Характеристики (Ability Scores)",
       equipment: "Екипировка (Equipment)",
       sheet: "Лист",
     },
@@ -74,7 +74,7 @@ export const bg = {
 
   /** Abilities page: the table has base, bonus, total and modifier columns. */
   abilitiesPage: {
-    title: "Характеристики (Abilities)",
+    title: "Характеристики (Ability Scores)",
     methods: { standard: "Standard Array", pointbuy: "Point Buy", roll: "Roll (4d6, drop lowest)", manual: "Manual" },
     rollAll: "Roll all six scores",
     rerollNote: "Re-rolling replaces the current scores.",

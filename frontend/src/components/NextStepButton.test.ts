@@ -31,7 +31,7 @@ describe("NextStepButton", () => {
   });
   it("under a base path the router strips it: the target is found and the href carries it", () => {
     const at = (path: string) => renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [path], basename: "/dnd-character-creator" }, createElement(NextStepButton)));
-    expect(at("/dnd-character-creator/species")).toContain('data-next="abilities" aria-label="Напред: Характеристики (Abilities)" href="/dnd-character-creator/abilities"');
+    expect(at("/dnd-character-creator/species")).toContain('data-next="abilities" aria-label="Напред: Характеристики (Ability Scores)" href="/dnd-character-creator/abilities"');
     expect(at("/dnd-character-creator/sheet")).toBe("");
   });
   it("every step but the last has exactly one button, pointing at the next step", () => {

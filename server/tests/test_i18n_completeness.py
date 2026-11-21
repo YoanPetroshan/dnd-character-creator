@@ -185,9 +185,6 @@ KNOWN_INCONSISTENCIES: dict[str, str] = {
                                              "Feats)' of the singular glossary term 'Талант от произхода'; wording is consistent",
     "front:background:sheet.tabs.background": "the owner's brief fixes the tab name 'Предистория (Background)' (a backstory tab); "
                                               "the glossary term for the rule 'Background' stays 'Произход'",
-    **{f"front:{term}:{path}": _LEGACY for term, path in [
-        ("equipment", "nav.steps.equipment"), ("equipment", "equipmentPage.title"),
-    ]},
 }
 
 

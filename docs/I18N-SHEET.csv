@@ -36,8 +36,8 @@ copy:sheet.identity.species",Species,Раса (Species),"Лентата със �
 Страница „Раса (Species)“ · заглавие на секция: „Раса (Species)“
 (и още на 3 места)",преведено + английско в скоби,,,Дълго заради скобите (T1): 14 знака. На телефон и в тясна колона на таблица може да е неудобно; реши дали да остане с термина в скоби или да има по-кратка форма.
 10,Интерфейс,"copy:nav.steps.abilities
-copy:abilitiesPage.title",Abilities,Характеристики (Abilities),"Лентата със стъпки, име на стъпка · текст: „Характеристики (Abilities)“
-Страница „Abilities“ · заглавие на секция: „Характеристики (Abilities)“",преведено + английско в скоби,,,Съмнение от docs/I18N-REVIEW.md (SK6-BI): English in the Bulgarian UI on purpose (LEGACY); glossary 'Характеристики'.
+copy:abilitiesPage.title",Abilities,Характеристики (Ability Scores),"Лентата със стъпки, име на стъпка · текст: „Характеристики (Ability Scores)“
+Страница „Abilities“ · заглавие на секция: „Характеристики (Ability Scores)“",преведено + английско в скоби,,,Съмнение от docs/I18N-REVIEW.md (SK6-BI): English in the Bulgarian UI on purpose (LEGACY); glossary 'Характеристики'.
 11,Интерфейс,"copy:nav.steps.equipment
 copy:equipmentPage.title",Equipment,Екипировка (Equipment),"Лентата със стъпки, име на стъпка · текст: „Екипировка (Equipment)“
 Страница „Equipment“ · заглавие на секция: „Екипировка (Equipment)“",преведено + английско в скоби,,,Съмнение от docs/I18N-REVIEW.md (SK6-BI): English in the Bulgarian UI on purpose (LEGACY); glossary 'Екипировка'.
@@ -1389,7 +1389,7 @@ Your Speed increases to 35 feet.",преведено,,,
 1184,Експорт,export:sheet.featuresMore,Additional Features & Traits,Допълнителни черти и особености (Features),Ред в Markdown / PDF файла: Надпис или ред в листа за игра (PDF форма): Допълнителни черти и особености (Features),преведено + английско в скоби,,,
 1185,Експорт,export:sheet.equipmentMore,Additional Equipment,Допълнителна екипировка,Ред в Markdown / PDF файла: Надпис или ред в листа за игра (PDF форма): Допълнителна екипировка,преведено,,,
 1186,Експорт,export:sheet.footer,Character Sheet · {name} · p. {n}/{m},Лист на героя (Character Sheet) · {name} · стр. {n}/{m},Ред в Markdown / PDF файла: Надпис или ред в листа за игра (PDF форма): Лист на героя (Character Sheet) · {name} · стр. {n}/{m},преведено + английско в скоби,,,
-1187,Речник,glossary:abilityScores,Ability Scores,Характеристики (Ability Scores),Текст в интерфейса: Характеристики (Abilities),преведено + английско в скоби,,,
+1187,Речник,glossary:abilityScores,Ability Scores,Характеристики (Ability Scores),Текст в интерфейса: Характеристики (Ability Scores),преведено + английско в скоби,,,
 1188,Речник,glossary:armorClass,Armor Class,"Клас броня (Armor Class, AC)","Текст в интерфейса: Клас броня (Armor Class, AC)",преведено + английско в скоби,,,
 1189,Речник,glossary:hitPoints,Hit Points,Точки живот (Hit Points),Текст в интерфейса: Точки живот (Hit Points) на ниво,преведено + английско в скоби,,,
 1190,Речник,glossary:hitPointDice,Hit Point Dice,Зарове за точки живот (Hit Point Dice),Текст в интерфейса: Зарове за точки живот (Hit Point Dice),преведено + английско в скоби,,,Дълго заради скобите (T1): 38 знака. На телефон и в тясна колона на таблица може да е неудобно; реши дали да остане с термина в скоби или да има по-кратка форма.

@@ -136,7 +136,6 @@ describe("scripts", () => {
   // BRACKET_TERMS_START
   const BRACKET_TERMS = new Set([
   "Ability Save DC",
-  "Abilities",
   "Equipment",
   "Features & Traits",
   "Inventory",
