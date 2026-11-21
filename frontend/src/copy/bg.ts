@@ -52,6 +52,8 @@ export const bg = {
 
   common: {
     loading: "Зареждане…",
+    showMore: "Покажи още",
+    showLess: "Покажи по-малко",
     retry: "Опитай пак",
     remove: "Премахни",
     search: "Търсене…",
@@ -543,6 +545,7 @@ export const bg = {
     subclass: "Подклас",
     chooseSubclass: "— избери подклас —",
     higherLevels: "Способности (Features) на по-високи нива:",
+    higherLevelsToggle: (n: number) => `Налични на по-високи нива (${n})`,
     classResources: "Ресурси на класа",
     hpRolls: "Хвърляния за точки живот (Hit Points)",
     levelFeatures: "Какво получаваш по нива",

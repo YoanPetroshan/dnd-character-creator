@@ -49,6 +49,8 @@ export const en: Copy = {
 
   common: {
     loading: "Loading…",
+    showMore: "Show more",
+    showLess: "Show less",
     retry: "Try again",
     remove: "Remove",
     search: "Search…",
@@ -535,6 +537,7 @@ export const en: Copy = {
     subclass: "Subclass",
     chooseSubclass: "— choose a subclass —",
     higherLevels: "Features at higher levels:",
+    higherLevelsToggle: (n: number) => `Available at higher levels (${n})`,
     classResources: "Class Resources",
     hpRolls: "Hit Point rolls",
     levelFeatures: "What you get at each level",

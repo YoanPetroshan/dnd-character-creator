@@ -43,6 +43,7 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
   const [tab, setTab] = useState<ClassTab>("features");
   const [classDetail, setClassDetail] = useState<ClassDetail | null>(null);
   const [subOpen, setSubOpen] = useState(false);
+  const [higherOpen, setHigherOpen] = useState(false);
   // every class feature by level (names and the id of their text), for the "next levels" list
   const [levelList, setLevelList] = useState<{ level: number; name: string; ref: string }[]>([]);
   const subclasses = useSubclassDetails();
@@ -210,27 +211,29 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
         </div>
       )}
 
-      {classDetail && (
-        <p className="higher-levels-teaser">
-          {cp.higherLevels}{" "}
-          {Object.entries(classDetail.levelFeatureCounts)
-            .filter(([lvl]) => Number(lvl) > classLevel)
-            .reduce((sum, [, count]) => sum + count, 0)}
-        </p>
-      )}
-
-      {upcoming.length > 0 && (
-        <details className="details-section class-next-levels">
-          <summary>{cp.nextLevels}</summary>
-          <LevelFeatureList idPrefix={`next:${classId}`} features={upcoming} extra={[]} />
-        </details>
-      )}
-
       {levelFeatures.length + levelExtras.length > 0 && (
         <div className="class-level-features">
           <h3>{cp.levelFeatures}</h3>
           <LevelFeatureList idPrefix={`class:${classId}`} features={levelFeatures} extra={levelExtras} />
         </div>
+      )}
+
+      {upcoming.length > 0 ? (
+        <div className="class-next-levels">
+          <button type="button" className="class-next-levels__toggle" aria-expanded={higherOpen} onClick={() => setHigherOpen((v) => !v)}>
+            {cp.higherLevelsToggle(upcoming.length)}
+          </button>
+          {higherOpen && <LevelFeatureList idPrefix={`next:${classId}`} features={upcoming} extra={[]} />}
+        </div>
+      ) : (
+        classDetail && (
+          <p className="higher-levels-teaser">
+            {cp.higherLevels}{" "}
+            {Object.entries(classDetail.levelFeatureCounts)
+              .filter(([lvl]) => Number(lvl) > classLevel)
+              .reduce((sum, [, count]) => sum + count, 0)}
+          </p>
+        )
       )}
 
       {(resolution?.derived.classResources ?? []).some((r) => r.classId === classId) && (

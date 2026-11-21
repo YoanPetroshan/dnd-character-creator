@@ -1283,3 +1283,117 @@ main .next-button::after {
   font-size: 13px;
   color: var(--color-text-secondary);
 }
+
+/* Title cards (Class, Species, Background pages): one line per feature that opens its text, like a list of accordions. */
+.feature-cards {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feature-card {
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.feature-card:last-child {
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.feature-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--space-2);
+  position: relative;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  padding: 10px 32px 10px 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--color-text-strong);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.feature-card__head--plain {
+  cursor: default;
+}
+
+/* The sign: "+" when closed, a minus (U+2212) when open, as on the other collapsible blocks. */
+button.feature-card__head::after {
+  content: "+";
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20px;
+  color: var(--color-text-secondary);
+}
+
+.feature-card[data-open="true"] > button.feature-card__head::after {
+  content: "\2212";
+}
+
+.feature-card__title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.feature-card__meta {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--color-text-secondary);
+}
+
+.feature-card__picked {
+  flex-basis: 100%;
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.feature-card__body {
+  padding: 0 0 12px;
+}
+
+.feature-card__more {
+  margin-top: var(--space-1);
+  min-height: 44px;
+}
+
+.class-next-levels__toggle {
+  position: relative;
+  width: 100%;
+  min-height: 48px;
+  margin: var(--space-2) 0 0;
+  padding: 10px 32px 10px 0;
+  border: 0;
+  border-top: 1px solid var(--color-border-subtle);
+  border-radius: 0;
+  background: none;
+  text-align: left;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-strong);
+  cursor: pointer;
+}
+
+.class-next-levels__toggle::after {
+  content: "+";
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-sans);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.class-next-levels__toggle[aria-expanded="true"]::after {
+  content: "\2212";
+}

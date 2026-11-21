@@ -13,10 +13,10 @@ import { SpellDetailBody, useSpellDetails } from "../SpellDetailBody";
  *  background feature, `GET /api/features/<id>`) or a feat. */
 export type EyeKind = "spell" | "item" | "feature" | "feat";
 
-interface Eyes {
+export interface Eyes {
   isOpen: (rowKey: string) => boolean;
   toggle: (rowKey: string, kind: EyeKind, id: string) => void;
-  body: (kind: EyeKind, id: string) => ReactNode;
+  body: (kind: EyeKind, id: string, compact?: boolean) => ReactNode;
 }
 
 const EyesContext = createContext<Eyes | null>(null);
@@ -46,14 +46,20 @@ export function SheetEyesProvider({ children }: { children: ReactNode }) {
         return next;
       });
     },
-    body: (kind, id) => {
+    body: (kind, id, compact) => {
       if (kind === "spell") return <SpellDetailBody state={spells.details[id]} />;
       if (kind === "item") return <ItemDetailBody state={items.detailOf(id)} />;
       if (kind === "feat") return <FeatDetailBody state={feats.detailOf(id)} />;
-      return <FeatureDetailBody state={features.detailOf(id)} />;
+      return <FeatureDetailBody state={features.detailOf(id)} compact={compact} />;
     },
   };
   return <EyesContext.Provider value={eyes}>{children}</EyesContext.Provider>;
+}
+
+/** The open eyes and their texts, for a list that draws its own header (the title cards of the Class, Species and Background
+ *  pages). Null outside a SheetEyesProvider. */
+export function useSheetEyes(): Eyes | null {
+  return useContext(EyesContext);
 }
 
 /** The eye that sits right after a name; renders nothing outside the sheet page. */
