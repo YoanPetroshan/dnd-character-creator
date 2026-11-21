@@ -536,9 +536,12 @@ main .next-button::after {
   }
 }
 
-.summary-strip__sub {
+.summary-strip__sub,
+.stat-box dd.summary-strip__sub {
+  font-family: inherit;
   font-size: 12px;
   line-height: 16px;
+  font-weight: 400;
   color: var(--color-text-secondary);
 }
 
@@ -685,7 +688,7 @@ main .next-button::after {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-frame);
+  color: var(--color-label);
 }
 
 .tabs__panel > [data-section]:first-child > h2,
@@ -701,7 +704,7 @@ main .next-button::after {
   font-size: 18px;
   line-height: 24px;
   font-weight: 700;
-  color: var(--color-frame);
+  color: var(--color-label);
 }
 
 .tabs__panel h4 {
@@ -905,7 +908,7 @@ main .next-button::after {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-frame);
+  color: var(--color-label);
 }
 
 :is(.tabs__panel, .sheet-reference, .sheet-combat > [data-section]) dl > div > dd {
@@ -1192,7 +1195,7 @@ main .next-button::after {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-frame);
+  color: var(--color-label);
 }
 
 .sheet-reference [data-section="proficiencies"] [data-section="languages"] {

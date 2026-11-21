@@ -13,8 +13,8 @@ export function NextStepLink() {
   const next = nextUnfinishedStep(resolution, draft);
   if (!next) return null;
   return (
-    <p className="next-step">
+    <nav className="next-step" aria-label={t.nav.nextStepRegion}>
       <Link to={next}>{t.nav.nextStep}</Link>
-    </p>
+    </nav>
   );
 }

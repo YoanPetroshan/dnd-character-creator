@@ -10,8 +10,8 @@ export function NewChoicesLink() {
   const { ids } = useNewChoices();
   if (ids.length === 0) return null;
   return (
-    <p className="new-choices" data-new="true">
+    <nav className="new-choices" data-new="true" aria-label={t.nav.nextStepRegion}>
       <Link to={{ pathname: stepForChoice(ids[0]), hash: ids[0] }}>{t.nav.newChoices(ids.length)}</Link>
-    </p>
+    </nav>
   );
 }

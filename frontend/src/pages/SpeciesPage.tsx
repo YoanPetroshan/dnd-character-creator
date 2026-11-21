@@ -129,7 +129,7 @@ export function SpeciesPage() {
       <ul className="picker-list picker-list--rows">
         {speciesGroups.map((g) => (
           <Fragment key={g.key}>
-            <li className="picker-list__group" role="presentation">
+            <li className="picker-list__group">
               {g.label}
             </li>
             {g.items.map((s) => (

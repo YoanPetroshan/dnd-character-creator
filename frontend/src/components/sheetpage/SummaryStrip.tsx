@@ -83,9 +83,9 @@ export function SummaryStrip({ sections }: { sections: SheetSection[] }) {
             <dt>{c.hitPoints}</dt>
             <dd>{hp.max}</dd>
             {hp.hitDice && (
-              <span className="summary-strip__sub" data-summary="hitDice">
+              <dd className="summary-strip__sub" data-summary="hitDice">
                 {c.hitDice} {hp.hitDice}
-              </span>
+              </dd>
             )}
           </div>
         )}
