@@ -1,0 +1,783 @@
+/* Character sheet, one to one with the online D&D Beyond sheet (docs/SHEET-DDB-SPEC.md, measured 2026-11-24).
+   Layout, sizes and type follow the measurements; the frames are our own drawings in the same shapes (CSS clip-paths), the
+   type is Roboto / Roboto Condensed (self-hosted, OFL), and the theme colour is ours (--color-frame). Everything here is
+   scoped to the sheet page, so the rest of the app keeps its own type scale. Print keeps print.css. */
+
+[data-page="sheet"] {
+  font-family: var(--sheet-r);
+  font-size: 13px;
+  color: var(--sheet-black);
+}
+
+/* The page title is the browser title only; the online sheet opens with the hero header. */
+[data-page="sheet"] > h1 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- shared: a signed number (smaller, lighter sign) ---------- */
+[data-page="sheet"] .signed__sign {
+  margin-right: 1px;
+  font-size: 0.77em;
+  font-weight: 400;
+  opacity: 0.6;
+  vertical-align: 0.12em;
+}
+
+/* ---------- frames ----------
+   A framed box draws its frame on ::before (theme colour) and its paper on ::after (2px inside), both clipped to the
+   box's shape; the content sits above them. */
+[data-page="sheet"] :is(.ability-box, .stat-box) {
+  position: relative;
+  isolation: isolate;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+[data-page="sheet"] :is(.ability-box, .stat-box)::before,
+[data-page="sheet"] :is(.ability-box, .stat-box)::after {
+  content: "";
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  background: var(--sheet-theme);
+}
+
+[data-page="sheet"] :is(.ability-box, .stat-box)::after {
+  z-index: -1;
+  inset: 2px;
+  background: var(--sheet-surface);
+}
+
+
+/* the shapes of the frames (both layers of a box get the same clip-path) */
+[data-page="sheet"] .ability-box::before,
+[data-page="sheet"] .ability-box::after {
+  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%, 0 12px);
+}
+
+[data-page="sheet"] .stat-box::before,
+[data-page="sheet"] .stat-box::after {
+  clip-path: polygon(9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 9px), calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px), 0 9px);
+}
+
+[data-page="sheet"] .stat-box--hp::before,
+[data-page="sheet"] .stat-box--hp::after {
+  clip-path: inset(0 round 14px);
+}
+
+[data-page="sheet"] .stat-box[data-summary="initiative"]::before,
+[data-page="sheet"] .stat-box[data-summary="initiative"]::after {
+  clip-path: polygon(18px 0, calc(100% - 18px) 0, 100% 50%, calc(100% - 18px) 100%, 18px 100%, 0 50%);
+}
+
+[data-page="sheet"] .stat-box--ac::before,
+[data-page="sheet"] .stat-box--ac::after {
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% 58%, 50% 100%, 0 58%, 0 10px);
+}
+
+/* ---------- header ---------- */
+[data-page="sheet"] .sheet-hero {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-height: 80px;
+  margin: 0;
+  padding: 10px 0;
+}
+
+[data-page="sheet"] .sheet-hero .portrait__frame {
+  width: 60px;
+  height: 60px;
+  min-width: 60px;
+  border: 2px solid var(--sheet-theme);
+  border-radius: 4px;
+}
+
+[data-page="sheet"] .summary-strip__who {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+[data-page="sheet"] .summary-strip__who strong {
+  font-family: var(--sheet-rc);
+  font-size: 26px;
+  line-height: 1.1;
+  font-weight: 700;
+  color: var(--sheet-black);
+}
+
+[data-page="sheet"] .summary-strip__line {
+  font-family: var(--sheet-r);
+  font-size: 12px;
+  color: var(--sheet-grey);
+}
+
+[data-page="sheet"] .summary-strip__line > span + span::before {
+  content: "  ";
+  white-space: pre;
+}
+
+[data-page="sheet"] .summary-strip__level {
+  font-family: var(--sheet-r);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--sheet-black);
+}
+
+/* ---------- top row: six abilities, proficiency, speed, hit points ---------- */
+[data-page="sheet"] .summary-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px 13px;
+  margin: 0 0 22px;
+}
+
+[data-page="sheet"] .summary-strip__abilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 16px;
+  margin: 0;
+}
+
+/* ability: chamfered top corners; the label on top, the modifier in an inner box, the score in an oval on the bottom edge */
+[data-page="sheet"] .ability-box {
+  box-sizing: border-box;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  row-gap: 4px;
+  width: 81px;
+  height: 95px;
+  min-height: 0;
+  margin: 0 0 10px;
+  padding: 10px 6px 0;
+}
+
+[data-page="sheet"] .ability__label {
+  font-family: var(--sheet-rc);
+  font-size: 10px;
+  line-height: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--sheet-grey);
+}
+
+[data-page="sheet"] .ability__mod {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 61px;
+  height: 37px;
+  border: 1px solid var(--sheet-line);
+  border-radius: 4px;
+  font-family: var(--sheet-r);
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 400;
+  color: var(--sheet-ink);
+}
+
+[data-page="sheet"] .ability__score {
+  box-sizing: border-box;
+  bottom: -10px;
+  min-width: 46px;
+  height: 26px;
+  padding: 0 8px;
+  border: 2px solid var(--sheet-theme);
+  border-radius: 50%;
+  background: var(--sheet-surface);
+  font-family: var(--sheet-r);
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--sheet-black);
+}
+
+[data-page="sheet"] .summary-strip__stats {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 16px 15px;
+  margin: 0;
+}
+
+/* proficiency and speed: a box with all four corners cut; the title on top, the number, the word at the bottom */
+[data-page="sheet"] .stat-box {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  justify-items: center;
+  align-items: center;
+  width: 94px;
+  height: 89px;
+  min-height: 0;
+  padding: 6px 4px 4px;
+  text-align: center;
+}
+
+[data-page="sheet"] .stat-box dt {
+  display: contents;
+}
+
+[data-page="sheet"] .stat-box__top,
+[data-page="sheet"] .stat-box__bottom {
+  font-family: var(--sheet-rc);
+  font-size: 12px;
+  line-height: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--sheet-black);
+}
+
+[data-page="sheet"] .stat-box__top {
+  grid-row: 1;
+}
+
+[data-page="sheet"] .stat-box__bottom {
+  grid-row: 3;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+[data-page="sheet"] .stat-box__top--grey,
+[data-page="sheet"] .stat-box__bottom--grey {
+  font-size: 10px;
+  color: var(--sheet-grey);
+}
+
+[data-page="sheet"] .stat-box dd {
+  grid-row: 2;
+  margin: 0;
+  font-family: var(--sheet-r);
+  font-size: 26px;
+  line-height: 36px;
+  font-weight: 500;
+  color: var(--sheet-ink);
+  white-space: nowrap;
+}
+
+[data-page="sheet"] .stat-box[data-summary="speed"] dd {
+  font-size: 26px;
+}
+
+/* the unit after the walking speed ("ft." / "фута") is smaller and lighter, like the sign */
+[data-page="sheet"] .stat-box__unit {
+  margin-left: 2px;
+  font-size: 16px;
+  font-weight: 500;
+  opacity: 0.6;
+}
+
+[data-page="sheet"] .summary-strip__sub {
+  grid-row: 4;
+  font-size: 10px;
+  color: var(--sheet-grey);
+}
+
+/* hit points: a wide rounded frame; MAX and HIT DICE side by side, HIT POINTS under them */
+[data-page="sheet"] .stat-box--hp {
+  flex: 1 1 260px;
+  width: auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: 1fr auto;
+  column-gap: 8px;
+  padding: 10px 16px 8px;
+}
+
+[data-page="sheet"] .stat-box--hp > dt.stat-box__bottom {
+  display: block;
+  grid-row: 2;
+  grid-column: 1 / -1;
+}
+
+[data-page="sheet"] .stat-box--hp .hp-cell {
+  display: grid;
+  justify-items: center;
+  grid-row: 1;
+  line-height: 1;
+}
+
+[data-page="sheet"] .hp-cell__label {
+  font-family: var(--sheet-rc);
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--sheet-grey);
+}
+
+[data-page="sheet"] .hp-cell__value {
+  font-family: var(--sheet-r);
+  font-size: 26px;
+  line-height: 34px;
+  font-weight: 500;
+  color: var(--sheet-ink);
+}
+
+[data-page="sheet"] .hp-cell__value--dice {
+  font-size: 20px;
+}
+
+/* ---------- combat strip over the tabs: initiative (hexagon), armor class (shield), defenses ---------- */
+[data-page="sheet"] .sheet-combat {
+  display: flex;
+  align-items: flex-end;
+  gap: 15px;
+  margin: 0 0 10px;
+}
+
+[data-page="sheet"] .sheet-combat__stats {
+  display: flex;
+  gap: 15px;
+  margin: 0;
+}
+
+[data-page="sheet"] .stat-box[data-summary="initiative"] {
+  width: 90px;
+  height: 62px;
+  margin-top: 24px;
+  padding: 0;
+  grid-template-rows: 1fr;
+}
+
+[data-page="sheet"] .stat-box[data-summary="initiative"] dt {
+  display: block;
+  position: absolute;
+  top: -22px;
+  left: 0;
+  right: 0;
+  font-family: var(--sheet-rc);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--sheet-black);
+}
+
+[data-page="sheet"] .stat-box[data-summary="initiative"] dd {
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 50px;
+  height: 36px;
+  border: 1px solid var(--sheet-line);
+  border-radius: 4px;
+  font-weight: 400;
+}
+
+[data-page="sheet"] .stat-box--ac {
+  width: 76px;
+  height: 90px;
+  padding: 10px 4px 22px;
+  grid-template-rows: auto auto auto;
+  align-content: start;
+}
+
+[data-page="sheet"] .stat-box--ac dd {
+  font-size: 26px;
+  line-height: 28px;
+  font-weight: 700;
+}
+
+[data-page="sheet"] .stat-box--ac .stat-box__top {
+  grid-row: 1;
+}
+
+[data-page="sheet"] .stat-box--ac .stat-box__bottom {
+  grid-row: 3;
+  font-size: 10px;
+  line-height: 12px;
+}
+
+/* ---------- boxes of the three columns: a double frame (outer theme line, inner thin line) ---------- */
+[data-page="sheet"] :is(.sheet-reference__saves, .sheet-reference__skills, .sheet-reference__rest) > [data-section],
+[data-page="sheet"] .sheet-combat > [data-section="defenses"],
+[data-page="sheet"] .sheet-main > .tabs {
+  border: 2px solid var(--sheet-theme);
+  border-radius: 12px;
+  background: var(--sheet-surface);
+  box-shadow: inset 0 0 0 3px var(--sheet-surface), inset 0 0 0 4px color-mix(in srgb, var(--sheet-theme) 45%, transparent);
+}
+
+/* the title at the bottom, centred, upper case (the online sheet's footers) */
+[data-page="sheet"] .sheet-reference [data-section] > h2 {
+  font-family: var(--sheet-rc);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--sheet-black);
+}
+
+/* skills */
+[data-page="sheet"] .sheet-reference [data-section="skills"] thead th {
+  font-family: var(--sheet-rc);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--sheet-grey);
+}
+
+[data-page="sheet"] .sheet-reference [data-section="skills"] tbody :is(th, td) {
+  font-family: var(--sheet-rc);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--sheet-black);
+}
+
+/* proficiencies: grey upper-case group labels, items in condensed type */
+[data-page="sheet"] .sheet-reference :is(dt, h3, h4) {
+  font-family: var(--sheet-rc);
+  letter-spacing: 0;
+}
+
+[data-page="sheet"] .sheet-reference :is(dd, p, li) {
+  font-family: var(--sheet-rc);
+  font-size: 13px;
+}
+
+/* ---------- the tab box ---------- */
+[data-page="sheet"] .tabs__tab {
+  padding: 3px 0;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: none;
+  font-family: var(--sheet-rc);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--sheet-grey);
+}
+
+[data-page="sheet"] .tabs__tab[aria-selected="true"] {
+  border-bottom-color: var(--sheet-theme);
+  color: var(--sheet-ink);
+}
+
+[data-page="sheet"] .tabs__panel :is(table, th, td, p, li, dd, dt) {
+  font-family: var(--sheet-rc);
+}
+
+[data-page="sheet"] .tabs__panel :is(h2, h3) {
+  font-family: var(--sheet-rc);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--sheet-theme);
+}
+
+/* ---------- wide screens: the online sheet's 1200px grid ---------- */
+@media (min-width: 1200px) {
+  [data-page="sheet"] {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  [data-page="sheet"] .summary-strip {
+    flex-wrap: nowrap;
+  }
+
+  [data-page="sheet"] .summary-strip__stats {
+    flex-wrap: nowrap;
+  }
+
+  [data-page="sheet"] .sheet-body {
+    grid-template-columns: 281px 281px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  [data-page="sheet"] .sheet-reference__saves,
+  [data-page="sheet"] .sheet-reference__rest {
+    gap: 10px;
+  }
+}
+
+/* ---------- page grid: the alert, then the hero header with the downloads on the right (where the online sheet has its
+   rest buttons), then the top row, then the three columns ---------- */
+@media (min-width: 900px) {
+  [data-page="sheet"] {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "alert alert"
+      "hero export"
+      "strip strip"
+      "body body";
+    column-gap: 24px;
+    align-items: center;
+  }
+
+  [data-page="sheet"] > .sheet-alert {
+    grid-area: alert;
+    margin-bottom: 12px;
+  }
+
+  [data-page="sheet"] > .sheet-hero {
+    grid-area: hero;
+  }
+
+  [data-page="sheet"] > .export-bar {
+    grid-area: export;
+    max-width: 460px;
+    align-self: center;
+  }
+
+  [data-page="sheet"] > .summary-strip {
+    grid-area: strip;
+  }
+
+  [data-page="sheet"] > .sheet-body {
+    grid-area: body;
+  }
+}
+
+/* the downloads: buttons in the theme colour's outline, like the online sheet's header buttons; the heading is for screen
+   readers, the notes are small */
+[data-page="sheet"] .export-bar {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-family: var(--sheet-r);
+}
+
+[data-page="sheet"] .export-bar > h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+[data-page="sheet"] .export-bar p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--sheet-grey);
+  text-align: right;
+}
+
+[data-page="sheet"] .export-bar__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+[data-page="sheet"] .export-bar__buttons :is(button, a) {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--sheet-theme);
+  border-radius: 3px;
+  background: var(--sheet-surface);
+  font-family: var(--sheet-rc);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--sheet-black);
+}
+
+[data-page="sheet"] .export-bar__buttons :is(button, a):disabled,
+[data-page="sheet"] .export-bar__buttons :is(button, a)[aria-disabled="true"] {
+  border-style: dashed;
+  color: var(--sheet-grey);
+}
+
+/* ---------- saving throws: thin pills; the ability in condensed caps with a dotted underline, the value in a small
+   round-ended box on the right (Roboto 14, smaller sign) ---------- */
+[data-page="sheet"] .sheet-reference [data-section="savingThrows"] tbody {
+  gap: 9px 12px;
+}
+
+[data-page="sheet"] .sheet-reference [data-section="savingThrows"] tr {
+  min-height: 30px;
+  border: 1px solid color-mix(in srgb, var(--sheet-theme) 55%, transparent);
+  background: var(--sheet-surface);
+}
+
+[data-page="sheet"] .sheet-reference [data-section="savingThrows"] tbody th {
+  justify-content: center;
+  padding: 0 4px 0 20px;
+  font-family: var(--sheet-rc);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  color: var(--sheet-black);
+}
+
+[data-page="sheet"] .sheet-reference [data-section="savingThrows"] td:nth-child(2) {
+  min-width: 38px;
+  border-left: 1px solid color-mix(in srgb, var(--sheet-theme) 55%, transparent);
+  border-radius: 0 999px 999px 0;
+  font-family: var(--sheet-r);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--sheet-ink);
+}
+
+/* the proficiency mark: a dotted empty circle, a filled dark dot when proficient */
+[data-page="sheet"] .sheet-reference [data-section="savingThrows"] tbody th::before,
+[data-page="sheet"] .skill__mark::before {
+  width: 10px;
+  height: 10px;
+  border: 1px dotted var(--sheet-grey);
+}
+
+[data-page="sheet"] .sheet-reference tr[data-proficient="true"] th::before,
+[data-page="sheet"] .sheet-reference tr[data-proficient="true"] .skill__mark::before {
+  border: 0;
+  background: var(--sheet-ink);
+}
+
+/* ---------- skills: PROF MOD SKILL BONUS; stat in grey caps, the name in condensed 14, the bonus in a light box ---------- */
+[data-page="sheet"] .sheet-reference [data-section="skills"] tbody :is(th, td) {
+  height: 35px;
+  border-bottom: 1px solid var(--sheet-line);
+}
+
+[data-page="sheet"] .skill__mark,
+[data-page="sheet"] .skill__ability {
+  width: 36px;
+}
+
+[data-page="sheet"] .skill__ability {
+  font-family: var(--sheet-r);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--sheet-grey);
+}
+
+[data-page="sheet"] .sheet-reference [data-section="skills"] tr[data-proficient="true"] th {
+  font-weight: 400;
+}
+
+[data-page="sheet"] .sheet-reference .skill__bonus .sheet-chip {
+  box-sizing: border-box;
+  min-width: 40px;
+  height: 30px;
+  padding: 0 4px;
+  border: 1px solid var(--sheet-line);
+  border-radius: 4px;
+  font-family: var(--sheet-r);
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 400;
+  color: var(--sheet-ink);
+}
+
+/* ---------- senses: one box; the passives as a number box joined to a long label pill, the senses line centred, the
+   title SENSES at the bottom ---------- */
+[data-page="sheet"] .sheet-senses-box {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px 10px;
+  border: 2px solid var(--sheet-theme);
+  border-radius: 12px;
+  background: var(--sheet-surface);
+  box-shadow: inset 0 0 0 3px var(--sheet-surface), inset 0 0 0 4px color-mix(in srgb, var(--sheet-theme) 45%, transparent);
+}
+
+[data-page="sheet"] .sheet-senses-box > [data-section] {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
+}
+
+[data-page="sheet"] .sheet-senses-box > [data-section="passives"] > h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+[data-page="sheet"] .sheet-reference .passives > .passives__row > dd {
+  min-width: 38px;
+  min-height: 30px;
+  border: 1px solid color-mix(in srgb, var(--sheet-theme) 55%, transparent);
+  border-radius: 999px;
+  font-family: var(--sheet-r);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--sheet-ink);
+}
+
+[data-page="sheet"] .sheet-reference .passives > .passives__row > dt {
+  border: 1px solid color-mix(in srgb, var(--sheet-theme) 55%, transparent);
+  border-left: 0;
+  font-family: var(--sheet-rc);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--sheet-ink);
+}
+
+[data-page="sheet"] .sheet-senses-box [data-section="senses"] {
+  margin-top: 12px;
+}
+
+[data-page="sheet"] .sheet-senses-box [data-section="senses"] li::before {
+  content: none;
+}
+
+[data-page="sheet"] .sheet-senses-box [data-section="senses"] li {
+  padding: 0;
+  font-family: var(--sheet-rc);
+  font-size: 12px;
+}
+
+[data-page="sheet"] .sheet-senses-box [data-section="senses"] {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- proficiencies & training: grey condensed caps labels (14), the items in condensed 13, thin rules ---------- */
+[data-page="sheet"] .sheet-reference [data-section="proficiencies"] :is(dt, h3),
+[data-page="sheet"] .sheet-reference [data-section="languages"] h3 {
+  margin: 0 0 2px;
+  font-family: var(--sheet-rc);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--sheet-grey);
+}
+
+[data-page="sheet"] .sheet-reference [data-section="proficiencies"] :is(dd, p, li),
+[data-page="sheet"] .sheet-reference [data-section="languages"] :is(dd, p, li) {
+  font-family: var(--sheet-rc);
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--sheet-black);
+}
+
+[data-page="sheet"] .sheet-reference [data-section="skills"] tbody td.skill__ability {
+  font-family: var(--sheet-r);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--sheet-grey);
+}

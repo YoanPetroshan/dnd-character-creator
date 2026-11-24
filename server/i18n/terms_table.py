@@ -345,6 +345,7 @@ COVERAGE_EXCEPTIONS: dict[tuple[str, str], str] = {
 # one of these prefixes.
 SHORT_LABEL_KEYS: dict[str, str] = {
     "UI:nav.steps.": "step bar: the English term is in the heading of the page the step opens",
+    "UI:sheet.boxes.": "sheet box labels (one to one with the online sheet, two short words per box); the terms are in the sheet's sections and export",
 }
 
 

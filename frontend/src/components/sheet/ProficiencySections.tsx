@@ -2,6 +2,7 @@ import { useT } from "../../LanguageContext";
 import { formatModifier } from "../../logic/abilities";
 import type { SheetSectionData } from "../../logic/sheetSections";
 import { SectionFrame } from "./SectionFrame";
+import { Signed } from "./Signed";
 
 export function SavingThrowsSection({ data }: { data: SheetSectionData["savingThrows"] }) {
   const t = useT();
@@ -20,7 +21,9 @@ export function SavingThrowsSection({ data }: { data: SheetSectionData["savingTh
           {data.map((s) => (
             <tr key={s.ability} data-proficient={s.proficient}>
               <th scope="row">{s.ability}</th>
-              <td>{formatModifier(s.bonus)}</td>
+              <td>
+                <Signed value={formatModifier(s.bonus)} />
+              </td>
               <td>{s.proficient ? t.sheet.markers.proficient : ""}</td>
             </tr>
           ))}
@@ -57,7 +60,9 @@ export function SkillsSection({ data }: { data: SheetSectionData["skills"] }) {
               <td className="skill__ability">{s.ability ?? ""}</td>
               <th scope="row">{s.name}</th>
               <td className="skill__bonus">
-                <span className="sheet-chip">{formatModifier(s.bonus)}</span>
+                <span className="sheet-chip">
+                  <Signed value={formatModifier(s.bonus)} />
+                </span>
               </td>
             </tr>
           ))}

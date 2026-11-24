@@ -4,6 +4,7 @@ import { useLibrary } from "../../LibraryContext";
 import { formatModifier } from "../../logic/abilities";
 import type { SheetSection, SheetSectionData } from "../../logic/sheetSections";
 import { HeroPortrait } from "../HeroPortrait";
+import { Signed } from "../sheet/Signed";
 import { DefensesSection } from "../sheet/EquipmentSection";
 
 function data<K extends SheetSection["key"]>(sections: SheetSection[], key: K): SheetSectionData[K] | undefined {
@@ -50,6 +51,7 @@ export function SheetHero({ sections }: { sections: SheetSection[] }) {
 export function SummaryStrip({ sections }: { sections: SheetSection[] }) {
   const t = useT();
   const c = t.sheet.summary;
+  const b = t.sheet.boxes;
   const abilities = data(sections, "abilities");
   const hp = data(sections, "hitPoints");
   const speeds = data(sections, "speeds");
@@ -61,8 +63,10 @@ export function SummaryStrip({ sections }: { sections: SheetSection[] }) {
       <ul className="summary-strip__abilities" data-section="abilities">
         {(abilities ?? []).map((r) => (
           <li key={r.ability} className="sheet-box ability-box" data-summary-ability={r.ability}>
-            <span className="ability__label">{r.ability}</span>
-            <span className="ability__mod">{formatModifier(r.modifier)}</span>
+            <span className="ability__label">{b.abilityNames[r.ability] ?? r.ability}</span>
+            <span className="ability__mod">
+              <Signed value={formatModifier(r.modifier)} />
+            </span>
             <span className="ability__score">{r.total}</span>
           </li>
         ))}
@@ -70,14 +74,24 @@ export function SummaryStrip({ sections }: { sections: SheetSection[] }) {
       <dl className="summary-strip__stats">
         {prof !== undefined && (
           <div className="sheet-box stat-box" data-summary="proficiencyBonus" data-section="proficiencyBonus">
-            <dt>{c.proficiencyBonus}</dt>
-            <dd>{formatModifier(prof)}</dd>
+            <dt>
+              <span className="stat-box__top">{b.profTop}</span> <span className="stat-box__bottom">{b.profBottom}</span>
+            </dt>
+            <dd>
+              <Signed value={formatModifier(prof)} />
+            </dd>
           </div>
         )}
         {first && (
           <div className="sheet-box stat-box" data-summary="speed" data-section="speeds">
-            <dt>{c.speed}</dt>
-            <dd>{t.common.feet(first.feet)}</dd>
+            <dt>
+              <span className="stat-box__top stat-box__top--grey">{t.sheet.speeds.modes[first.mode] ?? b.speedTop}</span>{" "}
+              <span className="stat-box__bottom">{b.speedBottom}</span>
+            </dt>
+            <dd>
+              {first.feet}
+              <span className="stat-box__unit">{b.feetUnit}</span>
+            </dd>
             {extraSpeeds.map((sp) => (
               <span key={sp.mode} className="summary-strip__sub">
                 {t.sheet.speeds.modes[sp.mode] ?? sp.mode} {t.common.feet(sp.feet)}
@@ -87,11 +101,15 @@ export function SummaryStrip({ sections }: { sections: SheetSection[] }) {
         )}
         {hp && (
           <div className="sheet-box stat-box stat-box--hp" data-summary="hitPoints" data-section="hitPoints">
-            <dt>{c.hitPoints}</dt>
-            <dd>{hp.max}</dd>
+            <dt className="stat-box__bottom">{b.hpTitle}</dt>
+            <dd className="hp-cell">
+              <span className="hp-cell__label">{b.hpMax}</span>
+              <span className="hp-cell__value">{hp.max}</span>
+            </dd>
             {hp.hitDice && (
-              <dd className="summary-strip__sub" data-summary="hitDice">
-                {c.hitDice} {hp.hitDice}
+              <dd className="hp-cell" data-summary="hitDice">
+                <span className="hp-cell__label">{b.hpDice}</span>
+                <span className="hp-cell__value hp-cell__value--dice">{hp.hitDice}</span>
               </dd>
             )}
           </div>
@@ -104,7 +122,6 @@ export function SummaryStrip({ sections }: { sections: SheetSection[] }) {
 /** Initiative and Armor Class boxes, then the defenses box when the character has any: the row over the tab panel. */
 export function CombatRow({ sections }: { sections: SheetSection[] }) {
   const t = useT();
-  const c = t.sheet.summary;
   const ac = data(sections, "armorClass");
   const initiative = data(sections, "initiative");
   const defenses = data(sections, "defenses");
@@ -113,13 +130,18 @@ export function CombatRow({ sections }: { sections: SheetSection[] }) {
       <dl className="sheet-combat__stats">
         {initiative !== undefined && (
           <div className="sheet-box stat-box" data-summary="initiative" data-section="initiative">
-            <dt>{c.initiative}</dt>
-            <dd>{formatModifier(initiative)}</dd>
+            <dt>{t.sheet.boxes.initiative}</dt>
+            <dd>
+              <Signed value={formatModifier(initiative)} />
+            </dd>
           </div>
         )}
         {ac && (
           <div className="sheet-box stat-box stat-box--ac" data-summary="armorClass" data-section="armorClass">
-            <dt>{c.armorClass}</dt>
+            <dt>
+              <span className="stat-box__top stat-box__top--grey">{t.sheet.boxes.acTop}</span>{" "}
+              <span className="stat-box__bottom stat-box__bottom--grey">{t.sheet.boxes.acBottom}</span>
+            </dt>
             <dd>{ac.value}</dd>
           </div>
         )}

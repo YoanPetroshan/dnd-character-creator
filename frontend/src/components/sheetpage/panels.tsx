@@ -57,8 +57,13 @@ export function ReferenceBlock({ sections }: { sections: SheetSection[] }) {
       <div className="sheet-reference__saves">{saves && <SavingThrowsSection data={saves} />}</div>
       <div className="sheet-reference__skills">{skills && <SkillsSection data={skills} />}</div>
       <div className="sheet-reference__rest">
-        {passives && <PassivesSection data={passives} />}
-        {senses && <SensesSection data={senses} />}
+        {/* one SENSES box like the online sheet: the three passives, then the senses line, the title at the bottom */}
+        {(passives || senses) && (
+          <div className="sheet-senses-box">
+            {passives && <PassivesSection data={passives} />}
+            {senses && <SensesSection data={senses} />}
+          </div>
+        )}
         {proficiencies ? (
           <ProficienciesSection data={proficiencies} languages={languages} />
         ) : (

@@ -54,6 +54,17 @@
 
   /* the pinstripe texture was removed (owner decision 5A, DESIGN-L 2026-11-24): it added noise behind every paragraph */
   --texture-page: none;
+
+  /* the character sheet (DESIGN-L, one to one with the online sheet; docs/SHEET-DDB-SPEC.md) */
+  --sheet-theme: var(--color-frame);
+  --sheet-ink: #12181c;
+  --sheet-black: #000000;
+  --sheet-grey: #75838b;
+  --sheet-line: #c3cbd0;
+  --sheet-surface: #ffffff;
+  --sheet-pill: #e4e8ea;
+  --sheet-r: "Roboto", system-ui, sans-serif;
+  --sheet-rc: "Roboto Condensed", "Arial Narrow", system-ui, sans-serif;
 }
 
 /* Dark theme: the system setting decides unless the page sets data-theme (light or dark). The values are a
@@ -84,6 +95,12 @@
     --color-warning-bg: #2a2412;
     --color-warning-border: #d9a400;
     --texture-page: none;
+    --sheet-ink: #e6ede3;
+    --sheet-black: #e6ede3;
+    --sheet-grey: #9fae9a;
+    --sheet-line: #3a4a3d;
+    --sheet-surface: var(--color-surface);
+    --sheet-pill: #2a372c;
     color-scheme: dark;
   }
 }
@@ -113,6 +130,12 @@
   --color-warning-bg: #2a2412;
   --color-warning-border: #d9a400;
   --texture-page: none;
+  --sheet-ink: #e6ede3;
+  --sheet-black: #e6ede3;
+  --sheet-grey: #9fae9a;
+  --sheet-line: #3a4a3d;
+  --sheet-surface: var(--color-surface);
+  --sheet-pill: #2a372c;
   color-scheme: dark;
 }
 
@@ -139,6 +162,11 @@
     --color-danger: #a02a16;
     --color-error: #a02a16;
     --color-ok: #1d6b52;
+    --sheet-ink: #000000;
+    --sheet-black: #000000;
+    --sheet-grey: #333333;
+    --sheet-line: #999999;
+    --sheet-surface: #ffffff;
     --texture-page: none;
   }
 }

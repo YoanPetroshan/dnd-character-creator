@@ -127,7 +127,9 @@ describe("scripts", () => {
 
   // Game terms kept in English on purpose (owner decision 2026-11-05): "Spell Slots" (glossary spellSlots, as in the BG export);
   // Advantage / Disadvantage (owner decision, Bulgarian wording rules): English, no Bulgarian word and no brackets.
-  const TERMS = new Set("Spell Slot Slots Disadvantage".split(" "));
+  // The six ability names on the sheet's ability boxes stay English (owner decision 2026-11-17: ability names stay English;
+  // the sheet follows the online sheet one to one, DESIGN-L).
+  const TERMS = new Set("Spell Slot Slots Disadvantage Strength Dexterity Constitution Intelligence Wisdom Charisma".split(" "));
 
   // T1 (owner decision 2026-11-05): a Bulgarian rules term is followed by its English term in brackets, "Талант (Feat)".
   // Latin text is allowed inside such a bracket only when it is one of these terms (the same list as
