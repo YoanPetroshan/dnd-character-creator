@@ -76,9 +76,12 @@
   clip-path: polygon(18px 0, calc(100% - 18px) 0, 100% 50%, calc(100% - 18px) 100%, 18px 100%, 0 50%);
 }
 
+/* armor class: a shield (flat top with cut corners, curved sides meeting in a point) */
 [data-page="sheet"] .stat-box--ac::before,
 [data-page="sheet"] .stat-box--ac::after {
-  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% 58%, 50% 100%, 0 58%, 0 10px);
+  clip-path: none;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M8 0H92L100 7V42C100 68 80 88 50 100C20 88 0 68 0 42V7Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M8 0H92L100 7V42C100 68 80 88 50 100C20 88 0 68 0 42V7Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
 }
 
 /* ---------- header ---------- */
@@ -137,7 +140,7 @@
   flex-wrap: wrap;
   align-items: flex-start;
   gap: 16px 13px;
-  margin: 0 0 22px;
+  margin: 0 0 4px;
 }
 
 [data-page="sheet"] .summary-strip__abilities {
@@ -780,4 +783,346 @@
   font-size: 12px;
   font-weight: 700;
   color: var(--sheet-grey);
+}
+
+
+/* ---------- hit points, live: HEAL / amount / DAMAGE, then CURRENT / MAX / TEMP, HIT POINTS under them ---------- */
+[data-page="sheet"] .stat-box--hp {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr);
+  grid-template-rows: 1fr auto;
+  column-gap: 14px;
+  align-items: center;
+  padding: 8px 14px 6px 10px;
+}
+
+[data-page="sheet"] .hp-adjust {
+  grid-row: 1 / 3;
+  display: grid;
+  gap: 4px;
+}
+
+[data-page="sheet"] .hp-adjust > * {
+  box-sizing: border-box;
+  width: 70px;
+  min-height: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--sheet-theme);
+  border-radius: 3px;
+  background: var(--sheet-surface);
+  font-family: var(--sheet-rc);
+  font-size: 9px;
+  font-weight: 500;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+[data-page="sheet"] .hp-adjust__amount {
+  font-family: var(--sheet-r);
+  font-size: 13px;
+  color: var(--sheet-ink);
+}
+
+[data-page="sheet"] .hp-adjust__heal {
+  color: var(--sheet-heal);
+}
+
+[data-page="sheet"] .hp-adjust__damage {
+  color: var(--sheet-damage);
+}
+
+[data-page="sheet"] .hp-adjust button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+[data-page="sheet"] .hp-values {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 6px;
+  margin: 0;
+}
+
+[data-page="sheet"] .hp-values .hp-cell {
+  display: grid;
+  justify-items: center;
+}
+
+[data-page="sheet"] .hp-values dd {
+  margin: 0;
+}
+
+[data-page="sheet"] .hp-values__slash {
+  font-family: var(--sheet-r);
+  font-size: 26px;
+  line-height: 34px;
+  color: var(--sheet-grey);
+}
+
+[data-page="sheet"] .hp-cell--temp {
+  margin-left: 14px;
+}
+
+[data-page="sheet"] .hp-temp,
+[data-page="sheet"] .hp-temp-input {
+  min-height: 0;
+  width: 56px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--sheet-r);
+  font-size: 26px;
+  font-weight: 500;
+  text-align: center;
+  color: var(--sheet-ink);
+}
+
+[data-page="sheet"] .hp-temp-input {
+  border-bottom: 1px solid var(--sheet-line);
+}
+
+[data-page="sheet"] .hp-title {
+  grid-column: 2;
+  margin: 0;
+  text-align: center;
+}
+
+/* ---------- heroic inspiration: a framed box that lights up in the theme colour, its name under it ---------- */
+[data-page="sheet"] .inspiration {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  width: 74px;
+}
+
+[data-page="sheet"] .inspiration__box {
+  position: relative;
+  width: 70px;
+  height: 56px;
+  min-height: 0;
+  padding: 0;
+  border: 2px solid var(--sheet-theme);
+  border-radius: 10px;
+  background: var(--sheet-surface);
+  box-shadow: inset 0 0 0 4px var(--sheet-surface), inset 0 0 0 5px var(--sheet-line);
+  cursor: pointer;
+}
+
+[data-page="sheet"] .inspiration__box[aria-pressed="true"] {
+  background: var(--sheet-theme);
+  box-shadow: inset 0 0 0 4px var(--sheet-theme), inset 0 0 0 5px var(--sheet-surface);
+}
+
+[data-page="sheet"] .inspiration__box[aria-pressed="true"]::after {
+  content: "\2605";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  color: var(--sheet-surface);
+}
+
+[data-page="sheet"] .inspiration__label {
+  font-family: var(--sheet-rc);
+  font-size: 12px;
+  line-height: 13px;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--sheet-black);
+}
+
+/* ---------- DEFENSES | CONDITIONS beside the armor class ---------- */
+[data-page="sheet"] .defenses-conditions {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-self: stretch;
+  min-height: 95px;
+  padding: 10px 12px;
+  border: 2px solid var(--sheet-theme);
+  border-radius: 6px;
+  background: var(--sheet-surface);
+  box-shadow: inset 0 0 0 3px var(--sheet-surface), inset 0 0 0 4px color-mix(in srgb, var(--sheet-theme) 45%, transparent);
+}
+
+[data-page="sheet"] .defenses-conditions__half {
+  min-width: 0;
+  padding: 0 10px;
+}
+
+[data-page="sheet"] .defenses-conditions__half + .defenses-conditions__half {
+  border-left: 1px solid var(--sheet-line);
+}
+
+[data-page="sheet"] .defenses-conditions h3 {
+  margin: 0 0 2px;
+  font-family: var(--sheet-rc);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--sheet-black);
+}
+
+[data-page="sheet"] .defenses-conditions [data-section="defenses"] {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: none;
+}
+
+[data-page="sheet"] .defenses-conditions [data-section="defenses"] > h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+[data-page="sheet"] .defenses-conditions :is(dt, dd, p, li, summary, label) {
+  font-family: var(--sheet-r);
+  font-size: 13px;
+  line-height: 17px;
+}
+
+[data-page="sheet"] .defenses-conditions dt {
+  font-family: var(--sheet-rc);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--sheet-grey);
+}
+
+[data-page="sheet"] .defenses-conditions__none {
+  margin: 0;
+  color: var(--sheet-grey);
+}
+
+[data-page="sheet"] .condition-menu > summary {
+  min-height: 0;
+  font-family: var(--sheet-rc);
+  font-weight: 400;
+  color: var(--sheet-grey);
+  list-style: none;
+  cursor: pointer;
+}
+
+[data-page="sheet"] .condition-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+[data-page="sheet"] .condition-menu > ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 8px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+[data-page="sheet"] .condition-menu li::before {
+  content: none;
+}
+
+[data-page="sheet"] .condition-menu label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+}
+
+[data-page="sheet"] .condition-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+}
+
+[data-page="sheet"] .condition-chips li::before {
+  content: none;
+}
+
+[data-page="sheet"] .condition-chips button {
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--sheet-theme);
+  border-radius: 3px;
+  background: var(--sheet-surface);
+  font-family: var(--sheet-rc);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--sheet-black);
+}
+
+/* the top row keeps its order on wide screens: the six abilities never shrink, the hit point box takes what is left */
+@media (min-width: 1200px) {
+  [data-page="sheet"] .summary-strip__abilities {
+    flex: none;
+    flex-wrap: nowrap;
+  }
+
+  [data-page="sheet"] .summary-strip__stats {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  [data-page="sheet"] .summary-strip__stats > .stat-box--hp {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+[data-page="sheet"] .hp-cell__label,
+[data-page="sheet"] .stat-box__top,
+[data-page="sheet"] .stat-box__bottom {
+  white-space: nowrap;
+}
+
+[data-page="sheet"] .inspiration {
+  width: 80px;
+}
+
+[data-page="sheet"] .inspiration__label {
+  font-size: 11px;
+  overflow-wrap: normal;
+}
+
+/* hit point box fixes: the amount field keeps the 22px row (the global 44px field minimum does not apply inside the
+   frame; the whole stack is 74px), the title sits in the second row, the values fit the column */
+/* compact like the online sheet on a wide screen with a mouse; touch screens keep the 44px minimum (touch.css) */
+@media (min-width: 900px) and (pointer: fine) {
+  [data-page="sheet"] .stat-box.stat-box--hp .hp-adjust > input.hp-adjust__amount {
+    min-height: 22px;
+    height: 22px;
+  }
+}
+
+[data-page="sheet"] .stat-box--hp > .hp-title {
+  grid-row: 2;
+  grid-column: 2;
+}
+
+[data-page="sheet"] .stat-box--hp > .hp-values {
+  grid-row: 1;
+  grid-column: 2;
+  gap: 4px;
+}
+
+[data-page="sheet"] .hp-cell--temp {
+  margin-left: 6px;
+}
+
+[data-page="sheet"] .hp-temp,
+[data-page="sheet"] .hp-temp-input {
+  width: 48px;
 }

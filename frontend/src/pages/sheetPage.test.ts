@@ -160,7 +160,12 @@ describe("no data is lost: every section of the old sheet / export pages is rend
     expect(h).toContain('data-section="summary"');
     for (const a of ["STR", "DEX", "CON", "INT", "WIS", "CHA"]) expect(h).toContain(`data-summary-ability="${a}"`);
     for (const k of ["name", "class", "species", "hitPoints", "armorClass", "initiative", "speed", "proficiencyBonus"]) expect(h).toContain(`data-summary="${k}"`);
-    expect(h).not.toMatch(/current HP|temp(orary)? HP|inspiration|short rest/i);
+    // the live sheet (owner, 2026-11-24): current / temporary hit points with Heal and Damage, Heroic Inspiration and the
+    // conditions are on the sheet; rests are not (yet)
+    expect(h).toContain('data-summary="currentHp"');
+    expect(h).toMatch(/Heroic Inspiration/);
+    expect(h).toMatch(/Add Active Conditions/);
+    expect(h).not.toMatch(/short rest/i);
   });
 
   it("spells: one row per spell, grouped by level, with the catalog columns", () => {

@@ -63,6 +63,8 @@
   --sheet-line: #c3cbd0;
   --sheet-surface: #ffffff;
   --sheet-pill: #e4e8ea;
+  --sheet-heal: #1f7a2e;
+  --sheet-damage: #b3261e;
   --sheet-r: "Roboto", system-ui, sans-serif;
   --sheet-rc: "Roboto Condensed", "Arial Narrow", system-ui, sans-serif;
 }
@@ -101,6 +103,8 @@
     --sheet-line: #3a4a3d;
     --sheet-surface: var(--color-surface);
     --sheet-pill: #2a372c;
+    --sheet-heal: #7fd98c;
+    --sheet-damage: #ff8a80;
     color-scheme: dark;
   }
 }
@@ -136,6 +140,8 @@
   --sheet-line: #3a4a3d;
   --sheet-surface: var(--color-surface);
   --sheet-pill: #2a372c;
+  --sheet-heal: #7fd98c;
+  --sheet-damage: #ff8a80;
   color-scheme: dark;
 }
 

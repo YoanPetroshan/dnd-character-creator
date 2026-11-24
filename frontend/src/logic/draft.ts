@@ -57,6 +57,11 @@ export type Action =
   | { type: "SET_ABILITY_SCORE"; ability: Ability; value: number }
   | { type: "SET_ABILITY_SCORES"; base: Record<Ability, number> }
   | { type: "SET_DETAIL"; field: keyof Draft["details"]; value: string }
+  /** play state (the live sheet): heal or damage by an amount, set the temporary HP, toggle inspiration / a condition */
+  | { type: "APPLY_HP"; kind: "heal" | "damage"; amount: number; maxHp: number }
+  | { type: "SET_TEMP_HP"; value: number }
+  | { type: "TOGGLE_INSPIRATION" }
+  | { type: "TOGGLE_CONDITION"; condition: string }
   | { type: "SET_CHOICE_SELECTION"; source: ChoiceSourceKind; choiceId: string; selected: string[] }
   | { type: "TOGGLE_CHOICE_OPTION"; source: ChoiceSourceKind; choiceId: string; optionId: string; count: number }
   | { type: "CLEAR_STALE_SELECTIONS"; keepIds: string[]; clearSubclassFor?: string[] }
@@ -217,6 +222,33 @@ export function reducer(state: Draft, action: Action): Draft {
           base: { ...state.abilities.base, [action.ability]: action.value },
         },
       };
+    case "APPLY_HP": {
+      const amount = Math.max(0, Math.floor(action.amount));
+      if (!amount) return state;
+      const play = { ...state.play };
+      const damage = play.damage ?? 0;
+      if (action.kind === "heal") {
+        play.damage = Math.max(0, damage - amount);
+      } else {
+        // damage takes the temporary hit points first, as the rules say
+        const temp = play.tempHp ?? 0;
+        const fromTemp = Math.min(temp, amount);
+        play.tempHp = temp - fromTemp;
+        play.damage = Math.min(Math.max(0, action.maxHp), damage + amount - fromTemp);
+      }
+      return { ...state, play };
+    }
+    case "SET_TEMP_HP":
+      return { ...state, play: { ...state.play, tempHp: Math.max(0, Math.floor(action.value) || 0) } };
+    case "TOGGLE_INSPIRATION":
+      return { ...state, play: { ...state.play, inspiration: !state.play?.inspiration } };
+    case "TOGGLE_CONDITION": {
+      const current = state.play?.conditions ?? [];
+      const conditions = current.includes(action.condition)
+        ? current.filter((c) => c !== action.condition)
+        : [...current, action.condition];
+      return { ...state, play: { ...state.play, conditions } };
+    }
     case "SET_DETAIL":
       return { ...state, details: { ...state.details, [action.field]: action.value } };
     case "SET_CHOICE_SELECTION": {

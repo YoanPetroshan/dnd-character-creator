@@ -25,7 +25,8 @@ export function useResolution(draft: Draft): ResolutionState & { retry: () => vo
   const { lang } = useLang();
   const requestId = useRef(0);
   // FE-07: the request depends on the draft's text, not its identity: a new object with the same content asks nothing
-  const body = useMemo(() => JSON.stringify(draft), [draft]);
+  // the play state (HP, inspiration, conditions) does not change the rules result: it is left out, so a heal asks nothing
+  const body = useMemo(() => JSON.stringify({ ...draft, play: undefined }), [draft]);
 
   useEffect(() => {
     const controller = new AbortController();

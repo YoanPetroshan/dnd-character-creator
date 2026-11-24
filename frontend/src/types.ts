@@ -393,6 +393,17 @@ export interface Preferences {
 
 export type Ruleset = "2014" | "2024" | "mixed";
 
+/** Play state kept with the hero (DESIGN-L: the sheet is a live sheet like the online one). It never reaches the engine
+ *  (useResolution leaves it out), so a heal or a damage does not re-resolve. Optional: older drafts have none. */
+export interface PlayState {
+  /** hit points lost; current HP = max - damage (so a changed maximum keeps the loss) */
+  damage?: number;
+  tempHp?: number;
+  inspiration?: boolean;
+  /** active conditions, by their English game term (Blinded, Prone ...) */
+  conditions?: string[];
+}
+
 export interface Draft {
   draftVersion?: number;
   name: string;
@@ -418,4 +429,5 @@ export interface Draft {
     skipped: boolean;
   };
   details: CharacterDetails;
+  play?: PlayState;
 }

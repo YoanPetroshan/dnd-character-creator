@@ -5,7 +5,7 @@ import { formatModifier } from "../../logic/abilities";
 import type { SheetSection, SheetSectionData } from "../../logic/sheetSections";
 import { HeroPortrait } from "../HeroPortrait";
 import { Signed } from "../sheet/Signed";
-import { DefensesSection } from "../sheet/EquipmentSection";
+import { DefensesConditionsBox, HitPointsBox, InspirationBox } from "./PlayBoxes";
 
 function data<K extends SheetSection["key"]>(sections: SheetSection[], key: K): SheetSectionData[K] | undefined {
   return sections.find((s) => s.key === key)?.data as SheetSectionData[K] | undefined;
@@ -53,7 +53,6 @@ export function SummaryStrip({ sections }: { sections: SheetSection[] }) {
   const c = t.sheet.summary;
   const b = t.sheet.boxes;
   const abilities = data(sections, "abilities");
-  const hp = data(sections, "hitPoints");
   const speeds = data(sections, "speeds");
   const prof = data(sections, "proficiencyBonus");
   const first = speeds?.[0];
@@ -71,19 +70,19 @@ export function SummaryStrip({ sections }: { sections: SheetSection[] }) {
           </li>
         ))}
       </ul>
-      <dl className="summary-strip__stats">
+      <div className="summary-strip__stats">
         {prof !== undefined && (
-          <div className="sheet-box stat-box" data-summary="proficiencyBonus" data-section="proficiencyBonus">
+          <dl className="sheet-box stat-box" data-summary="proficiencyBonus" data-section="proficiencyBonus">
             <dt>
               <span className="stat-box__top">{b.profTop}</span> <span className="stat-box__bottom">{b.profBottom}</span>
             </dt>
             <dd>
               <Signed value={formatModifier(prof)} />
             </dd>
-          </div>
+          </dl>
         )}
         {first && (
-          <div className="sheet-box stat-box" data-summary="speed" data-section="speeds">
+          <dl className="sheet-box stat-box" data-summary="speed" data-section="speeds">
             <dt>
               <span className="stat-box__top stat-box__top--grey">{t.sheet.speeds.modes[first.mode] ?? b.speedTop}</span>{" "}
               <span className="stat-box__bottom">{b.speedBottom}</span>
@@ -93,28 +92,15 @@ export function SummaryStrip({ sections }: { sections: SheetSection[] }) {
               <span className="stat-box__unit">{b.feetUnit}</span>
             </dd>
             {extraSpeeds.map((sp) => (
-              <span key={sp.mode} className="summary-strip__sub">
+              <dd key={sp.mode} className="summary-strip__sub">
                 {t.sheet.speeds.modes[sp.mode] ?? sp.mode} {t.common.feet(sp.feet)}
-              </span>
-            ))}
-          </div>
-        )}
-        {hp && (
-          <div className="sheet-box stat-box stat-box--hp" data-summary="hitPoints" data-section="hitPoints">
-            <dt className="stat-box__bottom">{b.hpTitle}</dt>
-            <dd className="hp-cell">
-              <span className="hp-cell__label">{b.hpMax}</span>
-              <span className="hp-cell__value">{hp.max}</span>
-            </dd>
-            {hp.hitDice && (
-              <dd className="hp-cell" data-summary="hitDice">
-                <span className="hp-cell__label">{b.hpDice}</span>
-                <span className="hp-cell__value hp-cell__value--dice">{hp.hitDice}</span>
               </dd>
-            )}
-          </div>
+            ))}
+          </dl>
         )}
-      </dl>
+        <InspirationBox />
+        <HitPointsBox sections={sections} />
+      </div>
     </section>
   );
 }
@@ -124,7 +110,6 @@ export function CombatRow({ sections }: { sections: SheetSection[] }) {
   const t = useT();
   const ac = data(sections, "armorClass");
   const initiative = data(sections, "initiative");
-  const defenses = data(sections, "defenses");
   return (
     <div className="sheet-combat">
       <dl className="sheet-combat__stats">
@@ -146,7 +131,7 @@ export function CombatRow({ sections }: { sections: SheetSection[] }) {
           </div>
         )}
       </dl>
-      {defenses && <DefensesSection data={defenses} />}
+      <DefensesConditionsBox sections={sections} />
       {ac?.stealthDisadvantage && (
         <p className="summary-strip__note" data-summary="stealthDisadvantage">
           {t.sheet.armorClass.stealthDisadvantage}
