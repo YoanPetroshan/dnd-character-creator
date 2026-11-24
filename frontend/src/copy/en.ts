@@ -84,7 +84,7 @@ export const en: Copy = {
     valueLabel: (ability: string) => `${ability}: value`,
     decreaseLabel: (ability: string) => `${ability}: decrease`,
     increaseLabel: (ability: string) => `${ability}: increase`,
-    columns: { ability: "Ability", base: "Base", bonus: "Bonus", total: "Total", modifier: "Modifier" },
+    columns: { ability: "Ability", base: "Base", bonus: "Bonus", total: "Total", modifier: "Mod." },
   },
 
   sheet: {
@@ -147,6 +147,7 @@ export const en: Copy = {
     unnamed: "Unnamed character",
     incompleteLabel: "What is left to fix",
     incompleteLead: "The sheet is incomplete — left to fix:",
+    incompleteMore: (n: number) => `${n} more`,
     nameIt: "Give the hero a name →",
     markers: { proficient: "proficient", expertise: "expertise" },
 

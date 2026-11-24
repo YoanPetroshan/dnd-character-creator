@@ -91,7 +91,7 @@ export const bg = {
     valueLabel: (ability: string) => `${ability}: стойност`,
     decreaseLabel: (ability: string) => `${ability}: намали`,
     increaseLabel: (ability: string) => `${ability}: увеличи`,
-    columns: { ability: "Характеристика (Ability)", base: "Основа", bonus: "Бонус", total: "Общо", modifier: "Модификатор" },
+    columns: { ability: "Характеристика (Ability)", base: "Основа", bonus: "Бонус", total: "Общо", modifier: "Мод." },
   },
 
   sheet: {
@@ -154,6 +154,7 @@ export const bg = {
     unnamed: "Безименен герой",
     incompleteLabel: "Какво остава за оправяне",
     incompleteLead: "Листът е непълен — за оправяне:",
+    incompleteMore: (n: number) => `Още ${n}`,
     nameIt: "Дай име на героя →",
     markers: { proficient: "владее", expertise: "експертиза (Expertise)" },
 

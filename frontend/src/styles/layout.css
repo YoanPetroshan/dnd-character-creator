@@ -183,6 +183,26 @@
   color: var(--color-text);
 }
 
+/* Phone: all seven steps fit without sideways scrolling (DESIGN-L). Seven equal columns; the icons tell the steps apart and
+   only the current step shows its name (the others keep it as their accessible name, at font-size 0). */
+@media (max-width: 599px) {
+  .step-nav {
+    gap: 0;
+    padding: 10px 6px 12px;
+    overflow-x: visible;
+  }
+
+  .step-nav a {
+    flex: 1 1 0;
+    width: auto;
+    white-space: nowrap;
+  }
+
+  .step-nav a:not(.active) {
+    font-size: 0;
+  }
+}
+
 .step-nav a.active::before {
   background: var(--color-highlight);
   border-color: var(--color-highlight);
@@ -394,6 +414,15 @@ main .next-button::after {
 .sheet-alert__list a::after {
   content: "\2192";
   margin-left: var(--space-2);
+}
+
+/* the fixes after the first three: a closed "N more" row */
+.sheet-alert__more > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-size: var(--fs-md);
+  color: var(--color-text-secondary);
 }
 
 /* An unnamed hero: the name slot is a link to the name field on Home. */

@@ -73,7 +73,7 @@ table.ability-table {
   letter-spacing: 0;
   text-transform: none;
   color: var(--color-text-secondary);
-  overflow-wrap: break-word;
+  white-space: nowrap;
 }
 
 /* column widths: the name, the three result columns (fixed) and the control, which takes what is left */
@@ -85,7 +85,7 @@ table.ability-table {
 .ability-table td:nth-child(3),
 .ability-table th:nth-child(4),
 .ability-table td:nth-child(4) {
-  width: 44px;
+  width: 52px;
 }
 
 .ability-table th:nth-child(5),

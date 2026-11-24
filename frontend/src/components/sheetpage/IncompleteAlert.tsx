@@ -5,6 +5,9 @@ import { stepForChoice } from "../../logic/steps";
 import { stepForProblem } from "../../problems";
 import type { Resolution } from "../../types";
 
+/** How many fixes the alert lists before "and N more". */
+const FIRST_ROWS = 3;
+
 const PART_PATH = { class: "/class", species: "/species", background: "/background" } as const;
 
 /** The alert at the top of an unfinished sheet: a red mark, the bold count of what is left, the reason the downloads are
@@ -28,24 +31,37 @@ export function IncompleteAlert({ resolution, error }: { resolution: Resolution;
         </p>
       )}
       <p className="sheet-alert__reason">{t.exportPage.notReady}</p>
-      {count > 0 && (
-        <ul className="sheet-alert__list">
-          {missingParts.map((m) => (
+      {count > 0 && (() => {
+        // every missing part, problem and pending choice as a link to its step; only the first few show, the rest open
+        // on demand (DESIGN-L: eight links filled a whole phone screen before the sheet)
+        const rows = [
+          ...missingParts.map((m) => (
             <li key={m}>
               <Link to={PART_PATH[m]}>{t.exportPage.missing[m]}</Link>
             </li>
-          ))}
-          {problems.map((p) => {
+          )),
+          ...problems.map((p) => {
             const step = stepForProblem(p);
             return <li key={p.id}>{step ? <Link to={`/${step}`}>{p.message}</Link> : p.message}</li>;
-          })}
-          {pendingChoices.map((c) => (
+          }),
+          ...pendingChoices.map((c) => (
             <li key={c.id}>
               <Link to={{ pathname: stepForChoice(c.id), hash: c.id }}>{c.label}</Link>
             </li>
-          ))}
-        </ul>
-      )}
+          )),
+        ];
+        return (
+          <>
+            <ul className="sheet-alert__list">{rows.slice(0, FIRST_ROWS)}</ul>
+            {rows.length > FIRST_ROWS && (
+              <details className="sheet-alert__more">
+                <summary>{t.sheet.incompleteMore(rows.length - FIRST_ROWS)}</summary>
+                <ul className="sheet-alert__list">{rows.slice(FIRST_ROWS)}</ul>
+              </details>
+            )}
+          </>
+        );
+      })()}
     </section>
   );
 }
