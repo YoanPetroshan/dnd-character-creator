@@ -574,6 +574,9 @@ export const bg = {
   },
 
   backgroundPage: {
+    searchLabel: "Търсене на произход (Background)",
+    searchPlaceholder: "Търсене на произход (Background)…",
+    changeLabel: (name: string) => `Смени произхода (Background): ${name}`,
     title: "Произход (Background)",
     fallbackNote:
       "Няма произход (Background) от 2024 в избраните източници — показан е само SRD произход от 2014, без бонус към характеристики (Ability Scores) и талант от произхода (Origin Feat) по правилата от 2024.",

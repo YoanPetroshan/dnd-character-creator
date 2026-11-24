@@ -565,6 +565,9 @@ export const en: Copy = {
   },
 
   backgroundPage: {
+    searchLabel: "Search backgrounds",
+    searchPlaceholder: "Search backgrounds…",
+    changeLabel: (name: string) => `Change the background ${name}`,
     title: "Background",
     fallbackNote:
       "There are no 2024 backgrounds in the selected sources — only the SRD background is shown (from 2014, without the ability score bonus and Origin feat of the 2024 rules).",

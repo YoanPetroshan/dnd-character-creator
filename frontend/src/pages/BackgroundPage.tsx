@@ -8,6 +8,7 @@ import { useCatalogContext } from "../CatalogContext";
 import { ChoiceCard, firstPendingId } from "../components/ChoiceCard";
 import { FeatureEyeList, grantedFeatures } from "../components/FeatureEyeList";
 import { SheetEyesProvider } from "../components/sheet/SheetEyes";
+import { BookPicker } from "../components/BookPicker";
 
 export function BackgroundPage() {
   const t = useT();
@@ -68,21 +69,25 @@ export function BackgroundPage() {
           {bp.fallbackNote}
         </p>
       )}
-      <select
-        aria-label={bp.selectLabel}
-        value={selectedBackgroundId ?? ""}
-        onChange={(e) => {
-          if (e.target.value) dispatch({ type: "SET_BACKGROUND", backgroundId: e.target.value });
+      <BookPicker
+        name="background"
+        items={backgroundList}
+        sources={catalog.sources}
+        selected={backgroundList.find((b) => b.id === selectedBackgroundId)}
+        selectedHidden={!!hiddenBackground}
+        onPick={(id) => dispatch({ type: "SET_BACKGROUND", backgroundId: id })}
+        labels={{
+          search: bp.searchLabel,
+          searchPlaceholder: bp.searchPlaceholder,
+          noMatches: t.common.noMatches,
+          noSourceGroup: t.speciesPage.noSourceGroup,
+          groupSummary: t.speciesPage.groupSummary,
+          change: t.speciesPage.change,
+          changeLabel: bp.changeLabel,
+          cancel: t.speciesPage.cancel,
+          hidden: t.common.hiddenByFilters,
         }}
-      >
-        <option value="">{bp.choose}</option>
-        {backgroundList.map((b) => (
-          <option key={b.id} value={b.id}>
-            {b.name}
-            {hiddenBackground && b.id === hiddenBackground.id ? ` (${t.common.hiddenByFilters})` : ""}
-          </option>
-        ))}
-      </select>
+      />
       {selectedBackgroundId && grantedFeatures(resolution?.sheet, "background").length > 0 && (
         <div className="granted-features">
           <h2>{bp.gives}</h2>

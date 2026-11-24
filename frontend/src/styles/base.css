@@ -370,7 +370,7 @@ main .next-button:active,
     background: var(--color-surface-muted);
   }
 
-  .species-chip:not(:has(input:checked)):hover {
+  .book-chip:not(:has(input:checked)):hover {
     background: var(--color-surface-muted);
   }
 
