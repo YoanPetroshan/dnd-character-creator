@@ -92,15 +92,19 @@
     margin-bottom: 0;
   }
 
+  [data-page="sheet"] > .sheet-alert {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
   [data-page="sheet"] > .export-bar {
     grid-column: 2;
-    grid-row: 2;
+    grid-row: 3;
     align-self: start;
     max-width: 380px;
     margin-top: 0;
   }
 
-  [data-page="sheet"] > p[data-state="incomplete"],
   [data-page="sheet"] > .summary-strip,
   [data-page="sheet"] > .sheet-body {
     grid-column: 1 / -1;

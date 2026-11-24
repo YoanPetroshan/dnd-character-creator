@@ -140,10 +140,9 @@ export const en: Copy = {
     backgroundTab: { empty: "No character details yet." },
     loading: "Loading…",
     unnamed: "Unnamed character",
-    incomplete: (count: number) =>
-      count === 1
-        ? "The sheet is incomplete: 1 part or choice is still unselected."
-        : `The sheet is incomplete: ${count} parts or choices are still unselected.`,
+    incompleteLabel: "What is left to fix",
+    incompleteLead: "The sheet is incomplete — left to fix:",
+    nameIt: "Give the hero a name →",
     markers: { proficient: "proficient", expertise: "expertise" },
 
     identity: {
@@ -660,7 +659,8 @@ export const en: Copy = {
     unresolved: "Unresolved choices",
     pendingEquipment: (n: number) => `Not all equipment choices have been made (${n}) — this does not block the download.`,
     ready: "Everything is ready to download.",
-    notReady: "Downloading is unavailable until the items above are fixed.",
+    notReady: "Downloading is unavailable until you fix:",
+    blockedHint: "Unavailable until you fix the list at the top of the sheet.",
     preparingPdf: "Preparing the PDF… The first time can take a few seconds.",
     downloading: "Downloading…",
     downloadSheet: "Character sheet (form)",

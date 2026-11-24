@@ -271,19 +271,84 @@ main .next-button::after {
   border-top: 0;
 }
 
-.export-bar__reasons {
-  margin-top: var(--space-3);
-  padding-left: var(--space-3);
-  border-left: 3px solid var(--color-danger);
+.export-bar__blocked {
+  margin: 0 0 var(--space-2);
   font-size: 14px;
   line-height: 20px;
+  color: var(--color-text);
 }
 
-[data-page="sheet"] > p[data-state="incomplete"] {
-  margin: var(--space-3) 0 0;
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--color-text-secondary);
+/* The incomplete-sheet alert at the very top: a tinted block with a thick danger edge, the red "!" mark and the count in bold,
+   then the reason and what is left, each a link to the step that fixes it. */
+.sheet-alert {
+  margin: var(--space-3) 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1.5px solid var(--color-danger);
+  border-left-width: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-warning-bg);
+  color: var(--color-text);
+}
+
+.sheet-alert__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: 17px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
+.sheet-alert__count {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.sheet-alert__reason {
+  margin: var(--space-2) 0 0;
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.sheet-alert__list {
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.sheet-alert__list li {
+  padding: 0;
+}
+
+.sheet-alert__list a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 600;
+  color: var(--color-text);
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+.sheet-alert__list a::after {
+  content: "\2192";
+  margin-left: var(--space-2);
+}
+
+/* An unnamed hero: the name slot is a link to the name field on Home. */
+.sheet-name-prompt {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 600;
+  color: var(--color-text);
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
 }
 
 /* Header: the picture (72px square), the name, species and class, the level. The picture's actions sit under the name. */

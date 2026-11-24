@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useT } from "../../LanguageContext";
 import { useLibrary } from "../../LibraryContext";
 import { formatModifier } from "../../logic/abilities";
@@ -21,7 +22,13 @@ export function SheetHero({ sections }: { sections: SheetSection[] }) {
     <header className="sheet-hero">
       <HeroPortrait id={activeId} classId={identity?.classes[0]?.id} />
       <p className="summary-strip__who" data-section="identity">
-        <strong data-summary="name">{identity?.name || t.sheet.unnamed}</strong>
+        <strong data-summary="name">
+          {identity?.name || (
+            <Link to="/home" className="sheet-name-prompt">
+              {t.sheet.nameIt}
+            </Link>
+          )}
+        </strong>
         <span className="summary-strip__line">
           {speciesLine && <span data-summary="species">{speciesLine}</span>}
           <span data-summary="class">{classLine}</span>

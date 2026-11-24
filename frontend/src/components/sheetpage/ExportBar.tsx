@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { apiFetch } from "../../api/transport";
 import { useEngineStatus } from "../../api/useEngineStatus";
 import { useDraft } from "../../DraftContext";
@@ -9,7 +8,6 @@ import { exportReadiness } from "../../logic/exportReadiness";
 import { safeFilename, shareOrDownload } from "../../logic/files";
 import { withLang } from "../../logic/langQuery";
 import { MsgError, msg, renderMsg, toMsg, type Msg } from "../../logic/messages";
-import { stepForChoice } from "../../logic/steps";
 import type { Resolution } from "../../types";
 
 // Only two downloads are offered in the UI: the fillable character sheet first, then Markdown. The server still answers
@@ -32,9 +30,7 @@ export function ExportBar({ resolution, error }: { resolution: Resolution; error
   const engine = useEngineStatus();
   const [exportError, setExportError] = useState<Msg | null>(null);
   const [busy, setBusy] = useState<ExportKind | null>(null);
-  const { missingParts, pendingChoices, pendingEquipment, canExport } = exportReadiness(resolution, error);
-  const problems = resolution.problems;
-  const reasons = missingParts.length + pendingChoices.length + problems.length > 0 || !canExport;
+  const { pendingEquipment, canExport } = exportReadiness(resolution, error);
 
   async function download(kind: ExportKind) {
     const config = EXPORTS[kind];
@@ -70,6 +66,7 @@ export function ExportBar({ resolution, error }: { resolution: Resolution; error
   return (
     <section className="export-bar" data-section="export" aria-labelledby="export-heading">
       <h2 id="export-heading">{xp.heading}</h2>
+      {!canExport && <p className="export-bar__blocked">{xp.blockedHint}</p>}
       <div className="export-bar__buttons">
         {ORDER.map((kind) => (
           <button
@@ -95,40 +92,6 @@ export function ExportBar({ resolution, error }: { resolution: Resolution; error
         <p role="alert" className="status--error" data-state="error">
           {renderMsg(t, exportError)}
         </p>
-      )}
-      {reasons && (
-        <div id="export-reasons" className="export-bar__reasons" data-state="not-ready">
-          <p role="status">{xp.notReady}</p>
-          {problems.length > 0 && (
-            <div>
-              <h3>{xp.problems}</h3>
-              <ul>
-                {problems.map((p) => (
-                  <li key={p.id}>{p.message}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {missingParts.length > 0 && (
-            <ul role="alert">
-              {missingParts.map((m) => (
-                <li key={m}>{xp.missing[m]}</li>
-              ))}
-            </ul>
-          )}
-          {pendingChoices.length > 0 && (
-            <div>
-              <h3>{xp.unresolved}</h3>
-              <ul>
-                {pendingChoices.map((c) => (
-                  <li key={c.id}>
-                    <Link to={{ pathname: stepForChoice(c.id), hash: c.id }}>{c.label}</Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
       )}
       {pendingEquipment.length > 0 && <p>{xp.pendingEquipment(pendingEquipment.length)}</p>}
       {canExport && <p>{xp.ready}</p>}
