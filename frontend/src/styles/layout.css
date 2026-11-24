@@ -1460,10 +1460,12 @@ button.feature-card__head::after {
   content: "\2212";
 }
 
+/* One look for every row title (feature cards, choice cards, the "higher levels" and details toggles): sans 16px semibold.
+   The display serif is kept for page and section headings, names and big numbers (DESIGN-L: one writing per role). */
 .feature-card__title {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: var(--fs-md);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .feature-card__meta {
@@ -1478,8 +1480,9 @@ button.feature-card__head::after {
   color: var(--color-text);
 }
 
+/* a feature's text belongs to its title: indented by the shared --indent */
 .feature-card__body {
-  padding: 0 0 12px;
+  padding: 0 0 12px var(--indent);
 }
 
 .feature-card__more {
@@ -1498,9 +1501,9 @@ button.feature-card__head::after {
   border-radius: 0;
   background: none;
   text-align: left;
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: var(--fs-md);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--color-text-strong);
   cursor: pointer;
 }

@@ -33,9 +33,14 @@
 .details-section > summary {
   min-height: 48px;
   cursor: pointer;
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: var(--fs-md);
-  font-weight: 700;
+  font-weight: 600;
+}
+
+/* what a details section opens belongs to its title: the shared indent */
+.details-section > summary ~ * {
+  margin-left: var(--indent);
 }
 
 /* The sign: "+" when closed, a minus (U+2212) when open. */
