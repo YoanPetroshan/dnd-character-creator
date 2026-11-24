@@ -15,20 +15,26 @@ export type EyeKind = "spell" | "item" | "feature" | "feat";
 
 export interface Eyes {
   isOpen: (rowKey: string) => boolean;
-  toggle: (rowKey: string, kind: EyeKind, id: string) => void;
+  toggle: (rowKey: string, kind: EyeKind, id: string, name?: string) => void;
   body: (kind: EyeKind, id: string, compact?: boolean) => ReactNode;
+  /** "side": one text at a time in the 340px panel on the right (the online sheet on a wide screen); "inline": under its row */
+  mode: "inline" | "side";
+  /** the text open in the side panel */
+  side: { rowKey: string; kind: EyeKind; id: string; name: string } | null;
+  closeSide: () => void;
 }
 
 const EyesContext = createContext<Eyes | null>(null);
 
 /** Holds the open eyes and the lazily fetched texts of the sheet page. Without it (SheetView, tests) the sheet has no eyes. */
-export function SheetEyesProvider({ children }: { children: ReactNode }) {
+export function SheetEyesProvider({ children, side: sideMode = false }: { children: ReactNode; side?: boolean }) {
   const { draft } = useDraft();
   const spells = useSpellDetails();
   const items = useItemDetails(draft.ruleset);
   const features = useFeatureDetails();
   const feats = useFeatDetails();
   const [open, setOpen] = useState<Set<string>>(new Set());
+  const [side, setSide] = useState<Eyes["side"]>(null);
   const load = (kind: EyeKind, id: string) => {
     if (kind === "spell") spells.loadDetail(id);
     else if (kind === "item") items.loadDetail(id);
@@ -36,8 +42,20 @@ export function SheetEyesProvider({ children }: { children: ReactNode }) {
     else features.loadDetail(id);
   };
   const eyes: Eyes = {
-    isOpen: (rowKey) => open.has(rowKey),
-    toggle: (rowKey, kind, id) => {
+    mode: sideMode ? "side" : "inline",
+    side,
+    closeSide: () => setSide(null),
+    isOpen: (rowKey) => (sideMode ? side?.rowKey === rowKey : open.has(rowKey)),
+    toggle: (rowKey, kind, id, name) => {
+      if (sideMode) {
+        // like the online sheet: opening another thing replaces the panel's content; the same one closes it
+        if (side?.rowKey === rowKey) setSide(null);
+        else {
+          load(kind, id);
+          setSide({ rowKey, kind, id, name: name ?? "" });
+        }
+        return;
+      }
       if (!open.has(rowKey)) load(kind, id);
       setOpen((prev) => {
         const next = new Set(prev);
@@ -69,20 +87,20 @@ export function SheetEye({ rowKey, kind, id, name }: { rowKey: string; kind: Eye
   if (!eyes) return null;
   const e = t.sheet.eye;
   const label = kind === "spell" ? e.spell(name) : kind === "item" ? e.item(name) : e.details(name);
-  return <DetailEye label={label} open={eyes.isOpen(rowKey)} onToggle={() => eyes.toggle(rowKey, kind, id)} />;
+  return <DetailEye label={label} open={eyes.isOpen(rowKey)} onToggle={() => eyes.toggle(rowKey, kind, id, name)} />;
 }
 
 /** The panel of an open eye (a block under its row; in a table use `SheetEyeRow`). */
 export function SheetEyePanel({ rowKey, kind, id }: { rowKey: string; kind: EyeKind; id: string }) {
   const eyes = useContext(EyesContext);
-  if (!eyes || !eyes.isOpen(rowKey)) return null;
+  if (!eyes || eyes.mode === "side" || !eyes.isOpen(rowKey)) return null;
   return <DetailPanel>{eyes.body(kind, id)}</DetailPanel>;
 }
 
 /** The panel of an open eye as a full-width table row under the row of its name. */
 export function SheetEyeRow({ rowKey, kind, id, colSpan }: { rowKey: string; kind: EyeKind; id: string; colSpan: number }) {
   const eyes = useContext(EyesContext);
-  if (!eyes || !eyes.isOpen(rowKey)) return null;
+  if (!eyes || eyes.mode === "side" || !eyes.isOpen(rowKey)) return null;
   return (
     <tr className="sheet-eye-row">
       <td colSpan={colSpan}>
@@ -98,4 +116,26 @@ export function featureEyeTarget(ref: SheetFeature["ref"]): { kind: EyeKind; id:
   if (ref.kind === "feat") return { kind: "feat", id: ref.id };
   if (ref.kind === "background") return { kind: "feature", id: `background:${ref.id}` };
   return { kind: "feature", id: ref.id };
+}
+
+/** The side panel of the sheet on a wide screen: 340px at the right edge of the window, over the sheet, with the title of
+ *  what is open, its text and a close button (the online sheet's sidebar). Renders nothing in inline mode or when closed. */
+export function SheetSidePanel() {
+  const t = useT();
+  const eyes = useContext(EyesContext);
+  if (!eyes || eyes.mode !== "side" || !eyes.side) return null;
+  const { kind, id, name } = eyes.side;
+  return (
+    <aside className="sheet-side" aria-label={name || t.sheet.sidePanel.label}>
+      <div className="sheet-side__bar">
+        <button type="button" className="sheet-side__close" aria-label={t.sheet.sidePanel.close} onClick={eyes.closeSide}>
+          <span aria-hidden="true">{"\u00bb"}</span>
+        </button>
+      </div>
+      <div className="sheet-side__body">
+        {name && <h2 className="sheet-side__title">{name}</h2>}
+        {eyes.body(kind, id)}
+      </div>
+    </aside>
+  );
 }

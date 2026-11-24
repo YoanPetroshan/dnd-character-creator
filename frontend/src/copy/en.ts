@@ -105,6 +105,7 @@ export const en: Copy = {
       background: "Background",
       notes: "Notes",
     },
+    sidePanel: { label: "Details", close: "Close the panel" },
     boxes: {
       heal: "Heal",
       damage: "Damage",

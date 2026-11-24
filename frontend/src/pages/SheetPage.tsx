@@ -2,7 +2,8 @@ import { useSearchParams } from "react-router-dom";
 import { ExportBar } from "../components/sheetpage/ExportBar";
 import { IncompleteAlert } from "../components/sheetpage/IncompleteAlert";
 import { CombatRow, SheetHero, SummaryStrip } from "../components/sheetpage/SummaryStrip";
-import { SheetEyesProvider } from "../components/sheet/SheetEyes";
+import { SheetEyesProvider, SheetSidePanel } from "../components/sheet/SheetEyes";
+import { useMediaQuery } from "../logic/useMediaQuery";
 import { Tabs, type TabDef } from "../components/sheetpage/Tabs";
 import { ActionsPanel, BackgroundPanel, FeaturesPanel, InventoryPanel, NotesPanel, ReferenceBlock, SpellsPanel } from "../components/sheetpage/panels";
 import { useDraft } from "../DraftContext";
@@ -22,6 +23,8 @@ export function SheetPage() {
   const { resolution, loading, error } = useResolutionContext();
   const [params, setParams] = useSearchParams();
   const tab = parseTab(params.get("tab"));
+  // a wide screen opens details in the side panel on the right, like the online sheet; narrower screens open them inline
+  const wide = useMediaQuery("(min-width: 1200px)");
 
   if (!resolution) {
     return (
@@ -42,6 +45,7 @@ export function SheetPage() {
   }
 
   return (
+    <SheetEyesProvider side={wide}>
     <div className="page" data-page="sheet" data-tab={tab}>
       <h1>
         {t.sheet.title} {loading && "…"}
@@ -53,7 +57,6 @@ export function SheetPage() {
       <div className="sheet-body">
       <div className="sheet-main">
       <CombatRow sections={sections} />
-      <SheetEyesProvider>
       <Tabs
         idPrefix="sheet"
         label={t.sheet.tabs.label}
@@ -77,10 +80,11 @@ export function SheetPage() {
           }
         }}
       />
-      </SheetEyesProvider>
       </div>
       <ReferenceBlock sections={sections} />
       </div>
+      <SheetSidePanel />
     </div>
+    </SheetEyesProvider>
   );
 }

@@ -112,6 +112,7 @@ export const bg = {
       background: "Предистория (Background)",
       notes: "Бележки (Notes)",
     },
+    sidePanel: { label: "Подробности", close: "Затвори панела" },
     boxes: {
       heal: "Лекуване",
       damage: "Щети",
