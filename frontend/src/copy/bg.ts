@@ -19,7 +19,7 @@ export const bg = {
   nav: {
     label: "Стъпки",
     steps: {
-      home: "Начало",
+      home: "Герой",
       class: "Клас",
       background: "Произход",
       species: "Раса",
@@ -36,13 +36,17 @@ export const bg = {
     nextStepRegion: "Следваща стъпка",
     nextButton: "Напред",
     help: "Помощ",
+    settings: "Настройки",
+    heroesLink: "Към героите",
   },
 
   /** document.title per route: `${page} — ${appName}`; `fallback` for an unknown path. */
   titles: {
     separator: " — ",
     pages: {
-      "/home": "Начало",
+      "/home": "Герой",
+      "/heroes": "Герои",
+      "/settings": "Настройки",
       "/class": "Клас",
       "/background": "Произход (Background)",
       "/species": "Раса (Species)",
@@ -479,7 +483,8 @@ export const bg = {
   },
 
   home: {
-    title: "Начало",
+    title: "Герой",
+    filesTitle: "Внос и износ (.json)",
     nameLabel: "Character Name",
     randomName: "Случайно име",
     randomNameIcon: "🎲",

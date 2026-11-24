@@ -1,4 +1,5 @@
-/* Home page (data-page="home"): name field, library list, library actions, preferences. */
+/* Hero step (data-page="home"): portrait and name; Heroes page (data-page="heroes"): the library; Settings
+   (data-page="settings"): rules, sources, preferences. */
 [data-page="home"] .name-row {
   display: flex;
   align-items: flex-end;
@@ -197,106 +198,46 @@
   color: var(--color-danger);
 }
 
+/* Heroes page: "Нов герой" is the one solid button of the page; import and export sit in a closed section under it. */
 .library-actions {
+  margin-top: var(--space-4);
+}
+
+.library-actions__new {
+  min-height: 48px;
+  margin-bottom: var(--space-4);
+  padding: 0 24px;
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-dark);
+  font-size: var(--fs-md);
+}
+
+.library-actions__files {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin-top: var(--space-4);
+  padding-bottom: var(--space-3);
 }
 
 .library-actions > p,
 .library-actions > div {
-  flex-basis: 100%;
-  margin: 0;
+  margin: var(--space-2) 0 0;
 }
 
-[data-page="home"] fieldset {
+[data-page="settings"] fieldset {
   margin: var(--space-3) 0;
   padding: var(--space-2) 0 0;
   border: 0;
   border-top: 1px solid var(--color-border);
 }
 
-[data-page="home"] legend {
+[data-page="settings"] legend {
   padding: 0;
   font-size: var(--fs-xs);
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--color-text-secondary);
-}
-
-/* The three slots (class, background, species): one row of cells, 2px rule above, 1px below, 1px between. */
-.slots {
-  display: flex;
-  margin: 0 0 var(--space-4);
-  padding: 0;
-  list-style: none;
-  border-top: 1px solid var(--color-text);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.slot {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-.slot + .slot {
-  border-left: 1px solid var(--color-border);
-}
-
-.slot__link {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-height: 88px;
-  padding: var(--space-3) var(--space-2);
-  text-decoration: none;
-}
-
-.slot__label {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-1);
-  min-width: 0;
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--color-text-secondary);
-}
-
-/* The state mark: a diamond, outline = open, filled = chosen. */
-.slot__label::after {
-  content: "";
-  flex: none;
-  width: 8px;
-  height: 8px;
-  margin: 3px 3px 0 4px;
-  border: 1px solid var(--color-text-muted);
-  transform: rotate(45deg);
-}
-
-.slot[data-state="filled"] .slot__label::after {
-  background: var(--color-text);
-}
-
-.slot__value {
-  font-family: var(--font-display);
-  font-size: var(--fs-lg);
-  font-weight: 700;
-  line-height: 1.15;
-  overflow-wrap: anywhere;
-}
-
-.slot[data-state="empty"] .slot__value {
-  font-family: var(--font-sans);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  color: var(--color-text-secondary);
-}
-
-.slot__hint {
-  font-size: var(--fs-sm);
   color: var(--color-text-secondary);
 }
 
@@ -314,7 +255,7 @@
 }
 
 /* A label with its field on one row (the ruleset select): a clear gap between the words and the field. */
-.home-main > label {
+[data-page="settings"] > label {
   display: flex;
   flex-wrap: wrap;
   align-items: center;

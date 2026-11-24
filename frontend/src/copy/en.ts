@@ -16,7 +16,7 @@ export const en: Copy = {
   nav: {
     label: "Steps",
     steps: {
-      home: "Home",
+      home: "Hero",
       class: "Class",
       background: "Background",
       species: "Species",
@@ -33,12 +33,16 @@ export const en: Copy = {
     nextStepRegion: "Next step",
     nextButton: "Next",
     help: "Help",
+    settings: "Settings",
+    heroesLink: "To the heroes",
   },
 
   titles: {
     separator: " — ",
     pages: {
-      "/home": "Home",
+      "/home": "Hero",
+      "/heroes": "Heroes",
+      "/settings": "Settings",
       "/class": "Class",
       "/background": "Background",
       "/species": "Species",
@@ -470,7 +474,8 @@ export const en: Copy = {
   },
 
   home: {
-    title: "Home",
+    title: "Hero",
+    filesTitle: "Import and export (.json)",
     nameLabel: "Character Name",
     randomName: "Random name",
     randomNameIcon: "🎲",

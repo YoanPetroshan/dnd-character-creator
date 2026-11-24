@@ -1,7 +1,6 @@
-import { Routes, Route, Navigate, NavLink, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, Link, NavLink, useLocation } from "react-router-dom";
 import { CatalogProvider } from "./CatalogContext";
 import { ResolutionProvider } from "./ResolutionContext";
-import { LanguageSwitch } from "./components/LanguageSwitch";
 import { StepNav } from "./components/StepNav";
 import { NextStepLink } from "./components/NextStepLink";
 import { NextStepButton } from "./components/NextStepButton";
@@ -12,6 +11,8 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { RouteA11y } from "./components/RouteA11y";
 import { exportRedirectTarget } from "./logic/exportRedirect";
 import { HomePage } from "./pages/HomePage";
+import { HeroesPage } from "./pages/HeroesPage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { ClassPage } from "./pages/ClassPage";
 import { BackgroundPage } from "./pages/BackgroundPage";
 import { SpeciesPage } from "./pages/SpeciesPage";
@@ -37,18 +38,21 @@ export default function App() {
           <NewChoicesProvider>
           <RouteA11y />
           <header className="app-header">
-            <span className="app-brand">
+            {/* the brand leads to the hero library, like a logo leads home */}
+            <Link className="app-brand" to="/heroes" aria-label={t.nav.heroesLink}>
               <svg className="app-brand__mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
                 <polygon points="16,2.5 28.5,9.5 28.5,22.5 16,29.5 3.5,22.5 3.5,9.5" />
                 <polygon points="16,9.5 22.5,20.5 9.5,20.5" />
                 <path d="M16 2.5V9.5M28.5 9.5L22.5 20.5M3.5 9.5L9.5 20.5M3.5 22.5L9.5 20.5M28.5 22.5L22.5 20.5M16 29.5L9.5 20.5M16 29.5L22.5 20.5" />
               </svg>
               <span className="app-brand__name">{t.appName}</span>
-            </span>
+            </Link>
+            <NavLink className="help-link" to="/settings">
+              {t.nav.settings}
+            </NavLink>
             <NavLink className="help-link" to="/help">
               {t.nav.help}
             </NavLink>
-            <LanguageSwitch />
           </header>
           <StepNav />
           <NextStepLink />
@@ -60,6 +64,8 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Navigate to="/home" replace />} />
               <Route path="/home" element={<HomePage />} />
+              <Route path="/heroes" element={<HeroesPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
               <Route path="/class" element={<ClassPage />} />
               <Route path="/background" element={<BackgroundPage />} />
               <Route path="/species" element={<SpeciesPage />} />

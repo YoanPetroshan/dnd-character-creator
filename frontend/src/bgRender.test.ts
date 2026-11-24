@@ -51,7 +51,7 @@ vi.mock("./useSpells", async (orig) => ({
 }));
 
 // /export redirects to /sheet; the sheet page has six tabs (?tab=), each rendered on its own
-const ROUTES = ["/home", "/class", "/background", "/species", "/abilities", "/equipment", "/sheet", "/sheet?tab=spells", "/sheet?tab=inventory", "/sheet?tab=features", "/sheet?tab=background", "/sheet?tab=notes"];
+const ROUTES = ["/home", "/heroes", "/settings", "/class", "/background", "/species", "/abilities", "/equipment", "/sheet", "/sheet?tab=spells", "/sheet?tab=inventory", "/sheet?tab=features", "/sheet?tab=background", "/sheet?tab=notes"];
 
 interface Fixture {
   id: string;
@@ -342,7 +342,7 @@ describe("BG render is identical to the snapshot captured before the copy conver
   it("the captured pages contain real content (the harness is not rendering empty shells)", () => {
     const now = capture();
     expect(now["busy-pointbuy /class"]).toContain("Fighting Style");
-    expect(now["busy-pointbuy /home"]).toContain("Втори герой");
+    expect(now["busy-pointbuy /heroes"]).toContain("Втори герой");
     expect(now["busy-manual /equipment"]).toContain("Explorer&#x27;s Pack");
     expect(now["wizard20-2024 /sheet"].length).toBeGreaterThan(10000);
   });
@@ -351,7 +351,7 @@ describe("BG render is identical to the snapshot captured before the copy conver
     const en = capture("en", true);
     const bad = Object.entries(en).filter(([, html]) => /[\u0400-\u04FF]/.test(html)).map(([k, html]) => `${k}: ${html.match(/.{0,40}[\u0400-\u04FF]+.{0,20}/)?.[0]}`);
     expect(bad).toEqual([]);
-    expect(en["busy-pointbuy /home"]).toContain("Characters");
+    expect(en["busy-pointbuy /heroes"]).toContain("Characters");
     expect(en["busy-pointbuy /class"]).toContain("Class Resources");
     expect(en["wizard20-2024 /sheet"]).toContain("Saving Throws");
   });
