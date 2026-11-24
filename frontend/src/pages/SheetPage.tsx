@@ -4,6 +4,7 @@ import { IncompleteAlert } from "../components/sheetpage/IncompleteAlert";
 import { CombatRow, SheetHero, SummaryStrip } from "../components/sheetpage/SummaryStrip";
 import { SheetEyesProvider, SheetSidePanel } from "../components/sheet/SheetEyes";
 import { useMediaQuery } from "../logic/useMediaQuery";
+import { MobileSheet } from "../components/sheetpage/MobileSheet";
 import { Tabs, type TabDef } from "../components/sheetpage/Tabs";
 import { ActionsPanel, BackgroundPanel, FeaturesPanel, InventoryPanel, NotesPanel, ReferenceBlock, SpellsPanel } from "../components/sheetpage/panels";
 import { useDraft } from "../DraftContext";
@@ -25,6 +26,8 @@ export function SheetPage() {
   const tab = parseTab(params.get("tab"));
   // a wide screen opens details in the side panel on the right, like the online sheet; narrower screens open them inline
   const wide = useMediaQuery("(min-width: 1200px)");
+  // a phone gets the online app's layout: stat area, a sticky section bar and the sections side by side (swipe)
+  const phone = useMediaQuery("(max-width: 767px)");
 
   if (!resolution) {
     return (
@@ -53,6 +56,10 @@ export function SheetPage() {
       <IncompleteAlert resolution={resolution} error={error} />
       <SheetHero sections={sections} />
       <ExportBar resolution={resolution} error={error} />
+      {phone ? (
+        <MobileSheet sections={sections} resolution={resolution} />
+      ) : (
+        <>
       <SummaryStrip sections={sections} />
       <div className="sheet-body">
       <div className="sheet-main">
@@ -83,6 +90,8 @@ export function SheetPage() {
       </div>
       <ReferenceBlock sections={sections} />
       </div>
+        </>
+      )}
       <SheetSidePanel />
     </div>
     </SheetEyesProvider>

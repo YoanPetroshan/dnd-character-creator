@@ -106,6 +106,7 @@ export const en: Copy = {
       notes: "Notes",
     },
     sidePanel: { label: "Details", close: "Close the panel" },
+    phone: { menuLabel: "Sheet sections", close: "Close", speedHeading: "Speed" },
     boxes: {
       heal: "Heal",
       damage: "Damage",

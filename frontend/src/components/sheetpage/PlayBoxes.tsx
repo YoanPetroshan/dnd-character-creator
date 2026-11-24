@@ -123,9 +123,7 @@ export function InspirationBox() {
 export function DefensesConditionsBox({ sections }: { sections: SheetSection[] }) {
   const t = useT();
   const b = t.sheet.boxes;
-  const { draft, dispatch } = useDraft();
   const defenses = data(sections, "defenses");
-  const active = draft.play?.conditions ?? [];
   return (
     <div className="defenses-conditions">
       <div className="defenses-conditions__half">
@@ -134,6 +132,20 @@ export function DefensesConditionsBox({ sections }: { sections: SheetSection[] }
       </div>
       <div className="defenses-conditions__half">
         <h3>{b.conditions}</h3>
+        <ConditionsEditor />
+      </div>
+    </div>
+  );
+}
+
+/** The active conditions as chips (tap to remove) and the menu to add one. */
+export function ConditionsEditor({ open = false }: { open?: boolean }) {
+  const t = useT();
+  const b = t.sheet.boxes;
+  const { draft, dispatch } = useDraft();
+  const active = draft.play?.conditions ?? [];
+  return (
+    <>
         {active.length > 0 && (
           <ul className="condition-chips">
             {active.map((c) => (
@@ -145,7 +157,7 @@ export function DefensesConditionsBox({ sections }: { sections: SheetSection[] }
             ))}
           </ul>
         )}
-        <details className="condition-menu">
+        <details className="condition-menu" open={open || undefined}>
           <summary>{b.addCondition}</summary>
           <ul>
             {CONDITIONS.map((c) => (
@@ -158,7 +170,6 @@ export function DefensesConditionsBox({ sections }: { sections: SheetSection[] }
             ))}
           </ul>
         </details>
-      </div>
-    </div>
+    </>
   );
 }

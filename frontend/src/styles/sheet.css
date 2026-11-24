@@ -1340,3 +1340,552 @@
   font-size: 13px;
   line-height: 18px;
 }
+
+/* =====================================================================================================================
+   PHONE (< 768px): the online app's layout (docs/SHEET-DDB-SPEC-PHONE.md). The name bar, a stat area that scrolls away, a
+   section bar that sticks, and the sections side by side in a pager (swipe left / right); menu and sheets as modals.
+   ===================================================================================================================== */
+@media (max-width: 767px) {
+  [data-page="sheet"] > .sheet-hero {
+    display: none;
+  }
+
+  [data-page="sheet"] .export-bar {
+    margin: 0 0 8px;
+  }
+
+  [data-page="sheet"] .export-bar p {
+    text-align: left;
+  }
+
+  [data-page="sheet"] .export-bar__buttons {
+    justify-content: flex-start;
+  }
+}
+
+[data-page="sheet"] .m-sheet {
+  margin: 0;
+}
+
+[data-page="sheet"] .m-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+[data-page="sheet"] .m-label {
+  font-family: var(--sheet-r);
+  font-size: 11px;
+  line-height: 13px;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--sheet-black);
+}
+
+/* name bar: the name centred, "Species Class Level" in grey under it */
+[data-page="sheet"] .m-name {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  padding: 8px 0 6px;
+  background: var(--sheet-surface);
+  text-align: center;
+}
+
+[data-page="sheet"] .m-name strong {
+  font-family: var(--sheet-r);
+  font-size: 18px;
+  line-height: 22px;
+  font-weight: 400;
+  color: var(--sheet-ink);
+}
+
+[data-page="sheet"] .m-name span {
+  font-family: var(--sheet-r);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sheet-grey);
+}
+
+/* stat area: AC + initiative | portrait with the inspiration badge | hit points over CONDITIONS */
+[data-page="sheet"] .m-stats {
+  display: grid;
+  grid-template-columns: 46px 66px 87px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  row-gap: 14px;
+  align-items: start;
+  padding: 6px 0 16px;
+  background: var(--sheet-surface);
+}
+
+[data-page="sheet"] .m-ac,
+[data-page="sheet"] .m-init {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+
+[data-page="sheet"] .m-ac__shield {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  background: var(--sheet-theme);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M8 0H92L100 7V42C100 68 80 88 50 100C20 88 0 68 0 42V7Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M8 0H92L100 7V42C100 68 80 88 50 100C20 88 0 68 0 42V7Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  font-family: var(--sheet-r);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--sheet-surface);
+}
+
+[data-page="sheet"] .m-init {
+  margin-top: 13px;
+}
+
+[data-page="sheet"] .m-init__hex {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 46px;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background: var(--sheet-theme);
+  font-family: var(--sheet-r);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--sheet-surface);
+}
+
+[data-page="sheet"] .m-portrait {
+  grid-row: 1 / 3;
+  grid-column: 3;
+  position: relative;
+  display: grid;
+  justify-items: center;
+}
+
+[data-page="sheet"] .m-portrait .portrait__frame {
+  width: 87px;
+  height: 86px;
+  min-width: 87px;
+  border: 2px solid var(--sheet-line);
+  border-radius: 8px;
+}
+
+[data-page="sheet"] .m-portrait .portrait__actions {
+  display: none;
+}
+
+[data-page="sheet"] .m-portrait__badge {
+  position: relative;
+  z-index: 1;
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  min-height: 26px;
+  margin-top: -13px;
+  padding: 0;
+  border: 2px solid var(--sheet-surface);
+  border-radius: 50%;
+  background: var(--sheet-grey);
+  font-size: 13px;
+  line-height: 1;
+  color: var(--sheet-surface);
+}
+
+[data-page="sheet"] .m-portrait__badge[aria-pressed="true"] {
+  background: var(--sheet-theme);
+}
+
+[data-page="sheet"] .m-portrait__label {
+  max-width: 96px;
+  margin-top: 4px;
+}
+
+[data-page="sheet"] .m-hp {
+  grid-column: 4;
+  grid-row: 1;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  min-height: 56px;
+  padding: 7px 8px 8px;
+  border: 1px solid var(--sheet-line);
+  border-radius: 6px;
+  background: var(--sheet-surface);
+}
+
+[data-page="sheet"] .m-hp__value {
+  font-family: var(--sheet-r);
+  font-size: 20px;
+  line-height: 22px;
+  font-weight: 500;
+  color: var(--sheet-ink);
+}
+
+[data-page="sheet"] .m-hp__temp {
+  color: var(--sheet-heal);
+}
+
+[data-page="sheet"] .m-hp__bar {
+  display: block;
+  width: 100%;
+  height: 3px;
+  background: var(--sheet-line);
+}
+
+[data-page="sheet"] .m-hp__fill {
+  fill: #3b7bd6;
+}
+
+[data-page="sheet"] .m-hp__fill--temp {
+  fill: var(--sheet-heal);
+}
+
+[data-page="sheet"] .m-conditions {
+  grid-column: 4;
+  grid-row: 2;
+  align-self: end;
+  min-height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--sheet-line);
+  border-radius: 6px;
+  background: var(--sheet-surface);
+  font-family: var(--sheet-r);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--sheet-ink);
+}
+
+/* the section bar: sticks under the top; icon + title, the 3 x 3 dots, a darker segment with the list icon; the whole bar
+   opens the menu */
+[data-page="sheet"] .m-bar {
+  position: sticky;
+  z-index: 15;
+  top: 0;
+  padding: 8px 0;
+  background: var(--color-page);
+}
+
+[data-page="sheet"] .m-bar__button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  height: 40px;
+  padding: 0 0 0 16px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 5px;
+  background: var(--sheet-ink);
+  color: var(--sheet-surface);
+  text-align: left;
+}
+
+[data-page="sheet"] .m-bar__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--sheet-r);
+  font-size: 16px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-page="sheet"] .m-bar__dots {
+  display: grid;
+  grid-template-columns: repeat(3, 5px);
+  gap: 2px;
+  margin-right: 12px;
+}
+
+[data-page="sheet"] .m-bar__dots span {
+  width: 5px;
+  height: 5px;
+  background: var(--sheet-theme);
+  filter: brightness(1.35);
+}
+
+[data-page="sheet"] .m-bar__list {
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  width: 60px;
+  border-left: 1px solid rgb(255 255 255 / 0.12);
+  background: rgb(0 0 0 / 0.25);
+}
+
+/* the pager: the sections side by side, one screen wide each, snapping; only this part changes on a swipe */
+[data-page="sheet"] .m-pager {
+  display: flex;
+  align-items: flex-start;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  transition: height 0.15s ease;
+}
+
+[data-page="sheet"] .m-pager::-webkit-scrollbar {
+  display: none;
+}
+
+[data-page="sheet"] .m-page {
+  flex: 0 0 100%;
+  min-width: 0;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+[data-page="sheet"] .m-page__inner {
+  display: block;
+  padding: 8px 0 80px;
+}
+
+[data-page="sheet"] .m-page__inner [data-section] {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
+}
+
+/* inside a section: headings like the app (theme caps over a hairline), lists flat and open */
+[data-page="sheet"] .m-page__inner [data-section] > h2,
+[data-page="sheet"] .m-heading {
+  margin: 18px 0 10px;
+  padding: 0 0 3px;
+  border: 0;
+  border-bottom: 1px solid var(--sheet-line);
+  font-family: var(--sheet-r);
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--sheet-theme);
+}
+
+[data-page="sheet"] .m-abilities {
+  display: grid;
+  grid-template-columns: repeat(3, 92px);
+  justify-content: space-between;
+  row-gap: 22px;
+  margin: 8px 0 20px;
+  padding: 0;
+  list-style: none;
+}
+
+[data-page="sheet"] .m-abilities .ability-box {
+  width: 92px;
+  height: 104px;
+  margin: 0;
+}
+
+[data-page="sheet"] .m-abilities .ability__label {
+  font-size: 11px;
+}
+
+[data-page="sheet"] .m-abilities .ability__mod {
+  width: 65px;
+  height: 36px;
+  font-size: 28px;
+}
+
+[data-page="sheet"] .m-page__inner [data-section="savingThrows"] tbody {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(3, auto);
+  grid-auto-flow: column;
+  gap: 14px 16px;
+}
+
+[data-page="sheet"] .m-page__inner [data-section="savingThrows"] tr {
+  min-height: 40px;
+}
+
+[data-page="sheet"] .m-page__inner .passives {
+  gap: 14px;
+}
+
+[data-page="sheet"] .m-page__inner .passives > .passives__row > dd {
+  min-width: 60px;
+  min-height: 40px;
+  font-size: 22px;
+}
+
+[data-page="sheet"] .m-page__inner .passives > .passives__row > dt {
+  font-size: 13px;
+}
+
+[data-page="sheet"] .m-page__inner [data-section="skills"] tbody :is(th, td) {
+  height: 47px;
+  font-size: 17px;
+}
+
+[data-page="sheet"] .m-speeds {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 17px;
+}
+
+[data-page="sheet"] .m-speeds li::before {
+  content: none;
+}
+
+[data-page="sheet"] .m-muted {
+  color: var(--sheet-grey);
+}
+
+[data-page="sheet"] .m-prof {
+  display: grid;
+  justify-items: center;
+  margin: 10px 0 16px;
+}
+
+[data-page="sheet"] .m-prof__value {
+  font-family: var(--sheet-r);
+  font-size: 40px;
+  line-height: 46px;
+  font-weight: 500;
+  color: var(--sheet-ink);
+}
+
+/* modals: the section menu, the hit point sheet and the conditions sheet slide up over a dimmed page */
+[data-page="sheet"] .m-modal {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  background: rgb(0 0 0 / 0.55);
+}
+
+[data-page="sheet"] .m-modal__sheet {
+  width: 100%;
+  max-height: calc(100% - 48px);
+  overflow-y: auto;
+  padding: 16px 0 32px;
+  border-radius: 26px 26px 0 0;
+  background: var(--sheet-surface);
+  animation: m-sheet-up 0.2s ease-out;
+}
+
+@keyframes m-sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-page="sheet"] .m-modal__sheet {
+    animation: none;
+  }
+
+  [data-page="sheet"] .m-pager {
+    transition: none;
+  }
+}
+
+[data-page="sheet"] .m-modal__top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px 12px;
+}
+
+[data-page="sheet"] .m-modal__close {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--sheet-pill);
+  font-size: 24px;
+  line-height: 1;
+  color: var(--sheet-ink);
+}
+
+[data-page="sheet"] .m-modal__title {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-family: var(--sheet-r);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--sheet-ink);
+}
+
+[data-page="sheet"] .m-modal__body {
+  padding: 0 16px;
+}
+
+[data-page="sheet"] .m-modal__body .stat-box--hp {
+  width: 100%;
+  height: auto;
+  min-height: 110px;
+}
+
+[data-page="sheet"] .m-menu {
+  display: grid;
+  gap: 13px;
+  margin: 0;
+  padding: 8px 32px 0;
+  list-style: none;
+}
+
+[data-page="sheet"] .m-menu li::before {
+  content: none;
+}
+
+[data-page="sheet"] .m-menu button {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: var(--sheet-pill);
+  font-family: var(--sheet-r);
+  font-size: 17px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--sheet-ink);
+}
+
+[data-page="sheet"] .m-menu button[aria-current="true"] {
+  border-color: var(--sheet-theme);
+  background: color-mix(in srgb, var(--sheet-theme) 12%, var(--sheet-surface));
+}
+
+[data-page="sheet"] .m-page__inner.sheet-reference [data-section] > h2 {
+  order: 0;
+  text-align: left;
+}
+
+[data-page="sheet"] .m-page__inner.sheet-reference [data-section] {
+  display: block;
+}
+
+[data-page="sheet"] .m-init .m-label,
+[data-page="sheet"] .m-ac .m-label {
+  font-size: 10px;
+  white-space: nowrap;
+}

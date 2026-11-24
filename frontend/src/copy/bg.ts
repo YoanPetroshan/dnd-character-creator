@@ -113,6 +113,7 @@ export const bg = {
       notes: "Бележки (Notes)",
     },
     sidePanel: { label: "Подробности", close: "Затвори панела" },
+    phone: { menuLabel: "Раздели на листа", close: "Затвори", speedHeading: "Скорост" },
     boxes: {
       heal: "Лекуване",
       damage: "Щети",
