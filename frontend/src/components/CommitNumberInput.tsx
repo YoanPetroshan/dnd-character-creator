@@ -40,6 +40,7 @@ export function CommitNumberInput({ value, onCommit, min, max, placeholder, aria
       aria-label={ariaLabel}
       value={text}
       onChange={(e) => setText(e.target.value)}
+      onFocus={(e) => e.target.select()}
       onBlur={commit}
       onKeyDown={(e) => {
         if (e.key === "Enter") commit();

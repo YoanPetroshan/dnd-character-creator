@@ -117,6 +117,11 @@ function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
     (a, b) => choice.options.indexOf(a) - choice.options.indexOf(b),
   ) : available;
 
+  // starting equipment: the options are lettered rows A, B, C (the order of the rules text, "(A) ... (B) ...")
+  // (the follow-up pick of an option, "...equipment-choice-2:0", is a plain list: it only appears once its option is picked)
+  const lettered = choice.source.kind === "equipment" && /equipment-choice-\d+$/.test(choice.id);
+  const letterOf = (o: ChoiceOption) => (lettered ? String.fromCharCode(65 + choice.options.indexOf(o)) : undefined);
+
   function renderOption(option: ChoiceOption, prev: ChoiceOption | undefined) {
     const heading = option.group && option.group !== prev?.group ? option.group : null;
     // a spell row keeps its own box (the eye button and the panel hang on it): its group heading is a row of its own
@@ -136,7 +141,7 @@ function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
             {groupLabel(t, heading)}
           </span>
         )}
-        <label className={option.disabled ? "choice-picker__option--disabled" : ""}>
+        <label className={option.disabled ? "choice-picker__option--disabled" : ""} data-letter={letterOf(option)}>
           <input
             type="checkbox"
             checked={selected.has(option.id)}
@@ -173,7 +178,7 @@ function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
         />
       )}
       {filterable && needle && available.length + hidden.length === 0 && <p>{t.common.noMatches}</p>}
-      <ul className="choice-picker">{shown.map((o, i) => renderOption(o, shown[i - 1]))}</ul>
+      <ul className={lettered ? "choice-picker choice-picker--lettered" : "choice-picker"}>{shown.map((o, i) => renderOption(o, shown[i - 1]))}</ul>
       {hidden.length > 0 && (
         <button
           type="button"

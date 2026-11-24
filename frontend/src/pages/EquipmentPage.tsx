@@ -11,6 +11,48 @@ import { ItemDetailBody, useItemDetails } from "../components/ItemDetailBody";
 /** Values of the category filter; the labels are `t.equipmentPage.categories[value || "all"]`. */
 const CATEGORIES = ["", "weapon", "armor", "adventuring-gear", "tools", "mounts-and-vehicles"];
 
+/** The starting-equipment cards come from the class and from the background: each gets its own heading. */
+const SOURCES = [
+  { prefix: "class:", title: "fromClass" },
+  { prefix: "background:", title: "fromBackground" },
+] as const;
+
+interface SlotFieldProps {
+  label: string;
+  placeholder: string;
+  options: { itemId: string; name: string }[];
+  value: string;
+  onChange: (value: string) => void;
+}
+
+/** A worn or held slot. A dropdown only where there is a choice: with nothing to pick the placeholder is plain text,
+ *  with exactly one thing it is a toggle row (take it or leave it). */
+function SlotField({ label, placeholder, options, value, onChange }: SlotFieldProps) {
+  if (options.length === 0) return <p className="equipment-field equipment-field--plain">{`${label}: ${placeholder}`}</p>;
+  if (options.length === 1) {
+    const only = options[0];
+    return (
+      <label className="equipment-toggle">
+        <input type="checkbox" checked={value === only.itemId} onChange={(e) => onChange(e.target.checked ? only.itemId : "")} />
+        {`${label}: ${only.name}`}
+      </label>
+    );
+  }
+  return (
+    <label className="equipment-field">
+      {label}
+      <select value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">{placeholder}</option>
+        {options.map((o) => (
+          <option key={o.itemId} value={o.itemId}>
+            {o.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 /** RP8: the items of a 2024 equipment pack, one plain line ("Backpack, Oil ×2"). */
 function contentsText(contents: { name: string; qty: number }[]): string {
   return contents.map((c) => (c.qty !== 1 ? `${c.name} ×${c.qty}` : c.name)).join(", ");
@@ -74,47 +116,67 @@ export function EquipmentPage() {
       <StepProblems step="equipment" />
 
       {equipmentChoices.length === 0 && <p>{ep.noStartingChoices}</p>}
-      {equipmentChoices.map((choice) => (
-        <ChoiceCard key={choice.id} choice={choice} onToggle={handleChoiceChange} defaultExpanded={choice.id === firstPendingId(equipmentChoices)} />
-      ))}
-
-      {sheetEquipment.granted.length > 0 && (
-        <div className="equipment-section">
-          <h2>{eq.groups.granted}</h2>
-          <ul>
-            {sheetEquipment.granted.map((g, i) => (
-              <li key={`${g.itemId}-${i}`}>
-                {g.name} ×{g.qty}
-                {g.contents && g.contents.length > 0 && ` ${ep.contains(contentsText(g.contents))}`}
-                {eyes.button(`granted-${i}`, g.itemId, g.name)}
-                {eyes.panel(`granted-${i}`, g.itemId)}
-              </li>
+      {SOURCES.map(({ prefix, title }) => {
+        const cards = equipmentChoices.filter((c) => c.id.startsWith(prefix));
+        if (cards.length === 0) return null;
+        return (
+          <section key={prefix} className="equipment-source">
+            <h2>{ep[title]}</h2>
+            {prefix === "class:" && <p className="equipment-hint">{ep.startingHint}</p>}
+            {cards.map((choice) => (
+              <ChoiceCard key={choice.id} choice={choice} onToggle={handleChoiceChange} defaultExpanded={choice.id === firstPendingId(equipmentChoices)} />
             ))}
-          </ul>
-        </div>
-      )}
+          </section>
+        );
+      })}
+      {equipmentChoices
+        .filter((c) => !SOURCES.some(({ prefix }) => c.id.startsWith(prefix)))
+        .map((choice) => (
+          <ChoiceCard key={choice.id} choice={choice} onToggle={handleChoiceChange} defaultExpanded={choice.id === firstPendingId(equipmentChoices)} />
+        ))}
 
-      {sheetEquipment.chosen.length > 0 && (
-        <div className="equipment-section">
-          <h2>{eq.groups.chosen}</h2>
-          <ul>
-            {sheetEquipment.chosen.map((c, i) => (
-              <li key={`${c.itemId}-${i}`}>
-                {c.name}
-                {c.qty !== 1 ? ` ×${c.qty}` : ""}
-                {c.contents && c.contents.length > 0 && ` ${ep.contains(contentsText(c.contents))}`}
-                {eyes.button(`chosen-${i}`, c.itemId, c.name)}
-                {eyes.panel(`chosen-${i}`, c.itemId)}
-              </li>
-            ))}
-          </ul>
-        </div>
+      {(sheetEquipment.granted.length > 0 || sheetEquipment.chosen.length > 0) && (
+        <section className="equipment-final">
+          <h2>{ep.finalTitle}</h2>
+          <p className="equipment-hint">{ep.finalHint}</p>
+          {sheetEquipment.granted.length > 0 && (
+            <div className="equipment-section">
+              <h3>{eq.groups.granted}</h3>
+              <ul>
+                {sheetEquipment.granted.map((g, i) => (
+                  <li key={`${g.itemId}-${i}`}>
+                    {g.name} ×{g.qty}
+                    {g.contents && g.contents.length > 0 && ` ${ep.contains(contentsText(g.contents))}`}
+                    {eyes.button(`granted-${i}`, g.itemId, g.name)}
+                    {eyes.panel(`granted-${i}`, g.itemId)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {sheetEquipment.chosen.length > 0 && (
+            <div className="equipment-section">
+              <h3>{eq.groups.chosen}</h3>
+              <ul>
+                {sheetEquipment.chosen.map((c, i) => (
+                  <li key={`${c.itemId}-${i}`}>
+                    {c.name}
+                    {c.qty !== 1 ? ` ×${c.qty}` : ""}
+                    {c.contents && c.contents.length > 0 && ` ${ep.contains(contentsText(c.contents))}`}
+                    {eyes.button(`chosen-${i}`, c.itemId, c.name)}
+                    {eyes.panel(`chosen-${i}`, c.itemId)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
       )}
 
       {sheetEquipment.slots && (
         <div className="equipment-section">
           <h2>{ep.wornAndHeld}</h2>
-          <label>
+          <label className="equipment-toggle">
             <input
               type="checkbox"
               checked={!!draft.equipment.worn}
@@ -131,23 +193,14 @@ export function EquipmentPage() {
           </label>
           {draft.equipment.worn && (
             <>
-              <label>
-                {ep.armor}
-                <select
-                  value={draft.equipment.worn.armor ?? ""}
-                  onChange={(e) =>
-                    dispatch({ type: "SET_WORN", worn: { ...draft.equipment.worn, armor: e.target.value || null } })
-                  }
-                >
-                  <option value="">{ep.noArmor}</option>
-                  {sheetEquipment.slots.armor.map((o) => (
-                    <option key={o.itemId} value={o.itemId}>
-                      {o.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
+              <SlotField
+                label={ep.armor}
+                placeholder={ep.noArmor}
+                options={sheetEquipment.slots.armor}
+                value={draft.equipment.worn.armor ?? ""}
+                onChange={(value) => dispatch({ type: "SET_WORN", worn: { ...draft.equipment.worn, armor: value || null } })}
+              />
+              <label className="equipment-toggle">
                 <input
                   type="checkbox"
                   checked={draft.equipment.worn.shield == null ? !!sheetEquipment.worn?.shield : draft.equipment.worn.shield}
@@ -157,7 +210,7 @@ export function EquipmentPage() {
               </label>
             </>
           )}
-          <label>
+          <label className="equipment-toggle">
             <input
               type="checkbox"
               checked={!!draft.equipment.wielded}
@@ -168,24 +221,14 @@ export function EquipmentPage() {
           {draft.equipment.wielded && (
             <>
               {(["main", "off"] as const).map((hand) => (
-                <label key={hand}>
-                  {hand === "main" ? ep.mainHand : ep.offHand}
-                  <select
-                    value={draft.equipment.wielded?.[hand] ?? ""}
-                    onChange={(e) =>
-                      dispatch({ type: "SET_WIELDED", wielded: { ...draft.equipment.wielded, [hand]: e.target.value || null } })
-                    }
-                  >
-                    <option value="">{ep.emptyHand}</option>
-                    {sheetEquipment.slots!.hands
-                      .filter((o) => hand === "off" || o.kind !== "shield")
-                      .map((o) => (
-                        <option key={o.itemId} value={o.itemId}>
-                          {o.name}
-                        </option>
-                      ))}
-                  </select>
-                </label>
+                <SlotField
+                  key={hand}
+                  label={hand === "main" ? ep.mainHand : ep.offHand}
+                  placeholder={ep.emptyHand}
+                  options={sheetEquipment.slots!.hands.filter((o) => hand === "off" || o.kind !== "shield")}
+                  value={draft.equipment.wielded?.[hand] ?? ""}
+                  onChange={(value) => dispatch({ type: "SET_WIELDED", wielded: { ...draft.equipment.wielded, [hand]: value || null } })}
+                />
               ))}
             </>
           )}
@@ -193,14 +236,17 @@ export function EquipmentPage() {
       )}
 
       <h2>{ep.itemsTitle}</h2>
-      <input type="text" inputMode="search" enterKeyHint="search" aria-label={ep.searchLabel} placeholder={t.common.search} value={query} onChange={(e) => setQuery(e.target.value)} />
-      <select aria-label={ep.categoryLabel} value={category} onChange={(e) => setCategory(e.target.value)}>
+      <div className="item-search">
+        <input type="text" inputMode="search" enterKeyHint="search" aria-label={ep.searchLabel} placeholder={t.common.search} value={query} onChange={(e) => setQuery(e.target.value)} />
+      </div>
+      <div className="item-categories" role="group" aria-label={ep.categoryLabel}>
         {CATEGORIES.map((value) => (
-          <option key={value} value={value}>
+          <label key={value}>
+            <input type="radio" name="item-category" checked={category === value} onChange={() => setCategory(value)} />
             {ep.categories[value || "all"]}
-          </option>
+          </label>
         ))}
-      </select>
+      </div>
       {items.error && (
         <p>
           {t.common.errorLine(renderMsg(t, items.error))}{" "}
@@ -212,9 +258,9 @@ export function EquipmentPage() {
       <ul className="item-browser-list">
         {items.items.map((item) => (
           <li key={item.id}>
-            <span>{item.name}</span>
             {eyes.button(`browse-${item.id}`, item.id, item.name)}
-            <button type="button" aria-label={ep.addLabel(item.name)} onClick={() => dispatch({ type: "ADD_ITEM", itemId: item.id })}>
+            <span>{item.name}</span>
+            <button type="button" className="item-add" aria-label={ep.addLabel(item.name)} onClick={() => dispatch({ type: "ADD_ITEM", itemId: item.id })}>
               {ep.add}
             </button>
             {eyes.panel(`browse-${item.id}`, item.id)}
@@ -233,7 +279,7 @@ export function EquipmentPage() {
                 {entry.contents && entry.contents.length > 0 && ` ${ep.contains(contentsText(entry.contents))}`}
               </span>
               {eyes.button(`added-${entry.itemId}`, entry.itemId, entry.name)}
-              <label>
+              <label className="equipment-toggle">
                 <input
                   type="checkbox"
                   checked={entry.equipped}
