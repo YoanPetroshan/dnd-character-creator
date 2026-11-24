@@ -49,6 +49,13 @@
     font-size: 15px;
   }
 
+  .step-nav a::after {
+    top: 9px;
+    left: calc(50% - 11px);
+    width: 22px;
+    height: 22px;
+  }
+
   main {
     width: 100%;
     max-width: 1104px;
