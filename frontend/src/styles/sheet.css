@@ -1126,3 +1126,154 @@
 [data-page="sheet"] .hp-temp-input {
   width: 48px;
 }
+
+/* ---------- the tab box: 660px tall on a wide screen, only the content under the tab row scrolls (docs SHEET-DDB-SPEC-TABS) ---------- */
+[data-page="sheet"] .sheet-main > .tabs {
+  padding: 13px 20px 12px;
+}
+
+[data-page="sheet"] .tabs__list {
+  gap: 16px;
+  border-bottom: 0;
+}
+
+@media (min-width: 1200px) {
+  [data-page="sheet"] .sheet-main > .tabs {
+    display: flex;
+    flex-direction: column;
+    height: 660px;
+  }
+
+  [data-page="sheet"] .sheet-main > .tabs > .tabs__panel:not([hidden]) {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--sheet-line) transparent;
+  }
+}
+
+/* section headings inside a tab: condensed caps 13 in the theme colour over a 1px light rule */
+[data-page="sheet"] .tabs__panel [data-section] > h2 {
+  margin: 14px 0 9px;
+  padding: 0 0 2px;
+  border: 0;
+  border-bottom: 1px solid var(--sheet-line);
+  font-family: var(--sheet-rc);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--sheet-theme);
+}
+
+[data-page="sheet"] .tabs__panel :is(h3, h4) {
+  font-family: var(--sheet-rc);
+  font-size: 15px;
+  line-height: 21px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--sheet-theme);
+}
+
+/* filter pills: grey chips 23px tall in condensed caps; the pressed one in the theme colour */
+[data-page="sheet"] .sheet-pills {
+  gap: 4px;
+  margin: 4px 0 6px;
+}
+
+[data-page="sheet"] .sheet-pills > button {
+  min-width: 0;
+  min-height: 23px;
+  height: 23px;
+  padding: 0 5px;
+  border: 2px solid var(--sheet-pill);
+  border-radius: 4px;
+  background: var(--sheet-pill);
+  font-family: var(--sheet-rc);
+  font-size: 12px;
+  line-height: 19px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--sheet-grey);
+}
+
+[data-page="sheet"] .sheet-pills > button[aria-pressed="true"] {
+  border-color: var(--sheet-theme);
+  background: var(--sheet-theme);
+  color: var(--sheet-surface);
+}
+
+@media (hover: hover) {
+  [data-page="sheet"] .sheet-pills > button:not([aria-pressed="true"]):hover {
+    border-color: #525c63;
+    background: #525c63;
+    color: #ecedee;
+  }
+}
+
+/* the attack table: condensed caps header, the name 14 with a grey line under it, the range bold, the to-hit and damage
+   in light boxes, grey notes */
+[data-page="sheet"] table.attacks {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+[data-page="sheet"] table.attacks thead th {
+  padding: 4px 4px 6px 0;
+  font-family: var(--sheet-rc);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--sheet-black);
+}
+
+[data-page="sheet"] table.attacks tbody :is(th, td) {
+  padding: 8px 4px 8px 0;
+  border-bottom: 1px solid var(--sheet-line);
+  vertical-align: middle;
+}
+
+[data-page="sheet"] .attack__name {
+  font-family: var(--sheet-rc);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--sheet-ink);
+}
+
+[data-page="sheet"] .attack__sub {
+  display: block;
+  font-family: var(--sheet-rc);
+  font-size: 10px;
+  color: var(--sheet-grey);
+}
+
+[data-page="sheet"] .attack__range {
+  font-family: var(--sheet-r);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--sheet-black);
+}
+
+[data-page="sheet"] table.attacks .sheet-chip {
+  box-sizing: border-box;
+  min-width: 38px;
+  padding: 4px 6px;
+  border: 1px solid var(--sheet-line);
+  border-radius: 4px;
+  font-family: var(--sheet-r);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  color: var(--sheet-ink);
+}
+
+[data-page="sheet"] .attack__notes {
+  font-family: var(--sheet-rc);
+  font-size: 12px;
+  color: var(--sheet-grey);
+}
