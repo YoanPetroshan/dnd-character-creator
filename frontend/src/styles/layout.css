@@ -187,7 +187,7 @@ main .next-button::after {
   line-height: 1;
 }
 
-/* The "next unfinished step" link: quiet underlined text, right-aligned, so it does not compete with the page title. */
+/* The "unfinished step" link: underlined ink text, right-aligned, clear enough to be seen yet smaller than the page title. */
 .next-step {
   margin: var(--space-1) var(--space-4) 0;
   text-align: right;
@@ -200,11 +200,11 @@ main .next-button::after {
   padding: 0;
   border: 0;
   border-radius: 0;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  color: var(--color-text);
   text-decoration: underline;
-  text-decoration-thickness: 1px;
+  text-decoration-thickness: 1.5px;
   text-underline-offset: 3px;
 }
 
@@ -353,11 +353,11 @@ main .next-button::after {
   border: 0;
   border-radius: 0;
   background: none;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  color: var(--color-text);
   text-decoration: underline;
-  text-decoration-thickness: 1px;
+  text-decoration-thickness: 1.5px;
   text-underline-offset: 3px;
 }
 

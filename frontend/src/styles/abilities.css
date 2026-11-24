@@ -87,58 +87,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Species list: one row per option with the source on the right; the radio stays hidden but focusable. */
-.picker-list.picker-list--rows {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0 var(--space-5);
-}
-
-.picker-list.picker-list--rows li {
-  padding: 0;
-  border-bottom: 1px solid var(--color-border-subtle);
-}
-
-.picker-list.picker-list--rows label {
-  display: flex;
-  width: 100%;
-  min-height: 48px;
-  padding: 0 4px;
-  gap: 12px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--color-text);
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.picker-list.picker-list--rows label::before {
-  content: "";
-  flex: none;
-  box-sizing: border-box;
-  width: 9px;
-  height: 9px;
-  margin: 0 3px;
-  border: 1.5px solid var(--color-text);
-  transform: rotate(45deg);
-}
-
-.picker-list.picker-list--rows label:has(input:checked) {
-  background: transparent;
-  color: var(--color-text);
-  font-weight: 500;
-}
-
-.picker-list.picker-list--rows label:has(input:checked)::before {
-  background: var(--color-text);
-}
-
-.picker-list.picker-list--rows label:has(input:focus-visible) {
-  outline: 2px solid var(--color-text);
-  outline-offset: -2px;
-}
-
 /* Class tiles: a grid of two columns (three from 600px), each tile a pill with the class mark on its left. */
 .picker-list--classes {
   display: grid;
@@ -192,48 +140,102 @@
   opacity: 0.6;
 }
 
-.picker-list__source {
-  margin-left: auto;
-  padding-left: 12px;
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--color-text-secondary);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+/* Species picker: groups of outlined, text-wide pills that wrap across the whole width. A pill is the radio label plus the eye
+   button; the selected pill is solid ink with a check mark; an open preview is its own full-width row after its pill. */
+.species-groups {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
 }
 
-@media (min-width: 600px) {
-  .picker-list.picker-list--rows {
-    grid-template-columns: 1fr 1fr;
-    gap: 0 48px;
-  }
-
-  /* an open species row spans both columns, like an open spell row */
-  .picker-list.picker-list--rows li.picker-list__item--open {
-    grid-column: 1 / -1;
-  }
+.species-group {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
 }
 
-/* Species preview: the eye button follows the name (the radio label shrinks to its text); the source tag stays at the right
-   end of the row and the panel opens under the row at full width. */
-.picker-list.picker-list--rows li:has(> .species-eye) {
+.species-group:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.species-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  gap: var(--space-2);
 }
 
-.picker-list.picker-list--rows li:has(> .species-eye) > label {
+.species-chip {
   box-sizing: border-box;
-  flex: 0 1 auto;
-  width: auto;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 44px;
+  border: 1.5px solid var(--color-text);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text);
+}
+
+.species-chip:has(input:checked) {
+  background: var(--color-accent);
+  color: var(--color-on-dark);
+}
+
+.species-chip:has(input:focus-visible) {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+
+.species-chip__label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
+  min-height: 44px;
+  padding: 0 0 0 16px;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+  overflow-wrap: anywhere;
 }
 
-.picker-list.picker-list--rows li > .picker-list__source {
-  padding-right: 4px;
+.species-chip__label input[type="radio"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
 }
 
-.picker-list.picker-list--rows li > .species-eye__panel {
+.species-chip:has(input:checked) .species-chip__label {
+  font-weight: 600;
+}
+
+/* The check mark of a selected pill, drawn from two borders. */
+.species-chip__label:has(input:checked)::before {
+  content: "";
+  flex: none;
+  box-sizing: border-box;
+  width: 6px;
+  height: 11px;
+  margin: -3px 2px 0 0;
+  border: solid currentColor;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
+}
+
+.species-chip .species-eye {
+  margin-right: 2px;
+}
+
+.species-panel {
   flex: 0 0 100%;
   box-sizing: border-box;
 }
@@ -372,25 +374,4 @@
     line-height: 16px;
     font-weight: 500;
   }
-}
-
-/* Species list: a source heading above each group, a 1px rule above it, spanning both columns. */
-.picker-list.picker-list--rows li.picker-list__group {
-  display: block;
-  grid-column: 1 / -1;
-  min-height: 0;
-  margin-top: var(--space-5);
-  padding: var(--space-2) 4px 0;
-  border-top: 1px solid var(--color-border);
-  border-bottom: 0;
-  font-size: 11px;
-  line-height: 14px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-text-secondary);
-}
-
-.picker-list.picker-list--rows li.picker-list__group:first-child {
-  margin-top: 0;
 }

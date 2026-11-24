@@ -366,8 +366,11 @@ main .next-button:active,
   .choice-picker label:not(:has(input:checked)):not(.choice-picker__option--disabled):hover,
   .picker-list label:not(:has(input:checked)):hover,
   .ability-method-selector label:not(:has(input:checked)):hover,
-  .picker-list.picker-list--rows label:hover,
   .choice-card__header:hover {
+    background: var(--color-surface-muted);
+  }
+
+  .species-chip:not(:has(input:checked)):hover {
     background: var(--color-surface-muted);
   }
 

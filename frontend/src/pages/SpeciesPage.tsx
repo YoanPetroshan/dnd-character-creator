@@ -21,7 +21,7 @@ interface SpeciesGroup {
   items: CatalogSpecies[];
 }
 
-/** Groups species by source: core books first, then the rest by display name; names keep their order inside. */
+/** Groups species by source: core books first (PHB 2014, XPHB 2024, DMG, XDMG), then the rest by display name; names are alphabetical inside. */
 function groupBySource(list: CatalogSpecies[], sources: CatalogSource[], noSourceLabel: string): SpeciesGroup[] {
   const nameOf = new Map(sources.map((x) => [x.id, x.name]));
   const byKey = new Map<string, SpeciesGroup>();
@@ -34,6 +34,7 @@ function groupBySource(list: CatalogSpecies[], sources: CatalogSource[], noSourc
     }
     g.items.push(s);
   }
+  for (const g of byKey.values()) g.items.sort((a, b) => a.name.localeCompare(b.name, "en") || a.id.localeCompare(b.id));
   const core = CORE_SOURCES.flatMap((k) => byKey.get(k) ?? []);
   const rest = [...byKey.values()]
     .filter((g) => !CORE_SOURCES.includes(g.key))
@@ -126,40 +127,42 @@ export function SpeciesPage() {
         onChange={(e) => setSpeciesFilter(e.target.value)}
       />
       {needle && shownSpecies.length === 0 && <p>{t.common.noMatches}</p>}
-      <ul className="picker-list picker-list--rows">
+      <ul className="species-groups">
         {speciesGroups.map((g) => (
-          <Fragment key={g.key}>
-            <li className="picker-list__group">
-              {g.label}
-            </li>
-            {g.items.map((s) => (
-              <li key={s.id} className={openSpecies.has(s.id) ? "picker-list__item--open" : undefined}>
-                <label>
-                  <input
-                    type="radio"
-                    name="species"
-                    checked={selectedSpeciesId === s.id}
-                    onChange={() => dispatch({ type: "SET_SPECIES", speciesId: s.id })}
-                  />
-                  {s.name}
-                  {speciesHidden && s.id === selectedSpeciesId ? ` (${t.common.hiddenByFilters})` : ""}
-                </label>
-                <button
-                  type="button"
-                  className="species-eye"
-                  aria-label={sp.showSpecies(s.name)}
-                  aria-expanded={openSpecies.has(s.id)}
-                  onClick={() => toggleSpecies(s.id)}
-                />
-                {s.source && !s.name.endsWith(`(${s.source})`) && <span className="picker-list__source">{s.source}</span>}
-                {openSpecies.has(s.id) && (
-                  <div className="species-eye__panel">
-                    <SpeciesDetailBody state={details[s.id]} />
-                  </div>
-                )}
-              </li>
-            ))}
-          </Fragment>
+          <li key={g.key} className="species-group">
+            <ul className="species-chips" aria-label={g.label}>
+              {g.items.map((s) => (
+                <Fragment key={s.id}>
+                  <li className="species-chip">
+                    <label className="species-chip__label">
+                      <input
+                        type="radio"
+                        name="species"
+                        checked={selectedSpeciesId === s.id}
+                        onChange={() => dispatch({ type: "SET_SPECIES", speciesId: s.id })}
+                      />
+                      {s.name}
+                      {speciesHidden && s.id === selectedSpeciesId ? ` (${t.common.hiddenByFilters})` : ""}
+                    </label>
+                    <button
+                      type="button"
+                      className="species-eye"
+                      aria-label={sp.showSpecies(s.name)}
+                      aria-expanded={openSpecies.has(s.id)}
+                      onClick={() => toggleSpecies(s.id)}
+                    />
+                  </li>
+                  {openSpecies.has(s.id) && (
+                    <li className="species-panel">
+                      <div className="species-eye__panel">
+                        <SpeciesDetailBody state={details[s.id]} />
+                      </div>
+                    </li>
+                  )}
+                </Fragment>
+              ))}
+            </ul>
+          </li>
         ))}
       </ul>
       {selectedSpecies && subspeciesList.length > 0 && (
