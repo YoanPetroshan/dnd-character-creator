@@ -20,7 +20,7 @@ describe("NextStepButton", () => {
   it("Bulgarian markup: class, data-next, href and an aria-label naming the target step", () => {
     expect(render("/home", "bg")).toBe('<a class="next-button" data-next="class" aria-label="Напред: Клас" href="/class" data-discover="true">Напред</a>');
     expect(render("/class", "bg")).toContain('data-next="background"');
-    expect(render("/class", "bg")).toContain('aria-label="Напред: Произход (Background)"');
+    expect(render("/class", "bg")).toContain('aria-label="Напред: Произход"');
   });
   it("English markup", () => {
     expect(render("/home", "en")).toBe('<a class="next-button" data-next="class" aria-label="Next: Class" href="/class" data-discover="true">Next</a>');
@@ -31,7 +31,7 @@ describe("NextStepButton", () => {
   });
   it("under a base path the router strips it: the target is found and the href carries it", () => {
     const at = (path: string) => renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [path], basename: "/dnd-character-creator" }, createElement(NextStepButton)));
-    expect(at("/dnd-character-creator/species")).toContain('data-next="abilities" aria-label="Напред: Характеристики (Ability Scores)" href="/dnd-character-creator/abilities"');
+    expect(at("/dnd-character-creator/species")).toContain('data-next="abilities" aria-label="Напред: Характеристики" href="/dnd-character-creator/abilities"');
     expect(at("/dnd-character-creator/sheet")).toBe("");
   });
   it("every step but the last has exactly one button, pointing at the next step", () => {

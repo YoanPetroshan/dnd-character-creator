@@ -10,9 +10,9 @@
 .picker-list label {
   position: relative;
   padding: 0 16px;
-  border: 1.5px solid var(--color-text);
+  border: 1px solid var(--color-text-muted);
   border-radius: var(--radius-pill);
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 500;
   cursor: pointer;
 }
@@ -67,7 +67,7 @@ table.ability-table {
 .ability-table thead th {
   padding: var(--space-2) var(--space-1);
   border-bottom: 2px solid var(--color-text);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   line-height: 14px;
   font-weight: 600;
   letter-spacing: 0;
@@ -96,12 +96,12 @@ table.ability-table {
 .ability-table thead th:nth-child(5) {
   padding-left: 0;
   padding-right: 0;
-  font-size: 10px;
+  font-size: var(--fs-xs);
 }
 
 .ability-table tbody th.ability-name {
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: var(--fs-lg);
   font-weight: 700;
   letter-spacing: 0.04em;
 }
@@ -133,7 +133,7 @@ table.ability-table {
   height: 28px;
   padding: 0 var(--space-1);
   border-radius: var(--radius-pill);
-  font-size: 14px;
+  font-size: var(--fs-sm);
   font-weight: 600;
 }
 
@@ -150,7 +150,7 @@ table.ability-table {
 }
 
 .ability-total {
-  font-size: 18px;
+  font-size: var(--fs-lg);
   font-weight: 600;
 }
 
@@ -161,7 +161,7 @@ table.ability-table {
   background: var(--color-accent);
   color: var(--color-on-dark);
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: var(--fs-lg);
   font-weight: 700;
 }
 
@@ -174,7 +174,7 @@ table.ability-table {
 .point-buy-stepper button {
   padding: 0;
   border-radius: var(--radius-round);
-  font-size: 20px;
+  font-size: var(--fs-lg);
 }
 
 .point-buy-stepper__value {
@@ -182,7 +182,7 @@ table.ability-table {
   text-align: center;
   display: inline-block;
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: var(--fs-lg);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -246,7 +246,7 @@ table.ability-table {
   align-items: center;
   gap: var(--space-2);
   margin: 0;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   line-height: 20px;
   color: var(--color-text-secondary);
 }
@@ -261,7 +261,7 @@ table.ability-table {
   border-radius: var(--radius-round);
   background: var(--color-danger);
   color: var(--color-on-dark);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 700;
 }
 
@@ -272,7 +272,7 @@ table.ability-table {
   gap: var(--space-2);
   margin: 0 0 var(--space-3);
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: var(--fs-lg);
   font-weight: 700;
 }
 
@@ -288,7 +288,7 @@ table.ability-table {
 
   .ability-table thead th {
     padding: var(--space-2) var(--space-3);
-    font-size: 12px;
+    font-size: var(--fs-xs);
     line-height: 16px;
     font-weight: 500;
   }
@@ -350,7 +350,7 @@ table.ability-table {
   width: 100%;
   min-height: 56px;
   padding: 6px 14px 6px 7px;
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 500;
   line-height: 1.2;
   text-align: left;
@@ -411,7 +411,7 @@ table.ability-table {
   align-items: center;
   max-width: 100%;
   min-height: 44px;
-  border: 1.5px solid var(--color-text);
+  border: 1px solid var(--color-text-muted);
   border-radius: var(--radius-pill);
   background: transparent;
   color: var(--color-text);
@@ -435,7 +435,7 @@ table.ability-table {
   min-width: 0;
   min-height: 44px;
   padding: 0 0 0 16px;
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 500;
   line-height: 1.2;
   cursor: pointer;
@@ -485,7 +485,7 @@ table.ability-table {
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-4);
   margin: 0 0 var(--space-2);
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 22px;
 }
 
@@ -496,7 +496,7 @@ table.ability-table {
 
 .species-eye__fact-label,
 .species-eye__trait-name {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   line-height: 14px;
   font-weight: 600;
   letter-spacing: 0.1em;

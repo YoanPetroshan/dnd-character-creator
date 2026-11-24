@@ -13,7 +13,7 @@
 }
 
 .name-row__label {
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -28,7 +28,7 @@
   border-radius: 0;
   background: transparent;
   font-family: var(--font-display);
-  font-size: 29px;
+  font-size: var(--fs-xl);
   font-weight: 700;
 }
 
@@ -61,7 +61,7 @@
 
 .name-hint {
   margin: var(--space-2) 0 var(--space-4);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 18px;
   color: var(--color-text-secondary);
 }
@@ -92,7 +92,7 @@
 }
 
 .hero__name {
-  font-size: 17px;
+  font-size: var(--fs-md);
   font-weight: 500;
   overflow-wrap: anywhere;
 }
@@ -103,13 +103,13 @@
   border-radius: var(--radius-pill);
   background: var(--color-accent);
   color: var(--color-on-dark);
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   font-weight: 600;
 }
 
 .hero__meta {
   grid-column: 1 / -1;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 18px;
   color: var(--color-text-secondary);
 }
@@ -126,7 +126,7 @@
   position: relative;
   min-height: 40px;
   padding: 0 16px;
-  border: 1.5px solid var(--color-text);
+  border: 1px solid var(--color-text-muted);
   background: transparent;
   color: var(--color-text);
 }
@@ -151,7 +151,7 @@
   box-sizing: border-box;
   width: 44px;
   height: 44px;
-  border: 1.5px solid var(--color-text);
+  border: 1px solid var(--color-text-muted);
   border-radius: var(--radius-round);
   list-style: none;
   cursor: pointer;
@@ -189,7 +189,7 @@
   border: 0;
   border-radius: 10px;
   text-align: left;
-  font-size: 14.5px;
+  font-size: var(--fs-sm);
   font-weight: 600;
 }
 
@@ -219,7 +219,7 @@
 
 [data-page="home"] legend {
   padding: 0;
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -232,7 +232,7 @@
   margin: 0 0 var(--space-4);
   padding: 0;
   list-style: none;
-  border-top: 2px solid var(--color-text);
+  border-top: 1px solid var(--color-text);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -260,7 +260,7 @@
   justify-content: space-between;
   gap: var(--space-1);
   min-width: 0;
-  font-size: 12.5px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--color-text-secondary);
 }
@@ -272,7 +272,7 @@
   width: 8px;
   height: 8px;
   margin: 3px 3px 0 4px;
-  border: 1.5px solid var(--color-text);
+  border: 1px solid var(--color-text-muted);
   transform: rotate(45deg);
 }
 
@@ -282,7 +282,7 @@
 
 .slot__value {
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: var(--fs-lg);
   font-weight: 700;
   line-height: 1.15;
   overflow-wrap: anywhere;
@@ -290,13 +290,13 @@
 
 .slot[data-state="empty"] .slot__value {
   font-family: var(--font-sans);
-  font-size: 14.5px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--color-text-secondary);
 }
 
 .slot__hint {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--color-text-secondary);
 }
 

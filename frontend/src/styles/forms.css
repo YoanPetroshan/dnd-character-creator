@@ -1,7 +1,7 @@
 .details-section {
   margin: var(--space-3) 0;
   border: 0;
-  border-top: 2px solid var(--color-text);
+  border-top: 1px solid var(--color-text);
   padding: var(--space-2) 0;
 }
 
@@ -34,7 +34,7 @@
   min-height: 48px;
   cursor: pointer;
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: var(--fs-md);
   font-weight: 700;
 }
 
@@ -43,7 +43,7 @@
 .spell-library-card summary::after {
   content: "+";
   font-family: var(--font-sans);
-  font-size: 20px;
+  font-size: var(--fs-lg);
   font-weight: 500;
   line-height: 1;
 }
@@ -56,7 +56,7 @@
 .details-section label {
   display: block;
   margin: var(--space-2) 0 var(--space-1);
-  font-size: 14px;
+  font-size: var(--fs-sm);
   line-height: 20px;
   color: var(--color-text-secondary);
 }
@@ -75,7 +75,7 @@
 }
 
 .higher-levels-teaser {
-  font-size: 0.9em;
+  font-size: var(--fs-sm);
   color: var(--color-text-muted);
 }
 
@@ -89,10 +89,11 @@
 }
 
 .hp-summary {
-  margin-bottom: var(--space-3);
+  margin: var(--space-2) 0 var(--space-4);
 }
 
-/* Class block: no box. Glyph circle + 44px name, then level (field + 2x10 pips), then the subclass row. */
+/* Class block: no box. Glyph circle + name + a quiet "Change", then level and hit points, then the subclass row.
+   The twelve tiles fold away once a class is picked (DESIGN-L). */
 .class-block {
   margin-bottom: var(--space-4);
 }
@@ -108,15 +109,20 @@
   margin: 0;
   padding: 0;
   border-top: 0;
-  font-size: 44px;
+  font-size: var(--fs-xl);
   font-weight: 800;
   line-height: 1.05;
   letter-spacing: -0.015em;
 }
 
-.class-block h2 button {
-  vertical-align: middle;
-  font-size: 13px;
+.class-block__action {
+  margin-left: auto;
+  min-height: 44px;
+  font-size: var(--fs-sm);
+}
+
+.class-block__action + .class-block__action {
+  margin-left: 0;
 }
 
 .class-glyph {
@@ -125,7 +131,7 @@
   place-items: center;
   width: 42px;
   height: 42px;
-  border: 1.5px solid var(--color-text);
+  border: 1px solid var(--color-text-muted);
   border-radius: var(--radius-round);
   color: var(--color-text);
 }
@@ -148,8 +154,8 @@
 }
 
 .class-block__head .class-glyph {
-  width: 72px;
-  height: 72px;
+  width: 56px;
+  height: 56px;
 }
 
 .class-level {
@@ -162,29 +168,9 @@
 .class-level input {
   width: 72px;
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: var(--fs-lg);
   font-weight: 700;
   text-align: center;
-}
-
-/* Decorative level meter: 20 diamonds on 2 rows of 10, filled up to the current level. */
-.level-pips {
-  display: grid;
-  grid-template-columns: repeat(10, 9px);
-  gap: 9px 8px;
-  margin: var(--space-2) 0 var(--space-4);
-  padding-left: 3px;
-}
-
-.level-pips__pip {
-  width: 9px;
-  height: 9px;
-  border: 1.5px solid var(--color-text);
-  transform: rotate(45deg);
-}
-
-.level-pips__pip[data-on="true"] {
-  background: var(--color-text);
 }
 
 .class-subclass {
@@ -215,10 +201,23 @@
   margin-bottom: var(--space-4);
 }
 
+/* multiclassing is rare: one quiet button opens the tiles (owner decision 6A, DESIGN-L) */
+.add-class__toggle,
+.class-picked__cancel {
+  min-height: 44px;
+  margin: var(--space-2) 0 var(--space-4);
+  font-size: var(--fs-sm);
+}
+
+/* the class's choices and its spells: two sections one under the other, each opened by the small-caps heading */
+.class-section {
+  margin-top: 32px;
+}
+
 .choice-pruned {
   margin: -4px 0 var(--space-2);
   padding: 6px 10px;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   color: var(--color-warning-text);
   background: var(--color-warning-bg);
   border-left: 3px solid var(--color-warning-border);
@@ -232,7 +231,7 @@
 
 .help-page p,
 .help-page li {
-  font-size: 16px;
+  font-size: var(--fs-md);
   line-height: 1.55;
 }
 

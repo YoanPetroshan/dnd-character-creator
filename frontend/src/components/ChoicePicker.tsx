@@ -98,6 +98,14 @@ function useOptionPreview(choice: Choice) {
   return { button, panel, itemClass, hasEye };
 }
 
+/** The shared "Kind: " prefix of every option label ("Skill: Arcana", "Skill: History" ...), or "" when the labels differ.
+ *  The card heading already names the kind, so the rows drop it (DESIGN-L: say a thing once). */
+export function sharedLabelPrefix(options: ChoiceOption[]): string {
+  if (options.length < 2) return "";
+  const m = /^([^:]{2,24}): /.exec(options[0].label);
+  return m && options.every((o) => o.label.startsWith(m[0])) ? m[0] : "";
+}
+
 function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
   const t = useT();
   const [filter, setFilter] = useState("");
@@ -121,6 +129,7 @@ function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
   // (the follow-up pick of an option, "...equipment-choice-2:0", is a plain list: it only appears once its option is picked)
   const lettered = choice.source.kind === "equipment" && /equipment-choice-\d+$/.test(choice.id);
   const letterOf = (o: ChoiceOption) => (lettered ? String.fromCharCode(65 + choice.options.indexOf(o)) : undefined);
+  const prefix = sharedLabelPrefix(choice.options);
 
   function renderOption(option: ChoiceOption, prev: ChoiceOption | undefined) {
     const heading = option.group && option.group !== prev?.group ? option.group : null;
@@ -150,7 +159,7 @@ function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
             aria-describedby={option.disabled && option.disabledReason ? `${choice.id}::${option.id}::why` : undefined}
             onChange={() => onToggle(choice.id, option.id, choice.count)}
           />
-          {option.label}
+          {prefix ? option.label.slice(prefix.length) : option.label}
           {option.hiddenByFilters && (
             <span className="choice-picker__reason"> — {t.common.hiddenByFilters}</span>
           )}

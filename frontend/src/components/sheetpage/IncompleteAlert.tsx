@@ -19,7 +19,7 @@ export function IncompleteAlert({ resolution, error }: { resolution: Resolution;
     <section id="export-reasons" className="sheet-alert" data-state="incomplete" aria-label={t.sheet.incompleteLabel}>
       {count > 0 && (
         <p className="sheet-alert__title" role="status">
-          <span className="choice-card__pending-dot" aria-hidden="true">
+          <span className="alert-dot" aria-hidden="true">
             !
           </span>
           <span>

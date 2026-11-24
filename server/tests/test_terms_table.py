@@ -70,6 +70,13 @@ def test_every_term_noun_in_a_bulgarian_text_has_its_english_bracket():
         assert row in {t.en for t in tt.TERMS}
 
 
+def test_every_short_label_prefix_matches_a_text():
+    """A SHORT_LABEL_KEYS prefix that matches no text any more must go (owner decision 1A, DESIGN-L)."""
+    keys = [f"{s}:{k}" for s, k, _t in tt._corpus()]
+    for prefix, reason in tt.SHORT_LABEL_KEYS.items():
+        assert reason.strip() and any(k.startswith(prefix) for k in keys), prefix
+
+
 def test_no_old_wording_is_left():
     assert tt.forbidden_hits() == []
 

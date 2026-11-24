@@ -40,13 +40,13 @@
   .step-nav a {
     width: 88px;
     min-width: 0;
-    font-size: 13px;
+    font-size: var(--fs-sm);
   }
 
   .step-nav a::before {
     width: 40px;
     height: 40px;
-    font-size: 15px;
+    font-size: var(--fs-md);
   }
 
   .step-nav a::after {

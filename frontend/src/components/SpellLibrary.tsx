@@ -43,7 +43,7 @@ export function SpellLibrary({ classId }: SpellLibraryProps) {
 
   return (
     <>
-      <h2>{sl.title} {loading && "…"}</h2>
+      <h4>{sl.title} {loading && "…"}</h4>
       <input type="text" inputMode="search" enterKeyHint="search" aria-label={sl.searchLabel} placeholder={t.common.search} value={query} onChange={(e) => setQuery(e.target.value)} />
       <select aria-label={sl.levelLabel} value={levelFilter} onChange={(e) => setLevelFilter(e.target.value as LevelFilter)}>
         {LEVEL_FILTERS.map((l) => (

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
 import { apiFetch } from "../api/transport";
 import { StepProblems } from "../components/StepProblems";
 import { MAX_TOTAL_LEVEL, totalLevel, useDraft } from "../DraftContext";
@@ -14,15 +13,12 @@ import { SpellLibrary } from "../components/SpellLibrary";
 import { ClassResourcesList } from "../components/ClassResourcesList";
 import { SpellSlotsSummary } from "../components/SpellSlotsSummary";
 import { classChoicesFor, splitClassChoices } from "../logic/choiceRouting";
-import { cidFromHash } from "../logic/hashTarget";
 import { DetailEye, DetailPanel } from "../components/DetailEye";
 import { SubclassPreview } from "../components/SubclassPreview";
 import { LevelFeatureList } from "../components/FeatureEyeList";
 import type { SheetFeature } from "../types";
 import { SheetEyesProvider } from "../components/sheet/SheetEyes";
 import { useSubclassDetails } from "../useSubclassDetail";
-
-type ClassTab = "features" | "spells";
 
 interface ClassDetail {
   // "index", not "id". Filtered server-side by ruleset/sources; `hidden` marks
@@ -33,14 +29,24 @@ interface ClassDetail {
   hit_die?: number; // raw SRD class object field, spread into this response as-is
 }
 
-function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolean }) {
+function ClassBlock({
+  classId,
+  isPrimary,
+  hitPoints,
+  onChangeClass,
+}: {
+  classId: string;
+  isPrimary: boolean;
+  hitPoints?: string;
+  /** the single class's "Change" button (opens the twelve tiles again) */
+  onChangeClass?: () => void;
+}) {
   const t = useT();
   const cp = t.classPage;
   const { draft, dispatch } = useDraft();
   const { resolution, loading } = useResolutionContext();
   const catalog = useCatalogContext();
   const sheetClass = resolution?.sheet.classes.find((c) => c.id === classId);
-  const [tab, setTab] = useState<ClassTab>("features");
   const [classDetail, setClassDetail] = useState<ClassDetail | null>(null);
   const [subOpen, setSubOpen] = useState(false);
   const [higherOpen, setHigherOpen] = useState(false);
@@ -48,6 +54,7 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
   const [levelList, setLevelList] = useState<{ level: number; name: string; ref: string }[]>([]);
   const subclasses = useSubclassDetails();
 
+  const className = sheetClass?.name ?? catalog.classes.find((c) => c.id === classId)?.name ?? classId;
   const classEntry = draft.classes.find((c) => c.classId === classId);
   const classLevel = classEntry?.level ?? 1;
   const selectedSubclassId = classEntry?.subclassId ?? "";
@@ -123,26 +130,6 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
   const { featureChoices, spellChoices } = splitClassChoices(classChoices);
   const prunedReasons = new Map((resolution?.pruned ?? []).map((p) => [p.choiceId, p.reason]));
   const hasSpells = spellChoices.length > 0;
-  const effectiveTab: ClassTab = hasSpells ? tab : "features";
-  // a tab that is not open shows the red mark when one of its required choices is still open
-  const hasPending = (list: typeof featureChoices) => list.some((c) => c.status === "pending" && !c.optional);
-  const featuresPending = effectiveTab !== "features" && hasPending(featureChoices);
-  const spellsPending = effectiveTab !== "spells" && hasPending(spellChoices);
-
-  // A "#<cid>" hash may point into the tab that is not showing: switch to it
-  // (the card itself expands and scrolls, see ChoiceCard).
-  const hashCid = cidFromHash(useLocation().hash);
-  const hashInSpells = hashCid !== null && spellChoices.some((c) => c.id === hashCid);
-  const hashInFeatures = hashCid !== null && featureChoices.some((c) => c.id === hashCid);
-  useEffect(() => {
-    if (hashInSpells) setTab("spells");
-    else if (hashInFeatures) setTab("features");
-  }, [hashCid, hashInSpells, hashInFeatures]);
-
-  const tabFeaturesId = `tab-features-${classId}`;
-  const panelFeaturesId = `panel-features-${classId}`;
-  const tabSpellsId = `tab-spells-${classId}`;
-  const panelSpellsId = `panel-spells-${classId}`;
 
   function handleChange(choiceId: string, optionId: string, count: number) {
     dispatch({ type: "TOGGLE_CHOICE_OPTION", source: "class", choiceId, optionId, count });
@@ -152,14 +139,17 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
     <div className="class-block">
       <div className="class-block__head">
         <ClassGlyph classId={classId} solid />
-        <h2>
-          {sheetClass?.name ?? catalog.classes.find((c) => c.id === classId)?.name ?? classId}{" "}
-          {!isPrimary && (
-            <button type="button" onClick={() => dispatch({ type: "REMOVE_CLASS", classId })}>
-              {cp.remove}
-            </button>
-          )}
-        </h2>
+        <h2>{className}</h2>
+        {onChangeClass && (
+          <button type="button" className="class-block__action" aria-label={cp.changeClassLabel(className)} onClick={onChangeClass}>
+            {cp.changeClass}
+          </button>
+        )}
+        {!isPrimary && (
+          <button type="button" className="class-block__action" onClick={() => dispatch({ type: "REMOVE_CLASS", classId })}>
+            {cp.remove}
+          </button>
+        )}
       </div>
 
       <label className="class-level">
@@ -171,12 +161,11 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
           onCommit={(level) => dispatch({ type: "SET_CLASS_LEVEL", classId, level })}
         />
       </label>
-      {/* decorative: the number field above stays the control and the source of truth */}
-      <span className="level-pips" aria-hidden="true">
-        {Array.from({ length: 20 }, (_, i) => (
-          <span key={i} className="level-pips__pip" data-on={i < classLevel ? "true" : undefined} />
-        ))}
-      </span>
+      {hitPoints !== undefined && (
+        <p className="hp-summary">
+          <strong>{cp.hitPoints}</strong> {hitPoints}
+        </p>
+      )}
 
       {classDetail && classDetail.subclassUnlockLevel !== null && classLevel >= classDetail.subclassUnlockLevel && (
         <div className="class-subclass">
@@ -272,63 +261,34 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
         </div>
       )}
 
-      <div className="tab-bar" role="tablist">
-        <button
-          type="button"
-          id={tabFeaturesId}
-          role="tab"
-          aria-selected={effectiveTab === "features"}
-          aria-controls={panelFeaturesId}
-          onClick={() => setTab("features")}
-        >
-          {cp.tabFeatures}
-          {featuresPending && (
-            <span className="tab-bar__pending" aria-label={t.choice.pendingDot}>
-              !
-            </span>
-          )}
-        </button>
-        {hasSpells && (
-          <button
-            type="button"
-            id={tabSpellsId}
-            role="tab"
-            aria-selected={effectiveTab === "spells"}
-            aria-controls={panelSpellsId}
-            onClick={() => setTab("spells")}
-          >
-            {cp.tabSpells}
-            {spellsPending && (
-              <span className="tab-bar__pending" aria-label={t.choice.pendingDot}>
-                !
-              </span>
+      {/* The class's choices and its spells are two sections one under the other, not tabs: a caster's most important
+          pick (the spells) must not hide behind a tab (DESIGN-L). */}
+      <section className="class-section" aria-labelledby={`class-choices-${classId}`}>
+        <h3 id={`class-choices-${classId}`}>{cp.tabFeatures}</h3>
+        {!loading && featureChoices.length === 0 && <p>{cp.noChoices}</p>}
+        {featureChoices.map((choice) => (
+          <div key={choice.id}>
+            <ChoiceCard choice={choice} onToggle={handleChange} defaultExpanded={choice.id === firstPendingId(featureChoices)} />
+            {prunedReasons.has(choice.id) && (
+              <p className="choice-pruned" role="note">
+                {prunedReasons.get(choice.id)}
+              </p>
             )}
-          </button>
-        )}
-      </div>
+          </div>
+        ))}
+      </section>
 
-      {effectiveTab === "features" && (
-        <div id={panelFeaturesId} role="tabpanel" aria-labelledby={tabFeaturesId}>
-          {!loading && featureChoices.length === 0 && <p>{cp.noChoices}</p>}
-          {featureChoices.map((choice) => (
-            <div key={choice.id}>
-              <ChoiceCard choice={choice} onToggle={handleChange} defaultExpanded={choice.id === firstPendingId(featureChoices)} />
-              {prunedReasons.has(choice.id) && (
-                <p className="choice-pruned" role="note">
-                  {prunedReasons.get(choice.id)}
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {effectiveTab === "spells" && (
-        <div id={panelSpellsId} role="tabpanel" aria-labelledby={tabSpellsId}>
+      {hasSpells && (
+        <section className="class-section" aria-labelledby={`class-spells-${classId}`}>
+          <h3 id={`class-spells-${classId}`}>{cp.tabSpells}</h3>
           {resolution && <SpellSlotsSummary resolution={resolution} classId={classId} />}
           {spellChoices.map((choice) => (
             <div key={choice.id}>
-              <ChoiceCard choice={choice} onToggle={handleChange} defaultExpanded={choice.id === firstPendingId(spellChoices)} />
+              <ChoiceCard
+                choice={choice}
+                onToggle={handleChange}
+                defaultExpanded={!firstPendingId(featureChoices) && choice.id === firstPendingId(spellChoices)}
+              />
               {prunedReasons.has(choice.id) && (
                 <p className="choice-pruned" role="note">
                   {prunedReasons.get(choice.id)}
@@ -338,7 +298,7 @@ function ClassBlock({ classId, isPrimary }: { classId: string; isPrimary: boolea
           ))}
 
           <SpellLibrary key={classId} classId={classId} />
-        </div>
+        </section>
       )}
     </div>
   );
@@ -354,6 +314,11 @@ export function ClassPage() {
 
   const takenClassIds = new Set(draft.classes.map((c) => c.classId));
   const primaryClassId = draft.classes[0]?.classId;
+  // once a class is picked the twelve tiles fold into one row with "Change" (DESIGN-L: show only the current decision)
+  const [changing, setChanging] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const showPicker = draft.classes.length <= 1 && (!primaryClassId || changing);
+  const hp = resolution ? String(resolution.derived.hitPointMax ?? "—") : "—";
 
   return (
     <SheetEyesProvider>
@@ -369,7 +334,7 @@ export function ClassPage() {
         </p>
       )}
 
-      {draft.classes.length <= 1 && (
+      {showPicker && (
         <ul className="picker-list picker-list--classes">
           {catalog.classes.map((c) => (
             <li key={c.id}>
@@ -378,7 +343,10 @@ export function ClassPage() {
                   type="radio"
                   name="class"
                   checked={c.id === primaryClassId}
-                  onChange={() => dispatch({ type: "SET_CLASS", classId: c.id })}
+                  onChange={() => {
+                    dispatch({ type: "SET_CLASS", classId: c.id });
+                    setChanging(false);
+                  }}
                 />
                 <ClassGlyph classId={c.id} />
                 {cp.hitDieLabel(c.name, c.hitDie)}
@@ -388,19 +356,31 @@ export function ClassPage() {
         </ul>
       )}
 
-      {primaryClassId && (
-        <div className="hp-summary">
-          <strong>{cp.hitPoints}</strong> {resolution ? String(resolution.derived.hitPointMax ?? "—") : "—"}
-        </div>
+      {showPicker && primaryClassId && (
+        <button type="button" className="class-picked__cancel" onClick={() => setChanging(false)}>
+          {cp.cancelChange}
+        </button>
       )}
 
       {draft.classes.map((c, i) => (
-        <ClassBlock key={c.classId} classId={c.classId} isPrimary={i === 0} />
+        <ClassBlock
+          key={c.classId}
+          classId={c.classId}
+          isPrimary={i === 0}
+          hitPoints={i === 0 ? hp : undefined}
+          onChangeClass={i === 0 && draft.classes.length === 1 && !changing ? () => setChanging(true) : undefined}
+        />
       ))}
 
-      {primaryClassId && (
+      {primaryClassId && !adding && (
+        <button type="button" className="add-class__toggle" aria-expanded={false} onClick={() => setAdding(true)}>
+          {cp.addClass}
+        </button>
+      )}
+
+      {primaryClassId && adding && (
         <div className="add-class">
-          <h3>{cp.addClass}</h3>
+          <h3>{cp.addClassTitle}</h3>
           {totalLevel(draft) >= MAX_TOTAL_LEVEL && (
             <p role="note">{cp.levelCap(MAX_TOTAL_LEVEL)}</p>
           )}
@@ -412,7 +392,10 @@ export function ClassPage() {
                   <button
                     type="button"
                     disabled={totalLevel(draft) >= MAX_TOTAL_LEVEL}
-                    onClick={() => dispatch({ type: "ADD_CLASS", classId: c.id })}
+                    onClick={() => {
+                      dispatch({ type: "ADD_CLASS", classId: c.id });
+                      setAdding(false);
+                    }}
                   >
                     <ClassGlyph classId={c.id} />
                     {cp.hitDieLabel(c.name, c.hitDie)}
@@ -420,6 +403,9 @@ export function ClassPage() {
                 </li>
               ))}
           </ul>
+          <button type="button" className="class-picked__cancel" onClick={() => setAdding(false)}>
+            {cp.cancelChange}
+          </button>
         </div>
       )}
     </div>

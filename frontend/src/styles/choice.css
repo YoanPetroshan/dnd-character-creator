@@ -17,10 +17,11 @@
   border: none;
   border-radius: 0;
   text-align: left;
-  font-size: 16px;
+  font-size: var(--fs-md);
   cursor: pointer;
 }
 
+.alert-dot,
 .choice-card__pending-dot,
 .choice-card[data-status="resolved"] .choice-card__header::before {
   display: inline-flex;
@@ -30,13 +31,21 @@
   width: 26px;
   height: 26px;
   border-radius: var(--radius-round);
-  font-size: 14px;
+  font-size: var(--fs-sm);
   font-weight: 700;
 }
 
-.choice-card__pending-dot {
+/* the red "!" is kept for what really blocks (the sheet that cannot be downloaded) */
+.alert-dot {
   background: var(--color-danger);
   color: var(--color-on-dark);
+}
+
+/* Not chosen yet is a to-do, not an error (owner decision 2A, DESIGN-L): an empty ring; it becomes the green check. Red stays
+   for real problems (StepProblems, the sheet alert). */
+.choice-card__pending-dot {
+  border: 1.5px solid var(--color-text-muted);
+  background: transparent;
 }
 
 .choice-card[data-status="resolved"] .choice-card__header::before {
@@ -51,7 +60,7 @@
   border-radius: var(--radius-pill);
   background: var(--color-highlight);
   color: var(--color-on-highlight);
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -60,7 +69,7 @@
 .choice-card__label {
   order: 2;
   flex: 1;
-  font-size: 16px;
+  font-size: var(--fs-md);
   font-weight: 500;
   line-height: 1.25;
 }
@@ -68,7 +77,7 @@
 .choice-card__level,
 .choice-card__count {
   order: 3;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 400;
   color: var(--color-text-secondary);
 }
@@ -167,9 +176,9 @@ ul.choice-picker > li {
   width: 100%;
   height: 100%;
   padding: var(--space-1) 14px;
-  border: 1.5px solid var(--color-text);
+  border: 1px solid var(--color-text-muted);
   border-radius: var(--radius-pill);
-  font-size: 14.5px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   line-height: 1.25;
   cursor: pointer;
@@ -203,7 +212,7 @@ ul.choice-picker > li {
 .choice-picker__reason {
   display: block;
   width: 100%;
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   font-style: normal;
 }
 
@@ -215,12 +224,12 @@ ul.choice-picker > li {
 .choice-picker__selected {
   margin-bottom: var(--space-3);
   padding-top: var(--space-2);
-  border-top: 2px solid var(--color-text);
+  border-top: 1px solid var(--color-text);
 }
 
 .choice-picker__selected-title {
   margin: 0 0 var(--space-1);
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -235,12 +244,12 @@ ul.choice-picker > li {
   border: 0;
   border-bottom: 1px solid var(--color-border);
   border-radius: 0;
-  font-size: 16px;
+  font-size: var(--fs-md);
 }
 
 .choice-picker__group-toggle::after {
   content: "+";
-  font-size: 20px;
+  font-size: var(--fs-lg);
   font-weight: 500;
 }
 
@@ -257,7 +266,7 @@ ul.choice-picker > li {
 }
 
 .choice-picker__result-count {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--color-text-secondary);
 }
 
@@ -363,13 +372,13 @@ ul.choice-picker > li.choice-picker__item--spell > .spell-eye__panel {
   margin: var(--space-2) 0 var(--space-3) var(--space-2);
   padding-left: var(--space-3);
   border-left: 2px solid var(--color-border);
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 22px;
   overflow-wrap: anywhere;
 }
 
 .spell-eye__panel .spell-library-card__material {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 18px;
   font-style: normal;
   color: var(--color-text-secondary);
@@ -406,7 +415,7 @@ ul.choice-picker--lettered > li {
   flex-wrap: wrap;
   align-items: center;
   box-sizing: border-box;
-  border: 1.5px solid var(--color-text);
+  border: 1px solid var(--color-text-muted);
   border-radius: 16px;
   cursor: pointer;
 }
@@ -440,7 +449,7 @@ ul.choice-picker--lettered > li[data-state="disabled"] {
   border-radius: 16px;
   background: transparent;
   color: inherit;
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 1.35;
 }
 
@@ -466,7 +475,7 @@ ul.choice-picker--lettered > li > label::before {
   border: 1.5px solid currentColor;
   border-radius: var(--radius-round);
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: var(--fs-lg);
   font-weight: 700;
 }
 

@@ -4,6 +4,14 @@
   --font-display: "Piazzolla", Georgia, serif;
   --font-sans: "Golos Text", system-ui, sans-serif;
 
+  /* type scale (DESIGN-L, 2026-11-24): six steps, nothing in between */
+  --fs-xs: 12px;
+  --fs-sm: 14px;
+  --fs-md: 16px;
+  --fs-lg: 20px;
+  --fs-xl: 28px;
+  --fs-2xl: 40px;
+
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -40,8 +48,8 @@
   --color-warning-bg: #fbf1cf;
   --color-warning-border: #d9a400;
 
-  /* fine 45-degree pinstripes over the page colour, 6px apart (owner's choice S1, 2026-11-16; tiles seamlessly) */
-  --texture-page: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Cg stroke='%231c2a1d' stroke-width='0.6' stroke-opacity='0.07'%3E%3Cpath d='M-1 1L1 -1M0 6L6 0M5 7L7 5'/%3E%3C/g%3E%3C/svg%3E");
+  /* the pinstripe texture was removed (owner decision 5A, DESIGN-L 2026-11-24): it added noise behind every paragraph */
+  --texture-page: none;
 }
 
 /* Dark theme: the system setting decides unless the page sets data-theme (light or dark). The values are a
@@ -71,7 +79,7 @@
     --color-warning-text: #f2d27a;
     --color-warning-bg: #2a2412;
     --color-warning-border: #d9a400;
-    --texture-page: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Cg stroke='%23e6ede3' stroke-width='0.6' stroke-opacity='0.05'%3E%3Cpath d='M-1 1L1 -1M0 6L6 0M5 7L7 5'/%3E%3C/g%3E%3C/svg%3E");
+    --texture-page: none;
     color-scheme: dark;
   }
 }
@@ -100,7 +108,7 @@
   --color-warning-text: #f2d27a;
   --color-warning-bg: #2a2412;
   --color-warning-border: #d9a400;
-  --texture-page: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Cg stroke='%23e6ede3' stroke-width='0.6' stroke-opacity='0.05'%3E%3Cpath d='M-1 1L1 -1M0 6L6 0M5 7L7 5'/%3E%3C/g%3E%3C/svg%3E");
+  --texture-page: none;
   color-scheme: dark;
 }
 

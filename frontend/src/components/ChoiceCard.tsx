@@ -43,9 +43,7 @@ export function ChoiceCard({ choice, onToggle, defaultExpanded = false }: Choice
         aria-expanded={expanded}
       >
         {choice.status === "pending" && !choice.optional && (
-          <span className="choice-card__pending-dot" aria-label={t.choice.pendingDot}>
-            !
-          </span>
+          <span className="choice-card__pending-dot" role="img" aria-label={t.choice.pendingDot} />
         )}
         <span className="choice-card__label">{choice.label}</span>
         {isNew && <span className="choice-card__new">{t.choice.newMarker}</span>}

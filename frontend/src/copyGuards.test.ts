@@ -118,8 +118,8 @@ describe("scripts", () => {
     "Add", "Array", "Buy", "Character",
     "Manual", "Name", "Point", "Points", "Preferences", "Remaining", "Resolution", "Roll", "Saved",
     "Sources", "Standard", "Subspecies", "all", "and", "api", "as", "be",
-    "choice", "drop", "from", "here", "level", "lowest",
-    "name", "none", "page", "pending", "reload", "resolve",
+    "drop", "from", "here", "lowest",
+    "name", "none", "page", "reload", "resolve",
     "ruleset", "scores", "should", "six", "still", "the", "this", "type", "you",
     // damage types stay English like the weapon table (owner, 2026-11-20)
     "acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder",

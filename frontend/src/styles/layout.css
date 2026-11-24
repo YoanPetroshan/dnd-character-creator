@@ -2,7 +2,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--space-2);
+  gap: var(--space-1);
   padding: 14px var(--space-3) 6px;
   border-bottom: 1px solid var(--color-border);
 }
@@ -14,7 +14,7 @@
   margin-right: auto;
   min-width: 0;
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 700;
   color: var(--color-text-strong);
 }
@@ -36,7 +36,7 @@
 }
 
 .help-link {
-  font-size: 14.5px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--color-text-secondary);
 }
@@ -52,14 +52,17 @@
   padding: 0 var(--space-2);
   border-color: transparent;
   border-radius: var(--radius-pill);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--color-text-secondary);
 }
 
+/* a text toggle, not a filled pill: solid ink is reserved for the selected pick and the main action (DESIGN-L, G6) */
 .lang-switch button[data-state="active"] {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: var(--color-on-dark);
+  color: var(--color-text-strong);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
 }
 
 /* Steps: a circle over the step name with a small line icon of the step (house, sword, book, person, die, backpack, page) so the
@@ -94,7 +97,7 @@
   text-align: center;
   line-height: 1.2;
   text-decoration: none;
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   font-weight: 500;
   color: var(--color-text-muted);
 }
@@ -107,7 +110,7 @@
   height: 34px;
   border: 1.5px solid var(--color-text-muted);
   border-radius: var(--radius-round);
-  font-size: 13.5px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -195,9 +198,11 @@
   margin-left: 8px;
   padding: 0 4px;
   border-radius: 9px;
-  background: var(--color-danger);
-  color: var(--color-on-dark);
-  font-size: 11px;
+  /* a neutral count of open choices, not an alarm (owner decision 2A, DESIGN-L) */
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
   font-weight: 700;
   line-height: 18px;
   text-align: center;
@@ -225,14 +230,14 @@ main .next-button {
   border-radius: var(--radius-pill);
   background: var(--color-accent);
   color: var(--color-on-dark);
-  font-size: 17px;
+  font-size: var(--fs-md);
   font-weight: 700;
   text-decoration: none;
 }
 
 main .next-button::after {
   content: "\2192";
-  font-size: 22px;
+  font-size: var(--fs-lg);
   line-height: 1;
 }
 
@@ -249,7 +254,7 @@ main .next-button::after {
   padding: 0;
   border: 0;
   border-radius: 0;
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--color-text);
   text-decoration: underline;
@@ -270,7 +275,7 @@ main .next-button::after {
   border-radius: var(--radius-pill);
   background: var(--color-highlight);
   color: var(--color-on-highlight);
-  font-size: 14.5px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   text-decoration: none;
 }
@@ -279,7 +284,7 @@ main .next-button::after {
 [data-page="sheet"] > h1 {
   margin: var(--space-4) 0 var(--space-1);
   font-family: var(--font-sans);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   line-height: 14px;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -322,7 +327,7 @@ main .next-button::after {
 
 .export-bar__blocked {
   margin: 0 0 var(--space-2);
-  font-size: 14px;
+  font-size: var(--fs-sm);
   line-height: 20px;
   color: var(--color-text);
 }
@@ -344,19 +349,19 @@ main .next-button::after {
   align-items: center;
   gap: var(--space-3);
   margin: 0;
-  font-size: 17px;
+  font-size: var(--fs-md);
   line-height: 24px;
   font-weight: 600;
 }
 
 .sheet-alert__count {
-  font-size: 20px;
+  font-size: var(--fs-lg);
   font-weight: 800;
 }
 
 .sheet-alert__reason {
   margin: var(--space-2) 0 0;
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 22px;
 }
 
@@ -364,7 +369,7 @@ main .next-button::after {
   margin: var(--space-1) 0 0;
   padding: 0;
   list-style: none;
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 22px;
 }
 
@@ -468,7 +473,7 @@ main .next-button::after {
   border: 0;
   border-radius: 0;
   background: none;
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--color-text);
   text-decoration: underline;
@@ -479,14 +484,14 @@ main .next-button::after {
 .portrait__error {
   flex-basis: 100%;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 18px;
   color: var(--color-danger);
 }
 
 .summary-strip__who {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   line-height: 20px;
   color: var(--color-text-secondary);
 }
@@ -494,7 +499,7 @@ main .next-button::after {
 .summary-strip__who strong {
   display: block;
   font-family: var(--font-display);
-  font-size: 30px;
+  font-size: var(--fs-xl);
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: -0.01em;
@@ -514,7 +519,7 @@ main .next-button::after {
 
 .summary-strip__level {
   display: block;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--color-text);
 }
@@ -563,7 +568,7 @@ main .next-button::after {
 }
 
 .ability__label {
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 16px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -573,7 +578,7 @@ main .next-button::after {
 
 .ability__mod {
   font-family: var(--font-display);
-  font-size: 30px;
+  font-size: var(--fs-xl);
   line-height: 34px;
   font-weight: 700;
   color: var(--color-text-strong);
@@ -590,7 +595,7 @@ main .next-button::after {
   border: 2px solid var(--color-frame);
   border-radius: var(--radius-pill);
   background: var(--color-surface);
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 24px;
   font-weight: 600;
   color: var(--color-text);
@@ -617,7 +622,7 @@ main .next-button::after {
 .stat-box dt {
   padding: 0;
   border: 0;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 16px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -630,7 +635,7 @@ main .next-button::after {
   padding: 0;
   border: 0;
   font-family: var(--font-display);
-  font-size: 30px;
+  font-size: var(--fs-xl);
   line-height: 34px;
   font-weight: 700;
   color: var(--color-text-strong);
@@ -642,19 +647,19 @@ main .next-button::after {
 }
 
 .stat-box[data-summary="speed"] dd {
-  font-size: 20px;
+  font-size: var(--fs-lg);
 }
 
 @media (min-width: 600px) {
   .stat-box[data-summary="speed"] dd {
-    font-size: 24px;
+    font-size: var(--fs-lg);
   }
 }
 
 .summary-strip__sub,
 .stat-box dd.summary-strip__sub {
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 16px;
   font-weight: 400;
   color: var(--color-text-secondary);
@@ -669,7 +674,7 @@ main .next-button::after {
 .summary-strip__note {
   flex-basis: 100%;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 18px;
   color: var(--color-text-secondary);
 }
@@ -740,7 +745,7 @@ main .next-button::after {
   background: none;
   color: var(--color-text-secondary);
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -779,7 +784,7 @@ main .next-button::after {
   background: var(--color-surface-muted);
   background-clip: padding-box;
   color: var(--color-text-secondary);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 30px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -798,7 +803,7 @@ main .next-button::after {
   border-top: 0;
   border-bottom: 1px solid var(--color-border-subtle);
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 18px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -816,7 +821,7 @@ main .next-button::after {
   letter-spacing: 0;
   text-transform: none;
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: var(--fs-lg);
   line-height: 24px;
   font-weight: 700;
   color: var(--color-label);
@@ -827,7 +832,7 @@ main .next-button::after {
   letter-spacing: 0;
   text-transform: none;
   color: var(--color-text-strong);
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 700;
 }
 
@@ -840,7 +845,7 @@ main .next-button::after {
 
 .feature {
   padding: 6px 0;
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 22px;
 }
 
@@ -850,7 +855,7 @@ main .next-button::after {
 }
 
 .feature__meta {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-style: italic;
   color: var(--color-text-secondary);
 }
@@ -872,7 +877,7 @@ main .next-button::after {
 
 .feature__source {
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 400;
   font-style: italic;
   color: var(--color-text-secondary);
@@ -892,7 +897,7 @@ main .next-button::after {
   overflow-wrap: normal;
   padding: 8px 14px 8px 0;
   border-bottom: 1px solid var(--color-border-subtle);
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 20px;
   text-align: left;
   white-space: nowrap;
@@ -907,7 +912,7 @@ main .next-button::after {
   padding: 0 14px 6px 0;
   white-space: normal;
   vertical-align: bottom;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 16px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -925,7 +930,7 @@ main .next-button::after {
   display: flex;
   gap: 6px;
   margin: 0 0 var(--space-2);
-  font-size: 14px;
+  font-size: var(--fs-sm);
 }
 
 .attacks__per-action :is(dt, dd) {
@@ -953,13 +958,13 @@ main .next-button::after {
 
 .attack__name {
   display: block;
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 600;
 }
 
 .attack__sub {
   display: block;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 16px;
   font-weight: 400;
   color: var(--color-text-secondary);
@@ -971,7 +976,7 @@ main .next-button::after {
   padding: 4px 8px;
   border: 1.5px solid var(--color-border);
   border-radius: 6px;
-  font-size: 17px;
+  font-size: var(--fs-md);
   line-height: 24px;
   font-weight: 600;
   text-align: center;
@@ -981,7 +986,7 @@ main .next-button::after {
 .sheet-chip--wide {
   display: block;
   min-width: 11ch;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   line-height: 20px;
   text-align: left;
   white-space: normal;
@@ -995,7 +1000,7 @@ main .next-button::after {
 .tabs__panel .attacks .attack__notes {
   min-width: 24ch;
   padding-right: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 18px;
   color: var(--color-text-secondary);
 }
@@ -1018,7 +1023,7 @@ main .next-button::after {
 :is(.tabs__panel, .sheet-reference, .sheet-combat > [data-section]) dl > div > dt {
   padding: 0;
   border: 0;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 16px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -1030,13 +1035,13 @@ main .next-button::after {
   padding: 2px 0 0;
   border: 0;
   text-align: left;
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 22px;
   font-weight: 400;
 }
 
 .tabs__panel dl:not(:has(> div)) {
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 22px;
 }
 
@@ -1047,7 +1052,7 @@ main .next-button::after {
   list-style: none;
   padding: 0 0 0 12px;
   border-left: 3px solid var(--color-border-subtle);
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 22px;
 }
 
@@ -1080,7 +1085,7 @@ main .next-button::after {
   padding: 0;
   border: 0;
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 18px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -1091,7 +1096,7 @@ main .next-button::after {
 
 .sheet-reference p,
 .sheet-reference li {
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 22px;
 }
 
@@ -1126,7 +1131,7 @@ main .next-button::after {
   display: flex;
   align-items: center;
   padding: 0 4px 0 22px;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-align: left;
@@ -1138,7 +1143,7 @@ main .next-button::after {
   justify-content: center;
   min-width: 44px;
   border-left: 1.5px solid var(--color-border);
-  font-size: 16px;
+  font-size: var(--fs-md);
   font-weight: 600;
 }
 
@@ -1191,7 +1196,7 @@ main .next-button::after {
 .sheet-reference [data-section="skills"] thead th {
   padding: 0 0 6px;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 16px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -1208,7 +1213,7 @@ main .next-button::after {
   height: 38px;
   padding: 0;
   border-bottom: 1px solid var(--color-border-subtle);
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 20px;
   vertical-align: middle;
 }
@@ -1223,7 +1228,7 @@ main .next-button::after {
 
 .skill__ability {
   width: 44px;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--color-text-secondary);
@@ -1246,7 +1251,7 @@ main .next-button::after {
 .sheet-reference .skill__bonus .sheet-chip {
   min-width: 40px;
   padding: 1px 6px;
-  font-size: 16px;
+  font-size: var(--fs-md);
   line-height: 24px;
 }
 
@@ -1275,7 +1280,7 @@ main .next-button::after {
   border: 2px solid var(--color-frame);
   border-radius: 8px;
   background: var(--color-surface);
-  font-size: 17px;
+  font-size: var(--fs-md);
   font-weight: 700;
   text-align: center;
   position: relative;
@@ -1305,7 +1310,7 @@ main .next-button::after {
 .sheet-reference [data-section="languages"] h3 {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 16px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -1365,7 +1370,7 @@ main .next-button::after {
 }
 
 .stat-box--hp dd {
-  font-size: 32px;
+  font-size: var(--fs-xl);
 }
 
 /* Class page: what the levels give, one block per level; the species / background pages list what they grant. */
@@ -1381,7 +1386,7 @@ main .next-button::after {
 
 .level-features__level h4 {
   margin: 10px 0 2px;
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 700;
   color: var(--color-text-strong);
   letter-spacing: 0;
@@ -1398,7 +1403,7 @@ main .next-button::after {
 
 .help-page__notice {
   margin-top: var(--space-3);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--color-text-secondary);
 }
 
@@ -1447,7 +1452,7 @@ button.feature-card__head::after {
   right: 6px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 20px;
+  font-size: var(--fs-lg);
   color: var(--color-text-secondary);
 }
 
@@ -1457,19 +1462,19 @@ button.feature-card__head::after {
 
 .feature-card__title {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: var(--fs-md);
   font-weight: 700;
 }
 
 .feature-card__meta {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-style: italic;
   color: var(--color-text-secondary);
 }
 
 .feature-card__picked {
   flex-basis: 100%;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   color: var(--color-text);
 }
 
@@ -1494,7 +1499,7 @@ button.feature-card__head::after {
   background: none;
   text-align: left;
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: var(--fs-md);
   font-weight: 700;
   color: var(--color-text-strong);
   cursor: pointer;
@@ -1507,7 +1512,7 @@ button.feature-card__head::after {
   top: 50%;
   transform: translateY(-50%);
   font-family: var(--font-sans);
-  font-size: 20px;
+  font-size: var(--fs-lg);
   font-weight: 500;
   color: var(--color-text-secondary);
 }

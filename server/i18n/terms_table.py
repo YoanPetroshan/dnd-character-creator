@@ -340,6 +340,18 @@ COVERAGE_EXCEPTIONS: dict[tuple[str, str], str] = {
 }
 
 
+# Short labels that repeat on every page (the step bar ...): the owner decided (1A, DESIGN-L 2026-11-24) that the English bracket
+# stands once per page, in the page heading, so these keys carry only the Bulgarian word. A key is skipped when it starts with
+# one of these prefixes.
+SHORT_LABEL_KEYS: dict[str, str] = {
+    "UI:nav.steps.": "step bar: the English term is in the heading of the page the step opens",
+}
+
+
+def _short_label(where: str) -> bool:
+    return any(where.startswith(prefix) for prefix in SHORT_LABEL_KEYS)
+
+
 def _corpus() -> list[tuple[str, str, str]]:
     """(surface, key, Bulgarian text) for every Bulgarian text the app owns."""
     import export_labels
@@ -394,7 +406,8 @@ def coverage_gaps(corpus=None) -> list[tuple[str, str, str]]:
             nrx, brx = re.compile(noun, re.IGNORECASE), re.compile(bracket, re.IGNORECASE)
             for surface, key, text in corpus:
                 m = nrx.search(text)
-                if m and not brx.search(_brackets(text)) and (t.en, f"{surface}:{key}") not in COVERAGE_EXCEPTIONS:
+                where = f"{surface}:{key}"
+                if m and not brx.search(_brackets(text)) and (t.en, where) not in COVERAGE_EXCEPTIONS and not _short_label(where):
                     gaps.append((t.en, f"{surface}:{key}", m.group(0)))
     return gaps
 

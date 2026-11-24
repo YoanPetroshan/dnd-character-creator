@@ -14,16 +14,17 @@ export const bg = {
   /** The language control in the header: its group label and the two button labels. */
   lang: { label: "Език", bg: "БГ", en: "EN" },
 
-  /** The step navigation. `steps` are the labels of the eight routes (Export stays an English word on purpose: legacy wording; Home, Abilities and Equipment are Bulgarian with the English term in brackets). */
+  /** The step navigation. `steps` are the labels of the routes: short Bulgarian words only; the English term is in each
+   *  page's heading (owner decision 1A, DESIGN-L 2026-11-24: the bracket once per page). */
   nav: {
     label: "Стъпки",
     steps: {
       home: "Начало",
       class: "Клас",
-      background: "Произход (Background)",
-      species: "Раса (Species)",
-      abilities: "Характеристики (Ability Scores)",
-      equipment: "Екипировка (Equipment)",
+      background: "Произход",
+      species: "Раса",
+      abilities: "Характеристики",
+      equipment: "Екипировка",
       sheet: "Лист",
     },
     sheet: "Лист",
@@ -556,10 +557,14 @@ export const bg = {
     asiRow: "Увеличение на характеристики (Ability Score Improvement)",
     levelN: (n: number) => `Ниво ${n}`,
     showSubclass: (name: string) => `Покажи какво дава подкласът: ${name}`,
-    tabFeatures: "Способности (Features)",
+    tabFeatures: "Избори от класа",
     tabSpells: "Заклинания",
     noChoices: "Няма избори за този клас.",
-    addClass: "+ Добави клас",
+    addClass: "+ Добави още един клас",
+    addClassTitle: "Добави клас",
+    changeClass: "Смени",
+    changeClassLabel: (name: string) => `Смени класа ${name}`,
+    cancelChange: "Откажи",
     levelCap: (max: number) => `Общото ниво е ${max} — намали ниво на клас, за да добавиш друг.`,
   },
 
@@ -667,8 +672,8 @@ export const bg = {
 
   choice: {
     newMarker: "ново",
-    pendingDot: "pending choice",
-    levelBadge: (level: number) => `${level} level`,
+    pendingDot: "още не е избрано",
+    levelBadge: (level: number) => `ниво ${level}`,
     counter: (selected: number, count: number) => `избрани ${selected}/${count}`,
     granted: (list: string) => `Получаваш автоматично: ${list}`,
     groups: {
