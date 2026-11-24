@@ -116,11 +116,11 @@ describe("scripts", () => {
   // sentences). They stay so that the BG rendering is byte-identical; translating them is a deliberate later change.
   const LEGACY = new Set([
     "Add", "Array", "Buy", "Character",
-    "Manual", "Name", "Point", "Points", "Preferences", "Re", "Remaining", "Resolution", "Roll", "Saved",
+    "Manual", "Name", "Point", "Points", "Preferences", "Remaining", "Resolution", "Roll", "Saved",
     "Sources", "Standard", "Subspecies", "all", "and", "api", "as", "be",
-    "choice", "current", "drop", "from", "here", "level", "lowest",
-    "name", "none", "page", "pending", "reload", "replaces", "resolve",
-    "rolling", "ruleset", "scores", "should", "six", "still", "the", "this", "type", "you",
+    "choice", "drop", "from", "here", "level", "lowest",
+    "name", "none", "page", "pending", "reload", "resolve",
+    "ruleset", "scores", "should", "six", "still", "the", "this", "type", "you",
     // damage types stay English like the weapon table (owner, 2026-11-20)
     "acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder",
   ]);

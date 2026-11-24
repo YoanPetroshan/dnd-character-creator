@@ -1,4 +1,5 @@
 import { CommitNumberInput } from "../components/CommitNumberInput";
+import { ScoreSlider } from "../components/ScoreSlider";
 import { StepProblems } from "../components/StepProblems";
 import { useDraft } from "../DraftContext";
 import { useT } from "../LanguageContext";
@@ -42,7 +43,7 @@ export function AbilitiesPage() {
     dispatch({ type: "SET_ABILITY_SCORES", base: setStandardScore(base, ability, value) });
   }
 
-  const pointBuySpent = pointBuySpentOf(base);
+  const pointsLeft = POINT_BUY_BUDGET - pointBuySpentOf(base);
 
   return (
     <div className="page">
@@ -68,9 +69,10 @@ export function AbilitiesPage() {
       </div>
 
       {method === "roll" && (
-        <p>
+        <div className="ability-roll">
           <button
             type="button"
+            className="ability-roll__button"
             onClick={() =>
               dispatch({
                 type: "SET_ABILITY_SCORES",
@@ -79,11 +81,25 @@ export function AbilitiesPage() {
             }
           >
             {ap.rollAll}
-          </button>{" "}
-          {ap.rerollNote}
+          </button>
+          <p className="ability-note">
+            <span className="ability-note__mark" aria-hidden="true">
+              !
+            </span>
+            {ap.rerollNote}
+          </p>
+        </div>
+      )}
+      {method === "pointbuy" && (
+        <p className="point-buy-remaining" role="status" data-state={pointsLeft <= 0 ? "alert" : "ok"}>
+          {pointsLeft <= 0 && (
+            <span className="ability-note__mark" aria-hidden="true">
+              !
+            </span>
+          )}
+          {ap.pointsRemaining(pointsLeft)}
         </p>
       )}
-      {method === "pointbuy" && <p>{ap.pointsRemaining(POINT_BUY_BUDGET - pointBuySpent)}</p>}
 
       <table className="ability-table">
         <thead>
@@ -100,9 +116,13 @@ export function AbilitiesPage() {
             const score = base[ability];
             const canInc = canIncrement(base, ability);
             const row = rowOf(ability);
+            // while the resolution is one step behind the base (a slider drag), the total and the modifier are worked out here
+            const stale = row != null && row.base !== score;
+            const total = stale ? score + (row.bonus ?? 0) : row?.total;
+            const modifier = stale && total != null ? Math.floor((total - 10) / 2) : row?.modifier;
             return (
               <tr key={ability}>
-                <td>{ability}</td>
+                <th scope="row" className="ability-name">{ability}</th>
                 <td>
                   {method === "standard" && (
                     <select aria-label={ap.valueLabel(ability)} value={score} onChange={(e) => setStandard(ability, Number(e.target.value))}>
@@ -127,18 +147,27 @@ export function AbilitiesPage() {
                   )}
                   {method === "roll" && <span>{score}</span>}
                   {method === "manual" && (
-                    <CommitNumberInput
-                      ariaLabel={ap.valueLabel(ability)}
-                      min={1}
-                      max={30}
-                      value={score}
-                      onCommit={(value) => setAbility(ability, value)}
-                    />
+                    <span className="ability-manual">
+                      <CommitNumberInput
+                        ariaLabel={ap.valueLabel(ability)}
+                        min={1}
+                        max={30}
+                        value={score}
+                        onCommit={(value) => setAbility(ability, value)}
+                      />
+                      <ScoreSlider ariaLabel={ap.sliderLabel(ability)} min={1} max={20} value={score} onChange={(value) => setAbility(ability, value)} />
+                    </span>
                   )}
                 </td>
-                <td>{row?.bonus == null ? t.common.none : formatModifier(row.bonus)}</td>
-                <td>{row?.total ?? t.common.none}</td>
-                <td>{formatModifier(row?.modifier)}</td>
+                <td>
+                  <span className="ability-chip" data-empty={!row?.bonus ? "true" : undefined}>
+                    {row?.bonus ? formatModifier(row.bonus) : t.common.none}
+                  </span>
+                </td>
+                <td className="ability-total">{total ?? t.common.none}</td>
+                <td>
+                  <span className="ability-mod">{formatModifier(modifier)}</span>
+                </td>
               </tr>
             );
           })}

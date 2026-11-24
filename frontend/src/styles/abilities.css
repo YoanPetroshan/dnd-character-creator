@@ -39,36 +39,136 @@
   outline-offset: 2px;
 }
 
-/* Table: no vertical lines, a plain eyebrow header row, tabular figures. */
-.ability-table {
+/* Ability table: one airy row per ability. Every value column has a fixed width and its content is centred in it, so the
+   numbers line up whether or not a bonus chip is there (an empty chip keeps its slot). Light 1px lines between columns. */
+table.ability-table {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
 }
 
 .ability-table th,
 .ability-table td {
-  padding: 6px var(--space-3);
+  padding: var(--space-3) var(--space-1);
   border: 0;
   border-bottom: 1px solid var(--color-border);
-  text-align: left;
+  vertical-align: middle;
+  text-align: center;
 }
 
-.ability-table th {
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--color-text-secondary);
+.ability-table th + th,
+.ability-table th + td,
+.ability-table td + td {
+  border-left: 1px solid var(--color-border-subtle);
 }
 
 .ability-table thead th {
+  padding: var(--space-2) var(--space-1);
   border-bottom: 2px solid var(--color-text);
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-text-secondary);
+  overflow-wrap: break-word;
+}
+
+/* column widths: the name, the three result columns (fixed) and the control, which takes what is left */
+.ability-table th:nth-child(1) {
+  width: 48px;
+}
+
+.ability-table th:nth-child(3),
+.ability-table td:nth-child(3),
+.ability-table th:nth-child(4),
+.ability-table td:nth-child(4) {
+  width: 44px;
+}
+
+.ability-table th:nth-child(5),
+.ability-table td:nth-child(5) {
+  width: 68px;
+}
+
+.ability-table thead th:nth-child(5) {
+  padding-left: 0;
+  padding-right: 0;
+  font-size: 10px;
+}
+
+.ability-table tbody th.ability-name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* the first header is hidden visually on a phone (the rows say STR, DEX...; screen readers still get it) */
+@media (max-width: 599px) {
+  .ability-table thead th:first-child {
+    font-size: 0;
+  }
+}
+
+.ability-table input[type="number"] {
+  width: 64px;
+  min-width: 0;
+  text-align: center;
+}
+
+.ability-table select {
+  min-width: 68px;
+}
+
+.ability-chip,
+.ability-mod {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 32px;
+  height: 28px;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* the bonus chip: a quiet green pill; an empty slot is only a dash of the same width */
+.ability-chip {
+  border: 1.5px solid var(--color-label);
+  color: var(--color-label);
+}
+
+.ability-chip[data-empty="true"] {
+  border-color: transparent;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+
+.ability-total {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* the modifier is the number a player reads most: big, in a solid bubble */
+.ability-mod {
+  min-width: 48px;
+  height: 36px;
+  background: var(--color-accent);
+  color: var(--color-on-dark);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
 }
 
 .point-buy-stepper {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
 .point-buy-stepper button {
@@ -78,7 +178,7 @@
 }
 
 .point-buy-stepper__value {
-  min-width: 1.5em;
+  min-width: 1.2em;
   text-align: center;
   display: inline-block;
   font-family: var(--font-display);
@@ -87,6 +187,142 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Manual: the typed number and, under it (beside it from 600px), a 1 to 20 slider. */
+.ability-manual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.score-slider {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+/* Roll: the button is an action beside the method pills, not a fifth pill; the note under it warns about the replacing. */
+.ability-roll {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: 0 0 var(--space-3);
+}
+
+.ability-roll__button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-highlight);
+  color: var(--color-on-highlight);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ability-roll__button::before {
+  content: "";
+  flex: none;
+  width: 22px;
+  height: 22px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M16 3h5v5h-2V6.4l-4.3 4.3-1.4-1.4L17.6 5H16V3zM3 4h4.6c1.3 0 2.5.6 3.3 1.6l7.7 9.4c.4.6 1.1 1 1.9 1H19v-1.6h2V20h-5v-2h1.6l-1.1-1.3-1.2 1.4c-.8 1-2 1.6-3.3 1.6H3v-2h6.4c.7 0 1.4-.3 1.8-.9l.6-.7-3.4-4.2c-.4-.5-1.1-.8-1.8-.8H3V4z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M16 3h5v5h-2V6.4l-4.3 4.3-1.4-1.4L17.6 5H16V3zM3 4h4.6c1.3 0 2.5.6 3.3 1.6l7.7 9.4c.4.6 1.1 1 1.9 1H19v-1.6h2V20h-5v-2h1.6l-1.1-1.3-1.2 1.4c-.8 1-2 1.6-3.3 1.6H3v-2h6.4c.7 0 1.4-.3 1.8-.9l.6-.7-3.4-4.2c-.4-.5-1.1-.8-1.8-.8H3V4z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* the red round "!" of a pending choice card, smaller, in front of a note */
+.ability-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text-secondary);
+}
+
+.ability-note__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-round);
+  background: var(--color-danger);
+  color: var(--color-on-dark);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Point buy: the points left are the number the player watches, so they get a line of their own */
+.point-buy-remaining {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.point-buy-remaining[data-state="alert"] {
+  color: var(--color-danger);
+}
+
+@media (min-width: 600px) {
+  .ability-table th,
+  .ability-table td {
+    padding: var(--space-4) var(--space-3);
+  }
+
+  .ability-table thead th {
+    padding: var(--space-2) var(--space-3);
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+  }
+
+  .ability-table th:nth-child(1) {
+    width: 96px;
+  }
+
+  .ability-table th:nth-child(3),
+  .ability-table td:nth-child(3),
+  .ability-table th:nth-child(4),
+  .ability-table td:nth-child(4) {
+    width: 96px;
+  }
+
+  .ability-table th:nth-child(5),
+  .ability-table td:nth-child(5) {
+    width: 112px;
+  }
+
+  .ability-manual {
+    flex-direction: row;
+    justify-content: center;
+    gap: var(--space-3);
+  }
+
+  .score-slider {
+    width: 160px;
+  }
+
+  .ability-chip {
+    min-width: 48px;
+  }
+}
 /* Species list: one row per option with the source on the right; the radio stays hidden but focusable. */
 .picker-list.picker-list--rows {
   display: grid;
@@ -295,84 +531,6 @@
   text-align: left;
 }
 
-
-/* 375px: the table fits without scrolling inside itself (headers wrap, tighter cells, a 56px number field). */
-.ability-table th,
-.ability-table td {
-  padding: 6px 8px;
-}
-
-.ability-table th {
-  font-size: 10.5px;
-  letter-spacing: 0.08em;
-  white-space: normal;
-  vertical-align: bottom;
-}
-
-.ability-table input[type="number"] {
-  width: 56px;
-  min-width: 0;
-  text-align: center;
-}
-
-/* On a phone the first column header is hidden visually (the rows say STR, DEX...; screen readers still get it),
-   which leaves room for the other headers to stay whole words. */
-@media (max-width: 599px) {
-  .ability-table thead th:first-child {
-    font-size: 0;
-  }
-}
-
-/* Point buy: the two 44px steppers need the room, so their column is tight. */
-.ability-table .point-buy-stepper {
-  gap: 4px;
-}
-
-.ability-table td:nth-child(2) {
-  padding-left: 0;
-  padding-right: 0;
-}
-
-/* Column headers: sentence case and no forced breaks, so a long word is never cut in the middle. */
-.ability-table thead th {
-  padding-left: 4px;
-  padding-right: 4px;
-  font-size: 11px;
-  letter-spacing: 0;
-  text-transform: none;
-  overflow-wrap: normal;
-  word-break: normal;
-}
-
-.ability-table tbody th,
-.ability-table td {
-  padding-left: 4px;
-  padding-right: 4px;
-}
-
-/* Ability table, tablet and up: roomier cells, 16px body, a quiet sentence-case header, a lighter row label. */
-.ability-table tbody th {
-  font-weight: 500;
-}
-
-@media (min-width: 600px) {
-  .ability-table tbody th,
-  .ability-table td {
-    padding: 8px 12px;
-    font-size: 16px;
-  }
-
-  .ability-table tbody th {
-    letter-spacing: 0.04em;
-  }
-
-  .ability-table thead th {
-    padding: 8px 12px;
-    font-size: 12px;
-    line-height: 16px;
-    font-weight: 500;
-  }
-}
 
 /* Species list: a source heading above each group, a 1px rule above it, spanning both columns. */
 .picker-list.picker-list--rows li.picker-list__group {
