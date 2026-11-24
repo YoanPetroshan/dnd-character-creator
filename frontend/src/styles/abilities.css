@@ -294,7 +294,7 @@ table.ability-table {
   }
 
   .ability-table th:nth-child(1) {
-    width: 96px;
+    width: 150px;
   }
 
   .ability-table th:nth-child(3),
