@@ -654,6 +654,7 @@ export const en: Copy = {
     searchLabel: "Search items",
     categoryLabel: "Category",
     add: "Add",
+    browseHint: "Type a name or pick a category to see the items.",
     addLabel: (name: string) => `Add ${name}`,
     removeLabel: (name: string) => `Remove ${name}`,
     showItem: (name: string) => `Show a short description of the item: ${name}`,

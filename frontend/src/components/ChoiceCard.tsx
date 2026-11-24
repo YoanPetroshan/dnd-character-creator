@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { useT } from "../LanguageContext";
 import type { Choice } from "../types";
 import { ChoicePicker } from "./ChoicePicker";
+import { isLetteredEquipment } from "../logic/choiceRouting";
 import { cidFromHash } from "../logic/hashTarget";
 import { useNewChoices } from "../NewChoicesContext";
 
@@ -53,10 +54,15 @@ export function ChoiceCard({ choice, onToggle, defaultExpanded = false }: Choice
         <span className="choice-card__count">
           {t.choice.counter(choice.selected.length, choice.count)}
         </span>
+        {/* several starting-equipment cards share one title: a closed card names its options so they can be told apart */}
+        {!expanded && isLetteredEquipment(choice) && (
+          <span className="choice-card__summary">{choice.options.map((o) => o.label).join(" · ")}</span>
+        )}
       </button>
       {expanded && (
         <div className="choice-card__body">
-          <p>{choice.description}</p>
+          {/* lettered starting-equipment rows already show every option: the "(A) ... or (B) ..." sentence would repeat them */}
+          {!isLetteredEquipment(choice) && <p>{choice.description}</p>}
           {choice.status === "unavailable" && <p>{choice.unavailableReason}</p>}
           {choice.granted && choice.granted.length > 0 && (
             <p>{t.choice.granted(choice.granted.map((g) => g.label).join(", "))}</p>

@@ -95,10 +95,13 @@ export function EquipmentPage() {
   const eq = t.sheet.equipment;
   const { draft, dispatch } = useDraft();
   const { resolution, loading, error } = useResolutionContext();
-  const [category, setCategory] = useState("");
+  // null = no category picked yet (the list stays closed); "" = "All"
+  const [category, setCategory] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const items = useItems(category, query, draft.ruleset, draft.sources);
+  const items = useItems(category ?? "", query, draft.ruleset, draft.sources);
   const eyes = useItemEyes(draft.ruleset, ep.showItem);
+  // DESIGN-L: the item list shows only after a search or a category pick (all ~250 rows at once were 500+ targets)
+  const browsing = category !== null || query.trim() !== "";
 
   if (!resolution) return <div className="page">{error ? null : t.common.loading}</div>;
 
@@ -173,9 +176,70 @@ export function EquipmentPage() {
         </section>
       )}
 
+      <h2>{eq.groups.added}</h2>
+      {sheetEquipment.added.length === 0 && <p>{ep.noAdded}</p>}
+      {sheetEquipment.added.length > 0 && (
+        <ul className="inventory-list">
+          {sheetEquipment.added.map((entry) => (
+            <li key={entry.itemId}>
+              <span>
+                {entry.name} ×{entry.qty}
+                {entry.contents && entry.contents.length > 0 && ` ${ep.contains(contentsText(entry.contents))}`}
+              </span>
+              {eyes.button(`added-${entry.itemId}`, entry.itemId, entry.name)}
+              <label className="equipment-toggle">
+                <input
+                  type="checkbox"
+                  checked={entry.equipped}
+                  onChange={() => dispatch({ type: "TOGGLE_EQUIPPED", itemId: entry.itemId })}
+                />
+                {ep.equipped}
+              </label>
+              <button type="button" aria-label={ep.removeLabel(entry.name)} onClick={() => dispatch({ type: "REMOVE_ITEM", itemId: entry.itemId })}>
+                {t.common.remove}
+              </button>
+              {eyes.panel(`added-${entry.itemId}`, entry.itemId)}
+            </li>
+          ))}
+        </ul>
+      )}
+      <h2>{ep.itemsTitle}</h2>
+      <div className="item-search">
+        <input type="text" inputMode="search" enterKeyHint="search" aria-label={ep.searchLabel} placeholder={t.common.search} value={query} onChange={(e) => setQuery(e.target.value)} />
+      </div>
+      <div className="item-categories" role="group" aria-label={ep.categoryLabel}>
+        {CATEGORIES.map((value) => (
+          <label key={value}>
+            <input type="radio" name="item-category" checked={category === value} onChange={() => setCategory(value)} />
+            {ep.categories[value || "all"]}
+          </label>
+        ))}
+      </div>
+      {items.error && (
+        <p>
+          {t.common.errorLine(renderMsg(t, items.error))}{" "}
+          <button type="button" onClick={items.retry}>
+            {t.common.retry}
+          </button>
+        </p>
+      )}
+      {!browsing && <p className="equipment-hint">{ep.browseHint}</p>}
+      <ul className="item-browser-list">
+        {(browsing ? items.items : []).map((item) => (
+          <li key={item.id}>
+            {eyes.button(`browse-${item.id}`, item.id, item.name)}
+            <span>{item.name}</span>
+            <button type="button" className="item-add" aria-label={ep.addLabel(item.name)} onClick={() => dispatch({ type: "ADD_ITEM", itemId: item.id })}>
+              {ep.add}
+            </button>
+            {eyes.panel(`browse-${item.id}`, item.id)}
+          </li>
+        ))}
+      </ul>
+
       {sheetEquipment.slots && (
-        <div className="equipment-section">
-          <h2>{ep.wornAndHeld}</h2>
+        <details className="details-section" open={!!draft.equipment.worn || !!draft.equipment.wielded}>
+          <summary>{ep.wornAndHeld}</summary>
           <label className="equipment-toggle">
             <input
               type="checkbox"
@@ -232,68 +296,7 @@ export function EquipmentPage() {
               ))}
             </>
           )}
-        </div>
-      )}
-
-      <h2>{ep.itemsTitle}</h2>
-      <div className="item-search">
-        <input type="text" inputMode="search" enterKeyHint="search" aria-label={ep.searchLabel} placeholder={t.common.search} value={query} onChange={(e) => setQuery(e.target.value)} />
-      </div>
-      <div className="item-categories" role="group" aria-label={ep.categoryLabel}>
-        {CATEGORIES.map((value) => (
-          <label key={value}>
-            <input type="radio" name="item-category" checked={category === value} onChange={() => setCategory(value)} />
-            {ep.categories[value || "all"]}
-          </label>
-        ))}
-      </div>
-      {items.error && (
-        <p>
-          {t.common.errorLine(renderMsg(t, items.error))}{" "}
-          <button type="button" onClick={items.retry}>
-            {t.common.retry}
-          </button>
-        </p>
-      )}
-      <ul className="item-browser-list">
-        {items.items.map((item) => (
-          <li key={item.id}>
-            {eyes.button(`browse-${item.id}`, item.id, item.name)}
-            <span>{item.name}</span>
-            <button type="button" className="item-add" aria-label={ep.addLabel(item.name)} onClick={() => dispatch({ type: "ADD_ITEM", itemId: item.id })}>
-              {ep.add}
-            </button>
-            {eyes.panel(`browse-${item.id}`, item.id)}
-          </li>
-        ))}
-      </ul>
-
-      <h2>{eq.groups.added}</h2>
-      {sheetEquipment.added.length === 0 && <p>{ep.noAdded}</p>}
-      {sheetEquipment.added.length > 0 && (
-        <ul className="inventory-list">
-          {sheetEquipment.added.map((entry) => (
-            <li key={entry.itemId}>
-              <span>
-                {entry.name} ×{entry.qty}
-                {entry.contents && entry.contents.length > 0 && ` ${ep.contains(contentsText(entry.contents))}`}
-              </span>
-              {eyes.button(`added-${entry.itemId}`, entry.itemId, entry.name)}
-              <label className="equipment-toggle">
-                <input
-                  type="checkbox"
-                  checked={entry.equipped}
-                  onChange={() => dispatch({ type: "TOGGLE_EQUIPPED", itemId: entry.itemId })}
-                />
-                {ep.equipped}
-              </label>
-              <button type="button" aria-label={ep.removeLabel(entry.name)} onClick={() => dispatch({ type: "REMOVE_ITEM", itemId: entry.itemId })}>
-                {t.common.remove}
-              </button>
-              {eyes.panel(`added-${entry.itemId}`, entry.itemId)}
-            </li>
-          ))}
-        </ul>
+        </details>
       )}
     </div>
   );

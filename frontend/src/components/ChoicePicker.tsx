@@ -5,6 +5,7 @@ import { optionSource } from "../logic/sources";
 import type { Choice, ChoiceOption } from "../types";
 import { useDraftRuleset } from "../DraftContext";
 import { optionFeatId, optionItemIds } from "../logic/optionItems";
+import { isLetteredEquipment } from "../logic/choiceRouting";
 import { DetailEye, DetailPanel, ParagraphsBody } from "./DetailEye";
 import { FeatDetailBody, useFeatDetails } from "./FeatDetailBody";
 import { ItemDetailBody, useItemDetails } from "./ItemDetailBody";
@@ -127,7 +128,7 @@ function ShortPicker({ choice, onToggle }: ChoicePickerProps) {
 
   // starting equipment: the options are lettered rows A, B, C (the order of the rules text, "(A) ... (B) ...")
   // (the follow-up pick of an option, "...equipment-choice-2:0", is a plain list: it only appears once its option is picked)
-  const lettered = choice.source.kind === "equipment" && /equipment-choice-\d+$/.test(choice.id);
+  const lettered = isLetteredEquipment(choice);
   const letterOf = (o: ChoiceOption) => (lettered ? String.fromCharCode(65 + choice.options.indexOf(o)) : undefined);
   const prefix = sharedLabelPrefix(choice.options);
 

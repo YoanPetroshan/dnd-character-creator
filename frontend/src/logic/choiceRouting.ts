@@ -1,7 +1,7 @@
 import type { Choice } from "../types";
 
-/** Which Class-step tab a class card belongs to: the "Заклинания" tab holds
- *  the spell-pick cards, every other class card is on "Способности".
+/** Which Class-step section a class card belongs to: the "Заклинания" section holds
+ *  the spell-pick cards, every other class card is under "Избори от класа".
  *  Moved verbatim from ClassPage (SK1). Cards are keyed by their choice id
  *  ("class:<classId>:..."), so this is a pure string test. */
 export function isSpellChoiceId(choiceId: string): boolean {
@@ -41,4 +41,9 @@ export function speciesChoicesOf(choices: Choice[]): Choice[] {
 /** Background step cards: background-sourced and feat cards that are neither class nor species. */
 export function backgroundChoicesOf(choices: Choice[]): Choice[] {
   return choices.filter((c) => (c.source.kind === "background" || c.source.kind === "feat") && !c.id.startsWith("class:") && !c.id.startsWith("species:"));
+}
+
+/** A starting-equipment pick shown as lettered rows A, B, C (see ChoicePicker). */
+export function isLetteredEquipment(choice: Choice): boolean {
+  return choice.source.kind === "equipment" && /equipment-choice-\d+$/.test(choice.id);
 }
