@@ -581,6 +581,10 @@ export const en: Copy = {
   },
 
   speciesPage: {
+    change: "Change",
+    changeLabel: (name: string) => `Change the species ${name}`,
+    cancel: "Cancel",
+    groupSummary: (book: string, n: number) => `${book} (${n})`,
     title: "Species",
     searchLabel: "Search species",
     searchPlaceholder: "Search species…",

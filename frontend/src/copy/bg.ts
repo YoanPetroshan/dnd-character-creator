@@ -590,6 +590,10 @@ export const bg = {
   },
 
   speciesPage: {
+    change: "Смени",
+    changeLabel: (name: string) => `Смени расата (Species): ${name}`,
+    cancel: "Откажи",
+    groupSummary: (book: string, n: number) => `${book} (${n})`,
     title: "Раса (Species)",
     searchLabel: "Търсене на раса (Species)",
     searchPlaceholder: "Търсене на раса (Species)…",

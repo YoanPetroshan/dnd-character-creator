@@ -384,16 +384,74 @@ table.ability-table {
   padding: 0;
 }
 
+/* Each book is a titled group (DESIGN-L, 4A): the Player's Handbooks are open, every other book is a closed row with its
+   count. Space and the title separate the groups; no rules between them. */
 .species-group {
   margin-top: var(--space-5);
-  padding-top: var(--space-5);
-  border-top: 1px solid var(--color-border);
 }
 
 .species-group:first-child {
   margin-top: 0;
-  padding-top: 0;
-  border-top: 0;
+}
+
+.species-group__title {
+  margin: 0 0 var(--space-2);
+}
+
+.species-group__more {
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.species-group__more > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  list-style: none;
+}
+
+.species-group__more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.species-group__more > summary::after {
+  content: "+";
+  font-size: var(--fs-lg);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.species-group__more[open] > summary::after {
+  content: "\2212";
+}
+
+.species-group__more > .species-chips {
+  margin-bottom: var(--space-4);
+}
+
+.species-group + .species-group:has(> .species-group__more) {
+  margin-top: 0;
+}
+
+/* the picked species: its pill (with the eye for its description) and a quiet "Change" */
+.species-picked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.species-picked > .species-chips {
+  flex: 1 1 auto;
+}
+
+.species-picked__change {
+  min-height: 44px;
+  font-size: var(--fs-sm);
 }
 
 .species-chips {
@@ -434,7 +492,7 @@ table.ability-table {
   gap: 8px;
   min-width: 0;
   min-height: 44px;
-  padding: 0 0 0 16px;
+  padding: 0 16px;
   font-size: var(--fs-md);
   font-weight: 500;
   line-height: 1.2;
@@ -467,8 +525,9 @@ table.ability-table {
   transform: rotate(45deg);
 }
 
+/* only the picked pill has an eye: it sits inside the pill's right padding */
 .species-chip .species-eye {
-  margin-right: 2px;
+  margin: 0 2px 0 -10px;
 }
 
 .species-panel {

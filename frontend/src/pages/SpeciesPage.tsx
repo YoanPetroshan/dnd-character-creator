@@ -14,6 +14,8 @@ import { SpeciesDetailBody, useSpeciesDetails } from "../components/SpeciesDetai
 
 /** The core books come first, in this order; every other source follows as its own group. */
 const CORE_SOURCES = ["PHB", "XPHB", "DMG", "XDMG"];
+/** Groups open from the start (the Player's Handbooks); every other book is a closed group with its count (DESIGN-L, 4A). */
+const OPEN_SOURCES = new Set(["PHB", "XPHB"]);
 
 interface SpeciesGroup {
   key: string;
@@ -51,6 +53,8 @@ export function SpeciesPage() {
   const catalog = useCatalogContext();
   const { details, loadDetail } = useSpeciesDetails();
   const [openSpecies, setOpenSpecies] = useState<Set<string>>(new Set());
+  // once a species is picked the list folds into the picked pill with "Change" (like the Class page)
+  const [changing, setChanging] = useState(false);
 
   function toggleSpecies(id: string) {
     const next = new Set(openSpecies);
@@ -118,6 +122,37 @@ export function SpeciesPage() {
           ))}
         </ul>
       )}
+      {selectedSpecies && !changing ? (
+        <div className="species-picked">
+          <ul className="species-chips">
+            <li className="species-chip">
+              <label className="species-chip__label">
+                <input type="radio" name="species" checked readOnly />
+                {selectedSpecies.name}
+                {speciesHidden ? ` (${t.common.hiddenByFilters})` : ""}
+              </label>
+              <button
+                type="button"
+                className="species-eye"
+                aria-label={sp.showSpecies(selectedSpecies.name)}
+                aria-expanded={openSpecies.has(selectedSpecies.id)}
+                onClick={() => toggleSpecies(selectedSpecies.id)}
+              />
+            </li>
+            {openSpecies.has(selectedSpecies.id) && (
+              <li className="species-panel">
+                <div className="species-eye__panel">
+                  <SpeciesDetailBody state={details[selectedSpecies.id]} />
+                </div>
+              </li>
+            )}
+          </ul>
+          <button type="button" className="species-picked__change" aria-label={sp.changeLabel(selectedSpecies.name)} onClick={() => setChanging(true)}>
+            {sp.change}
+          </button>
+        </div>
+      ) : (
+        <>
       <input
         type="search"
         className="picker-filter"
@@ -128,8 +163,8 @@ export function SpeciesPage() {
       />
       {needle && shownSpecies.length === 0 && <p>{t.common.noMatches}</p>}
       <ul className="species-groups">
-        {speciesGroups.map((g) => (
-          <li key={g.key} className="species-group">
+        {speciesGroups.map((g, index) => {
+          const chips = (
             <ul className="species-chips" aria-label={g.label}>
               {g.items.map((s) => (
                 <Fragment key={s.id}>
@@ -139,32 +174,50 @@ export function SpeciesPage() {
                         type="radio"
                         name="species"
                         checked={selectedSpeciesId === s.id}
-                        onChange={() => dispatch({ type: "SET_SPECIES", speciesId: s.id })}
+                        onChange={() => {
+                          dispatch({ type: "SET_SPECIES", speciesId: s.id });
+                          setChanging(false);
+                        }}
                       />
                       {s.name}
                       {speciesHidden && s.id === selectedSpeciesId ? ` (${t.common.hiddenByFilters})` : ""}
                     </label>
-                    <button
-                      type="button"
-                      className="species-eye"
-                      aria-label={sp.showSpecies(s.name)}
-                      aria-expanded={openSpecies.has(s.id)}
-                      onClick={() => toggleSpecies(s.id)}
-                    />
                   </li>
-                  {openSpecies.has(s.id) && (
-                    <li className="species-panel">
-                      <div className="species-eye__panel">
-                        <SpeciesDetailBody state={details[s.id]} />
-                      </div>
-                    </li>
-                  )}
                 </Fragment>
               ))}
             </ul>
-          </li>
-        ))}
+          );
+          // a book's group is open when it is a Player's Handbook, while searching, or when it holds the pick
+          // (without either handbook, e.g. SRD only, the first group is open)
+          const open =
+            OPEN_SOURCES.has(g.key) ||
+            (index === 0 && !speciesGroups.some((x) => OPEN_SOURCES.has(x.key))) ||
+            !!needle ||
+            g.items.some((s) => s.id === selectedSpeciesId);
+          return (
+            <li key={g.key} className="species-group">
+              {open ? (
+                <>
+                  <h3 className="species-group__title">{g.label}</h3>
+                  {chips}
+                </>
+              ) : (
+                <details className="species-group__more">
+                  <summary>{sp.groupSummary(g.label, g.items.length)}</summary>
+                  {chips}
+                </details>
+              )}
+            </li>
+          );
+        })}
       </ul>
+      {selectedSpecies && (
+        <button type="button" className="species-picked__change" onClick={() => setChanging(false)}>
+          {sp.cancel}
+        </button>
+      )}
+        </>
+      )}
       {selectedSpecies && subspeciesList.length > 0 && (
         <>
           <h2>{sp.subspecies}</h2>
